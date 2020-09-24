@@ -133,7 +133,7 @@ bool IsInplaceAllowed(
     if (first_blob == nullptr) {
       first_blob = blob_desc;
     } else {
-      if (!(first_blob->shape() == blob_desc->shape()
+      if (!(first_blob->shape().elem_cnt() == blob_desc->shape().elem_cnt()
             && first_blob->data_type() == blob_desc->data_type())) {
         return false;
       }
@@ -142,11 +142,21 @@ bool IsInplaceAllowed(
   return true;
 }
 
+std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    return std::unique_ptr<BoxingLogger>(
+        new CsvBoxingLogger(StrCat("boxing/log/", GlobalJobDesc().job_id()) + ".csv"));
+  } else {
+    return std::unique_ptr<BoxingLogger>(new NullBoxingLogger());
+  }
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
+  boxing_logger_ = CreateBoxingLogger();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new ToInterfaceSubTskGphBuilder());
   builders.emplace_back(new OneToOneSubTskGphBuilder());
@@ -464,10 +474,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    Maybe<void> status = TRY(sub_tsk_gph_builder_->Build(
+    auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    CHECK(status.IsOk());
+    boxing_logger_->Log(*status);
   }
 }
 

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -41,6 +42,14 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     const float scale = ctx->Attr<float>("scale");
     MaskAndScale<T>(ctx->device_ctx(), in->shape().elem_cnt(), scale, in->dptr<T>(),
                     mask->dptr<int8_t>(), out->mut_dptr<T>());
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape(), out->shape());
+      KernelUtil<DeviceType::kCPU, T>::Addition(
+          ctx->device_ctx(), add_to_output->shape().elem_cnt(), out->mut_dptr<T>(), out->dptr<T>(),
+          add_to_output->dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

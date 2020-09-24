@@ -54,7 +54,11 @@ class BatchMatMulOp : public XlaOpKernel {
 
     // ctx->SetOutput("out", xla::BatchDot(lhs, rhs));
 
-    ctx->SetOutput("out_0", xla::BatchDot(a, transpose_a, b, transpose_b));
+    xla::XlaOp out = xla::BatchDot(a, transpose_a, b, transpose_b);
+    if (ctx->HasInput("_add_to_output_0")) {
+      out = xla::Add(out, ctx->Input("_add_to_output_0"));
+    } 
+    ctx->SetOutput("out_0", out);
   }
 };
 

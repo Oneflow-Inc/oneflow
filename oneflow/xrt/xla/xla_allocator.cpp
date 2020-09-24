@@ -38,7 +38,8 @@ XlaAllocator::XlaAllocator(const se::Platform *platform, DeviceBufferAllocator *
 XlaAllocator::~XlaAllocator() {}
 
 xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(int device_ordinal, uint64 size,
-                                                             bool retry_on_failure) {
+                                                             bool retry_on_failure,
+                                                             int64 /*memory_space*/) {
   se::DeviceMemoryBase memory_base;
   if (allocate_index_ < populated_buffers_.size()
       && populated_buffers_[allocate_index_].populated) {

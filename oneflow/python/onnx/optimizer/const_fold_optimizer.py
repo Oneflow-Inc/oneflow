@@ -69,7 +69,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
             return True
 
         skip_type = ["Identity"]
-        if node.type in skip_type:
+        if node.op_type in skip_type:
             return True
 
         return False
@@ -78,10 +78,10 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         """ if node's input are all const and it's not graph's output then it can be fold.
             if node can be fold True will be return indicating that graph is changed
         """
-        if self._AllInputsAreConst(node.inputs) and not self._IsGraphOutput(
+        if self._AllInputsAreConst(node.input_nodes) and not self._IsGraphOutput(
             node, graph
         ):
-            process_func = _func_map.get(node.type, None)
+            process_func = _func_map.get(node.op_type, None)
             if process_func:
                 const_outputs = process_func(node, graph)
                 self._ReplaceNodeWithConst(node, graph, const_outputs)
@@ -89,7 +89,7 @@ class ConstFoldOptimizer(GraphOptimizerBase):
             self.logger.debug(
                 "need to add function to fold op %s whose op_type is %s",
                 node.name,
-                node.type,
+                node.op_type,
             )
         return False
 
@@ -99,37 +99,40 @@ class ConstFoldOptimizer(GraphOptimizerBase):
 
     @staticmethod
     def _IsGraphOutput(node, graph):
-        node_out_set = set(node.output)
+        node_out_set = set(node.output_tensor_names)
         graph_out_set = set(graph.outputs)
         return node_out_set.intersection(graph_out_set)
 
     @staticmethod
     def _ReplaceNodeWithConst(node, graph, vals):
         util.MakeSure(
-            len(node.output) == len(vals),
+            len(node.output_tensor_names) == len(vals),
             "length of node outputs and const vals should be same",
         )
-        for old_input, val in zip(node.output, vals):
+        for old_input, val in zip(node.output_tensor_names, vals):
             const_node = graph.MakeConst(id_util.UniqueStr("const_fold_opt"), val)
-            graph.set_dtype(const_node.output[0], util.Numpy2OnnxDtype(val.dtype))
-            graph.set_shape(const_node.output[0], val.shape)
-            graph.ReplaceAllInputs(graph.get_nodes(), old_input, const_node.output[0])
+            graph.set_dtype(
+                const_node.output_tensor_names[0], util.Numpy2OnnxDtype(val.dtype)
+            )
+            graph.set_shape(const_node.output_tensor_names[0], val.shape)
+            graph.ReplaceAllInputs(
+                graph.get_nodes(), old_input, const_node.output_tensor_names[0]
+            )
         graph.RemoveNode(node.name)
 
     @staticmethod
     @_register_func("Cast")
     def _FoldCast(node, graph):
-        const_val = node.inputs[0].get_tensor_value(as_list=False)
-        np_dtype = util.ONNX_2_NUMPY_DTYPE[node.get_attr("to").i]
+        const_val = node.input_nodes[0].get_tensor_value(as_list=False)
+        np_dtype = util.ONNX_2_NUMPY_DTYPE[node.attrs["to"]]
         const_val_after_cast = const_val.astype(np_dtype)
         return [const_val_after_cast]
 
     @staticmethod
     @_register_func("Transpose")
     def _FoldTranspose(node, graph) -> list:
-        const_val = node.inputs[0].get_tensor_value(as_list=False)
-        perm_attr = node.get_attr("perm")
-        perm = perm_attr.ints if perm_attr else None
+        const_val = node.input_nodes[0].get_tensor_value(as_list=False)
+        perm = node.attrs.get("perm", None)
         const_val_after_trans = const_val.transpose(perm)
         return [const_val_after_trans]
 
@@ -139,8 +142,8 @@ class ConstFoldOptimizer(GraphOptimizerBase):
         """
         numpy expand_dims only supports to unsqueeze one dim one time, so reshape is used to simplify the logic
         """
-        const_val = node.inputs[0].get_tensor_value(as_list=False)
-        axes = list(node.get_attr("axes").ints)
+        const_val = node.input_nodes[0].get_tensor_value(as_list=False)
+        axes = node.attrs["axes"]
         util.MakeSure(
             all(axis >= 0 for axis in axes),
             "onnx spec says it only supports positive axis",

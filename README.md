@@ -28,12 +28,14 @@
   - CUDA Toolkit Linux x86_64 Driver
     | OneFlow |CUDA Driver Version|
     |---|---|
+    | oneflow_cu110  | >= 450.36.06  |
     | oneflow_cu102  | >= 440.33  |
     | oneflow_cu101  | >= 418.39  |
     | oneflow_cu100  | >= 410.48  |
     | oneflow_cu92  | >= 396.26  |
     | oneflow_cu91  | >= 390.46  |
     | oneflow_cu90  | >= 384.81  |
+    | oneflow_cpu  | N/A  |
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
@@ -47,6 +49,12 @@
 
     ```
     python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
+    ```
+
+  - To install latest release of CPU-only OneFlow:
+
+    ```
+    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cpu --user
     ```
 
   - To install OneFlow with legacy CUDA support, run one of:
@@ -63,8 +71,6 @@
     python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
     ```
     For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
-
-  - CPU-only OneFlow is not available for now.
 
   - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
@@ -99,19 +105,28 @@
 
 2. #### Clone Source Code
 
-    Clone source code and submodules (faster, recommended)
+    - #### Option 1: Download from Aliyun
 
-    ```
-    git clone https://github.com/Oneflow-Inc/oneflow
-    cd oneflow
-    git submodule update --init --recursive
-    ```
+      If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
-    Or you could also clone the repo with `--recursive` flag to clone third_party submodules together
+      ```bash
+      curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
+      unzip oneflow-src.zip
+      ```
 
-    ```
-    git clone https://github.com/Oneflow-Inc/oneflow --recursive
-    ```
+    - #### Option 2: Clone source code and submodules
+
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow
+      cd oneflow
+      git submodule update --init --recursive
+      ```
+
+    - #### Option 3: Clone the repo with `--recursive` flag to clone third_party submodules together
+
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow --recursive
+      ```
 
 3. #### Build and Install OneFlow
 

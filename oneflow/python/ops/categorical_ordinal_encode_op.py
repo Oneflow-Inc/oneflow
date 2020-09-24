@@ -30,6 +30,62 @@ def categorical_ordinal_encode(
     hash_precomputed: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator maintains a hash table to encode the categorical ordinal Blob. It converts a discrete input value into a continuous integer ID. 
+
+    Args:
+        table (remote_blob_util.BlobDef): The hash table, you can assign it as a variable. 
+        size (remote_blob_util.BlobDef): The size of hash table. 
+        input_tensor (remote_blob_util.BlobDef): The input Blob. 
+        hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np 
+        import oneflow.typing as tp 
+
+        @flow.global_function()
+        def categorical_ordinal_encode_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int32)
+        ) -> tp.Numpy: 
+            dtype = x.dtype
+            with flow.scope.namespace("categorical_ordinal_encode"):
+                table = flow.get_variable(
+                    name="Table",
+                    shape=(16,),
+                    dtype=dtype,
+                    initializer=flow.constant_initializer(0, dtype=dtype),
+                    trainable=False,
+                    reuse=False,
+                )
+                size = flow.get_variable(
+                    name="Size",
+                    shape=(1,),
+                    dtype=dtype,
+                    initializer=flow.constant_initializer(0, dtype=dtype),
+                    trainable=False,
+                    reuse=False,
+                )
+                return flow.categorical_ordinal_encode(
+                    table=table, size=size, input_tensor=x, name="Encode",
+                )
+
+        x = np.array([[7, 0, 2], 
+                    [1, 7, 2], 
+                    [0, 1, 7]]).astype(np.int32)
+
+        out = categorical_ordinal_encode_Job(x)
+
+        # out [[1 0 2]
+        #      [3 1 2]
+        #      [0 3 1]]
+
+    """
     assert hash_precomputed is True
     return (
         flow.user_op_builder(name or id_util.UniqueStr("CategoricalOrdinalEncode_"))
@@ -52,6 +108,41 @@ def categorical_ordinal_encoder(
     hash_precomputed: bool = True,
     name: str = "CategoricalOrdinalEncoder",
 ) -> remote_blob_util.BlobDef:
+    """This operator uses `oneflow.categorical_ordinal_encode` to encapsulate a categorical_ordinal_encoder. More details please refer to `oneflow.categorical_ordinal_encode`
+
+    Args:
+        input_tensor (remote_blob_util.BlobDef): The input Blob. 
+        capacity (int): The capacity of hash table. 
+        hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
+        name (str, optional): The name for the operation. Defaults to "CategoricalOrdinalEncoder".
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np 
+        import oneflow.typing as tp 
+
+        @flow.global_function()
+        def categorical_ordinal_encoder_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int32)
+        ) -> tp.Numpy: 
+            return flow.layers.categorical_ordinal_encoder(x, 16)
+
+        x = np.array([[7, 0, 2], 
+                    [1, 7, 2], 
+                    [0, 1, 7]]).astype(np.int32)
+
+        out = categorical_ordinal_encoder_Job(x)
+
+        # out [[1 0 2]
+        #      [3 1 2]
+        #      [0 3 1]]
+
+    """
     assert hash_precomputed is True
     dtype = input_tensor.dtype
     with flow.scope.namespace(name):

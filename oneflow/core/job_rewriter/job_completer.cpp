@@ -57,6 +57,7 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
     }
     return false;
   };
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   HashMap<const OperatorConf*, HashSet<std::string>> op_conf2ctrl_in_op_names;
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
@@ -82,7 +83,9 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   for (const auto& pair : op_conf2ctrl_in_op_names) {
     OperatorConf mut_mutable_consumer_op_conf(*pair.first);
     for (const auto& fw_bw_op_name : pair.second) {
-      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op_name);
+      if (!IsReachable(fw_bw_op_name, mut_mutable_consumer_op_conf.name())) {
+        mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op_name);
+      }
     }
     job_builder->MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
   }

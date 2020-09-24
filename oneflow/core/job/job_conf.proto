@@ -90,7 +90,9 @@ message JobConfigProto {
   optional int32 cudnn_conv_force_bwd_filter_algo = 204;
   optional bool cudnn_conv_heuristic_search_algo = 205 [default = true];
   optional bool cudnn_conv_use_deterministic_algo_only = 206 [default = false];
-  
+  optional bool enable_cudnn_fused_normalization_add_relu = 207;
+  optional bool enable_fuse_add_to_output = 208 [default = false];
+
   optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
   optional bool enable_inplace_in_reduce_struct = 302 [default = true];

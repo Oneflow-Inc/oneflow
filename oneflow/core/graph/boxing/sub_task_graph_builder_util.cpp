@@ -98,7 +98,7 @@ bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
 }
 
 bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const ErrorProto& error) {
-  return error.has_boxing_error() && error.boxing_error() == BoxingError::kNotSupported;
+  return error.has_boxing_not_supported_error();
 }
 
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {

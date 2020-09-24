@@ -7,7 +7,6 @@ include(protobuf)
 include(googletest)
 include(gflags)
 include(glog)
-include(grpc)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
@@ -15,16 +14,16 @@ include(cocoapi)
 include(half)
 include(re2)
 include(json)
-include(pybind11)
+include(absl)
+include(cares)
+include(openssl)
+include(grpc)
 
 if (WITH_XLA)
   include(tensorflow)
 endif()
 
 if (WITH_TENSORRT)
-  if (NOT WITH_XLA)
-    include(absl)
-  endif()
   include(tensorrt)
 endif()
 
@@ -131,7 +130,9 @@ set(oneflow_third_party_libs
     ${LIBJPEG_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
     ${Python_LIBRARIES}
-    pybind11::embed
+    ${CARES_STATIC_LIBRARIES}
+    ${ABSL_STATIC_LIBRARIES}
+    ${OPENSSL_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -187,6 +188,9 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${COCOAPI_INCLUDE_DIR}
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
+    ${ABSL_INCLUDE_DIR}
+    ${CARES_INCLUDE_DIR}
+    ${OPENSSL_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)
@@ -237,13 +241,11 @@ include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})
 
 if(WITH_XLA)
   list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies tensorflow_symlink_headers)
   list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
 endif()
 
 if(WITH_TENSORRT)
-  if (NOT WITH_XLA)
-    list(APPEND oneflow_third_party_libs ${ABSL_LIBRARIES})
-  endif()
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 

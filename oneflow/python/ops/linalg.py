@@ -35,8 +35,45 @@ def matmul(
     transpose_b: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""
-    Analogous to `tf.linalg.matmul <https://www.tensorflow.org/api_docs/python/tf/linalg/matmul>`_
+    r"""This operator applies matrix multiplication to two Blobs. 
+
+    Args:
+        a (remote_blob_util.BlobDef): A Blob
+        b (remote_blob_util.BlobDef): A Blob
+        transpose_a (bool, optional): Whether to transpose A Blob. Defaults to False.
+        transpose_b (bool, optional): Whether to transpose B Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def matmul_Job(A: tp.Numpy.Placeholder((3, 3)),
+                    B: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.linalg.matmul(A, B)
+
+
+        A = np.array([[1, 0, 0],
+                    [0, 1, 1],
+                    [0, 0, 1]]).astype(np.float32)
+        B = np.array([[3, 4, 5],
+                    [6, 7, 8],
+                    [9, 10, 11]]).astype(np.float32)
+        out = matmul_Job(A, B)
+
+        # output [[ 3.  4.  5.]
+        #         [15. 17. 19.]
+        #         [ 9. 10. 11.]]
 
     """
     assert len(a.shape) == len(b.shape)

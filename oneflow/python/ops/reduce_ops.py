@@ -71,17 +71,39 @@ def reduce_sum(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes the sum of elements across dimensions of a tensor.
+    """This operator computes the sum of elements across dimensions of a tensor
 
     Args:
-        input_tensor: A `Blob`.
-        axis: The dimensions to reduce. If None (by default), reduces all dimensions.
-            Must be a int or a list/tuple of int which must be in the range
-            [-len(input_tensor.shape), len(input_tensor.shape))
-        keepdims: If true, reduced dimensions will be kept with length 1.
-        name: A name for the operator.
+        input_tensor (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the sum value is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`.
+        remote_blob_util.BlobDef: The result of sum on the specified axis of input Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_sum_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.math.reduce_sum(x, axis=1, keepdims=True)
+
+
+        x = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).astype(np.float32)
+        out = reduce_sum_Job(x)
+
+        # out [[ 6.]
+        #      [15.]
+        #      [24.]]
+
     """
     name = _gen_unique_name_if_need(name, "ReduceSum_")
 
@@ -108,6 +130,44 @@ def reduce_any(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the `logical or` of input Blob along the specified axis
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the logical and value is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of logical or on the specified axis of input Blob
+
+    Note: 
+
+        The input Blob dtype is int8
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_any_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int8)
+        ) -> tp.Numpy:
+            return flow.math.reduce_any(x, axis=1, keepdims=True)
+
+
+        x = np.array([[1, 0, 0], [0, 0, 0], [1, 0, 1]]).astype(np.int8)
+        out = reduce_any_Job(x)
+
+        # out [[1]
+        #      [0]
+        #      [1]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceAny_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -122,6 +182,40 @@ def reduce_min(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the minimum value of input Blob along the specified axis
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the minimum value is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of minimum value on the specified axis of input Blob
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_min_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.math.reduce_min(x, axis=1, keepdims=True)
+
+
+        x = np.array([[2, 1, 3], [5, 3, 6], [7, 4, 9]]).astype(np.float32)
+        out = reduce_min_Job(x)
+
+        # out [[1.]
+        #      [3.]
+        #      [4.]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceMin_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -136,6 +230,40 @@ def reduce_max(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the maximum value of input Blob along the specified axis
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the maximum value is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of maximum value on the specified axis of input Blob
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_max_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.math.reduce_max(x, axis=1, keepdims=True)
+
+
+        x = np.array([[2, 1, 4], [5, 3, 7], [7, 4, 9]]).astype(np.float32)
+        out = reduce_max_Job(x)
+        
+        # out [[4.]
+        #      [7.]
+        #      [9.]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceMax_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -150,6 +278,40 @@ def reduce_prod(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the product of input Blob along the specified axis
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the product is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of product value on the specified axis of input Blob
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_product_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.math.reduce_prod(x, axis=1, keepdims=True)
+
+
+        x = np.array([[1, 2, 3], [3, 4, 5], [6, 3, 2]]).astype(np.float32)
+        out = reduce_product_Job(x)
+
+        # out [[ 6.]
+        #      [60.]
+        #      [36.]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceProd_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -164,6 +326,44 @@ def reduce_all(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the `logical and` of input Blob along the specified axis
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the logical and value is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of logical and value on the specified axis of input Blob
+    
+    Note: 
+
+        The input Blob dtype is int8
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_all_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int8)
+        ) -> tp.Numpy:
+            return flow.math.reduce_all(x, axis=1, keepdims=True)
+
+
+        x = np.array([[1, 0, 0], [0, 0, 0], [1, 1, 1]]).astype(np.int8)
+        out = reduce_all_Job(x)
+
+        # out [[0]
+        #      [0]
+        #      [1]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceAll_")
     axis = _check_axis(axis, x.shape)
     if len(axis) == 0:
@@ -178,6 +378,46 @@ def reduce_euclidean_norm(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator computes the Euclidean norm of input Blob along the specified axis
+
+    The equation is: 
+
+    .. math:: 
+
+        out=\sqrt{\sum_{t=0}^{n} x_{t}^2}
+
+    Args:
+        input_tensor (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the Euclidean norm is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of Euclidean norm on the specified axis of input Blob
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_euclidean_norm_Job(x: tp.Numpy.Placeholder((3, 2))
+        ) -> tp.Numpy:
+            return flow.math.reduce_euclidean_norm(x, axis=1, keepdims=True)
+
+
+        x = np.array([[3, 4], [5, 12], [8, 15]]).astype(np.float32)
+        out = reduce_euclidean_norm_Job(x)
+
+        # out [[ 5.]
+        #      [13.]
+        #      [17.]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceEuclideanNorm_")
     return flow.math.sqrt(
         flow.math.reduce_sum(
@@ -197,6 +437,47 @@ def reduce_logsumexp(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator computes the log of exponential sum of input Blob along the specified axis
+
+
+    The equation is: 
+
+    .. math:: 
+
+        out = log(\sum_{t=0}^{t=n} e^{x_{t}})
+
+    Args:
+        input_tensor (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the log of exponential sum is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of log of exponential sum on the specified axis of input Blob
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_logsumexp_Job(x: tp.Numpy.Placeholder((3, 2))
+        ) -> tp.Numpy:
+            return flow.math.reduce_logsumexp(x, axis=1, keepdims=True)
+
+
+        x = np.array([[0, 0], [1, 1], [2, 2]]).astype(np.float32)
+        out = reduce_logsumexp_Job(x)
+
+        # out [[0.6931472]
+        #      [1.6931472]
+        #      [2.6931472]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceLogSumExp_")
     axis = _check_axis(axis, input_tensor.shape)
     return flow.math.log(
@@ -217,6 +498,46 @@ def reduce_std(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator computes the standard deviation of input Blob along the specified axis
+
+    The equation is: 
+
+    .. math:: 
+
+        out=\sqrt{\frac{1}{n}*\sum_{i=1}^{n}(x_i-mean)^2}
+    
+    Args:
+        input_tensor (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the standard deviation is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of standard deviation on the specified axis of input Blob
+
+    For example: 
+
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_std_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.math.reduce_std(x, axis=1, keepdims=True)
+
+
+        x = np.array([[0, 5, 10], [5, 5, 5], [12, 3, 0]]).astype(np.float32)
+        out = reduce_std_Job(x)
+
+        # out [[4.0824833]
+        #      [0.       ]
+        #      [5.0990195]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceStd_")
     axis = _check_axis(axis, input_tensor.shape)
     if isinstance(axis, list) and len(axis) == 0:
@@ -238,6 +559,46 @@ def reduce_variance(
     keepdims: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator computes the variance of input Blob along the specified axis
+
+    The equation is: 
+
+    .. math:: 
+
+        out=\frac{1}{n}*\sum_{i=1}^{n}(x_i-mean)^2
+
+    Args:
+        input_tensor (remote_blob_util.BlobDef): A Blob
+        axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the variance is computed. Defaults to None.
+        keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result of variance on the specified axis of input Blob
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reduce_variance_Job(x: tp.Numpy.Placeholder((3, 3))
+        ) -> tp.Numpy:
+            return flow.math.reduce_variance(x, axis=1, keepdims=True)
+
+
+        x = np.array([[0, 5, 10], [5, 5, 5], [12, 3, 0]]).astype(np.float32)
+        out = reduce_variance_Job(x)
+
+        # out [[16.666668]
+        #      [ 0.      ]
+        #      [26.      ]]
+
+    """
     name = _gen_unique_name_if_need(name, "ReduceVariance_")
     axis = _check_axis(axis, input_tensor.shape)
     if isinstance(axis, list) and len(axis) == 0:

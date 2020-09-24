@@ -71,13 +71,11 @@ const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_
 }
 
 bool UserOpConfWrapper::has_input(const std::string& arg_name, int32_t index) const {
-  auto it = op_conf_.user_conf().input().find(arg_name);
-  return (it != op_conf_.user_conf().input().end());
+  return input_size(arg_name) > index;
 }
 
 bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) const {
-  auto it = op_conf_.user_conf().output().find(arg_name);
-  return (it != op_conf_.user_conf().output().end());
+  return output_size(arg_name) > index;
 }
 
 int32_t UserOpConfWrapper::input_size(const std::string& arg_name) const {
@@ -214,9 +212,15 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Output(const std::string& ar
   return *this;
 }
 
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::ScopeSymbolId(int64_t scope_symbol_id) {
+  scope_symbol_id_.set_value(scope_symbol_id);
+  return *this;
+}
+
 UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   OperatorConf op_conf;
   op_conf.set_name(op_name_);
+  if (scope_symbol_id_.has_value()) { op_conf.set_scope_symbol_id(scope_symbol_id_.value()); }
   UserOpConf* user_conf = op_conf.mutable_user_conf();
   user_conf->set_op_type_name(op_type_name_);
   auto GenArgs = [&](const HashMap<std::string, std::vector<std::string>>& src,
