@@ -63,7 +63,7 @@ __global__ void LayerNormImpl(const int num_instances, const int norm_size, cons
   __shared__ ComputeType row_reduce_inv_var;
   typedef cub::BlockReduce<ComputeType, kLayerNormGpuBlockSize> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
-  ComputeType val_scale = 1.0 / norm_size;
+  ComputeType val_scale = ComputeType(1.0) / static_cast<ComputeType>(norm_size);
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * norm_size;
     const T* in_row = x + row_offset;
@@ -86,7 +86,7 @@ __global__ void LayerNormImpl(const int num_instances, const int norm_size, cons
       mean[row] = mean_val;
       ComputeType variance_val =
           max(block_square_sum * val_scale - mean_val * mean_val, ComputeType(0));
-      ComputeType inv_var_val = rsqrt(variance_val + epsilon);
+      ComputeType inv_var_val = rsqrt(variance_val + static_cast<ComputeType>(epsilon));
       row_reduce_inv_var = inv_var_val;
       inv_variance[row] = inv_var_val;
     }
