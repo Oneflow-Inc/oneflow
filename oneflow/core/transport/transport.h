@@ -44,6 +44,15 @@ struct TransportStatus {
         dst_machine_id(-1) {}
 };
 
+struct CopyStatusOnLocalMachine {
+  const uint64_t token;
+  void* ptr;
+  std::size_t size;
+  std::function<void()> callback;
+  CopyStatusOnLocalMachine(uint64_t tk, void* p, std::size_t s, std::function<void()> cb)
+      : token(tk), ptr(p), size(s), callback(cb) {}
+};
+
 class Transport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Transport);
@@ -51,7 +60,7 @@ class Transport {
 
   void Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
             std::function<void()> callback);
-  void Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
+  void Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t max_size,
                std::function<void()> callback);
   void EnqueueTransportMsg(const TransportMsg& msg);
 
@@ -60,6 +69,10 @@ class Transport {
   void HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg& msg);
   void HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg& msg);
   void DoRead(uint64_t token);
+  void SendToLocalMachine(uint64_t token, void* ptr, std::size_t size,
+                          std::function<void()> callback);
+  void RecvFromLocalMachine(uint64_t token, void* ptr, std::size_t max_size,
+                            std::function<void()> callback);
 
   // TODO(chengcheng)
   // Global<Transport> has a dependency on Global<CommNet> which should be initialized first.
@@ -67,6 +80,10 @@ class Transport {
   Transport();
   std::mutex status_lock_;
   HashMap<uint64_t, TransportStatus> token2status_;
+
+  // for local copy
+  std::mutex local_copy_lock_;
+  HashMap<uint64_t, CopyStatusOnLocalMachine> token2local_copy_status_;
 
   int64_t this_machine_id_;
   void* read_id_;
@@ -76,8 +93,8 @@ class Transport {
   std::thread msg_poller_;
 
   // unused now
-  Channel<std::function<void()>> callback_channel_;
-  std::thread callback_poller_;
+  // Channel<std::function<void()>> callback_channel_;
+  // std::thread callback_poller_;
 };
 
 }  // namespace oneflow

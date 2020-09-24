@@ -109,6 +109,8 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
     } else {
       recv_before_send = true;
       stat = &(it->second);
+      CHECK_GE(stat->size, msg.size);  // NOTE(chengcheng): Recv size may larger than Send size.
+      stat->size = msg.size;
     }
 
     stat->is_send_ready = true;
@@ -120,7 +122,6 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
   if (recv_before_send) {
     // it means the local machine has call Transport::Receive() before this handler
     // check status
-    CHECK_EQ(stat->size, msg.size);
     CHECK_EQ(stat->src_machine_id, msg.src_machine_id);
     CHECK_EQ(stat->dst_machine_id, msg.dst_machine_id);
 
@@ -168,6 +169,14 @@ void Transport::HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg&
 
 void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
                      std::function<void()> callback) {
+  void* mut_ptr = const_cast<void*>(ptr);
+
+  // handler for send to local machine
+  if (dst_machine_id == this_machine_id_) {
+    SendToLocalMachine(token, mut_ptr, size, callback);
+    return;
+  }
+
   // prepare transport status for this token.
   // store callback.
   TransportStatus* stat = nullptr;
@@ -178,7 +187,6 @@ void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
     token2status_.emplace(token, TransportStatus(token));
     stat = &(token2status_.at(token));
   }
-  void* mut_ptr = const_cast<void*>(ptr);
   stat->callback = callback;
   stat->is_send_ready = true;
   stat->is_recv_ready = false;
@@ -200,8 +208,14 @@ void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, st
   comm_net_->SendTransportMsg(msg.dst_machine_id, msg);
 }
 
-void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t size,
+void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::size_t max_size,
                         std::function<void()> callback) {
+  // handler for receive from local machine
+  if (src_machine_id == this_machine_id_) {
+    RecvFromLocalMachine(token, ptr, max_size, callback);
+    return;
+  }
+
   // prepare transport status for this token.
   // store callback.
   TransportStatus* stat = nullptr;
@@ -218,7 +232,7 @@ void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
       // init stat
       // These three members must be initialized in the block protected by lock
       //  to prevent multithreaded access bugs
-      stat->size = size;
+      stat->size = max_size;
       stat->src_machine_id = src_machine_id;
       stat->dst_machine_id = this_machine_id_;
     } else {
@@ -230,13 +244,14 @@ void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
     stat->is_recv_ready = true;
     CHECK(stat->dst_mem_token == nullptr);
     // dst_mem_token MUST init in the block protected by lock
-    stat->dst_mem_token = comm_net_->RegisterMemory(ptr, size);
+    stat->dst_mem_token = comm_net_->RegisterMemory(ptr, stat->size);
   }
 
   if (send_before_recv) {
     // it means the source machine has send message to this machine
     // check status
-    CHECK_EQ(stat->size, size);
+    CHECK_LE(stat->size,
+             max_size);  // NOTE(chengcheng): Receive max_size may larger than Send size.
     CHECK_EQ(stat->src_machine_id, src_machine_id);
     CHECK_EQ(stat->dst_machine_id, this_machine_id_);
 
@@ -294,6 +309,49 @@ void Transport::DoRead(uint64_t token) {
       token2status_.erase(it);
     }
   });
+}
+
+void Transport::SendToLocalMachine(uint64_t token, void* ptr, std::size_t size,
+                                   std::function<void()> callback) {
+  std::unique_lock<std::mutex> lock(local_copy_lock_);
+  auto it = token2local_copy_status_.find(token);
+  if (it == token2local_copy_status_.end()) {
+    // init local copy status
+    token2local_copy_status_.emplace(token, CopyStatusOnLocalMachine(token, ptr, size, callback));
+  } else {
+    // do copy
+    CHECK(size <= it->second.size);  // NOTE(chengcheng): Recv size may larger than Send size.
+    if (ptr != it->second.ptr) { memcpy(it->second.ptr, ptr, size); }
+
+    // do callback
+    callback();
+    it->second.callback();
+
+    // erase local copy status
+    token2local_copy_status_.erase(it);
+  }
+}
+
+void Transport::RecvFromLocalMachine(uint64_t token, void* ptr, std::size_t max_size,
+                                     std::function<void()> callback) {
+  std::unique_lock<std::mutex> lock(local_copy_lock_);
+  auto it = token2local_copy_status_.find(token);
+  if (it == token2local_copy_status_.end()) {
+    // init local copy status
+    token2local_copy_status_.emplace(token,
+                                     CopyStatusOnLocalMachine(token, ptr, max_size, callback));
+  } else {
+    // do copy
+    CHECK(max_size >= it->second.size);  // NOTE(chengcheng): Recv size may larger than Send size.
+    if (ptr != it->second.ptr) { memcpy(ptr, it->second.ptr, it->second.size); }
+
+    // do callback
+    callback();
+    it->second.callback();
+
+    // erase local copy status
+    token2local_copy_status_.erase(it);
+  }
 }
 
 }  // namespace oneflow
