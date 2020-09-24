@@ -137,8 +137,18 @@ void Runtime::DeleteAllGlobal() {
   Global<MemoryAllocator>::Delete();
   Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   // should be called after Global<Transport>::Delete()
-  Global<EpollCommNet>::Delete();
-  Global<CommNet>::Delete();
+  if (Global<EpollCommNet>::Get() == static_cast<EpollCommNet*>(Global<CommNet>::Get())) {
+    // it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
+    // so the Global<CommNet> and Global<EpollCommNet> are same global object
+    // then only need delete once.
+    Global<EpollCommNet>::Delete();
+  } else {
+    // it means that Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
+    // so the Global<CommNet> and Global<EpollCommNet> are NOT same global object
+    // then need delete both.
+    Global<EpollCommNet>::Delete();
+    Global<CommNet>::Delete();
+  }
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
   Global<summary::EventsWriter>::Delete();
