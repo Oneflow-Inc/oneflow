@@ -157,19 +157,27 @@ Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_des
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
-  std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
+  std::string machine_id = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
+  std::string device_id = std::to_string(CHECK_JUST(DeviceId4ParallelId(parallel_id)));
   parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   parallel_conf.add_device_name(machine_id + ":" + device_id);
   return parallel_conf;
 }
 
-int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
-  return parallel_id2machine_id_.at(parallel_id);
+Maybe<int64_t> ParallelDesc::MachineId4ParallelId(int64_t parallel_id) const {
+  const auto& iter = parallel_id2machine_id_.find(parallel_id);
+  CHECK_OR_RETURN(iter != parallel_id2machine_id_.end())
+      << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
+      << parallel_conf().DebugString();
+  return iter->second;
 }
 
-int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
-  return parallel_id2device_id_.at(parallel_id);
+Maybe<int64_t> ParallelDesc::DeviceId4ParallelId(int64_t parallel_id) const {
+  const auto& iter = parallel_id2device_id_.find(parallel_id);
+  CHECK_OR_RETURN(iter != parallel_id2device_id_.end())
+      << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
+      << parallel_conf().DebugString();
+  return iter->second;
 }
 
 bool ParallelDesc::ContainingMachineId(int64_t machine_id) const {
