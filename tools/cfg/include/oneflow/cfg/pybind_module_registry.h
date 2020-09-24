@@ -24,17 +24,17 @@ class Pybind11ModuleRegistry {
 } // namespace oneflow
 
 
-#define ONEFLOW_PYBIND11_MODULE(module_path, m)                    \
-  static void OneflowPythonModule##__LINE__(pybind11::module&);    \
-  namespace {                                                      \
-  struct RegistryInit {                                            \
-    RegistryInit() {                                               \
-        ::oneflow::cfg::Pybind11ModuleRegistry()                   \
-          .Register(module_path, &OneflowPythonModule##__LINE__);  \
-    }                                                              \
-  };                                                               \
-  RegistryInit registry_init;                                      \
-  }                                                                \
-  static void OneflowPythonModule##__LINE__(pybind11::module& m)
+#define ONEFLOW_CFG_PYBIND11_MODULE(module_path, m)                  \
+  static void OneflowCfgPythonModule##__LINE__(pybind11::module&);   \
+  namespace {                                                        \
+  struct CfgRegistryInit {                                           \
+    CfgRegistryInit() {                                              \
+        ::oneflow::cfg::Pybind11ModuleRegistry()                     \
+          .Register(module_path, &OneflowCfgPythonModule##__LINE__); \
+    }                                                                \
+  };                                                                 \
+  CfgRegistryInit cfg_registry_init;                                 \
+  }                                                                  \
+  static void OneflowCfgPythonModule##__LINE__(pybind11::module& m)
 
 #endif // CFG_PYBIND_REGISTRY_H_

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/cfg/pybind_module_registry.h"
 
-// namespace py = pybind11;
+namespace py = pybind11;
 
 namespace oneflow {
 

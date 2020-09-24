@@ -16,11 +16,7 @@ class ProtoReflectionUtil:
         return filter(lambda x: len(x) > 0, module.package.split("."))
 
     def module_package_namespace(self, module):
-        package_list = self.module_package_list(module)
-        namespace_str = str()
-        for elem in package_list:
-            namespace_str = namespace_str + '::' + elem
-        return namespace_str
+        return '::' + module.package.replace('.', '::')
     
     def module_cfg_header_name(self, module):
         return module.name[0:-5] + "cfg.h"
@@ -28,27 +24,16 @@ class ProtoReflectionUtil:
     def module_proto_header_name(self, module):
         return module.name[0:-5] + "pb.h"
 
-    def module_cfg_convert_header_name(self, module):
-        return module.name[0:-5] + "cfg.proto.convert.h"
-
     def module_get_python_module_path(self, module):
         return module.name[0:-6].replace("/", ".")
 
     def module_header_macro_lock(self, module):
         return _ToValidVarName("CFG_%s_" % self.module_cfg_header_name(module).upper())
 
-    def module_proto_convert_header_macro_lock(self, module):
-        return _ToValidVarName(
-            "CFG_%s_" % self.module_cfg_convert_header_name(module).upper()
-        )
-
     def module_enum_types(self, module):
         return module.enum_types_by_name.values()
-
-    def module_message_types(self, module):
-        return module.message_types_by_name.values()
     
-    def module_nest_message_types(self, module):
+    def module_nested_message_types(self, module):
         def FlattenMessageTypes(message_types):
             for msg_type in message_types:
                 for nested_msg_type in FlattenMessageTypes(msg_type.nested_types):
@@ -84,12 +69,6 @@ class ProtoReflectionUtil:
     def message_type_fields(self, cls):
         return cls.fields
 
-    def cls_has_oneofs(self, cls):
-        return self.cls_oneofs_size(cls) != 0
-
-    def cls_oneofs_size(self, cls):
-        return len(cls.oneofs)
-
     def message_type_oneofs(self, cls):
         return cls.oneofs
 
@@ -108,17 +87,11 @@ class ProtoReflectionUtil:
     def oneof_type_fields(self, oneof):
         return oneof.fields
 
-    def oneof_type_field_name(self, field):
-        return field.name
-
     def oneof_type_field_enum_value_name(self, field):
         return "k" + self._underline_name_to_camel(field.name)
 
     def oneof_type_field_enum_value_number(self, field):
         return field.number
-
-    def field_has_oneof_label(self, field):
-        return field.containing_oneof is not None
 
     def field_oneof_name(self, field):
         assert self.field_has_oneof_label(field)
@@ -140,7 +113,10 @@ class ProtoReflectionUtil:
             field
         )
 
-    def field_is_map(self, field):
+    def field_has_oneof_label(self, field):
+        return field.containing_oneof is not None
+    
+    def field_has_map_label(self, field):
         return field.label == field.LABEL_REPEATED and self._field_is_map_entry(field)
 
     def field_in_oneof(self, field):

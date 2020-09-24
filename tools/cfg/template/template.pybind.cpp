@@ -3,7 +3,7 @@
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "{{ util.module_cfg_header_name(module) }}"
 
-ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
+ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% if util.module_has_package(module) %}
   using namespace {{ "::".join(util.module_package_list(module)) }}::cfg;
 {% else %}
@@ -20,7 +20,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% endfor %}{# enum_values #}
   }
 {% endfor %}{# enum_types #}
-{% for cls in util.module_nest_message_types(module) %}
+{% for cls in util.module_nested_message_types(module) %}
 {% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated python class registered for each repeated field type #}
@@ -60,7 +60,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
   }
 
 {# map begin #}
-{% elif util.field_is_map(field) and util.add_visited_map_field_type_name(field) %}
+{% elif util.field_has_map_label(field) and util.add_visited_map_field_type_name(field) %}
   {
     pybind11::class_<Const{{ util.field_map_container_name(field) }}, std::shared_ptr<Const{{ util.field_map_container_name(field) }}>> registry(m, "Const{{ util.field_map_container_name(field) }}");
     registry.def("__len__", &Const{{ util.field_map_container_name(field) }}::size);
@@ -105,7 +105,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% endfor %}{# field #}
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
-{% for cls in util.module_nest_message_types(module) %}
+{% for cls in util.module_nested_message_types(module) %}
 {% if not util.class_is_map_entry(cls) %}
   {
     pybind11::class_<Const{{ util.class_name(cls) }}, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
@@ -141,7 +141,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
     registry.def("{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% endif %}{# field message type #}
 {# map begin #}
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
     registry.def("{{ util.field_name(field) }}_size", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
     registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_container_name(field) }}> (Const{{ util.class_name(cls) }}::*)() const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 
@@ -211,7 +211,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
     registry.def("set_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% endif %}{# field_message_type #}
 {# map begin #}
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
     registry.def("{{ util.field_name(field) }}_size", &{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
     registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_container_name(field) }}> ({{ util.class_name(cls) }}::*)() const)&{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
     registry.def("clear_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});

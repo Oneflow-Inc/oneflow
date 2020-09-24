@@ -42,7 +42,7 @@ inline {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) 
 }
 {% endfor %}{# enm #}
 
-{% for cls in util.module_nest_message_types(module) %}
+{% for cls in util.module_nested_message_types(module) %}
 {% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated class defined for each repeated field type #}
@@ -104,7 +104,7 @@ class {{ util.field_repeated_container_name(field) }} final : public Const{{ uti
 };
 {% endif  %}{# repeated #}
 {# map begin #}
-{% if util.field_is_map(field) and util.add_visited_map_field_type_name(field) %}
+{% if util.field_has_map_label(field) and util.add_visited_map_field_type_name(field) %}
 
 class {{ util.field_map_container_name(field) }};
 // inheritance is helpful for avoid container iterator boilerplate 
@@ -219,7 +219,7 @@ class _{{ util.class_name(cls) }}_ {
       }
 {% endif %}{# field_type #}
     }
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
     // map field : {{ util.field_name(field) }}
     if (!proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}().empty()) {
       {{ util.field_map_container_name(field) }}&  mut_{{ util.field_name(field) }} = *mutable_{{ util.field_name(field) }}();
@@ -294,7 +294,7 @@ class _{{ util.class_name(cls) }}_ {
       }
 {% endif %}{# message_type #}
     }
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
     // map field : {{ util.field_name(field) }}
     if (!{{ util.field_name(field) }}().empty()) {
       auto& mut_{{ util.field_name(field) }} = *(proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}());
@@ -359,7 +359,7 @@ class _{{ util.class_name(cls) }}_ {
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}
     clear_{{ util.field_name(field) }}();
-{% elif util.field_has_repeated_label(field) or util.field_is_map(field) %}
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
     clear_{{ util.field_name(field) }}();
 {% endif %}
 {% endfor %}
@@ -379,7 +379,7 @@ class _{{ util.class_name(cls) }}_ {
     } else {
       clear_{{ util.field_name(field) }}();
     }
-{% elif util.field_has_repeated_label(field) or util.field_is_map(field) %}
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
     mutable_{{ util.field_name(field) }}()->CopyFrom(other.{{ util.field_name(field) }}());
 {% endif %}
 {% endfor %}
@@ -517,7 +517,7 @@ class _{{ util.class_name(cls) }}_ {
   }
 {% endif %}{# field string type #}
 {% endif %}{# field message type #}
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
  public:
   ::std::size_t {{ util.field_name(field) }}_size() const {
     return {{ util.field_name(field) }}_.size();
@@ -616,7 +616,7 @@ class _{{ util.class_name(cls) }}_ {
     } else if (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
       return {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() ? -1 : 1;
     }
-{% elif util.field_has_repeated_label(field) or util.field_is_map(field) %}
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
     if (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
       return {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() ? -1 : 1;
     }
@@ -650,7 +650,7 @@ class _{{ util.class_name(cls) }}_ {
         {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
       return false;
     }
-{% elif util.field_has_repeated_label(field) or util.field_is_map(field) %}
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
     if (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
       return false;
     }
@@ -686,7 +686,7 @@ class _{{ util.class_name(cls) }}_ {
     if (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
       return {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}();
     }
-{% elif util.field_has_repeated_label(field) or util.field_is_map(field) %}
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
     if (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
       return {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}();
     }
@@ -791,7 +791,7 @@ class Const{{ util.class_name(cls) }} {
   }
 {% endif %}{# field message type #}
 {# map begin#}
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
   // map field {{ util.field_name(field) }}
  public:
   ::std::size_t {{ util.field_name(field) }}_size() const {
@@ -960,7 +960,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
 {% endif %}{# field string type #}
 {% endif %}{# field message type #}
 {# map begin#}
-{% elif util.field_is_map(field) %}
+{% elif util.field_has_map_label(field) %}
   // repeated field {{ util.field_name(field) }}
  public:
   void clear_{{ util.field_name(field) }}() {
