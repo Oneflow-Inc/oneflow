@@ -242,7 +242,6 @@ class _{{ util.class_name(cls) }}_ {
 {% for field in util.oneof_type_fields(oneof) %}
       case {{ util.oneof_type_field_enum_value_name(field) }}: {
 {% if util.field_is_message_type(field) %}
-        // *mutable_{{ util.field_name(field) }}() = {{ util.module_package_namespace(module) }}::cfg::{{ util.field_type_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
         *mutable_{{ util.field_name(field) }}() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
 {% elif util.field_is_enum_type(field) %}
         set_{{ util.field_name(field) }}(Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
@@ -338,11 +337,10 @@ class _{{ util.class_name(cls) }}_ {
 {% endfor %}{# oneofs #}
   }
 
-  ::std::string DebugString() {
+  ::std::string DebugString() const {
     {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }} proto_{{ util.class_name(cls).lower() }};
     this->ToProto(&proto_{{ util.class_name(cls).lower() }});
     return proto_{{ util.class_name(cls).lower() }}.DebugString();
-    // return "hahaha";
   }
 
 {% for oneof in util.message_type_oneofs(cls) %}
@@ -730,7 +728,7 @@ class Const{{ util.class_name(cls) }} {
     __SharedPtrOrDefault__()->ToProto(proto_{{ util.class_name(cls).lower() }});
   }
   
-  ::std::string DebugString() {
+  ::std::string DebugString() const {
     return __SharedPtrOrDefault__()->DebugString();
   }
 
