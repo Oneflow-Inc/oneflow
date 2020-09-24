@@ -200,15 +200,15 @@ class ProtoReflectionUtil:
         return field.message_type is not None
 
     def field_message_type_name(self, field):
-        package = field.file.package
+        package = field.message_type.file.package
         return (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
     
     def field_message_type_name_with_cfg_namespace(self, field):
-        package = field.file.package
+        package = field.message_type.file.package
         return '::' + package.replace('.', '::') + '::cfg::' + (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
 
     def field_message_type_name_with_proto_namespace(self, field):
-        package = field.file.package
+        package = field.message_type.file.package
         return '::' + package.replace('.', '::') + '::' + (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
 
     def field_repeated_container_name(self, field):
