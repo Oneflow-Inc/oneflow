@@ -53,78 +53,86 @@ void ReceiveBlobInstructionType::Compute(vm::Instruction* instruction) const {
 }
 
 Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
+  FlatMsgView<SendBlobInstruction> args(instruction->instr_msg().operand());
+  CHECK_EQ_OR_RETURN(args->src_blob_size(), args->header_token_size());
+  CHECK_EQ_OR_RETURN(args->body_token_size(), args->header_token_size());
   RefCntType* ref_cnt = nullptr;
   {
     char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
     ref_cnt = reinterpret_cast<RefCntType*>(data_ptr);
-    *ref_cnt = 2;
+    *ref_cnt = 2 * args->src_blob_size();
   }
-  FlatMsgView<SendBlobInstruction> args(instruction->instr_msg().operand());
+  // `ref_cnt` is safe to be captured before `Callback` finished.
+  auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
   // Streams each take responsibility for destination machines.
   // See TransportStreamType::MakeTransportStreamType for more details.
   int64_t dst_machine_id = instruction->stream().device_id();
   int64_t this_machine_id = instruction->stream().machine_id();
-  const char* header_mem_ptr = nullptr;
-  std::size_t header_size = 0;
-  const char* body_mem_ptr = nullptr;
-  std::size_t body_size = 0;
-  {
-    const auto* src_blob_operand = instruction->operand_type(args->src_blob(0));
-    CHECK_NOTNULL_OR_RETURN(src_blob_operand)
-        << Error::RwMutexedObjectNotFoundError()
-        << "src_blob: " << args->src_blob(0).logical_object_id() << ". "
-        << "Did you forget broadcast the src_blob?";
-    const auto& blob = JUST(src_blob_operand->template Get<BlobObject>())->blob();
-    header_mem_ptr = blob.header_ptr();
-    header_size = blob.blob_desc().ByteSizeOfBlobHeader();
-    body_mem_ptr = blob.dptr<char>();
-    // get actual byte size of blob body
-    body_size = blob.ByteSizeOfBlobBody();
+  FOR_RANGE(int64_t, i, 0, args->src_blob_size()) {
+    const char* header_mem_ptr = nullptr;
+    std::size_t header_size = 0;
+    const char* body_mem_ptr = nullptr;
+    std::size_t body_size = 0;
+    {
+      const auto* src_blob_operand = instruction->operand_type(args->src_blob(i));
+      CHECK_NOTNULL_OR_RETURN(src_blob_operand)
+          << Error::RwMutexedObjectNotFoundError()
+          << "src_blob: " << args->src_blob(i).logical_object_id() << ". "
+          << "Did you forget broadcast the src_blob?";
+      const auto& blob = JUST(src_blob_operand->template Get<BlobObject>())->blob();
+      header_mem_ptr = blob.header_ptr();
+      header_size = blob.blob_desc().ByteSizeOfBlobHeader();
+      body_mem_ptr = blob.dptr<char>();
+      // get actual byte size of blob body
+      body_size = blob.ByteSizeOfBlobBody();
+    }
+    JUST(Send(this_machine_id, dst_machine_id, args->header_token(i), header_mem_ptr, header_size,
+              Callback));
+    JUST(Send(this_machine_id, dst_machine_id, args->body_token(i), body_mem_ptr, body_size,
+              Callback));
   }
-  // `ref_cnt` is safe to be captured before `Callback` finished.
-  auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
-  JUST(Send(this_machine_id, dst_machine_id, args->header_token(0), header_mem_ptr, header_size,
-            Callback));
-  JUST(Send(this_machine_id, dst_machine_id, args->body_token(0), body_mem_ptr, body_size,
-            Callback));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) const {
+  FlatMsgView<ReceiveBlobInstruction> args(instruction->instr_msg().operand());
+  CHECK_EQ_OR_RETURN(args->dst_blob_size(), args->header_token_size());
+  CHECK_EQ_OR_RETURN(args->body_token_size(), args->header_token_size());
   RefCntType* ref_cnt = nullptr;
   {
     char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
     ref_cnt = reinterpret_cast<RefCntType*>(data_ptr);
-    *ref_cnt = 2;
+    *ref_cnt = 2 * args->dst_blob_size();
   }
-  FlatMsgView<ReceiveBlobInstruction> args(instruction->instr_msg().operand());
+  // `ref_cnt` is safe to be captured before `Callback` finished.
+  auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
   // Streams each take responsibility for source machines.
   // See TransportStreamType::MakeTransportStreamType for more details.
   int64_t src_machine_id = instruction->stream().device_id();
   int64_t this_machine_id = instruction->stream().machine_id();
-  char* header_mem_ptr = nullptr;
-  std::size_t header_size = 0;
-  char* body_mem_ptr = nullptr;
-  std::size_t body_size = 0;
-  {
-    auto* dst_blob_operand = instruction->mut_operand_type(args->dst_blob(0));
-    CHECK_NOTNULL_OR_RETURN(dst_blob_operand)
-        << Error::RwMutexedObjectNotFoundError()
-        << "dst_blob: " << args->dst_blob(0).logical_object_id() << ". "
-        << "Did you forget broadcast the dst_blob?";
-    auto* blob = JUST(dst_blob_operand->template Mut<BlobObject>())->mut_blob();
-    header_mem_ptr = blob->mut_header_ptr();
-    header_size = blob->blob_desc().ByteSizeOfBlobHeader();
-    body_mem_ptr = blob->mut_dptr<char>();
-    // get capacity byte size of blob body
-    body_size = blob->blob_desc().ByteSizeOfBlobBody();
+  FOR_RANGE(int64_t, i, 0, args->dst_blob_size()) {
+    char* header_mem_ptr = nullptr;
+    std::size_t header_size = 0;
+    char* body_mem_ptr = nullptr;
+    std::size_t body_size = 0;
+    {
+      auto* dst_blob_operand = instruction->mut_operand_type(args->dst_blob(i));
+      CHECK_NOTNULL_OR_RETURN(dst_blob_operand)
+          << Error::RwMutexedObjectNotFoundError()
+          << "dst_blob: " << args->dst_blob(i).logical_object_id() << ". "
+          << "Did you forget broadcast the dst_blob?";
+      auto* blob = JUST(dst_blob_operand->template Mut<BlobObject>())->mut_blob();
+      header_mem_ptr = blob->mut_header_ptr();
+      header_size = blob->blob_desc().ByteSizeOfBlobHeader();
+      body_mem_ptr = blob->mut_dptr<char>();
+      // get capacity byte size of blob body
+      body_size = blob->blob_desc().ByteSizeOfBlobBody();
+    }
+    JUST(Receive(src_machine_id, this_machine_id, args->header_token(i), header_mem_ptr,
+                 header_size, Callback));
+    JUST(Receive(src_machine_id, this_machine_id, args->body_token(i), body_mem_ptr, body_size,
+                 Callback));
   }
-  // `ref_cnt` is safe to be captured before `Callback` finished.
-  auto Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
-  JUST(Receive(src_machine_id, this_machine_id, args->header_token(0), header_mem_ptr, header_size,
-               Callback));
-  JUST(Receive(src_machine_id, this_machine_id, args->body_token(0), body_mem_ptr, body_size,
-               Callback));
   return Maybe<void>::Ok();
 }
 
