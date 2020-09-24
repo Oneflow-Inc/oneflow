@@ -168,6 +168,19 @@ def test_broadcast_to_compatible_with_grad(test_case):
     test_case.assertTrue(np.array_equal(exp_ret, ret))
 
 
+def test_broadcast_to_compatible_with_grad_case_2(test_case):
+    x = np.random.standard_normal((7, 1, 4)).astype(np.float32)
+    compatible_shape = [[1, 7, 5, 4]]
+
+    def compare_dy(dx_blob):
+        dx = np.ones([7, 5, 4], dtype=np.float32).sum(axis=1).reshape(x.shape)
+        test_case.assertTrue(np.array_equal(dx, dx_blob.numpy()))
+
+    ret = _of_broadcast_to_compatible_with_grad(x, compatible_shape, compare_dy)
+    exp_ret = np.broadcast_to(x, [1, 7, 5, 4])
+    test_case.assertTrue(np.array_equal(exp_ret, ret))
+
+
 def test_broadcast_to_compatible_with_no_broadcast(test_case):
     x = np.random.standard_normal((9, 9, 6)).astype(np.float32)
     x_static_shape = (10, 9, 6)
