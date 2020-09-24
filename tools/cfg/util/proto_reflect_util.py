@@ -16,8 +16,8 @@ class ProtoReflectionUtil:
         return filter(lambda x: len(x) > 0, module.package.split("."))
 
     def module_package_namespace(self, module):
-        return '::' + module.package.replace('.', '::')
-    
+        return "::" + module.package.replace(".", "::")
+
     def module_cfg_header_name(self, module):
         return module.name[0:-5] + "cfg.h"
 
@@ -32,28 +32,32 @@ class ProtoReflectionUtil:
 
     def module_enum_types(self, module):
         return module.enum_types_by_name.values()
-    
+
     def module_nested_message_types(self, module):
         def FlattenMessageTypes(message_types):
             for msg_type in message_types:
                 for nested_msg_type in FlattenMessageTypes(msg_type.nested_types):
                     yield nested_msg_type
                 yield msg_type
-        return [msg_type for msg_type in FlattenMessageTypes(module.message_types_by_name.values())]
+
+        return [
+            msg_type
+            for msg_type in FlattenMessageTypes(module.message_types_by_name.values())
+        ]
 
     def class_name(self, cls):
         package = cls.file.package
-        return (cls.full_name)[len(package) + 1 :].replace('.', '_')
-    
+        return (cls.full_name)[len(package) + 1 :].replace(".", "_")
+
     def class_name_under_line(self, cls):
-        return '_' + self.class_name(cls) + '_'
+        return "_" + self.class_name(cls) + "_"
 
     def class_name_const(self, cls):
-        return 'Const' + self.class_name(cls)
+        return "Const" + self.class_name(cls)
 
     def class_is_map_entry(self, cls):
-        return self.class_name(cls).endswith('Entry')
-    
+        return self.class_name(cls).endswith("Entry")
+
     def enum_name(self, enum):
         return enum.name
 
@@ -115,7 +119,7 @@ class ProtoReflectionUtil:
 
     def field_has_oneof_label(self, field):
         return field.containing_oneof is not None
-    
+
     def field_has_map_label(self, field):
         return field.label == field.LABEL_REPEATED and self._field_is_map_entry(field)
 
@@ -150,9 +154,11 @@ class ProtoReflectionUtil:
 
     def field_map_value_type_name(self, field):
         return self.field_type_name(field.message_type.fields_by_name["value"])
-    
+
     def field_map_value_type_name_with_cfg_namespace(self, field):
-        return self.field_type_name_with_cfg_namespace(field.message_type.fields_by_name["value"])
+        return self.field_type_name_with_cfg_namespace(
+            field.message_type.fields_by_name["value"]
+        )
 
     def field_map_value_type_is_message(self, field):
         return self.field_is_message_type(field.message_type.fields_by_name["value"])
@@ -177,15 +183,25 @@ class ProtoReflectionUtil:
 
     def field_message_type_name(self, field):
         package = field.message_type.file.package
-        return (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
-    
+        return (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+
     def field_message_type_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package
-        return '::' + package.replace('.', '::') + '::cfg::' + (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
+        return (
+            "::"
+            + package.replace(".", "::")
+            + "::cfg::"
+            + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+        )
 
     def field_message_type_name_with_proto_namespace(self, field):
         package = field.message_type.file.package
-        return '::' + package.replace('.', '::') + '::' + (field.message_type.full_name)[len(package) + 1 :].replace('.', '_')
+        return (
+            "::"
+            + package.replace(".", "::")
+            + "::"
+            + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+        )
 
     def field_repeated_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)
@@ -268,12 +284,14 @@ class ProtoReflectionUtil:
         camel_name = ""
         for sub_name in sub_name_list:
             camel_name = camel_name + sub_name[0].upper() + sub_name[1:]
-        
+
         flag = False
         length = len(camel_name)
         for i in range(length):
             if flag and camel_name[i].isalpha():
-                camel_name = camel_name[0 : i] + camel_name[i].upper() + camel_name[i + 1 : ]
+                camel_name = (
+                    camel_name[0:i] + camel_name[i].upper() + camel_name[i + 1 :]
+                )
                 flag = False
             if camel_name[i].isdigit():
                 flag = True
