@@ -71,7 +71,7 @@ void HandlerOfFirstMachine(uint64_t first_token, size_t test_num,
       Global<Transport>::Get()->Send(token, 1, ptr, size, [&bc]() { bc.Decrease(); });
     } else {
       // Recv
-      Global<Transport>::Get()->Receive(token, 1, ptr, size + 20, [ptr, i, size, &bc]() {
+      Global<Transport>::Get()->Receive(token, 1, ptr, size + 77, [ptr, i, size, &bc]() {
         int32_t* data = static_cast<int32_t*>(ptr);
         CHECK_EQ(*data, i);
         CHECK_EQ(*(data + (size / 4) - 1), i + 20);
@@ -92,7 +92,7 @@ void HandlerOfSecondMachine(uint64_t first_token, size_t test_num,
     uint64_t token = first_token + i;
     if (i % 2 == 0) {
       // Recv
-      Global<Transport>::Get()->Receive(token, 0, ptr, size + 10, [ptr, i, size, &bc]() {
+      Global<Transport>::Get()->Receive(token, 0, ptr, size + 66, [ptr, i, size, &bc]() {
         int32_t* data = static_cast<int32_t*>(ptr);
         CHECK_EQ(*data, i);
         CHECK_EQ(*(data + (size / 4) - 1), i + 10);
@@ -127,7 +127,7 @@ void TestCorrectness() {
     malloc_size_list.at(i) = 16 << (i % 20);
     total_bytes += malloc_size_list.at(i);
     // malloc data
-    malloc_ptr_list.at(i) = malloc(malloc_size_list.at(i));
+    malloc_ptr_list.at(i) = malloc(malloc_size_list.at(i) + 100);
   }
   total_mib = (total_bytes * 1.0 / 1000000.0);
 

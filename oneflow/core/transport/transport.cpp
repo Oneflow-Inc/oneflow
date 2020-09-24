@@ -110,7 +110,7 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
       recv_before_send = true;
       stat = &(it->second);
       CHECK_GE(stat->size, msg.size);  // NOTE(chengcheng): Recv size may larger than Send size.
-      stat->size = msg.size;
+      stat->size = msg.size;           // NOTE(chengcheng): msg.size always is smaller one.
     }
 
     stat->is_send_ready = true;
@@ -242,9 +242,8 @@ void Transport::Receive(uint64_t token, int64_t src_machine_id, void* ptr, std::
 
     stat->callback = callback;
     stat->is_recv_ready = true;
-    CHECK(stat->dst_mem_token == nullptr);
-    // dst_mem_token MUST init in the block protected by lock
-    stat->dst_mem_token = comm_net_->RegisterMemory(ptr, stat->size);
+    // NOTE(chengcheng): Store dst_ptr so that we can create dst_mem_token in DoRead()
+    stat->dst_ptr = ptr;
   }
 
   if (send_before_recv) {
@@ -267,6 +266,11 @@ void Transport::DoRead(uint64_t token) {
     auto it = token2status_.find(token);
     CHECK(it != token2status_.end());
     stat = &(it->second);
+
+    // dst_mem_token MUST init in the block protected by lock
+    CHECK(stat->dst_mem_token == nullptr);
+    // NOTE(chengcheng): ONLY at this time, the stat->size is the real size assigned by Send
+    stat->dst_mem_token = comm_net_->RegisterMemory(stat->dst_ptr, stat->size);
   }
   CHECK(stat != nullptr);
   CHECK(stat->is_send_ready && stat->is_recv_ready);

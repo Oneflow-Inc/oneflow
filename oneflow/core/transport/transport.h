@@ -29,6 +29,8 @@ struct TransportStatus {
   bool is_recv_ready;
   void* src_mem_token;
   void* dst_mem_token;
+  void*
+      dst_ptr;  // NOTE(chengcheng): must store dst_ptr in status when Receive max_size > Send size
   std::size_t size;
   int64_t src_machine_id;
   int64_t dst_machine_id;
