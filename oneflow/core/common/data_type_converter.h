@@ -164,7 +164,7 @@ struct ClampHelper<bool, T> {
 
 template<typename T>
 struct ClampHelper<float16, T> {
-  static inline const float16 Call(T value) {
+  inline static const float16 Call(T value) {
     return static_cast<float16>(ClampHelper<T, float>::Call(value) < GetMinVal<float16>()
                                     ? GetMinVal<float16>()
                                     : ClampHelper<T, float>::Call(value) > GetMaxVal<float16>()
@@ -175,7 +175,7 @@ struct ClampHelper<float16, T> {
 
 template<typename T>
 struct ClampHelper<T, float16> {
-  static inline const T Call(float16 value) {
+  inline static const T Call(float16 value) {
     return ClampHelper<T, float>::Call(static_cast<float>(value));
   }
 };
