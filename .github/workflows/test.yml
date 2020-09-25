@@ -53,6 +53,7 @@ jobs:
         docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
         docker build -f docker/package/manylinux/Dockerfile \
           --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
+          --build-arg use_tuna_yum=0 --build-arg pip_args="" \
           -t $docker_tag .
 
   build_and_test:
