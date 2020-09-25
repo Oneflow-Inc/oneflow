@@ -56,9 +56,10 @@ jobs:
           --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
           --build-arg use_tuna_yum=0 --build-arg pip_args="" \
           -t $docker_tag .
-        docker tag ${docker_tag} http://hub.platform.oneflow.info/${docker_tag}
+        remote_tag="http://hub.platform.oneflow.info/${KSYUN_HARBOR_USER}/${docker_tag}"
+        docker tag ${docker_tag} ${remote_tag}
         echo ${KSYUN_HARBOR_PASSWORD} | docker login http://hub.platform.oneflow.info --username ${KSYUN_HARBOR_USER} --password-stdin
-        docker push http://hub.platform.oneflow.info/${KSYUN_HARBOR_USER}/oneflow-manylinux2014
+        docker push ${remote_tag}
 
   build_and_test:
     name: CUDA
