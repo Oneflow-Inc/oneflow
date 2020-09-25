@@ -41,4 +41,3 @@ def test_simple_cnn(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net)
-

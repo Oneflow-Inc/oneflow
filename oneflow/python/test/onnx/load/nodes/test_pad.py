@@ -36,4 +36,3 @@ def test_pad_with_value(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net)
-

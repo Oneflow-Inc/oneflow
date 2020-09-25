@@ -15,17 +15,32 @@ limitations under the License.
 """
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
 
-def test_add(test_case):
+def test_reduce_mean(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x += x
-            return x
+            return torch.mean(x)
 
     load_pytorch_module_and_check(test_case, Net)
+
+
+def test_reduce_mean_axis(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            return torch.mean(x, dim=2)
+
+    load_pytorch_module_and_check(test_case, Net)
+
+
+def test_reduce_mean_axis_keepdim(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            return torch.mean(x, dim=3, keepdim=True)
+
+    load_pytorch_module_and_check(test_case, Net)
+
 
 

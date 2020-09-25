@@ -15,6 +15,8 @@ limitations under the License.
 """
 import string
 import random
+import operator
+from functools import reduce
 
 import numpy as np
 
@@ -22,6 +24,7 @@ from oneflow.python.onnx.load.handler import BackendHandler
 from oneflow.python.onnx.load.handler import flow_func
 from oneflow.python.onnx.load.handler import onnx_op
 from oneflow.python.onnx.load.handlers.common import ConvMixin
+from oneflow.python.ops import array_ops
 from oneflow.python.ops import nn_ops
 from oneflow.python.ops import math_ops
 from oneflow.python.ops import layers
@@ -196,19 +199,26 @@ class SoftmaxCrossEntropyLoss(BackendHandler):
     @classmethod
     def version_12(cls, node, tensor_dict, **kwargs):
         if len(node.input_tensor_names) == 3:
-            raise NotImplementedError("SoftmaxCrossEntropyLoss with weight is not supported")
+            raise NotImplementedError(
+                "SoftmaxCrossEntropyLoss with weight is not supported"
+            )
         # Swap the inputs
-        node.input_tensor_names[0], node.input_tensor_names[1] = node.input_tensor_names[1], node.input_tensor_names[0]
+        node.input_tensor_names[0], node.input_tensor_names[1] = (
+            node.input_tensor_names[1],
+            node.input_tensor_names[0],
+        )
         output = cls.run_onnx_node(node, tensor_dict, **kwargs)
-        reduction = node.attrs['reduction']
-        if reduction == 'mean':
+        reduction = node.attrs["reduction"]
+        if reduction == "mean":
             output = reduce_mean.reduce_mean(output)
-        elif reduction == 'sum':
+        elif reduction == "sum":
             output = reduce_ops.reduce_sum(output)
-        elif reduction == 'none':
+        elif reduction == "none":
             pass
         else:
-            raise NotImplementedError('Unknown "reduction" value: "{}"'.format(reduction))
+            raise NotImplementedError(
+                'Unknown "reduction" value: "{}"'.format(reduction)
+            )
         return output
 
 
@@ -219,22 +229,31 @@ class Pad(BackendHandler):
     def _common(cls, node, tensor_dict, **kwargs):
         x = tensor_dict[node.input_tensor_names[0]]
         mode = node.attrs.pop("mode", "constant")
-        if mode != 'constant':
+        if mode != "constant":
             raise NotImplementedError('Padding mode "{}" is not supported'.format(mode))
 
         if cls.SINCE_VERSION < 11:  # for opset 1 and opset 2
-            node.attrs['paddings'] = node.attrs.pop("pads", None)
-            node.attrs['constant_value'] = node.attrs.pop("value", 0.)
+            node.attrs["paddings"] = node.attrs.pop("pads", None)
+            node.attrs["constant_value"] = node.attrs.pop("value", 0.0)
 
         else:  # for opset 11
-            init_dict = kwargs['init_dict']
-            paddings = init_dict[node.input_tensor_names[1]].reshape(2, -1).transpose((1, 0)).tolist()
-            constant_values = init_dict[node.input_tensor_names[2]].item() if len(
-                node.input_tensor_names) == 3 else 0
+            init_dict = kwargs["init_dict"]
+            paddings = (
+                init_dict[node.input_tensor_names[1]]
+                .reshape(2, -1)
+                .transpose((1, 0))
+                .tolist()
+            )
+            constant_values = (
+                init_dict[node.input_tensor_names[2]].item()
+                if len(node.input_tensor_names) == 3
+                else 0
+            )
 
         return [
             cls.run_onnx_node(
-                node, tensor_dict, inputs=[x, paddings, constant_values], **kwargs)
+                node, tensor_dict, inputs=[x, paddings, constant_values], **kwargs
+            )
         ]
 
     @classmethod
@@ -252,18 +271,46 @@ class Pad(BackendHandler):
 
 @onnx_op("GlobalMaxPool")
 class GlobalMaxPool(BackendHandler):
-  @classmethod
-  def version_1(cls, node, tensor_dict, **kwargs):
-    x = tensor_dict[node.input_tensor_names[0]]
-    spatial_dims = list(range(2, len(x.shape)))
-    return reduce_ops.reduce_max(x, spatial_dims, keepdims=True)
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        spatial_dims = list(range(2, len(x.shape)))
+        return reduce_ops.reduce_max(x, spatial_dims, keepdims=True)
 
 
 @onnx_op("GlobalAveragePool")
 class GlobalAverageMaxPool(BackendHandler):
-  @classmethod
-  def version_1(cls, node, tensor_dict, **kwargs):
-    x = tensor_dict[node.input_tensor_names[0]]
-    spatial_dims = list(range(2, len(x.shape)))
-    return reduce_mean.reduce_mean(x, spatial_dims, keepdims=True)
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        spatial_dims = list(range(2, len(x.shape)))
+        return reduce_mean.reduce_mean(x, spatial_dims, keepdims=True)
 
+
+@onnx_op("Softmax")
+class Softmax(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        axis = node.attrs.get("axis", 1)
+        axis = axis if axis >= 0 else len(np.shape(x)) + axis
+
+        if axis == len(np.shape(x)) - 1:
+            return nn_ops.softmax(x)
+
+        shape = x.shape
+        cal_shape = (
+            reduce(operator.mul, shape[0:axis], 1),
+            reduce(operator.mul, shape[axis : len(shape)], 1),
+        )
+        x = array_ops.reshape(x, cal_shape)
+
+        return array_ops.reshape(nn_ops.softmax(x), shape)
+
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)

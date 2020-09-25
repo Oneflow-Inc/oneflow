@@ -15,32 +15,27 @@ limitations under the License.
 """
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
 
-def test_clip_min_max(test_case):
+def test_softmax(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.clamp(x, min=-0.5, max=3.1)
+            x = F.softmax(x)
             return x
 
     load_pytorch_module_and_check(test_case, Net)
 
 
-def test_clip_min(test_case):
+def test_softmax_with_axis(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.clamp(x, min=-2.2)
+            x = F.softmax(x, dim=1)
             return x
 
     load_pytorch_module_and_check(test_case, Net)
 
 
-def test_clip_max(test_case):
-    class Net(nn.Module):
-        def forward(self, x):
-            x = torch.clamp(x, max=1.2)
-            return x
 
-    load_pytorch_module_and_check(test_case, Net)

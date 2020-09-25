@@ -25,11 +25,9 @@ def test_bn(test_case):
         def __init__(self):
             super(Net, self).__init__()
             self.bn = nn.BatchNorm2d(4)
+
         def forward(self, x):
             x = self.bn(x)
             return x
 
     load_pytorch_module_and_check(test_case, Net)
-
-
-

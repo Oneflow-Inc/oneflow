@@ -38,7 +38,7 @@ def test_softmax_cross_entropy_loss_sum(test_case):
     class Net(nn.Module):
         def __init__(self):
             super(Net, self).__init__()
-            self.loss = nn.CrossEntropyLoss(reduction='sum')
+            self.loss = nn.CrossEntropyLoss(reduction="sum")
             self.register_buffer("label", torch.tensor([0, 1], dtype=torch.int64))
 
         def forward(self, x):
@@ -52,7 +52,7 @@ def test_softmax_cross_entropy_loss_none(test_case):
     class Net(nn.Module):
         def __init__(self):
             super(Net, self).__init__()
-            self.loss = nn.CrossEntropyLoss(reduction='none')
+            self.loss = nn.CrossEntropyLoss(reduction="none")
             self.register_buffer("label", torch.tensor([0, 1], dtype=torch.int64))
 
         def forward(self, x):
@@ -60,5 +60,3 @@ def test_softmax_cross_entropy_loss_none(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net, input_size=(2, 4))
-
-

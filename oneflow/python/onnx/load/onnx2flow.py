@@ -45,8 +45,10 @@ import numpy as np
 import onnx
 import torch
 import logging
+
 try:
     import onnxsim
+
     has_onnxsim = True
 except ImportError:
     has_onnxsim = False
@@ -54,29 +56,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-@oneflow_export("from_pytorch")
-def from_pytorch(torch_model, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True):
-    if type(inputs) is not list:
-        inputs = [inputs]
-    torch_model = torch_model.to("cpu")
-    f = io.BytesIO()
-    input_names = ["x_{}".format(i) for i in range(len(inputs))]
-    torch.onnx.export(
-        torch_model,
-        tuple([torch.zeros(ipt.shape) for ipt in inputs]),
-        f,
-        input_names=input_names,
-        output_names=["y"],
-        opset_version=12,
-    )
-    model_str = f.getvalue()
-    with open("/home/dev/files/temp.onnx", "wb") as f:
-        f.write(model_str)
-    onnx_model = onnx.load_model_from_string(model_str)
+@oneflow_export("from_onnx")
+def from_onnx(
+    onnx_model: onnx.ModelProto, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True
+):
+    input_names = [x.name for x in onnx_model.graph.input]
+    if type(inputs) is not dict:
+        assert (
+            len(input_names) == 1
+        ), "Please use input dict if the model has multiple inputs"
+        inputs = {input_names[0]: inputs}
+    print(input_names)
     if do_onnxsim and has_onnxsim:
-        onnx_model, _ = onnxsim.simplify(onnx_model, skip_shape_inference=True)
+        onnx_model, _ = onnxsim.simplify(
+            onnx_model,
+            skip_shape_inference=True,
+            input_shapes=dict(zip(input_names, [x.shape for x in inputs.values()])),
+        )
     elif do_onnxsim:
-        logger.info("We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes")
+        logger.info(
+            "We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes"
+        )
     if os.path.exists(model_weight_dir):
         shutil.rmtree(model_weight_dir)
     BackendHandler.WEIGHT_SAVE_DIR = model_weight_dir
@@ -112,8 +112,39 @@ def from_pytorch(torch_model, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=Tr
     write_fake_data(train_step_name, np.array([0]))
     write_fake_data("v1", np.array([0], dtype=np.float32))
 
-    d = prepare(onnx_model, blob_dict=dict(zip(input_names, inputs)))
-    return d["y"]
+    d = prepare(onnx_model, blob_dict=inputs)
+    print("end")
+    output_names = [x.name for x in onnx_model.graph.output]
+    if len(output_names) == 1:
+        return d[output_names[0]]
+    return {output_name: d[output_name] for output_name in output_names}
+
+
+@oneflow_export("from_pytorch")
+def from_pytorch(torch_model, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True):
+    if type(inputs) is not list:
+        inputs = [inputs]
+    input_names = ["x_{}".format(i) for i in range(len(inputs))]
+
+    torch_model = torch_model.to("cpu")
+    f = io.BytesIO()
+    torch.onnx.export(
+        torch_model,
+        tuple([torch.zeros(ipt.shape) for ipt in inputs]),
+        f,
+        input_names=input_names,
+        opset_version=12,
+    )
+    model_str = f.getvalue()
+    with open("/home/dev/files/temp.onnx", "wb") as f:
+        f.write(model_str)
+    onnx_model = onnx.load_model_from_string(model_str)
+    return from_onnx(
+        onnx_model,
+        dict(zip(input_names, inputs)),
+        model_weight_dir=model_weight_dir,
+        do_onnxsim=do_onnxsim,
+    )
 
 
 def get_all_backend_handlers(opset_dict):

@@ -71,7 +71,6 @@ def test_conv2d_k3s2p0g2(test_case):
     load_pytorch_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
 
 
-
 def test_conv2d_k3s2p0g2d2(test_case):
     class Net(nn.Module):
         def __init__(self):
@@ -83,4 +82,3 @@ def test_conv2d_k3s2p0g2d2(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net, input_size=(2, 4, 13, 12))
-
