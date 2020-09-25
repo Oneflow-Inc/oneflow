@@ -5,15 +5,17 @@ function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   set(${SRCS})
   set(${HDRS})
   set(${PYBIND_SRCS})
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/common/data_type.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/common/device_type.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/job/sbp_parallel.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/job/mirrored_parallel.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/job/scope.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/record/record.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/record/image.proto)
+  list(APPEND ALL_CFG_CONVERT_PROTO
+      oneflow/core/common/data_type.proto
+      oneflow/core/common/device_type.proto
+      oneflow/core/job/sbp_parallel.proto
+      oneflow/core/job/mirrored_parallel.proto
+      oneflow/core/job/scope.proto
+      oneflow/core/record/record.proto
+      oneflow/core/record/image.proto
+  )
 
-  foreach(FIL ${ALL_CONVERT_PROTO})
+  foreach(FIL ${ALL_CFG_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
@@ -31,7 +33,7 @@ function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/template_convert.py
       ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
            --dst_pybind_path ${CFG_PYBIND_FIL}
-          --proto_py_path ${PY_REL_MOD}
+           --proto_py_path ${PY_REL_MOD}  --of_proto_python_dir ${of_proto_python_dir}
 
       DEPENDS ${Python_EXECUTABLE} ${PY_REL_FIL} ${of_all_rel_pybinds}
       COMMENT "Running Pybind11 Compiler on ${FIL}"
