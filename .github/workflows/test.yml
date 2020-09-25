@@ -50,13 +50,13 @@ jobs:
         KSYUN_HARBOR_USER: ${{ secrets.KSYUN_HARBOR_USER }}
         KSYUN_HARBOR_PASSWORD: ${{ secrets.KSYUN_HARBOR_PASSWORD }}
       run: |
-        git_branch=${GITHUB_REF##*/}
-        docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow-manylinux2014:cuda10.2-${git_branch}"}
+        git_hash=$(git rev-parse --short "$GITHUB_SHA")
+        docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow-manylinux2014:cuda10.2-${git_hash}"}
         docker build -f docker/package/manylinux/Dockerfile \
           --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
           --build-arg use_tuna_yum=0 --build-arg pip_args="" \
           -t $docker_tag .
-        remote_tag="http://hub.platform.oneflow.info/${KSYUN_HARBOR_USER}/${docker_tag}"
+        remote_tag="hub.platform.oneflow.info/${KSYUN_HARBOR_USER}/${docker_tag}"
         docker tag ${docker_tag} ${remote_tag}
         echo ${KSYUN_HARBOR_PASSWORD} | docker login http://hub.platform.oneflow.info --username ${KSYUN_HARBOR_USER} --password-stdin
         docker push ${remote_tag}
