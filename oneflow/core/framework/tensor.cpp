@@ -60,6 +60,16 @@ Tensor& Tensor::operator=(Tensor&& rhs) {
   return *this;
 }
 
+#ifdef WITH_CUDA
+
+template<>
+void Tensor::CheckDataType<half>() const {
+  LOG_IF(FATAL, data_type_ != DataType::kFloat16)
+      << "tensor data_type mismatched. value: kFloat16, template T: half";
+}
+
+#endif  // WITH_CUDA
+
 }  // namespace user_op
 
 }  // namespace oneflow
