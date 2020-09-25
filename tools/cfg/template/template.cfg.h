@@ -720,7 +720,7 @@ class Const{{ util.class_name(cls) }} {
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept = default;
   Const{{ util.class_name(cls) }}(): data_(::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>()) {}
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
-    data_->reset(new _{{ util.class_name(cls) }}_(proto_{{ util.class_name(cls).lower() }}));
+    data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(proto_{{ util.class_name(cls).lower() }}));
   }
   ~Const{{ util.class_name(cls) }}() = default;
 

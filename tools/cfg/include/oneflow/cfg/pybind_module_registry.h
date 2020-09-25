@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 #include <pybind11/pybind11.h>
 #include <map>
+#include <functional>
 
 namespace oneflow {
 namespace cfg {
