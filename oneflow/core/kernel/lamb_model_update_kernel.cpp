@@ -58,9 +58,10 @@ void LAMBMdUpdateKernel<device_type, T>::UpdateModel(
       static_cast<T>(lamb_conf.beta1()), static_cast<T>(lamb_conf.beta2()),
       static_cast<T>(lamb_conf.epsilon()), train_step,
       (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
-      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->mut_dptr<T>(),
-      model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>(),
-      fw_buf_blob->mut_dptr<T>());
+      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr),
+      // model_diff must be mutable
+      BnInOp2Blob("model_diff")->ForceMutDptr<T>(), model_blob->mut_dptr<T>(),
+      m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>(), fw_buf_blob->mut_dptr<T>());
 }
 
 template<typename T>

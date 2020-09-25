@@ -39,8 +39,10 @@ void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
 
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
                              JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
-  const OperatorConf& m_var = GenerateLAMBHelperVariableOpConf(op, "m", 0.f);
-  const OperatorConf& v_var = GenerateLAMBHelperVariableOpConf(op, "v", 0.f);
+  OperatorConf m_var = GenerateLAMBHelperVariableOpConf(op, "m", 0.f);
+  OperatorConf v_var = GenerateLAMBHelperVariableOpConf(op, "v", 0.f);
+  m_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
+  v_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {m_var, v_var});
 
   OperatorConf mdupdt_op;
@@ -52,8 +54,10 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   OperatorConf beta2_t_var;
   const LAMBModelUpdateConf& lamb_conf = mdupdt_op_conf->user_conf().lamb_conf();
   beta1_t_var = GenerateLAMBHelperVariableOpConf(op, "beta1_t", lamb_conf.beta1());
+  beta1_t_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   SetScalarShapeAndSbpConf(&beta1_t_var);
   beta2_t_var = GenerateLAMBHelperVariableOpConf(op, "beta2_t", lamb_conf.beta2());
+  beta2_t_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   SetScalarShapeAndSbpConf(&beta2_t_var);
   job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
 
@@ -62,7 +66,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   mdupdt_op_conf->set_v(v_var.name() + "/out");
   mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
   mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
-
+  mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   job_builder->AddOps(parallel_conf, {mdupdt_op});
 }
 
