@@ -67,8 +67,8 @@ class ParallelDesc final {
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
-  int64_t MachineIdForParallelId(int64_t parallel_id) const;
-  int64_t DeviceIdForParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   bool ContainingMachineId(int64_t machine_id) const;
 

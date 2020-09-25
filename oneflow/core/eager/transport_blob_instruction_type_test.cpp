@@ -70,7 +70,8 @@ class TestSendBlobInstructionType : public SendBlobInstructionType {
   ~TestSendBlobInstructionType() override = default;
 
  private:
-  Maybe<void> Send(int64_t dst_machine_id, uint64_t token, const char* mem_ptr, std::size_t size,
+  Maybe<void> Send(int64_t this_machine_id, int64_t dst_machine_id, uint64_t token,
+                   const char* mem_ptr, std::size_t size,
                    const std::function<void()>& Callback) const override {
     SendRequest send_request{
         .dst_machine_id = dst_machine_id,
@@ -99,7 +100,8 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
   ~TestReceiveBlobInstructionType() override = default;
 
  private:
-  Maybe<void> Receive(int64_t src_machine_id, uint64_t token, char* mem_ptr, std::size_t size,
+  Maybe<void> Receive(int64_t src_machine_id, int64_t this_machine_id, uint64_t token,
+                      char* mem_ptr, std::size_t size,
                       const std::function<void()>& Callback) const override {
     ReceiveRequest recv_request{
         .src_machine_id = src_machine_id,
@@ -228,9 +230,11 @@ void MakeSendReceiveInstruction(InstructionMsgList* list, uint64_t header_token,
   }
   list->EmplaceBack(vm::NewInstruction("TestSendBlob")
                         ->add_parallel_desc(src_parallel_desc_id)
+                        ->add_const_operand(src_obj_id)
+                        ->add_separator()
                         ->add_uint64_operand(header_token)
-                        ->add_uint64_operand(body_token)
-                        ->add_const_operand(src_obj_id));
+                        ->add_separator()
+                        ->add_uint64_operand(body_token));
   int64_t dst_parallel_desc_id = 0;
   int64_t dst_obj_id = vm::IdUtil::NewLogicalObjectId();
   {
@@ -244,9 +248,11 @@ void MakeSendReceiveInstruction(InstructionMsgList* list, uint64_t header_token,
   }
   list->EmplaceBack(vm::NewInstruction("TestReceiveBlob")
                         ->add_parallel_desc(dst_parallel_desc_id)
+                        ->add_mut2_operand(dst_obj_id)
+                        ->add_separator()
                         ->add_uint64_operand(header_token)
-                        ->add_uint64_operand(body_token)
-                        ->add_mut2_operand(dst_obj_id));
+                        ->add_separator()
+                        ->add_uint64_operand(body_token));
 }
 
 }  // namespace
