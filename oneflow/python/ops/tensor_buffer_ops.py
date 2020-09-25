@@ -101,7 +101,7 @@ def tensor_to_tensor_buffer(
 
     Args:
         x (BlobDef): Input `Blob`.
-        instance_dims (int): The dim of dynamic instance. 
+        instance_dims (int): The dims of dynamic tensor instance. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
