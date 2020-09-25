@@ -77,20 +77,29 @@ function(use_mirror)
   cmake_parse_arguments(
     PARSED_ARGS
     ""
-    "NAME;URL"
+    "VARIABLE;URL"
     ""
     ${ARGN}
   )
-  if(NOT PARSED_ARGS_NAME)
-    message(FATAL_ERROR "name required")
-  endif(NOT PARSED_ARGS_NAME)
+  if(NOT PARSED_ARGS_VARIABLE)
+    message(FATAL_ERROR "VARIABLE required")
+  endif(NOT PARSED_ARGS_VARIABLE)
   if(NOT PARSED_ARGS_URL)
     message(FATAL_ERROR "url required")
   endif(NOT PARSED_ARGS_URL)
-  if((DEFINED THIRD_PARTY_MIRROR) AND (THIRD_PARTY_MIRROR STREQUAL "aliyun"))
-    execute_process( 
-      COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
-      OUTPUT_VARIABLE temp_url)
-    set(${PARSED_ARGS_NAME} ${temp_url} PARENT_SCOPE)
+  if(DEFINED THIRD_PARTY_MIRROR)
+    if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
+      execute_process( 
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
+        OUTPUT_VARIABLE temp_url
+        RESULT_VARIABLE ret_code)
+      if (NOT (ret_code EQUAL "0"))
+        message(FATAL_ERROR "Fail to execute the script package_mirror.py.")
+      else()
+        set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
+      endif()
+    else()
+      message(FATAL_ERROR "Invalid key for third party mirror.")
+    endif()
   endif()
 endfunction()
