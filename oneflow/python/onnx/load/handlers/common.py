@@ -180,7 +180,7 @@ class ArithmeticMixin(BroadcastMixin):
 
 class ReductionMixin(BroadcastMixin):
     @classmethod
-    def _common(cls, node, **kwargs):
+    def _common(cls, node, tensor_dict, **kwargs):
         attrs = copy.deepcopy(node.attrs)
         axis = attrs.pop("axes", None)
         if isinstance(axis, (list, tuple)) and len(axis) == 1:
@@ -188,4 +188,4 @@ class ReductionMixin(BroadcastMixin):
         attrs["axis"] = axis
         # https://github.com/onnx/onnx/issues/585
         attrs["keepdims"] = attrs.pop("keepdims", 1) == 1
-        return [cls.run_onnx_node(node, attrs=attrs, **kwargs)]
+        return cls.run_onnx_node(node, tensor_dict, attrs=attrs, **kwargs)

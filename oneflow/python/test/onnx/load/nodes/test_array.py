@@ -19,28 +19,51 @@ from torch import nn
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
 
-def test_clip_min_max(test_case):
+def test_concat(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.clamp(x, min=-0.5, max=3.1)
-            return x
+            y = x * 3
+            return torch.cat((x, y))
 
     load_pytorch_module_and_check(test_case, Net)
 
 
-def test_clip_min(test_case):
+def test_concat_with_axis(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.clamp(x, min=-2.2)
-            return x
+            y = x * 3
+            return torch.cat((x, y), dim=1)
 
     load_pytorch_module_and_check(test_case, Net)
 
 
-def test_clip_max(test_case):
+def test_unsqueeze(test_case):
     class Net(nn.Module):
         def forward(self, x):
-            x = torch.clamp(x, max=1.2)
-            return x
+            return torch.unsqueeze(x, 2)
+
+    load_pytorch_module_and_check(test_case, Net)
+
+
+def test_transpose(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            return torch.transpose(x, 1, 3)
+
+    load_pytorch_module_and_check(test_case, Net)
+
+
+def test_gather(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            return x[1]
+
+    load_pytorch_module_and_check(test_case, Net)
+
+
+def test_tensor_index(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            return x[0, 1:3, :1, 2:]
 
     load_pytorch_module_and_check(test_case, Net)
