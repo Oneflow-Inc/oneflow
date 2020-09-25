@@ -1503,8 +1503,11 @@ class LAMBW(LAMB):
         train_step_lbn: Optional[Text] = None,
     ):
         super().__init__(
-            lr_scheduler, beta1, beta2, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
         )
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
         self.weight_decay = weight_decay
         if isinstance(weight_decay_includes, str):
             weight_decay_includes = [weight_decay_includes]
@@ -1514,7 +1517,9 @@ class LAMBW(LAMB):
         self.weight_decay_excludes = weight_decay_excludes
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
-        super()._SetSpecificFieldsInTrainConf(train_conf)
+        train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
+        train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
+        train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon
         if self.weight_decay is not None:
             train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
                 self.weight_decay
