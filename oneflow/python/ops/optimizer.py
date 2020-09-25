@@ -1485,3 +1485,49 @@ class LAMB(Optimizer):
         train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
         train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
         train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon
+
+
+@oneflow_export("optimizer.LAMBW")
+class LAMBW(LAMB):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        epsilon: float = 1e-6,
+        loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+    ):
+        super().__init__(
+            lr_scheduler, beta1, beta2, loss_scale_factor, grad_clipping, train_step_lbn,
+        )
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        super()._SetSpecificFieldsInTrainConf(train_conf)
+        if self.weight_decay is not None:
+            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            elif self.weight_decay_excludes is not None:
+                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )
