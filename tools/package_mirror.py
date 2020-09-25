@@ -2,12 +2,17 @@ import glob
 import argparse
 import os
 import re
-import oss2
 from urllib.parse import urlparse
 import requests
 import hashlib
 import base64
 import tempfile
+
+try:
+    import oss2
+except:
+    pass
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -44,9 +49,10 @@ def convert_url_to_oss_key(url):
     return os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
 
 
-# https://oneflow-static.oss-cn-beijing.aliyuncs.com/...
 def convert_url_to_oss_https_url(url):
-    raise NotImplemented
+    key = convert_url_to_oss_key(url)
+    prefix = "https://oneflow-static.oss-cn-beijing.aliyuncs.com/"
+    return os.path.join(prefix, key)
 
 
 def should_be_mirrored(url: str):
@@ -106,5 +112,5 @@ if __name__ == "__main__":
     if args.src_path != None:
         upload_to_aliyun(args.src_path)
     if args.url != None:
-        oss_url = convert_url_to_oss_https(args.url)
+        oss_url = convert_url_to_oss_https_url(args.url)
         print(oss_url)
