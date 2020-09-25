@@ -1488,7 +1488,7 @@ class LAMB(Optimizer):
 
 
 @oneflow_export("optimizer.LAMBW")
-class LAMBW(LAMB):
+class LAMBW(Optimizer):
     def __init__(
         self,
         lr_scheduler: LrScheduler,
