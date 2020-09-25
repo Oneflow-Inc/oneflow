@@ -13,56 +13,60 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from collections import OrderedDict
+
 import numpy as np
+import oneflow as flow
+import oneflow.typing as tp
 import tensorflow as tf
 import random
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare(prediction, target, k):
+def compare_with_tensorflow(device_type, target_dtype):
+    assert device_type in ["gpu", "cpu"]
+    assert target_dtype in ["int32", "int64"]
+    flow_data_type = type_name_to_flow_type[target_dtype]
+
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
-    func_config.default_placement_scope(flow.fixed_placement("cpu", "0:0"))
-    func_config.default_data_type(flow.float)
+    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_data_type(flow_data_type)
 
-    def test_in_top_k(predictions, targets, k, name=None):
-        if name is None:
-            name = id_util.UniqueStr("intopk_")
-        return (
-            flow.user_op_builder(name)
-            .Op("in_top_k")
-            .Input("predictions", [predictions])
-            .Input("targets", [targets])
-            .SetAttr("k", k, "AttrTypeInt32",)
-            .Output("out")
-            .Build()
-            .RemoteBlobList()[0]
-        )
+    targets = np.random.randint(4, size=3).astype(type_name_to_np_type[target_dtype])
+    predictions = np.random.rand(3, 4).astype("float32")
+    k = random.choice([1, 2, 3, 4])
 
-    @flow.function(func_config)
+    @flow.global_function(function_config=func_config)
     def IntopkJob(
-        prediction=flow.FixedTensorDef((3, 4), dtype=flow.float),
-        target=flow.FixedTensorDef((3,), dtype=flow.int32),
+        targets: tp.Numpy.Placeholder((3,), dtype=flow_data_type),
+        predictions: tp.Numpy.Placeholder((3, 4), dtype=flow.float32),
     ):
-        return flow.math.in_top_k(prediction, target, k=k)
+        with flow.scope.placement(device_type, "0:0"):
+            return flow.math.in_top_k(targets, predictions, k=k)
 
     # OneFlow
-    y = IntopkJob(prediction, target).get().ndarray()
+    of_out = IntopkJob(targets, predictions,).get().numpy()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
-        prediction_v = tf.Variable(prediction)
-        target_v = tf.Variable(target)
-        tf_out = tf.math.in_top_k(target_v, prediction_v, k=k)
+        predictions = tf.Variable(predictions)
+        targets = tf.Variable(targets)
+        tf_out = tf.math.in_top_k(targets, predictions, k=k)
+    assert np.allclose(of_out, tf_out)
 
-    assert np.allclose(y, tf_out)
+
+def gen_arg_list():
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["target_dtype"] = ["int32", "int64"]
+
+    return GenArgList(arg_dict)
 
 
-def test(test_case):
-
-    test_time = 5
-    for i in range(test_time):
-        prediction = np.random.rand(3, 4).astype("float32")
-        target = np.random.randint(4, size=3).astype("int32")
-        k = random.choice([1, 2, 3, 4])
-        compare(prediction, target, k)
+def test_in_top_K(test_case):
+    for arg in gen_arg_list():
+        compare_with_tensorflow(*arg)
