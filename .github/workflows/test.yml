@@ -47,14 +47,18 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build image
       env:
-        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        KSYUN_HARBOR_USER: ${{ secrets.KSYUN_HARBOR_USER }}
+        KSYUN_HARBOR_PASSWORD: ${{ secrets.KSYUN_HARBOR_PASSWORD }}
       run: |
-        docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
+        git_branch=${GITHUB_REF##*/}
+        docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow-manylinux2014:cuda10.2-${git_branch}"}
         docker build -f docker/package/manylinux/Dockerfile \
           --build-arg from=nvidia/cuda:10.2-cudnn7-devel-centos7 \
           --build-arg use_tuna_yum=0 --build-arg pip_args="" \
           -t $docker_tag .
+        docker tag ${docker_tag} http://hub.platform.oneflow.info/${docker_tag}
+        echo ${KSYUN_HARBOR_PASSWORD} | docker login http://hub.platform.oneflow.info --username ${KSYUN_HARBOR_USER} --password-stdin
+        docker push http://hub.platform.oneflow.info/${KSYUN_HARBOR_USER}/oneflow-manylinux2014
 
   build_and_test:
     name: CUDA
