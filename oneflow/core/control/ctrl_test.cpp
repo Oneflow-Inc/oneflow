@@ -20,16 +20,48 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
+#ifdef PLATFORM_POSIX
+
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+
 namespace oneflow {
 
 namespace {
 
-EnvProto GetEnvProto() {
+sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
+  sockaddr_in sa;
+  sa.sin_family = AF_INET;
+  sa.sin_port = htons(port);
+  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
+  return sa;
+}
+
+int FindAvailablePort() {
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+  for (uint16_t port = 10000; port < GetMaxVal<uint16_t>(); ++port) {
+    sockaddr_in sa = GetSockAddr("0.0.0.0", port);
+    int bind_result = bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
+    if (bind_result == 0) {
+      shutdown(sock, SHUT_RDWR);
+      close(sock);
+      return port;
+    }
+  }
+
+  return -1;
+}
+
+EnvProto GetEnvProto(int port) {
   EnvProto ret;
   auto* machine0 = ret.add_machine();
   machine0->set_id(0);
   machine0->set_addr("127.0.0.1");
-  ret.set_ctrl_port(46323);
+  ret.set_ctrl_port(port);
   return ret;
 }
 
@@ -45,7 +77,9 @@ Resource GetResource() {
 }  // namespace
 
 TEST(CtrlServer, new_delete) {
-  EnvProto env_proto = GetEnvProto();
+  int port = FindAvailablePort();
+  if (port == -1) { return; }
+  EnvProto env_proto = GetEnvProto(port);
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
@@ -55,7 +89,7 @@ TEST(CtrlServer, new_delete) {
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
 
-  // maybe do some
+  // do test
   // OF_BARRIER_ALL();
 
   Global<ResourceDesc, ForSession>::Delete();
@@ -67,3 +101,5 @@ TEST(CtrlServer, new_delete) {
 }
 
 }  // namespace oneflow
+
+#endif  // PLATFORM_POSIX
