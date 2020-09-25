@@ -31,15 +31,46 @@ def tensor_buffer_to_tensor(
     instance_shape: Sequence[int],
     name: Optional[str] = None,
 ) -> BlobDef:
-    r"""Converts the Blob type to TensorBuffer.
+    r"""Converts the Blob's type from TensorBuffer to Tensor. 
+
+    In some situations, Our input tensor shape is not fixed. For example, when we read some images, 
+    each image's shape is different, we can't allocatate the fixed memory in GPU. So we use a more dynamic 
+    tensor `TensorBuffer`. After some operations like `flow.images.Resize` , the tensor shape is fixed, 
+    so we can allocate the corresponding memory in GPU. Thus we need to convert `TensorBuffer` to `Tensor`.
+
 
     Args:
-        x: Input `Blob`.
-        dtype: The destination dtype.
-        instance_shape: The shape of each TensorBuffer.
-        name: Name for the operator.
+        x (BlobDef): Input `Blob`.
+        dtype (dtype_util.dtype): The data dtype.
+        instance_shape (Sequence[int]): The shape of each TensorBuffer instance.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`.
+        BlobDef: A `Blob`.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensor_buffer_to_tensor_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
+        ) -> tp.Numpy:
+            x = flow.tensor_to_tensor_buffer(x, 
+                                            instance_dims=2)
+            return flow.tensor_buffer_to_tensor(x, 
+                                                instance_shape=(64, 64), 
+                                                dtype=flow.float)
+
+        x = np.random.randn(4, 16, 64, 64).astype(np.float32)
+        out = tensor_buffer_to_tensor_Job(x)
+
+        # out.shape (4, 16, 64, 64)
+    
     """
     if name is None:
         name = id_util.UniqueStr("TensorBufferToTensor_")
@@ -60,14 +91,45 @@ def tensor_buffer_to_tensor(
 def tensor_to_tensor_buffer(
     x: BlobDef, instance_dims: int, name: Optional[str] = None,
 ) -> BlobDef:
-    r"""Converts the TensorBuffer Blob to dense Tensor.
+    r"""Converts the Blob's type from Tensor to TensorBuffer. 
+
+    In some situations, Our input tensor shape is not fixed. For example, when we read some images, 
+    each image's shape is different, we can't allocatate the fixed memory in GPU. So we use a more dynamic 
+    tensor `TensorBuffer`. After some operations like `flow.images.Resize` , the tensor shape is fixed, 
+    so we can allocate the corresponding memory in GPU. Thus we need to convert `TensorBuffer` to `Tensor`.
+
 
     Args:
-        x: Input `Blob`.
-        instance_dims: The number of dimensions to convert to TensorBuffer.
-        name: Name for the operator.
+        x (BlobDef): Input `Blob`.
+        instance_dims (int): The dim of dynamic instance. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`.
+        BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensor_buffer_to_tensor_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
+        ) -> tp.Numpy:
+            x = flow.tensor_to_tensor_buffer(x, 
+                                            instance_dims=2)
+            return flow.tensor_buffer_to_tensor(x, 
+                                                instance_shape=(64, 64), 
+                                                dtype=flow.float)
+
+        x = np.random.randn(4, 16, 64, 64).astype(np.float32)
+        out = tensor_buffer_to_tensor_Job(x)
+
+        # out.shape (4, 16, 64, 64)
+
     """
     if name is None:
         name = id_util.UniqueStr("TensorToTensorBuffer_")
