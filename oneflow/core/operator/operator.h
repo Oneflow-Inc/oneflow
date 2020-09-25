@@ -217,6 +217,8 @@ class Operator {
   Maybe<void> FillLogicalBlobDescSignature(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp);
 
+  virtual bool ifIdentical() const { return op_name().find("Reshape")!=std::string::npos; }
+
  protected:
   virtual Maybe<void> InferParallelSignature();
   // overloaded
