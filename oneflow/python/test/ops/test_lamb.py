@@ -29,7 +29,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow_addons_adam(
+def compare_with_tensorflow_addons_lamb(
     device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
 ):
     assert device_type in ["gpu", "cpu"]
@@ -38,7 +38,7 @@ def compare_with_tensorflow_addons_adam(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=flow.FunctionConfig())
-    def testAdam(
+    def testLAMB(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0-0"):
@@ -68,7 +68,7 @@ def compare_with_tensorflow_addons_adam(
 
     init_value = None
     for i in range(train_iters + 1):
-        x = testAdam(random_masks_seq[i])
+        x = testLAMB(random_masks_seq[i])
         if i == 0:
             init_value = np.copy(x)
 
@@ -97,4 +97,4 @@ def test_lamb(test_case):
     arg_dict["learning_rate"] = [1]
     arg_dict["train_iters"] = [10]
     for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_addons_adam(*arg)
+        compare_with_tensorflow_addons_lamb(*arg)
