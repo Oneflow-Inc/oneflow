@@ -155,7 +155,7 @@ def tensor_buffer_to_tensor_list(
 @oneflow_export("tensor_list_split")
 def tensor_list_split(
     input_tensor_list: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]: 
+) -> Tuple[remote_blob_util.BlobDef]:
     """This operation splits the input `TensorList`. 
 
     Args:

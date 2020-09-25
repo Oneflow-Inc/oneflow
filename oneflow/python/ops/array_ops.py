@@ -1825,7 +1825,7 @@ def broadcast_like(
     like: remote_blob_util.BlobDef,
     broadcast_axes: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef: 
+) -> remote_blob_util.BlobDef:
     """This operator broadcast the input Blob `x` on the specified axis with input Blob `like`.
 
     Args:
