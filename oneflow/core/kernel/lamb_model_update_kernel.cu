@@ -58,8 +58,13 @@ __device__ void UpdateModel(const float learning_rate, T weight_decay, const T m
 }
 
 template<typename T>
-__global__ void UpdateMomentEstimateGpu(int64_t n, T beta1, T beta2, T epsilon, const T* beta1_t,
-                                        const T* beta2_t, T* model_diff, T* model, T* m, T* v) {
+__global__ void UpdateMomentEstimateGpu(int64_t n, T beta1, T beta2, T epsilon,
+                                        const int64_t* train_step, T* beta1_t, T* beta2_t,
+                                        T* model_diff, T* model, T* m, T* v) {
+  if (*train_step != 0) {
+    *beta1_t *= beta1;
+    *beta2_t *= beta2;
+  }
   CUDA_1D_KERNEL_LOOP(i, n) {
     UpdateMomentEstimate<1>(beta1, model_diff[i], &m[i]);
     UpdateMomentEstimate<2>(beta2, model_diff[i], &v[i]);
@@ -80,11 +85,11 @@ template<typename T>
 class LAMBMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
-                          T beta1, T beta2, T epsilon, const int64_t* train_step, const T* beta1_t,
-                          const T* beta2_t, T* model_diff, T* model, T* m, T* v, T* fw_buf) {
+                          T beta1, T beta2, T epsilon, const int64_t* train_step, T* beta1_t,
+                          T* beta2_t, T* model_diff, T* model, T* m, T* v, T* fw_buf) {
     UpdateMomentEstimateGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, model, m, v);
+            n, beta1, beta2, epsilon, train_step, beta1_t, beta2_t, model_diff, model, m, v);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &fw_buf[0]);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &fw_buf[1]);
     KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, fw_buf, fw_buf);

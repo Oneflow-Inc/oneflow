@@ -48,17 +48,13 @@ void LAMBMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
   Blob* fw_buf_blob = BnInOp2Blob("fw_buf");
   const auto& lamb_conf = GetLAMBModelUpdateConf(this->op_conf());
-  if (*train_step != 0) {
-    *beta1_t_blob->mut_dptr<T>() *= lamb_conf.beta1();
-    *beta2_t_blob->mut_dptr<T>() *= lamb_conf.beta2();
-  }
   Memset<device_type>(ctx, fw_buf_blob->mut_dptr<T>(), 0, fw_buf_blob->ByteSizeOfBlobBody());
   LAMBMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), learning_rate, weight_decay,
       static_cast<T>(lamb_conf.beta1()), static_cast<T>(lamb_conf.beta2()),
       static_cast<T>(lamb_conf.epsilon()), train_step,
-      (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
-      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr),
+      (beta1_t_blob ? beta1_t_blob->mut_dptr<T>() : nullptr),
+      (beta2_t_blob ? beta2_t_blob->mut_dptr<T>() : nullptr),
       // model_diff must be mutable
       BnInOp2Blob("model_diff")->ForceMutDptr<T>(), model_blob->mut_dptr<T>(),
       m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>(), fw_buf_blob->mut_dptr<T>());
@@ -68,8 +64,12 @@ template<typename T>
 class LAMBMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, const float* learning_rate, T weight_decay,
-                          T beta1, T beta2, T epsilon, const int64_t* train_step, const T* beta1_t,
-                          const T* beta2_t, T* model_diff, T* model, T* m, T* v, T* fw_buf) {
+                          T beta1, T beta2, T epsilon, const int64_t* train_step, T* beta1_t,
+                          T* beta2_t, T* model_diff, T* model, T* m, T* v, T* fw_buf) {
+    if (*train_step != 0) {
+      *beta1_t *= beta1;
+      *beta2_t *= beta2;
+    }
     // first-order moment
     UpdateMomentEstimate<T>(n, beta1, 1, model_diff, m);
     // second-order moment
