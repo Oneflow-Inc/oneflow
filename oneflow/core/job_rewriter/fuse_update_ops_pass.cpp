@@ -29,6 +29,7 @@ std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const Op
     }
   });
   return [=](const OpNode* op_node) {
+    if (op_node->out_edges().size() > 1) { return false; }
     if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
     if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
       return false;
