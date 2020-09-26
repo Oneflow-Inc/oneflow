@@ -84,7 +84,9 @@ def compare_with_tensorflow_addons_adam(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
 
-    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
+    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4), (
+        x.flatten() - var.numpy().flatten()
+    )
 
 
 def test_lamb(test_case):
