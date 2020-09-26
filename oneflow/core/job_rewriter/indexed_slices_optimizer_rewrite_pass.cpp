@@ -74,6 +74,7 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         return;
       }
     } while (true);
+    if (!dst_node->op().op_conf().has_user_conf()) { return; }
     const user_op::UserOpConfWrapper user_op_conf(dst_node->op().op_conf());
     if (user_op_conf.op_type_name() != "sgd_update"
         && user_op_conf.op_type_name() != "momentum_update"
