@@ -80,23 +80,6 @@ void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, c
           n, scale, x, mask, addend, y);
 }
 
-template<>
-void MaskAndScale<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
-                           const int8_t* mask, float16* y) {
-  MaskAndScaleGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
-}
-
-template<>
-void MaskAndScaleAdd<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
-                              const int8_t* mask, const float16* addend, float16* y) {
-  MaskAndScaleAddGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<const half*>(addend),
-          reinterpret_cast<half*>(y));
-}
-
 template<typename T>
 class DropoutKernelGPU final : public user_op::OpKernel {
  public:
@@ -126,7 +109,7 @@ class DropoutKernelGPU final : public user_op::OpKernel {
       (user_op::HobDeviceTag() == "gpu")                                                  \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_DROPOUT_KERNEL_GPU(float16)
+REGISTER_DROPOUT_KERNEL_GPU(half)
 REGISTER_DROPOUT_KERNEL_GPU(float)
 REGISTER_DROPOUT_KERNEL_GPU(double)
 
@@ -159,7 +142,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(float16)
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 
