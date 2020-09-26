@@ -707,7 +707,7 @@ def set_indexed_slices_optimizer_conf(func_desc, value):
 
 
 @oneflow_function_config("enable_fuse_model_update_ops")
-def set_enable_fuse_model_update_ops(func_desc, value):
+def set_enable_fuse_model_update_ops(func_desc, value=True):
     r"""Whether enable fuse_model_update_ops.
             If enabled, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
