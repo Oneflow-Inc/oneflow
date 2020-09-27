@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 namespace eager {
@@ -137,18 +138,24 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
 }
 
 Maybe<void> SendBlobInstructionType::Send(int64_t this_machine_id, int64_t dst_machine_id,
-                                          uint64_t body_token, const char* mem_ptr,
-                                          std::size_t size,
+                                          uint64_t token, const char* mem_ptr, std::size_t size,
                                           const std::function<void()>& Callback) const {
-  TODO();
+  // TODO(lixinqi): Change to Global<Transport> solution
+  Global<CtrlClient>::Get()->PushKV(std::to_string(token),
+                                    [&](std::string* str) { str->assign(mem_ptr, size); });
+  Callback();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReceiveBlobInstructionType::Receive(int64_t src_machine_id, int64_t this_machine_id,
-                                                uint64_t body_token, char* mem_ptr,
-                                                std::size_t size,
+                                                uint64_t token, char* mem_ptr, std::size_t size,
                                                 const std::function<void()>& Callback) const {
-  TODO();
+  // TODO(lixinqi): Change to Global<Transport> solution
+  Global<CtrlClient>::Get()->PullKV(std::to_string(token), [&](const std::string& str) {
+    CHECK_LE(str.size(), size);
+    std::memcpy(mem_ptr, str.data(), str.size());
+  });
+  Callback();
   return Maybe<void>::Ok();
 }
 
