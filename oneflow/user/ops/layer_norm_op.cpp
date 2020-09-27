@@ -53,7 +53,6 @@ REGISTER_USER_OP("layer_norm")
     .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
     .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
     .Attr("epsilon", UserOpAttrType::kAtDouble)
-    .Attr("for_test", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
