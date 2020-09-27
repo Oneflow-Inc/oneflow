@@ -98,7 +98,7 @@ void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& 
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kTransport;
   msg.transport_msg = transport_msg;
-  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+  SendSocketMsg(dst_machine_id, msg);
 }
 
 void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {

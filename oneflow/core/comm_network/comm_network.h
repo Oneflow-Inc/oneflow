@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
-// #define DEPRECATED(func) func __attribute__((deprecated))
 #define DEPRECATED __attribute__((deprecated))
 
 #include "oneflow/core/actor/actor_message.h"
@@ -52,7 +51,6 @@ class CommNet {
   void AddReadCallBack(void* actor_read_id, std::function<void()> callback);
   void ReadDone(void* read_id);
 
-  //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
 
  protected:

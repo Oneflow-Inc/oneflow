@@ -54,15 +54,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   HashMap<int, SocketHelper*> sockfd2helper_;
 };
 
-/*
- * DEPRECATED
-template<>
-class Global<EpollCommNet> final {
- public:
-  static EpollCommNet* Get() { return static_cast<EpollCommNet*>(Global<CommNet>::Get()); }
-};
-*/
-
 }  // namespace oneflow
 
 #endif  // PLATFORM_POSIX

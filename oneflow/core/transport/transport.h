@@ -52,7 +52,7 @@ struct CopyStatusOnLocalMachine {
   std::size_t size;
   std::function<void()> callback;
   CopyStatusOnLocalMachine(uint64_t tk, void* p, std::size_t s, std::function<void()> cb)
-      : token(tk), ptr(p), size(s), callback(cb) {}
+      : token(tk), ptr(p), size(s), callback(std::move(cb)) {}
 };
 
 class Transport {
@@ -80,7 +80,7 @@ class Transport {
   // Global<Transport> has a dependency on Global<CommNet> which should be initialized first.
   friend class Global<Transport>;
   Transport();
-  std::mutex status_lock_;
+  std::mutex status_mutex_;
   HashMap<uint64_t, TransportStatus> token2status_;
 
   // for local copy
@@ -93,10 +93,6 @@ class Transport {
 
   Channel<TransportMsg> msg_channel_;
   std::thread msg_poller_;
-
-  // unused now
-  // Channel<std::function<void()>> callback_channel_;
-  // std::thread callback_poller_;
 };
 
 }  // namespace oneflow
