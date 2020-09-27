@@ -31,6 +31,10 @@ def numpy_sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
+def numpy_sigmoid_grad(y, dy):
+    return y * (1 - y) * dy
+
+
 def make_job(input_shape, dtype=flow.float32):
     @flow.global_function(function_config=func_config)
     def sigmoid_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
@@ -39,27 +43,60 @@ def make_job(input_shape, dtype=flow.float32):
     return sigmoid_job
 
 
+def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
+    @flow.global_function(function_config=func_config)
+    def sigmoid_grad_job(y: oft.Numpy.Placeholder(y_shape, dtype=dtype), dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype)):
+        return flow.math.sigmoid_grad(y, dy)
+
+    return sigmoid_grad_job
+
+
 def make_py_job(input_shape, dtype=flow.float32):
     @flow.global_function(function_config=func_config)
-    def py_sigmoid_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
+    def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
         with flow.scope.placement("cpu", "0:0"):
             return flow.py.sigmoid(x)
 
-    return py_sigmoid_job
+    return sigmoid_py_job
+
+
+def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
+    @flow.global_function(function_config=func_config)
+    def sigmoid_py_grad_job(y: oft.Numpy.Placeholder(y_shape, dtype=dtype), dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype)):
+        with flow.scope.placement("cpu", "0:0"):
+            return flow.py.sigmoid_grad(y, dy)
+
+    return sigmoid_py_grad_job
 
 
 def test_py_sigmoid(test_case):
     x = np.ones((1, 10), dtype=np.float32)
-
     sig_job = make_job(x.shape)
     py_sig_job = make_py_job(x.shape)
-
     sig = sig_job(x).get().numpy()
     py_sig = py_sig_job(x).get().numpy()
     numpy_sig = numpy_sigmoid(x)
     print("sig : ", sig)
     print("py_sig : ", py_sig)
     print("numpy_sig : ", numpy_sig)
-
     test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
-    test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
+    test_case.assertTrue(np.allclose(
+        py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
+
+
+def test_py_sigmoid_grad(test_case):
+    x = np.ones((1, 10), dtype=np.float32)
+    y = 0.5 * np.ones((1, 10), dtype=np.float32)
+    dy = 0.2 * np.ones((1, 10), dtype=np.float32)
+    sig_grad_job = make_grad_job(y.shape, dy.shape)
+    py_sig_grad_job = make_py_grad_job(y.shape, dy.shape)
+    sig_grad = sig_grad_job(y, dy).get().numpy()
+    py_sig_grad = py_sig_grad_job(y, dy).get().numpy()
+    numpy_sig_grad = numpy_sigmoid_grad(y, dy)
+    print("sig_grad", sig_grad)
+    print("py_sig_grad", py_sig_grad)
+    print("numpy_sig_grad", numpy_sig_grad)
+    test_case.assertTrue(np.allclose(
+        sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
+    test_case.assertTrue(np.allclose(
+        py_sig_grad, numpy_sig_grad, rtol=1e-03, atol=1e-05))

@@ -42,11 +42,32 @@ def py_sigmoid(
     """
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Sigmoid_")
+            name if name is not None else id_util.UniqueStr("PySigmoid_")
         )
         .Op("py_sigmoid")
         .Input("in", [x])
         .Output("out")
+        .Attr("py_file", "py_sigmoid")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("py.sigmoid_grad")
+def py_sigmoid_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("PySigmoidGrad_")
+        )
+        .Op("pyg_sigmoid")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
         .Attr("py_file", "py_sigmoid")
         .Build()
         .InferAndTryRun()

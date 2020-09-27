@@ -42,7 +42,7 @@ def dense(
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""Fully-connected layer. 
-    
+
     The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
 
     Args:
@@ -65,7 +65,7 @@ def dense(
         ValueError: The dimension of input `Blob` must be less than 2.
         VauleError: Model distribute must be in auto, broadcast, split.
         ValueError: The input must be a 2D `Blob` when the model distribute is split.
-    
+
     For example: 
 
     .. code-block:: python 
@@ -181,7 +181,7 @@ def conv1d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""1D convolution layer. 
-    
+
     This layer computes a 1-D convolution with 3D input Blob and filters. 
 
     Args:
@@ -214,7 +214,7 @@ def conv1d(
 
     Returns:
         remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).
-    
+
     For example: 
 
     .. code-block:: python 
@@ -276,7 +276,8 @@ def conv1d(
         raise ValueError("data_format must be in NCW or NWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+        kernel_initializer = flow.xavier_uniform_initializer(
+            data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -342,7 +343,8 @@ def conv1d(
             )
 
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+            output = flow.nn.bias_add(
+                output, bias, data_format, name="bias_add")
 
     if callable(activation):
         with flow.scope.namespace(name):
@@ -375,7 +377,7 @@ def conv2d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""2D convolution layer. 
-    
+
     This layer computes a 2D convolution with 4D input Blob and filters. 
 
     Args:
@@ -410,7 +412,7 @@ def conv2d(
 
     Returns:
         remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
-    
+
     For example: 
 
     .. code-block:: python 
@@ -473,7 +475,8 @@ def conv2d(
         raise ValueError("data_format must be in NCHW or NHWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+        kernel_initializer = flow.xavier_uniform_initializer(
+            data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -539,11 +542,13 @@ def conv2d(
             )
 
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+            output = flow.nn.bias_add(
+                output, bias, data_format, name="bias_add")
 
     if callable(activation):
-        with flow.scope.namespace(name):
-            output = activation(output, name="activation")
+        with flow.scope.placement("cpu", "0:0"):
+            with flow.scope.namespace(name):
+                output = activation(output, name="activation")
 
     return output
 
@@ -572,7 +577,7 @@ def conv3d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""3D convolution layer. 
-    
+
     This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
@@ -607,7 +612,7 @@ def conv3d(
 
     Returns:
         remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
-    
+
     For example: 
 
     .. code-block:: python 
@@ -677,7 +682,8 @@ def conv3d(
         raise ValueError("data_format must be in NCHW or NHWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+        kernel_initializer = flow.xavier_uniform_initializer(
+            data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -743,7 +749,8 @@ def conv3d(
             )
 
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+            output = flow.nn.bias_add(
+                output, bias, data_format, name="bias_add")
 
     if callable(activation):
         with flow.scope.namespace(name):
@@ -1008,7 +1015,8 @@ def _get_batch_normalization_variables(
                 reuse=False,
             )
         else:
-            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+            beta = flow.constant(0, dtype=params_dtype,
+                                 shape=params_shape, name="beta")
 
         if scale:
             gamma = flow.get_variable(
@@ -1067,9 +1075,9 @@ def batch_normalization(
     name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
     r"""The BatchNormalization Layer. 
-    
+
     This layer can be used in conv or dense layer.
-    
+
     The input data will be normalized by the mean and variance of the current batch data
 
     Args:
@@ -1162,12 +1170,14 @@ def batch_normalization(
             for dim in range(len(inputs.shape)):
                 if dim != axis:
                     reduce_axis.append(dim)
-            mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=False)
+            mean, variance = flow.nn.moments(
+                inputs, reduce_axis, keepdims=False)
 
             def update_moving(moving, this_batch):
                 moving_identity = flow.identity(moving)
                 flow.assign(
-                    moving, momentum * moving_identity + (1 - momentum) * this_batch
+                    moving, momentum * moving_identity +
+                    (1 - momentum) * this_batch
                 )
 
             update_moving(moving_mean, mean)
@@ -1423,7 +1433,7 @@ def upsample(
 
     Returns:
         [type]: remote_blob_util.BlobDef:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
-    
+
     For example: 
 
     .. code-block:: python 
