@@ -16,6 +16,7 @@ option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
+set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
