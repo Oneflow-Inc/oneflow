@@ -1460,3 +1460,28 @@ class LazyAdam(Optimizer):
         train_conf.model_update_conf.lazy_adam_conf.beta1 = self.beta1
         train_conf.model_update_conf.lazy_adam_conf.beta2 = self.beta2
         train_conf.model_update_conf.lazy_adam_conf.epsilon = self.epsilon
+
+
+@oneflow_export("optimizer.LAMB")
+class LAMB(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        epsilon: float = 1e-6,
+        loss_scale_factor: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+    ):
+        super().__init__(
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+        )
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
+        train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
+        train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon
