@@ -30,7 +30,7 @@ for gpu in gpus:
 
 def test_layer_norm(_):
     confs = [
-        {"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1},
+        {"x_shape": (40, 50), "begin_norm_axis": -1, "begin_params_axis": -1},
     ]
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
@@ -57,7 +57,7 @@ def test_layer_norm(_):
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
-            y_tf = tf.keras.layers.LayerNormalization(
+            layer = tf.keras.layers.LayerNormalization(
                 axis=begin_norm_axis,
                 epsilon=epsilon,
                 center=center,
@@ -69,14 +69,46 @@ def test_layer_norm(_):
                 beta_constraint=None,
                 gamma_constraint=None,
                 trainable=trainable,
-            )(x_tf)
+            )
+            y_tf = layer(x_tf)
 
         dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
+        grad = tape.gradient(y_tf, layer.trainable_variables)
+        if trainable:
+            if scale and center:
+                tf_gamma_diff = grad[0]
+                tf_beta_diff = grad[1]
+            elif scale and not center:
+                tf_gamma_diff = grad[0]
+            elif not scale and center:
+                tf_beta_diff = grad[0]
+            else:
+                pass
+        else:
+            pass
 
         def assert_grad(b):
             diff = dx_tf.numpy() - b.numpy()
             max_diff = np.max(np.abs(diff))
             assert np.allclose(dx_tf.numpy(), b.numpy(), rtol=1e-5, atol=1e-5), (
+                case,
+                max_diff,
+            )
+
+        def assert_grad_gamma(b):
+            diff = tf_gamma_diff.numpy() - b.numpy()
+            max_diff = np.max(np.abs(diff))
+            assert np.allclose(
+                tf_gamma_diff.numpy(), b.numpy(), rtol=1e-4, atol=1e-4
+            ), (
+                case,
+                max_diff,
+            )
+
+        def assert_grad_beta(b):
+            diff = tf_beta_diff.numpy() - b.numpy()
+            max_diff = np.max(np.abs(diff))
+            assert np.allclose(tf_beta_diff.numpy(), b.numpy(), rtol=1e-5, atol=1e-5), (
                 case,
                 max_diff,
             )
@@ -106,6 +138,31 @@ def test_layer_norm(_):
                     center=center,
                     scale=scale,
                 )
+            if center:
+                with flow.scope.namespace("LayerNorm"):
+                    beta = flow.get_variable(
+                        name="beta",
+                        shape=(x.shape[begin_params_axis:],),
+                        dtype=x.dtype,
+                        initializer=flow.constant_initializer(0.0),
+                        trainable=trainable,
+                        model_name="beta",
+                    )
+                    if trainable:
+                        flow.watch_diff(beta, assert_grad_beta)
+            if scale:
+                with flow.scope.namespace("LayerNorm"):
+                    gamma = flow.get_variable(
+                        name="gamma",
+                        shape=(x.shape[begin_params_axis:],),
+                        dtype=x.dtype,
+                        initializer=flow.constant_initializer(1.0),
+                        trainable=trainable,
+                        model_name="gamma",
+                    )
+                    if trainable:
+                        flow.watch_diff(gamma, assert_grad_gamma)
+
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(y)
@@ -114,6 +171,7 @@ def test_layer_norm(_):
         check_point = flow.train.CheckPoint()
         check_point.init()
         y = test_job(x).get()
+
         assert y.numpy().shape == y_tf.numpy().shape, (
             y.numpy().shape,
             y_tf.numpy().shape,

@@ -214,10 +214,8 @@ __global__ void LayerNormParamGradImplHalf(const int64_t n, const int64_t instan
   __syncthreads();
   for (int64_t elem_id = tid; elem_id < instance_size; elem_id += blockDim.x) {
     const int64_t offset = blockIdx.x * instance_size + elem_id;
-    half gamma_diff_sum = __float2half(gamma_diff_sum_buf[elem_id]);
-    tmp_gamma_diff[offset] = gamma_diff_sum;
-    half beta_diff_sum = __float2half(beta_diff_sum_buf[elem_id]);
-    tmp_beta_diff[offset] = beta_diff_sum;
+    tmp_gamma_diff[offset] = __float2half(gamma_diff_sum_buf[elem_id]);
+    tmp_beta_diff[offset] = __float2half(beta_diff_sum_buf[elem_id]);
   }
 }
 
