@@ -137,6 +137,8 @@ def test_layer_norm(_):
                     begin_params_axis=begin_params_axis,
                     center=center,
                     scale=scale,
+                    trainable=trainable,
+                    epsilon=epsilon,
                 )
             if center:
                 with flow.scope.namespace("LayerNorm"):

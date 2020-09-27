@@ -148,7 +148,8 @@ constexpr int64_t kLayerNormGpuBlockSize = 512;
 int64_t GetLayerNormBlockSize() { return kLayerNormGpuBlockSize; }
 
 int64_t GetLayerNormNumBlocks(const int64_t elem_cnt) {
-  return std::min(static_cast<int>(elem_cnt / kLayerNormGpuBlockSize), 256);
+  return std::min(
+      static_cast<int>((elem_cnt + kLayerNormGpuBlockSize - 1) / kLayerNormGpuBlockSize), 256);
 }
 
 template<typename T>
@@ -165,8 +166,8 @@ template<typename T>
 __global__ void LayerNormParamGradImpl(const int64_t n, const int64_t instance_size, const T* dy,
                                        const T* normalized, const T* gamma, T* gamma_diff,
                                        T* beta_diff, T* normalized_diff) {
-  extern __shared__ __align__(sizeof(T)) unsigned char fw_shared_buf[];
-  auto* gamma_diff_sum_buf = reinterpret_cast<T*>(fw_shared_buf);
+  extern __shared__ __align__(sizeof(T)) unsigned char bw_shared_buf[];
+  auto* gamma_diff_sum_buf = reinterpret_cast<T*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const int64_t tid = threadIdx.x;
   for (int64_t elem_id = tid; elem_id < instance_size; elem_id += blockDim.x) {
@@ -194,8 +195,8 @@ __global__ void LayerNormParamGradHalfImpl(const int64_t n, const int64_t instan
                                            const half* dy, const half* normalized,
                                            const half* gamma, half* tmp_gamma_diff,
                                            half* tmp_beta_diff, half* normalized_diff) {
-  extern __shared__ __align__(sizeof(float)) unsigned char fw_shared_buf[];
-  auto* gamma_diff_sum_buf = reinterpret_cast<float*>(fw_shared_buf);
+  extern __shared__ __align__(sizeof(float)) unsigned char bw_shared_buf[];
+  auto* gamma_diff_sum_buf = reinterpret_cast<float*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const int64_t tid = threadIdx.x;
   for (int64_t elem_id = tid; elem_id < instance_size; elem_id += blockDim.x) {
@@ -219,19 +220,6 @@ __global__ void LayerNormParamGradHalfImpl(const int64_t n, const int64_t instan
     tmp_gamma_diff[offset] = __float2half(gamma_diff_sum_buf[elem_id]);
     tmp_beta_diff[offset] = __float2half(beta_diff_sum_buf[elem_id]);
   }
-}
-
-void LayerNormParamGradGpuHalf(DeviceCtx* ctx, const int64_t n, const int64_t instance_size,
-                               const float16* dy, const float16* normalized, const float16* gamma,
-                               float16* tmp_gamma_diff, float16* tmp_beta_diff,
-                               float16* normalized_diff) {
-  LayerNormParamGradHalfImpl<<<GetLayerNormNumBlocks(n), GetLayerNormBlockSize(),
-                               GetDynamicSharedMemorySize<float16>(instance_size),
-                               ctx->cuda_stream()>>>(
-      n, instance_size, reinterpret_cast<const half*>(dy),
-      reinterpret_cast<const half*>(normalized), reinterpret_cast<const half*>(gamma),
-      reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
-      reinterpret_cast<half*>(normalized_diff));
 }
 
 }  // namespace
@@ -491,9 +479,14 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel {
       float16* tmp_reduce_buf =
           reinterpret_cast<float16*>(tmp_buffer->mut_dptr<char>() + 2 * tmp_diff_size);
       CHECK_GE(tmp_buffer->shape().elem_cnt(), 3 * tmp_diff_size);
-      LayerNormParamGradGpuHalf(ctx->device_ctx(), dy->shape().elem_cnt(), m, dy->dptr<float16>(),
-                                normalized->dptr<float16>(), gamma->dptr<float16>(), tmp_gamma_diff,
-                                tmp_beta_diff, normalized_diff->mut_dptr<float16>());
+      LayerNormParamGradHalfImpl<<<GetLayerNormNumBlocks(dy->shape().elem_cnt()),
+                                   GetLayerNormBlockSize(), GetDynamicSharedMemorySize<float16>(m),
+                                   ctx->device_ctx()->cuda_stream()>>>(
+          dy->shape().elem_cnt(), m, reinterpret_cast<const half*>(dy->dptr<float16>()),
+          reinterpret_cast<const half*>(normalized->dptr<float16>()),
+          reinterpret_cast<const half*>(gamma->dptr<float16>()),
+          reinterpret_cast<half*>(tmp_gamma_diff), reinterpret_cast<half*>(tmp_beta_diff),
+          reinterpret_cast<half*>(normalized_diff->mut_dptr<float16>()));
       NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, gamma_diff->mut_dptr<float16>()),
                         Val({num_blocks, m}, tmp_gamma_diff), Var({num_blocks, m}, tmp_reduce_buf));
       NdUtil::ReduceSum(ctx->device_ctx(), Var({1, m}, beta_diff->mut_dptr<float16>()),
