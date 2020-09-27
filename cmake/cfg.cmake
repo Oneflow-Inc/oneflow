@@ -1,5 +1,16 @@
-include_directories(${PROJECT_SOURCE_DIR}/tools/cfg/include)
-set(PYBIND_REGISTRY_CC "${PROJECT_SOURCE_DIR}/tools/cfg/pybind_module_registry.cpp")
+execute_process( 
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  OUTPUT_VARIABLE cfg_head_dir_and_convert_srcs
+  )
+
+string(REPLACE "\n" ";" cfg_head_dir_and_convert_srcs ${cfg_head_dir_and_convert_srcs})
+list(GET cfg_head_dir_and_convert_srcs 0  CFG_INCLUDE_DIR)
+list(GET cfg_head_dir_and_convert_srcs 1  TEMPLATE_CONVERT_PYTHON_SCRIPT)
+list(REMOVE_AT cfg_head_dir_and_convert_srcs 0 1)
+
+set(PYBIND_REGISTRY_CC ${cfg_head_dir_and_convert_srcs})
+include_directories(${CFG_INCLUDE_DIR})
+
 
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
@@ -27,7 +38,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       OUTPUT "${CFG_HPP_FIL}"
              "${CFG_CPP_FIL}"
              "${CFG_PYBIND_FIL}"
-      COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/template_convert.py
+      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
            --dst_pybind_path ${CFG_PYBIND_FIL}
            --proto_py_path ${PY_REL_MOD}  --of_proto_python_dir ${of_proto_python_dir}
