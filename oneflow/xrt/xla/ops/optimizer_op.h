@@ -33,8 +33,8 @@ namespace mola {
 class OptimizerOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    xla::XlaOp gradient = ctx->Input("model_diff");
-    xla::XlaOp learning_rate = ctx->Input("learning_rate");
+    xla::XlaOp gradient = ctx->Input("model_diff_0");
+    xla::XlaOp learning_rate = ctx->Input("learning_rate_0");
     ApplyUpdate(ctx, gradient, learning_rate);
   }
 
@@ -43,8 +43,8 @@ class OptimizerOp : public XlaOpKernel {
 
   xla::XlaOp ClipGradient(XlaOpContext *ctx, const xla::XlaOp &gradient,
                           const ClipConf &clip_conf) {
-    DataType data_type = ctx->InputType("model_diff");
-    Shape gradient_shape = ctx->InputShape("model_diff");
+    DataType data_type = ctx->InputType("model_diff_0");
+    Shape gradient_shape = ctx->InputShape("model_diff_0");
     xla::XlaOp norm;
     if (clip_conf.clip_by_global_norm().has_global_norm()) {
       float global_norm_val = clip_conf.clip_by_global_norm().global_norm();
