@@ -37,27 +37,27 @@ class ClipGradientConf:
 
 @oneflow_export("optimizer.grad_clipping.by_global_norm")
 class by_global_norm(ClipGradientConf):
-    r"""This operator limits the norm of `Input` with `clip_norm`. 
+    r"""This operator limits the norm of `Input` with `clip_norm`.
 
-    If the norm of `Input` is less than the `clip_norm`, 
+    If the norm of `Input` is less than the `clip_norm`,
 
-    the `Output` will be the same as `Input`. 
+    the `Output` will be the same as `Input`.
 
-    If the norm of `Input` is greater than the `clip_norm`, the `Output` will be scaled. 
+    If the norm of `Input` is greater than the `clip_norm`, the `Output` will be scaled.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
-    
+    .. math::
+
         Output = \frac{clip\_norm*Input}{norm(Input)}
-    
+
     Args:
-        clip_norm (float): The maximum norm value. 
+        clip_norm (float): The maximum norm value.
 
     For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         import oneflow as flow
         import oneflow.typing as tp
 
@@ -76,8 +76,8 @@ class by_global_norm(ClipGradientConf):
             # Set gradient_clip
             gradient_clip = flow.optimizer.grad_clipping.by_global_norm(1.0)
             # Set AdamW optimizer with gradient clip
-            flow.optimizer.AdamW(lr_scheduler, 
-                        do_bias_correction=False, weight_decay=0.00005, 
+            flow.optimizer.AdamW(lr_scheduler,
+                        do_bias_correction=False, weight_decay=0.00005,
                         grad_clipping=gradient_clip).minimize(loss)
 
             return loss
@@ -102,17 +102,17 @@ class WarmupConf:
 
 @oneflow_export("optimizer.warmup.constant")
 class constant(WarmupConf):
-    r"""This operator use the constant warmup strategy to adjust the learning rate. 
+    r"""This operator use the constant warmup strategy to adjust the learning rate.
 
-    Before the steps are specified by user, the learning rate is: 
+    Before the steps are specified by user, the learning rate is:
 
     .. math::
 
         learning\_rate = base\_learning\_rate*multiplier
 
-    After the steps are specified by user, the learning rate is: 
+    After the steps are specified by user, the learning rate is:
 
-    .. math:: 
+    .. math::
 
         learning\_rate = base\_learning\_rate
 
@@ -120,13 +120,13 @@ class constant(WarmupConf):
         steps (int): [description]
         multiplier (float): The scale factor :math:`multiplier`, it should be greater than 0. and less than 1.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        
+
         @flow.global_function(type="train")
         def train_job(
             images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
@@ -164,25 +164,25 @@ class constant(WarmupConf):
 class linear(WarmupConf):
     r"""This operator uses the linear warmup strategy to adjust the learning rate.
 
-    When current train step is less than warmup steps, the learning rate will be updated as: 
+    When current train step is less than warmup steps, the learning rate will be updated as:
 
-    .. math:: 
+    .. math::
 
-        & current\_multiplier = start\_multiplier + (1-start\_multiplier)*\frac{train\_step}{warmup\_step} 
-        
+        & current\_multiplier = start\_multiplier + (1-start\_multiplier)*\frac{train\_step}{warmup\_step}
+
         & current\_learning\_rate = learning\_rate*current\_multiplier
 
     Args:
-        steps (int): The warmup steps. 
+        steps (int): The warmup steps.
         start_multiplier (float): The start multiplier(:math:`start\_multiplier`). It should be greater than 0. and less than 1.
-    
-    For example: 
 
-    .. code-block:: python  
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        
+
         @flow.global_function(type="train")
         def train_job(
             images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
@@ -194,7 +194,7 @@ class linear(WarmupConf):
                     labels, logits, name="softmax_loss"
                 )
 
-            # Before 10 epochs, the learning rate will increase from 0.001 to 0.01 in linear. 
+            # Before 10 epochs, the learning rate will increase from 0.001 to 0.01 in linear.
             warmup_scheduler = flow.optimizer.warmup.linear(10, 0.1)
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.01], warmup=warmup_scheduler)
             flow.optimizer.Adam(lr_scheduler).minimize(loss)
@@ -255,33 +255,33 @@ class LrScheduler:
 
 @oneflow_export("optimizer.CosineScheduler")
 class CosineScheduler(LrScheduler):
-    r"""This operator creates a Cosine decayed learning rate scheduler. 
-    
-    Before the steps are specified by user, the learning rate will be updated as: 
+    r"""This operator creates a Cosine decayed learning rate scheduler.
 
-    .. math:: 
+    Before the steps are specified by user, the learning rate will be updated as:
 
-        & cos\_decay = 0.5*(1+cos(\pi*\frac{current\_batch}{decayed\_batch})) 
-        
-        & decay\_factor = (1-\alpha)*cos\_decay+\alpha 
-        
+    .. math::
+
+        & cos\_decay = 0.5*(1+cos(\pi*\frac{current\_batch}{decayed\_batch}))
+
+        & decay\_factor = (1-\alpha)*cos\_decay+\alpha
+
         & learning\_rate = base\_learning\_rate*decay\_factor
 
     After the steps specified by user, the learning rate will be :
 
-    .. math:: 
+    .. math::
 
-        learning\_rate = {base\_learning\_rate}*{\alpha}  
+        learning\_rate = {base\_learning\_rate}*{\alpha}
 
     Args:
         base_lr (float): The base learning rate (:math:`base\_learning\_rate`)
         steps (int): The decay steps in the scheduler (:math:`decayed\_batch`)
         alpha (float, optional): The learning rate scale factor (:math:`\alpha`). Defaults to 0.0.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -337,16 +337,16 @@ class CustomScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PiecewiseConstantScheduler")
 class PiecewiseConstantScheduler(LrScheduler):
-    r"""This operator creates a piecewise constant learning rate scheduler. 
-    
+    r"""This operator creates a piecewise constant learning rate scheduler.
+
     The change in learning rate can be described as follows:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         boundaries = [1000, 2000]
         values = [0.1, 0.01, 0.001]
 
-        if current_step < 1000: 
+        if current_step < 1000:
             learning_rate = 0.1
         elif 1000 < current_step < 2000:
             learning_rate = 0.01
@@ -354,13 +354,13 @@ class PiecewiseConstantScheduler(LrScheduler):
             learning_rate = 0.001
 
     Args:
-        boundaries (Sequence[int]): A list of train steps. 
-        values (Sequence[float]): A list of learning rate values during the different train step boundary. 
+        boundaries (Sequence[int]): A list of train steps.
+        values (Sequence[float]): A list of learning rate values during the different train step boundary.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -407,17 +407,17 @@ class PiecewiseConstantScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PiecewiseScalingScheduler")
 class PiecewiseScalingScheduler(LrScheduler):
-    """This operator creates a piecewise scaled decayed learning rate scheduler. 
-    
+    """This operator creates a piecewise scaled decayed learning rate scheduler.
+
     The change in learning rate can be described as follows:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         boundaries = [1000, 2000]
         scale = [0.1, 0.01]
         base_lr = 0.1
 
-        if current_step < 1000: 
+        if current_step < 1000:
             learning_rate = base_lr
         elif 1000 < current_step < 2000:
             learning_rate = 0.1*base_lr
@@ -426,8 +426,8 @@ class PiecewiseScalingScheduler(LrScheduler):
 
     Args:
         base_lr (float): The base learning rate
-        boundaries (Sequence[int]): A list of train steps. 
-        scale (Union[float, Sequence[float]]): A list of learning rate scaled factors during the different train step boundary. 
+        boundaries (Sequence[int]): A list of train steps.
+        scale (Union[float, Sequence[float]]): A list of learning rate scaled factors during the different train step boundary.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
     For example:
@@ -483,24 +483,24 @@ class PiecewiseScalingScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PolynomialSchduler")
 class PolynomialSchduler(LrScheduler):
-    r"""This operator creates a polynomial decayed learning rate scheduler. 
-    
+    r"""This operator creates a polynomial decayed learning rate scheduler.
+
     The learning rate will be updated as follows:
 
-    If cycle is `True`, the equation is: 
+    If cycle is `True`, the equation is:
 
-    .. math:: 
+    .. math::
 
-        & decay\_batch = decay\_batch*ceil(\frac{current\_batch}{decay\_batch})  
+        & decay\_batch = decay\_batch*ceil(\frac{current\_batch}{decay\_batch})
 
         & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
 
     If cycle is `False`, the equation is:
 
-    .. math:: 
+    .. math::
 
         & decay\_batch = min(decay\_batch, current\_batch)
-        
+
         & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
 
     Args:
@@ -568,20 +568,20 @@ class PolynomialSchduler(LrScheduler):
 
 @oneflow_export("optimizer.LinearCosineScheduler")
 class LinearCosineScheduler(LrScheduler):
-    r"""This operator creates a linear cosine decayed learning rate scheduler. 
-    
+    r"""This operator creates a linear cosine decayed learning rate scheduler.
+
     The learning rate will be updated as follows:
 
-    .. math:: 
+    .. math::
 
         & current\_batch = min(current\_batch, decay\_batch)
-        
+
         & linear\_decay = \frac{(decay\_batch - current\_batch)}{decay\_batch}
-        
+
         & cosine\_decay = 0.5*(1.0+cos(2*\pi*num\_periods*\frac{current\_batch}{decay\_batch}))
-        
-        & decay\_factor = (\alpha+linear\_decay)*cosine\_decay + \beta 
-        
+
+        & decay\_factor = (\alpha+linear\_decay)*cosine\_decay + \beta
+
         & learning\_rate = base\_learning\_rate*decay\_factor
 
     Args:
@@ -645,26 +645,26 @@ class LinearCosineScheduler(LrScheduler):
 
 @oneflow_export("optimizer.ExponentialScheduler")
 class ExponentialScheduler(LrScheduler):
-    r"""This operator creates a exponential decayed learning rate scheduler. 
-    
+    r"""This operator creates a exponential decayed learning rate scheduler.
+
     The learning rate will be updated as follows:
 
-    If staircase is set to False, the equation is: 
+    If staircase is set to False, the equation is:
 
-    .. math:: 
+    .. math::
 
-        & pow = \frac{current\_batch}{decay\_batch} 
-        
+        & pow = \frac{current\_batch}{decay\_batch}
+
         & learning\_rate = base\_learning\_rate*decay\_rate^{pow}
-    
-    If staircase is set to True, the equation is: 
 
-    .. math:: 
+    If staircase is set to True, the equation is:
 
-        & pow = floor(\frac{current\_batch}{decay\_batch}) 
-            
+    .. math::
+
+        & pow = floor(\frac{current\_batch}{decay\_batch})
+
         & learning\_rate = base\_learning\_rate*decay\_rate^{pow}
-    
+
     Args:
         base_lr (float): The base learning rate
         steps (int): The decay steps
@@ -723,26 +723,26 @@ class ExponentialScheduler(LrScheduler):
 
 @oneflow_export("optimizer.InverseTimeScheduler")
 class InverseTimeScheduler(LrScheduler):
-    r"""This operator creates a inverse time decayed learning rate scheduler. 
-    
+    r"""This operator creates a inverse time decayed learning rate scheduler.
+
     The learning rate will be updated as follows:
 
-    If staircase is set to False, the equation is: 
+    If staircase is set to False, the equation is:
 
-    .. math:: 
+    .. math::
 
         & step\_ratio = \frac{current\_batch}{decay\_batch}
 
         & learning\_rate = \frac{base\_learning\_rate}{1+decay\_rate*step\_ratio}
-    
-    If staircase is set to True, the equation is: 
 
-    .. math:: 
+    If staircase is set to True, the equation is:
+
+    .. math::
 
         & step\_ratio = \frac{current\_batch}{decay\_batch}
 
         & learning\_rate = \frac{base\_learning\_rate}{1+floor(decay\_rate*step\_ratio)}
-    
+
     Args:
         base_lr (float): The base learning rate
         steps (int): The decay steps
@@ -801,26 +801,26 @@ class InverseTimeScheduler(LrScheduler):
 
 @oneflow_export("optimizer.NaturalExpScheduler")
 class NaturalExpScheduler(LrScheduler):
-    r"""This operator creates a natural exponential decayed learning rate scheduler. 
-    
+    r"""This operator creates a natural exponential decayed learning rate scheduler.
+
     The learning rate will be updated as follows:
-    
-    If staircase is set to False, the equation is: 
 
-    .. math:: 
+    If staircase is set to False, the equation is:
+
+    .. math::
 
         & step\_ratio = \frac{current\_batch}{decay\_batch}
-        
+
         & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*step\_ratio}
-    
-    If staircase is set to True, the equation is: 
 
-    .. math:: 
+    If staircase is set to True, the equation is:
+
+    .. math::
 
         & step\_ratio = \frac{current\_batch}{decay\_batch}
-        
+
         & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*floor(step\_ratio)}
-    
+
     Args:
         base_lr (float): The base learning rate
         steps (int): The decay steps
@@ -919,21 +919,21 @@ class Optimizer:
 
 @oneflow_export("optimizer.SGD")
 class SGD(Optimizer):
-    r"""The optimizer of the stochastic gradient descent algorithm. 
-    
-    This algorithm takes a random sample's gradient as an approximate estimate of the overall gradient in small batch gradient descent.  
+    r"""The optimizer of the stochastic gradient descent algorithm.
 
-    When the momentum = 0, the equation of parameters updating is: 
+    This algorithm takes a random sample's gradient as an approximate estimate of the overall gradient in small batch gradient descent.
+
+    When the momentum = 0, the equation of parameters updating is:
 
     .. math::
 
         param_{new} = param_{old} - learning\_rate*grad
-    
+
     With momentum, the equation of parameters updating is:
 
     .. math::
 
-        & V_{t} = \beta*V_{t-1} + learning\_rate*g_t 
+        & V_{t} = \beta*V_{t-1} + learning\_rate*g_t
 
         & param_{new} = param_{old} - V_{t}
 
@@ -944,13 +944,13 @@ class SGD(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        
+
         @flow.global_function(type="train")
         def train_job(
             images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
@@ -966,7 +966,7 @@ class SGD(Optimizer):
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
             # Set Momentum=0.9 SGD optimizer
             flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(loss)
-            
+
             return loss
     """
 
@@ -992,37 +992,37 @@ class SGD(Optimizer):
 
 @oneflow_export("optimizer.Adam")
 class Adam(Optimizer):
-    r"""The optimizer of the Adam algorithm. 
-    
-    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates 
-    
+    r"""The optimizer of the Adam algorithm.
+
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates
+
     and the 2nd-moment estimates of gradient.
-    
-    With bias correction, the equation of parameters updating is: 
-    
+
+    With bias correction, the equation of parameters updating is:
+
     .. math::
 
-        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad 
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
 
-        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad} 
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
 
-        & \hat{V_t} = \frac{V_t}{1-\beta_1^t} 
+        & \hat{V_t} = \frac{V_t}{1-\beta_1^t}
 
-        & \hat{S_t} = \frac{S_t}{1-\beta_2^t} 
+        & \hat{S_t} = \frac{S_t}{1-\beta_2^t}
 
-        & \hat{g} = learning\_rate*\frac{\hat{V_t}}{\sqrt{\hat{S_t}}+\epsilon} 
+        & \hat{g} = learning\_rate*\frac{\hat{V_t}}{\sqrt{\hat{S_t}}+\epsilon}
 
         & param_{new} = param_{old} - \hat{g}
 
-    Without bias correction, the equation of parameters updating is: 
-    
+    Without bias correction, the equation of parameters updating is:
+
     .. math::
 
-        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad 
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
 
-        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad} 
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
 
-        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon} 
+        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}
 
         & param_{new} = param_{old} - \hat{g}
 
@@ -1038,13 +1038,13 @@ class Adam(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        
+
         @flow.global_function(type="train")
         def train_job(
             images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
@@ -1055,12 +1055,12 @@ class Adam(Optimizer):
                 loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
                     labels, logits, name="softmax_loss"
                 )
-            
+
             # Set learning rate as 0.001
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
             # Set Adam optimizer
             flow.optimizer.Adam(lr_scheduler, do_bias_correction=False).minimize(loss)
-            
+
             return loss
     """
 
@@ -1094,41 +1094,41 @@ class Adam(Optimizer):
 
 @oneflow_export("optimizer.AdamW")
 class AdamW(Optimizer):
-    r"""The optimizer of the Adam-weight-decay algorithm. 
-    
-    If we use L2 regularization, 
-    
-    it will be invalid due to the adaptive learning rate in Adam optimizer 
-    
-    (More details please refer to `Adam-weight-decay <https://www.fast.ai/2018/07/02/adam-weight-decay/>`_). 
-    
-    So we use Adam-weight-decay algorithm to solve this problem. 
+    r"""The optimizer of the Adam-weight-decay algorithm.
 
-    With bias correction, the equation of parameters updating is: 
-    
+    If we use L2 regularization,
+
+    it will be invalid due to the adaptive learning rate in Adam optimizer
+
+    (More details please refer to `Adam-weight-decay <https://www.fast.ai/2018/07/02/adam-weight-decay/>`_).
+
+    So we use Adam-weight-decay algorithm to solve this problem.
+
+    With bias correction, the equation of parameters updating is:
+
     .. math::
 
-        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad 
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
 
-        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad} 
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
 
-        & \hat{V_t} = \frac{V_t}{1-\beta_1^t} 
+        & \hat{V_t} = \frac{V_t}{1-\beta_1^t}
 
-        & \hat{S_t} = \frac{S_t}{1-\beta_2^t} 
+        & \hat{S_t} = \frac{S_t}{1-\beta_2^t}
 
-        & \hat{g} = learning\_rate*(\frac{\hat{V_t}}{\sqrt{\hat{S_t}}+\epsilon}+\lambda*param_{old}) 
+        & \hat{g} = learning\_rate*(\frac{\hat{V_t}}{\sqrt{\hat{S_t}}+\epsilon}+\lambda*param_{old})
 
         & param_{new} = param_{old} - \hat{g}
 
-    Without bias correction, the equation of parameters updating is: 
-    
+    Without bias correction, the equation of parameters updating is:
+
     .. math::
 
-        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad 
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
 
-        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad} 
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
 
-        & \hat{g} = learning\_rate*(\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}+\lambda*param_{old}) 
+        & \hat{g} = learning\_rate*(\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}+\lambda*param_{old})
 
         & param_{new} = param_{old} - \hat{g}
 
@@ -1147,16 +1147,16 @@ class AdamW(Optimizer):
 
     Note:
 
-        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None, 
-        all the model parameters will use weight decay. 
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None,
+        all the model parameters will use weight decay.
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        
+
         @flow.global_function(type="train")
         def train_job(
             images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
@@ -1167,13 +1167,13 @@ class AdamW(Optimizer):
                 loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
                     labels, logits, name="softmax_loss"
                 )
-            
+
             # Set learning rate as 0.001
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
             # Set AdamW optimizer, weight_decay factor is 0.00005
-            flow.optimizer.AdamW(lr_scheduler, 
+            flow.optimizer.AdamW(lr_scheduler,
                     do_bias_correction=False, weight_decay=0.00005).minimize(loss)
-            
+
             return loss
 
     """
@@ -1234,11 +1234,11 @@ class AdamW(Optimizer):
 
 @oneflow_export("optimizer.RMSProp")
 class RMSProp(Optimizer):
-    r"""The optimizer of the RMSProp algorithm. 
-    
-    This algorithm uses mean squared gradient to adjust the learning rate. 
+    r"""The optimizer of the RMSProp algorithm.
 
-    The equation of parameters updating is: 
+    This algorithm uses mean squared gradient to adjust the learning rate.
+
+    The equation of parameters updating is:
         .. math::
             & S_t = \beta_1*S_{t-1} + (1-\beta_1)*grad \odot grad
             & param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{S_t+\epsilon}} \odot grad
@@ -1249,7 +1249,7 @@ class RMSProp(Optimizer):
         else:
             .. math::
                 denom_t = S_t
-        .. math:: 
+        .. math::
             param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{denom_t+\epsilon}} \odot grad
 
     Args:
@@ -1315,15 +1315,15 @@ class RMSProp(Optimizer):
 
 @oneflow_export("optimizer.LARS")
 class LARS(Optimizer):
-    r"""The optimizer of the LARS algorithm. 
+    r"""The optimizer of the LARS algorithm.
 
-    The equation of parameters updating is: 
-    
+    The equation of parameters updating is:
+
     .. math::
 
-        & local\_learning\_rate = learning\_rate*lars\_coeff*\frac{\lVert{parm_{old}\rVert}}{\epsilon+\lVert{grad\rVert}} 
+        & local\_learning\_rate = learning\_rate*lars\_coeff*\frac{\lVert{parm_{old}\rVert}}{\epsilon+\lVert{grad\rVert}}
 
-        & momentum_t = \beta*momentum_{t-1} + local\_learning\_rate*(grad) 
+        & momentum_t = \beta*momentum_{t-1} + local\_learning\_rate*(grad)
 
         & param_{new} = param_{old} - momentum_t
 
@@ -1335,7 +1335,7 @@ class LARS(Optimizer):
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
-    
+
     For example:
 
     .. code-block:: python
@@ -1388,19 +1388,19 @@ class LARS(Optimizer):
 @oneflow_export("optimizer.LazyAdam")
 class LazyAdam(Optimizer):
     r"""
-    The optimizer of the LazyAdam algorithm. 
-    
-    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of the gradient. 
-    
-    The difference between Adam optimizer and LazyAdam optimizer is that LazyAdam only updates the element that has gradient in the current batch, it is faster than Adam optimizer. 
+    The optimizer of the LazyAdam algorithm.
+
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of the gradient.
+
+    The difference between Adam optimizer and LazyAdam optimizer is that LazyAdam only updates the element that has gradient in the current batch, it is faster than Adam optimizer.
 
     .. math::
 
-        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad 
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
 
-        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad} 
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
 
-        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon} 
+        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}
 
         & param_{new} = param_{old} - \hat{g}
 
@@ -1415,11 +1415,11 @@ class LazyAdam(Optimizer):
 
     For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        
+
         @flow.global_function(type="train")
         def train_job(
             images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
