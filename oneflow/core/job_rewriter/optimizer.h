@@ -24,6 +24,9 @@ namespace oneflow {
 void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 
+float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_update_conf,
+                                  const VariableOp& op);
+
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
                            JobBuilder* job_builder, T*);
