@@ -832,8 +832,8 @@ def gather_nd(
         def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
                         indice: tp.Numpy.Placeholder(shape=(2, 1), dtype=flow.int32)
         ) -> tp.Numpy:
-            gather_nd_blob = flow.gather(params=x, 
-                                        indices=indice)
+            gather_nd_blob = flow.gather_nd(params=x, 
+                                            indices=indice)
             return gather_nd_blob
 
 
@@ -859,8 +859,8 @@ def gather_nd(
         def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
                         indice: tp.Numpy.Placeholder(shape=(2, 2), dtype=flow.int32)
         ) -> tp.Numpy:
-            gather_nd_blob = flow.gather(params=x, 
-                                        indices=indice)
+            gather_nd_blob = flow.gather_nd(params=x, 
+                                            indices=indice)
             return gather_nd_blob
 
 
