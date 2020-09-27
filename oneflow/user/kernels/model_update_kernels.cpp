@@ -436,6 +436,34 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_ADAM_UPDATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+template<DeviceType device_type, typename T, typename G>
+class LambUpdateKernel final : public user_op::OpKernel {
+ public:
+  LambUpdateKernel() = default;
+  ~LambUpdateKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override{
+      // Add your code...
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_LAMB_UPDATE_KERNEL(device, dtype, gtype)                                \
+  REGISTER_USER_KERNEL("lamb_update")                                                    \
+      .SetCreateFn<LambUpdateKernel<device, dtype, gtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
+
 }  // namespace
 
 }  // namespace oneflow
