@@ -1,9 +1,7 @@
 include(python)
 # main cpp
-# TODO(tsai): skip for now, fail to link when building CPU only
-if (BUILD_CUDA)
-  list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
-endif()
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})
@@ -210,7 +208,7 @@ endif()
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj)
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive -ldl)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
