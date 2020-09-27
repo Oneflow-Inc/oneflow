@@ -190,4 +190,28 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
+REGISTER_CPU_ONLY_USER_OP("image_brightness_contrast")
+    .Input("in")
+    .Output("out")
+    .Attr<float>("brightness", UserOpAttrType::kAtFloat, 1.0)
+    .Attr<float>("brightness_shift", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("contrast", UserOpAttrType::kAtFloat, 1.0)
+    .Attr<float>("contrast_center", UserOpAttrType::kAtFloat, 0.5)
+    .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kInvalidDataType)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      DataType outbuffer_type = ctx->Attr<DataType>("data_type");
+      CHECK_OR_RETURN((outbuffer_type == DataType::kInvalidDataType)
+                      || (outbuffer_type == DataType::kUInt8)
+                      || outbuffer_type == DataType::kFloat);
+      *out_tensor->mut_shape() = in_tensor->shape();
+      *out_tensor->mut_data_type() = DataType::kTensorBuffer;
+      // *out_tensor = *in_tensor;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+
 }  // namespace oneflow

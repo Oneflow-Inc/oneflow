@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/common/data_type_converter.h"
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/random_seed_util.h"
@@ -401,6 +402,115 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("image_random_crop")
     .SetCreateFn<ImageRandomCropKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+
+namespace {
+
+template<typename T>
+constexpr float FullRange() {
+  return std::is_integral<T>::value ? std::numeric_limits<T>::max() : 1.0f;
+}
+
+template<typename T>
+constexpr float HalfRange() {
+  return std::is_integral<T>::value ? (1 << (8 * sizeof(T) - std::is_integral<T>::value - 1))
+                                    : 0.5f;
+}
+
+template<typename F, typename T>
+void ImageAdjustBrightnessStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
+                                 const float& brightness, const float& brightness_shift,
+                                 const float& contrast, const float& contrast_center_) {
+  CHECK_EQ(input_buffer.shape().NumAxes(), 3);
+  int h = input_buffer.shape().At(0);
+  int w = input_buffer.shape().At(1);
+  int c = input_buffer.shape().At(2);
+  float contrast_center = std::isnan(contrast_center_) ? HalfRange<F>() : contrast_center_;
+  float brightness_range = FullRange<T>();
+  float addend = brightness_shift * brightness_range
+                 + brightness * (contrast_center - contrast * contrast_center);
+  float multiplier = brightness * contrast;
+  FOR_RANGE(int, i, 0, (h * w * c)) {
+    const F* input_data = input_buffer.data<F>() + i;
+    T adjust_value = ConvertSat<T>(*input_data * multiplier + addend);
+    memcpy(output_buffer->mut_data<T>() + i, &adjust_value, sizeof(T));
+  }
+}
+
+template<typename F>
+void ImageAdjustBrightnessImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
+                               const float& brightness, const float& brightness_shift,
+                               const float& contrast, const float& contrast_center_,
+                               DataType outbuffer_dtype) {
+  outbuffer_dtype =
+      (outbuffer_dtype != DataType::kInvalidDataType) ? outbuffer_dtype : input_buffer.data_type();
+  output_buffer->Resize(input_buffer.shape(), outbuffer_dtype);
+
+  switch (outbuffer_dtype) {
+    case DataType::kChar:
+    case DataType::kInt8:
+    case DataType::kUInt8:
+      ImageAdjustBrightnessStatic<F, DataTypeToType<DataType::kUInt8>>(
+          input_buffer, output_buffer, brightness, brightness_shift, contrast, contrast_center_);
+      break;
+    case DataType::kFloat16:
+    case DataType::kFloat:
+      ImageAdjustBrightnessStatic<F, DataTypeToType<DataType::kFloat>>(
+          input_buffer, output_buffer, brightness, brightness_shift, contrast, contrast_center_);
+      break;
+    case DataType::kInt32:
+    case DataType::kDouble:
+    case DataType::kInt64:
+    default: { LOG(FATAL) << "Invalid data type " << outbuffer_dtype; }
+  }
+}
+
+#define MAKE_ADJUST_FROM_TENSOR_BUFFER_SWITCH_ENTRY(func_name, F) func_name<F>
+DEFINE_STATIC_SWITCH_FUNC(void, ImageAdjustBrightnessImpl,
+                          MAKE_ADJUST_FROM_TENSOR_BUFFER_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(IMAGE_DATA_TYPE_SEQ));
+
+#undef MAKE_ADJUST_FROM_TENSOR_BUFFER_SWITCH_ENTRY
+
+}  // namespace
+
+class ImageAdjustBrightnessKernel final : public user_op::OpKernel {
+ public:
+  ImageAdjustBrightnessKernel() = default;
+  ~ImageAdjustBrightnessKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in_tensor->shape().NumAxes(), 1);
+    CHECK_EQ(out_tensor->shape().NumAxes(), 1);
+    const int64_t num_images = in_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    const float brightness = ctx->Attr<float>("brightness");
+    const float brightness_shift = ctx->Attr<float>("brightness_shift");
+    const float contrast = ctx->Attr<float>("contrast");
+    const float contrast_center = ctx->Attr<float>("contrast_center");
+    DataType outbuffer_dtype = ctx->Attr<DataType>("data_type");
+
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      SwitchImageAdjustBrightnessImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
+                                      brightness, brightness_shift, contrast, contrast_center,
+                                      outbuffer_dtype);
+    });
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("image_brightness_contrast")
+    .SetCreateFn<ImageAdjustBrightnessKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 

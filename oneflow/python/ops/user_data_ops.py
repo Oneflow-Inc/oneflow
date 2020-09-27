@@ -1373,6 +1373,36 @@ def image_flip(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
+@oneflow_export("image.brightness_contrast", "image_brightness_contrast")
+def image_brightness_contrast(
+    image: BlobDef,
+    brightness: float = 1.0,
+    brightness_shift: float = 0.0,
+    contrast: float = 1.0,
+    contrast_center: float = 0.5,
+    dtype: dtype_util.dtype = dtype_util.dtype,
+    name: Optional[str] = None,
+):
+    if name is None:
+        name = id_util.UniqueStr("ImageBrightnessContrast_")
+
+    assert isinstance(image, BlobDef)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_brightness_contrast")
+        .Input("in", [image])
+        .Output("out")
+        .Attr("brightness", brightness)
+        .Attr("brightness_shift", brightness_shift)
+        .Attr("contrast", contrast)
+        .Attr("contrast_center", contrast_center)
+        .Attr("data_type", dtype)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
 @oneflow_export("detection.object_bbox_flip", "object_bbox_flip")
 def object_bbox_flip(
     bbox: BlobDef,
