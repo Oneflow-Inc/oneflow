@@ -87,6 +87,12 @@ OpRegistry& OpRegistry::SetOutputBufferNum(int32_t num) {
   return *this;
 }
 
+OpRegistry& OpRegistry::SetAreaId(int64_t area_id) {
+  CHECK_NE(area_id, AreaType::kInvalidArea);
+  result_.area_id = area_id;
+  return *this;
+}
+
 OpRegistry& OpRegistry::Attr(const std::string& name, UserOpAttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
   UserOpDef::AttrDef attr_def;

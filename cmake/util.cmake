@@ -72,3 +72,34 @@ function(add_copy_headers_target)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PARSED_ARGS_SRC}/${header_file}" "${PARSED_ARGS_DST}/${header_file}")
   endforeach()
 endfunction()
+
+function(use_mirror)
+  cmake_parse_arguments(
+    PARSED_ARGS
+    ""
+    "VARIABLE;URL"
+    ""
+    ${ARGN}
+  )
+  if(NOT PARSED_ARGS_VARIABLE)
+    message(FATAL_ERROR "VARIABLE required")
+  endif(NOT PARSED_ARGS_VARIABLE)
+  if(NOT PARSED_ARGS_URL)
+    message(FATAL_ERROR "url required")
+  endif(NOT PARSED_ARGS_URL)
+  if(DEFINED THIRD_PARTY_MIRROR)
+    if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
+      execute_process( 
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
+        OUTPUT_VARIABLE temp_url
+        RESULT_VARIABLE ret_code)
+      if (NOT (ret_code EQUAL "0"))
+        message(FATAL_ERROR "Fail to execute the script package_mirror.py.")
+      else()
+        set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
+      endif()
+    elseif(NOT THIRD_PARTY_MIRROR STREQUAL "")
+      message(FATAL_ERROR "Invalid key for third party mirror.")
+    endif()
+  endif()
+endfunction()
