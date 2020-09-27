@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
 
@@ -112,4 +112,4 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

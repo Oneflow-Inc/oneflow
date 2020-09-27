@@ -101,7 +101,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     Global<ActEventLogger>::New(is_experiment_phase);
   }
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
