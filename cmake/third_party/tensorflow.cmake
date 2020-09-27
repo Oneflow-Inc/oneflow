@@ -67,6 +67,7 @@ link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
 if(NOT XRT_TF_URL)
   set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip)
+  use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
 endif()
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
