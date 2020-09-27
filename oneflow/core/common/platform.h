@@ -19,8 +19,9 @@ limitations under the License.
 // Set one OF_PLATFORM_* macro and set OF_IS_MOBILE_PLATFORM if the platform is for
 // mobile.
 
-#if !defined(OF_PLATFORM_POSIX) && !defined(OF_PLATFORM_GOOGLE) && !defined(OF_PLATFORM_POSIX_ANDROID) \
-    && !defined(OF_PLATFORM_GOOGLE_ANDROID) && !defined(OF_PLATFORM_WINDOWS)
+#if !defined(OF_PLATFORM_POSIX) && !defined(OF_PLATFORM_GOOGLE)                    \
+    && !defined(OF_PLATFORM_POSIX_ANDROID) && !defined(OF_PLATFORM_GOOGLE_ANDROID) \
+    && !defined(OF_PLATFORM_WINDOWS)
 
 // Choose which platform we are on.
 #if defined(ANDROID) || defined(__ANDROID__)
