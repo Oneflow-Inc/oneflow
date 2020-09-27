@@ -129,16 +129,14 @@ void Transport::HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg&
   CHECK(msg.dst_mem_token != nullptr);
   uint64_t token = msg.token;
   CHECK(token != -1);
-
   std::function<void()> callback;
 
   // get status from map
-  TransportStatus* stat = nullptr;
   {
     std::unique_lock<std::mutex> lock(status_mutex_);
     auto it = token2status_.find(token);
     CHECK(it != token2status_.end());
-    stat = &(it->second);
+    TransportStatus* stat = &(it->second);
 
     // check msg == stat
     CHECK_EQ(stat->src_mem_token, msg.src_mem_token);
@@ -153,11 +151,11 @@ void Transport::HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg&
     token2status_.erase(it);
   }
 
+  // UnRegisterMemory
+  comm_net_->UnRegisterMemory(msg.src_mem_token);
+
   // Do Send callback
   callback();
-
-  // UnRegisterMemory
-  comm_net_->UnRegisterMemory(stat->src_mem_token);
 }
 
 void Transport::Send(uint64_t token, int64_t dst_machine_id, const void* ptr, std::size_t size,
@@ -286,7 +284,7 @@ void Transport::DoRead(uint64_t token) {
     comm_net_->SendTransportMsg(msg.src_machine_id, msg);
 
     // UnRegisterMemory
-    comm_net_->UnRegisterMemory(stat->dst_mem_token);
+    comm_net_->UnRegisterMemory(msg.dst_mem_token);
 
     // Do Recive callback
     stat->callback();
