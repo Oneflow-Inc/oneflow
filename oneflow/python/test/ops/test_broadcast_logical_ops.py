@@ -136,10 +136,10 @@ def test_broadcast_logical(test_case):
         func_greater_than,
         func_greater_equal,
         func_less_than,
-        func_less_than,
+        func_less_equal,
     ]
     arg_dict["a_shape"] = [(64, 64), (64, 64, 64)]
-    arg_dict["b_shape"] = [(1, 64), (64, 1), (64, 1, 64), (1, 64, 1)]
+    arg_dict["b_shape"] = [(1, 64), (1, 64, 1)]
     arg_dict["data_type"] = [flow.int8, flow.int32, flow.int64, flow.float, flow.double]
     arg_dict["device_type"] = ["cpu", "gpu"]
 
@@ -149,19 +149,3 @@ def test_broadcast_logical(test_case):
         if len(arg[2]) < len(arg[3]):
             continue
         GenerateTest(*arg)
-
-
-def test_xy_mod_x1(test_case):
-    GenerateTest(test_case, func_less_than, (64, 64), (64, 1), flow.int8)
-
-
-def test_xy_mod_1y(test_case):
-    GenerateTest(test_case, func_greater_than, (64, 64), (1, 64))
-
-
-def test_xyz_mod_x1z(test_case):
-    GenerateTest(test_case, func_equal, (64, 64, 64), (64, 1, 64))
-
-
-def test_xyz_mod_1y1(test_case):
-    GenerateTest(test_case, func_not_equal, (64, 64, 64), (1, 64, 1))

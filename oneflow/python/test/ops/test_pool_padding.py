@@ -29,32 +29,11 @@ for gpu in gpus:
 
 pool_confs = [
     {
-        "x_shape": (1, 1, 10, 10),
-        "ksize": 2,
-        "strides": 1,
-        "padding": "SAME",
-        "data_format": "NCHW",
-    },
-    {
-        "x_shape": (1, 3, 7, 7),
-        "ksize": 3,
-        "strides": 2,
-        "padding": "SAME",
-        "data_format": "NCHW",
-    },
-    {
         "x_shape": (1, 7, 7, 3),
         "ksize": 3,
         "strides": 2,
         "padding": "SAME",
         "data_format": "NHWC",
-    },
-    {
-        "x_shape": (1, 5, 6, 6),
-        "ksize": 3,
-        "strides": 2,
-        "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 7, 5, 5),
@@ -78,13 +57,6 @@ pool_confs = [
         "data_format": "NCHW",
     },
     {
-        "x_shape": (1, 10, 10, 1),
-        "ksize": 3,
-        "strides": 2,
-        "padding": "SAME",
-        "data_format": "NHWC",
-    },
-    {
         "x_shape": (1, 1, 10, 10, 10),
         "ksize": 2,
         "strides": 2,
@@ -104,13 +76,6 @@ pool_confs = [
         "strides": 2,
         "padding": "VALID",
         "data_format": "NDHWC",
-    },
-    {
-        "x_shape": (1, 3, 3, 3, 3),
-        "ksize": 2,
-        "strides": 1,
-        "padding": "SAME",
-        "data_format": "NCDHW",
     },
 ]
 
