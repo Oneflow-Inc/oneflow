@@ -1,10 +1,7 @@
 include_directories(${PROJECT_SOURCE_DIR}/tools/cfg/include)
 set(PYBIND_REGISTRY_CC "${PROJECT_SOURCE_DIR}/tools/cfg/pybind_module_registry.cpp")
 
-function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
-  set(${SRCS})
-  set(${HDRS})
-  set(${PYBIND_SRCS})
+function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto

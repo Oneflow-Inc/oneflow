@@ -195,7 +195,7 @@ target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 add_dependencies(of_protoobj make_pyproto_dir)
 
 include(cfg)
-RELATIVE_PYBIND11_GENERATE_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR} ${of_all_rel_pybinds})
+GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR} ${of_all_rel_pybinds})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj)
 
@@ -229,10 +229,10 @@ foreach(swig_name ${of_all_swig})
 endforeach()
 
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
-                           ${PROJECT_SOURCE_DIR}
-                           ${of_all_rel_swigs})
+                          ${PROJECT_SOURCE_DIR}
+                          ${of_all_rel_swigs})
 
-# PYBIND11_SRCS must be put before oneflow/api/python/init.cpp, and PYBIND_REGISTRY_CC must be the last arg
+# PYBIND11_SRCS must be put before oneflow/api/python/init.cpp, and PYBIND_REGISTRY_CC must be the last arg, otherwise it will compile error
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc} ${PYBIND_REGISTRY_CC})
 add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
