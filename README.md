@@ -138,6 +138,7 @@
     ```
 
     - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
+    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files. 
 
 ### Troubleshooting
 
