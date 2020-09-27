@@ -147,7 +147,9 @@ constexpr int64_t kLayerNormGpuBlockSize = 512;
 
 int64_t GetLayerNormBlockSize() { return kLayerNormGpuBlockSize; }
 
-int64_t GetLayerNormNumBlocks() { return 256; }
+int64_t GetLayerNormNumBlocks(const int64_t elem_cnt) {
+  return std::min(static_cast<int>(elem_cnt / kLayerNormGpuBlockSize), 256);
+}
 
 template<typename T>
 int64_t GetDynamicSharedMemorySize(const int64_t instance_size) {
@@ -188,7 +190,7 @@ __global__ void LayerNormParamGradImpl(const int64_t n, const int64_t instance_s
   }
 }
 
-__global__ void LayerNormParamGradImplHalf(const int64_t n, const int64_t instance_size,
+__global__ void LayerNormParamGradHalfImpl(const int64_t n, const int64_t instance_size,
                                            const half* dy, const half* normalized,
                                            const half* gamma, half* tmp_gamma_diff,
                                            half* tmp_beta_diff, half* normalized_diff) {
@@ -223,7 +225,7 @@ void LayerNormParamGradGpuHalf(DeviceCtx* ctx, const int64_t n, const int64_t in
                                const float16* dy, const float16* normalized, const float16* gamma,
                                float16* tmp_gamma_diff, float16* tmp_beta_diff,
                                float16* normalized_diff) {
-  LayerNormParamGradImplHalf<<<GetLayerNormNumBlocks(), GetLayerNormBlockSize(),
+  LayerNormParamGradHalfImpl<<<GetLayerNormNumBlocks(n), GetLayerNormBlockSize(),
                                GetDynamicSharedMemorySize<float16>(instance_size),
                                ctx->cuda_stream()>>>(
       n, instance_size, reinterpret_cast<const half*>(dy),
@@ -390,14 +392,18 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel {
     const bool has_gamma = gamma != nullptr;
     const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
     const int64_t m = dy->shape().Count(begin_params_axis);
-    int maxActiveBlocks;
+    int max_active_blocks;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-        &maxActiveBlocks, LayerNormParamGradImpl<T>, GetLayerNormBlockSize(),
+        &max_active_blocks, LayerNormParamGradImpl<T>, GetLayerNormBlockSize(),
         GetDynamicSharedMemorySize<T>(m)));
-    if (has_gamma_diff && has_beta_diff && has_normalized_diff && maxActiveBlocks > 0) {
+    if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {
       const user_op::Tensor* normalized = ctx->Tensor4ArgNameAndIndex("normalized", 0);
-      LayerNormParamGradImpl<<<GetLayerNormNumBlocks(), GetLayerNormBlockSize(),
-                               GetDynamicSharedMemorySize<T>(m),
+      Memset<DeviceType::kGPU>(ctx->device_ctx(), gamma_diff->mut_dptr<T>(), 0,
+                               gamma_diff->shape().elem_cnt() * sizeof(T));
+      Memset<DeviceType::kGPU>(ctx->device_ctx(), beta_diff->mut_dptr<T>(), 0,
+                               beta_diff->shape().elem_cnt() * sizeof(T));
+      LayerNormParamGradImpl<<<GetLayerNormNumBlocks(dy->shape().elem_cnt()),
+                               GetLayerNormBlockSize(), GetDynamicSharedMemorySize<T>(m),
                                ctx->device_ctx()->cuda_stream()>>>(
           dy->shape().elem_cnt(), m, dy->dptr<T>(), normalized->dptr<T>(), gamma->dptr<T>(),
           gamma_diff->mut_dptr<T>(), beta_diff->mut_dptr<T>(), normalized_diff->mut_dptr<T>());
@@ -470,22 +476,21 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel {
     const bool has_gamma = gamma != nullptr;
     const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
     const int64_t m = dy->shape().Count(begin_params_axis);
-    int maxActiveBlocks;
+    int max_active_blocks;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-        &maxActiveBlocks, LayerNormParamGradImplHalf, GetLayerNormBlockSize(),
+        &max_active_blocks, LayerNormParamGradHalfImpl, GetLayerNormBlockSize(),
         GetDynamicSharedMemorySize<float16>(m)));
-    if (has_gamma_diff && has_beta_diff && has_normalized_diff && maxActiveBlocks > 0) {
+    if (has_gamma_diff && has_beta_diff && has_normalized_diff && max_active_blocks > 0) {
       const user_op::Tensor* normalized = ctx->Tensor4ArgNameAndIndex("normalized", 0);
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      const int64_t num_blocks = GetLayerNormNumBlocks();
+      const int64_t num_blocks = GetLayerNormNumBlocks(dy->shape().elem_cnt());
       const size_t tmp_diff_size = GetCudaAlignedSize(num_blocks * m * sizeof(float16));
       float16* tmp_gamma_diff = tmp_buffer->mut_dptr<float16>();
       float16* tmp_beta_diff =
           reinterpret_cast<float16*>(tmp_buffer->mut_dptr<char>() + tmp_diff_size);
       float16* tmp_reduce_buf =
           reinterpret_cast<float16*>(tmp_buffer->mut_dptr<char>() + 2 * tmp_diff_size);
-      CHECK_EQ(tmp_buffer->shape().elem_cnt(), 3 * tmp_diff_size);
-
+      CHECK_GE(tmp_buffer->shape().elem_cnt(), 3 * tmp_diff_size);
       LayerNormParamGradGpuHalf(ctx->device_ctx(), dy->shape().elem_cnt(), m, dy->dptr<float16>(),
                                 normalized->dptr<float16>(), gamma->dptr<float16>(), tmp_gamma_diff,
                                 tmp_beta_diff, normalized_diff->mut_dptr<float16>());
@@ -547,8 +552,8 @@ REGISTER_USER_KERNEL("layer_norm_param_grad")
       const int64_t instance_size = dy->shape().Count(begin_params_axis);
       size_t tmp_buffer_size = 0;
       if (has_gamma_diff && has_beta_diff && has_normalized_diff) {
-        const size_t tmp_gamma_diff =
-            GetCudaAlignedSize(GetLayerNormNumBlocks() * instance_size * sizeof(float16));
+        const size_t tmp_gamma_diff = GetCudaAlignedSize(
+            GetLayerNormNumBlocks(dy->shape().elem_cnt()) * instance_size * sizeof(float16));
         const size_t tmp_beta_diff = tmp_gamma_diff;
         const size_t tmp_reduce_buf = tmp_gamma_diff;
         tmp_buffer_size = tmp_gamma_diff + tmp_beta_diff + tmp_reduce_buf;
