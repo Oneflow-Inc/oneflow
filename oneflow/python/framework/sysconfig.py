@@ -19,7 +19,7 @@ import os
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python_gen.sysconfig import generated_compile_flags
+import oneflow.python_gen.sysconfig as gen_sysconfig
 from typing import List
 
 
@@ -30,7 +30,7 @@ def get_include() -> str:
 
 @oneflow_export("sysconfig.get_lib")
 def get_lib() -> str:
-    return os.path.join(os.path.dirname(oneflow.__file__))
+    return os.path.dirname(oneflow.__file__)
 
 
 @oneflow_export("sysconfig.get_compile_flags")
@@ -38,7 +38,7 @@ def get_compile_flags() -> List[str]:
     flags = []
     flags.append("-I%s" % get_include())
     flags.append("-DHALF_ENABLE_CPP11_USER_LITERALS=0")
-    flags.extend(generated_compile_flags)
+    flags.extend(gen_sysconfig.generated_compile_flags)
     return flags
 
 
@@ -46,5 +46,5 @@ def get_compile_flags() -> List[str]:
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L%s" % get_lib())
-    flags.append("-l:_oneflow_internal.so")
+    flags.append("-l:%s" % gen_sysconfig.oneflow_internal_lib_name)
     return flags
