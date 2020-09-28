@@ -16,11 +16,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
-      oneflow/core/job/sbp_parallel.proto
-      oneflow/core/job/mirrored_parallel.proto
-      oneflow/core/job/scope.proto
-      oneflow/core/record/record.proto
-      oneflow/core/record/image.proto
   )
 
   foreach(FIL ${ALL_CFG_CONVERT_PROTO})
