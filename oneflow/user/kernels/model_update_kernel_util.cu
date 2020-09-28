@@ -349,7 +349,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, model_diff, adam_diff, model, m, v);
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &norm_buffer[0]);
-  // KernelUtil<DeviceType::kGPU, G>::Dot(ctx, n, model_diff, 1, model_diff, 1, &norm_buffer[1]);
+  KernelUtil<DeviceType::kGPU, G>::Dot(ctx, n, model_diff, 1, model_diff, 1, &norm_buffer[1]);
   KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
   LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, weight_decay, learning_rate, norm_buffer, beta1_t, beta2_t, adam_diff, model);
@@ -377,7 +377,7 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
 
 template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float>;
 template struct LambUpdateKernelUtil<DeviceType::kGPU, double, double>;
-template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+// template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float16>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
