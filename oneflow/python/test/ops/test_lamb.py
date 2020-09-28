@@ -29,7 +29,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow_addons_adam(
+def compare_with_tensorflow_addons_lamb(
     device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
 ):
     assert device_type in ["gpu", "cpu"]
@@ -99,4 +99,4 @@ def test_lamb(test_case):
     arg_dict["learning_rate"] = [1]
     arg_dict["train_iters"] = [10]
     for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_addons_adam(*arg)
+        compare_with_tensorflow_addons_lamb(*arg)
