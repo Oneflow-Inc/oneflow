@@ -91,16 +91,17 @@ struct AdamUpdateFunctor {
 template<typename T, typename G>
 struct LambGradFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* adam_diff, T* model, T* m, T* v, float scale, float l1,
-                  float l2, float beta1, float beta2, float epsilon) const {
+  void operator()(const T* beta1_t, const T* beta2_t, const G* model_diff, T* adam_diff, T* model,
+                  T* m, T* v, float scale, float l1, float l2, float beta1, float beta2,
+                  float epsilon) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
     const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
-    *m = next_m;
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
+    *adam_diff = (next_m / (1 - *beta1_t)) / std::sqrt(next_v / (1 - *beta2_t) + epsilon);
+    *m = next_m;
     *v = next_v;
-    *adam_diff = next_m / (sqrt(next_v) + epsilon);
   }
 };
 

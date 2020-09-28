@@ -208,14 +208,13 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     float epsilon, float weight_decay, const float* learning_rate, const G* model_diff,
     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t) {
   FOR_RANGE(int64_t, i, 0, n) {
-    LambGradFunctor<T, G>()(model_diff + i, adam_diff + i, model + i, m + i, v + i, scale, l1, l2,
-                            beta1, beta2, epsilon);
+    LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
+                            v + i, scale, l1, l2, beta1, beta2, epsilon);
   }
   KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &norm_buffer[0]);
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &norm_buffer[1]);
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, &norm_buffer[1]);
   KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
-  float lr;
-  lr = *learning_rate * std::sqrt(1 - *beta2_t) / (1 - *beta1_t);
+  float lr = *learning_rate;
   const T trust_ratio = norm_buffer[0] / norm_buffer[1];
   lr *= trust_ratio;
   FOR_RANGE(int64_t, i, 0, n) {
