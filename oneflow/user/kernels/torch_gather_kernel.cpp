@@ -118,36 +118,30 @@ class TorchGatherKernel final : public user_op::OpKernel {
     CoordinateOffsetConverter<IDX_T> index_nd_helper(index_tensor->shape());
     FOR_RANGE(IDX_T, index_offset, 0, input_tensor->shape().elem_cnt()){
       
-      /*
-        when dim = 1 
-        output[i][j][k] = input[i][x][k] 
-        where x is:
-          x = index[i][j][k]
-      */
-
-      // get i, j, k
+      // get coordinate of index tensor
       index_nd_helper.setOffset(index_offset);
       index_nd_helper.idxToCoordinate();
 
-      // re-write x at axis "dim", updates offset    
+      // get coordinate of input tensor by replacing "dim" axis   
       const IDX_T* index = index_tensor->dptr<IDX_T>();
       const IDX_T x = index[index_offset];
       input_nd_helper.copyCoordinate(index_nd_helper);
       input_nd_helper.coordinate_[dim] = x;
-      IDX_T input_offset = input_nd_helper.coordinateToIdx();    
 
+      // set output value at index_offset
+      IDX_T input_offset = input_nd_helper.coordinateToIdx();    
       output[index_offset] = input[input_offset];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PYTORCH_GATHER_KERNEL(device, in_type, indices_type)                                \
+#define REGISTER_PYTORCH_GATHER_KERNEL(device, in_type, indices_type)                              \
   REGISTER_USER_KERNEL("torch_gather")                                                             \
-      .SetCreateFn<                                                                          \
-          TorchGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))       \
+      .SetCreateFn<                                                                                \
+          TorchGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 #define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
