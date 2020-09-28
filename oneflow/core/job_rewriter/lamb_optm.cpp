@@ -69,7 +69,6 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
       .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
       .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
       .Input("learning_rate", train_conf.primary_lr_lbn())
-      .Input("train_step", train_conf.train_step_lbn())
       .Attr<float>("beta1", lamb_conf.beta1())
       .Attr<float>("beta2", lamb_conf.beta2())
       .Attr<float>("epsilon", lamb_conf.epsilon())
