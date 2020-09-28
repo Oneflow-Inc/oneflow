@@ -33,11 +33,11 @@ REGISTER_USER_OP("torch_gather")
       CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
 
       const int64_t dim = ctx->Attr<int64_t>("dim");
-      CHECK_GT_OR_RETURN(dim, 0);
+      CHECK_GE_OR_RETURN(dim, 0);
 
       // check in and index tensor, only axis "dim" differs
       // ...
-      
+
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out->mut_shape() = index->shape();
       *out->mut_data_type() = in->data_type();

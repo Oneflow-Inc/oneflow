@@ -30,10 +30,15 @@ namespace {
 */
 template<typename IDXTYPE>
 struct CoordinateOffsetConverter{
+    static const unsigned int MAX_AXIS = 8;
     CoordinateOffsetConverter(const ShapeView& tensorShape) :
     offset_(0), axisNum_(tensorShape.NumAxes())
     {
-
+      // memset(shape_, 0, sizeof(int64_t)*MAX_AXIS);
+      // memset(coordinate_, 0, sizeof(int64_t)*MAX_AXIS);
+      FOR_RANGE(int64_t, i, 0, axisNum_){
+        shape_[i] = tensorShape.At(i);
+      }
     }
 
     void setCoordinate(IDXTYPE x0, ...){
@@ -76,10 +81,10 @@ struct CoordinateOffsetConverter{
       memcpy(coordinate_, otherConverter.coordinate_, sizeof(IDXTYPE)*axisNum_);
     }
 
-    IDXTYPE coordinate_[8];
+    IDXTYPE coordinate_[MAX_AXIS];
     IDXTYPE offset_;
     int64_t axisNum_;
-    int64_t shape_[8];
+    int64_t shape_[MAX_AXIS];
 };
 
 } // namespace
@@ -110,7 +115,7 @@ class TorchGatherKernel final : public user_op::OpKernel {
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
     CoordinateOffsetConverter<IDX_T> input_nd_helper(input_tensor->shape());
-    CoordinateOffsetConverter<IDX_T> index_nd_helper(input_tensor->shape());
+    CoordinateOffsetConverter<IDX_T> index_nd_helper(index_tensor->shape());
     FOR_RANGE(IDX_T, index_offset, 0, input_tensor->shape().elem_cnt()){
       
       /*
