@@ -194,4 +194,38 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KE
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_CPU
 
+template<typename T, typename G>
+struct LambUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
+                     float beta2, float epsilon, bool do_bias_correction, float weight_decay,
+                     const float* learning_rate, const G* model_diff, T* adam_diff, T* model, T* m,
+                     T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+};
+
+template<typename T, typename G>
+void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
+    float epsilon, bool do_bias_correction, float weight_decay, const float* learning_rate,
+    const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t,
+    T* beta2_t) {
+  FOR_RANGE(int64_t, i, 0, n) {
+    LambGradFunctor<T, G>()(model_diff + i, adam_diff + i, model + i, m + i, v + i, scale, l1, l2,
+                            beta1, beta2, epsilon);
+  }
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &norm_buffer[0]);
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &norm_buffer[1]);
+  KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
+  float lr;
+  lr = *learning_rate * std::sqrt(1 - *beta2_t) / (1 - *beta1_t);
+  FOR_RANGE(int64_t, i, 0, n) {
+    LambUpdateFunctor<T>()(lr, weight_decay, norm_buffer[0], norm_buffer[1], adam_diff + i,
+                           model + i);
+  }
+  *beta1_t *= beta1;
+  *beta2_t *= beta2;
+}
+
+template struct LambUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct LambUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
 }  // namespace oneflow

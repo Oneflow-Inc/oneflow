@@ -88,6 +88,33 @@ struct AdamUpdateFunctor {
   }
 };
 
+template<typename T, typename G>
+struct LambGradFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const G* model_diff, T* adam_diff, T* model, T* m, T* v, float scale, float l1,
+                  float l2, float beta1, float beta2, float epsilon) const {
+    const T model_val = *model;
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+    const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
+    *m = next_m;
+    const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
+    *v = next_v;
+    *adam_diff = next_m / (sqrt(next_v) + epsilon);
+  }
+};
+
+template<typename T>
+struct LambUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const float learning_rate, float weight_decay, const T weight_norm,
+                  const T grad_norm, const T* adam_diff, T* model) const {
+    const T model_val = *model;
+    // *model = model_val
+    //          - learning_rate * weight_norm / grad_norm * (adam_diff + weight_decay * model_val);
+  }
+};
+
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta,
@@ -118,6 +145,15 @@ struct IndexedSlicesAdamMdUpdateKernelUtil {
                      int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
                      const float* learning_rate, const K* indices, const T* values, T* model, T* m,
                      T* v, T* beta1_t, T* beta2_t);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct LambUpdateKernelUtil {
+ public:
+  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
+                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer,
+                     T* beta1_t, T* beta2_t);
 };
 
 #endif

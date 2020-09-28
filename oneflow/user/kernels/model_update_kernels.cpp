@@ -444,20 +444,26 @@ class LambUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+    const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
     user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
     user_op::Tensor* beta1_t = ctx->Tensor4ArgNameAndIndex("beta1_t", 0);
     user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* norm_buffer_ptr = tmp_buffer->mut_dptr<T>();
+    T* adam_diff_ptr = reinterpret_cast<T*>(reinterpret_cast<char*>(tmp_buffer->mut_dptr()))
+                       + GetCudaAlignedSize(2 * sizeof(T));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) { return GetCudaAlignedSize(2 * sizeof(T)); };
+  return [](user_op::InferContext* ctx) {
+    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+    return GetCudaAlignedSize((model->shape().elem_cnt() + 2) * sizeof(T));
+  };
 }
 
 #define REGISTER_LAMB_UPDATE_KERNEL(device, dtype, gtype)                                      \
