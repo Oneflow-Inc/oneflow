@@ -15,33 +15,124 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include <stdarg.h>
+#include <string.h>
 
 namespace oneflow {
 
 namespace user_op {
 
-template <typename T>
-void MyRelu(DeviceCtx *ctx, const int64_t n, const T *x, T *y) {
-  T zero = (T)(0);
-  for (int64_t i = 0; i != n; ++i) {
-    y[i] = std::max(x[i], zero);
-  }
-}
+namespace {
 
-template<DeviceType device_type, typename T, typename K>
-class GatherKernel final : public user_op::OpKernel {
+/*
+  A converter that converts coordinate of high-dimensions tensor
+  and offset in one-dimension offset.
+*/
+template<typename IDXTYPE>
+struct CoordinateOffsetConverter{
+    CoordinateOffsetConverter(const ShapeView& tensorShape) :
+    offset_(0), axisNum_(tensorShape.NumAxes())
+    {
+
+    }
+
+    void setCoordinate(IDXTYPE x0, ...){
+        va_list marker;
+        coordinate_[0] = x0;
+        va_start(marker, x0);
+        FOR_RANGE(unsigned, i, 1, axisNum_){
+            coordinate_[i] = va_arg(marker, IDXTYPE);
+        }
+        va_end(marker);
+    }
+
+    void setOffset(IDXTYPE idx){
+        offset_ = idx;
+    }
+
+    IDXTYPE coordinateToIdx(){
+        offset_ = 0;
+        FOR_RANGE(IDXTYPE, i, 0, axisNum_){
+            IDXTYPE tmp = 1;
+            for (IDXTYPE j = i + 1; j < axisNum_; j++){
+                tmp *= shape_[j];
+            }
+            offset_ += tmp*coordinate_[i];
+        }
+
+        return offset_;
+    }
+
+    void idxToCoordinate(){
+        IDXTYPE tmp = offset_;
+        for (IDXTYPE i = axisNum_-1; i >= 0; --i)
+        {
+            coordinate_[i] = tmp % shape_[i];
+            tmp = (tmp - coordinate_[i])/shape_[i];
+        }
+    }
+
+    void copyCoordinate(CoordinateOffsetConverter& otherConverter){
+      memcpy(coordinate_, otherConverter.coordinate_, sizeof(IDXTYPE)*axisNum_);
+    }
+
+    IDXTYPE coordinate_[8];
+    IDXTYPE offset_;
+    int64_t axisNum_;
+    int64_t shape_[8];
+};
+
+} // namespace
+
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+class TorchGatherKernel final : public user_op::OpKernel {
  public:
-  GatherKernel() = default;
-  ~GatherKernel() override = default;
+  TorchGatherKernel() = default;
+  ~TorchGatherKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-   const user_op::Tensor *in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    MyRelu<T>(ctx->device_ctx(),
-           in_tensor->shape().elem_cnt(),
-           in_tensor->dptr<T>(), 
-           out_tensor->mut_dptr<T>());
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor *input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
+    const Tensor *index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
+    Tensor *out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t dim = ctx->Attr<int64_t>("dim");
+    const bool is_sparse_grad = ctx->Attr<bool>("sparse_grad");
+    
+    if (index_tensor->shape().elem_cnt() == 0) { 
+      return; 
+    }
+
+    if(is_sparse_grad){
+      //TO DO...
+    }
+
+    const IN_T* input = input_tensor->dptr<IN_T>();
+    IN_T* output = out_tensor->mut_dptr<IN_T>();
+
+    CoordinateOffsetConverter<IDX_T> input_nd_helper(input_tensor->shape());
+    CoordinateOffsetConverter<IDX_T> index_nd_helper(input_tensor->shape());
+    FOR_RANGE(IDX_T, index_offset, 0, input_tensor->shape().elem_cnt()){
+      
+      /*
+        when dim = 1 
+        output[i][j][k] = input[i][x][k] 
+        where x is:
+          x = index[i][j][k]
+      */
+
+      // get i, j, k
+      index_nd_helper.setOffset(index_offset);
+      index_nd_helper.idxToCoordinate();
+
+      // re-write x at axis "dim", updates offset    
+      const IDX_T* index = index_tensor->dptr<IDX_T>();
+      const IDX_T x = index[index_offset];
+      input_nd_helper.copyCoordinate(index_nd_helper);
+      input_nd_helper.coordinate_[dim] = x;
+      IDX_T input_offset = input_nd_helper.coordinateToIdx();    
+
+      output[index_offset] = input[input_offset];
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -49,16 +140,16 @@ class GatherKernel final : public user_op::OpKernel {
 #define REGISTER_PYTORCH_GATHER_KERNEL(device, in_type, indices_type)                                \
   REGISTER_USER_KERNEL("torch_gather")                                                             \
       .SetCreateFn<                                                                          \
-          GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+          TorchGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))       \
-                       & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))       \
+                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 #define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
 
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_PYTORCH_GATHER_KERNEL,
-                                DEVICE_TYPE_SEQ, 
+                                (DeviceType::kCPU), 
                                 GATHER_DATA_TYPE_SEQ,
                                 INDEX_DATA_TYPE_SEQ)
 

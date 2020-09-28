@@ -17,19 +17,33 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace user_op{
 REGISTER_USER_OP("torch_gather")
-    .Input("in")
+    .Input("input")
     .Input("index")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt64)
+    .Attr("dim", UserOpAttrType::kAtInt64)
     .Attr("sparse_grad", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) =
-      *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) =
-      *ctx->Dtype4ArgNameAndIndex("in", 0);
+      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
+
+      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+      CHECK_GT_OR_RETURN(index->shape().NumAxes(), 0);
+      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+
+      const int64_t dim = ctx->Attr<int64_t>("dim");
+      CHECK_GT_OR_RETURN(dim, 0);
+
+      // check in and index tensor, only axis "dim" differs
+      // ...
       
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out->mut_shape() = index->shape();
+      *out->mut_data_type() = in->data_type();
+
       return Maybe<void>::Ok();
     });
+} // namespace user_op
 
 }  // namespace oneflow
