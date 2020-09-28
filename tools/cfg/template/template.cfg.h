@@ -555,7 +555,7 @@ class _{{ util.class_name(cls) }}_ {
     return {{ util.oneof_name(oneof) }}_case_;
   }
   bool has_{{util.oneof_name(oneof)}}() const {
-    return {{ util.oneof_name(oneof) }}_case_ == {{ util.oneof_name(oneof).upper() }}_NOT_SET;
+    return {{ util.oneof_name(oneof) }}_case_ != {{ util.oneof_name(oneof).upper() }}_NOT_SET;
   }
  protected:
   void clear_{{util.oneof_name(oneof)}}() {
@@ -811,6 +811,10 @@ class Const{{ util.class_name(cls) }} {
   using {{ util.oneof_enum_name(oneof) }} = _{{ util.class_name(cls) }}_::{{ util.oneof_enum_name(oneof) }};
   {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case() const {
     return __SharedPtrOrDefault__()->{{ util.oneof_name(oneof) }}_case();
+  }
+
+  bool has_{{ util.oneof_name(oneof) }}() const {
+    return __SharedPtrOrDefault__()->has_{{ util.oneof_name(oneof) }}();
   }
 {% endfor %}{# oneofs #}
 

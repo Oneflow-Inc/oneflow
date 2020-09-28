@@ -155,6 +155,13 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def("{{ util.oneof_name(oneof) }}_case",  &Const{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
+    registry.def("has_{{ util.oneof_name(oneof) }}",  &Const{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
+    registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
+        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
+{% for field in util.oneof_type_fields(oneof) %}
+        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; })
+{% endfor %}{# oneof_fields #}
+        ;
 {% endfor %}{# oneofs #}
   }
   {
@@ -172,7 +179,11 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
-        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; });
+        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
+{% for field in util.oneof_type_fields(oneof) %}
+        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; })
+{% endfor %}{# oneof_fields #}
+        ;
 {% endfor %}{# oneofs #}
 
 {% for field in util.message_type_fields(cls) %}
@@ -232,6 +243,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# oneof_fields #}
         ;
     registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
+    registry.def("has_{{ util.oneof_name(oneof) }}",  &{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
 {% endfor %}{# oneofs #}
   }
 {% endif %}{# cls is not entry #}
