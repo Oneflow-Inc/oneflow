@@ -216,9 +216,10 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
   float lr;
   lr = *learning_rate * std::sqrt(1 - *beta2_t) / (1 - *beta1_t);
+  const T trust_ratio = norm_buffer[0] / norm_buffer[1];
+  lr *= trust_ratio;
   FOR_RANGE(int64_t, i, 0, n) {
-    LambUpdateFunctor<T>()(lr, weight_decay, norm_buffer[0], norm_buffer[1], adam_diff + i,
-                           model + i);
+    LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i);
   }
   *beta1_t *= beta1;
   *beta2_t *= beta2;

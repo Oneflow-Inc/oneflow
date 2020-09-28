@@ -107,11 +107,10 @@ struct LambGradFunctor {
 template<typename T>
 struct LambUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const float learning_rate, float weight_decay, const T weight_norm,
-                  const T grad_norm, const T* adam_diff, T* model) const {
+  void operator()(const float learning_rate, float weight_decay, const T* adam_diff,
+                  T* model) const {
     const T model_val = *model;
-    *model = model_val
-             - learning_rate * weight_norm / grad_norm * (*adam_diff + weight_decay * model_val);
+    *model = model_val - learning_rate * (*adam_diff + weight_decay * model_val);
   }
 };
 

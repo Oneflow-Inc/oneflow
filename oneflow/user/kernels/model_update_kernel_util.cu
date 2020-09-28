@@ -280,12 +280,9 @@ __global__ void LambUpdateGpu(int64_t n, float weight_decay, const float* learni
                               const T* adam_diff, T* model) {
   float lr;
   lr = *learning_rate * sqrt(1 - *beta2_t) / (1 - *beta1_t);
-  const T weight_norm_val = norm_buffer[0];
-  const T grad_norm_val = norm_buffer[1];
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    LambUpdateFunctor<T>()(lr, weight_decay, weight_norm_val, grad_norm_val, adam_diff + i,
-                           model + i);
-  }
+  const T trust_ratio = norm_buffer[0] / norm_buffer[1];
+  lr *= trust_ratio;
+  CUDA_1D_KERNEL_LOOP(i, n) { LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i); }
 }
 
 }  // namespace
