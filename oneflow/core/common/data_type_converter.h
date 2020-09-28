@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_H_
 
+#ifdef WITH_CUDA
 #include <cuda_runtime.h>
+#endif
 #include <cstdint>
 #include <limits>
 #include <type_traits>
