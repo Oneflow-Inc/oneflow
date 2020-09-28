@@ -188,8 +188,7 @@ def Sequential(*boxing_methods, exclude=tuple(), middle_verbose=False):
 
 
 MatchCopyH2D = (
-    boxing_hob.MasterMachineOnly
-    & (
+    (
         boxing_hob.producer_parallel_desc.machine_id2device_id_list
         == boxing_hob.consumer_parallel_desc.machine_id2device_id_list
     )
@@ -208,8 +207,7 @@ def CopyH2D(builder, produced_blob_object, consumer_op_arg_parallel_attr):
 
 
 MatchCopyD2H = (
-    boxing_hob.MasterMachineOnly
-    & (
+    (
         boxing_hob.producer_parallel_desc.machine_id2device_id_list
         == boxing_hob.consumer_parallel_desc.machine_id2device_id_list
     )
@@ -234,8 +232,7 @@ def CopyHD(builder, produced_blob_object, consumer_op_arg_parallel_attr):
 
 
 MatchCpuOneToOne = (
-    boxing_hob.MasterMachineOnly
-    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.producer_parallel_desc != boxing_hob.consumer_parallel_desc)
     & (

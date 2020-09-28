@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <atomic>
 #include <pybind11/pybind11.h>
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
@@ -20,8 +21,15 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+uint64_t NewTokenId() {
+  static std::atomic<uint64_t> token_id(0);
+  token_id++;
+  return token_id;
+}
+
 PYBIND11_MODULE(oneflow_api, m) {
   m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
+  m.def("NewTokenId", &NewTokenId);
 }
 
 }  // namespace oneflow
