@@ -61,8 +61,9 @@ void Transport::PollMsgChannel() {
 }
 
 void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg& msg) {
-  // this handler means that:
-  // this machine is dst machine, and receive Send msg from source machine
+  // This machine is dst machine, and receive Send msg from source machine
+  // Mayby we need create TransportStatus,
+  // or we need update TransportStatus and DoRead().
   CHECK_EQ(msg.type, TransportMsgType::kSend);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token == nullptr);
@@ -70,12 +71,15 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
   CHECK(token != -1);
 
   // There are two ways to trigger the creation of TransportStatus:
-  //   1. the dst machine receives SendMsg from src machine
-  //   2. time the dst machine calls the Receive() method.
-  // The early party is responsible for creating the TransportStatus,
-  // and the late party is responsible for checking the state and calling the DoRead() operation.
-  // Early arrival and late arrival are within the protection scope of lock(status_mutex_),
-  // so there will be no early or late arrival at the same time.
+  //   1. The time (T_A) when the dst machine receives SendMsg from src machine
+  //   2. The time (T_B) when method Receive() called by the dst machine.
+  // Because of T_ A and t_ B are both protected by the lock(status_mutex_), so the creation of
+  // TransportStatus will NOT trigger at the same time.
+  //
+  // T_ A maybe earlier than t_ B, maybe later.
+  //
+  // In either case, the earlier one is responsible for creating the TransportStatus, and the later
+  // one is responsible for checking the TransportStatus and then calling the DoRead() operation.
 
   // prepare transport status for this token.
   // store callback.
@@ -121,9 +125,8 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
 }
 
 void Transport::HandlerAchievedTransportAckMsgFromDstMachine(const TransportMsg& msg) {
-  // this handler means that:
-  // this machine is src machine, and receive Ack msg from dst machine
-  // The Send/Receive is done.
+  // This machine is src machine, and receive Ack msg from dst machine. The Send/Receive pair of
+  // this token is all done. So we can call callback function and erase TransportStatus.
   CHECK_EQ(msg.type, TransportMsgType::kAck);
   CHECK(msg.src_mem_token != nullptr);
   CHECK(msg.dst_mem_token != nullptr);
@@ -301,44 +304,72 @@ void Transport::DoRead(uint64_t token) {
 
 void Transport::SendToLocalMachine(uint64_t token, void* ptr, std::size_t size,
                                    std::function<void()> callback) {
-  std::unique_lock<std::mutex> lock(local_copy_lock_);
-  auto it = token2local_copy_status_.find(token);
-  if (it == token2local_copy_status_.end()) {
-    // init local copy status
-    token2local_copy_status_.emplace(token, CopyStatusOnLocalMachine(token, ptr, size, callback));
-  } else {
-    // do copy
-    CHECK(size <= it->second.size);  // NOTE(chengcheng): Recv size may larger than Send size.
-    if (ptr != it->second.ptr) { memcpy(it->second.ptr, ptr, size); }
+  bool need_do_copy = false;
+  bool need_do_callback = false;
+  std::function<void()> receive_callback;
+  void* dst_ptr = nullptr;
+  {
+    std::unique_lock<std::mutex> lock(local_copy_lock_);
+    auto it = token2local_copy_status_.find(token);
+    if (it == token2local_copy_status_.end()) {
+      // init local copy status
+      token2local_copy_status_.emplace(token, CopyStatusOnLocalMachine(token, ptr, size, callback));
+    } else {
+      need_do_callback = true;
+      receive_callback = std::move(it->second.callback);
 
-    // do callback
+      dst_ptr = it->second.ptr;
+      CHECK(size <= it->second.size);  // NOTE(chengcheng): Recv size may larger than Send size.
+
+      if (ptr != dst_ptr) { need_do_copy = true; }
+
+      // erase local copy status
+      token2local_copy_status_.erase(it);
+    }
+  }
+
+  if (need_do_copy) { memcpy(dst_ptr, ptr, size); }
+
+  if (need_do_callback) {
     callback();
-    it->second.callback();
-
-    // erase local copy status
-    token2local_copy_status_.erase(it);
+    receive_callback();
   }
 }
 
 void Transport::RecvFromLocalMachine(uint64_t token, void* ptr, std::size_t max_size,
                                      std::function<void()> callback) {
-  std::unique_lock<std::mutex> lock(local_copy_lock_);
-  auto it = token2local_copy_status_.find(token);
-  if (it == token2local_copy_status_.end()) {
-    // init local copy status
-    token2local_copy_status_.emplace(token,
-                                     CopyStatusOnLocalMachine(token, ptr, max_size, callback));
-  } else {
-    // do copy
-    CHECK(max_size >= it->second.size);  // NOTE(chengcheng): Recv size may larger than Send size.
-    if (ptr != it->second.ptr) { memcpy(ptr, it->second.ptr, it->second.size); }
+  bool need_do_copy = false;
+  bool need_do_callback = false;
+  std::function<void()> send_callback;
+  void* src_ptr = nullptr;
+  std::size_t size = -1;
+  {
+    std::unique_lock<std::mutex> lock(local_copy_lock_);
+    auto it = token2local_copy_status_.find(token);
+    if (it == token2local_copy_status_.end()) {
+      // init local copy status
+      token2local_copy_status_.emplace(token,
+                                       CopyStatusOnLocalMachine(token, ptr, max_size, callback));
+    } else {
+      need_do_callback = true;
+      send_callback = std::move(it->second.callback);
 
-    // do callback
+      src_ptr = it->second.ptr;
+      size = it->second.size;
+      CHECK(max_size >= size);  // NOTE(chengcheng): Recv size may larger than Send size.
+
+      if (ptr != src_ptr) { need_do_copy = true; }
+
+      // erase local copy status
+      token2local_copy_status_.erase(it);
+    }
+  }
+
+  if (need_do_copy) { memcpy(ptr, src_ptr, size); }
+
+  if (need_do_callback) {
     callback();
-    it->second.callback();
-
-    // erase local copy status
-    token2local_copy_status_.erase(it);
+    send_callback();
   }
 }
 
