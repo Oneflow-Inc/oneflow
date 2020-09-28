@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -91,6 +95,20 @@ CommNet::CommNet(const Plan& plan) {
   CHECK(machine_ids_it != net_topo.end());
   std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
   peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
+
+  ready_cb_poller_ = std::thread([this]() {
+    std::function<void()> cb;
+    while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
+  });
+}
+
+CommNet::CommNet() {
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  for (int64_t i = 0; i < total_machine_num; ++i) {
+    if (i == this_machine_id) { continue; }
+    peer_machine_id_.insert(i);
+  }
 
   ready_cb_poller_ = std::thread([this]() {
     std::function<void()> cb;
