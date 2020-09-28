@@ -41,9 +41,6 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     std::string indices_lbn;
     std::string values_lbn;
     std::string model_op_name;
-    std::function<void(OperatorConf* /*new_optimizer_op_conf*/, const std::string& /*indices*/,
-                       const std::string& /*values*/)>
-        BuildOptimizer;
     if (!src_op_conf.has_user_conf()) { return; }
     const user_op::UserOpConfWrapper src_op(src_op_conf);
     if (src_op.op_type_name() == "unsorted_segment_sum" && src_op.attr<int64_t>("axis") == 0) {
@@ -77,61 +74,51 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         return;
       }
     } while (true);
-    const OperatorConf& dst_op_conf = dst_node->op().op_conf();
-    if (dst_op_conf.has_naive_model_update_conf()) {
-      const NaiveModelUpdateOpConf& old_optimizer_conf = dst_op_conf.naive_model_update_conf();
-      const LogicalBlobId& model_lbi = dst_node->op().BnInOp2Lbi("model");
-      model_op_name = model_lbi.op_name();
-      BuildOptimizer = [&](OperatorConf* new_optimizer_op_conf, const std::string& indices,
-                           const std::string& values) {
-        IndexedSlicesNaiveModelUpdateOpConf* new_optimizer_conf =
-            new_optimizer_op_conf->mutable_indexed_slices_naive_model_update_conf();
-        new_optimizer_conf->set_model_diff_indices(indices);
-        new_optimizer_conf->set_model_diff_values(values);
-        new_optimizer_conf->set_model(old_optimizer_conf.model());
-        new_optimizer_conf->set_learning_rate(old_optimizer_conf.learning_rate());
-      };
-    } else if (dst_op_conf.has_momentum_model_update_conf()) {
-      const MomentumModelUpdateOpConf& old_optimizer_conf =
-          dst_op_conf.momentum_model_update_conf();
-      const LogicalBlobId& model_lbi = dst_node->op().BnInOp2Lbi("model");
-      model_op_name = model_lbi.op_name();
-      BuildOptimizer = [&](OperatorConf* new_optimizer_op_conf, const std::string& indices,
-                           const std::string& values) {
-        IndexedSlicesMomentumModelUpdateOpConf* new_optimizer_conf =
-            new_optimizer_op_conf->mutable_indexed_slices_momentum_model_update_conf();
-        new_optimizer_conf->set_momentum(old_optimizer_conf.momentum());
-        new_optimizer_conf->set_model_diff_indices(indices);
-        new_optimizer_conf->set_model_diff_values(values);
-        new_optimizer_conf->set_model(old_optimizer_conf.model());
-        new_optimizer_conf->set_train_step(old_optimizer_conf.train_step());
-        new_optimizer_conf->set_learning_rate(old_optimizer_conf.learning_rate());
-        new_optimizer_conf->set_beta(old_optimizer_conf.user_conf().momentum_conf().beta());
-      };
-    } else if (dst_op_conf.has_lazy_adam_model_update_conf()) {
-      const LazyAdamModelUpdateOpConf& old_optimizer_conf =
-          dst_op_conf.lazy_adam_model_update_conf();
-      const LogicalBlobId& model_lbi = dst_node->op().BnInOp2Lbi("model");
-      model_op_name = model_lbi.op_name();
-      BuildOptimizer = [&](OperatorConf* new_optimizer_op_conf, const std::string& indices,
-                           const std::string& values) {
-        IndexedSlicesLazyAdamModelUpdateOpConf* new_optimizer_conf =
-            new_optimizer_op_conf->mutable_indexed_slices_lazy_adam_model_update_conf();
-        new_optimizer_conf->set_m(old_optimizer_conf.m());
-        new_optimizer_conf->set_v(old_optimizer_conf.v());
-        new_optimizer_conf->set_model_diff_indices(indices);
-        new_optimizer_conf->set_model_diff_values(values);
-        new_optimizer_conf->set_model(old_optimizer_conf.model());
-        new_optimizer_conf->set_train_step(old_optimizer_conf.train_step());
-        new_optimizer_conf->set_learning_rate(old_optimizer_conf.learning_rate());
-        new_optimizer_conf->set_beta1(old_optimizer_conf.user_conf().lazy_adam_conf().beta1());
-        new_optimizer_conf->set_beta2(old_optimizer_conf.user_conf().lazy_adam_conf().beta2());
-        new_optimizer_conf->set_epsilon(old_optimizer_conf.user_conf().lazy_adam_conf().epsilon());
-      };
+    if (!dst_node->op().op_conf().has_user_conf()) { return; }
+    const user_op::UserOpConfWrapper user_op_conf(dst_node->op().op_conf());
+    if (user_op_conf.op_type_name() != "sgd_update"
+        && user_op_conf.op_type_name() != "momentum_update"
+        && user_op_conf.op_type_name() != "adam_update") {
+      return;
+    }
+    if (user_op_conf.attr<float>("scale") != 1.0f || user_op_conf.attr<float>("l1") != 0.0f
+        || user_op_conf.attr<float>("l2") != 0.0f
+        || user_op_conf.attr<float>("weight_decay") != 0.0f) {
+      return;
+    }
+    const LogicalBlobId& model_lbi = GenLogicalBlobId(user_op_conf.input("model", 0));
+    if (dst_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(user_op_conf.input("model_diff", 0)))
+            .data_type()
+        != dst_node->LogicalBlobDesc4Lbi(model_lbi).data_type()) {
+      return;
+    }
+    model_op_name = model_lbi.op_name();
+    user_op::UserOpConfWrapperBuilder indexed_slices_op_builder("System-Optimizer-IndexedSlices-"
+                                                                + model_op_name);
+    indexed_slices_op_builder.OpTypeName("indexed_slices_" + user_op_conf.op_type_name())
+        .Input("model", user_op_conf.input("model", 0))
+        .Input("learning_rate", user_op_conf.input("learning_rate", 0));
+
+    if (user_op_conf.op_type_name() == "sgd_update") {
+      // do nothing
+    } else if (user_op_conf.op_type_name() == "momentum_update") {
+      indexed_slices_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
+          .Attr<float>("beta", user_op_conf.attr<float>("beta"));
+    } else if (user_op_conf.op_type_name() == "adam_update") {
+      const bool do_bias_correction = user_op_conf.attr<bool>("do_bias_correction");
+      indexed_slices_op_builder.Input("m", user_op_conf.input("m", 0))
+          .Input("v", user_op_conf.input("v", 0))
+          .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
+          .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<bool>("do_bias_correction", do_bias_correction);
+      if (do_bias_correction) {
+        indexed_slices_op_builder.Input("beta1_t", user_op_conf.input("beta1_t", 0))
+            .Input("beta2_t", user_op_conf.input("beta2_t", 0));
+      }
     } else {
       return;
     }
-    if (!BuildOptimizer) { return; }
     CHECK(!model_op_name.empty());
     CHECK(!indices_lbn.empty());
     CHECK(!values_lbn.empty());
@@ -149,11 +136,11 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         UNIMPLEMENTED();
       }
     }
-    OperatorConf new_optimizer_op_conf{};
-    new_optimizer_op_conf.set_name("System-Optimizer-IndexedSlices-" + model_op_name);
-    BuildOptimizer(&new_optimizer_op_conf, indices_lbn, values_lbn);
-    job_builder->DelOps({src_op_conf, dst_op_conf});
-    job_builder->AddOps(dst_node->parallel_desc().parallel_conf(), {new_optimizer_op_conf});
+    indexed_slices_op_builder.Input("model_diff_indices", indices_lbn)
+        .Input("model_diff_values", values_lbn);
+    job_builder->DelOps({src_op_conf, user_op_conf.op_conf()});
+    job_builder->AddOps(dst_node->parallel_desc().parallel_conf(),
+                        {indexed_slices_op_builder.Build().op_conf()});
   });
   return Maybe<void>::Ok();
 }
