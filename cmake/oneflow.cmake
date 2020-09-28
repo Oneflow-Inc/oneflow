@@ -65,6 +65,13 @@ if (WITH_XLA OR WITH_TENSORRT)
   list(APPEND oneflow_all_src ${oneflow_xrt_src})
 endif()
 
+file(GLOB_RECURSE oneflow_python_api_src "${PROJECT_SOURCE_DIR}/oneflow/api/*.*")
+foreach(oneflow_python_api_single_file ${oneflow_python_api_src})
+  if("${oneflow_python_api_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.pybind\\.cpp$")
+    list(APPEND oneflow_all_src ${oneflow_python_api_single_file})
+  endif()
+endforeach()
+
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -117,6 +124,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.pybind\\.cpp$")
+    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -225,7 +237,8 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-pybind11_add_module(oneflow_internal ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
+pybind11_add_module(oneflow_internal ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc}
+                    ${PROJECT_SOURCE_DIR}/oneflow/api/python/util/of_api_registry.cpp)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
