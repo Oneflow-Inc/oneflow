@@ -444,6 +444,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
@@ -454,7 +455,19 @@ class LambUpdateKernel final : public user_op::OpKernel {
     T* norm_buffer_ptr = tmp_buffer->mut_dptr<T>();
     T* adam_diff_ptr = reinterpret_cast<T*>(reinterpret_cast<char*>(tmp_buffer->mut_dptr()))
                        + GetCudaAlignedSize(2 * sizeof(T));
-  };
+    const auto scale = ctx->Attr<float>("scale");
+    const auto l1 = ctx->Attr<float>("l1");
+    const auto l2 = ctx->Attr<float>("l2");
+    const auto beta1 = ctx->Attr<float>("beta1");
+    const auto beta2 = ctx->Attr<float>("beta2");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    LambUpdateKernelUtil<device_type, T, G>::Update(
+        ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
+        weight_decay, learning_rate->dptr<float>(), model_diff->dptr<G>(), adam_diff_ptr,
+        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), norm_buffer_ptr,
+        beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
@@ -477,7 +490,6 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA

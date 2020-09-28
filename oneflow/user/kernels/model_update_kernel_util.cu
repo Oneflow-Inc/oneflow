@@ -377,7 +377,6 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
 
 template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float>;
 template struct LambUpdateKernelUtil<DeviceType::kGPU, double, double>;
-// template struct LambUpdateKernelUtil<DeviceType::kGPU, float, float16>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kGPU, T, K, IDX> {
