@@ -17,7 +17,8 @@ limitations under the License.
 
 namespace oneflow {
 
-std::map<std::string, std::vector<std::function<void(pybind11::module&)>>> OneflowModuleRegistry::sub_module_;
+std::map<std::string, std::vector<std::function<void(pybind11::module&)>>>
+    OneflowModuleRegistry::sub_module_;
 
 void OneflowModuleRegistry::Register(std::string module_path,
                                      std::function<void(pybind11::module&)> build_sub_module) {
@@ -26,9 +27,7 @@ void OneflowModuleRegistry::Register(std::string module_path,
 
 void OneflowModuleRegistry::ImportAll(pybind11::module& m) {
   for (auto& pair : sub_module_) {
-    for (auto& build_sub_module : pair.second) {
-      BuildSubModule(pair.first, m, build_sub_module);
-    }
+    for (auto& build_sub_module : pair.second) { BuildSubModule(pair.first, m, build_sub_module); }
   }
 }
 
