@@ -21,14 +21,12 @@ namespace oneflow {
 Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
   if (device_type == kCPU) { return "cpu"; }
   if (device_type == kGPU) { return "gpu"; }
-  if (device_type == kTransportUnit) { return "transport_unit"; }
   return Error::DeviceTagNotFoundError() << "invalid_device";
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
   if (device_tag == "cpu") { return DeviceType::kCPU; }
   if (device_tag == "gpu") { return DeviceType::kGPU; }
-  if (device_tag == "transport_unit") { return DeviceType::kTransportUnit; }
   return Error::DeviceTagNotFoundError() << "device tag `" << device_tag << "' not found";
 }
 

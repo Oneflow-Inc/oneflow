@@ -81,14 +81,19 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
-                                             int64_t device_id) const {
-  parallel_ctx->set_parallel_num(parallel_num());
+Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
+                                                        int64_t device_id) const {
   const auto& machine_iter = machine_id2device_id2parallel_id_.find(machine_id);
   CHECK_OR_RETURN(machine_iter != machine_id2device_id2parallel_id_.end());
   const auto& device_iter = machine_iter->second.find(device_id);
   CHECK_OR_RETURN(device_iter != machine_iter->second.end());
-  parallel_ctx->set_parallel_id(device_iter->second);
+  return device_iter->second;
+}
+
+Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
+                                             int64_t device_id) const {
+  parallel_ctx->set_parallel_num(parallel_num());
+  parallel_ctx->set_parallel_id(JUST(ParallelId4MachineDeviceId(machine_id, device_id)));
   return Maybe<void>::Ok();
 }
 

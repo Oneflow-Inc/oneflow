@@ -69,6 +69,7 @@ class ParallelDesc final {
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
   Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   bool ContainingMachineId(int64_t machine_id) const;
 

@@ -37,9 +37,8 @@ class SendBlobInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
 
  protected:
-  virtual Maybe<void> Send(int64_t this_machine_id, int64_t dst_machine_id, uint64_t token,
-                           const char* mem_ptr, std::size_t size,
-                           const std::function<void()>& Callback) const;
+  virtual Maybe<void> Send(int64_t dst_machine_id, uint64_t token, const char* mem_ptr,
+                           std::size_t size, const std::function<void()>& Callback) const;
 
  private:
   Maybe<void> Send(vm::Instruction* instruction) const;
@@ -59,9 +58,8 @@ class ReceiveBlobInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
 
  protected:
-  virtual Maybe<void> Receive(int64_t src_machine_id, int64_t this_machine_id, uint64_t token,
-                              char* mem_ptr, std::size_t size,
-                              const std::function<void()>& Callback) const;
+  virtual Maybe<void> Receive(int64_t src_machine_id, uint64_t token, char* mem_ptr,
+                              std::size_t size, const std::function<void()>& Callback) const;
 
  private:
   Maybe<void> Receive(vm::Instruction* instruction) const;
