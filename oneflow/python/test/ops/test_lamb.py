@@ -30,7 +30,7 @@ for gpu in gpus:
 
 
 def compare_with_tensorflow_addons_lamb(
-    device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
+    test_case, device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -84,13 +84,15 @@ def compare_with_tensorflow_addons_lamb(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
 
-    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4), (
-        x.flatten() - var.numpy().flatten()
+    test_case.assertTrue(
+        np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4),
+        (x.flatten() - var.numpy().flatten()),
     )
 
 
 def test_lamb(test_case):
     arg_dict = OrderedDict()
+    arg_dict["test_case"] = [test_case]
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["x_shape"] = [(10,)]
     arg_dict["beta1"] = [0.9]
