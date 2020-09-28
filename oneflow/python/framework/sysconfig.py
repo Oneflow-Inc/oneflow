@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
+import imp
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
@@ -30,13 +31,13 @@ def get_include() -> str:
 
 @oneflow_export("sysconfig.get_lib")
 def get_lib() -> str:
-    return os.path.join(os.path.dirname(oneflow.__file__))
+    return os.path.dirname(oneflow.__file__)
 
 
 @oneflow_export("sysconfig.get_compile_flags")
 def get_compile_flags() -> List[str]:
     flags = []
-    flags.append("-I%s" % get_include())
+    flags.append("-I{}".format(get_include()))
     flags.append("-DHALF_ENABLE_CPP11_USER_LITERALS=0")
     flags.extend(generated_compile_flags)
     return flags
@@ -45,6 +46,7 @@ def get_compile_flags() -> List[str]:
 @oneflow_export("sysconfig.get_link_flags")
 def get_link_flags() -> List[str]:
     flags = []
-    flags.append("-L%s" % get_lib())
-    flags.append("-l:_oneflow_internal.so")
+    flags.append("-L{}".format(get_lib()))
+    _, oneflow_internal_lib_path, _ = imp.find_module("_oneflow_internal", [get_lib()])
+    flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags
