@@ -83,10 +83,11 @@ def compare_with_tensorflow_addons_lamb(
             loss = tf.reduce_mean(var * random_mask)
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
-
+    case = device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
+    diff = x.flatten() - var.numpy().flatten()
     test_case.assertTrue(
         np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4),
-        (x.flatten() - var.numpy().flatten()),
+        (case, diff),
     )
 
 
