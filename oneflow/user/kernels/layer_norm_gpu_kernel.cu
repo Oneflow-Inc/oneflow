@@ -195,7 +195,8 @@ __global__ void LayerNormImpl(const int num_instances, const int norm_size, cons
   __shared__ ComputeType row_reduce_mean;
   __shared__ ComputeType row_reduce_inv_var;
   typedef cub::BlockReduce<ComputeType, kLayerNormGpuBlockSize> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+  __shared__ typename BlockReduce::TempStorage cub_mean_reduce_tmp_storage;
+  __shared__ typename BlockReduce::TempStorage cub_variance_reduce_tmp_storage;
   ComputeType val_scale = ComputeType(1.0) / static_cast<ComputeType>(norm_size);
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * norm_size;
@@ -210,9 +211,9 @@ __global__ void LayerNormImpl(const int num_instances, const int norm_size, cons
       thread_square_sum += val * val;
     }
     __syncthreads();
-    ComputeType block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
+    ComputeType block_sum = BlockReduce(cub_mean_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
     ComputeType block_square_sum =
-        BlockReduce(cub_reduce_tmp_storage).Reduce(thread_square_sum, cub::Sum());
+        BlockReduce(cub_variance_reduce_tmp_storage).Reduce(thread_square_sum, cub::Sum());
     if (tid == 0) {
       ComputeType mean_val = block_sum * val_scale;
       row_reduce_mean = mean_val;
