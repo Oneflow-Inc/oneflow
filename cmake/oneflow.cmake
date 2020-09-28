@@ -262,11 +262,6 @@ else()
         COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
         )
 endif()
-get_target_property(ONEFLOW_INTERNAL_LIB_SUFFIX oneflow_internal SUFFIX)
-get_target_property(ONEFLOW_INTERNAL_LIB_PREFIX oneflow_internal PREFIX)
-add_custom_command(TARGET of_pyscript_copy POST_BUILD
-    COMMAND echo "\"oneflow_internal_lib_name='${ONEFLOW_INTERNAL_LIB_PREFIX}oneflow_internal${ONEFLOW_INTERNAL_LIB_SUFFIX}'\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-      )
 
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
