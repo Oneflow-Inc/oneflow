@@ -74,8 +74,7 @@ class TestSendBlobInstructionType : public SendBlobInstructionType {
   ~TestSendBlobInstructionType() override = default;
 
  private:
-  Maybe<void> Send(int64_t this_machine_id, int64_t dst_machine_id, uint64_t token,
-                   const char* mem_ptr, std::size_t size,
+  Maybe<void> Send(int64_t dst_machine_id, uint64_t token, const char* mem_ptr, std::size_t size,
                    const std::function<void()>& Callback) const override {
     SendRequest send_request{
         .dst_machine_id = dst_machine_id,
@@ -104,8 +103,7 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
   ~TestReceiveBlobInstructionType() override = default;
 
  private:
-  Maybe<void> Receive(int64_t src_machine_id, int64_t this_machine_id, uint64_t token,
-                      char* mem_ptr, std::size_t size,
+  Maybe<void> Receive(int64_t src_machine_id, uint64_t token, char* mem_ptr, std::size_t size,
                       const std::function<void()>& Callback) const override {
     ReceiveRequest recv_request{
         .src_machine_id = src_machine_id,
@@ -224,40 +222,22 @@ class SendRecvUtil {
   ~SendRecvUtil() = default;
 
   void MakeTestInstructions(InstructionMsgList* list, uint64_t header_token, uint64_t body_token,
-                            const std::pair<int64_t, int64_t>& src_machine_and_blob,
-                            const std::pair<int64_t, int64_t>& dst_machine_and_blob) const {
-    int64_t src_parallel_desc_id = 0;
-    int64_t src_obj_id = vm::IdUtil::NewLogicalObjectId();
-    {
-      const std::string& parallel_str = std::to_string(src_machine_and_blob.first) + ":"
-                                        + std::to_string(dst_machine_and_blob.first);
-      src_parallel_desc_id = vm::TestUtil::NewParallelDesc(list, "transport_unit", parallel_str);
-      list->EmplaceBack(vm::NewInstruction("BroadcastObjectReference")
-                            ->add_parallel_desc(src_parallel_desc_id)
-                            ->add_int64_operand(src_obj_id)
-                            ->add_int64_operand(src_machine_and_blob.second));
-    }
+                            const std::string& src_pd, int64_t src_blob_id,
+                            const std::string& dst_pd, int64_t dst_blob_id) const {
+    int64_t src_pd_id = vm::TestUtil::NewParallelDesc(list, "cpu", src_pd);
+    int64_t dst_pd_id = vm::TestUtil::NewParallelDesc(list, "cpu", dst_pd);
     list->EmplaceBack(vm::NewInstruction(send_instr_name_)
-                          ->add_parallel_desc(src_parallel_desc_id)
-                          ->add_const_operand(src_obj_id)
+                          ->add_parallel_desc(src_pd_id)
+                          ->add_symbol_operand(dst_pd_id)
+                          ->add_const_operand(src_blob_id)
                           ->add_separator()
                           ->add_uint64_operand(header_token)
                           ->add_separator()
                           ->add_uint64_operand(body_token));
-    int64_t dst_parallel_desc_id = 0;
-    int64_t dst_obj_id = vm::IdUtil::NewLogicalObjectId();
-    {
-      const std::string& parallel_str = std::to_string(dst_machine_and_blob.first) + ":"
-                                        + std::to_string(src_machine_and_blob.first);
-      dst_parallel_desc_id = vm::TestUtil::NewParallelDesc(list, "transport_unit", parallel_str);
-      list->EmplaceBack(vm::NewInstruction("BroadcastObjectReference")
-                            ->add_parallel_desc(dst_parallel_desc_id)
-                            ->add_int64_operand(dst_obj_id)
-                            ->add_int64_operand(dst_machine_and_blob.second));
-    }
     list->EmplaceBack(vm::NewInstruction(recv_instr_name_)
-                          ->add_parallel_desc(dst_parallel_desc_id)
-                          ->add_mut2_operand(dst_obj_id)
+                          ->add_parallel_desc(dst_pd_id)
+                          ->add_symbol_operand(src_pd_id)
+                          ->add_mut2_operand(dst_blob_id)
                           ->add_separator()
                           ->add_uint64_operand(header_token)
                           ->add_separator()
@@ -292,14 +272,14 @@ TEST(SendReceiveInstructionType, naive) {
   SendRecvUtil send_recv_util("TestSendBlob", "TestReceiveBlob");
   {
     InstructionMsgList list;
-    send_recv_util.MakeTestInstructions(&list, header_token, body_token, {0, src_blob_id},
-                                        {1, dst_blob_id});
+    send_recv_util.MakeTestInstructions(&list, header_token, body_token, "0:0", src_blob_id, "1:0",
+                                        dst_blob_id);
     vm0->Receive(&list);
   }
   {
     InstructionMsgList list;
-    send_recv_util.MakeTestInstructions(&list, header_token, body_token, {0, src_blob_id},
-                                        {1, dst_blob_id});
+    send_recv_util.MakeTestInstructions(&list, header_token, body_token, "0:0", src_blob_id, "1:0",
+                                        dst_blob_id);
     vm1->Receive(&list);
   }
   while (!(vm0->Empty() && vm1->Empty())) {
@@ -312,61 +292,6 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
-}
-
-TEST(SendReceiveInstructionType, send_receive) {
-  // machine_num=2 is a fake number, it's used to make two VirtualMachines
-  vm::TestResourceDescScope scope(1, 1, 2);
-  int port = CtrlUtil().FindAvailablePort();
-  if (port == -1) { return; }
-  EnvProto env_proto;
-  {
-    auto* machine0 = env_proto.add_machine();
-    machine0->set_id(0);
-    machine0->set_addr("127.0.0.1");
-    env_proto.set_ctrl_port(port);
-  }
-  Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  auto vm0 = MakeVM(0);
-  int64_t src_blob_id = 0;
-  {
-    InstructionMsgList list;
-    src_blob_id = MakeTestBlob(&list, "0:0");
-    vm0->Receive(&list);
-  }
-  auto vm1 = MakeVM(1);
-  int64_t dst_blob_id = 0;
-  {
-    InstructionMsgList list;
-    dst_blob_id = MakeTestBlob(&list, "1:0");
-    vm1->Receive(&list);
-  }
-  uint64_t header_token = 7777;
-  uint64_t body_token = 8888;
-  SendRecvUtil send_recv_util("SendBlob", "ReceiveBlob");
-  {
-    InstructionMsgList list;
-    send_recv_util.MakeTestInstructions(&list, header_token, body_token, {0, src_blob_id},
-                                        {1, dst_blob_id});
-    vm0->Receive(&list);
-  }
-  {
-    InstructionMsgList list;
-    send_recv_util.MakeTestInstructions(&list, header_token, body_token, {0, src_blob_id},
-                                        {1, dst_blob_id});
-    vm1->Receive(&list);
-  }
-  while (!(vm0->Empty() && vm1->Empty())) {
-    vm0->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm0->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
-    vm1->Schedule();
-    OBJECT_MSG_LIST_FOR_EACH_PTR(vm1->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
-  }
-  Global<CtrlClient>::Delete();
-  Global<CtrlServer>::Delete();
-  Global<EnvDesc>::Delete();
 }
 
 }  // namespace test

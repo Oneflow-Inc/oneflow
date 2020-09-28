@@ -36,7 +36,7 @@ class TransportStreamType : public StreamType {
 
   using RefCntType = std::atomic<int32_t>;
 
-  const char* device_tag() const override { return "transport_unit"; }
+  const char* device_tag() const override { return "cpu"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 

@@ -56,12 +56,12 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   OF_PUBLIC template<typename T> bool Has() const {
     return dynamic_cast<const T*>(&object()) != nullptr;
   }
-  OF_PUBLIC template<typename T> Maybe<const T*> Get() const {
+  OF_PUBLIC template<typename T> Maybe<const T&> Get() const {
     const T* obj = dynamic_cast<const T*>(&object());
     CHECK_NOTNULL_OR_RETURN(obj)
       << "cast to " << typeid(T).name() << "failed. "
       << "type: " << (object_ptr() ? typeid(*object_ptr()).name() : "nullptr");
-    return obj;
+    return *obj;
   }
   OF_PUBLIC template<typename T> Maybe<T*> Mut() {
     T* obj = dynamic_cast<T*>(object_ptr().get());
