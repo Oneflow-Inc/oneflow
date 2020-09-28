@@ -257,9 +257,7 @@ def compare_with_numpy_lazy_adam(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=func_config)
-    def testLazyAdam(
-        mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
-    ) -> flow.typing.Numpy:
+    def testLazyAdam() -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0-0"):
             x = flow.get_variable(
                 name="x",
@@ -268,7 +266,7 @@ def compare_with_numpy_lazy_adam(
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            loss = flow.math.reduce_mean(x * mask)
+            loss = flow.math.reduce_mean(x)
 
             flow.optimizer.LazyAdam(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
@@ -282,26 +280,14 @@ def compare_with_numpy_lazy_adam(
     checkpoint = flow.train.CheckPoint()
     checkpoint.init()
 
-    mask = np.random.randint(2, size=x_shape)
-    mask_float = mask.astype(np.float32)
-
     init_value = None
     for i in range(train_iters + 1):
-        x = testLazyAdam(mask_float)
+        x = testLazyAdam()
         if i == 0:
             init_value = np.copy(x)
 
     def lazy_adam_update_numpy(
-        param,
-        mask,
-        gradient,
-        iter,
-        m,
-        v,
-        lr=0.001,
-        beta1=0.9,
-        beta2=0.999,
-        epsilon=1e-7,
+        param, gradient, iter, m, v, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-7,
     ):
 
         lr_t = lr * np.sqrt(1 - beta2 ** (iter + 1)) / (1 - beta1 ** (iter + 1))
@@ -312,14 +298,14 @@ def compare_with_numpy_lazy_adam(
         m_t_o = beta1 * m + (1 - beta1) * gradient
         v_t_o = beta2 * v + (1 - beta2) * gradient * gradient
 
-        m_t[mask == 1] = m_t_o[mask == 1]
-        v_t[mask == 1] = v_t_o[mask == 1]
+        m_t = m_t_o
+        v_t = v_t_o
 
         param_t = np.copy(param)
 
         param_t_o = param - lr_t * m_t / (np.sqrt(v_t) + epsilon)
 
-        param_t[mask == 1] = param_t_o[mask == 1]
+        param_t = param_t_o
 
         return param_t, m_t, v_t
 
@@ -330,7 +316,7 @@ def compare_with_numpy_lazy_adam(
 
     for i in range(train_iters):
         param, m, v = lazy_adam_update_numpy(
-            param, mask, gradient, i, m, v, learning_rate, beta1, beta2, epsilon
+            param, gradient, i, m, v, learning_rate, beta1, beta2, epsilon
         )
 
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
@@ -486,6 +472,181 @@ def compare_with_tensorflow_sgd(
     assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
 
 
+def unique_grads(sparse_ids, sparse_grads):
+    num_ids = np.prod(sparse_ids.shape)
+    sparse_grads_shape = (num_ids,) + sparse_grads.shape[len(sparse_ids.shape) :]
+    sparse_grads = sparse_grads.reshape(sparse_grads_shape)
+    sparse_ids = sparse_ids.flatten()
+    unique_dict = {}
+    for i in range(num_ids):
+        if sparse_ids[i] in unique_dict:
+            unique_dict[sparse_ids[i]] += sparse_grads[i].copy()
+        else:
+            unique_dict[sparse_ids[i]] = sparse_grads[i].copy()
+    return unique_dict
+
+
+def compare_with_numpy_indexed_slices_sgd(
+    device_type,
+    model_shape,
+    ids_shape,
+    grad_shape,
+    momentum_beta,
+    learning_rate,
+    train_iters,
+    mul_scalar,
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+    func_config.indexed_slices_optimizer_conf(
+        dict(include_op_names=dict(op_name=["embeddings"]))
+    )
+
+    @flow.global_function(type="train", function_config=func_config)
+    def testIndexedSlicesSGD(
+        sparse_ids: flow.typing.Numpy.Placeholder(ids_shape, dtype=flow.int32),
+    ) -> flow.typing.Numpy:
+        with flow.scope.placement(device_type, "0:0"):
+            embedding_table = flow.get_variable(
+                name="embeddings",
+                shape=model_shape,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+            )
+            embedding = flow.gather(
+                params=embedding_table * mul_scalar, indices=sparse_ids
+            )
+            loss = flow.math.reduce_mean(embedding)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                momentum=momentum_beta,
+            ).minimize(loss)
+
+            return embedding_table
+
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    sparse_ids = np.random.randint(model_shape[0], size=ids_shape).astype(np.int32)
+
+    init_value = None
+    for i in range(train_iters + 1):
+        x = testIndexedSlicesSGD(sparse_ids)
+        if i == 0:
+            init_value = np.copy(x)
+
+    def indexed_slices_update_numpy(
+        param, unique_dict, iter, momentum, lr=0.001, momentum_beta=0,
+    ):
+        param_t = np.copy(param)
+        momentum_t = np.copy(momentum)
+        for ids in unique_dict.keys():
+            next_momentum = momentum_beta * momentum_t[ids] - lr * unique_dict[ids]
+            momentum_t[ids] = next_momentum
+            param_t_o = param[ids] + next_momentum
+            param_t[ids] = param_t_o
+
+        return param_t, momentum_t
+
+    param = init_value
+    gradient = np.full(grad_shape, float(mul_scalar) / np.prod(grad_shape))
+    momentum = np.zeros(param.shape)
+    unique_dict = unique_grads(sparse_ids, gradient)
+
+    for i in range(train_iters):
+        param, momentum = indexed_slices_update_numpy(
+            param, unique_dict, i, momentum, learning_rate, momentum_beta
+        )
+    assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
+
+
+def compare_with_numpy_indexed_slices_adam(
+    device_type,
+    model_shape,
+    ids_shape,
+    grad_shape,
+    beta1,
+    beta2,
+    epsilon,
+    learning_rate,
+    train_iters,
+    mul_scalar,
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+    func_config.indexed_slices_optimizer_conf(
+        dict(include_op_names=dict(op_name=["embeddings"]))
+    )
+
+    @flow.global_function(type="train", function_config=func_config)
+    def testIndexedSlicesAdam(
+        sparse_ids: flow.typing.Numpy.Placeholder(ids_shape, dtype=flow.int32),
+    ) -> flow.typing.Numpy:
+        with flow.scope.placement(device_type, "0:0"):
+            embedding_table = flow.get_variable(
+                name="embeddings",
+                shape=model_shape,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+            )
+            embedding = flow.gather(
+                params=embedding_table * mul_scalar, indices=sparse_ids
+            )
+            loss = flow.math.reduce_mean(embedding)
+
+            flow.optimizer.Adam(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                beta1=beta1,
+                beta2=beta2,
+                epsilon=epsilon,
+                do_bias_correction=True,
+            ).minimize(loss)
+
+            return embedding_table
+
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    sparse_ids = np.random.randint(model_shape[0], size=ids_shape).astype(np.int32)
+
+    init_value = None
+    for i in range(train_iters + 1):
+        x = testIndexedSlicesAdam(sparse_ids)
+        if i == 0:
+            init_value = np.copy(x)
+
+    def indexed_slices_update_numpy(
+        param, unique_dict, iter, m, v, lr=0.001, beta1=0.9, beta2=0.999, epsilon=1e-7,
+    ):
+        param_t = np.copy(param)
+        m_t = np.copy(m)
+        v_t = np.copy(v)
+        for ids in unique_dict.keys():
+            lr_t = lr * np.sqrt(1 - beta2 ** (iter + 1)) / (1 - beta1 ** (iter + 1))
+            m_t_o = beta1 * m[ids] + (1 - beta1) * unique_dict[ids]
+            v_t_o = beta2 * v[ids] + (1 - beta2) * unique_dict[ids] * unique_dict[ids]
+            m_t[ids] = m_t_o
+            v_t[ids] = v_t_o
+            param_t_o = param[ids] - lr_t * m_t[ids] / (np.sqrt(v_t[ids]) + epsilon)
+            param_t[ids] = param_t_o
+
+        return param_t, m_t, v_t
+
+    param = init_value
+    gradient = np.full(grad_shape, float(mul_scalar) / np.prod(grad_shape))
+    m = np.zeros(param.shape)
+    v = np.zeros(param.shape)
+    unique_dict = unique_grads(sparse_ids, gradient)
+
+    for i in range(train_iters):
+        param, m, v = indexed_slices_update_numpy(
+            param, unique_dict, i, m, v, learning_rate, beta1, beta2, epsilon
+        )
+    assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
+
+
 def test_rmsprop(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
@@ -560,3 +721,33 @@ def test_sgd(test_case):
     arg_dict["train_iters"] = [10]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow_sgd(*arg)
+
+
+def test_indexed_slices_sgd(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["model_shape"] = [(200, 2)]
+    arg_dict["ids"] = [(10, 4)]
+    arg_dict["grad_shape"] = [(10, 4, 2)]
+    arg_dict["momentum_beta"] = [0, 0.9]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    arg_dict["mul_scalar"] = [1, 2]
+    for arg in GenArgList(arg_dict):
+        compare_with_numpy_indexed_slices_sgd(*arg)
+
+
+def test_indexed_slices_adam(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["model_shape"] = [(200, 2)]
+    arg_dict["ids"] = [(10, 4)]
+    arg_dict["grad_shape"] = [(10, 4, 2)]
+    arg_dict["beta1"] = [0.9]
+    arg_dict["beta2"] = [0.99]
+    arg_dict["epsilon"] = [1e-9]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    arg_dict["mul_scalar"] = [1, 2]
+    for arg in GenArgList(arg_dict):
+        compare_with_numpy_indexed_slices_adam(*arg)
