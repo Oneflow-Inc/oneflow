@@ -132,6 +132,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.pybind\\.cpp$")
+    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
       list(APPEND of_transport_test_cc ${oneflow_single_file})
