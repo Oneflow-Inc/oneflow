@@ -1,6 +1,7 @@
 execute_process( 
   COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
   OUTPUT_VARIABLE cfg_head_dir_and_convert_srcs
+  RESULT_VARIABLE ret_code
   )
 
 string(REPLACE "\n" ";" cfg_head_dir_and_convert_srcs ${cfg_head_dir_and_convert_srcs})
