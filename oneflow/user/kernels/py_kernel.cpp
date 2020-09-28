@@ -20,16 +20,20 @@ namespace oneflow {
 
 namespace {
 template<typename T>
-void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject** py_inputs) {
-  size_t in_num = ctx->inputs().size();
-  LOG(INFO) << "input num " << in_num;
-  PyObject* py_list = PyList_New(in_num);
+void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
+                  PyObject** py_inputs) {
+  const size_t kernel_in_num = ctx->inputs().size();
+  const size_t def_in_num = op_def.input_size();
+  CHECK_EQ(kernel_in_num, def_in_num) << "kernel input num " << kernel_in_num
+                                      << " not equal to definition input num " << def_in_num;
+  PyObject* py_list = PyList_New(def_in_num);
   CHECK(py_list);
 
-  FOR_RANGE(size_t, i, 0, in_num) {
+  FOR_RANGE(size_t, i, 0, def_in_num) {
     PyObject* arg = nullptr;
-    const std::string& arg_name = ctx->inputs().at(i).first;
+    const std::string& arg_name = op_def.input(i).name();
     LOG(INFO) << "input arg_name " << arg_name;
+    // do not support multi input in one symbolic arg name
     int32_t index = 0;
     TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), &arg);
     arg = PyArray_Return(reinterpret_cast<PyArrayObject*>(arg));
@@ -40,12 +44,15 @@ void MakePyInputs(user_op::KernelComputeContext* ctx, PyObject** py_inputs) {
 }
 
 template<typename T>
-void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_outputs) {
+void GetPyOutputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
+                  PyObject* py_outputs) {
+  const size_t kernel_out_num = ctx->outputs().size();
+  const size_t def_out_num = op_def.output_size();
+  CHECK_EQ(kernel_out_num, def_out_num) << "kernel output num " << kernel_out_num
+                                        << " not equal to definition output num " << def_out_num;
   if (PyList_Check(py_outputs)) {
-    size_t out_num = ctx->outputs().size();
-    LOG(INFO) << "output num " << out_num;
-    FOR_RANGE(size_t, i, 0, out_num) {
-      const std::string& arg_name = ctx->outputs().at(i).first;
+    FOR_RANGE(size_t, i, 0, def_out_num) {
+      const std::string& arg_name = op_def.output(i).name();
       LOG(INFO) << "output arg_name " << arg_name;
       int32_t index = 0;
       NumpyToTensor<T>(PyList_GetItem(py_outputs, i), ctx->Tensor4ArgNameAndIndex(arg_name, index));
@@ -62,6 +69,12 @@ void GetPyOutputs(user_op::KernelComputeContext* ctx, PyObject* py_outputs) {
 
 template<typename T>
 void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_name) {
+  const std::string& op_type_name = ctx->user_op_conf().op_type_name();
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK(val) << "Op op_type_name " << op_type_name << " has no definition.";
+  const UserOpDef& op_def = val->op_def;
+
   // if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
   PyGILState_STATE py_gil_st;
   py_gil_st = PyGILState_Ensure();
@@ -86,14 +99,14 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   }
 
   // input
-  MakePyInputs<T>(ctx, &py_inputs);
+  MakePyInputs<T>(op_def, ctx, &py_inputs);
 
   // call func
   py_outputs = PyEval_CallObject(py_func, py_inputs);
   Py_DECREF(py_inputs);
 
   // output
-  GetPyOutputs<T>(ctx, py_outputs);
+  GetPyOutputs<T>(op_def, ctx, py_outputs);
 
   Py_DECREF(py_outputs);
   Py_XDECREF(py_func);

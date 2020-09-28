@@ -21,8 +21,7 @@ def sigmoid(x):
     return y
 
 
-# TODO(strint): tensor order need to be fix in kernel
-def sigmoid_grad(dy, y):
+def sigmoid_grad(y, dy):
     return y * (1 - y) * dy
 
 

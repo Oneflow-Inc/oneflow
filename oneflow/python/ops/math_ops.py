@@ -382,8 +382,7 @@ def floor_mod(
 def scalar_add(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarAdd_")
-    builder = flow.user_op_builder(name).Op(
-        "scalar_add").Input("in", [x]).Output("out")
+    builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
             builder.Attr("has_int_operand", True)
@@ -474,8 +473,7 @@ def broadcast_mul(x, y, name=None):
 def scalar_mul(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarMul_")
-    builder = flow.user_op_builder(name).Op(
-        "scalar_mul").Input("in", [x]).Output("out")
+    builder = flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
     if isinstance(operand, int):
         builder = (
             builder.Attr("has_int_operand", True)
@@ -566,8 +564,7 @@ def tanh(
     """
 
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("TanH_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
         .Op("tanh")
         .Input("in", [x])
         .Output("out")
@@ -615,8 +612,7 @@ def gelu(
 
     """
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Gelu_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
         .Op("gelu")
         .Input("in", [x])
         .Output("out")
@@ -665,8 +661,7 @@ def relu(
     """
 
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Relu_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
         .Op("relu")
         .Input("in", [x])
         .Output("out")
@@ -814,8 +809,7 @@ def unsorted_segment_sum(
     """
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr(
-                "UnsortedSegmentSum_")
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
         )
         .Op("unsorted_segment_sum")
         .Input("data", [data])
@@ -878,8 +872,7 @@ def unsorted_segment_sum_like(
     """
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr(
-                "UnsortedSegmentSumLike_")
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike_")
         )
         .Op("unsorted_segment_sum_like")
         .Input("data", [data])
@@ -947,8 +940,7 @@ def unsorted_batch_segment_sum(
     """
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr(
-                "UnsortedBatchSegmentSum_")
+            name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
         )
         .Op("unsorted_batch_segment_sum")
         .Input("data", [data])
@@ -1471,8 +1463,7 @@ def top_k(
 
     """
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("TopK_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
         .Input("in", [input])
         .Output("out")
@@ -1519,8 +1510,7 @@ def argmax(
 
     """
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("ArgMax_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
         .Op("argmax")
         .Input("in", [input])
         .Output("out")
@@ -1663,8 +1653,7 @@ def clip_by_value(
             .Attr("integral_max", int(max_value))
         )
     else:
-        raise ValueError(
-            "min_value and max_value cannot be None at the same time")
+        raise ValueError("min_value and max_value cannot be None at the same time")
 
     return (
         op_builder.Input("x", [values])
@@ -1863,8 +1852,7 @@ def tril(
 
     """
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Tril_"))
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
         .Op("tril")
         .Input("in", [x])
         .Attr("diagonal", diagonal)
