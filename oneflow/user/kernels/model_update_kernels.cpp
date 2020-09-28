@@ -443,18 +443,30 @@ class LambUpdateKernel final : public user_op::OpKernel {
   ~LambUpdateKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override{
-      // Add your code...
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+    user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
+    user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
+    user_op::Tensor* beta1_t = ctx->Tensor4ArgNameAndIndex("beta1_t", 0);
+    user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_LAMB_UPDATE_KERNEL(device, dtype, gtype)                                \
-  REGISTER_USER_KERNEL("lamb_update")                                                    \
-      .SetCreateFn<LambUpdateKernel<device, dtype, gtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+template<DeviceType device_type, typename T>
+user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) { return GetCudaAlignedSize(2 * sizeof(T)); };
+}
+
+#define REGISTER_LAMB_UPDATE_KERNEL(device, dtype, gtype)                                      \
+  REGISTER_USER_KERNEL("lamb_update")                                                          \
+      .SetCreateFn<LambUpdateKernel<device, dtype, gtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
+      .SetInferTmpSizeFn(LambGenInferTmpSizeFn<device, dtype>());
 
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
