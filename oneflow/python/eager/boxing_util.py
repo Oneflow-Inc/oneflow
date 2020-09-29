@@ -231,7 +231,7 @@ def CopyHD(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return BuildCopyHdInstruction(builder, produced_blob_object, op_device_tag)
 
 
-MatchCpuOneToOne = (
+MatchInterNodeOneToOne = (
     (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.producer_parallel_desc != boxing_hob.consumer_parallel_desc)
@@ -239,6 +239,7 @@ MatchCpuOneToOne = (
         boxing_hob.producer_parallel_desc.parallel_num
         == boxing_hob.consumer_parallel_desc.parallel_num
     )
+    & ~boxing_hob.MatchDeviceOneToOnePerMachine
     & (
         (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
         | (boxing_hob.producer_parallel_desc.parallel_num == 1)
@@ -246,8 +247,25 @@ MatchCpuOneToOne = (
 )
 
 
-@boxing_condition(MatchCpuOneToOne)
-def CpuOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+@boxing_condition(MatchInterNodeOneToOne)
+def InterNodeOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+    TODO()
+
+
+MatchCpuBroadcastOneToOne = (
+    (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
+    & (boxing_hob.producer_parallel_desc != boxing_hob.consumer_parallel_desc)
+    & boxing_hob.MatchDeviceOneToOnePerMachine
+    & (
+        (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
+        | (boxing_hob.producer_parallel_desc.parallel_num == 1)
+    )
+)
+
+
+@boxing_condition(MatchCpuBroadcastOneToOne)
+def CpuBroadcastOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     def get_identity_physical_in_blob_objects(
         builder,
         produced_blob_object,
@@ -267,18 +285,28 @@ def CpuOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
 
 
 MatchNoBoxing = (
-    boxing_hob.MasterMachineOnly
-    & (boxing_hob.producer_parallel_desc == boxing_hob.consumer_parallel_desc)
-    & (
-        (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
-        | (boxing_hob.producer_parallel_desc.parallel_num == 1)
-    )
+    boxing_hob.producer_parallel_desc == boxing_hob.consumer_parallel_desc
+) & (
+    (boxing_hob.producer_sbp_parallel == boxing_hob.consumer_sbp_parallel)
+    | (boxing_hob.producer_parallel_desc.parallel_num == 1)
 )
 
 
 @boxing_condition(MatchNoBoxing)
 def NoBoxing(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     return produced_blob_object
+
+
+@boxing_condition(boxing_hob.Verbose & MatchNoBoxing)
+def VerboseNoBoxing(builder, produced_blob_object, consumer_op_arg_parallel_attr):
+    return produced_blob_object
+
+
+def VerboseOptionalBoxing(boxing_method):
+    opt_boxing_method = FirstMatchedBoxing(boxing_method, VerboseNoBoxing)
+    debug_str = "VerboseOptional(%s)" % GetBoxingDebugString(boxing_method)
+    opt_boxing_method.__debug_str__ = debug_str
+    return opt_boxing_method
 
 
 BlobIsPartialSum = boxing_hob.producer_sbp_parallel.HasField("partial_sum_parallel")
@@ -740,14 +768,28 @@ NcclAllReduce = Sequential(
     OptionalBoxing(CopyD2H),
 )
 
-BoxingOneToOne = Sequential(
+BoxingIntraNodeOneToOne = Sequential(
     boxing_middle.BoxingToMiddle(
         OptionalBoxing(CopyD2H),
         boxing_middle.ReplaceProducerDeviceTag("cpu"),
         boxing_middle.ProducerSbpParallel,
     ),
     boxing_middle.BoxingToMiddle(
-        CpuOneToOne,
+        CpuBroadcastOneToOne,
+        boxing_middle.ReplaceConsumerDeviceTag("cpu"),
+        boxing_middle.ConsumerSbpParallel,
+    ),
+    OptionalBoxing(CopyH2D),
+)
+
+BoxingInterNodeOneToOne = Sequential(
+    boxing_middle.BoxingToMiddle(
+        OptionalBoxing(CopyD2H),
+        boxing_middle.ReplaceProducerDeviceTag("cpu"),
+        boxing_middle.ProducerSbpParallel,
+    ),
+    boxing_middle.BoxingToMiddle(
+        InterNodeOneToOne,
         boxing_middle.ReplaceConsumerDeviceTag("cpu"),
         boxing_middle.ConsumerSbpParallel,
     ),
@@ -759,7 +801,8 @@ conditional_function_table = [
     CopyD2H,
     NoBoxing,
     # one to one
-    BoxingOneToOne,
+    BoxingIntraNodeOneToOne,
+    BoxingInterNodeOneToOne,
     # B -> B
     BroadcastManyToOne,
     Sequential(
@@ -774,7 +817,7 @@ conditional_function_table = [
             boxing_middle.ProducerSbpParallel,
         ),
         boxing_middle.BoxingToMiddle(
-            OptionalBoxing(CpuOneToOne),
+            OptionalBoxing(CpuBroadcastOneToOne),
             boxing_middle.ConsumerRandomParallelIdPerMachine("cpu"),
             boxing_middle.BroadcastParallel,
         ),
@@ -784,7 +827,13 @@ conditional_function_table = [
             boxing_middle.BroadcastParallel,
         ),
         OptionalBoxing(CopyH2D),
-        exclude=(BroadcastManyToOne, CopyH2D, CopyD2H, NoBoxing, BoxingOneToOne),
+        exclude=(
+            BroadcastManyToOne,
+            CopyH2D,
+            CopyD2H,
+            NoBoxing,
+            BoxingIntraNodeOneToOne,
+        ),
     ),
     # B -> S
     Sequential(
