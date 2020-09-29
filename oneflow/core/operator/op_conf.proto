@@ -233,6 +233,7 @@ message LambModelUpdateConf {
   required float beta1 = 1;
   required float beta2 = 2;
   required float epsilon = 3;
+  required bool adam = 4;
 }
 
 message ExponentialDecayConf {

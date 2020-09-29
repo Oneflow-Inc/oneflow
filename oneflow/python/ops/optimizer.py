@@ -1464,12 +1464,28 @@ class LazyAdam(Optimizer):
 
 @oneflow_export("optimizer.LAMB")
 class LAMB(Optimizer):
+
+    r"""
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        beta1 (float, optional): The exponential weighted average decay rate for the 1st-moment estimates (:math:`\beta_1`). Defaults to 0.9.
+        beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
+        adam (bool, optional): if True, this optm should be equivalent to adam, for test purpose mainly. Defaults to False.
+        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
         beta1: float = 0.9,
         beta2: float = 0.999,
         epsilon: float = 1e-6,
+        adam: bool = False,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
@@ -1480,8 +1496,10 @@ class LAMB(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        self.adam = adam
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
         train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
         train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
         train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon
+        train_conf.model_update_conf.lamb_conf.adam = self.adam

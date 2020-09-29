@@ -197,15 +197,15 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KE
 template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
-                     const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer,
-                     T* beta1_t, T* beta2_t);
+                     float beta2, float epsilon, float weight_decay, bool adam,
+                     const float* learning_rate, const G* model_diff, T* adam_diff, T* model, T* m,
+                     T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 template<typename T, typename G>
 void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, const float* learning_rate, const G* model_diff,
+    float epsilon, float weight_decay, bool adam, const float* learning_rate, const G* model_diff,
     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t) {
   FOR_RANGE(int64_t, i, 0, n) {
     LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
@@ -215,8 +215,10 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, &norm_buffer[1]);
   KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
   float lr = *learning_rate;
-  const T trust_ratio = norm_buffer[0] / norm_buffer[1];
-  lr *= trust_ratio;
+  if (adam == false) {
+    const T trust_ratio = norm_buffer[0] / norm_buffer[1];
+    lr *= trust_ratio;
+  }
   FOR_RANGE(int64_t, i, 0, n) {
     LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i);
   }
