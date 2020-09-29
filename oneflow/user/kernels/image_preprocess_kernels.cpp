@@ -420,8 +420,8 @@ constexpr float HalfRange() {
 
 template<typename F, typename T>
 void ImageBrightnessContrastStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
-                                 const float& brightness, const float& brightness_shift,
-                                 const float& contrast, const float& contrast_center_) {
+                                   const float& brightness, const float& brightness_shift,
+                                   const float& contrast, const float& contrast_center_) {
   CHECK_EQ(input_buffer.shape().NumAxes(), 3);
   int h = input_buffer.shape().At(0);
   int w = input_buffer.shape().At(1);
@@ -440,9 +440,9 @@ void ImageBrightnessContrastStatic(const TensorBuffer& input_buffer, TensorBuffe
 
 template<typename F>
 void ImageBrightnessContrastImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
-                               const float& brightness, const float& brightness_shift,
-                               const float& contrast, const float& contrast_center_,
-                               DataType outbuffer_dtype) {
+                                 const float& brightness, const float& brightness_shift,
+                                 const float& contrast, const float& contrast_center_,
+                                 DataType outbuffer_dtype) {
   outbuffer_dtype =
       (outbuffer_dtype != DataType::kInvalidDataType) ? outbuffer_dtype : input_buffer.data_type();
   output_buffer->Resize(input_buffer.shape(), outbuffer_dtype);
@@ -500,8 +500,8 @@ class ImageBrightnessContrastKernel final : public user_op::OpKernel {
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
       SwitchImageBrightnessContrastImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
-                                      brightness, brightness_shift, contrast, contrast_center,
-                                      outbuffer_dtype);
+                                        brightness, brightness_shift, contrast, contrast_center,
+                                        outbuffer_dtype);
     });
   }
 
