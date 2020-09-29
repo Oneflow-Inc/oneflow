@@ -34,8 +34,8 @@ struct CoordinateOffsetConverter{
     CoordinateOffsetConverter(const ShapeView& tensorShape) :
     offset_(0), axisNum_(tensorShape.NumAxes())
     {
-      // memset(shape_, 0, sizeof(int64_t)*MAX_AXIS);
-      // memset(coordinate_, 0, sizeof(int64_t)*MAX_AXIS);
+      memset(shape_, 0, sizeof(int64_t)*MAX_AXIS);
+      memset(coordinate_, 0, sizeof(int64_t)*MAX_AXIS);
       FOR_RANGE(int64_t, i, 0, axisNum_){
         shape_[i] = tensorShape.At(i);
       }
@@ -153,5 +153,4 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_PYTORCH_GATHER_KERNEL,
                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op
-
 }  // namespace oneflow
