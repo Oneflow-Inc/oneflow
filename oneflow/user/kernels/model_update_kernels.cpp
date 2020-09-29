@@ -442,13 +442,14 @@ class LambTmpBufferManager final {
   OF_DISALLOW_COPY_AND_MOVE(LambTmpBufferManager);
   LambTmpBufferManager(void* ptr, const int64_t n) : ptr_(ptr) {
     const size_t adam_diff_bytes = GetCudaAlignedSize(n * sizeof(T));
-    const size_t norm_buffer_bytes = GetCudaAlignedSize(2 * sizeof(T));
+    norm_buffer_bytes_ = GetCudaAlignedSize(2 * sizeof(T));
     adam_diff_offset_ = 0;
     norm_buffer_offset_ = adam_diff_offset_ + adam_diff_bytes;
-    total_buffer_size_ = adam_diff_bytes + norm_buffer_bytes;
+    total_buffer_size_ = adam_diff_bytes + norm_buffer_bytes_;
   }
   ~LambTmpBufferManager() = default;
 
+  size_t GetNormBufferSize() const { return norm_buffer_bytes_; }
   size_t GetTotalBufferSize() const { return total_buffer_size_; }
 
   T* AdamDiffPtr() const {
@@ -465,6 +466,7 @@ class LambTmpBufferManager final {
   size_t norm_buffer_offset_;
 
   size_t total_buffer_size_;
+  size_t norm_buffer_bytes_;
   void* ptr_;
 };
 
@@ -493,6 +495,9 @@ class LambUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto adam = ctx->Attr<bool>("adam");
+    if (device_type != DeviceType::kCPU) {
+      Memset<device_type>(ctx->device_ctx(), tbm.NormBufferPtr(), 0, tbm.GetNormBufferSize());
+    }
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
         weight_decay, adam, learning_rate->dptr<float>(), model_diff->dptr<G>(), tbm.AdamDiffPtr(),
