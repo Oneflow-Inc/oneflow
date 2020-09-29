@@ -1,10 +1,7 @@
 include(python)
-
 # main cpp
-# TODO(tsai): skip for now, fail to link when building CPU only
-if (BUILD_CUDA)
-  list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
-endif()
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})
@@ -124,7 +121,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
+      list(APPEND of_transport_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
@@ -211,7 +210,7 @@ endif()
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj)
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive -ldl)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
@@ -320,6 +319,16 @@ if(BUILD_TESTING)
     endif()
   endif()
 endif()
+
+# build transport_test
+foreach(cc ${of_transport_test_cc})
+  get_filename_component(transport_test_name ${cc} NAME_WE)
+  string(CONCAT transport_test_exe_name ${transport_test_name} _exe)
+  oneflow_add_executable(${transport_test_exe_name} ${cc})
+  target_link_libraries(${transport_test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+  set_target_properties(${transport_test_exe_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+endforeach()
+
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")

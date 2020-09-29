@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/naive_model_update_op.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
+#ifndef ONEFLOW_CORE_CONTROL_CTR_TEST_H_
+#define ONEFLOW_CORE_CONTROL_CTR_TEST_H_
 
 namespace oneflow {
 
-const PbMessage& NaiveModelUpdateOp::GetCustomizedConf() const {
-  return op_conf().naive_model_update_conf();
-}
+class CtrlUtil {
+ public:
+  CtrlUtil() = default;
+  ~CtrlUtil() = default;
 
-const HashSet<std::string> NaiveModelUpdateOp::AlwaysBroadcastParallelBns() const {
-  return HashSet<std::string>{};
-}
-
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kNaiveConf, NormalModelUpdtOp, NaiveModelUpdateOp);
-
-REGISTER_OP(OperatorConf::kNaiveModelUpdateConf, NaiveModelUpdateOp);
+  int FindAvailablePort() const;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_CONTROL_CTR_TEST_H_

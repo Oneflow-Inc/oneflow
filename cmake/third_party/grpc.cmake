@@ -5,6 +5,7 @@ set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
 SET(GRPC_TAR_URL https://github.com/grpc/grpc/archive/v1.27.3.tar.gz)
+use_mirror(VARIABLE GRPC_TAR_URL URL ${GRPC_TAR_URL})
 set(GRPC_URL_HASH 0c6c3fc8682d4262dd0e5e6fabe1a7e2)
 SET(GRPC_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc)
 

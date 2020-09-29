@@ -54,8 +54,13 @@ void TransportStreamType::Compute(Instruction* instruction) const {
 template<typename DerivedT>
 ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
-  // total device_num of a cluster is $machine_num * $machine_num
-  std::size_t device_num = resource.machine_num();
+  std::size_t device_num = 0;
+  if (resource.has_cpu_device_num()) {
+    device_num = std::max<std::size_t>(device_num, resource.cpu_device_num());
+  }
+  if (resource.has_gpu_device_num()) {
+    device_num = std::max<std::size_t>(device_num, resource.gpu_device_num());
+  }
   auto ret = ObjectMsgPtr<StreamDesc>::New();
   ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<DerivedT>());
   // TODO(lixinqi): remove this ugly field

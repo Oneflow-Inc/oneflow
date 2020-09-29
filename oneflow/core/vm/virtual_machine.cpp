@@ -72,7 +72,7 @@ void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* inst
     const auto& instr_type_id = instr_msg->instr_type_id();
     const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
     if (stream_type.SharingVirtualMachineThread() && IsSourceInstruction(*instr_msg)) {
-      const auto& parallel_desc = GetInstructionParallelDesc(*instr_msg);
+      const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
       }
@@ -99,7 +99,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
       LOG(FATAL) << typeid(instr_msg->instr_type_id().instruction_type()).name() << " "
                  << typeid(stream_type_id.stream_type()).name();
     }
-    const auto& parallel_desc = GetInstructionParallelDesc(*instr_msg);
+    const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
       new_instruction_list->EmplaceBack(stream->NewInstruction(instr_msg, parallel_desc));
@@ -108,16 +108,15 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
   }
 }
 
-const std::shared_ptr<ParallelDesc>& VirtualMachine::GetInstructionParallelDesc(
-    const InstructionMsg& instr_msg) {
+Maybe<ParallelDesc> VirtualMachine::GetInstructionParallelDesc(const InstructionMsg& instr_msg) {
   static const std::shared_ptr<ParallelDesc> empty_ptr;
   if (!instr_msg.has_parallel_desc_symbol_id()) { return empty_ptr; }
   int64_t symbol_id = instr_msg.parallel_desc_symbol_id();
   auto* logical_object = mut_id2logical_object()->FindPtr(symbol_id);
-  CHECK_NOTNULL(logical_object);
+  CHECK_NOTNULL_OR_RETURN(logical_object) << "symbol_id: " << symbol_id;
   auto* map = logical_object->mut_global_device_id2mirrored_object();
-  CHECK_EQ(map->size(), 1);
-  return CHECK_JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>())->GetPtr();
+  CHECK_EQ_OR_RETURN(map->size(), 1);
+  return JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>()).GetPtr();
 }
 
 MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
