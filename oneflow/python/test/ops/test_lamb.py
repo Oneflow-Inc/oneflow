@@ -175,7 +175,8 @@ def compare_with_tensorflow_adam(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
 
-    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
+    diff = x.flatten() - var.numpy().flatten()
+    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,), diff
 
 
 def test_lamb_as_adam(test_case):
