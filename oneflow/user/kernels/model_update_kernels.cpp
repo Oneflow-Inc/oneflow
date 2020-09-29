@@ -491,9 +491,9 @@ user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
-REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 #endif  // WITH_CUDA
 
 }  // namespace
