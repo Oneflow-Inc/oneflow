@@ -101,14 +101,9 @@ class TorchGatherKernel final : public user_op::OpKernel {
     const Tensor *index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor *out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
-    const bool is_sparse_grad = ctx->Attr<bool>("sparse_grad");
     
     if (index_tensor->shape().elem_cnt() == 0) { 
       return; 
-    }
-
-    if(is_sparse_grad){
-      //TO DO...
     }
 
     const IN_T* input = input_tensor->dptr<IN_T>();

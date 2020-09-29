@@ -947,7 +947,6 @@ def torch_gather(
             .Input("index", [index])
             .Output("out")
             .Attr("dim", int(dim))
-            .Attr("sparse_grad", bool(sparse_grad))
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]

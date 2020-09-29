@@ -23,7 +23,6 @@ REGISTER_USER_OP("torch_gather")
     .Input("index")
     .Output("out")
     .Attr("dim", UserOpAttrType::kAtInt64)
-    .Attr("sparse_grad", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
