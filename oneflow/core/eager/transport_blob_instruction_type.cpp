@@ -52,7 +52,7 @@ void ReceiveBlobInstructionType::Compute(vm::Instruction* instruction) const {
   CHECK_OK(Receive(instruction));
 }
 
-// Send data to dst_machine
+// Sends data to dst_machine
 Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
   FlatMsgView<SendBlobInstruction> args(instruction->instr_msg().operand());
   CHECK_EQ_OR_RETURN(args->src_blob_size(), args->header_token_size());
@@ -95,7 +95,7 @@ Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
   return Maybe<void>::Ok();
 }
 
-// Receive data from src_machine
+// Receives data from src_machine
 Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) const {
   FlatMsgView<ReceiveBlobInstruction> args(instruction->instr_msg().operand());
   CHECK_EQ_OR_RETURN(args->dst_blob_size(), args->header_token_size());

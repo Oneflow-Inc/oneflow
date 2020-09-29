@@ -18,13 +18,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// Initalize DeviceCtx
+// Initalizes DeviceCtx
 void TransportStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                         Stream* stream) const {
   device_ctx->reset();
 }
 
-// Reinterpret status_buffer as RefCntType
+// Reinterprets status_buffer as RefCntType
 void TransportStreamType::InitInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(RefCntType) < kInstructionStatusBufferBytes, "");
@@ -36,21 +36,21 @@ void TransportStreamType::DeleteInstructionStatus(const Stream& stream,
   // do nothing
 }
 
-// Return true if RefCntType is eaqual to 0
+// Returns true if RefCntType is eaqual to 0
 bool TransportStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   const char* data = status_buffer.buffer().data();
   return *reinterpret_cast<const RefCntType*>(data) == 0;
 }
 
-// Launch a cuda kernel
+// Launches a cuda kernel
 void TransportStreamType::Compute(Instruction* instruction) const {
   const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(instruction);
 }
 
-// Specify transport stream description of the virtual machine to be used
+// Specifys transport stream description of the virtual machine to be used
 template<typename DerivedT>
 ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
