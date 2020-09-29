@@ -419,7 +419,7 @@ constexpr float HalfRange() {
 }
 
 template<typename F, typename T>
-void ImageAdjustBrightnessStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
+void ImageBrightnessContrastStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
                                  const float& brightness, const float& brightness_shift,
                                  const float& contrast, const float& contrast_center_) {
   CHECK_EQ(input_buffer.shape().NumAxes(), 3);
@@ -439,7 +439,7 @@ void ImageAdjustBrightnessStatic(const TensorBuffer& input_buffer, TensorBuffer*
 }
 
 template<typename F>
-void ImageAdjustBrightnessImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
+void ImageBrightnessContrastImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
                                const float& brightness, const float& brightness_shift,
                                const float& contrast, const float& contrast_center_,
                                DataType outbuffer_dtype) {
@@ -451,12 +451,12 @@ void ImageAdjustBrightnessImpl(const TensorBuffer& input_buffer, TensorBuffer* o
     case DataType::kChar:
     case DataType::kInt8:
     case DataType::kUInt8:
-      ImageAdjustBrightnessStatic<F, DataTypeToType<DataType::kUInt8>>(
+      ImageBrightnessContrastStatic<F, DataTypeToType<DataType::kUInt8>>(
           input_buffer, output_buffer, brightness, brightness_shift, contrast, contrast_center_);
       break;
     case DataType::kFloat16:
     case DataType::kFloat:
-      ImageAdjustBrightnessStatic<F, DataTypeToType<DataType::kFloat>>(
+      ImageBrightnessContrastStatic<F, DataTypeToType<DataType::kFloat>>(
           input_buffer, output_buffer, brightness, brightness_shift, contrast, contrast_center_);
       break;
     case DataType::kInt32:
@@ -467,7 +467,7 @@ void ImageAdjustBrightnessImpl(const TensorBuffer& input_buffer, TensorBuffer* o
 }
 
 #define MAKE_ADJUST_FROM_TENSOR_BUFFER_SWITCH_ENTRY(func_name, F) func_name<F>
-DEFINE_STATIC_SWITCH_FUNC(void, ImageAdjustBrightnessImpl,
+DEFINE_STATIC_SWITCH_FUNC(void, ImageBrightnessContrastImpl,
                           MAKE_ADJUST_FROM_TENSOR_BUFFER_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(IMAGE_DATA_TYPE_SEQ));
 
@@ -475,10 +475,10 @@ DEFINE_STATIC_SWITCH_FUNC(void, ImageAdjustBrightnessImpl,
 
 }  // namespace
 
-class ImageAdjustBrightnessKernel final : public user_op::OpKernel {
+class ImageBrightnessContrastKernel final : public user_op::OpKernel {
  public:
-  ImageAdjustBrightnessKernel() = default;
-  ~ImageAdjustBrightnessKernel() = default;
+  ImageBrightnessContrastKernel() = default;
+  ~ImageBrightnessContrastKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -499,7 +499,7 @@ class ImageAdjustBrightnessKernel final : public user_op::OpKernel {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
       CHECK_EQ(in_buffer.shape().NumAxes(), 3);
       TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-      SwitchImageAdjustBrightnessImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
+      SwitchImageBrightnessContrastImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
                                       brightness, brightness_shift, contrast, contrast_center,
                                       outbuffer_dtype);
     });
@@ -509,7 +509,7 @@ class ImageAdjustBrightnessKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("image_brightness_contrast")
-    .SetCreateFn<ImageAdjustBrightnessKernel>()
+    .SetCreateFn<ImageBrightnessContrastKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));

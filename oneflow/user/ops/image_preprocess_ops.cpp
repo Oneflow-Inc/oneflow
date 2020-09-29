@@ -208,7 +208,6 @@ REGISTER_CPU_ONLY_USER_OP("image_brightness_contrast")
                       || outbuffer_type == DataType::kFloat);
       *out_tensor->mut_shape() = in_tensor->shape();
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
-      // *out_tensor = *in_tensor;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
