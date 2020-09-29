@@ -31,13 +31,15 @@ limitations under the License.
 #include <sys/types.h>
 #include <unistd.h>
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/transport/transport_message.h"
 
 namespace oneflow {
 
 #define SOCKET_MSG_TYPE_SEQ                         \
   OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
   OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
-  OF_PP_MAKE_TUPLE_SEQ(Actor, actor)
+  OF_PP_MAKE_TUPLE_SEQ(Actor, actor)                \
+  OF_PP_MAKE_TUPLE_SEQ(Transport, transport)
 
 enum class SocketMsgType {
 #define MAKE_ENTRY(x, y) k##x,
