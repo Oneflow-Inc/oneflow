@@ -106,6 +106,7 @@ Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendHalt();
+  Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
