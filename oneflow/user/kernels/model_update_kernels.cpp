@@ -436,6 +436,38 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_ADAM_UPDATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+template<DeviceType device_type, typename T>
+class LambTmpBufferManager final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LambTmpBufferManager);
+  LambTmpBufferManager(void* ptr, const int64_t n) : ptr_(ptr) {
+    const size_t adam_diff_bytes = GetCudaAlignedSize(n * sizeof(T));
+    const size_t norm_buffer_bytes = GetCudaAlignedSize(2 * sizeof(T));
+    adam_diff_offset_ = 0;
+    norm_buffer_offset_ = adam_diff_offset_ + adam_diff_bytes;
+    total_buffer_size_ = adam_diff_bytes + norm_buffer_bytes;
+  }
+  ~LambTmpBufferManager() = default;
+
+  size_t GetTotalBufferSize() const { return total_buffer_size_; }
+
+  T* AdamDiffPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + adam_diff_offset_);
+  }
+  T* NormBufferPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + norm_buffer_offset_);
+  }
+
+ private:
+  size_t adam_diff_offset_;
+  size_t norm_buffer_offset_;
+
+  size_t total_buffer_size_;
+  void* ptr_;
+};
+
 template<DeviceType device_type, typename T, typename G>
 class LambUpdateKernel final : public user_op::OpKernel {
  public:
@@ -452,9 +484,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* beta1_t = ctx->Tensor4ArgNameAndIndex("beta1_t", 0);
     user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* norm_buffer_ptr = tmp_buffer->mut_dptr<T>();
-    T* adam_diff_ptr = reinterpret_cast<T*>(reinterpret_cast<char*>(tmp_buffer->mut_dptr()))
-                       + GetCudaAlignedSize(2 * sizeof(T));
+    LambTmpBufferManager<device_type, T> tbm(tmp_buffer->mut_dptr(), model->shape().elem_cnt());
     const auto scale = ctx->Attr<float>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
@@ -465,8 +495,8 @@ class LambUpdateKernel final : public user_op::OpKernel {
     const auto adam = ctx->Attr<bool>("adam");
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, adam, learning_rate->dptr<float>(), model_diff->dptr<G>(), adam_diff_ptr,
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), norm_buffer_ptr,
+        weight_decay, adam, learning_rate->dptr<float>(), model_diff->dptr<G>(), tbm.AdamDiffPtr(),
+        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), tbm.NormBufferPtr(),
         beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -476,7 +506,8 @@ template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-    return GetCudaAlignedSize((model->shape().elem_cnt() + 2) * sizeof(T));
+    LambTmpBufferManager<device_type, T> tbm(nullptr, model->shape().elem_cnt());
+    return tbm.GetTotalBufferSize();
   };
 }
 
