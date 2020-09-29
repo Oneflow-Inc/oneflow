@@ -26,7 +26,7 @@ class OneflowModuleRegistry {
  public:
   OneflowModuleRegistry() = default;
   ~OneflowModuleRegistry() = default;
-  
+
   void Register(std::string module_path, std::function<void(pybind11::module&)> BuildModule);
   void ImportAll(pybind11::module& m);
 
