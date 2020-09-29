@@ -66,9 +66,11 @@ def compare_with_tensorflow_addons_lamb(
     for i in range(train_iters + 1):
         random_masks_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
 
+    x_list = []
     init_value = None
     for i in range(train_iters + 1):
         x = testAdam(random_masks_seq[i])
+        x_list.append(x)
         if i == 0:
             init_value = np.copy(x)
 
@@ -77,13 +79,21 @@ def compare_with_tensorflow_addons_lamb(
         learning_rate=learning_rate, beta_1=beta1, beta_2=beta2, epsilon=epsilon
     )
 
+    var_list = []
     for i in range(train_iters):
         with tf.GradientTape() as tape:
             random_mask = tf.Variable(random_masks_seq[i])
             loss = tf.reduce_mean(var * random_mask)
+            var_list.append(var.numpy())
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
     case = device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
+    test_case.assertTrue(len(x_list) == len(var_list) + 1)
+    for (i, o, t) in zip(range(len(var_list)), x_list[1:], var_list):
+        diff = o - t
+        test_case.assertTrue(
+            np.allclose(x_list[i], var_list[i], rtol=1e-3, atol=1e-3), (i, case, diff),
+        )
     diff = x.flatten() - var.numpy().flatten()
     test_case.assertTrue(
         np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4),
@@ -99,7 +109,7 @@ def test_lamb(test_case):
     arg_dict["beta1"] = [0.9]
     arg_dict["beta2"] = [0.99]
     arg_dict["epsilon"] = [1e-9]
-    arg_dict["learning_rate"] = [1]
-    arg_dict["train_iters"] = [10]
+    arg_dict["learning_rate"] = [0.5]
+    arg_dict["train_iters"] = [30]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow_addons_lamb(*arg)
