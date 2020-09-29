@@ -20,6 +20,8 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
+import test_global_storage
+
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
@@ -35,7 +37,7 @@ def test_layer_norm(_):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["confs"] = confs
-    arg_dict["data_type"] = ["float32"]
+    arg_dict["data_type"] = ["float32", "float16"]
     arg_dict["trainable"] = [True, False]
     arg_dict["center"] = [True, False]
     arg_dict["scale"] = [True, False]
@@ -43,6 +45,8 @@ def test_layer_norm(_):
 
     for case in GenArgList(arg_dict):
         (device_type, confs, data_type, trainable, center, scale, epsilon) = case
+        if device_type == "cpu" and data_type == "float16":
+            continue
         x_shape = confs["x_shape"]
         begin_norm_axis = confs["begin_norm_axis"]
         begin_params_axis = confs["begin_params_axis"]
@@ -51,12 +55,25 @@ def test_layer_norm(_):
             begin_norm_axis == begin_params_axis
         ), "tf doesn't support a dedicated begin_params_axis"
         # Random inputs
-        x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
+        if data_type == "float16":
+            x = (
+                np.random.uniform(low=-1, high=1, size=x_shape)
+                .astype(np.float16)
+                .astype(np.float32)
+            )
+        else:
+            x = np.random.uniform(low=-1, high=1, size=x_shape).astype(
+                type_name_to_np_type[data_type]
+            )
+
         dim = len(x.shape) - 2
 
         # TF results
         with tf.GradientTape(persistent=True) as tape:
             x_tf = tf.Variable(x)
+            if data_type == "float16":
+                x_tf = tf.cast(x_tf, dtype=tf.float16)
+                tf.keras.backend.set_floatx("float16")
             layer = tf.keras.layers.LayerNormalization(
                 axis=begin_norm_axis,
                 epsilon=epsilon,
@@ -71,8 +88,12 @@ def test_layer_norm(_):
                 trainable=trainable,
             )
             y_tf = layer(x_tf)
-
-        dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
+        if data_type == "float16":
+            dx_tf = tape.gradient(
+                y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape, dtype=tf.float16)
+            )
+        else:
+            dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
         grad = tape.gradient(y_tf, layer.trainable_variables)
         if trainable:
             if scale and center:
@@ -90,7 +111,13 @@ def test_layer_norm(_):
         def assert_grad(b):
             diff = dx_tf.numpy() - b.numpy()
             max_diff = np.max(np.abs(diff))
-            assert np.allclose(dx_tf.numpy(), b.numpy(), rtol=1e-5, atol=1e-5), (
+            if data_type == "float16":
+                tolerance = 2e-3
+            else:
+                tolerance = 1e-5
+            assert np.allclose(
+                dx_tf.numpy(), b.numpy(), rtol=tolerance, atol=tolerance
+            ), (
                 case,
                 max_diff,
             )
@@ -114,7 +141,10 @@ def test_layer_norm(_):
             )
 
         # 1F results
-        dtype = type_name_to_flow_type[data_type]
+        if data_type == "float16":
+            dtype = flow.float
+        else:
+            dtype = type_name_to_flow_type[data_type]
 
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
@@ -130,40 +160,60 @@ def test_layer_norm(_):
             )
             flow.watch_diff(v, assert_grad)
             x += v
+            if data_type == "float16":
+                x = flow.cast(x, dtype=flow.float16)
             with flow.scope.placement(device_type, "0:0"):
-                y = flow.layers.layer_norm(
+                param_shape = x.shape[begin_params_axis:]
+                gamma = None
+                beta = None
+                if center:
+                    with flow.scope.namespace("LayerNorm"):
+                        beta = flow.get_variable(
+                            name="beta",
+                            shape=param_shape,
+                            dtype=flow.float,
+                            initializer=flow.constant_initializer(0.0),
+                            trainable=trainable,
+                            model_name="beta",
+                            reuse=False,
+                        )
+                        if trainable:
+                            flow.watch_diff(beta, assert_grad_beta)
+                        if data_type == "float16":
+                            beta = flow.cast(beta, dtype=flow.float16)
+
+                if scale:
+                    with flow.scope.namespace("LayerNorm"):
+                        gamma = flow.get_variable(
+                            name="gamma",
+                            shape=param_shape,
+                            dtype=flow.float,
+                            initializer=flow.constant_initializer(1.0),
+                            trainable=trainable,
+                            model_name="gamma",
+                            reuse=False,
+                        )
+                        if trainable:
+                            if data_type == "float16":
+                                flow.watch_diff(
+                                    gamma, test_global_storage.Setter("gamma_diff")
+                                )
+                            else:
+                                flow.watch_diff(gamma, assert_grad_gamma)
+                        if data_type == "float16":
+                            gamma = flow.cast(gamma, dtype=flow.float16)
+
+                y = flow.nn.layer_norm(
                     x,
+                    gamma=gamma,
+                    beta=beta,
                     begin_norm_axis=begin_norm_axis,
                     begin_params_axis=begin_params_axis,
-                    center=center,
-                    scale=scale,
                     trainable=trainable,
                     epsilon=epsilon,
                 )
-            if center:
-                with flow.scope.namespace("LayerNorm"):
-                    beta = flow.get_variable(
-                        name="beta",
-                        shape=(x.shape[begin_params_axis:],),
-                        dtype=x.dtype,
-                        initializer=flow.constant_initializer(0.0),
-                        trainable=trainable,
-                        model_name="beta",
-                    )
-                    if trainable:
-                        flow.watch_diff(beta, assert_grad_beta)
-            if scale:
-                with flow.scope.namespace("LayerNorm"):
-                    gamma = flow.get_variable(
-                        name="gamma",
-                        shape=(x.shape[begin_params_axis:],),
-                        dtype=x.dtype,
-                        initializer=flow.constant_initializer(1.0),
-                        trainable=trainable,
-                        model_name="gamma",
-                    )
-                    if trainable:
-                        flow.watch_diff(gamma, assert_grad_gamma)
+            if data_type == "float16":
+                y = flow.cast(y, dtype=flow.float)
 
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
@@ -184,3 +234,23 @@ def test_layer_norm(_):
             case,
             max_diff,
         )
+        if data_type == "float16" and trainable and scale:
+            np_dy = np.ones(x.shape).astype(np.float32)
+            np_gamma_diff = np.sum(np_dy * y.numpy().astype(np.float32), axis=0).astype(
+                np.float16
+            )
+            max_diff = np.max(
+                np.abs(
+                    np_gamma_diff
+                    - test_global_storage.Get("gamma_diff").astype(np.float16)
+                )
+            )
+            assert np.allclose(
+                np_gamma_diff,
+                test_global_storage.Get("gamma_diff").astype(np.float16),
+                rtol=1e-2,
+                atol=1e-2,
+            ), (
+                case,
+                max_diff,
+            )
