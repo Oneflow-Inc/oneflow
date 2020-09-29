@@ -13,39 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/python/util/of_api_registry.h"
+#include "oneflow/api/python/of_api_registry.h"
 
 namespace oneflow {
 
-std::map<std::string, std::vector<std::function<void(pybind11::module&)>>>
-    OneflowModuleRegistry::sub_module_;
+OneflowModuleRegistry::SubModuleMap OneflowModuleRegistry::sub_module_map_;
 
 void OneflowModuleRegistry::Register(std::string module_path,
-                                     std::function<void(pybind11::module&)> build_sub_module) {
-  sub_module_[module_path].emplace_back(build_sub_module);
+                                     std::function<void(pybind11::module&)> BuildModule) {
+  sub_module_map_[module_path].emplace_back(BuildModule);
 }
 
 void OneflowModuleRegistry::ImportAll(pybind11::module& m) {
-  for (auto& pair : sub_module_) {
-    for (auto& build_sub_module : pair.second) { BuildSubModule(pair.first, m, build_sub_module); }
+  for (auto& pair : sub_module_map_) {
+    for (auto& BuildModule : pair.second) { BuildSubModule(pair.first, m, BuildModule); }
   }
 }
 
 void OneflowModuleRegistry::BuildSubModule(
     const std::string& module_path, pybind11::module& m,
-    const std::function<void(pybind11::module&)>& build_sub_module) {
+    const std::function<void(pybind11::module&)>& BuildModule) {
   if (module_path.empty()) {
-    build_sub_module(m);
+    BuildModule(m);
     return;
   }
   size_t dot_pos = module_path.find(".");
   if (dot_pos == std::string::npos) {
-    pybind11::module sub_module = m.def_submodule((char*)module_path.data());
-    build_sub_module(sub_module);
+    pybind11::module sub_module = m.def_submodule(module_path.data());
+    BuildModule(sub_module);
   } else {
     const std::string& sub_module_name = module_path.substr(0, dot_pos);
-    pybind11::module sub_module = m.def_submodule((char*)sub_module_name.data());
-    BuildSubModule(module_path.substr(dot_pos + 1), sub_module, build_sub_module);
+    pybind11::module sub_module = m.def_submodule(sub_module_name.data());
+    BuildSubModule(module_path.substr(dot_pos + 1), sub_module, BuildModule);
   }
 }
 

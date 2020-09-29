@@ -26,13 +26,16 @@ class OneflowModuleRegistry {
  public:
   OneflowModuleRegistry() = default;
   ~OneflowModuleRegistry() = default;
-  void Register(std::string module_path, std::function<void(pybind11::module&)> build_sub_module);
+  void Register(std::string module_path, std::function<void(pybind11::module&)> BuildModule);
   void ImportAll(pybind11::module& m);
 
  private:
   void BuildSubModule(const std::string& module_path, pybind11::module& m,
-                      const std::function<void(pybind11::module&)>& build_sub_module);
-  static std::map<std::string, std::vector<std::function<void(pybind11::module&)>>> sub_module_;
+                      const std::function<void(pybind11::module&)>& BuildModule);
+  // If different APIs are registered under the same path, the BuildModuleFuntion of which will be
+  // saved in the corresponding vector.
+  using SubModuleMap = std::map<std::string, std::vector<std::function<void(pybind11::module&)>>>;
+  static SubModuleMap sub_module_map_;
 };
 
 }  // namespace oneflow
