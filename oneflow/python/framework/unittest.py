@@ -142,7 +142,8 @@ class TestCase(unittest.TestCase):
 @oneflow_export("unittest.OneGpuTestCase")
 class TestCase(TestCase):
     def setUp(self):
-        if node_size() == 1 and gpu_device_num == 1:
+        if node_size() == 1 and gpu_device_num() == 1:
             super().__init__()
         else:
-            unittest.skip("skipping OneGpuTestCase: {!r}}".format(self))
+            skip_reason = "skipping 1 gpu case: {!r}".format(self)
+            unittest.skip(skip_reason)
