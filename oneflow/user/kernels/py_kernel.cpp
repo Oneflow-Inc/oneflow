@@ -75,43 +75,44 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   CHECK(val) << "Op op_type_name " << op_type_name << " has no definition.";
   const UserOpDef& op_def = val->op_def;
 
-  // if (!PyEval_ThreadsInitialized()) { PyEval_InitThreads(); }
+  // get GIL
   PyGILState_STATE py_gil_st;
   py_gil_st = PyGILState_Ensure();
+  // prepare for numpy c api
   if (PyArray_API == nullptr) { _import_array(); }
 
-  PyObject *py_file, *py_module, *py_func;
+  PyObject *py_file_str, *py_module, *py_func;
   PyObject *py_inputs, *py_outputs;
 
   // load python kernel
   const std::string& py_file_name = ctx->Attr<std::string>("py_file");
-  py_file = PyUnicode_DecodeFSDefault(py_file_name.c_str());
-  // Error checking of pName left out
-  py_module = PyImport_Import(py_file);
-  Py_DECREF(py_file);
+  py_file_str = PyUnicode_DecodeFSDefault(py_file_name.c_str());
+  py_module = PyImport_Import(py_file_str);
+  Py_DECREF(py_file_str);
   if (py_module == nullptr) { PyErr_Print(); }
 
-  // get forward func
+  // get func
   py_func = PyObject_GetAttrString(py_module, py_func_name.c_str());
   if (py_func == nullptr || !PyCallable_Check(py_func)) {
     Py_DECREF(py_module);
     PyErr_Print();
   }
 
-  // input
+  // get numpy input
   MakePyInputs<T>(op_def, ctx, &py_inputs);
 
   // call func
   py_outputs = PyEval_CallObject(py_func, py_inputs);
   Py_DECREF(py_inputs);
 
-  // output
+  // get numpy output
   GetPyOutputs<T>(op_def, ctx, py_outputs);
 
-  Py_DECREF(py_outputs);
   Py_XDECREF(py_func);
   Py_DECREF(py_module);
+  Py_DECREF(py_outputs);
 
+  // release GIL
   PyGILState_Release(py_gil_st);
 }
 

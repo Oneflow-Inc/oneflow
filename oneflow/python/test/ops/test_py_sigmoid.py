@@ -86,7 +86,8 @@ def test_py_sigmoid(test_case):
     print("py_sig : ", py_sig)
     print("numpy_sig : ", numpy_sig)
     test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
-    test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
+    test_case.assertTrue(np.allclose(
+        py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
 
 def test_py_sigmoid_grad(test_case):
@@ -101,7 +102,8 @@ def test_py_sigmoid_grad(test_case):
     print("sig_grad", sig_grad)
     print("py_sig_grad", py_sig_grad)
     print("numpy_sig_grad", numpy_sig_grad)
-    test_case.assertTrue(np.allclose(sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
+    test_case.assertTrue(np.allclose(
+        sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
     test_case.assertTrue(
         np.allclose(py_sig_grad, numpy_sig_grad, rtol=1e-03, atol=1e-05)
     )

@@ -83,6 +83,8 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
 template<typename T>
 void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
   PyObject* ro_array = PyArray_FromAny(arg, nullptr, 0, 0, NPY_ARRAY_CARRAY_RO, nullptr);
+  // PyArray_FromAny has increased the reference count
+  Py_DECREF(ro_array);
   PyArrayObject* array = reinterpret_cast<PyArrayObject*>(ro_array);
 
   DataType of_data_type = DataType::kFloat;
