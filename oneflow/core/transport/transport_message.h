@@ -13,20 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_INDEXED_SLICES_NAIVE_MODEL_UPDATE_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_INDEXED_SLICES_NAIVE_MODEL_UPDATE_KERNEL_UTIL_H_
+#ifndef ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_
+#define ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/platform.h"
+#include "oneflow/core/common/util.h"
+
+#ifdef PLATFORM_POSIX
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename K>
-struct IndexedSlicesNaiveMdUpdateKernelUtil final {
-  static void Update(DeviceCtx* ctx, const K* indices, const T* values, const float* learning_rate,
-                     int64_t num_indices, int64_t num_features, int64_t feature_size,
-                     int64_t feature_id_offset, T* model);
+enum class TransportMsgType {
+  kInvalid = 0,
+  kSend = 1,  // send msg from local to remote transport
+  kAck = 2,   // this token transmission task is down
+};
+
+struct TransportMsg {
+  uint64_t token;
+  void* src_mem_token;
+  void* dst_mem_token;
+  std::size_t size;
+  int64_t src_machine_id;
+  int64_t dst_machine_id;
+  TransportMsgType type;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_INDEXED_SLICES_NAIVE_MODEL_UPDATE_KERNEL_UTIL_H_
+#endif  // PLATFORM_POSIX
+
+#endif  // ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_

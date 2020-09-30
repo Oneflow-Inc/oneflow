@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "oneflow/core/transport/transport.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -107,6 +108,11 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.actor_msg);
+  SwitchToMsgHeadReadHandle();
+}
+
+void SocketReadHelper::SetStatusWhenTransportMsgHeadDone() {
+  Global<Transport>::Get()->EnqueueTransportMsg(cur_msg_.transport_msg);
   SwitchToMsgHeadReadHandle();
 }
 
