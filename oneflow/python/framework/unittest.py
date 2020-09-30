@@ -79,38 +79,44 @@ def _GetNumOfNodes(func):
         return 1
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
 
-
-def _enable_eager():
-    is_enabled = os.environ["ONEFLOW_TEST_ENABLE_EAGER"] == "1"
-    oneflow.enable_eager_execution(is_enabled)
-
-
-def _enable_typing_check():
-    is_enabled = os.environ["ONEFLOW_TEST_ENABLE_TYPING_CHECK"] == "1"
-    oneflow.experimental.enable_typing_check(True)
+@oneflow_export("unittest.env.should_enable_eager")
+def should_enable_eager():
+    return os.environ["ONEFLOW_TEST_ENABLE_EAGER"] == "1"
 
 
-@oneflow_export("unittest.OneNodeTest")
-class OneNodeTest(unittest.TestCase):
-    def setUp(self):
-        oneflow.clear_default_session()
-        _enable_eager()
-        _enable_typing_check()
-        oneflow.env.init()
+@oneflow_export("unittest.env.should_enable_typing_check")
+def should_enable_typing_check():
+    return os.environ["ONEFLOW_TEST_ENABLE_TYPING_CHECK"] == "1"
 
+
+@oneflow_export("unittest.env.node_list")
+def node_list():
+    node_list_str = os.environ["ONEFLOW_TEST_NODE_LIST"]
+    if node_list_str:
+        return node_list_str.split(",")
+    else:
+        return None
+
+@oneflow_export("unittest.env.node_size")
+def node_list():
+    node_list = node_list()
+    if node_list == None:
+        return 1
+    else
+        return len(node_list)
 
 @oneflow_export("unittest.TwoNodeTest")
-class TwoNodeTest(unittest.TestCase):
+class TestCase(unittest.TestCase):
     def setUp(self):
-        node_list_str = os.environ["ONEFLOW_TEST_NODE_LIST"]
-        assert node_list_str != None
-        node_list = node_list_str.split(",")
-        assert len(node_list) == 2
-
         oneflow.clear_default_session()
-        _enable_eager()
-        _enable_typing_check()
-        flow.env.machine(node_list)
-        flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+        oneflow.enable_eager_execution(should_enable_eager())
+        oneflow.experimental.enable_typing_check(should_enable_typing_check())
+
+        node_list = node_list()
+        if node_list:
+            assert node_size() > 1
+            flow.env.machine(node_list)
+            flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+            atexit.register(flow.deprecated.delete_worker)
+
         flow.env.init()
-        atexit.register(flow.deprecated.delete_worker)
