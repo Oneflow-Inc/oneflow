@@ -54,6 +54,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
+  // Update Lbi2SbpParallel here. Might need to adjust access modifiers
+  void UpdateLbi2SbpParallel();
 
  private:
   friend class OpGraph;
