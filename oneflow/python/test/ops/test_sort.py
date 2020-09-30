@@ -64,7 +64,7 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-class TestSort(flow.unittest.TestCase):
+class TestSort(flow.unittest.OneGpuTestCase):
     def test_sort(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)

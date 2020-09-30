@@ -112,7 +112,7 @@ def CompareBiasAddWithTensorFlow(
     assert np.allclose(of_x_diff2, tf_x_diff2, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
-class TestBiasAdd(flow.unittest.TestCase):
+class TestBiasAdd(flow.unittest.OneGpuTestCase):
     def test_bias_add_nchw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

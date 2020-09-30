@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-class TestGetVariable(flow.unittest.TestCase):
+class TestGetVariable(flow.unittest.OneGpuTestCase):
     def test_get_variable_with_same_name(test_case):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()

@@ -163,7 +163,7 @@ def _compare_bbox_scale(
         test_case.assertTrue(np.allclose(bbox, of_bbox))
 
 
-class TestObjectBboxScale(flow.unittest.TestCase):
+class TestObjectBboxScale(flow.unittest.OneGpuTestCase):
     def test_object_bbox_scale(test_case):
         _compare_bbox_scale(
             test_case,

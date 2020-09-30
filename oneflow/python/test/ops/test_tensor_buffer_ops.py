@@ -38,7 +38,7 @@ def _test_tensor_buffer_convert(test_case):
     test_case.assertTrue(np.array_equal(input_arr, output_arr))
 
 
-class TestTensorBufferOps(flow.unittest.TestCase):
+class TestTensorBufferOps(flow.unittest.OneGpuTestCase):
     def test_tensor_buffer_convert(test_case):
         _test_tensor_buffer_convert(test_case)
 

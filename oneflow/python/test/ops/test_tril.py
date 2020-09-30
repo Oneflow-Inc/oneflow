@@ -88,7 +88,7 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     )
 
 
-class TestTril(flow.unittest.TestCase):
+class TestTril(flow.unittest.OneGpuTestCase):
     def test_tril_fw_bw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "gpu"]

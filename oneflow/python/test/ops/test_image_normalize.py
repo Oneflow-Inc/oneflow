@@ -75,7 +75,7 @@ def _compare_image_normalize(test_case, image_files, std, mean):
         test_case.assertTrue(np.allclose(exp_norm_image, norm_image))
 
 
-class TestImageNormalize(flow.unittest.TestCase):
+class TestImageNormalize(flow.unittest.OneGpuTestCase):
     def test_image_normalize(test_case):
         _compare_image_normalize(
             test_case,

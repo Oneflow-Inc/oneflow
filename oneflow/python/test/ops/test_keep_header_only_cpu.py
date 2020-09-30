@@ -23,7 +23,7 @@ func_config.default_data_type(flow.float)
 func_config.default_logical_view(flow.scope.consistent_view())
 
 
-class TestKeepHeaderOnlyCpu(flow.unittest.TestCase):
+class TestKeepHeaderOnlyCpu(flow.unittest.OneGpuTestCase):
     def test_keep_header_only_cpu(test_case):
         @flow.global_function(function_config=func_config)
         def job(x: oft.Numpy.Placeholder((2, 3, 4), dtype=flow.float)):

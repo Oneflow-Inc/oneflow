@@ -18,7 +18,7 @@ import os
 import unittest
 
 
-class Test2dGpuVariable(flow.unittest.TestCase):
+class Test2dGpuVariable(flow.unittest.OneGpuTestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_2d_gpu_variable(test_case):
         flow.enable_eager_execution()

@@ -17,7 +17,7 @@ import unittest
 import oneflow as flow
 
 
-class TestFunctionConfig(flow.unittest.TestCase):
+class TestFunctionConfig(flow.unittest.OneGpuTestCase):
     def test_default_placement_scope(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))

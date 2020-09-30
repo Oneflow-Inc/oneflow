@@ -22,7 +22,7 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
-class TestInterfaceOpReadAndWrite(flow.unittest.TestCase):
+class TestInterfaceOpReadAndWrite(flow.unittest.OneGpuTestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test(test_case):
         flow.config.gpu_device_num(2)

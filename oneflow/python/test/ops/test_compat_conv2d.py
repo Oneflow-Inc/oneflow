@@ -156,7 +156,7 @@ def compare_with_tensorflow(
     )
 
 
-class TestCompatConv2d(flow.unittest.TestCase):
+class TestCompatConv2d(flow.unittest.OneGpuTestCase):
     def test_conv1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

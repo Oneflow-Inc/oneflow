@@ -22,7 +22,7 @@ import random
 import oneflow.typing as oft
 
 
-class TestShape(flow.unittest.TestCase):
+class TestShape(flow.unittest.OneGpuTestCase):
     def test_shape(test_case):
         flow.clear_default_session()
         flow.config.gpu_device_num(2)

@@ -49,7 +49,7 @@ def _test_reverse(test_case, input, axis, dtype, verbose=False):
     test_case.assertTrue(np.array_equal(output, of_output))
 
 
-class TestReverse(flow.unittest.TestCase):
+class TestReverse(flow.unittest.OneGpuTestCase):
     def test_reverse_case_1(test_case):
         input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
         _test_reverse(test_case, input, [3], flow.int32)

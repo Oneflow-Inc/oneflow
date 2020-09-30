@@ -120,7 +120,7 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-class TestClipByValue(flow.unittest.TestCase):
+class TestClipByValue(flow.unittest.OneGpuTestCase):
     def test_clip_by_value(test_case):
         values = np.random.randint(low=-100, high=100, size=(8, 512, 4)).astype(
             np.float32

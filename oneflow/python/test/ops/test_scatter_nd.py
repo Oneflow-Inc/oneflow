@@ -499,7 +499,7 @@ def _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(
     test_case.assertTrue(np.allclose(z.numpy(), of_z))
 
 
-class TestScatterNd(flow.unittest.TestCase):
+class TestScatterNd(flow.unittest.OneGpuTestCase):
     def test_scatter_nd(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

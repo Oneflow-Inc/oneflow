@@ -64,7 +64,7 @@ def _make_global_func(test_case, x_shape, y_shape):
     return AddJob
 
 
-class TestUserOpModule(flow.unittest.TestCase):
+class TestUserOpModule(flow.unittest.OneGpuTestCase):
     def test_Add(test_case):
         @flow.global_function()
         def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):

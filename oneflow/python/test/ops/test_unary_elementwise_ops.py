@@ -20,7 +20,7 @@ from scipy.special import erf, erfc, gammaln
 import oneflow.typing as oft
 
 
-class TestUnaryElementwiseOps(flow.unittest.TestCase):
+class TestUnaryElementwiseOps(flow.unittest.OneGpuTestCase):
     def test_abs(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

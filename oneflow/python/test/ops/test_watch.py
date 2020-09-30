@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-class TestWatch(flow.unittest.TestCase):
+class TestWatch(flow.unittest.OneGpuTestCase):
     def test_simple(test_case):
         flow.config.gpu_device_num(1)
         data = np.ones((10,), dtype=np.float32)

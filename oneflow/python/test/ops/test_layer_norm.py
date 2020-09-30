@@ -29,7 +29,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-class TestLayerNorm(flow.unittest.TestCase):
+class TestLayerNorm(flow.unittest.OneGpuTestCase):
     def test_layer_norm(_):
         confs = [
             {"x_shape": (4, 5, 2, 6), "begin_norm_axis": -1, "begin_params_axis": -1},

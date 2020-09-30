@@ -23,7 +23,7 @@ import tensorflow as tf
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
 
-class TestPad(flow.unittest.TestCase):
+class TestPad(flow.unittest.OneGpuTestCase):
     def test_pad(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

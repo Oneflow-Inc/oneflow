@@ -351,7 +351,7 @@ def _test_hybrid_concat(
     )
 
 
-class TestConcat(flow.unittest.TestCase):
+class TestConcat(flow.unittest.OneGpuTestCase):
     def test_concat(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

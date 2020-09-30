@@ -82,7 +82,7 @@ def compare_with_tensorflow(
     )
 
 
-class TestUpsample(flow.unittest.TestCase):
+class TestUpsample(flow.unittest.OneGpuTestCase):
     def test_upsample(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

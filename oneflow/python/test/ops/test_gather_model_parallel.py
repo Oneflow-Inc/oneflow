@@ -61,7 +61,7 @@ def _test_gather_model_parallel_fw(
         test_case.assertTrue(np.array_equal(out, out_arr))
 
 
-class TestGatherModelParallel(flow.unittest.TestCase):
+class TestGatherModelParallel(flow.unittest.OneGpuTestCase):
     def test_gather_model_parallel_fw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

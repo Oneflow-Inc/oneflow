@@ -164,7 +164,7 @@ def _compare_image_target_resize_with_cv(
         test_case.assertTrue(np.allclose(image_scale, resized_scale))
 
 
-class TestImageTargetResize(flow.unittest.TestCase):
+class TestImageTargetResize(flow.unittest.OneGpuTestCase):
     def test_image_target_resize(test_case):
         _compare_image_target_resize_with_cv(
             test_case,

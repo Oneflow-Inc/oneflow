@@ -58,7 +58,7 @@ def _run_test(
     _check(test_case, x, y.numpy(), depth, on_value, off_value, axis)
 
 
-class TestOneHot(flow.unittest.TestCase):
+class TestOneHot(flow.unittest.OneGpuTestCase):
     def test_one_hot(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]

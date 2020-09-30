@@ -61,7 +61,7 @@ def _test_non_distribute_optimizer_var_as_loss(test_case):
     Foo()
 
 
-class TestNonDistributeOptimizer(flow.unittest.TestCase):
+class TestNonDistributeOptimizer(flow.unittest.OneGpuTestCase):
     def test_non_distribute_optimizer(test_case):
         flow.config.gpu_device_num(2)
         flow.config.enable_debug_mode(True)

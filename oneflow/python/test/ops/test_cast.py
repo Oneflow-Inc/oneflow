@@ -91,7 +91,7 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     )
 
 
-class TestCast(flow.unittest.TestCase):
+class TestCast(flow.unittest.OneGpuTestCase):
     def test_cast(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

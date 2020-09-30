@@ -24,7 +24,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
 
-class TestShuffle(flow.unittest.TestCase):
+class TestShuffle(flow.unittest.OneGpuTestCase):
     def test_shuffle(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

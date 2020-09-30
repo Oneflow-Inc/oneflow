@@ -123,7 +123,7 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
     )
 
 
-class TestMaskedFill(flow.unittest.TestCase):
+class TestMaskedFill(flow.unittest.OneGpuTestCase):
     def test_masked_fill_fw_bw(test_case):
         arg_dict = OrderedDict()
         arg_dict["type_name"] = [

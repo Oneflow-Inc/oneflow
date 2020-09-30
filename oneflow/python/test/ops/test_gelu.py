@@ -37,7 +37,7 @@ def tf_gelu(x):
     return y.numpy(), x_diff.numpy()
 
 
-class TestGelu(flow.unittest.TestCase):
+class TestGelu(flow.unittest.OneGpuTestCase):
     def test_gelu(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

@@ -130,7 +130,7 @@ def _compare_gather_with_tf(
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-class TestBatchGather(flow.unittest.TestCase):
+class TestBatchGather(flow.unittest.OneGpuTestCase):
     def test_batch_gather(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

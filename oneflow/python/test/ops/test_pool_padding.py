@@ -134,7 +134,7 @@ def _GetSequence(value, n, name):
         )
 
 
-class TestPoolPadding(flow.unittest.TestCase):
+class TestPoolPadding(flow.unittest.OneGpuTestCase):
     def test_pool(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

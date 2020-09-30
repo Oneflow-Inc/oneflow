@@ -143,7 +143,7 @@ def gen_arg_list():
     return matmul_args + batch_matmul_args
 
 
-class TestMatmul(flow.unittest.TestCase):
+class TestMatmul(flow.unittest.OneGpuTestCase):
     def test_matmul(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)

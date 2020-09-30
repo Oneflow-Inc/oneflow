@@ -33,7 +33,7 @@ def GenerateTest(test_case, shape, num_inputs):
     test_case.assertTrue(np.allclose(r, sum(inputs)))
 
 
-class TestAddN(flow.unittest.TestCase):
+class TestAddN(flow.unittest.OneGpuTestCase):
     def test_naive(test_case):
         @flow.global_function(function_config=func_config)
         def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 3]):

@@ -23,7 +23,7 @@ func_config.default_logical_view(flow.scope.mirrored_view())
 func_config.default_data_type(flow.float)
 
 
-class TestRepeatAcc(flow.unittest.TestCase):
+class TestRepeatAcc(flow.unittest.OneGpuTestCase):
     def test_repeat_acc(test_case):
         if flow.eager_execution_enabled():
             return

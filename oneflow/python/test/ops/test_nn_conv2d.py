@@ -173,7 +173,7 @@ def compare_with_tensorflow(
     )
 
 
-class TestNnConv2d(flow.unittest.TestCase):
+class TestNnConv2d(flow.unittest.OneGpuTestCase):
     def test_cpu1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]

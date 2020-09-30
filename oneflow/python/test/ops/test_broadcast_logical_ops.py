@@ -96,7 +96,7 @@ def GenerateTest(
     flow.clear_default_session()
 
 
-class TestBroadcastLogicalOps(flow.unittest.TestCase):
+class TestBroadcastLogicalOps(flow.unittest.OneGpuTestCase):
     def test_naive(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

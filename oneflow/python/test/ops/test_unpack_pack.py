@@ -24,7 +24,7 @@ func_config.default_logical_view(flow.scope.mirrored_view())
 func_config.default_data_type(flow.float)
 
 
-class TestUnpackPack(flow.unittest.TestCase):
+class TestUnpackPack(flow.unittest.OneGpuTestCase):
     def test_unpack_pack(test_case):
         if flow.eager_execution_enabled():
             return

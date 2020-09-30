@@ -82,7 +82,7 @@ def _compare_with_np(test_case, shape, dtype, device_type):
     test_case.assertTrue(np.allclose(_np_relu(x), of_y))
 
 
-class TestAssign(flow.unittest.TestCase):
+class TestAssign(flow.unittest.OneGpuTestCase):
     def test_assign(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]

@@ -209,7 +209,7 @@ def _test_multi_lbi(
     test_case.assertTrue(np.array_equal(x, r2))
 
 
-class TestBoxingV2(flow.unittest.TestCase):
+class TestBoxingV2(flow.unittest.OneGpuTestCase):
     def test_split_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]

@@ -115,7 +115,7 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
     return of_out, of_out2
 
 
-class TestDropout(flow.unittest.TestCase):
+class TestDropout(flow.unittest.OneGpuTestCase):
     def test_dropout(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

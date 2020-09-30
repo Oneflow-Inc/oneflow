@@ -72,7 +72,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
     )
 
 
-class TestL2Normalize(flow.unittest.TestCase):
+class TestL2Normalize(flow.unittest.OneGpuTestCase):
     def test_l2_normalize(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

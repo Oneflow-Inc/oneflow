@@ -78,7 +78,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
     )
 
 
-class TestMoments(flow.unittest.TestCase):
+class TestMoments(flow.unittest.OneGpuTestCase):
     def test_moments(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

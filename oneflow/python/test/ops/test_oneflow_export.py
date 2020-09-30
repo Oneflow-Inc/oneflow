@@ -21,7 +21,7 @@ def AddLossUnderNormalMode():
     flow.losses.add_loss(None)
 
 
-class TestOneflowExport(flow.unittest.TestCase):
+class TestOneflowExport(flow.unittest.OneGpuTestCase):
     def test_ApiNotImplementedError(test_case):
         test_case.assertRaises(NotImplementedError, AddLossUnderNormalMode)
 

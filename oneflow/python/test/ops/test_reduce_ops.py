@@ -281,7 +281,7 @@ def compare_reduce_max_with_tensorflow(
     )
 
 
-class TestReduceOps(flow.unittest.TestCase):
+class TestReduceOps(flow.unittest.OneGpuTestCase):
     def test_reduce_any_func(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

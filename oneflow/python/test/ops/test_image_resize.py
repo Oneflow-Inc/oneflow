@@ -441,7 +441,7 @@ def _test_image_resize_with_cv(
         test_case.assertTrue(np.allclose(of_new_size, cv_new_size))
 
 
-class TestImageResize(flow.unittest.TestCase):
+class TestImageResize(flow.unittest.OneGpuTestCase):
     def test_image_resize_to_fixed_size(test_case):
         image_files, _ = _coco_random_sample_images()
         _test_image_resize_with_cv(

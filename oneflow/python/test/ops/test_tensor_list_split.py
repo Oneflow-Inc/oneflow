@@ -54,7 +54,7 @@ def _of_tensor_list_split(input_tensor_list, input_static_shape, device_tag="gpu
     return [output.numpy_list()[0] for output in outputs]
 
 
-class TestTensorListSplit(flow.unittest.TestCase):
+class TestTensorListSplit(flow.unittest.OneGpuTestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_list_input_output(test_case, verbose=False):
         input_shape = [2, 5, 4]

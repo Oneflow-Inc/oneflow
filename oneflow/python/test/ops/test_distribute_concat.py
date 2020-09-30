@@ -19,7 +19,7 @@ import unittest
 import os
 
 
-class TestDistributeConcat(flow.unittest.TestCase):
+class TestDistributeConcat(flow.unittest.OneGpuTestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_deadlock(test_case):
         flow.config.gpu_device_num(2)

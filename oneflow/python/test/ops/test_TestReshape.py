@@ -60,7 +60,7 @@ def mirrored_tensor_def_test(test_case, func_config):
     test_case.assertTrue(np.array_equal(x.reshape(5, 4), y))
 
 
-class Test_TestReshape(flow.unittest.TestCase):
+class Test_TestReshape(flow.unittest.OneGpuTestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_fixed_TestReshape(test_case):
         func_config = flow.FunctionConfig()

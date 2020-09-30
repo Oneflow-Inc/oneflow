@@ -58,7 +58,7 @@ def compare_with_tensorflow(
     )
 
 
-class TestReduceSum(flow.unittest.TestCase):
+class TestReduceSum(flow.unittest.OneGpuTestCase):
     def test_reduce_sum(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
