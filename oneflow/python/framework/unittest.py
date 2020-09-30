@@ -78,3 +78,22 @@ def _GetNumOfNodes(func):
     if hasattr(func, "__oneflow_test_case_num_nodes_required__") == False:
         return 1
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
+
+
+class OneNodeTest(unittest.TestCase):
+    def setUp(self):
+        oneflow.clear_default_session()
+        oneflow.enable_eager_execution(False)
+        oneflow.env.init()
+
+
+class TwoNodeTest(unittest.TestCase):
+    def setUp(self):
+        node_list_str = os.environ["ONEFLOW_TEST_NODE_LIST"]
+        assert node_list_str != None
+        node_list = node_list_str.split(",")
+        assert len(node_list) == 2
+        flow.env.machine(node_list)
+        flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+        flow.env.init()
+        atexit.register(flow.deprecated.delete_worker)
