@@ -80,6 +80,7 @@ def _GetNumOfNodes(func):
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
 
 
+@oneflow_export("unittest.OneNodeTest")
 class OneNodeTest(unittest.TestCase):
     def setUp(self):
         oneflow.clear_default_session()
@@ -87,6 +88,7 @@ class OneNodeTest(unittest.TestCase):
         oneflow.env.init()
 
 
+@oneflow_export("unittest.TwoNodeTest")
 class TwoNodeTest(unittest.TestCase):
     def setUp(self):
         node_list_str = os.environ["ONEFLOW_TEST_NODE_LIST"]
