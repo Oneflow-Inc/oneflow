@@ -11,4 +11,4 @@ cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
 cd test/ops/
-python3 -m unittest
+python3 -m unittest --failfast
