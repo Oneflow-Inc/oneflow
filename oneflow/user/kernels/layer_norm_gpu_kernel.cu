@@ -175,7 +175,7 @@ __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T
     beta_diff_sum_buf[elem_id] = 0;
   }
   __syncthreads();
-  CUDA_1D_KERNEL_LOOP(i, n) {
+  CUDA_1D_KERNEL_LOOP_T(I, i, n) {
     const I elem_id = i % instance_size;
     T dy_val = dy[i];
     T normalized_val = normalized[i];
@@ -205,7 +205,7 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
     beta_diff_sum_buf[elem_id] = 0;
   }
   __syncthreads();
-  CUDA_1D_KERNEL_LOOP(i, n) {
+  CUDA_1D_KERNEL_LOOP_T(I, i, n) {
     const I elem_id = i % instance_size;
     half dy_val = dy[i];
     half normalized_val = normalized[i];
