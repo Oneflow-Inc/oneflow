@@ -1471,8 +1471,8 @@ class LAMB(Optimizer):
         lr_scheduler (LrScheduler): The scheduler of learning rate.
         beta1 (float, optional): The exponential weighted average decay rate for the 1st-moment estimates (:math:`\beta_1`). Defaults to 0.9.
         beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
+        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-6.
         adam (bool, optional): if True, this optm should be equivalent to adam, for test purpose mainly. Defaults to False.
-        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
