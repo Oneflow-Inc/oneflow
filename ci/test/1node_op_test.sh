@@ -11,13 +11,11 @@ cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
 cd test/ops/
-export CUDA_VISIBLE_DEVICES=1
+
 python3 -m unittest --failfast
 
 export ONEFLOW_TEST_GPU_DEVICE_NUM=2
-export CUDA_VISIBLE_DEVICES=1,2
 python3 -m unittest --failfast
 
 export ONEFLOW_TEST_GPU_DEVICE_NUM=4
-export CUDA_VISIBLE_DEVICES=1,2,3,4
 python3 -m unittest --failfast
