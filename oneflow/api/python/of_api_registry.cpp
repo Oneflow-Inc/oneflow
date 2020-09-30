@@ -28,7 +28,7 @@ SubModuleMap* GetSubModuleMap() {
   return &sub_module_map;
 }
 
-}
+}  // namespace
 
 void OneflowModuleRegistry::Register(std::string module_path,
                                      std::function<void(pybind11::module&)> BuildModule) {
