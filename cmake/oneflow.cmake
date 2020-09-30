@@ -46,7 +46,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
- "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/*.*")
+ "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
@@ -120,12 +120,12 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.cpp$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
@@ -136,11 +136,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
-    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
-      get_filename_component(FIL_DIR ${oneflow_single_file} PATH)
-      get_filename_component(FIL_WE ${oneflow_single_file} NAME_WE)
-      file(RELATIVE_PATH REL_DIR ${PROJECT_SOURCE_DIR} ${FIL_DIR})
-      MESSAGE(FATAL_ERROR  "${FIL_WE}.pybind.cpp is not allowed to be defined in ${REL_DIR}! Move it to oneflow/api.")
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -157,7 +152,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     source_group("${group_name}" FILES ${oneflow_single_file})
   endif()
 endforeach()
-
 # clang format
 add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
