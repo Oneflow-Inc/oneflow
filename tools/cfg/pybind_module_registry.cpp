@@ -4,15 +4,26 @@ namespace oneflow {
 
 namespace cfg {
 
-Pybind11ModuleRegistry::SubModuleMap Pybind11ModuleRegistry::sub_module_map_;
+namespace {
+
+// If different APIs are registered under the same path, the BuildModuleFuntion of which will be
+// saved in the corresponding vector.
+using SubModuleMap = std::map<std::string, std::vector<std::function<void(pybind11::module&)>>>;
+
+SubModuleMap* GetSubModuleMap() {
+  static SubModuleMap sub_module_map;
+  return &sub_module_map;
+}
+
+}
 
 void Pybind11ModuleRegistry::Register(std::string module_path,
                                      std::function<void(pybind11::module&)> BuildModule) {
-  sub_module_map_[module_path].emplace_back(BuildModule);
+  (*GetSubModuleMap())[module_path].emplace_back(BuildModule);
 }
 
 void Pybind11ModuleRegistry::ImportAll(pybind11::module& m) {
-  for (auto& pair : sub_module_map_) {
+  for (auto& pair : (*GetSubModuleMap())) {
     for (auto& BuildModule : pair.second) { BuildSubModule(pair.first, m, BuildModule); }
   }
 }
