@@ -105,7 +105,7 @@ def node_list():
     else
         return len(node_list)
 
-@oneflow_export("unittest.TwoNodeTest")
+@oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
         oneflow.clear_default_session()
