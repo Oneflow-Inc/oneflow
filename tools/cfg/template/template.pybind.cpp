@@ -3,7 +3,7 @@
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "{{ util.module_cfg_header_name(module) }}"
 
-ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
+ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% if util.module_has_package(module) %}
   using namespace {{ "::".join(util.module_package_list(module)) }}::cfg;
 {% else %}
@@ -20,7 +20,8 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% endfor %}{# enum_values #}
   }
 {% endfor %}{# enum_types #}
-{% for cls in util.module_message_types(module) %}
+{% for cls in util.module_nested_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated python class registered for each repeated field type #}
 {% if util.field_has_repeated_label(field) and util.add_visited_repeated_field_type_name(field) %}
@@ -59,7 +60,7 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
   }
 
 {# map begin #}
-{% elif util.field_is_map(field) and util.add_visited_map_field_type_name(field) %}
+{% elif util.field_has_map_label(field) and util.add_visited_map_field_type_name(field) %}
   {
     pybind11::class_<Const{{ util.field_map_container_name(field) }}, std::shared_ptr<Const{{ util.field_map_container_name(field) }}>> registry(m, "Const{{ util.field_map_container_name(field) }}");
     registry.def("__len__", &Const{{ util.field_map_container_name(field) }}::size);
@@ -102,130 +103,149 @@ ONEFLOW_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 
 {% endif %}{# field type #}
 {% endfor %}{# field #}
+{% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
-{% for cls in util.module_message_types(module) %}
+{% for cls in util.module_nested_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
   {
-    pybind11::class_<Const{{ cls.name }}, std::shared_ptr<Const{{ cls.name }}>> registry(m, "Const{{ cls.name }}");
+    pybind11::class_<Const{{ util.class_name(cls) }}, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
     // the data of `self` will be moved to the result which is always mutable
-    registry.def("Move", &Const{{ cls.name }}::__Move__);
-    registry.def("__id__", &{{ cls.name }}::__Id__);
+    registry.def("Move", &Const{{ util.class_name(cls) }}::__Move__);
+    registry.def("__id__", &{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
+    registry.def("__str__", &Const{{ util.class_name(cls) }}::DebugString);
+    registry.def("__repr__", &Const{{ util.class_name(cls) }}::DebugString);
 {% for field in util.message_type_fields(cls) %}
 
 {% if util.field_has_required_or_optional_label(field) %}
-    registry.def("has_{{ util.field_name(field) }}", &Const{{ cls.name }}::has_{{ util.field_name(field) }});
+    registry.def("has_{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
-    registry.def("{{ util.field_name(field) }}", &Const{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", &Const{{ cls.name }}::{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% endif %}
 {% elif util.field_has_repeated_label(field) %}
-    registry.def("{{ util.field_name(field) }}_size", &Const{{ cls.name }}::{{ util.field_name(field) }}_size);
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> (Const{{ cls.name }}::*)() const)&Const{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}_size", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> (Const{{ util.class_name(cls) }}::*)() const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> (Const{{ cls.name }}::*)(::std::size_t) const)&Const{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> (Const{{ util.class_name(cls) }}::*)(::std::size_t) const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", (const {{ util.field_type_name(field) }}& (Const{{ cls.name }}::*)(::std::size_t) const)&Const{{ cls.name }}::{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (const {{ util.field_type_name(field) }}& (Const{{ util.class_name(cls) }}::*)(::std::size_t) const)&Const{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% endif %}
 {% elif util.field_has_oneof_label(field) %}
-    registry.def("has_{{ util.field_name(field) }}", &Const{{ cls.name }}::has_{{ util.field_name(field) }});
+    registry.def("has_{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
-    registry.def("{{ util.field_name(field) }}", &Const{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", &Const{{ cls.name }}::{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% endif %}{# field message type #}
 {# map begin #}
-{% elif util.field_is_map(field) %}
-    registry.def("{{ util.field_name(field) }}_size", &Const{{ cls.name }}::{{ util.field_name(field) }}_size);
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_container_name(field) }}> (Const{{ cls.name }}::*)() const)&Const{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+{% elif util.field_has_map_label(field) %}
+    registry.def("{{ util.field_name(field) }}_size", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_container_name(field) }}> (Const{{ util.class_name(cls) }}::*)() const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 
 {% if util.field_is_message_type(util.field_map_value_type(field)) %}
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_value_type_name(field) }}> (Const{{ cls.name }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&Const{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_value_type_name(field) }}> (Const{{ util.class_name(cls) }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", (const {{ util.field_map_value_type_name(field) }}& (Const{{ cls.name }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&Const{{ cls.name }}::{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (const {{ util.field_map_value_type_name(field) }}& (Const{{ util.class_name(cls) }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&Const{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% endif %}
 {# map end #}
 {% endif %}{# field label type #}
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
-    registry.def("{{ util.oneof_name(oneof) }}_case",  &Const{{ cls.name }}::{{ util.oneof_name(oneof) }}_case);
+    registry.def("{{ util.oneof_name(oneof) }}_case",  &Const{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
+    registry.def("has_{{ util.oneof_name(oneof) }}",  &Const{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
+    registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
+        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
+{% for field in util.oneof_type_fields(oneof) %}
+        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; })
+{% endfor %}{# oneof_fields #}
+        ;
 {% endfor %}{# oneofs #}
   }
   {
-    pybind11::class_<{{ cls.name }}, std::shared_ptr<{{ cls.name }}>> registry(m, "{{ cls.name }}");
+    pybind11::class_<{{ util.class_name(cls) }}, std::shared_ptr<{{ util.class_name(cls) }}>> registry(m, "{{ util.class_name(cls) }}");
     registry.def(pybind11::init<>());
-    registry.def("Clear", &{{ cls.name }}::Clear);
-    registry.def("CopyFrom", (void ({{ cls.name }}::*)(const Const{{ cls.name }}&))&{{ cls.name }}::CopyFrom);
-    registry.def("CopyFrom", (void ({{ cls.name }}::*)(const {{ cls.name }}&))&{{ cls.name }}::CopyFrom);
-    registry.def("Move", &{{ cls.name }}::__Move__);
-    registry.def("__id__", &{{ cls.name }}::__Id__);
+    registry.def("Clear", &{{ util.class_name(cls) }}::Clear);
+    registry.def("CopyFrom", (void ({{ util.class_name(cls) }}::*)(const Const{{ util.class_name(cls) }}&))&{{ util.class_name(cls) }}::CopyFrom);
+    registry.def("CopyFrom", (void ({{ util.class_name(cls) }}::*)(const {{ util.class_name(cls) }}&))&{{ util.class_name(cls) }}::CopyFrom);
+    registry.def("Move", &{{ util.class_name(cls) }}::__Move__);
+    registry.def("__id__", &{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
+    registry.def("__str__", &{{ util.class_name(cls) }}::DebugString);
+    registry.def("__repr__", &{{ util.class_name(cls) }}::DebugString);
 
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
-        [](const pybind11::object&){ return _{{ cls.name }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; });
+        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
+{% for field in util.oneof_type_fields(oneof) %}
+        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; })
+{% endfor %}{# oneof_fields #}
+        ;
 {% endfor %}{# oneofs #}
 
 {% for field in util.message_type_fields(cls) %}
 
 {% if util.field_has_required_or_optional_label(field) %}
-    registry.def("has_{{ util.field_name(field) }}", &{{ cls.name }}::has_{{ util.field_name(field) }});
-    registry.def("clear_{{ util.field_name(field) }}", &{{ cls.name }}::clear_{{ util.field_name(field) }});
+    registry.def("has_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
+    registry.def("clear_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
-    registry.def("{{ util.field_name(field) }}", &{{ cls.name }}::shared_const_{{ util.field_name(field) }});
-    registry.def("mutable_{{ util.field_name(field) }}", &{{ cls.name }}::shared_mutable_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
+    registry.def("mutable_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", &{{ cls.name }}::{{ util.field_name(field) }});
-    registry.def("set_{{ util.field_name(field) }}", &{{ cls.name }}::set_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::{{ util.field_name(field) }});
+    registry.def("set_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% endif %}
 {% elif util.field_has_repeated_label(field) %}
-    registry.def("{{ util.field_name(field) }}_size", &{{ cls.name }}::{{ util.field_name(field) }}_size);
-    registry.def("clear_{{ util.field_name(field) }}", &{{ cls.name }}::clear_{{ util.field_name(field) }});
-    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> ({{ cls.name }}::*)())&{{ cls.name }}::shared_mutable_{{ util.field_name(field) }});
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> ({{ cls.name }}::*)() const)&{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}_size", &{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
+    registry.def("clear_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
+    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> ({{ util.class_name(cls) }}::*)())&{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> ({{ util.class_name(cls) }}::*)() const)&{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> ({{ cls.name }}::*)(::std::size_t) const)&{{ cls.name }}::shared_const_{{ util.field_name(field) }});
-    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_type_name(field) }}> ({{ cls.name }}::*)(::std::size_t))&{{ cls.name }}::shared_mutable_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> ({{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
+    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_type_name(field) }}> ({{ util.class_name(cls) }}::*)(::std::size_t))&{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", (const {{ util.field_type_name(field) }}& ({{ cls.name }}::*)(::std::size_t) const)&{{ cls.name }}::{{ util.field_name(field) }});
-    registry.def("add_{{ util.field_name(field) }}", &{{ cls.name }}::add_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (const {{ util.field_type_name(field) }}& ({{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.class_name(cls) }}::{{ util.field_name(field) }});
+    registry.def("add_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::add_{{ util.field_name(field) }});
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
-    registry.def("has_{{ util.field_name(field) }}", &{{ cls.name }}::has_{{ util.field_name(field) }});
-    registry.def("clear_{{ util.field_name(field) }}", &{{ cls.name }}::clear_{{ util.field_name(field) }});
+    registry.def("has_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
+    registry.def("clear_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
     registry.def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}",
-        [](const pybind11::object&){ return _{{ cls.name }}_::{{ util.oneof_type_field_enum_value_name(field) }}; });
+        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; });
 {% if util.field_is_message_type(field) %}
-    registry.def("mutable_{{ util.field_name(field) }}", &{{ cls.name }}::shared_mutable_{{ util.field_name(field) }});
+    registry.def("mutable_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", &{{ cls.name }}::{{ util.field_name(field) }});
-    registry.def("set_{{ util.field_name(field) }}", &{{ cls.name }}::set_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::{{ util.field_name(field) }});
+    registry.def("set_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% endif %}{# field_message_type #}
 {# map begin #}
-{% elif util.field_is_map(field) %}
-    registry.def("{{ util.field_name(field) }}_size", &{{ cls.name }}::{{ util.field_name(field) }}_size);
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_container_name(field) }}> ({{ cls.name }}::*)() const)&{{ cls.name }}::shared_const_{{ util.field_name(field) }});
-    registry.def("clear_{{ util.field_name(field) }}", &{{ cls.name }}::clear_{{ util.field_name(field) }});
-    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_map_container_name(field) }}> ({{ cls.name }}::*)())&{{ cls.name }}::shared_mutable_{{ util.field_name(field) }});
+{% elif util.field_has_map_label(field) %}
+    registry.def("{{ util.field_name(field) }}_size", &{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_container_name(field) }}> ({{ util.class_name(cls) }}::*)() const)&{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
+    registry.def("clear_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
+    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_map_container_name(field) }}> ({{ util.class_name(cls) }}::*)())&{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
 {% if util.field_is_message_type(util.field_map_value_type(field)) %}
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_value_type_name(field) }}> ({{ cls.name }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&{{ cls.name }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_map_value_type_name(field) }}> ({{ util.class_name(cls) }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", (const {{ util.field_map_value_type_name(field) }}& ({{ cls.name }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&{{ cls.name }}::{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (const {{ util.field_map_value_type_name(field) }}& ({{ util.class_name(cls) }}::*)(const {{ util.field_map_key_type_name(field) }}&) const)&{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% endif %}
 {# map end #}
 {% endif %}{# field label type #}
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
-    pybind11::enum_<_{{ cls.name }}_::{{ util.oneof_enum_name(oneof) }}>(registry, "{{ util.oneof_enum_name(oneof) }}")
-        .value("{{ util.oneof_name(oneof).upper() }}_NOT_SET", _{{ cls.name }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET)
+    pybind11::enum_<_{{ util.class_name(cls) }}_::{{ util.oneof_enum_name(oneof) }}>(registry, "{{ util.oneof_enum_name(oneof) }}")
+        .value("{{ util.oneof_name(oneof).upper() }}_NOT_SET", _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET)
 {% for field in util.oneof_type_fields(oneof) %}
-        .value("{{ util.oneof_type_field_enum_value_name(field) }}", _{{ cls.name }}_::{{ util.oneof_type_field_enum_value_name(field) }})
+        .value("{{ util.oneof_type_field_enum_value_name(field) }}", _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }})
 {% endfor %}{# oneof_fields #}
         ;
-    registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ cls.name }}::{{ util.oneof_name(oneof) }}_case);
+    registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
+    registry.def("has_{{ util.oneof_name(oneof) }}",  &{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
 {% endfor %}{# oneofs #}
   }
+{% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
 }

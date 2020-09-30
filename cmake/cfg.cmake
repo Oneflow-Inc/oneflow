@@ -1,14 +1,25 @@
-include_directories(${PROJECT_SOURCE_DIR}/tools/cfg/include)
+execute_process( 
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  OUTPUT_VARIABLE cfg_head_dir_and_convert_srcs
+  RESULT_VARIABLE ret_code
+  )
 
-function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRC ROOT_DIR)
-  set(${SRCS})
-  set(${HDRS})
-  set(${PYBIND_SRC})
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/common/data_type.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/common/device_type.proto)
-  list(APPEND ALL_CONVERT_PROTO oneflow/core/job/sbp_parallel.proto)
+string(REPLACE "\n" ";" cfg_head_dir_and_convert_srcs ${cfg_head_dir_and_convert_srcs})
+list(GET cfg_head_dir_and_convert_srcs 0  CFG_INCLUDE_DIR)
+list(GET cfg_head_dir_and_convert_srcs 1  TEMPLATE_CONVERT_PYTHON_SCRIPT)
+list(REMOVE_AT cfg_head_dir_and_convert_srcs 0 1)
 
-  foreach(FIL ${ALL_CONVERT_PROTO})
+set(PYBIND_REGISTRY_CC ${cfg_head_dir_and_convert_srcs})
+include_directories(${CFG_INCLUDE_DIR})
+
+
+function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
+  list(APPEND ALL_CFG_CONVERT_PROTO
+      oneflow/core/common/data_type.proto
+      oneflow/core/common/device_type.proto
+  )
+
+  foreach(FIL ${ALL_CFG_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
@@ -23,10 +34,10 @@ function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRC ROOT_DIR)
       OUTPUT "${CFG_HPP_FIL}"
              "${CFG_CPP_FIL}"
              "${CFG_PYBIND_FIL}"
-      COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/cfg/template_convert.py
+      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
            --dst_pybind_path ${CFG_PYBIND_FIL}
-          --proto_py_path ${PY_REL_MOD}
+           --proto_py_path ${PY_REL_MOD}  --of_proto_python_dir ${of_proto_python_dir}
 
       DEPENDS ${Python_EXECUTABLE} ${PY_REL_FIL} ${of_all_rel_pybinds}
       COMMENT "Running Pybind11 Compiler on ${FIL}"
@@ -34,11 +45,11 @@ function(RELATIVE_PYBIND11_GENERATE_CPP SRCS HDRS PYBIND_SRC ROOT_DIR)
 
     list(APPEND ${HDRS} "${CFG_HPP_FIL}")
     list(APPEND ${SRCS} "${CFG_CPP_FIL}")
-    list(APPEND ${PYBIND_SRC} "${CFG_PYBIND_FIL}")
+    list(APPEND ${PYBIND_SRCS} "${CFG_PYBIND_FIL}")
   endforeach()
 
-  set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRC}} PROPERTIES GENERATED TRUE)
+  set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
   set(${SRCS} ${${SRCS}} PARENT_SCOPE)
   set(${HDRS} ${${HDRS}} PARENT_SCOPE)
-  set(${PYBIND_SRC} ${${PYBIND_SRC}} PARENT_SCOPE)
+  set(${PYBIND_SRCS} ${${PYBIND_SRCS}} PARENT_SCOPE)
 endfunction()

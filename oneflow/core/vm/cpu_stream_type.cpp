@@ -17,10 +17,8 @@ limitations under the License.
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/mem_instruction.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
-#include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/util.h"
 

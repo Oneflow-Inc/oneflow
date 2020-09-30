@@ -1,6 +1,4 @@
 import sys
-
-sys.path.append("../")
 import os
 import argparse
 import importlib
@@ -12,8 +10,12 @@ parser.add_argument("-dst_hpp", "--dst_hpp_path", type=str, required=True)
 parser.add_argument("-dst_cpp", "--dst_cpp_path", type=str, required=True)
 parser.add_argument("-dst_pybind", "--dst_pybind_path", type=str, required=True)
 parser.add_argument("-proto_py", "--proto_py_path", type=str, required=True)
+parser.add_argument(
+    "-of_proto_python", "--of_proto_python_dir", type=str, required=True
+)
 args = parser.parse_args()
 
+sys.path.append(args.of_proto_python_dir)
 sys.path.append(os.path.dirname(args.proto_py_path))
 
 demo = importlib.import_module((args.proto_py_path).split("/")[-1])

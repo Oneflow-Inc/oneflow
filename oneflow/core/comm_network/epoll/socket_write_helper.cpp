@@ -140,6 +140,10 @@ void SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
 }
 
+void SocketWriteHelper::SetStatusWhenTransportMsgHeadDone() {
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
+}
+
 }  // namespace oneflow
 
 #endif  // PLATFORM_POSIX
