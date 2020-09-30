@@ -79,6 +79,7 @@ def _GetNumOfNodes(func):
         return 1
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
 
+
 @oneflow_export("unittest.env.should_enable_eager")
 def should_enable_eager():
     return os.environ["ONEFLOW_TEST_ENABLE_EAGER"] == "1"
@@ -97,13 +98,15 @@ def node_list():
     else:
         return None
 
+
 @oneflow_export("unittest.env.node_size")
 def node_list():
     node_list = node_list()
     if node_list == None:
         return 1
-    else
+    else:
         return len(node_list)
+
 
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
