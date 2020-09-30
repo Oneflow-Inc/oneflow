@@ -46,7 +46,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
- "${PROJECT_SOURCE_DIR}/oneflow/user/*.*")
+ "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
@@ -64,13 +64,6 @@ if (WITH_XLA OR WITH_TENSORRT)
   endforeach ()
   list(APPEND oneflow_all_src ${oneflow_xrt_src})
 endif()
-
-file(GLOB_RECURSE oneflow_python_api_src "${PROJECT_SOURCE_DIR}/oneflow/api/*.*")
-foreach(oneflow_python_api_single_file ${oneflow_python_api_src})
-  if("${oneflow_python_api_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.pybind\\.cpp$")
-    list(APPEND oneflow_all_src ${oneflow_python_api_single_file})
-  endif()
-endforeach()
 
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -127,12 +120,12 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.pybind\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.cpp$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.pybind\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/.*\\.h$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
@@ -144,8 +137,10 @@ foreach(oneflow_single_file ${oneflow_all_src})
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/.*\\.pybind\\.cpp$")
-      list(APPEND of_pybind_obj_cc ${oneflow_single_file})
-      set(group_this ON)
+      get_filename_component(FIL_DIR ${oneflow_single_file} PATH)
+      get_filename_component(FIL_WE ${oneflow_single_file} NAME_WE)
+      file(RELATIVE_PATH REL_DIR ${PROJECT_SOURCE_DIR} ${FIL_DIR})
+      MESSAGE(FATAL_ERROR  "${FIL_WE}.pybind.cpp is not allowed to be defined in ${REL_DIR}! Move it to oneflow/api.")
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -242,8 +237,7 @@ endforeach()
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
-pybind11_add_module(oneflow_internal ${PROJECT_SOURCE_DIR}/oneflow/api/python/init.cpp ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc}
-                    ${PROJECT_SOURCE_DIR}/oneflow/api/python/of_api_registry.cpp)
+pybind11_add_module(oneflow_internal ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})

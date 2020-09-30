@@ -33,10 +33,6 @@ class OneflowModuleRegistry {
  private:
   void BuildSubModule(const std::string& module_path, pybind11::module& m,
                       const std::function<void(pybind11::module&)>& BuildModule);
-  // If different APIs are registered under the same path, the BuildModuleFuntion of which will be
-  // saved in the corresponding vector.
-  using SubModuleMap = std::map<std::string, std::vector<std::function<void(pybind11::module&)>>>;
-  static SubModuleMap sub_module_map_;
 };
 
 }  // namespace oneflow
