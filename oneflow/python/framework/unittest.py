@@ -137,3 +137,12 @@ class TestCase(unittest.TestCase):
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(should_enable_eager())
         oneflow.experimental.enable_typing_check(should_enable_typing_check())
+
+
+@oneflow_export("unittest.OneGpuTestCase")
+class TestCase(TestCase):
+    def setUp(self):
+        if node_size() == 1 and gpu_device_num == 1:
+            super().__init__()
+        else:
+            unittest.skip("skipping OneGpuTestCase: {!r}}".format(obj))
