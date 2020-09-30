@@ -209,7 +209,6 @@ def test_layer_norm(_):
                     beta=beta,
                     begin_norm_axis=begin_norm_axis,
                     begin_params_axis=begin_params_axis,
-                    trainable=trainable,
                     epsilon=epsilon,
                 )
             if data_type == "float16":
