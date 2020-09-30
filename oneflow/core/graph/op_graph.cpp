@@ -370,6 +370,18 @@ void OpNode::InitLbi2SbpParallel() {
   Update(op().output_bns());
 }
 
+void OpNode::UpdateLbi2SbpParallel() {
+  const auto Update = [&](const PbRpf<std::string>& bns) {
+    for (const auto& bn : bns) {
+      const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
+      const SbpParallel& sbp_parallel = SbpParallel4BnInOp(bn);
+      lbi2sbp_parallel_[lbi] = sbp_parallel;
+    }
+  };
+  Update(op().input_bns());
+  Update(op().output_bns());
+}
+
 Maybe<OpGraph> OpGraph::New(const Job& job) {
   const auto& op_graph = std::make_shared<OpGraph>();
   JUST(op_graph->Init(job));
