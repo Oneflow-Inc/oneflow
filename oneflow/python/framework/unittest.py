@@ -82,17 +82,17 @@ def _GetNumOfNodes(func):
 
 @oneflow_export("unittest.env.should_enable_eager")
 def should_enable_eager():
-    return os.environ["ONEFLOW_TEST_ENABLE_EAGER"] == "1"
+    return os.getenv("ONEFLOW_TEST_ENABLE_EAGER") == "1"
 
 
 @oneflow_export("unittest.env.should_enable_typing_check")
 def should_enable_typing_check():
-    return os.environ["ONEFLOW_TEST_ENABLE_TYPING_CHECK"] == "1"
+    return os.getenv("ONEFLOW_TEST_ENABLE_TYPING_CHECK") == "1"
 
 
 @oneflow_export("unittest.env.node_list")
 def node_list():
-    node_list_str = os.environ["ONEFLOW_TEST_NODE_LIST"]
+    node_list_str = os.getenv("ONEFLOW_TEST_NODE_LIST")
     if node_list_str:
         return node_list_str.split(",")
     else:
@@ -100,26 +100,31 @@ def node_list():
 
 
 @oneflow_export("unittest.env.node_size")
-def node_list():
-    node_list = node_list()
-    if node_list == None:
+def node_size():
+    node_list_from_env = node_list()
+    if node_list_from_env == None:
         return 1
     else:
-        return len(node_list)
+        return len(node_list_from_env)
+
+
+_env_initilized = False
 
 
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
-        oneflow.clear_default_session()
         oneflow.enable_eager_execution(should_enable_eager())
         oneflow.experimental.enable_typing_check(should_enable_typing_check())
 
-        node_list = node_list()
-        if node_list:
+        node_list_from_env = node_list()
+        if node_list_from_env:
             assert node_size() > 1
-            flow.env.machine(node_list)
-            flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+            oneflow.env.machine(node_list_from_env)
+            oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
             atexit.register(flow.deprecated.delete_worker)
-
-        flow.env.init()
+        global _env_initilized
+        if _env_initilized == False:
+            oneflow.env.init()
+            _env_initilized = True
+        oneflow.clear_default_session()
