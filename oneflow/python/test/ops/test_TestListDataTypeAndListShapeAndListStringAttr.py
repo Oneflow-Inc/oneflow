@@ -75,6 +75,11 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_data_type_attr(test_case):
-    for arg in gen_arg_list():
-        RunTest(*arg)
+class Test_TestListDataTypeAndListShapeAndListStringAttr(flow.unittest.TestCase):
+    def test_data_type_attr(test_case):
+        for arg in gen_arg_list():
+            RunTest(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -433,18 +433,6 @@ def _vis_img_segm_mask_cmp(mask_list, cmp_mask_list):
     display_fig()
 
 
-def test_poly_to_mask(test_case):
-    _poly_to_mask_with_of_and_cv(
-        test_case,
-        "/dataset/mscoco_2017/annotations/instances_val2017.json",
-        "/dataset/mscoco_2017/val2017",
-        4,
-        800,
-        1333,
-        # print_debug_info=True,
-    )
-
-
 def _check_empty_anno_img_ids(anno_file):
     coco = _coco(anno_file)
     img_ids = coco.getImgIds()
@@ -470,3 +458,16 @@ if __name__ == "__main__":
         print_debug_info=True,
     )
     _vis_img_segm_mask_cmp(of_mask_list, mask_list)
+
+
+class TestObjectSegmPolyToMask(flow.unittest.TestCase):
+    def test_poly_to_mask(test_case):
+        _poly_to_mask_with_of_and_cv(
+            test_case,
+            "/dataset/mscoco_2017/annotations/instances_val2017.json",
+            "/dataset/mscoco_2017/val2017",
+            4,
+            800,
+            1333,
+            # print_debug_info=True,
+        )

@@ -106,7 +106,12 @@ def _compare_bbox_flip(
         test_case.assertTrue(np.allclose(of_bbox.squeeze(), bbox))
 
 
-def test_object_bbox_flip(test_case):
-    _compare_bbox_flip(
-        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
-    )
+class TestObjectBboxFlip(flow.unittest.TestCase):
+    def test_object_bbox_flip(test_case):
+        _compare_bbox_flip(
+            test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

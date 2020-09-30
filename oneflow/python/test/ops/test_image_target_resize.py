@@ -163,14 +163,19 @@ def _compare_image_target_resize_with_cv(
         test_case.assertTrue(np.allclose(image_scale, resized_scale))
 
 
-def test_image_target_resize(test_case):
-    _compare_image_target_resize_with_cv(
-        test_case,
-        [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-        ],
-        800,
-        1333,
-        # True,
-    )
+class TestImageTargetResize(flow.unittest.TestCase):
+    def test_image_target_resize(test_case):
+        _compare_image_target_resize_with_cv(
+            test_case,
+            [
+                "/dataset/mscoco_2017/val2017/000000000139.jpg",
+                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+            ],
+            800,
+            1333,
+            # True,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

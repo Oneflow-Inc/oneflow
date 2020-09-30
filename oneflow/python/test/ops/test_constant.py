@@ -46,10 +46,15 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
     )
 
 
-def test_constant(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["value"] = [6, 6.66]
-    arg_dict["shape"] = [(2, 3), (3, 3, 3)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(test_case, *arg)
+class TestConstant(flow.unittest.TestCase):
+    def test_constant(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["value"] = [6, 6.66]
+        arg_dict["shape"] = [(2, 3), (3, 3, 3)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

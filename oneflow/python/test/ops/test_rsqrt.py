@@ -36,13 +36,17 @@ def _run_test(test_case, x, dtype, device):
     _check(test_case, x, y.numpy())
 
 
-def test_rsqrt_random_gpu(test_case):
-    flow.config.gpu_device_num(2)
-    x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
-    _run_test(test_case, x, flow.float, "gpu")
+class TestRsqrt(flow.unittest.TestCase):
+    def test_rsqrt_random_gpu(test_case):
+        flow.config.gpu_device_num(2)
+        x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
+        _run_test(test_case, x, flow.float, "gpu")
+
+    def test_rsqrt_random_cpu(test_case):
+        flow.config.gpu_device_num(2)
+        x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
+        _run_test(test_case, x, flow.float, "cpu")
 
 
-def test_rsqrt_random_cpu(test_case):
-    flow.config.gpu_device_num(2)
-    x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
-    _run_test(test_case, x, flow.float, "cpu")
+if __name__ == "__main__":
+    unittest.main()

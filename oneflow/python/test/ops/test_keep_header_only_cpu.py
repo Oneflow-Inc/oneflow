@@ -22,11 +22,18 @@ func_config.default_data_type(flow.float)
 func_config.default_logical_view(flow.scope.consistent_view())
 
 
-def test_keep_header_only_cpu(test_case):
-    @flow.global_function(function_config=func_config)
-    def job(x: oft.Numpy.Placeholder((2, 3, 4), dtype=flow.float)):
-        with flow.scope.placement("cpu", "0:0"):
-            x = flow.identity(x)
-            return flow.math.reduced_shape_elem_cnt(x)
+class TestKeepHeaderOnlyCpu(flow.unittest.TestCase):
+    def test_keep_header_only_cpu(test_case):
+        @flow.global_function(function_config=func_config)
+        def job(x: oft.Numpy.Placeholder((2, 3, 4), dtype=flow.float)):
+            with flow.scope.placement("cpu", "0:0"):
+                x = flow.identity(x)
+                return flow.math.reduced_shape_elem_cnt(x)
 
-    test_case.assertTrue(job(np.zeros((2, 3, 4), np.float32)).get().item() == 2 * 3 * 4)
+        test_case.assertTrue(
+            job(np.zeros((2, 3, 4), np.float32)).get().item() == 2 * 3 * 4
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

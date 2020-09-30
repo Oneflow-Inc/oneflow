@@ -18,32 +18,37 @@ import oneflow.typing as tp
 import numpy as np
 
 
-def test_watch(test_case):
-    flow.config.gpu_device_num(2)
-    flow.config.enable_debug_mode(True)
+class TestDemoMatmul(flow.unittest.TestCase):
+    def test_watch(test_case):
+        flow.config.gpu_device_num(2)
+        flow.config.enable_debug_mode(True)
 
-    expected = np.array(
-        [[30, 30, 30, 30], [30, 30, 30, 30], [30, 30, 30, 30], [30, 30, 30, 30],]
-    ).astype(np.float32)
+        expected = np.array(
+            [[30, 30, 30, 30], [30, 30, 30, 30], [30, 30, 30, 30], [30, 30, 30, 30],]
+        ).astype(np.float32)
 
-    def Watch(x: tp.Numpy):
-        test_case.assertTrue(np.allclose(x, expected))
+        def Watch(x: tp.Numpy):
+            test_case.assertTrue(np.allclose(x, expected))
 
-    @flow.global_function()
-    def Matmul(
-        x: tp.Numpy.Placeholder((4, 4), dtype=flow.float32, batch_axis=None),
-        y: tp.Numpy.Placeholder((4, 4), dtype=flow.float32, batch_axis=1),
-    ) -> tp.Numpy:
-        s = flow.matmul(x, y)  # model parallel
-        flow.watch(s, Watch)
-        z = flow.matmul(s, x)  # data parallel
-        return z
+        @flow.global_function()
+        def Matmul(
+            x: tp.Numpy.Placeholder((4, 4), dtype=flow.float32, batch_axis=None),
+            y: tp.Numpy.Placeholder((4, 4), dtype=flow.float32, batch_axis=1),
+        ) -> tp.Numpy:
+            s = flow.matmul(x, y)  # model parallel
+            flow.watch(s, Watch)
+            z = flow.matmul(s, x)  # data parallel
+            return z
 
-    x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4],]).astype(
-        np.float32
-    )
+        x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4],]).astype(
+            np.float32
+        )
 
-    y = np.array([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [4, 4, 4, 4],]).astype(
-        np.float32
-    )
-    Matmul(x, y)
+        y = np.array([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [4, 4, 4, 4],]).astype(
+            np.float32
+        )
+        Matmul(x, y)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -51,8 +51,13 @@ def RunTest(data_type):
     assert output.dtype == type_name_to_np_type[data_type]
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_data_type_attr(test_case):
-    # TODO: fix bugs in ForeignOutputKernel with "float16" and "char" dtype, do not test these two dtypes here
-    for data_type in ["float32", "double", "int8", "int32", "int64", "uint8"]:
-        RunTest(data_type)
+class Test_TestDataTypeAttr(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_data_type_attr(test_case):
+        # TODO: fix bugs in ForeignOutputKernel with "float16" and "char" dtype, do not test these two dtypes here
+        for data_type in ["float32", "double", "int8", "int32", "int64", "uint8"]:
+            RunTest(data_type)
+
+
+if __name__ == "__main__":
+    unittest.main()

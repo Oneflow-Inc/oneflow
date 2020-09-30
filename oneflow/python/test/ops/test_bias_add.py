@@ -111,19 +111,23 @@ def CompareBiasAddWithTensorFlow(
     assert np.allclose(of_x_diff2, tf_x_diff2, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
-def test_bias_add_nchw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["input_shapes"] = [((1, 20, 1, 11), (20,))]
-    arg_dict["op_args"] = [Args(["NCHW"])]
-    for arg in GenArgDict(arg_dict):
-        CompareBiasAddWithTensorFlow(**arg)
+class TestBiasAdd(flow.unittest.TestCase):
+    def test_bias_add_nchw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["input_shapes"] = [((1, 20, 1, 11), (20,))]
+        arg_dict["op_args"] = [Args(["NCHW"])]
+        for arg in GenArgDict(arg_dict):
+            CompareBiasAddWithTensorFlow(**arg)
+
+    def test_bias_add_nhwc(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["input_shapes"] = [((30, 20, 5, 10), (10,)), ((2, 5, 7, 8), (8,))]
+        arg_dict["op_args"] = [Args(["NHWC"])]
+        for arg in GenArgDict(arg_dict):
+            CompareBiasAddWithTensorFlow(**arg)
 
 
-def test_bias_add_nhwc(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["input_shapes"] = [((30, 20, 5, 10), (10,)), ((2, 5, 7, 8), (8,))]
-    arg_dict["op_args"] = [Args(["NHWC"])]
-    for arg in GenArgDict(arg_dict):
-        CompareBiasAddWithTensorFlow(**arg)
+if __name__ == "__main__":
+    unittest.main()

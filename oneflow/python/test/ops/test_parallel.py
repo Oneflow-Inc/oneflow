@@ -18,22 +18,6 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-def test_1n1c(test_case):
-    flow.config.gpu_device_num(1)
-    NaiveTest(test_case)
-
-
-def test_1n2c(test_case):
-    flow.config.gpu_device_num(2)
-    NaiveTest(test_case)
-
-
-@flow.unittest.num_nodes_required(2)
-def test_2n2c(test_case):
-    flow.config.gpu_device_num(1)
-    NaiveTest(test_case)
-
-
 def NaiveTest(test_case):
     shape = (16, 2)
     func_config = flow.FunctionConfig()
@@ -47,3 +31,22 @@ def NaiveTest(test_case):
     y = np.random.rand(*shape).astype(np.float32)
     z = AddJob(x, y).get().numpy()
     test_case.assertTrue(np.array_equal(z, x + y + y))
+
+
+class TestParallel(flow.unittest.TestCase):
+    def test_1n1c(test_case):
+        flow.config.gpu_device_num(1)
+        NaiveTest(test_case)
+
+    def test_1n2c(test_case):
+        flow.config.gpu_device_num(2)
+        NaiveTest(test_case)
+
+    @unittest.skipIf(flow.unittest.env.node_size != 2, "requires 2 nodes")
+    def test_2n2c(test_case):
+        flow.config.gpu_device_num(1)
+        NaiveTest(test_case)
+
+
+if __name__ == "__main__":
+    unittest.main()

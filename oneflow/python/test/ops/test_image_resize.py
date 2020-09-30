@@ -440,101 +440,101 @@ def _test_image_resize_with_cv(
         test_case.assertTrue(np.allclose(of_new_size, cv_new_size))
 
 
-def test_image_resize_to_fixed_size(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
+class TestImageResize(flow.unittest.TestCase):
+    def test_image_resize_to_fixed_size(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=(224, 224),
+            keep_aspect_ratio=False,
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_shorter_to_target_size(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=800,
+            keep_aspect_ratio=True,
+            resize_side="shorter",
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_longer_to_target_size(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=1000,
+            keep_aspect_ratio=True,
+            resize_side="longer",
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_shorter_to_target_size_with_max_size(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=800,
+            max_size=1333,
+            keep_aspect_ratio=True,
+            resize_side="shorter",
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_longer_to_target_size_with_min_size(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=1000,
+            min_size=600,
+            keep_aspect_ratio=True,
+            resize_side="longer",
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_to_fixed_size_with_dtype_uint8(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=(1000, 1000),
+            keep_aspect_ratio=False,
+            dtype=flow.uint8,
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_shorter_to_target_size_with_max_size_with_dtype_uint8(
         test_case,
-        image_files,
-        target_size=(224, 224),
-        keep_aspect_ratio=False,
-        # print_debug_info=True,
-    )
+    ):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=1000,
+            max_size=1600,
+            keep_aspect_ratio=True,
+            resize_side="shorter",
+            dtype=flow.uint8,
+            # print_debug_info=True,
+        )
+
+    def test_image_resize_uint8_to_float(test_case):
+        image_files, _ = _coco_random_sample_images()
+        _test_image_resize_with_cv(
+            test_case,
+            image_files,
+            target_size=(1000, 1000),
+            keep_aspect_ratio=False,
+            dtype=flow.float32,
+            origin_dtype=flow.uint8,
+            # print_debug_info=True,
+        )
 
 
-def test_image_resize_shorter_to_target_size(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=800,
-        keep_aspect_ratio=True,
-        resize_side="shorter",
-        # print_debug_info=True,
-    )
-
-
-def test_image_resize_longer_to_target_size(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=1000,
-        keep_aspect_ratio=True,
-        resize_side="longer",
-        # print_debug_info=True,
-    )
-
-
-def test_image_resize_shorter_to_target_size_with_max_size(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=800,
-        max_size=1333,
-        keep_aspect_ratio=True,
-        resize_side="shorter",
-        # print_debug_info=True,
-    )
-
-
-def test_image_resize_longer_to_target_size_with_min_size(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=1000,
-        min_size=600,
-        keep_aspect_ratio=True,
-        resize_side="longer",
-        # print_debug_info=True,
-    )
-
-
-def test_image_resize_to_fixed_size_with_dtype_uint8(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=(1000, 1000),
-        keep_aspect_ratio=False,
-        dtype=flow.uint8,
-        # print_debug_info=True,
-    )
-
-
-def test_image_resize_shorter_to_target_size_with_max_size_with_dtype_uint8(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=1000,
-        max_size=1600,
-        keep_aspect_ratio=True,
-        resize_side="shorter",
-        dtype=flow.uint8,
-        # print_debug_info=True,
-    )
-
-
-def test_image_resize_uint8_to_float(test_case):
-    image_files, _ = _coco_random_sample_images()
-    _test_image_resize_with_cv(
-        test_case,
-        image_files,
-        target_size=(1000, 1000),
-        keep_aspect_ratio=False,
-        dtype=flow.float32,
-        origin_dtype=flow.uint8,
-        # print_debug_info=True,
-    )
+if __name__ == "__main__":
+    unittest.main()

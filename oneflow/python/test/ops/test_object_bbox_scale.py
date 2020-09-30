@@ -162,12 +162,17 @@ def _compare_bbox_scale(
         test_case.assertTrue(np.allclose(bbox, of_bbox))
 
 
-def test_object_bbox_scale(test_case):
-    _compare_bbox_scale(
-        test_case,
-        "/dataset/mscoco_2017/annotations/instances_val2017.json",
-        "/dataset/mscoco_2017/val2017",
-        4,
-        800,
-        1333,
-    )
+class TestObjectBboxScale(flow.unittest.TestCase):
+    def test_object_bbox_scale(test_case):
+        _compare_bbox_scale(
+            test_case,
+            "/dataset/mscoco_2017/annotations/instances_val2017.json",
+            "/dataset/mscoco_2017/val2017",
+            4,
+            800,
+            1333,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

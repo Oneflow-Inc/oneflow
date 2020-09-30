@@ -72,11 +72,16 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_squeeze(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
-    if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
-        compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
-        compare_with_tensorflow("gpu", (5, 6, 7), None)
-    compare_with_tensorflow("cpu", (1, 1, 1), [0, 1, 2])
-    compare_with_tensorflow("cpu", (5, 6, 7), None)
+class TestSqueeze(flow.unittest.TestCase):
+    def test_squeeze(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
+            compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
+            compare_with_tensorflow("gpu", (5, 6, 7), None)
+        compare_with_tensorflow("cpu", (1, 1, 1), [0, 1, 2])
+        compare_with_tensorflow("cpu", (5, 6, 7), None)
+
+
+if __name__ == "__main__":
+    unittest.main()

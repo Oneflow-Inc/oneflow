@@ -122,21 +122,33 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
     )
 
 
-def test_masked_fill_fw_bw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["type_name"] = ["float32", "float16", "double", "int8", "int32", "int64"]
-    arg_dict["device"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [
-        (2, 4),
-        (1, 4),
-        (2, 2, 4),
-        (2, 1, 4),
-        (2, 3, 2, 4),
-        (2, 2, 3, 2, 4),
-    ]
-    arg_dict["mask_shape"] = [(2, 1, 2, 4)]
-    arg_dict["value"] = [2.5, 3.3, -5.5]
-    for arg in GenArgDict(arg_dict):
-        if arg["device"] == "cpu" and arg["type_name"] == "float16":
-            continue
-        _test_masked_fill_fw_bw(test_case, **arg)
+class TestMaskedFill(flow.unittest.TestCase):
+    def test_masked_fill_fw_bw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["type_name"] = [
+            "float32",
+            "float16",
+            "double",
+            "int8",
+            "int32",
+            "int64",
+        ]
+        arg_dict["device"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [
+            (2, 4),
+            (1, 4),
+            (2, 2, 4),
+            (2, 1, 4),
+            (2, 3, 2, 4),
+            (2, 2, 3, 2, 4),
+        ]
+        arg_dict["mask_shape"] = [(2, 1, 2, 4)]
+        arg_dict["value"] = [2.5, 3.3, -5.5]
+        for arg in GenArgDict(arg_dict):
+            if arg["device"] == "cpu" and arg["type_name"] == "float16":
+                continue
+            _test_masked_fill_fw_bw(test_case, **arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

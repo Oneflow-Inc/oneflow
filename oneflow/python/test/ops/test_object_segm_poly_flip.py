@@ -118,7 +118,12 @@ def _compare_segm_poly_flip(
     test_case.assertTrue(np.allclose(of_poly.squeeze(), poly))
 
 
-def test_object_segm_poly_flip(test_case):
-    _compare_segm_poly_flip(
-        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
-    )
+class TestObjectSegmPolyFlip(flow.unittest.TestCase):
+    def test_object_segm_poly_flip(test_case):
+        _compare_segm_poly_flip(
+            test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

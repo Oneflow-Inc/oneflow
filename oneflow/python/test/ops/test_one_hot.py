@@ -57,16 +57,21 @@ def _run_test(
     _check(test_case, x, y.numpy(), depth, on_value, off_value, axis)
 
 
-def test_one_hot(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 20, 20)]
-    arg_dict["depth"] = [10]
-    arg_dict["dtype"] = ["int32", "int64"]
-    arg_dict["out_dtype"] = ["int32", "double"]
-    arg_dict["on_value"] = [5]
-    arg_dict["off_value"] = [2]
-    arg_dict["axis"] = [-1, 0, 2]
-    for arg in GenArgList(arg_dict):
-        _run_test(*arg)
+class TestOneHot(flow.unittest.TestCase):
+    def test_one_hot(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [(10, 20, 20)]
+        arg_dict["depth"] = [10]
+        arg_dict["dtype"] = ["int32", "int64"]
+        arg_dict["out_dtype"] = ["int32", "double"]
+        arg_dict["on_value"] = [5]
+        arg_dict["off_value"] = [2]
+        arg_dict["axis"] = [-1, 0, 2]
+        for arg in GenArgList(arg_dict):
+            _run_test(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

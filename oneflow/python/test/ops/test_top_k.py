@@ -67,6 +67,11 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_top_k(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
+class TestTopK(flow.unittest.TestCase):
+    def test_top_k(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

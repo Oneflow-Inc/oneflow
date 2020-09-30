@@ -69,6 +69,11 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_argmax(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
+class TestArgmax(flow.unittest.TestCase):
+    def test_argmax(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

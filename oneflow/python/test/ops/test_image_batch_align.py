@@ -92,15 +92,20 @@ def _compare_image_batch_align(
     test_case.assertTrue(np.array_equal(image_tensor, empty_image_array))
 
 
-def test_image_batch_align(test_case):
-    _compare_image_batch_align(
-        test_case,
-        [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-            "/dataset/mscoco_2017/val2017/000000000785.jpg",
-            "/dataset/mscoco_2017/val2017/000000001000.jpg",
-        ],
-        16,
-        # True,
-    )
+class TestImageBatchAlign(flow.unittest.TestCase):
+    def test_image_batch_align(test_case):
+        _compare_image_batch_align(
+            test_case,
+            [
+                "/dataset/mscoco_2017/val2017/000000000139.jpg",
+                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+                "/dataset/mscoco_2017/val2017/000000000785.jpg",
+                "/dataset/mscoco_2017/val2017/000000001000.jpg",
+            ],
+            16,
+            # True,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

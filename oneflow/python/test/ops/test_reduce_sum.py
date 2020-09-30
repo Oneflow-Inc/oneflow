@@ -57,55 +57,56 @@ def compare_with_tensorflow(
     )
 
 
-def test_reduce_sum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(64, 64, 64)]
-    arg_dict["axis"] = [None, [1], [0, 2]]
-    arg_dict["keepdims"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+class TestReduceSum(flow.unittest.TestCase):
+    def test_reduce_sum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(64, 64, 64)]
+        arg_dict["axis"] = [None, [1], [0, 2]]
+        arg_dict["keepdims"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_col_reduce(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(1024 * 64, 25)]
+        arg_dict["axis"] = [[0]]
+        arg_dict["keepdims"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg, atol=1e-1)
+
+    def test_row_reduce(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(25, 1024 * 1024)]
+        arg_dict["axis"] = [[1]]
+        arg_dict["keepdims"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_scalar(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(1024 * 64, 25)]
+        arg_dict["axis"] = [[0, 1]]
+        arg_dict["keepdims"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_batch_axis_reduced(test_case):
+        flow.config.gpu_device_num(2)
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.consistent_view())
+
+        @flow.global_function(function_config=func_config)
+        def Foo(x: oft.Numpy.Placeholder((10,))):
+            y = flow.math.reduce_sum(x)
+            test_case.assertTrue(y.split_axis is None)
+            test_case.assertTrue(y.batch_axis is None)
+
+        Foo(np.ndarray((10,), dtype=np.float32))
 
 
-def test_col_reduce(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(1024 * 64, 25)]
-    arg_dict["axis"] = [[0]]
-    arg_dict["keepdims"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg, atol=1e-1)
-
-
-def test_row_reduce(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(25, 1024 * 1024)]
-    arg_dict["axis"] = [[1]]
-    arg_dict["keepdims"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_scalar(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(1024 * 64, 25)]
-    arg_dict["axis"] = [[0, 1]]
-    arg_dict["keepdims"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_batch_axis_reduced(test_case):
-    flow.config.gpu_device_num(2)
-    func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
-
-    @flow.global_function(function_config=func_config)
-    def Foo(x: oft.Numpy.Placeholder((10,))):
-        y = flow.math.reduce_sum(x)
-        test_case.assertTrue(y.split_axis is None)
-        test_case.assertTrue(y.batch_axis is None)
-
-    Foo(np.ndarray((10,), dtype=np.float32))
+if __name__ == "__main__":
+    unittest.main()

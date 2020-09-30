@@ -87,13 +87,18 @@ def _compare_with_np(
     test_case.assertTrue(np.array_equal(y, of_y))
 
 
-def test_argwhere(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    arg_dict["value_dtype"] = [np.float32, np.int32]
-    arg_dict["index_dtype"] = [np.int32, np.int64]
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    arg_dict["verbose"] = [False]
-    for arg in GenArgList(arg_dict):
-        _compare_with_np(test_case, *arg)
+class TestArgwhere(flow.unittest.TestCase):
+    def test_argwhere(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+        arg_dict["value_dtype"] = [np.float32, np.int32]
+        arg_dict["index_dtype"] = [np.int32, np.int64]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        arg_dict["verbose"] = [False]
+        for arg in GenArgList(arg_dict):
+            _compare_with_np(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

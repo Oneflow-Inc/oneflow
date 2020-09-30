@@ -100,12 +100,17 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     test_case.assertTrue(np.allclose(out1.numpy(), out_arr))
 
 
-def test_unsorted_segment_sum_model_parallel_fw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["out_shape"] = [(96, 96, 96)]
-    arg_dict["segment_ids_shape"] = [(32, 48)]
-    arg_dict["axis"] = [0, 1, 2]
-    arg_dict["split_axis"] = [0, 1, 2]
-    for arg in GenArgList(arg_dict):
-        _test_unsorted_segment_sum_model_parallel_fw(test_case, *arg)
+class TestUnsortedSegmentSumModelParallel(flow.unittest.TestCase):
+    def test_unsorted_segment_sum_model_parallel_fw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["out_shape"] = [(96, 96, 96)]
+        arg_dict["segment_ids_shape"] = [(32, 48)]
+        arg_dict["axis"] = [0, 1, 2]
+        arg_dict["split_axis"] = [0, 1, 2]
+        for arg in GenArgList(arg_dict):
+            _test_unsorted_segment_sum_model_parallel_fw(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

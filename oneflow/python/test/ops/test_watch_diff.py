@@ -55,10 +55,15 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
     TrainJob()
 
 
-def test_watch_diff(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(10,)]
-    arg_dict["dtype"] = ["float32"]
-    for arg in GenArgList(arg_dict):
-        WatchDiff(test_case, *arg)
+class TestWatchDiff(flow.unittest.TestCase):
+    def test_watch_diff(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(10,)]
+        arg_dict["dtype"] = ["float32"]
+        for arg in GenArgList(arg_dict):
+            WatchDiff(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

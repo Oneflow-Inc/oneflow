@@ -160,23 +160,27 @@ def compare_with_tensorflow(
     )
 
 
-def test_conv1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(10, 32, 20)]
-    arg_dict["filters"] = [64]
-    arg_dict["kernel_size"] = [3]
-    arg_dict["groups"] = [32]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(test_case, *arg)
+class TestLayersConv1d(flow.unittest.TestCase):
+    def test_conv1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [3]
+        arg_dict["groups"] = [32]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(test_case, *arg)
+
+    def test_conv2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [(10, 32, 20)]
+        arg_dict["filters"] = [32]
+        arg_dict["kernel_size"] = [3, 2]
+        arg_dict["groups"] = [1]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(test_case, *arg)
 
 
-def test_conv2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 20)]
-    arg_dict["filters"] = [32]
-    arg_dict["kernel_size"] = [3, 2]
-    arg_dict["groups"] = [1]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

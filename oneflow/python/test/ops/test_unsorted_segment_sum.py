@@ -95,14 +95,19 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
     _check(test_case, data, segment_ids, out_shape, axis, out.numpy())
 
 
-def test_unsorted_segment_sum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["out_shape"] = [(4,), (4, 5), (4, 5, 6), (4, 5, 6, 7)]
-    arg_dict["axis"] = [0, 1, 2, 3]
-    arg_dict["segment_ids_shape"] = [(64,), (64, 96)]
-    for arg in GenArgList(arg_dict):
-        # axis >= len(out_shape)
-        if arg[2] >= len(arg[1]):
-            continue
-        _run_test(test_case, *arg)
+class TestUnsortedSegmentSum(flow.unittest.TestCase):
+    def test_unsorted_segment_sum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["out_shape"] = [(4,), (4, 5), (4, 5, 6), (4, 5, 6, 7)]
+        arg_dict["axis"] = [0, 1, 2, 3]
+        arg_dict["segment_ids_shape"] = [(64,), (64, 96)]
+        for arg in GenArgList(arg_dict):
+            # axis >= len(out_shape)
+            if arg[2] >= len(arg[1]):
+                continue
+            _run_test(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

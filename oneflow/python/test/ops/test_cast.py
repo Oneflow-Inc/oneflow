@@ -90,19 +90,23 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     )
 
 
-def test_cast(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["dtype"] = ["float32", "double"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+class TestCast(flow.unittest.TestCase):
+    def test_cast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(5, 4, 3)]
+        arg_dict["dtype"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_cast_forward(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(5, 4, 3)]
+        arg_dict["dtype"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
+        for arg in GenArgList(arg_dict):
+            cast_forward_compare_with_tensorflow(test_case, *arg)
 
 
-def test_cast_forward(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["dtype"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
-    for arg in GenArgList(arg_dict):
-        cast_forward_compare_with_tensorflow(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

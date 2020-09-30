@@ -129,47 +129,49 @@ def _compare_gather_with_tf(
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-def test_batch_gather(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["params_shape"] = [(2, 8, 4)]
-    arg_dict["indices_shape"] = [(2, 1)]
-    arg_dict["axis"] = [1]
-    arg_dict["batch_dims"] = [1]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_with_tf(test_case, *arg)
+class TestBatchGather(flow.unittest.TestCase):
+    def test_batch_gather(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["params_shape"] = [(2, 8, 4)]
+        arg_dict["indices_shape"] = [(2, 1)]
+        arg_dict["axis"] = [1]
+        arg_dict["batch_dims"] = [1]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_with_tf(test_case, *arg)
+
+    def test_batch_gather_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(20, 10, 200)]
+        arg_dict["indices_shape"] = [(20, 10)]
+        arg_dict["axis"] = [1]
+        arg_dict["batch_dims"] = [1]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_with_tf(test_case, *arg)
+
+    def test_batch_gather_case_2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["params_shape"] = [(20, 80, 30, 5)]
+        arg_dict["indices_shape"] = [(20, 40)]
+        arg_dict["axis"] = [1]
+        arg_dict["batch_dims"] = [1]
+        arg_dict["mirrored"] = [True]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_with_tf(test_case, *arg)
+
+    def test_batch_gather_case_3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["params_shape"] = [(20, 80, 30, 5)]
+        arg_dict["indices_shape"] = [(20, 80, 20)]
+        arg_dict["axis"] = [2]
+        arg_dict["batch_dims"] = [2]
+        arg_dict["mirrored"] = [True]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_with_tf(test_case, *arg)
 
 
-def test_batch_gather_case_1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(20, 10, 200)]
-    arg_dict["indices_shape"] = [(20, 10)]
-    arg_dict["axis"] = [1]
-    arg_dict["batch_dims"] = [1]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_with_tf(test_case, *arg)
-
-
-def test_batch_gather_case_2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(20, 80, 30, 5)]
-    arg_dict["indices_shape"] = [(20, 40)]
-    arg_dict["axis"] = [1]
-    arg_dict["batch_dims"] = [1]
-    arg_dict["mirrored"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_with_tf(test_case, *arg)
-
-
-def test_batch_gather_case_3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(20, 80, 30, 5)]
-    arg_dict["indices_shape"] = [(20, 80, 20)]
-    arg_dict["axis"] = [2]
-    arg_dict["batch_dims"] = [2]
-    arg_dict["mirrored"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_with_tf(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

@@ -142,6 +142,11 @@ def gen_arg_list():
     return matmul_args + batch_matmul_args
 
 
-def test_matmul(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
+class TestMatmul(flow.unittest.TestCase):
+    def test_matmul(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

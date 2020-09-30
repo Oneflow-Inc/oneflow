@@ -143,93 +143,94 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-def test_floordiv(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.floordiv]
-    arg_dict["tf_op"] = [tf.math.floordiv]
-    arg_dict["x_shape"] = [(5, 5,)]
-    arg_dict["y_shape"] = [(5, 5,)]
-    arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["x_minval"] = [-10]
-    arg_dict["x_maxval"] = [10]
-    arg_dict["y_minval"] = [1]
-    arg_dict["y_maxval"] = [10]
-    arg_dict["compare_grad"] = [False]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+class TestBinaryElementwiseOps(flow.unittest.TestCase):
+    def test_floordiv(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.floordiv]
+        arg_dict["tf_op"] = [tf.math.floordiv]
+        arg_dict["x_shape"] = [(5, 5,)]
+        arg_dict["y_shape"] = [(5, 5,)]
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["x_minval"] = [-10]
+        arg_dict["x_maxval"] = [10]
+        arg_dict["y_minval"] = [1]
+        arg_dict["y_maxval"] = [10]
+        arg_dict["compare_grad"] = [False]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_pow(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.pow]
+        arg_dict["tf_op"] = [tf.math.pow]
+        arg_dict["x_shape"] = [(5, 5,)]
+        arg_dict["y_shape"] = [(5, 5,)]
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["x_minval"] = [1]
+        arg_dict["x_maxval"] = [5]
+        arg_dict["y_minval"] = [1]
+        arg_dict["y_maxval"] = [5]
+        arg_dict["compare_grad"] = [True]
+
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_xdivy(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.xdivy]
+        arg_dict["tf_op"] = [tf.math.xdivy]
+        arg_dict["x_shape"] = [(5, 5,)]
+        arg_dict["y_shape"] = [(5, 5,)]
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["x_minval"] = [1]
+        arg_dict["x_maxval"] = [100]
+        arg_dict["y_minval"] = [1]
+        arg_dict["y_maxval"] = [10]
+        arg_dict["compare_grad"] = [True]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_xlogy(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.xlogy]
+        arg_dict["tf_op"] = [tf.math.xlogy]
+        arg_dict["x_shape"] = [(5, 5,)]
+        arg_dict["y_shape"] = [(5, 5,)]
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["x_minval"] = [1]
+        arg_dict["x_maxval"] = [5]
+        arg_dict["y_minval"] = [1]
+        arg_dict["y_maxval"] = [5]
+        arg_dict["compare_grad"] = [True]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_atan2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.atan2]
+        arg_dict["tf_op"] = [tf.math.atan2]
+        arg_dict["x_shape"] = [(5, 5,)]
+        arg_dict["y_shape"] = [(5, 5,)]
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["x_minval"] = [1]
+        arg_dict["x_maxval"] = [5]
+        arg_dict["y_minval"] = [1]
+        arg_dict["y_maxval"] = [5]
+        arg_dict["compare_grad"] = [True]
+
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
-def test_pow(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.pow]
-    arg_dict["tf_op"] = [tf.math.pow]
-    arg_dict["x_shape"] = [(5, 5,)]
-    arg_dict["y_shape"] = [(5, 5,)]
-    arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["x_minval"] = [1]
-    arg_dict["x_maxval"] = [5]
-    arg_dict["y_minval"] = [1]
-    arg_dict["y_maxval"] = [5]
-    arg_dict["compare_grad"] = [True]
-
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_xdivy(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.xdivy]
-    arg_dict["tf_op"] = [tf.math.xdivy]
-    arg_dict["x_shape"] = [(5, 5,)]
-    arg_dict["y_shape"] = [(5, 5,)]
-    arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["x_minval"] = [1]
-    arg_dict["x_maxval"] = [100]
-    arg_dict["y_minval"] = [1]
-    arg_dict["y_maxval"] = [10]
-    arg_dict["compare_grad"] = [True]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_xlogy(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.xlogy]
-    arg_dict["tf_op"] = [tf.math.xlogy]
-    arg_dict["x_shape"] = [(5, 5,)]
-    arg_dict["y_shape"] = [(5, 5,)]
-    arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["x_minval"] = [1]
-    arg_dict["x_maxval"] = [5]
-    arg_dict["y_minval"] = [1]
-    arg_dict["y_maxval"] = [5]
-    arg_dict["compare_grad"] = [True]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_atan2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.atan2]
-    arg_dict["tf_op"] = [tf.math.atan2]
-    arg_dict["x_shape"] = [(5, 5,)]
-    arg_dict["y_shape"] = [(5, 5,)]
-    arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["x_minval"] = [1]
-    arg_dict["x_maxval"] = [5]
-    arg_dict["y_minval"] = [1]
-    arg_dict["y_maxval"] = [5]
-    arg_dict["compare_grad"] = [True]
-
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

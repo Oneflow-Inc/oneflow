@@ -70,10 +70,15 @@ def compare_with_tensorflow(device_type, input_shape, shape):
     )
 
 
-def test_reshape(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(5, 4, 3), (2, 3, 4, 5)]
-    arg_dict["shape"] = [[2, -1], [-1], [3, -1]]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+class TestReshapeV2(flow.unittest.TestCase):
+    def test_reshape(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(5, 4, 3), (2, 3, 4, 5)]
+        arg_dict["shape"] = [[2, -1], [-1], [3, -1]]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

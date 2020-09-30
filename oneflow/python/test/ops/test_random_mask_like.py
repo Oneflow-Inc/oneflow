@@ -43,12 +43,17 @@ def of_run(device_type, x_shape, rate, seed):
     )
 
 
-def test_random_mask_like(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(100, 100, 10, 20), (100, 100, 200)]
-    arg_dict["rate"] = [0.1, 0.4, 0.75]
-    arg_dict["seed"] = [12345, None]
+class TestRandomMaskLike(flow.unittest.TestCase):
+    def test_random_mask_like(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(100, 100, 10, 20), (100, 100, 200)]
+        arg_dict["rate"] = [0.1, 0.4, 0.75]
+        arg_dict["seed"] = [12345, None]
 
-    for arg in GenArgList(arg_dict):
-        of_run(*arg)
+        for arg in GenArgList(arg_dict):
+            of_run(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

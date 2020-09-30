@@ -33,22 +33,6 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def test_scalar_mul(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.multiply]
-    arg_dict["tf_op"] = [tf.math.multiply]
-    arg_dict["input_shape"] = [(10, 10, 10)]
-    arg_dict["op_args"] = [
-        Args([1]),
-        Args([-1]),
-        Args([84223.19348]),
-        Args([-3284.139]),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg)
-
-
 def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -116,10 +100,30 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     )
 
 
-def test_element_wise_mul_fw_bw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device"] = ["gpu", "cpu"]
-    arg_dict["shape"] = [(96, 96)]
-    arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
-    for arg in GenArgDict(arg_dict):
-        _test_element_wise_mul_fw_bw(test_case, **arg)
+class TestMultiply(flow.unittest.TestCase):
+    def test_scalar_mul(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.multiply]
+        arg_dict["tf_op"] = [tf.math.multiply]
+        arg_dict["input_shape"] = [(10, 10, 10)]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([-1]),
+            Args([84223.19348]),
+            Args([-3284.139]),
+        ]
+        for arg in GenArgDict(arg_dict):
+            CompareOpWithTensorFlow(**arg)
+
+    def test_element_wise_mul_fw_bw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["gpu", "cpu"]
+        arg_dict["shape"] = [(96, 96)]
+        arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
+        for arg in GenArgDict(arg_dict):
+            _test_element_wise_mul_fw_bw(test_case, **arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

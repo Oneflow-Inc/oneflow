@@ -86,10 +86,15 @@ def compare_with_tensorflow(device_type, data_type, shape):
     flow.clear_default_session()
 
 
-def test_softmax_cross_entropy_with_logits(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["data_type"] = ["double", "float32"]
-    arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+class TestSoftmaxCrossEntropy(flow.unittest.TestCase):
+    def test_softmax_cross_entropy_with_logits(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["data_type"] = ["double", "float32"]
+        arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

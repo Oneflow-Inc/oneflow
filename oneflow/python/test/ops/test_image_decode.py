@@ -88,12 +88,17 @@ def _compare_jpg_decode_with_pil(test_case, images, print_debug_info=False):
         test_case.assertTrue(np.all(diff_abs_values == 1))
 
 
-def test_image_decode(test_case):
-    _compare_jpg_decode_with_pil(
-        test_case,
-        [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-        ],
-        # True,
-    )
+class TestImageDecode(flow.unittest.TestCase):
+    def test_image_decode(test_case):
+        _compare_jpg_decode_with_pil(
+            test_case,
+            [
+                "/dataset/mscoco_2017/val2017/000000000139.jpg",
+                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+            ],
+            # True,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -109,11 +109,16 @@ def _run_test(test_case, device, out_shape, num_segments, segment_ids_shape):
     )
 
 
-def test_unsorted_batch_segment_sum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["out_shape"] = [(2, 4, 7, 6)]
-    arg_dict["num_segments"] = [7]
-    arg_dict["segment_ids_shape"] = [(2, 4, 5)]
-    for arg in GenArgList(arg_dict):
-        _run_test(test_case, *arg)
+class TestUnsortedBatchSegmentSum(flow.unittest.TestCase):
+    def test_unsorted_batch_segment_sum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["out_shape"] = [(2, 4, 7, 6)]
+        arg_dict["num_segments"] = [7]
+        arg_dict["segment_ids_shape"] = [(2, 4, 5)]
+        for arg in GenArgList(arg_dict):
+            _run_test(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

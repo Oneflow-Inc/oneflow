@@ -97,6 +97,11 @@ def _test_model_io(test_case, shape, dtype, lr, num_iters):
     test_case.assertTrue(np.allclose(final_var, var_from_file))
 
 
-def test_model_io_case_0(test_case):
-    # _test_model_io(test_case, (10, 5, 7), flow.float32, 1e-2, 10)
-    _test_model_io(test_case, (2, 2), flow.float32, 1e-2, 10)
+class TestModelIo(flow.unittest.TestCase):
+    def test_model_io_case_0(test_case):
+        # _test_model_io(test_case, (10, 5, 7), flow.float32, 1e-2, 10)
+        _test_model_io(test_case, (2, 2), flow.float32, 1e-2, 10)
+
+
+if __name__ == "__main__":
+    unittest.main()
