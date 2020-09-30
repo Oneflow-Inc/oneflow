@@ -138,7 +138,7 @@ def compare_with_tensorflow_adam(
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            loss = flow.math.reduce_mean(x * random_mask)
+            loss = flow.math.reduce_mean(x + random_mask)
             flow.optimizer.LAMB(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
                 beta1=beta1,
@@ -174,7 +174,7 @@ def compare_with_tensorflow_adam(
     for i in range(train_iters):
         with tf.GradientTape() as tape:
             random_mask = tf.Variable(random_masks_seq[i])
-            loss = tf.reduce_mean(var * random_mask)
+            loss = tf.reduce_mean(var + random_mask)
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
 
