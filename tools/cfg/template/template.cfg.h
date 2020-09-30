@@ -458,6 +458,9 @@ class _{{ util.class_name(cls) }}_ {
     return  {{ util.field_name(field) }}_.Mutable(index);
   }
 {% if util.field_is_message_type(field) %}
+  {{ util.field_type_name_with_cfg_namespace(field) }}* add_{{ util.field_name(field) }}() {
+    return {{ util.field_name(field) }}_.Add();
+  }
 {% else %}
   void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
     return {{ util.field_name(field) }}_.Add(value);
@@ -929,6 +932,9 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   }
   ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> shared_mutable_{{ util.field_name(field) }}(::std::size_t index) {
     return mutable_{{ util.field_name(field) }}(index)->__SharedMutable__();
+  }
+  {{ util.field_type_name_with_cfg_namespace(field) }}* add_{{ util.field_name(field) }}() {
+    return __SharedPtr__()->add_{{ util.field_name(field) }}();
   }
 {% else %}
   void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
