@@ -20,7 +20,7 @@ import oneflow.typing as oft
 
 
 class TestDynamicReshape(flow.unittest.TestCase):
-    @unittest.skipIf(flow.unittest.env.gpu_device_num() != 2, "requires 2 gpus")
+    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 2, "requires 2 gpus")
     def test_dynamic_reshape(test_case):
         num_gpus = 2
         data_shape = (10, 10, 10)

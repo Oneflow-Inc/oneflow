@@ -25,7 +25,7 @@ class TestDemo(flow.unittest.TestCase):
         # you can use `test_case' like unittest.TestCase instance
         pass
 
-    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
+    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
     def test_bar(test_case):
         # default num_nodes_required is 1
         pass

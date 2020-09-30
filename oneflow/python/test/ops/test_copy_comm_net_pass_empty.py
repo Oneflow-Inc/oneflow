@@ -34,7 +34,7 @@ def ccrelu(x, name):
 
 class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
+    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
     def test_multi_node_comm_net(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -68,7 +68,7 @@ class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
                 )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
+    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
     def test_multi_node_comm_net_dynamic(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -103,7 +103,7 @@ class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
                     np.array_equal(ret, np.zeros((5, 2,), dtype=np.float32))
                 )
 
-    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
+    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
     def test_multi_node_comm_net_dynamic_empty(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())

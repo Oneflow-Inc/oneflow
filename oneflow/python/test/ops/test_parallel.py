@@ -43,7 +43,7 @@ class TestParallel(flow.unittest.TestCase):
         flow.config.gpu_device_num(2)
         NaiveTest(test_case)
 
-    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
+    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
     def test_2n2c(test_case):
         flow.config.gpu_device_num(1)
         NaiveTest(test_case)
