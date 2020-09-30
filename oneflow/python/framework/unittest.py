@@ -145,4 +145,4 @@ class TestCase(TestCase):
         if node_size() == 1 and gpu_device_num == 1:
             super().__init__()
         else:
-            unittest.skip("skipping OneGpuTestCase: {!r}}".format(obj))
+            unittest.skip("skipping OneGpuTestCase: {!r}}".format(self))
