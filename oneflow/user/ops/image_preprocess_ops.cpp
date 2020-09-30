@@ -190,4 +190,24 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
+REGISTER_CPU_ONLY_USER_OP("image_hsv")
+    .Input("in")
+    .Output("out")
+    .Attr<float>("hue", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("saturation", UserOpAttrType::kAtFloat, 1.0)
+    .Attr<float>("value", UserOpAttrType::kAtFloat, 1.0)
+    .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kUInt8)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      DataType outbuffer_type = ctx->Attr<DataType>("data_type");
+      CHECK_OR_RETURN((outbuffer_type == DataType::kUInt8) || (outbuffer_type == DataType::kFloat));
+      *out_tensor->mut_shape() = in_tensor->shape();
+      *out_tensor->mut_data_type() = DataType::kTensorBuffer;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+
 }  // namespace oneflow

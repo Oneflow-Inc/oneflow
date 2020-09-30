@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/common/data_type_converter.h"
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/random_seed_util.h"
@@ -401,6 +402,183 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("image_random_crop")
     .SetCreateFn<ImageRandomCropKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+
+namespace {
+
+template<typename F, typename T>
+void ImageHsvStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
+                    //const float& hue, const float& saturation, const float& value
+                    std::vector<float>& mat) {
+  // TODO
+  CHECK_EQ(input_buffer.shape().NumAxes(), 3);
+  int h = input_buffer.shape().At(0);
+  int w = input_buffer.shape().At(1);
+  int c = input_buffer.shape().At(2);
+  CHECK_EQ(c, 3);
+  FOR_RANGE(int, i, 0, h) {
+    auto *row_ptr = input_buffer.data<F>() + i * w * c;
+    FOR_RANGE(int, j, 0, w) {
+      std::vector<float> v_in;
+      FOR_RANGE(int, k, 0, c) {
+        v_in.push_back(row_ptr[j * c + k]);
+      }
+      std::vector<float> v_out(3, 0);
+      FOR_RANGE(int, v_i, 0, 3) {
+        FOR_RANGE(int, v_j, 0, 3) {
+          v_out.at(v_i) += mat.at(v_i * 3 + v_j) * v_in.at(v_i);
+        }
+      }
+      FOR_RANGE(int, k, 0, c) {
+        T adjust_value = ConvertSat<T>(v_out.at(k));
+        memcpy(output_buffer->mut_data<T>() + i * w * c + j * c + k, &adjust_value, sizeof(T));
+      }
+    }
+  }
+}
+
+template<typename F>
+void ImageHsvImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer, std::vector<float>& mat,
+                  // const float& hue, const float& saturation, const float& value,
+                  DataType outbuffer_dtype) {
+  outbuffer_dtype = (outbuffer_dtype != DataType::kInvalidDataType) ? outbuffer_dtype : input_buffer.data_type();
+  output_buffer->Resize(input_buffer.shape(), outbuffer_dtype);
+
+  switch (outbuffer_dtype) {
+    case DataType::kChar:
+    case DataType::kInt8:
+    case DataType::kUInt8:
+      ImageHsvStatic<F, DataTypeToType<DataType::kUInt8>>(
+        input_buffer, output_buffer, mat);
+      break;
+    case DataType::kFloat16:
+    case DataType::kFloat:
+      ImageHsvStatic<F, DataTypeToType<DataType::kFloat>>(
+        input_buffer, output_buffer, mat);
+    case DataType::kInt32:
+    case DataType::kDouble:
+    case DataType::kInt64:
+    default: { LOG(FATAL) << "Invalid data type " << outbuffer_dtype; }
+  }  
+}
+
+#define MAKE_IMAGE_HSV_FROM_TENSOR_BUFFER_SWITCH_ENTRY(func_name, F) func_name<F>
+DEFINE_STATIC_SWITCH_FUNC(void, ImageHsvImpl, MAKE_IMAGE_HSV_FROM_TENSOR_BUFFER_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(IMAGE_DATA_TYPE_SEQ));
+
+#undef MAKE_IMAGE_HSV_FROM_TENSOR_BUFFER_SWITCH_ENTRY
+
+}  // namespace
+
+struct ImageHsvOpKernelState final : public user_op::OpKernelState {
+  std::vector<float> rgb2yiq;
+  std::vector<float> yiq2rgb;
+  std::vector<float> hue_mat;
+  std::vector<float> sat_mat;
+  std::vector<float> val_mat;
+  std::vector<float> final_mat;
+};
+
+std::shared_ptr<user_op::OpKernelState> CreateImageHsvOpKernelState(user_op::KernelInitContext* ctx,
+                                                                    const std::string& hue_name,
+                                                                    const std::string& saturation_name,
+                                                                    const std::string& value_name) {
+  std::shared_ptr<ImageHsvOpKernelState> state(new ImageHsvOpKernelState());
+
+  state->rgb2yiq = {.299f, .587f, .114f, .596f, -.274f, -.321f, .211f, -.523f, .311f};
+  state->yiq2rgb = {1, .956f, .621f, 1, -.272f, -.647f, 1, -1.107f, 1.705f};
+
+  state->hue_mat = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  state->sat_mat = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  state->val_mat = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  state->final_mat.assign(state->yiq2rgb.begin(), state->yiq2rgb.end());
+
+  auto SetHueMat = [](float hue, std::vector<float>& hue_mat) {
+    const double PI = std::atan(1.0) * 4.0;
+    const float h_rad = hue * PI / 180;
+    hue_mat.at(4) = std::cos(h_rad);
+    hue_mat.at(8) = std::cos(h_rad);
+    hue_mat.at(5) = std::sin(h_rad);
+    hue_mat.at(7) = -std::sin(h_rad);
+  };
+
+  auto SetSatMat = [](float saturation, std::vector<float>& sat_mat) {
+    sat_mat.at(4) = saturation;
+    sat_mat.at(8) = saturation;
+  };
+
+  auto SetValMat = [](float value, std::vector<float>& val_mat) {
+    val_mat.at(0) = value;
+    val_mat.at(4) = value;
+    val_mat.at(8) = value;
+  };
+
+  auto Matmul = [](std::vector<float>& left_mat, std::vector<float>& right_mat) {
+    CHECK_EQ(left_mat.size(), 9);
+    CHECK_EQ(right_mat.size(), 9);
+    std::vector<float> mid_vec(9, 0);
+    FOR_RANGE(int32_t, m, 0, 3) {
+      FOR_RANGE(int32_t, k, 0, 3) {
+        FOR_RANGE(int32_t, n, 0, 3) {
+          mid_vec.at(m * 3 + n) += left_mat.at(m * 3 + k) * right_mat.at(k * 3 + n);
+        }
+      }
+    }
+    left_mat.assign(mid_vec.begin(), mid_vec.end());
+  };
+
+  SetHueMat(ctx->Attr<float>(hue_name), state->hue_mat);
+  SetSatMat(ctx->Attr<float>(saturation_name), state->sat_mat);
+  SetValMat(ctx->Attr<float>(value_name), state->val_mat);
+  Matmul(state->final_mat, state->hue_mat);
+  Matmul(state->final_mat, state->sat_mat);
+  Matmul(state->final_mat, state->val_mat);
+  Matmul(state->final_mat, state->rgb2yiq);
+
+  return std::move(state);
+}
+
+class ImageHsvKernel final: public user_op::OpKernel {
+  public:
+    ImageHsvKernel() = default;
+    ~ImageHsvKernel() = default;
+
+    std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+        user_op::KernelInitContext* ctx) const {
+      return CreateImageHsvOpKernelState(ctx, "hue", "saturation", "value");
+    }
+
+  private:
+    void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+      auto* hsv_state = dynamic_cast<ImageHsvOpKernelState*>(state);
+      const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+      user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+      CHECK_EQ(in_tensor->shape().NumAxes(), 1);
+      CHECK_EQ(out_tensor->shape().NumAxes(), 1);
+      const int64_t num_images = in_tensor->shape().elem_cnt();
+      CHECK_GT(num_images, 0);
+      CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+      /*const float hue = ctx->Attr<float>("hue");
+      const float saturation = ctx->Attr<float>("saturation");
+      const float value = ctx->Attr<float>("value");*/
+      DataType outbuffer_dtype = ctx->Attr<DataType>("data_type");
+
+      MultiThreadLoop(num_images, [&](size_t i) {
+        const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+        CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+        TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+        SwitchImageHsvImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
+                                      hsv_state->final_mat, outbuffer_dtype);
+      });
+    }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("image_hsv")
+    .SetCreateFn<ImageHsvKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer)
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
