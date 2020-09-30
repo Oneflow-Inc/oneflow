@@ -43,6 +43,27 @@ REGISTER_USER_OP("torch_gather")
 
       return Maybe<void>::Ok();
     });
+
+REGISTER_USER_OP("scatter_dim")
+    .Input("src")
+    .Input("index")
+    .Output("out")
+    .Attr("dim", UserOpAttrType::kAtInt64)
+    .Attr("shape", UserOpAttrType::kAtShape)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
+      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+      const Shape& params_shape = ctx->Attr<Shape>("shape");
+
+      // check src, index params_shape
+      // ...
+
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out->mut_shape() = params_shape;
+      *out->mut_data_type() = src->data_type();
+
+      return Maybe<void>::Ok();
+    });
 } // namespace user_op
 
 }  // namespace oneflow
