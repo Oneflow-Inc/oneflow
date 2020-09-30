@@ -152,6 +152,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     source_group("${group_name}" FILES ${oneflow_single_file})
   endif()
 endforeach()
+
 # clang format
 add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
