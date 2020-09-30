@@ -114,8 +114,6 @@ _env_initilized = False
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
-        oneflow.enable_eager_execution(should_enable_eager())
-        oneflow.experimental.enable_typing_check(should_enable_typing_check())
 
         node_list_from_env = node_list()
         if node_list_from_env:
@@ -128,3 +126,5 @@ class TestCase(unittest.TestCase):
             oneflow.env.init()
             _env_initilized = True
         oneflow.clear_default_session()
+        oneflow.enable_eager_execution(should_enable_eager())
+        oneflow.experimental.enable_typing_check(should_enable_typing_check())
