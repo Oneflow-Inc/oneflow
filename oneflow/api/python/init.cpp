@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/api/python/of_api_registry.h"
 
 namespace py = pybind11;
 
@@ -22,6 +23,7 @@ namespace oneflow {
 
 PYBIND11_MODULE(oneflow_api, m) {
   m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
+  ::oneflow::OneflowModuleRegistry().ImportAll(m);
 }
 
 }  // namespace oneflow
