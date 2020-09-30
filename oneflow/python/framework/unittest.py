@@ -108,6 +108,15 @@ def node_size():
         return len(node_list_from_env)
 
 
+@oneflow_export("unittest.env.gpu_device_num")
+def gpu_device_num():
+    gpu_num_str = os.getenv("ONEFLOW_TEST_GPU_DEVICE_NUM")
+    if gpu_num_str:
+        return int(gpu_num_str)
+    else:
+        return 1
+
+
 _unittest_env_initilized = False
 
 

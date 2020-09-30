@@ -90,6 +90,7 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(len(ndarray_list[0]), 1)
         test_case.assertTrue(np.allclose(ndarray_list[0][0], data))
 
+    @unittest.skipIf(flow.unittest.env.gpu_device_num() != 4, "requires 4 gpus")
     def test_MirroredTensorDef_4_device(test_case):
         num_gpus = 4
         flow.config.gpu_device_num(num_gpus)
