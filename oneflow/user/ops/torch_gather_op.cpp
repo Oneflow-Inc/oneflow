@@ -64,6 +64,31 @@ REGISTER_USER_OP("scatter_dim_add")
 
       return Maybe<void>::Ok();
     });
+
+REGISTER_USER_OP_GRAD("torch_gather")
+    .SetBackwardOpConfGenFn(
+    [](user_op::BackwardOpConfContext* ctx) {
+
+      const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
+
+      ctx->DefineOp(op_grad_name, 
+        [&ctx](user_op::BackwardOpBuilder& builder) {
+          return builder.OpTypeName("scatter_dim_add") // scatter_dim_add(dim, index, src) -> output
+              .InputBind("index", ctx->FwOp().input("index", 0)) //scatter.index <- gather.input
+              .InputBind("src", ctx->FwOp().output_grad("out", 0)) //scatter.src <- grad of gather.out
+              .Output("out")
+              .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
+              .Attr("shape", ctx->FwOp().attr<Shape>("shape"))
+              .Build();
+        });
+
+      ctx->FwOp().InputGradBind(user_op::OpArg("input", 0), 
+        [&ctx, &op_grad_name]() -> const std::string& {
+          return ctx->GetOp(op_grad_name)
+                .output("out", 0);
+        });
+  });
+
 } // namespace user_op
 
 }  // namespace oneflow

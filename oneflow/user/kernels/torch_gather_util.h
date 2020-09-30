@@ -1,8 +1,13 @@
-
 #ifndef ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
+#include "oneflow/core/kernel/util/cuda_kernel_util.h"
 
 namespace oneflow{
+
+template<DeviceType device_type, typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y += *x; }
+};
 
 /*
   A converter that converts coordinate of high-dimensions tensor
@@ -158,7 +163,7 @@ __global__ void DoCUDAScatterDimAdd(
   IN_T* output
   )
 {
-  CUDA_1D_KERNEL_LOOP(src_offset, elem_cnt){
+  CUDA_1D_KERNEL_LOOP_T(int64_t, src_offset, elem_cnt){
     //output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
     // index.shape == src.shape
 
@@ -171,7 +176,8 @@ __global__ void DoCUDAScatterDimAdd(
     output_helper.coordinate_[dim] = index[src_offset];
 
     // set output value at index_offset
-    IDX_T output_offset = output_helper.coordinateToIdx();    
+    IDX_T output_offset = output_helper.coordinateToIdx(); 
+
     output[output_offset] += src[src_offset];
   }
 }
