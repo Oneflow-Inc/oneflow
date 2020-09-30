@@ -46,10 +46,10 @@ def compare_with_tensorflow_addons_lamb(
                 name="x",
                 shape=x_shape,
                 dtype=flow.float32,
-                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            loss = flow.math.reduce_mean(x * random_mask)
+            loss = flow.math.reduce_mean(x + random_mask)
             flow.optimizer.LAMB(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
                 beta1=beta1,
@@ -82,14 +82,17 @@ def compare_with_tensorflow_addons_lamb(
     var_list = []
     for i in range(train_iters):
         with tf.GradientTape() as tape:
+            if i == 0:
+                var0 = tf.identity(var)
+                var_list.append(var0)
             random_mask = tf.Variable(random_masks_seq[i])
-            loss = tf.reduce_mean(var * random_mask)
-            var_list.append(var.numpy())
+            loss = tf.reduce_mean(var + random_mask)
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
+        var_list.append(var.numpy())
     case = device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
-    test_case.assertTrue(len(x_list) == len(var_list) + 1)
-    for (i, o, t) in zip(range(len(var_list)), x_list[1:], var_list):
+    test_case.assertTrue(len(x_list) == len(var_list))
+    for (i, o, t) in zip(range(len(var_list)), x_list, var_list):
         diff = o - t
         test_case.assertTrue(
             np.allclose(x_list[i], var_list[i], rtol=1e-3, atol=1e-3), (i, case, diff),
@@ -110,7 +113,7 @@ def test_lamb(test_case):
     arg_dict["beta2"] = [0.1]
     arg_dict["epsilon"] = [1e-9]
     arg_dict["learning_rate"] = [0.5]
-    arg_dict["train_iters"] = [30]
+    arg_dict["train_iters"] = [10]
     for arg in GenArgList(arg_dict):
         compare_with_tensorflow_addons_lamb(*arg)
 

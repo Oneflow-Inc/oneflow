@@ -106,9 +106,25 @@ struct LambGradFunctor {
 };
 
 template<typename T>
+struct LambLRFunctor {
+  OF_DEVICE_FUNC
+  float operator()(const float learning_rate, const bool adam, const T* norm_buffer) const {
+    float lr = learning_rate;
+    if (adam == false) {
+      T trust_ratio = 1;
+      T w_norm = norm_buffer[0];
+      T g_norm = norm_buffer[1];
+      if (w_norm > 0 && g_norm > 0) { trust_ratio = w_norm / g_norm; }
+      lr *= trust_ratio;
+    }
+    return lr;
+  }
+};
+
+template<typename T>
 struct LambUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const float learning_rate, float weight_decay, const T* adam_diff,
+  void operator()(const float learning_rate, const float weight_decay, const T* adam_diff,
                   T* model) const {
     const T model_val = *model;
     *model = model_val - learning_rate * (*adam_diff + weight_decay * model_val);
