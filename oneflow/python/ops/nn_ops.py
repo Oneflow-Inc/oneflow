@@ -929,13 +929,12 @@ def batch_normalization(
 @oneflow_export("nn.layer_norm")
 def layer_norm(
     inputs: remote_blob_util.BlobDef,
-    gamma: remote_blob_util.BlobDef,
-    beta: remote_blob_util.BlobDef,
-    trainable: bool = True,
+    gamma: Optional[remote_blob_util.BlobDef] = None,
+    beta: Optional[remote_blob_util.BlobDef] = None,
     begin_norm_axis: int = 1,
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
-    name: str = "LayerNorm",
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Layer Normalization.
 
@@ -943,11 +942,10 @@ def layer_norm(
         inputs (remote_blob_util.BlobDef): Input `Blob`.
         gamma (Optional[remote_blob_util.BlobDef]).
         beta (Optional[remote_blob_util.BlobDef]).
-        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
         epsilon (float, optional): A small float is added to avoid division by zero. Defaults to 1e-5.
-        name (Optional[str], optional): This layer's name. Defaults to None.
+        name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
         remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
@@ -978,6 +976,9 @@ def layer_norm(
 
     """
     param_shape = inputs.shape[begin_params_axis:]
+
+    if name is None:
+        name = id_util.UniqueStr("LayerNorm_")
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if begin_norm_axis < 0:
