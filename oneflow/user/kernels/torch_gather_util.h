@@ -118,6 +118,64 @@ __global__ void DoCUDAGatherDim(
   }
 }
 
+template<typename IN_T, typename IDX_T>
+void DoScatterDimAdd(
+  CoordinateOffsetConverter<IDX_T> src_helper,
+  CoordinateOffsetConverter<IDX_T> output_helper,
+  int64_t elem_cnt,
+  int64_t dim,
+  const IDX_T* index, 
+  const IN_T* src,
+  IN_T* output
+  )
+{
+  FOR_RANGE(IDX_T, src_offset, 0, elem_cnt){
+    //output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
+    // index.shape == src.shape
+
+    // get coordinate of src tensor
+    src_helper.setOffset(src_offset);
+    src_helper.idxToCoordinate();
+
+    // get coordinate of output tensor by replacing "dim" axis
+    output_helper.copyCoordinate(src_helper);
+    output_helper.coordinate_[dim] = index[src_offset];
+
+    // set output value at index_offset
+    IDX_T output_offset = output_helper.coordinateToIdx();    
+    output[output_offset] += src[src_offset];
+  }
+}
+
+template<typename IN_T, typename IDX_T>
+__global__ void DoCUDAScatterDimAdd(
+  CoordinateOffsetConverter<IDX_T> src_helper,
+  CoordinateOffsetConverter<IDX_T> output_helper,
+  int64_t elem_cnt,
+  int64_t dim,
+  const IDX_T* index, 
+  const IN_T* src,
+  IN_T* output
+  )
+{
+  CUDA_1D_KERNEL_LOOP(src_offset, elem_cnt){
+    //output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
+    // index.shape == src.shape
+
+    // get coordinate of src tensor
+    src_helper.setOffset(src_offset);
+    src_helper.idxToCoordinate();
+
+    // get coordinate of output tensor by replacing "dim" axis
+    output_helper.copyCoordinate(src_helper);
+    output_helper.coordinate_[dim] = index[src_offset];
+
+    // set output value at index_offset
+    IDX_T output_offset = output_helper.coordinateToIdx();    
+    output[output_offset] += src[src_offset];
+  }
+}
+
 } // oneflow
 
 #endif //ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_

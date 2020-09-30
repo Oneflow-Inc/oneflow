@@ -951,3 +951,25 @@ def torch_gather(
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
+
+@oneflow_export("scatter_dim_add")
+def scatter_dim_add(
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    src: remote_blob_util.BlobDef,
+    shape: Sequence[int],
+    name: Optional[str] = None,
+):
+    if name is None:
+        name = id_util.UniqueStr("ScatterDimAdd_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("scatter_dim_add")
+        .Input("index", [index])
+        .Input("src", [src])
+        .Attr("dim", dim)
+        .Attr("shape", shape)
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().RemoteBlobList()[0]

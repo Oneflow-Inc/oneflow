@@ -44,7 +44,7 @@ REGISTER_USER_OP("torch_gather")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("scatter_dim")
+REGISTER_USER_OP("scatter_dim_add")
     .Input("src")
     .Input("index")
     .Output("out")
