@@ -340,7 +340,9 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, bool adam, const float* learning_rate, const G* model_diff,
     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t) {
-  AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(beta1, beta2, beta1_t, beta2_t);
+  if (adam == false) {
+    AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(beta1, beta2, beta1_t, beta2_t);
+  }
   LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, adam_diff, model, m,
       v);
@@ -349,6 +351,9 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
   LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, weight_decay, adam, learning_rate, norm_buffer, beta1_t, beta2_t, adam_diff, model);
+  if (adam) {
+    AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(beta1, beta2, beta1_t, beta2_t);
+  }
 }
 
 template<typename T>
