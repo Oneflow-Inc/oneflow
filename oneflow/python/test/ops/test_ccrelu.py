@@ -86,25 +86,25 @@ class TestCcrelu(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y1, np.maximum(x1, 0)))
         test_case.assertTrue(np.array_equal(y2, np.maximum(x2, 0)))
 
-    @unittest.skipIf(flow.unittest.env.node_size != 2, "requires 2 nodes")
+    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
     def test_ccrelu_2n1c_0(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
         fixed_tensor_def_test(test_case, func_config)
 
-    @unittest.skipIf(flow.unittest.env.node_size != 2, "requires 2 nodes")
+    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
     def test_ccrelu_2n1c_1(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
         fixed_tensor_def_test(test_case, func_config)
 
-    @unittest.skipIf(flow.unittest.env.node_size != 2, "requires 2 nodes")
+    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
     def test_ccrelu_2n1c_2(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
         fixed_tensor_def_test(test_case, func_config)
 
-    @unittest.skipIf(flow.unittest.env.node_size != 2, "requires 2 nodes")
+    @unittest.skipIf(flow.unittest.env.node_size() != 2, "requires 2 nodes")
     def test_ccrelu_2n1c_3(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
