@@ -1,0 +1,33 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/dlnet_conf.proto";
+
+message SavedModel {
+  required string name = 1;
+  required int64 version = 2;
+  repeated string checkpoint_dir = 3;
+  map<string, DLNetConf> graphs = 4;
+  map<string, SignatureDef> singatures = 5;
+}
+
+message SignatureDef {
+  map<string, InputDef> inputs = 1;
+  map<string, OutputDef> outputs = 2;
+  required string method_name = 3;
+}
+
+message InputDef {
+  repeated string consumer_op_names = 1;
+  repeated string consumer_op_input_bns = 2;
+  required InterfaceBlobConf blob_conf = 3;
+}
+
+message OutputDef {
+  required string producer_op_name = 1;
+}
+
+message ModelParallelDesc {
+
+}
