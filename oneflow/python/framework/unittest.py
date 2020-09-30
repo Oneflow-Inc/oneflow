@@ -108,7 +108,7 @@ def node_size():
         return len(node_list_from_env)
 
 
-_env_initilized = False
+_unittest_env_initilized = False
 
 
 @oneflow_export("unittest.TestCase")
@@ -121,10 +121,10 @@ class TestCase(unittest.TestCase):
             oneflow.env.machine(node_list_from_env)
             oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
             atexit.register(flow.deprecated.delete_worker)
-        global _env_initilized
-        if _env_initilized == False:
+        global _unittest_env_initilized
+        if _unittest_env_initilized == False:
             oneflow.env.init()
-            _env_initilized = True
+            _unittest_env_initilized = True
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(should_enable_eager())
         oneflow.experimental.enable_typing_check(should_enable_typing_check())
