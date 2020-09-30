@@ -22,10 +22,10 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class TorchGatherKernel final : public user_op::OpKernel {
+class TorchGatherGpuKernel final : public user_op::OpKernel {
  public:
-  TorchGatherKernel() = default;
-  ~TorchGatherKernel() override = default;
+  TorchGatherGpuKernel() = default;
+  ~TorchGatherGpuKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -44,21 +44,26 @@ class TorchGatherKernel final : public user_op::OpKernel {
 
     CoordinateOffsetConverter<IDX_T> input_nd_helper(input_tensor->shape());
     CoordinateOffsetConverter<IDX_T> index_nd_helper(index_tensor->shape());
-    DoGatherDim<IN_T, IDX_T>(input_nd_helper,
-              index_nd_helper,
-              input_tensor->shape().elem_cnt(),
-              dim,
-              index,
-              input,
-              output);
+    
+    RUN_CUDA_KERNEL((DoCUDAGatherDim<IN_T, IDX_T>), 
+                    ctx->device_ctx(), 
+                    20, 
+                    input_nd_helper,
+                    index_nd_helper,
+                    input_tensor->shape().elem_cnt(),
+                    dim,
+                    index,
+                    input,
+                    output);
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PYTORCH_GATHER_KERNEL(device, in_type, indices_type)                              \
+#define REGISTER_PYTORCH_GATHER_GPUKERNEL(device, in_type, indices_type)                              \
   REGISTER_USER_KERNEL("torch_gather")                                                             \
       .SetCreateFn<                                                                                \
-          TorchGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()  \
+        TorchGatherGpuKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
                        & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
@@ -66,8 +71,8 @@ class TorchGatherKernel final : public user_op::OpKernel {
 #define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
 
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_PYTORCH_GATHER_KERNEL,
-                                (DeviceType::kCPU), 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_PYTORCH_GATHER_GPUKERNEL,
+                                (DeviceType::kGPU), 
                                 GATHER_DATA_TYPE_SEQ,
                                 INDEX_DATA_TYPE_SEQ)
 
