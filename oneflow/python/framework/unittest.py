@@ -80,11 +80,22 @@ def _GetNumOfNodes(func):
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
 
 
+def _enable_eager():
+    is_enabled = os.environ["ONEFLOW_TEST_ENABLE_EAGER"] == "1"
+    oneflow.enable_eager_execution(is_enabled)
+
+
+def _enable_typing_check():
+    is_enabled = os.environ["ONEFLOW_TEST_ENABLE_TYPING_CHECK"] == "1"
+    oneflow.experimental.enable_typing_check(True)
+
+
 @oneflow_export("unittest.OneNodeTest")
 class OneNodeTest(unittest.TestCase):
     def setUp(self):
         oneflow.clear_default_session()
-        oneflow.enable_eager_execution(False)
+        _enable_eager()
+        _enable_typing_check()
         oneflow.env.init()
 
 
@@ -95,6 +106,10 @@ class TwoNodeTest(unittest.TestCase):
         assert node_list_str != None
         node_list = node_list_str.split(",")
         assert len(node_list) == 2
+
+        oneflow.clear_default_session()
+        _enable_eager()
+        _enable_typing_check()
         flow.env.machine(node_list)
         flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
         flow.env.init()
