@@ -184,7 +184,22 @@ class {{ util.field_map_container_name(field) }} final : public Const{{ util.fie
 {% endif  %}{# map end #}
 {% endfor %}{# field #}
 
-class _{{ util.class_name(cls) }}_ {
+
+class {{ util.class_name(cls) }};
+class Const{{ util.class_name(cls) }} {
+ public:
+{% for oneof in util.message_type_oneofs(cls) %}
+
+ // oneof enum {{ util.oneof_name(oneof) }}
+ enum {{ util.oneof_enum_name(oneof) }} {
+  {{ util.oneof_name(oneof).upper() }}_NOT_SET = 0,
+  {% for field in util.oneof_type_fields(oneof) %}
+  {{ util.oneof_type_field_enum_value_name(field) }} = {{ util.oneof_type_field_enum_value_number(field) }},
+  {% endfor %}
+ };
+{% endfor %}{# oneof enum #}
+
+  class _{{ util.class_name(cls) }}_ {
  public:
   _{{ util.class_name(cls) }}_() { Clear(); }
   explicit _{{ util.class_name(cls) }}_(const _{{ util.class_name(cls) }}_& other) { CopyFrom(other); }
@@ -343,16 +358,6 @@ class _{{ util.class_name(cls) }}_ {
     return proto_{{ util.class_name(cls).lower() }}.DebugString();
   }
 
-{% for oneof in util.message_type_oneofs(cls) %}
-
- // oneof enum {{ util.oneof_name(oneof) }}
- enum {{ util.oneof_enum_name(oneof) }} {
-  {{ util.oneof_name(oneof).upper() }}_NOT_SET = 0,
-  {% for field in util.oneof_type_fields(oneof) %}
-  {{ util.oneof_type_field_enum_value_name(field) }} = {{ util.oneof_type_field_enum_value_number(field) }},
-  {% endfor %}
- };
-{% endfor %}{# oneof enum #}
   void Clear() {
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}
@@ -715,9 +720,6 @@ class _{{ util.class_name(cls) }}_ {
   }
 };
 
-class {{ util.class_name(cls) }};
-class Const{{ util.class_name(cls) }} {
- public:
   Const{{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data): data_(data) {}
   Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&) = default;
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept = default;
@@ -738,6 +740,7 @@ class Const{{ util.class_name(cls) }} {
   bool __Empty__() const {
     return !*data_;
   }
+
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}
   // required or optional field {{ util.field_name(field) }}
@@ -811,7 +814,6 @@ class Const{{ util.class_name(cls) }} {
 {% endif %}{# field label type #}
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
-  using {{ util.oneof_enum_name(oneof) }} = _{{ util.class_name(cls) }}_::{{ util.oneof_enum_name(oneof) }};
   {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case() const {
     return __SharedPtrOrDefault__()->{{ util.oneof_name(oneof) }}_case();
   }

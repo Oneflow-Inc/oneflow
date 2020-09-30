@@ -157,9 +157,9 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
     registry.def("{{ util.oneof_name(oneof) }}_case",  &Const{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
     registry.def("has_{{ util.oneof_name(oneof) }}",  &Const{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
-        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
+        [](const pybind11::object&){ return {{ util.class_name(cls) }}::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
 {% for field in util.oneof_type_fields(oneof) %}
-        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; })
+        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return {{ util.class_name(cls) }}::{{ util.oneof_type_field_enum_value_name(field) }}; })
 {% endfor %}{# oneof_fields #}
         ;
 {% endfor %}{# oneofs #}
@@ -179,9 +179,9 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
-        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
+        [](const pybind11::object&){ return {{ util.class_name(cls) }}::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
 {% for field in util.oneof_type_fields(oneof) %}
-        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; })
+        .def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}", [](const pybind11::object&){ return {{ util.class_name(cls) }}::{{ util.oneof_type_field_enum_value_name(field) }}; })
 {% endfor %}{# oneof_fields #}
         ;
 {% endfor %}{# oneofs #}
@@ -214,7 +214,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
     registry.def("has_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
     registry.def("clear_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
     registry.def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}",
-        [](const pybind11::object&){ return _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }}; });
+        [](const pybind11::object&){ return {{ util.class_name(cls) }}::{{ util.oneof_type_field_enum_value_name(field) }}; });
 {% if util.field_is_message_type(field) %}
     registry.def("mutable_{{ util.field_name(field) }}", &{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
 {% else %}
@@ -236,10 +236,10 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endif %}{# field label type #}
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
-    pybind11::enum_<_{{ util.class_name(cls) }}_::{{ util.oneof_enum_name(oneof) }}>(registry, "{{ util.oneof_enum_name(oneof) }}")
-        .value("{{ util.oneof_name(oneof).upper() }}_NOT_SET", _{{ util.class_name(cls) }}_::{{ util.oneof_name(oneof).upper() }}_NOT_SET)
+    pybind11::enum_<{{ util.class_name(cls) }}::{{ util.oneof_enum_name(oneof) }}>(registry, "{{ util.oneof_enum_name(oneof) }}")
+        .value("{{ util.oneof_name(oneof).upper() }}_NOT_SET", {{ util.class_name(cls) }}::{{ util.oneof_name(oneof).upper() }}_NOT_SET)
 {% for field in util.oneof_type_fields(oneof) %}
-        .value("{{ util.oneof_type_field_enum_value_name(field) }}", _{{ util.class_name(cls) }}_::{{ util.oneof_type_field_enum_value_name(field) }})
+        .value("{{ util.oneof_type_field_enum_value_name(field) }}", {{ util.class_name(cls) }}::{{ util.oneof_type_field_enum_value_name(field) }})
 {% endfor %}{# oneof_fields #}
         ;
     registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
