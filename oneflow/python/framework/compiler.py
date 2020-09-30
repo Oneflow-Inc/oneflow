@@ -41,9 +41,18 @@ import oneflow
 import inspect
 
 
+job_map = {}
+
+
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(function_desc)
+        # NOTE(Liang Depeng): Save the original network definition before rewriting the graph.
+        global job_map
+        job_set = c_api_util.GetJobSet()
+        for job in job_set.job:
+            if job.job_conf.job_name == function_desc.job_func.__name__:
+                job_map[function_desc.job_func.__name__] = job
         c_api_util.CurJobBuildAndInferCtx_Complete()
 
 
