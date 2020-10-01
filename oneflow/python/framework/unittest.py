@@ -139,15 +139,12 @@ class TestCase(unittest.TestCase):
         oneflow.enable_eager_execution(should_enable_eager())
         oneflow.experimental.enable_typing_check(should_enable_typing_check())
 
-    def tearDown(self):
-        oneflow.clear_default_session()
-
 
 @oneflow_export("unittest.OneGpuTestCase")
 class OneGpuTestCase(TestCase):
     def setUp(self):
         if node_size() == 1 and gpu_device_num() == 1:
-            super().__init__()
+            super().setUp()
         else:
             skip_reason = "skipping 1 gpu case: {!r}".format(self)
             self.skipTest(skip_reason)
