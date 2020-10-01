@@ -435,8 +435,6 @@ class TestBatchNormalization(flow.unittest.OneGpuTestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_train_consistent(test_case):
-        # TODO(tsai): this always fails
-        return
         flow.config.enable_debug_mode(True)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
