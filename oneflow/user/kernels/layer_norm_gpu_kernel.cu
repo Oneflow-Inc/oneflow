@@ -179,20 +179,20 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
   using LU = LayerNormUtil<T>;
   extern __shared__ __align__(sizeof(ComputeType)) unsigned char fw_shared_buf[];
   auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
-  __shared__ ComputeType row_reduce_mean;
-  __shared__ ComputeType row_reduce_inv_var;
+  __shared__ ComputeType row_mean_shared;
+  __shared__ ComputeType row_inv_var_shared;
   typedef cub::BlockReduce<ComputeType, kLayerNormForwardGpuBlockSize> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_mean_reduce_tmp_storage;
   __shared__ typename BlockReduce::TempStorage cub_variance_reduce_tmp_storage;
-  ComputeType val_scale = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(norm_size);
+  ComputeType inv_norm_size = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(norm_size);
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * norm_size;
-    const T* in_row = x + row_offset;
+    const T* x_row = x + row_offset;
     ComputeType thread_sum = 0;
     ComputeType thread_square_sum = 0;
     const int tid = threadIdx.x;
     for (int col = tid; col < norm_size; col += blockDim.x) {
-      const ComputeType val = LU::ToComputeType(in_row[col]);
+      const ComputeType val = LU::ToComputeType(x_row[col]);
       compute_buf[col] = val;
       thread_sum += val;
       thread_square_sum += val * val;
@@ -202,18 +202,18 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
     ComputeType block_square_sum =
         BlockReduce(cub_variance_reduce_tmp_storage).Reduce(thread_square_sum, cub::Sum());
     if (tid == 0) {
-      ComputeType mean_val = block_sum * val_scale;
-      row_reduce_mean = mean_val;
-      mean[row] = mean_val;
-      ComputeType variance_val =
-          max(block_square_sum * val_scale - mean_val * mean_val, static_cast<ComputeType>(0));
-      ComputeType inv_var_val = rsqrt(variance_val + static_cast<ComputeType>(epsilon));
-      row_reduce_inv_var = inv_var_val;
-      inv_variance[row] = inv_var_val;
+      ComputeType row_mean = block_sum * inv_norm_size;
+      row_mean_shared = row_mean;
+      mean[row] = row_mean;
+      ComputeType row_variance =
+          max(block_square_sum * inv_norm_size - row_mean * row_mean, static_cast<ComputeType>(0));
+      ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+      row_inv_var_shared = row_inv_var;
+      inv_variance[row] = row_inv_var;
     }
     __syncthreads();
-    ComputeType mean = row_reduce_mean;
-    ComputeType inv_var = row_reduce_inv_var;
+    ComputeType mean = row_mean_shared;
+    ComputeType inv_var = row_inv_var_shared;
     for (int col = threadIdx.x; col < norm_size; col += blockDim.x) {
       int offset = row_offset + col;
       ComputeType val = compute_buf[col];
@@ -260,10 +260,10 @@ void LayerNormForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const
           reinterpret_cast<half*>(normalized_ptr), reinterpret_cast<half*>(y_ptr));
 }
 
-int GetFusedKernelMinNormSize() { return 64; }
+int GetForwardFusedKernelMinNormSize() { return 64; }
 
 template<typename T>
-int GetFusedKernelMaxActiveBlocks(const int32_t norm_size) {
+int GetForwardFusedKernelMaxActiveBlocks(const int32_t norm_size) {
   int max_active_blocks;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>,
@@ -272,7 +272,7 @@ int GetFusedKernelMaxActiveBlocks(const int32_t norm_size) {
 }
 
 template<>
-int GetFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
+int GetForwardFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
   int max_active_blocks;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>,
@@ -281,9 +281,9 @@ int GetFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
 }
 
 template<typename T>
-bool IsFusedKernelSupported(const int32_t norm_size, const int32_t instance_size) {
-  if (norm_size >= GetFusedKernelMinNormSize() && norm_size % 32 == 0
-      && GetFusedKernelMaxActiveBlocks<T>(norm_size) > 0
+bool IsForwardFusedKernelSupported(const int32_t norm_size, const int32_t instance_size) {
+  if (norm_size >= GetForwardFusedKernelMinNormSize() && norm_size % 32 == 0
+      && GetForwardFusedKernelMaxActiveBlocks<T>(norm_size) > 0
       && (instance_size == 0 || norm_size == instance_size)) {
     return true;
   } else {
@@ -414,7 +414,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
       }
       CHECK_EQ(y->shape().elem_cnt() % instance_size, 0);
     }
-    if (IsFusedKernelSupported<T>(norm_size, instance_size)) {
+    if (IsForwardFusedKernelSupported<T>(norm_size, instance_size)) {
       LayerNormForwardGpu<T>(ctx->device_ctx(), num_instances, norm_size, epsilon, x->dptr<T>(),
                              gamma_ptr, beta_ptr, normalized->mut_dptr<T>(), y->mut_dptr<T>(), mean,
                              inv_variance);
