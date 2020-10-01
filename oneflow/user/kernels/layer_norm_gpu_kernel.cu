@@ -171,23 +171,8 @@ int GetLayerNormForwardNumBlocks(const int num_instances) {
   return std::min(static_cast<int>(num_instances), kCudaMaxBlocksNum);
 }
 
-int GetMinNormSize() { return 32; }
-
-int GetMaxNormSize() { return 1024; }
-
-template<typename T>
-struct RsqrtFunc {
-  static __device__ T Call(const T x) { return rsqrt(x); }
-};
-
-template<>
-struct RsqrtFunc<float> {
-  static __device__ float Call(const float x) { return rsqrtf(x); }
-};
-
 template<typename T, typename ComputeType>
 __global__ void LayerNormForwardImpl(const int num_instances, const int norm_size,
-                                     const bool do_scale, const bool do_center,
                                      const double epsilon, const T* x, const T* gamma,
                                      const T* beta, ComputeType* mean, ComputeType* inv_variance,
                                      T* normalized, T* y) {
@@ -222,8 +207,7 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
       mean[row] = mean_val;
       ComputeType variance_val =
           max(block_square_sum * val_scale - mean_val * mean_val, static_cast<ComputeType>(0));
-      ComputeType inv_var_val =
-          RsqrtFunc<ComputeType>::Call(variance_val + static_cast<ComputeType>(epsilon));
+      ComputeType inv_var_val = rsqrt(variance_val + static_cast<ComputeType>(epsilon));
       row_reduce_inv_var = inv_var_val;
       inv_variance[row] = inv_var_val;
     }
@@ -234,13 +218,13 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
       int offset = row_offset + col;
       ComputeType val = compute_buf[col];
       val = (val - mean) * inv_var;
-      if (do_scale || do_center) {
+      if (gamma != nullptr || beta != nullptr) {
         int elem_id = col;
-        if (do_scale) {
+        if (gamma != nullptr) {
           normalized[offset] = LU::FromComputeType(val);
           val *= LU::ToComputeType(gamma[elem_id]);
         }
-        if (do_center) { val += LU::ToComputeType(beta[elem_id]); }
+        if (beta != nullptr) { val += LU::ToComputeType(beta[elem_id]); }
       }
       y[offset] = LU::FromComputeType(val);
     }
@@ -249,35 +233,37 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
 
 template<typename T>
 void LayerNormForwardGpu(DeviceCtx* ctx, const int num_instances, const int norm_size,
-                         const bool scale, const bool center, const double epsilon, const T* x_ptr,
-                         const T* gamma_ptr, const T* beta_ptr, T* normalized_ptr, T* y_ptr,
-                         user_op::Tensor* mean, user_op::Tensor* inv_variance) {
+                         const double epsilon, const T* x_ptr, const T* gamma_ptr,
+                         const T* beta_ptr, T* normalized_ptr, T* y_ptr, user_op::Tensor* mean,
+                         user_op::Tensor* inv_variance) {
   LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>
       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
          GetForwardDynamicSharedMemorySize<T>(norm_size), ctx->cuda_stream()>>>(
-          num_instances, norm_size, scale, center, epsilon, x_ptr, gamma_ptr, beta_ptr,
+          num_instances, norm_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
           mean->mut_dptr<typename LayerNormUtil<T>::ComputeType>(),
           inv_variance->mut_dptr<typename LayerNormUtil<T>::ComputeType>(), normalized_ptr, y_ptr);
 }
 
 template<>
 void LayerNormForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const int norm_size,
-                                  const bool scale, const bool center, const double epsilon,
-                                  const float16* x_ptr, const float16* gamma_ptr,
-                                  const float16* beta_ptr, float16* normalized_ptr, float16* y_ptr,
-                                  user_op::Tensor* mean, user_op::Tensor* inv_variance) {
+                                  const double epsilon, const float16* x_ptr,
+                                  const float16* gamma_ptr, const float16* beta_ptr,
+                                  float16* normalized_ptr, float16* y_ptr, user_op::Tensor* mean,
+                                  user_op::Tensor* inv_variance) {
   LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>
       <<<GetLayerNormForwardNumBlocks(num_instances), GetLayerNormForwardBlockSize(),
          GetForwardDynamicSharedMemorySize<half>(norm_size), ctx->cuda_stream()>>>(
-          num_instances, norm_size, scale, center, epsilon, reinterpret_cast<const half*>(x_ptr),
+          num_instances, norm_size, epsilon, reinterpret_cast<const half*>(x_ptr),
           reinterpret_cast<const half*>(gamma_ptr), reinterpret_cast<const half*>(beta_ptr),
           mean->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
           inv_variance->mut_dptr<typename LayerNormUtil<half>::ComputeType>(),
           reinterpret_cast<half*>(normalized_ptr), reinterpret_cast<half*>(y_ptr));
 }
 
+int GetFusedKernelMinNormSize() { return 64; }
+
 template<typename T>
-int GetMaxActiveBlocks(const int32_t norm_size) {
+int GetFusedKernelMaxActiveBlocks(const int32_t norm_size) {
   int max_active_blocks;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<T, typename LayerNormUtil<T>::ComputeType>,
@@ -286,12 +272,23 @@ int GetMaxActiveBlocks(const int32_t norm_size) {
 }
 
 template<>
-int GetMaxActiveBlocks<float16>(const int32_t norm_size) {
+int GetFusedKernelMaxActiveBlocks<float16>(const int32_t norm_size) {
   int max_active_blocks;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
       &max_active_blocks, LayerNormForwardImpl<half, typename LayerNormUtil<half>::ComputeType>,
       GetLayerNormForwardBlockSize(), GetForwardDynamicSharedMemorySize<half>(norm_size)));
   return max_active_blocks;
+}
+
+template<typename T>
+bool IsFusedKernelSupported(const int32_t norm_size, const int32_t instance_size) {
+  if (norm_size >= GetFusedKernelMinNormSize() && norm_size % 32 == 0
+      && GetFusedKernelMaxActiveBlocks<T>(norm_size) > 0
+      && (instance_size == 0 || norm_size == instance_size)) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 constexpr int64_t kLayerNormParamGradGpuBlockSize = 512;
@@ -417,13 +414,10 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
       }
       CHECK_EQ(y->shape().elem_cnt() % instance_size, 0);
     }
-
-    if (norm_size >= GetMinNormSize() && norm_size <= GetMaxNormSize() && norm_size % 32 == 0
-        && GetMaxActiveBlocks<T>(norm_size) > 0
-        && (instance_size == 0 || norm_size == instance_size)) {
-      LayerNormForwardGpu<T>(ctx->device_ctx(), num_instances, norm_size, scale, center, epsilon,
-                             x->dptr<T>(), gamma_ptr, beta_ptr, normalized->mut_dptr<T>(),
-                             y->mut_dptr<T>(), mean, inv_variance);
+    if (IsFusedKernelSupported<T>(norm_size, instance_size)) {
+      LayerNormForwardGpu<T>(ctx->device_ctx(), num_instances, norm_size, epsilon, x->dptr<T>(),
+                             gamma_ptr, beta_ptr, normalized->mut_dptr<T>(), y->mut_dptr<T>(), mean,
+                             inv_variance);
     } else {
       LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
