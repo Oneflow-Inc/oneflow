@@ -1373,6 +1373,34 @@ def image_flip(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
+@oneflow_export("image.hsv", "image_hsv")
+def image_hsv(
+    image: BlobDef,
+    hue: float = 0.0,
+    saturation: float = 1.0,
+    value: float = 1.0,
+    dtype: dtype_util.dtype = dtype_util.uint8,
+    name: Optional[str] = None,
+):
+    if name is None:
+        name = id_util.UniqueStr("ImageHsv_")
+
+    assert isinstance(image, BlobDef)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("image_hsv")
+        .Input("in", [image])
+        .Output("out")
+        .Attr("hue", hue)
+        .Attr("saturation", saturation)
+        .Attr("value", value)
+        .Attr("data_type", dtype)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
 @oneflow_export("detection.object_bbox_flip", "object_bbox_flip")
 def object_bbox_flip(
     bbox: BlobDef,

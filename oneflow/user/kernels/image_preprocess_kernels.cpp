@@ -409,7 +409,6 @@ namespace {
 
 template<typename F, typename T>
 void ImageHsvStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
-                    //const float& hue, const float& saturation, const float& value
                     std::vector<float>& mat) {
   // TODO
   CHECK_EQ(input_buffer.shape().NumAxes(), 3);
@@ -418,17 +417,13 @@ void ImageHsvStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffe
   int c = input_buffer.shape().At(2);
   CHECK_EQ(c, 3);
   FOR_RANGE(int, i, 0, h) {
-    auto *row_ptr = input_buffer.data<F>() + i * w * c;
+    auto* row_ptr = input_buffer.data<F>() + i * w * c;
     FOR_RANGE(int, j, 0, w) {
       std::vector<float> v_in;
-      FOR_RANGE(int, k, 0, c) {
-        v_in.push_back(row_ptr[j * c + k]);
-      }
-      std::vector<float> v_out(3, 0);
-      FOR_RANGE(int, v_i, 0, 3) {
-        FOR_RANGE(int, v_j, 0, 3) {
-          v_out.at(v_i) += mat.at(v_i * 3 + v_j) * v_in.at(v_i);
-        }
+      FOR_RANGE(int, k, 0, c) { v_in.push_back(row_ptr[j * c + k]); }
+      std::vector<float> v_out(c, 0);
+      FOR_RANGE(int, v_i, 0, c) {
+        FOR_RANGE(int, v_j, 0, c) { v_out.at(v_i) += mat.at(v_i * c + v_j) * v_in.at(v_j); }
       }
       FOR_RANGE(int, k, 0, c) {
         T adjust_value = ConvertSat<T>(v_out.at(k));
@@ -439,28 +434,26 @@ void ImageHsvStatic(const TensorBuffer& input_buffer, TensorBuffer* output_buffe
 }
 
 template<typename F>
-void ImageHsvImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer, std::vector<float>& mat,
-                  // const float& hue, const float& saturation, const float& value,
-                  DataType outbuffer_dtype) {
-  outbuffer_dtype = (outbuffer_dtype != DataType::kInvalidDataType) ? outbuffer_dtype : input_buffer.data_type();
+void ImageHsvImpl(const TensorBuffer& input_buffer, TensorBuffer* output_buffer,
+                  std::vector<float>& mat, DataType outbuffer_dtype) {
+  outbuffer_dtype =
+      (outbuffer_dtype != DataType::kInvalidDataType) ? outbuffer_dtype : input_buffer.data_type();
   output_buffer->Resize(input_buffer.shape(), outbuffer_dtype);
 
   switch (outbuffer_dtype) {
     case DataType::kChar:
     case DataType::kInt8:
     case DataType::kUInt8:
-      ImageHsvStatic<F, DataTypeToType<DataType::kUInt8>>(
-        input_buffer, output_buffer, mat);
+      ImageHsvStatic<F, DataTypeToType<DataType::kUInt8>>(input_buffer, output_buffer, mat);
       break;
     case DataType::kFloat16:
     case DataType::kFloat:
-      ImageHsvStatic<F, DataTypeToType<DataType::kFloat>>(
-        input_buffer, output_buffer, mat);
+      ImageHsvStatic<F, DataTypeToType<DataType::kFloat>>(input_buffer, output_buffer, mat);
     case DataType::kInt32:
     case DataType::kDouble:
     case DataType::kInt64:
     default: { LOG(FATAL) << "Invalid data type " << outbuffer_dtype; }
-  }  
+  }
 }
 
 #define MAKE_IMAGE_HSV_FROM_TENSOR_BUFFER_SWITCH_ENTRY(func_name, F) func_name<F>
@@ -480,10 +473,9 @@ struct ImageHsvOpKernelState final : public user_op::OpKernelState {
   std::vector<float> final_mat;
 };
 
-std::shared_ptr<user_op::OpKernelState> CreateImageHsvOpKernelState(user_op::KernelInitContext* ctx,
-                                                                    const std::string& hue_name,
-                                                                    const std::string& saturation_name,
-                                                                    const std::string& value_name) {
+std::shared_ptr<user_op::OpKernelState> CreateImageHsvOpKernelState(
+    user_op::KernelInitContext* ctx, const std::string& hue_name,
+    const std::string& saturation_name, const std::string& value_name) {
   std::shared_ptr<ImageHsvOpKernelState> state(new ImageHsvOpKernelState());
 
   state->rgb2yiq = {.299f, .587f, .114f, .596f, -.274f, -.321f, .211f, -.523f, .311f};
@@ -539,39 +531,36 @@ std::shared_ptr<user_op::OpKernelState> CreateImageHsvOpKernelState(user_op::Ker
   return std::move(state);
 }
 
-class ImageHsvKernel final: public user_op::OpKernel {
-  public:
-    ImageHsvKernel() = default;
-    ~ImageHsvKernel() = default;
+class ImageHsvKernel final : public user_op::OpKernel {
+ public:
+  ImageHsvKernel() = default;
+  ~ImageHsvKernel() = default;
 
-    std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-        user_op::KernelInitContext* ctx) const {
-      return CreateImageHsvOpKernelState(ctx, "hue", "saturation", "value");
-    }
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const {
+    return CreateImageHsvOpKernelState(ctx, "hue", "saturation", "value");
+  }
 
-  private:
-    void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-      auto* hsv_state = dynamic_cast<ImageHsvOpKernelState*>(state);
-      const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-      user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-      CHECK_EQ(in_tensor->shape().NumAxes(), 1);
-      CHECK_EQ(out_tensor->shape().NumAxes(), 1);
-      const int64_t num_images = in_tensor->shape().elem_cnt();
-      CHECK_GT(num_images, 0);
-      CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
-      /*const float hue = ctx->Attr<float>("hue");
-      const float saturation = ctx->Attr<float>("saturation");
-      const float value = ctx->Attr<float>("value");*/
-      DataType outbuffer_dtype = ctx->Attr<DataType>("data_type");
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* hsv_state = dynamic_cast<ImageHsvOpKernelState*>(state);
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in_tensor->shape().NumAxes(), 1);
+    CHECK_EQ(out_tensor->shape().NumAxes(), 1);
+    const int64_t num_images = in_tensor->shape().elem_cnt();
+    CHECK_GT(num_images, 0);
+    CHECK_EQ(out_tensor->shape().elem_cnt(), num_images);
+    DataType outbuffer_dtype = ctx->Attr<DataType>("data_type");
 
-      MultiThreadLoop(num_images, [&](size_t i) {
-        const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
-        CHECK_EQ(in_buffer.shape().NumAxes(), 3);
-        TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
-        SwitchImageHsvImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
-                                      hsv_state->final_mat, outbuffer_dtype);
-      });
-    }
+    MultiThreadLoop(num_images, [&](size_t i) {
+      const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
+      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
+      TensorBuffer* out_buffer = out_tensor->mut_dptr<TensorBuffer>() + i;
+      SwitchImageHsvImpl(SwitchCase(in_buffer.data_type()), in_buffer, out_buffer,
+                         hsv_state->final_mat, outbuffer_dtype);
+    });
+  }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
