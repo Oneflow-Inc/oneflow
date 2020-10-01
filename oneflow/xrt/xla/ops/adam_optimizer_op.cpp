@@ -37,6 +37,7 @@ class AdamOptimizerOp : public OptimizerOp {
     xla::XlaOp lr;
     xla::XlaOp beta1_t;
     xla::XlaOp beta2_t;
+    xla::XlaOp mul_scalar;
     if (do_bias_correction) {
       beta1_t = ctx->Input("beta1_t_0");
       beta2_t = ctx->Input("beta2_t_0");
@@ -51,12 +52,20 @@ class AdamOptimizerOp : public OptimizerOp {
         bcast_sizes.push_back(gradient_shape.At(i));
       }
       lr = xla::Broadcast(lr, bcast_sizes);
+      if (ctx->HasInput("mul_scalar")) {
+        mul_scalar = ctx->Input("mul_scalar_0");
+        mul_scalar = xla::Broadcast(mul_scalar, bcast_sizes);
+      }
     }
     DataType model_dtype = ctx->InputType("model_0");
     DataType gradient_dtype = ctx->InputType("model_diff_0");
+
     if (model_dtype != gradient_dtype) {
       xla::PrimitiveType data_type = DataTypeToPrimitiveType(model_dtype);
       gradient = xla::ConvertElementType(gradient, data_type);
+    }
+    if (ctx->HasInput("mul_scalar")) {
+      gradient = gradient * mul_scalar;
     }
     if(scale_val != 1) {
       xla::XlaOp scale = xla::ScalarLike(gradient, scale_val);

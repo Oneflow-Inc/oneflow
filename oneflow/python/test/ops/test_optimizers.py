@@ -100,7 +100,7 @@ def compare_with_tensorflow_adam(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=func_config)
     def testAdam(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
@@ -170,7 +170,7 @@ def compare_with_numpy_adamw(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=func_config)
     def testAdamW(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
@@ -424,7 +424,7 @@ def compare_with_tensorflow_sgd(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=func_config)
     def testSGD(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:

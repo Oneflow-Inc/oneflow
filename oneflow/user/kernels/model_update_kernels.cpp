@@ -116,15 +116,17 @@ class SGDUpdateKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* mul_scalar = ctx->Tensor4ArgNameAndIndex("mul_scalar", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     const auto scale = ctx->Attr<float>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* mul_scalar_ptr = (mul_scalar != nullptr) ? mul_scalar->dptr<T>() : nullptr;
     SGDUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), scale, l1, l2, weight_decay,
-        learning_rate->dptr<float>(), model_diff->dptr<G>(), model->mut_dptr<T>());
+        learning_rate->dptr<float>(), mul_scalar_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -209,6 +211,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* mul_scalar = ctx->Tensor4ArgNameAndIndex("mul_scalar", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
@@ -217,9 +220,10 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     const auto l2 = ctx->Attr<float>("l2");
     const auto beta = ctx->Attr<float>("beta");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* mul_scalar_ptr = (mul_scalar != nullptr) ? mul_scalar->dptr<T>() : nullptr;
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), scale, l1, l2, beta, weight_decay,
-        learning_rate->dptr<float>(), model_diff->dptr<G>(), model->mut_dptr<T>(),
+        learning_rate->dptr<float>(), mul_scalar_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
         momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -314,6 +318,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* mul_scalar = ctx->Tensor4ArgNameAndIndex("mul_scalar", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
@@ -326,6 +331,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* mul_scalar_ptr = (mul_scalar != nullptr) ? mul_scalar->dptr<T>() : nullptr;
     T* beta1_t_ptr = nullptr;
     T* beta2_t_ptr = nullptr;
     if (do_bias_correction) {
@@ -336,8 +342,9 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     }
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        do_bias_correction, weight_decay, learning_rate->dptr<float>(), model_diff->dptr<G>(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), beta1_t_ptr, beta2_t_ptr);
+        do_bias_correction, weight_decay, learning_rate->dptr<float>(), mul_scalar_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
+        beta1_t_ptr, beta2_t_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

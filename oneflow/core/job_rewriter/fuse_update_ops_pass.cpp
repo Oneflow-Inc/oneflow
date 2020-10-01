@@ -72,6 +72,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     float scale = 1;
     bool fused = false;
     LogicalBlobId model_diff_lbi = GenLogicalBlobId(user_op_conf.input("model_diff", 0));
+    std::string mul_scalar_lbn = "";
 
     [&]() {
       do {
@@ -86,6 +87,17 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         l1 = l1_l2_regularize_gradient_op_conf.attr<float>("l1");
         l2 = l1_l2_regularize_gradient_op_conf.attr<float>("l2");
         model_diff_lbi = GenLogicalBlobId(l1_l2_regularize_gradient_op_conf.input("model_diff", 0));
+        job_builder->DelOps({producer->op().op_conf()});
+        fused = true;
+      } while (false);
+
+      do {
+        const OpNode* producer = op_graph.OpNode4OpName(model_diff_lbi.op_name());
+        if (!IsUserOpWithTypeName(producer->op().op_conf(), "scalar_mul_by_tensor")) { break; }
+        if (!IsSafeToDelete(producer)) { return; }
+        const user_op::UserOpConfWrapper scalar_mul_by_tensor_op_conf(producer->op().op_conf());
+        model_diff_lbi = GenLogicalBlobId(scalar_mul_by_tensor_op_conf.input("x", 0));
+        mul_scalar_lbn = scalar_mul_by_tensor_op_conf.input("scalar", 0);
         job_builder->DelOps({producer->op().op_conf()});
         fused = true;
       } while (false);
@@ -134,6 +146,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         .Attr<float>("l1", l1)
         .Attr<float>("l2", l2)
         .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
+    if (mul_scalar_lbn != "") { fused_op_builder.Input("mul_scalar", mul_scalar_lbn); }
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {

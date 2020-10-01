@@ -45,7 +45,8 @@ struct SGDUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct SGDUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float weight_decay,
-                     const float* learning_rate, const G* model_diff, T* model);
+                     const float* learning_rate, const T* mul_scalar, const G* model_diff,
+                     T* model);
 };
 
 template<DeviceType device_type, typename T, typename K>
@@ -91,8 +92,8 @@ struct AdamUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta,
-                     float weight_decay, const float* learning_rate, const G* model_diff, T* model,
-                     T* momentum);
+                     float weight_decay, const float* learning_rate, const T* mul_scalar,
+                     const G* model_diff, T* model, T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -107,8 +108,8 @@ template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, bool do_bias_correction, float weight_decay,
-                     const float* learning_rate, const G* model_diff, T* model, T* m, T* v,
-                     T* beta1_t, T* beta2_t);
+                     const float* learning_rate, const T* mul_scalar, const G* model_diff, T* model,
+                     T* m, T* v, T* beta1_t, T* beta2_t);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
