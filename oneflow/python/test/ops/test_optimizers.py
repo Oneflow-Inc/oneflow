@@ -664,6 +664,11 @@ def compare_with_flow_job_fused_sgd_model_update(
             )
             constant_val = flow.constant(3.0, dtype=flow.float32, shape=(1,))
             x = x * constant_val
+            x = x * 2.0
+            if device_type == "gpu":
+                x = flow.cast(x, flow.float16)
+                x = flow.math.relu(x)
+                x = flow.cast(x, flow.float)
             loss = flow.math.reduce_mean(x * random_mask)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
@@ -729,6 +734,13 @@ def compare_with_flow_job_fused_adam_model_update(
                 initializer=flow.ones_initializer(),
                 trainable=True,
             )
+            constant_val = flow.constant(3.0, dtype=flow.float32, shape=(1,))
+            x = x * constant_val
+            x = x * 2.0
+            if device_type == "gpu":
+                x = flow.cast(x, flow.float16)
+                x = flow.math.relu(x)
+                x = flow.cast(x, flow.float)
             loss = flow.math.reduce_mean(x * random_mask)
             flow.optimizer.Adam(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
