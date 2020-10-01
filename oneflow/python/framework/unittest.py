@@ -139,6 +139,9 @@ class TestCase(unittest.TestCase):
         oneflow.enable_eager_execution(should_enable_eager())
         oneflow.experimental.enable_typing_check(should_enable_typing_check())
 
+    def tearDown(self):
+        oneflow.clear_default_session()
+
 
 @oneflow_export("unittest.OneGpuTestCase")
 class OneGpuTestCase(TestCase):
