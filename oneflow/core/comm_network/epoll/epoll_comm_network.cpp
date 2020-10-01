@@ -78,7 +78,7 @@ EpollCommNet::~EpollCommNet() {
     LOG(INFO) << "CommNet Thread " << i << " finish";
     pollers_[i]->Stop();
   }
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   for (IOEventPoller* poller : pollers_) { delete poller; }
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
