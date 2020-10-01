@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
+import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.id_util as id_util
@@ -249,7 +250,13 @@ MatchInterNodeOneToOne = (
 
 @boxing_condition(MatchInterNodeOneToOne)
 def InterNodeOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-    TODO()
+    receive_blob_object = _MakeNewBlobObjectLike(
+        builder,
+        produced_blob_object,
+        consumer_op_arg_parallel_attr.parallel_desc_symbol,
+    )
+    builder.Build121AssignInstruction(receive_blob_object, produced_blob_object)
+    return receive_blob_object
 
 
 MatchCpuBroadcastOneToOne = (
@@ -757,6 +764,26 @@ def _GetEagerNcclAllReduce(parallel_conf, ibn2blob_object):
     op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
     return op_infer_util.Infer(op_conf, ibn2blob_object)
+
+
+def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
+    op_conf = op_conf_pb.OperatorConf()
+    op_conf.name = id_util.UniqueStr("Input")
+    op_conf.device_tag = new_parallel_desc_symbol.device_tag
+    op_conf.input_conf.out = "out"
+    blob_object.op_arg_parallel_attr.DumpToToInterfaceBlobConf(
+        op_conf.input_conf.blob_conf
+    )
+    blob_object.op_arg_blob_attr.DumpToToInterfaceBlobConf(op_conf.input_conf.blob_conf)
+    op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
+    upstream_signature = op_attribute_pb.OpNodeSignature()
+    op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
+    parallel_conf = new_parallel_desc_symbol.parallel_conf
+    bn_in_op2blob_object = {}
+    builder.BoxingStatelessCall(
+        op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+    )
+    return bn_in_op2blob_object["out"]
 
 
 NcclAllReduce = Sequential(

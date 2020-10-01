@@ -20,6 +20,7 @@ import oneflow as flow
 from test_util import GenArgDict
 import oneflow.typing as oft
 import os
+import logging
 
 flow_to_np_dtype_dict = {
     flow.int32: np.int32,
@@ -104,14 +105,18 @@ def test_eager_assign_121(test_case):
 
 
 @flow.unittest.num_nodes_required(2)
-def test_2node_eager_assign_121(test_case):
-    if not flow.eager_execution_enabled():
-        return
+def test_2node_assign(test_case):
+    if flow.eager_execution_enabled():
+        assign = flow.experimental.eager_assign_121
+    else:
+        assign = flow.assign
     arg_dict = OrderedDict()
-    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    arg_dict["dtype"] = [flow.float, flow.double]
+    # arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+    arg_dict["shape"] = [(30, 4)]
+    # arg_dict["dtype"] = [flow.float, flow.double]
+    arg_dict["dtype"] = [flow.float]
     arg_dict["device_type"] = ["cpu"]
-    arg_dict["assign"] = [flow.experimental.eager_assign_121]
+    arg_dict["assign"] = [assign]
     for arg in GenArgDict(arg_dict):
         _2node_compare_with_np(test_case, **arg)
 
@@ -119,7 +124,8 @@ def test_2node_eager_assign_121(test_case):
 def _2node_compare_with_np(test_case, shape, dtype, device_type, assign):
     x = _random_input(shape, flow_to_np_dtype_dict[dtype])
     of_y = _2node_of_assign_and_relu(x, dtype, device_type, assign=assign)
-    test_case.assertTrue(np.allclose(_np_relu(x), of_y))
+    np_y = _np_relu(x)
+    test_case.assertTrue(np.allclose(np_y, of_y))
 
 
 def _2node_of_assign_and_relu(value, dtype, device_type, assign=flow.assign):
@@ -141,7 +147,7 @@ def _2node_of_assign_and_relu(value, dtype, device_type, assign=flow.assign):
                 dtype=dtype,
                 initializer=flow.constant_initializer(0),
             )
-        assign(var, value_def)
+            assign(var, value_def)
 
     @flow.global_function(function_config=func_config)
     def relu_fn():
@@ -152,7 +158,11 @@ def _2node_of_assign_and_relu(value, dtype, device_type, assign=flow.assign):
                 dtype=dtype,
                 initializer=flow.constant_initializer(0),
             )
-        return flow.nn.relu(var)
+        logging.info("+ flow.nn.relu")
+        ret = flow.nn.relu(var)
+        logging.info("+ return ret")
+        return ret
 
     assign_fn(value)
-    return relu_fn().get().numpy()
+    relu_ret = relu_fn().get()
+    return relu_ret.numpy()

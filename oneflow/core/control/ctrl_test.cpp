@@ -67,7 +67,7 @@ TEST(CtrlServer, new_delete) {
   Global<ResourceDesc, ForSession>::New(GetResource());
 
   // do test
-  // OF_BARRIER_ALL();
+  // OF_ENV_BARRIER();
 
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();

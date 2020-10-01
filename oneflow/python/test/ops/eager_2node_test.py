@@ -31,9 +31,9 @@ flags.DEFINE_integer("ctrl_port", "9524", "control port")
 def Init():
     flow.env.machine(FLAGS.nodes_list.split(","))
     flow.env.ctrl_port(FLAGS.ctrl_port)
-    flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+    # flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
     flow.env.init()
-    atexit.register(flow.deprecated.delete_worker)
+    # atexit.register(flow.deprecated.delete_worker)
 
 
 class _ClearDefaultSession(object):
