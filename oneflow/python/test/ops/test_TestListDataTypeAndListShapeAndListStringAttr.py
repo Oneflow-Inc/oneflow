@@ -76,7 +76,7 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-class Test_TestListDataTypeAndListShapeAndListStringAttr(flow.unittest.OneGpuTestCase):
+class Test_TestListDataTypeAndListShapeAndListStringAttr(flow.unittest.TestCase_1n1c):
     def test_data_type_attr(test_case):
         for arg in gen_arg_list():
             RunTest(*arg)

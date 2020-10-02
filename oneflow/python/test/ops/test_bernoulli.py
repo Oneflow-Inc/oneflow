@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-class TestBernoulli(flow.unittest.OneGpuTestCase):
+class TestBernoulli(flow.unittest.TestCase_1n1c):
     def test_bernoulli(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())

@@ -76,7 +76,10 @@ def _test_two_stage_reduce(
     _compare_with_numpy(test_case, np_func, x, y, axis=tuple(axis))
 
 
-class TestTwoStageReduce(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 4, "only runs when gpu_device_num is 4"
+)
+class TestTwoStageReduce(flow.unittest.TestCase):
     def test_two_stage_reduce_max(test_case):
         arg_dict = OrderedDict()
         arg_dict["flow_func"] = [flow.math.two_stage_reduce_max]

@@ -18,7 +18,7 @@ import numpy as np
 import oneflow as flow
 
 
-class TestNameScope(flow.unittest.OneGpuTestCase):
+class TestNameScope(flow.unittest.TestCase_1n1c):
     def test_name_scope(test_case):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()

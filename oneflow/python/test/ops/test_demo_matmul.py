@@ -19,7 +19,10 @@ import oneflow.typing as tp
 import numpy as np
 
 
-class TestDemoMatmul(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
+class TestDemoMatmul(flow.unittest.TestCase):
     def test_watch(test_case):
         flow.config.gpu_device_num(2)
         flow.config.enable_debug_mode(True)

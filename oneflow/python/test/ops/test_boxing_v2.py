@@ -209,7 +209,10 @@ def _test_multi_lbi(
     test_case.assertTrue(np.array_equal(x, r2))
 
 
-class TestBoxingV2(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 4, "only runs when gpu_device_num is 4"
+)
+class TestBoxingV2(flow.unittest.TestCase):
     def test_split_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]

@@ -66,7 +66,7 @@ def _check_non_cpu_only_relu_device(test_case):
     relu_job(np.random.rand(2, 5).astype(np.single)).get()
 
 
-class TestCpuOnlyUserOp(flow.unittest.OneGpuTestCase):
+class TestCpuOnlyUserOp(flow.unittest.TestCase_1n1c):
     def test_cpu_only_user_op(test_case):
         _check_cpu_only_relu_device(test_case)
 

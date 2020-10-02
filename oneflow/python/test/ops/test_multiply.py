@@ -101,7 +101,7 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     )
 
 
-class TestMultiply(flow.unittest.OneGpuTestCase):
+class TestMultiply(flow.unittest.TestCase_1n1c):
     def test_scalar_mul(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

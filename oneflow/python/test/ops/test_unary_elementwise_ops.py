@@ -20,7 +20,10 @@ from scipy.special import erf, erfc, gammaln
 import oneflow.typing as oft
 
 
-class TestUnaryElementwiseOps(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
+class TestUnaryElementwiseOps(flow.unittest.TestCase):
     def test_abs(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

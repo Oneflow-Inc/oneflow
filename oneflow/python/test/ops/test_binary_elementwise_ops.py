@@ -144,7 +144,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-class TestBinaryElementwiseOps(flow.unittest.OneGpuTestCase):
+class TestBinaryElementwiseOps(flow.unittest.TestCase_1n1c):
     def test_floordiv(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]

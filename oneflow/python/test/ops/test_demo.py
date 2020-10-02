@@ -19,13 +19,18 @@ import oneflow as flow
 # test file names and methods names are starts with `test'
 
 
-class TestDemo(flow.unittest.TestCase):
+class TestDemo(flow.unittest.TestCase_1n1c):
+    @unittest.skipIf(
+        flow.unittest.env.node_size() != 1, "only runs when node_size is 1"
+    )
     def test_foo(test_case):
         # only one arg required
         # you can use `test_case' like unittest.TestCase instance
         pass
 
-    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
+    @unittest.skipIf(
+        flow.unittest.env.node_size() != 2, "only runs when node_size is 2"
+    )
     def test_bar(test_case):
         # default num_nodes_required is 1
         pass

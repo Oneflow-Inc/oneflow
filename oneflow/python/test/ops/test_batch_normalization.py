@@ -420,7 +420,7 @@ def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
     )
 
 
-class TestBatchNormalization(flow.unittest.OneGpuTestCase):
+class TestBatchNormalization(flow.unittest.TestCase_1n1c):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_no_watch_scope_consistent(test_case):
         func_config = flow.FunctionConfig()
