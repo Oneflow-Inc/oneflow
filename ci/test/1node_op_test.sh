@@ -12,10 +12,10 @@ cd $test_tmp_dir
 
 cd test/ops/
 
-python3 -m unittest --failfast
+python3 -m unittest --failfast --verbose
 
 export ONEFLOW_TEST_GPU_DEVICE_NUM=2
-python3 -m unittest --failfast
+python3 -m unittest --failfast --verbose
 
 export ONEFLOW_TEST_GPU_DEVICE_NUM=4
-python3 -m unittest --failfast
+python3 -m unittest --failfast --verbose
