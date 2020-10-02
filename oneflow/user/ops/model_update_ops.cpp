@@ -65,8 +65,8 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
-  const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-  if (scale_by_tensor != nullptr) {
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
   }
   return Maybe<void>::Ok();
@@ -92,8 +92,8 @@ Maybe<void> InferMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckTensorDescLike(momentum, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
-  const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-  if (scale_by_tensor != nullptr) {
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
   }
   return Maybe<void>::Ok();
@@ -125,8 +125,8 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckTensorDescLike(v, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
-  const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-  if (scale_by_tensor != nullptr) {
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
   }
   if (ctx->Attr<bool>("do_bias_correction")) {
