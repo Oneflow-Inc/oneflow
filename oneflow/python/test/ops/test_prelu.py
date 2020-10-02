@@ -99,7 +99,7 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
     _check(test_case, x, y.numpy(), shared_axes)
 
 
-class TestPrelu(flow.unittest.TestCase_1n1c):
+class TestPrelu(flow.unittest.TestCase_1n1d):
     def test_prelu(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]

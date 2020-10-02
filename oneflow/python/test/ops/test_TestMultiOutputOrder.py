@@ -61,7 +61,7 @@ def GenerateTest(test_case, shape):
     )
 
 
-class Test_TestMultiOutputOrder(flow.unittest.TestCase_1n1c):
+class Test_TestMultiOutputOrder(flow.unittest.TestCase_1n1d):
     def test_TestMultiOutputOrder_example_1(test_case):
         GenerateTest(test_case, (7,))
 

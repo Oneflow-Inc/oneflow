@@ -73,7 +73,7 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-class TestSqueeze(flow.unittest.TestCase_1n1c):
+class TestSqueeze(flow.unittest.TestCase_1n1d):
     def test_squeeze(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)

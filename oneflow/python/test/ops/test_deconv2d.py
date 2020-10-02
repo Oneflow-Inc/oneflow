@@ -156,7 +156,7 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         )
 
 
-class TestDeconv2d(flow.unittest.TestCase_1n1c):
+class TestDeconv2d(flow.unittest.TestCase_1n1d):
     def test_deconv2d_NHWC_1n1c(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

@@ -182,7 +182,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-class TestBroadcastNormal(flow.unittest.TestCase_1n1c):
+class TestBroadcastNormal(flow.unittest.TestCase_1n1d):
     def test_broadcast_add(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

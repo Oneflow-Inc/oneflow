@@ -48,7 +48,7 @@ def TODO_test_mirror_testsource(test_case):
     test_case.assertTrue(np.array_equal(y, np.arange(5.0)))
 
 
-class Test_TestSource(flow.unittest.TestCase_1n1c):
+class Test_TestSource(flow.unittest.TestCase_1n1d):
     def test_testsource(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

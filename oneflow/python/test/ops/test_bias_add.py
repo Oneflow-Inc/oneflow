@@ -128,7 +128,7 @@ def CompareBiasAddWithTensorFlow(
     assert np.allclose(of_x_diff2, tf_x_diff2, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
-class TestBiasAdd(flow.unittest.TestCase_1n1c):
+class TestBiasAdd(flow.unittest.TestCase_1n1d):
     def test_bias_add_nchw(test_case):
         arg_dict = OrderedDict()
         arg_dict["data_type"] = ["float16", "float32"]

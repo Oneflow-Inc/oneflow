@@ -72,7 +72,7 @@ def _compare_image_flip_with_cv(test_case, image_files):
         test_case.assertTrue(np.allclose(exp_flip_image, flip_image))
 
 
-class TestImageFlip(flow.unittest.TestCase_1n1c):
+class TestImageFlip(flow.unittest.TestCase_1n1d):
     def test_image_flip(test_case):
         _compare_image_flip_with_cv(
             test_case,

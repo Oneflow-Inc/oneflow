@@ -61,7 +61,7 @@ def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
     )
 
 
-class TestIndexedSlicesReduceSum(flow.unittest.TestCase_1n1c):
+class TestIndexedSlicesReduceSum(flow.unittest.TestCase_1n1d):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_indexed_slices_reduce_sum_gpu(test_case):
         indices = np.random.randint(0, 32, 1024).astype(np.int32)

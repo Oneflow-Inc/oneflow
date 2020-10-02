@@ -90,7 +90,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
     )
 
 
-class TestSoftmax(flow.unittest.TestCase_1n1c):
+class TestSoftmax(flow.unittest.TestCase_1n1d):
     def test_softmax(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

@@ -226,7 +226,7 @@ def _compare_gather_nd_dynamic_indices_with_tf(
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-class TestGatherNd(flow.unittest.TestCase_1n1c):
+class TestGatherNd(flow.unittest.TestCase_1n1d):
     def test_gather_nd(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

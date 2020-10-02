@@ -148,7 +148,7 @@ def compare_with_tensorflow(
     )
 
 
-class TestNnConv2dPadding(flow.unittest.TestCase_1n1c):
+class TestNnConv2dPadding(flow.unittest.TestCase_1n1d):
     def test_padding_valid(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

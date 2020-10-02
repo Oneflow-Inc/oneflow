@@ -30,7 +30,7 @@ def my_test_source(name):
     )
 
 
-class Test_TestDynamicSource(flow.unittest.TestCase_1n1c):
+class Test_TestDynamicSource(flow.unittest.TestCase_1n1d):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_test_dynamic_source(test_case):
         func_config = flow.FunctionConfig()

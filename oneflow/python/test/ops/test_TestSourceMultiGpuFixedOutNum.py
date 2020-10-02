@@ -30,7 +30,7 @@ def my_test_source(name, out_num):
     )
 
 
-class Test_TestSourceMultiGpuFixedOutNum(flow.unittest.TestCase_1n1c):
+class Test_TestSourceMultiGpuFixedOutNum(flow.unittest.TestCase_1n1d):
     def test_testsource_2_gpu(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

@@ -101,7 +101,7 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     )
 
 
-class TestScalarByTensorOps(flow.unittest.TestCase_1n1c):
+class TestScalarByTensorOps(flow.unittest.TestCase_1n1d):
     def test_add(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

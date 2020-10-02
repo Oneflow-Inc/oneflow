@@ -54,7 +54,7 @@ def gen_numpy_data(prediction, label, beta=1.0):
     }
 
 
-class TestSmoothL1Loss(flow.unittest.TestCase_1n1c):
+class TestSmoothL1Loss(flow.unittest.TestCase_1n1d):
     def test_smooth_l1_loss(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

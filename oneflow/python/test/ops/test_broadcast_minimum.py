@@ -40,7 +40,7 @@ def _run_test(test_case, a, b, dtype, device):
     _check(test_case, a, b, out.numpy())
 
 
-class TestBroadcastMinimum(flow.unittest.TestCase_1n1c):
+class TestBroadcastMinimum(flow.unittest.TestCase_1n1d):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_broadcast_minimum_random_gpu(test_case):
         a = np.random.rand(1024, 1024).astype(np.float32)
