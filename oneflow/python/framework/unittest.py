@@ -80,12 +80,12 @@ def _GetNumOfNodes(func):
     return getattr(func, "__oneflow_test_case_num_nodes_required__")
 
 
-@oneflow_export("unittest.env.enable_eager_execution")
+@oneflow_export("unittest.env.eager_execution_enabled")
 def eager_execution_enabled():
     return os.getenv("ONEFLOW_TEST_ENABLE_EAGER") == "1"
 
 
-@oneflow_export("unittest.env.enable_typing_check")
+@oneflow_export("unittest.env.typing_check_enabled")
 def typing_check_enabled():
     return os.getenv("ONEFLOW_TEST_ENABLE_TYPING_CHECK") == "1"
 
