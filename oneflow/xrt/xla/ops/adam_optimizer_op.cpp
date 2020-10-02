@@ -45,6 +45,9 @@ class AdamOptimizerOp : public OptimizerOp {
     } else {
       lr = learning_rate;
     }
+    if (ctx->HasInput("mul_scalar_0")) {
+        mul_scalar = ctx->Input("mul_scalar_0");
+    }
     Shape gradient_shape = ctx->InputShape("model_diff_0");
     if (gradient_shape.NumAxes() > 1) {
       std::vector<long long> bcast_sizes;
@@ -52,8 +55,7 @@ class AdamOptimizerOp : public OptimizerOp {
         bcast_sizes.push_back(gradient_shape.At(i));
       }
       lr = xla::Broadcast(lr, bcast_sizes);
-      if (ctx->HasInput("mul_scalar")) {
-        mul_scalar = ctx->Input("mul_scalar_0");
+      if (ctx->HasInput("mul_scalar_0")) {
         mul_scalar = xla::Broadcast(mul_scalar, bcast_sizes);
       }
     }
@@ -64,7 +66,7 @@ class AdamOptimizerOp : public OptimizerOp {
       xla::PrimitiveType data_type = DataTypeToPrimitiveType(model_dtype);
       gradient = xla::ConvertElementType(gradient, data_type);
     }
-    if (ctx->HasInput("mul_scalar")) {
+    if (ctx->HasInput("mul_scalar_0")) {
       gradient = gradient * mul_scalar;
     }
     if(scale_val != 1) {
