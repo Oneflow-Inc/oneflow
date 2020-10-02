@@ -14,8 +14,8 @@ cd test/ops/
 
 python3 -m unittest --failfast --verbose
 
-export ONEFLOW_TEST_GPU_DEVICE_NUM=2
+export ONEFLOW_TEST_DEVICE_NUM=2
 python3 -m unittest --failfast --verbose
 
-export ONEFLOW_TEST_GPU_DEVICE_NUM=4
+export ONEFLOW_TEST_DEVICE_NUM=4
 python3 -m unittest --failfast --verbose
