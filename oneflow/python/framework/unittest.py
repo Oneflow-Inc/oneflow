@@ -93,19 +93,25 @@ def typing_check_enabled():
 @oneflow_export("unittest.env.node_list")
 def node_list():
     node_list_str = os.getenv("ONEFLOW_TEST_NODE_LIST")
-    if node_list_str:
-        return node_list_str.split(",")
+    assert node_list_str
+    return node_list_str.split(",")
+
+
+@oneflow_export("unittest.env.has_node_list")
+def has_node_list():
+    if os.getenv("ONEFLOW_TEST_NODE_LIST"):
+        return True
     else:
-        return None
+        return False
 
 
 @oneflow_export("unittest.env.node_size")
 def node_size():
     node_list_from_env = node_list()
-    if node_list_from_env == None:
-        return 1
-    else:
+    if has_node_list():
         return len(node_list_from_env)
+    else:
+        return 1
 
 
 @oneflow_export("unittest.env.gpu_device_num")
@@ -124,16 +130,26 @@ _unittest_env_initilized = False
 class TestCase(unittest.TestCase):
     def setUp(self):
 
-        node_list_from_env = node_list()
-        if node_list_from_env:
+        if has_node_list():
             assert node_size() > 1
-            oneflow.env.machine(node_list_from_env)
+            oneflow.env.machine(node_list())
+
+            data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+            assert data_port, "env var ONEFLOW_TEST_DATA_PORT not set"
+            oneflow.env.data_port(int(dport))
+
+            ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
+            assert ctrl_port, "env var ONEFLOW_TEST_CTRL_PORT not set"
+            oneflow.env.ctrl_port(int(ctrl_port))
+
             oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
-            atexit.register(flow.deprecated.delete_worker)
+
         global _unittest_env_initilized
         if _unittest_env_initilized == False:
             oneflow.env.init()
             _unittest_env_initilized = True
+            if has_node_list():
+                atexit.register(flow.deprecated.delete_worker)
 
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
