@@ -114,11 +114,11 @@ def node_size():
         return 1
 
 
-@oneflow_export("unittest.env.gpu_device_num")
-def gpu_device_num():
-    gpu_num_str = os.getenv("ONEFLOW_TEST_GPU_DEVICE_NUM")
-    if gpu_num_str:
-        return int(gpu_num_str)
+@oneflow_export("unittest.env.device_num")
+def device_num():
+    device_num_str = os.getenv("ONEFLOW_TEST_DEVICE_NUM")
+    if device_num_str:
+        return int(device_num_str)
     else:
         return 1
 
@@ -159,7 +159,7 @@ class TestCase(unittest.TestCase):
 @oneflow_export("unittest.TestCase_1n1d")
 class TestCase_1n1d(TestCase):
     def setUp(self):
-        if node_size() == 1 and gpu_device_num() == 1:
+        if node_size() == 1 and device_num() == 1:
             super().setUp()
         else:
             skip_reason = (
