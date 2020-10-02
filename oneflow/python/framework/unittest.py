@@ -107,8 +107,8 @@ def has_node_list():
 
 @oneflow_export("unittest.env.node_size")
 def node_size():
-    node_list_from_env = node_list()
     if has_node_list():
+        node_list_from_env = node_list()
         return len(node_list_from_env)
     else:
         return 1
