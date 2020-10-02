@@ -156,11 +156,13 @@ class TestCase(unittest.TestCase):
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
-@oneflow_export("unittest.TestCase_1n1c")
-class TestCase_1n1c(TestCase):
+@oneflow_export("unittest.TestCase_1n1d")
+class TestCase_1n1d(TestCase):
     def setUp(self):
         if node_size() == 1 and gpu_device_num() == 1:
             super().setUp()
         else:
-            skip_reason = "only runs when node_size is 1 and gpu_device_num is 1: {!r}"
+            skip_reason = (
+                "only runs when node_size is 1 and g(c)pu_device_num is 1: {!r}"
+            )
             self.skipTest(skip_reason)
