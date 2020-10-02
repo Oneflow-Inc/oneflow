@@ -61,7 +61,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 1, "only runs when node_size is 1"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+        flow.unittest.env.device_num() != 1, "only runs when device_num is 1"
     )
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_ccrelu(test_case):
@@ -73,7 +73,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 1, "only runs when node_size is 1"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+        flow.unittest.env.device_num() != 1, "only runs when device_num is 1"
     )
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_mirror_ccrelu(test_case):
@@ -85,7 +85,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 1, "only runs when node_size is 1"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+        flow.unittest.env.device_num() != 2, "only runs when device_num is 2"
     )
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_1n2c_mirror_dynamic_ccrelu(test_case):
@@ -108,7 +108,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 2, "only runs when node_size is 2"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+        flow.unittest.env.device_num() != 1, "only runs when device_num is 1"
     )
     def test_ccrelu_2n1c_0(test_case):
         func_config = flow.FunctionConfig()
@@ -119,7 +119,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 2, "only runs when node_size is 2"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+        flow.unittest.env.device_num() != 1, "only runs when device_num is 1"
     )
     def test_ccrelu_2n1c_1(test_case):
         func_config = flow.FunctionConfig()
@@ -130,7 +130,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 2, "only runs when node_size is 2"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+        flow.unittest.env.device_num() != 1, "only runs when device_num is 1"
     )
     def test_ccrelu_2n1c_2(test_case):
         func_config = flow.FunctionConfig()
@@ -141,7 +141,7 @@ class TestCcrelu(flow.unittest.TestCase):
         flow.unittest.env.node_size() != 2, "only runs when node_size is 2"
     )
     @unittest.skipIf(
-        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+        flow.unittest.env.device_num() != 1, "only runs when device_num is 1"
     )
     def test_ccrelu_2n1c_3(test_case):
         func_config = flow.FunctionConfig()

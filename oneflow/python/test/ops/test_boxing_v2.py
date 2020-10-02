@@ -210,9 +210,7 @@ def _test_multi_lbi(
 
 
 @unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(
-    flow.unittest.env.gpu_device_num() != 4, "only runs when gpu_device_num is 4"
-)
+@unittest.skipIf(flow.unittest.env.device_num() != 4, "only runs when device_num is 4")
 class TestBoxingV2(flow.unittest.TestCase):
     def test_split_to_split(test_case):
         arg_dict = OrderedDict()

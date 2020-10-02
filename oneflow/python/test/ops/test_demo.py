@@ -19,9 +19,7 @@ import oneflow as flow
 # test file names and methods names are starts with `test'
 
 
-@unittest.skipIf(
-    flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
-)
+@unittest.skipIf(flow.unittest.env.device_num() != 1, "only runs when device_num is 1")
 class TestDemo(flow.unittest.TestCase):
     @unittest.skipIf(
         flow.unittest.env.node_size() != 1, "only runs when node_size is 1"

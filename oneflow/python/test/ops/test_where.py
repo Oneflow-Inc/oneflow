@@ -221,9 +221,7 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
 
 
 @unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(
-    flow.unittest.env.gpu_device_num() != 4, "only runs when gpu_device_num is 4"
-)
+@unittest.skipIf(flow.unittest.env.device_num() != 4, "only runs when device_num is 4")
 class TestWhere(flow.unittest.TestCase):
     def test_where(test_case):
         arg_dict = OrderedDict()

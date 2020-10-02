@@ -62,9 +62,7 @@ def _test_non_distribute_optimizer_var_as_loss(test_case):
 
 
 @unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(
-    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
-)
+@unittest.skipIf(flow.unittest.env.device_num() != 2, "only runs when device_num is 2")
 class TestNonDistributeOptimizer(flow.unittest.TestCase):
     def test_non_distribute_optimizer(test_case):
         flow.config.gpu_device_num(2)
