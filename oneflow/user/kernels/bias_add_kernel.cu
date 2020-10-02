@@ -73,14 +73,10 @@ __global__ void BiasAddRowGpu(const Index elem_cnt, const Index bias_size, const
 }
 
 template<typename Index>
-__global__ void BiasAddRowGpuHalf(const Index elem_cnt, const Index bias_size, const half* x,
-                                  const half* bias, half* y) {
-  CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) { y[i] = __hadd(x[i], bias[i % bias_size]); }
-}
-
-template<typename Index>
-__global__ void BiasAddRowGpuHalf2(const Index h2_elem_cnt, const Index h2_bias_size, const half* x,
+__global__ void BiasAddRowGpuHalf2(const Index elem_cnt, const Index bias_size, const half* x,
                                    const half* bias, half* y) {
+  const Index h2_elem_cnt = elem_cnt / 2;
+  const Index h2_bias_size = bias_size / 2;
   const auto* x_h2 = reinterpret_cast<const half2*>(x);
   const auto* bias_h2 = reinterpret_cast<const half2*>(bias);
   auto* y_h2 = reinterpret_cast<half2*>(y);
@@ -93,12 +89,6 @@ template<typename T, typename Index>
 __global__ void BiasAddColGpu(const Index elem_cnt, const Index inner_size, const T* x,
                               const T* bias, T* y) {
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) { y[i] = x[i] + bias[i / inner_size]; }
-}
-
-template<typename Index>
-__global__ void BiasAddColGpuHalf(const Index elem_cnt, const Index inner_size, const half* x,
-                                  const half* bias, half* y) {
-  CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) { y[i] = __hadd(x[i], bias[i / inner_size]); }
 }
 
 }  // namespace
@@ -136,16 +126,16 @@ struct BiasAddCalculation<DeviceType::kGPU, float16, Index> {
       if (bias_size % 2 == 0) {
         BiasAddRowGpuHalf2<Index><<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
                                     ctx->cuda_stream()>>>(
-            elem_cnt / 2, bias_size / 2, reinterpret_cast<const half*>(x),
+            elem_cnt, bias_size, reinterpret_cast<const half*>(x),
             reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
       } else {
-        BiasAddRowGpuHalf<Index>
+        BiasAddRowGpu<half, Index>
             <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
                 elem_cnt, bias_size, reinterpret_cast<const half*>(x),
                 reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
       }
     } else if (outer_size == 1) {
-      BiasAddColGpuHalf<Index>
+      BiasAddColGpu<half, Index>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
               elem_cnt, inner_size, reinterpret_cast<const half*>(x),
               reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
