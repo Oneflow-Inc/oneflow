@@ -19,7 +19,11 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-class TestWatch(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
+class TestWatch(flow.unittest.TestCase):
     def test_simple(test_case):
         flow.config.gpu_device_num(1)
         data = np.ones((10,), dtype=np.float32)

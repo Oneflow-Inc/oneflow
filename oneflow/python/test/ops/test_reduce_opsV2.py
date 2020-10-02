@@ -71,7 +71,11 @@ def compare_reduce_sum_with_tensorflow(
     )
 
 
-class TestReduceOpsV2(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
+class TestReduceOpsV2(flow.unittest.TestCase):
     def test_reduce_sum_func(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

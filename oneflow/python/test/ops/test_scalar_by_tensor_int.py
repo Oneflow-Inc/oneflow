@@ -58,7 +58,7 @@ def _run_test(test_case, x, y, case, dtype=None, device="gpu"):
     _check(test_case, x, y, out.numpy(), case)
 
 
-class TestScalarByTensorInt(flow.unittest.OneGpuTestCase):
+class TestScalarByTensorInt(flow.unittest.TestCase_1n1c):
     def test_scalar_add_by_tensor_gpu_float(test_case):
         x = np.random.rand(10, 3, 32, 1024).astype(np.float32)
         y = np.random.rand(1).astype(np.float32)

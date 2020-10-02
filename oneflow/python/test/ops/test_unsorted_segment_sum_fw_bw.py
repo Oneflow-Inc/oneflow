@@ -135,7 +135,7 @@ def _compare_unsorted_segment_sum_with_tf(
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))
 
 
-class TestUnsortedSegmentSumFwBw(flow.unittest.OneGpuTestCase):
+class TestUnsortedSegmentSumFwBw(flow.unittest.TestCase_1n1c):
     def test_unsorted_segment_sum(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

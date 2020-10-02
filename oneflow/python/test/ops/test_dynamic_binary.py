@@ -19,8 +19,11 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
+@unittest.skipIf(flow.unittest.env.node_size() != 2, "only runs when node_size is 2")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+)
 class TestDynamicBinary(flow.unittest.TestCase):
-    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
     def test_multi_node_dynamic_binary_split_concat_empty(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())

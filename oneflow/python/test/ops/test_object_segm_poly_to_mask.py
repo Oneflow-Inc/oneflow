@@ -461,7 +461,7 @@ if __name__ == "__main__":
     _vis_img_segm_mask_cmp(of_mask_list, mask_list)
 
 
-class TestObjectSegmPolyToMask(flow.unittest.OneGpuTestCase):
+class TestObjectSegmPolyToMask(flow.unittest.TestCase_1n1c):
     def test_poly_to_mask(test_case):
         _poly_to_mask_with_of_and_cv(
             test_case,
@@ -472,3 +472,7 @@ class TestObjectSegmPolyToMask(flow.unittest.OneGpuTestCase):
             1333,
             # print_debug_info=True,
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

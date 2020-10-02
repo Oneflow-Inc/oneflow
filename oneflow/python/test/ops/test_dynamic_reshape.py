@@ -19,12 +19,14 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
 class TestDynamicReshape(flow.unittest.TestCase):
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 2, "requires 2 gpus")
     def test_dynamic_reshape(test_case):
-        num_gpus = 2
         data_shape = (10, 10, 10)
-        flow.config.gpu_device_num(num_gpus)
+        flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
         func_config.default_logical_view(flow.scope.mirrored_view())

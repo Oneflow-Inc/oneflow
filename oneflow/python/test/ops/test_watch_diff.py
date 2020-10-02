@@ -56,7 +56,7 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
     TrainJob()
 
 
-class TestWatchDiff(flow.unittest.OneGpuTestCase):
+class TestWatchDiff(flow.unittest.TestCase_1n1c):
     def test_watch_diff(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

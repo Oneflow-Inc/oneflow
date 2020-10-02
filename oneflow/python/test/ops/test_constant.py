@@ -47,7 +47,7 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
     )
 
 
-class TestConstant(flow.unittest.OneGpuTestCase):
+class TestConstant(flow.unittest.TestCase_1n1c):
     def test_constant(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

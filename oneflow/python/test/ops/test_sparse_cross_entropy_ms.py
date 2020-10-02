@@ -99,7 +99,11 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-class TestSparseCrossEntropyMs(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 4, "only runs when gpu_device_num is 4"
+)
+class TestSparseCrossEntropyMs(flow.unittest.TestCase):
     def test_sparse_cross_entropy_with_logits(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

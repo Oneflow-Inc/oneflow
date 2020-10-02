@@ -107,7 +107,7 @@ def _compare_bbox_flip(
         test_case.assertTrue(np.allclose(of_bbox.squeeze(), bbox))
 
 
-class TestObjectBboxFlip(flow.unittest.OneGpuTestCase):
+class TestObjectBboxFlip(flow.unittest.TestCase_1n1c):
     def test_object_bbox_flip(test_case):
         _compare_bbox_flip(
             test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1

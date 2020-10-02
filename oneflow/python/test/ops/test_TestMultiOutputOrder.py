@@ -20,6 +20,7 @@ import unittest
 import os
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def TestMultiOutputOrder(x, name):
     return (
         flow.user_op_builder(name)
@@ -60,8 +61,7 @@ def GenerateTest(test_case, shape):
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class Test_TestMultiOutputOrder(flow.unittest.OneGpuTestCase):
+class Test_TestMultiOutputOrder(flow.unittest.TestCase_1n1c):
     def test_TestMultiOutputOrder_example_1(test_case):
         GenerateTest(test_case, (7,))
 

@@ -35,15 +35,32 @@ def NaiveTest(test_case):
 
 
 class TestParallel(flow.unittest.TestCase):
+    @unittest.skipIf(
+        flow.unittest.env.node_size() != 1, "only runs when node_size is 1"
+    )
+    @unittest.skipIf(
+        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+    )
     def test_1n1c(test_case):
         flow.config.gpu_device_num(1)
         NaiveTest(test_case)
 
+    @unittest.skipIf(
+        flow.unittest.env.node_size() != 1, "only runs when node_size is 1"
+    )
+    @unittest.skipIf(
+        flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+    )
     def test_1n2c(test_case):
         flow.config.gpu_device_num(2)
         NaiveTest(test_case)
 
-    @unittest.skipUnless(flow.unittest.env.node_size() == 2, "requires 2 nodes")
+    @unittest.skipIf(
+        flow.unittest.env.node_size() != 2, "only runs when node_size is 2"
+    )
+    @unittest.skipIf(
+        flow.unittest.env.gpu_device_num() != 1, "only runs when gpu_device_num is 1"
+    )
     def test_2n2c(test_case):
         flow.config.gpu_device_num(1)
         NaiveTest(test_case)

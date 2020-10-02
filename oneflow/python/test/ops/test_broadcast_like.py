@@ -47,7 +47,7 @@ def compare_broadcast_like_with_tf(
     assert np.allclose(of_out.numpy(), np_out, rtol=rtol, atol=atol)
 
 
-class TestBroadcastLike(flow.unittest.OneGpuTestCase):
+class TestBroadcastLike(flow.unittest.TestCase_1n1c):
     def test_broadcast_like(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

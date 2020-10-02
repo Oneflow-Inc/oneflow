@@ -90,7 +90,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol)
 
 
-class TestActivations(flow.unittest.OneGpuTestCase):
+class TestActivations(flow.unittest.TestCase_1n1c):
     def test_activations(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

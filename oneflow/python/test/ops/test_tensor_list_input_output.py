@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-class TestTensorListInputOutput(flow.unittest.OneGpuTestCase):
+class TestTensorListInputOutput(flow.unittest.TestCase_1n1c):
     def test_eager_tensor_list_input(test_case):
         flow.clear_default_session()
         flow.enable_eager_execution()

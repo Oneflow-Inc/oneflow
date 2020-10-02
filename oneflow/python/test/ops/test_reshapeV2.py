@@ -71,7 +71,7 @@ def compare_with_tensorflow(device_type, input_shape, shape):
     )
 
 
-class TestReshapeV2(flow.unittest.OneGpuTestCase):
+class TestReshapeV2(flow.unittest.TestCase_1n1c):
     def test_reshape(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

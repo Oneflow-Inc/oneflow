@@ -96,7 +96,7 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
     _check(test_case, data, segment_ids, out_shape, axis, out.numpy())
 
 
-class TestUnsortedSegmentSum(flow.unittest.OneGpuTestCase):
+class TestUnsortedSegmentSum(flow.unittest.TestCase_1n1c):
     def test_unsorted_segment_sum(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

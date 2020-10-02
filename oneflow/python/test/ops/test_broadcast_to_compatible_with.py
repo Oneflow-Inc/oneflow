@@ -120,7 +120,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     return broadcast_to_compatible_with_fn(x).get().numpy()
 
 
-class TestBroadcastToCompatibleWith(flow.unittest.OneGpuTestCase):
+class TestBroadcastToCompatibleWith(flow.unittest.TestCase_1n1c):
     def test_broadcast_to_compatible_with(test_case):
         x = np.random.standard_normal((5, 2)).astype(np.float32)
         compatible_shape = [[4, 5, 2], [4, 5, 1]]

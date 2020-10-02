@@ -20,6 +20,10 @@ import oneflow.typing as oft
 from typing import Tuple
 
 
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 4, "only runs when gpu_device_num is 4"
+)
 class TestFunctionInputOutput(flow.unittest.TestCase):
     def test_FixedTensorDef(test_case):
         @flow.global_function()
@@ -32,7 +36,6 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(of_ret.numpy().min(), 1)
         test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 1, "skip 1 gpu case")
     def test_FixedTensorDef_batch_axis(test_case):
         @flow.global_function()
         def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=1)):
@@ -42,7 +45,6 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         data = np.ones((2, 5), dtype=np.float32)
         Foo(np.ones((2, 5), dtype=np.float32)).get()
 
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 1, "skip 1 gpu case")
     def test_FixedTensorDef_no_batch_axis(test_case):
         @flow.global_function()
         def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=None)):
@@ -52,7 +54,6 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         data = np.ones((2, 5), dtype=np.float32)
         Foo(np.ones((2, 5), dtype=np.float32)).get()
 
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 1, "skip 1 gpu case")
     def test_FixedTensorDef_2_device(test_case):
         flow.config.gpu_device_num(2)
 
@@ -66,7 +67,6 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(of_ret.numpy().min(), 1)
         test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 1, "requires 4 gpus")
     def test_MirroredTensorDef(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -80,7 +80,6 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(len(ndarray_list), 1)
         test_case.assertTrue(np.allclose(ndarray_list[0], data))
 
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 1, "requires 4 gpus")
     def test_MirroredTensorListDef(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -95,10 +94,8 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(len(ndarray_list[0]), 1)
         test_case.assertTrue(np.allclose(ndarray_list[0][0], data))
 
-    @unittest.skipUnless(flow.unittest.env.gpu_device_num() == 4, "requires 4 gpus")
     def test_MirroredTensorDef_4_device(test_case):
-        num_gpus = 4
-        flow.config.gpu_device_num(num_gpus)
+        flow.config.gpu_device_num(4)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
 

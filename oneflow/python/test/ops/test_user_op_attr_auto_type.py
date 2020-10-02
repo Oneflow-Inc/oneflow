@@ -33,7 +33,7 @@ def _test_user_op_attr_auto_type(input, attr1, attr2):
     )
 
 
-class TestUserOpAttrAutoType(flow.unittest.OneGpuTestCase):
+class TestUserOpAttrAutoType(flow.unittest.TestCase_1n1c):
     def test_user_op_attr_auto_type(test_case):
         flow.clear_default_session()
         function_config = flow.FunctionConfig()

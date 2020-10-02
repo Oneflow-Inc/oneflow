@@ -22,7 +22,11 @@ import random
 import oneflow.typing as oft
 
 
-class TestShape(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
+class TestShape(flow.unittest.TestCase):
     def test_shape(test_case):
         flow.clear_default_session()
         flow.config.gpu_device_num(2)

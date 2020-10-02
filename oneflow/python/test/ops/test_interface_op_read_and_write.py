@@ -22,7 +22,11 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
-class TestInterfaceOpReadAndWrite(flow.unittest.OneGpuTestCase):
+@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
+@unittest.skipIf(
+    flow.unittest.env.gpu_device_num() != 2, "only runs when gpu_device_num is 2"
+)
+class TestInterfaceOpReadAndWrite(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test(test_case):
         flow.config.gpu_device_num(2)

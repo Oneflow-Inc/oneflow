@@ -27,7 +27,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-class TestSqrt(flow.unittest.OneGpuTestCase):
+class TestSqrt(flow.unittest.TestCase_1n1c):
     def test_sqrt(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

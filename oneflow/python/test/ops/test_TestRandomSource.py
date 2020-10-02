@@ -30,7 +30,7 @@ def my_test_source(name, seed):
     )
 
 
-class Test_TestRandomSource(flow.unittest.OneGpuTestCase):
+class Test_TestRandomSource(flow.unittest.TestCase_1n1c):
     def test_testsource(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

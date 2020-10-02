@@ -90,7 +90,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-class TestSparseSoftmaxCrossEntropy(flow.unittest.OneGpuTestCase):
+class TestSparseSoftmaxCrossEntropy(flow.unittest.TestCase_1n1c):
     def test_sparse_softmax_cross_entropy_with_logits(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

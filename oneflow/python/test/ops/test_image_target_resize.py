@@ -164,9 +164,7 @@ def _compare_image_target_resize_with_cv(
         test_case.assertTrue(np.allclose(image_scale, resized_scale))
 
 
-# TODO(Tsai): Fix this later
-@unittest.skip("skip because always failed")
-class TestImageTargetResize(flow.unittest.OneGpuTestCase):
+class TestImageTargetResize(flow.unittest.TestCase_1n1c):
     def test_image_target_resize(test_case):
         _compare_image_target_resize_with_cv(
             test_case,

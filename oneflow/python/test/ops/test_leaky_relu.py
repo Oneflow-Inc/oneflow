@@ -72,7 +72,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, alpha):
     )
 
 
-class TestLeakyRelu(flow.unittest.OneGpuTestCase):
+class TestLeakyRelu(flow.unittest.TestCase_1n1c):
     def test_leaky_relu(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

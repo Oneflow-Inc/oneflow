@@ -87,7 +87,7 @@ def compare_with_tensorflow(device_type, input_shape, output_shape):
     )
 
 
-class Test_TestReshape4KeepHeaderOnly(flow.unittest.OneGpuTestCase):
+class Test_TestReshape4KeepHeaderOnly(flow.unittest.TestCase_1n1c):
     def test_TestReshape_train_keep_header_only_grad(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
