@@ -162,7 +162,5 @@ class TestCase_1n1d(TestCase):
         if node_size() == 1 and device_num() == 1:
             super().setUp()
         else:
-            skip_reason = (
-                "only runs when node_size is 1 and g(c)pu_device_num is 1: {!r}"
-            )
+            skip_reason = "only runs when node_size is 1 and device_num is 1"
             self.skipTest(skip_reason)
