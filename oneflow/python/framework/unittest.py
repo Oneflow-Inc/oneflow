@@ -81,12 +81,12 @@ def _GetNumOfNodes(func):
 
 
 @oneflow_export("unittest.env.enable_eager_execution")
-def enable_eager_execution():
+def eager_execution_enabled():
     return os.getenv("ONEFLOW_TEST_ENABLE_EAGER") == "1"
 
 
 @oneflow_export("unittest.env.enable_typing_check")
-def enable_typing_check():
+def typing_check_enabled():
     return os.getenv("ONEFLOW_TEST_ENABLE_TYPING_CHECK") == "1"
 
 
@@ -136,8 +136,8 @@ class TestCase(unittest.TestCase):
             _unittest_env_initilized = True
 
         oneflow.clear_default_session()
-        oneflow.enable_eager_execution(enable_eager_execution())
-        oneflow.experimental.enable_typing_check(enable_typing_check())
+        oneflow.enable_eager_execution(eager_execution_enabled())
+        oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
 @oneflow_export("unittest.OneGpuTestCase")
