@@ -122,6 +122,8 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(user_op::KernelComputeC
       if (i == split_axis) {
         slice_in_full_slice_start = get_size_in_slice(slice_in_full_input_start, lower, step);
         slice_in_full_slice_stop = get_size_in_slice(slice_in_full_input_start, upper, step);
+        LOG(INFO) << slice_in_full_slice_start << ", " << slice_in_full_slice_stop << std::endl;
+        LOG(INFO) << dim_size;
         slice_in_full_slice_start =
             std::min(std::max<int64_t>(slice_in_full_slice_start, 0), dim_size);
         slice_in_full_slice_stop =
@@ -215,6 +217,88 @@ class SliceGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<int NDIM, typename T>
+void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
+                user_op::Tensor* dst, const SliceAssignOpKernelState* slice_assign_state,
+                const bool from_large_to_small) {
+  const user_op::Tensor* large = from_large_to_small ? src : dst;
+  const user_op::Tensor* small = from_large_to_small ? dst : src;
+  CHECK_NOTNULL(slice_assign_state);
+  if (slice_assign_state->split_axis() != -1) {
+    CHECK_EQ(large->shape().At(slice_assign_state->split_axis()),
+             slice_assign_state->upper() - slice_assign_state->lower());
+  }
+
+  const auto params_pair = ConstructSliceParams(
+      ctx, large, small, slice_assign_state->split_axis(), slice_assign_state->lower(),
+      slice_assign_state->upper(), slice_assign_state->length());
+
+  const auto tensor_params = params_pair.first;
+  const auto slice_params = params_pair.second;
+
+  int64_t elem_cnt = tensor_params.elem_cnt();
+  SliceIndexHelper<NDIM> entire_tensor_idx_cvtr(tensor_params.dims);
+  SliceIndexHelper<NDIM> sliced_tensor_idx_cvtr(tensor_params.size);
+  SliceIndexHelper<NDIM> entire_slice_idx_cvtr(slice_params.dims);
+  SliceIndexHelper<NDIM> sliced_slice_idx_cvtr(slice_params.size);
+  const auto* src_ptr = src->dptr<T>();
+  auto* dst_ptr = dst->mut_dptr<T>();
+  FOR_RANGE(int, i, 0, elem_cnt) {
+    int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(i, tensor_params, entire_tensor_idx_cvtr,
+                                                           sliced_tensor_idx_cvtr);
+    int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(i, slice_params, entire_slice_idx_cvtr,
+                                                           sliced_slice_idx_cvtr);
+    int64_t src_offset = from_large_to_small ? large_offset : small_offset;
+    int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
+    AutoMemcpy(ctx->device_ctx(), dst_ptr + dst_offset, src_ptr + src_offset,
+               GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
+  }
+}
+
+#define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
+DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
+                          MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
+                          MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ
+#if defined(WITH_CUDA)
+                                                      HALF_DATA_TYPE_SEQ
+#endif
+                                                  ));
+#undef MAKE_WRITE_SLICE_SWITCH_ENTRY
+
+template<typename T>
+class Slice2Kernel final : public user_op::OpKernel {
+ public:
+  Slice2Kernel() = default;
+  ~Slice2Kernel() = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    if (in_sbp.has_split_parallel() && ctx->parallel_ctx().parallel_num() > 1) {
+      CHECK(ctx->SbpParallel4ArgNameAndIndex("y", 0).has_partial_sum_parallel());
+      const user_op::TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("x", 0);
+      const auto split_axis = in_sbp.split_parallel().axis();
+      const int64_t gather_dim_size = in_logical_desc->shape().At(split_axis);
+      BalancedSplitter bs(gather_dim_size, ctx->parallel_ctx().parallel_num());
+      return std::make_shared<SliceAssignOpKernelState>(
+          split_axis, bs.At(ctx->parallel_ctx().parallel_id()).begin(),
+          bs.At(ctx->parallel_ctx().parallel_id()).end(), gather_dim_size);
+    } else {
+      return std::make_shared<SliceAssignOpKernelState>(-1, 0, 0, 0);
+    }
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    auto* slice_assign_state = dynamic_cast<SliceAssignOpKernelState*>(state);
+    SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
+                     y_tensor, slice_assign_state, true);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
 template<typename T>
 class SliceAssignKernel final : public user_op::OpKernel {
  public:
@@ -239,49 +323,12 @@ class SliceAssignKernel final : public user_op::OpKernel {
   }
 
  private:
-  template<int NDIM>
-  static void DoCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
     auto* slice_assign_state = dynamic_cast<SliceAssignOpKernelState*>(state);
-    CHECK_NOTNULL(slice_assign_state);
-    if (slice_assign_state->split_axis() != -1) {
-      CHECK_EQ(ref_tensor->shape().At(slice_assign_state->split_axis()),
-               slice_assign_state->upper() - slice_assign_state->lower());
-    }
-
-    const auto params_pair = ConstructSliceParams(
-        ctx, ref_tensor, value_tensor, slice_assign_state->split_axis(),
-        slice_assign_state->lower(), slice_assign_state->upper(), slice_assign_state->length());
-
-    const auto tensor_params = params_pair.first;
-    const auto slice_params = params_pair.second;
-
-    int64_t elem_cnt = tensor_params.elem_cnt();
-    SliceIndexHelper<NDIM> entire_tensor_idx_cvtr(tensor_params.dims);
-    SliceIndexHelper<NDIM> sliced_tensor_idx_cvtr(tensor_params.size);
-    SliceIndexHelper<NDIM> entire_slice_idx_cvtr(slice_params.dims);
-    SliceIndexHelper<NDIM> sliced_slice_idx_cvtr(slice_params.size);
-    auto* tensor_ptr = ref_tensor->mut_dptr<T>();
-    const auto* slice_ptr = value_tensor->dptr<T>();
-    FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t tensor_offset = SliceOffsetToEntireOffset<NDIM>(
-          i, tensor_params, entire_tensor_idx_cvtr, sliced_tensor_idx_cvtr);
-      int64_t slice_offset = SliceOffsetToEntireOffset<NDIM>(i, slice_params, entire_slice_idx_cvtr,
-                                                             sliced_slice_idx_cvtr);
-      AutoMemcpy(ctx->device_ctx(), tensor_ptr + tensor_offset, slice_ptr + slice_offset,
-                 GetSizeOfDataType(ref_tensor->data_type()), ref_tensor->mem_case(),
-                 value_tensor->mem_case());
-    }
-  }
-#define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) SliceAssignKernel<T>::func_name<N>
-  DEFINE_STATIC_SWITCH_FUNC(void, DoCompute, MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
-#undef MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY
-
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
-    SwitchDoCompute(SwitchCase(value_tensor->shape().NumAxes()), ctx, state);
+    SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
+                     value_tensor, ref_tensor, slice_assign_state, false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -309,10 +356,12 @@ REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
 #endif
 
-#define REGISTER_SLICE_ASSIGN_KERNELS(dtype)   \
-  REGISTER_USER_KERNEL("slice_assign")         \
-      .SetCreateFn<SliceAssignKernel<dtype>>() \
-      .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value);
+#define REGISTER_SLICE_ASSIGN_KERNELS(dtype)                                         \
+  REGISTER_USER_KERNEL("slice_assign")                                               \
+      .SetCreateFn<SliceAssignKernel<dtype>>()                                       \
+      .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
+  REGISTER_USER_KERNEL("slice2").SetCreateFn<Slice2Kernel<dtype>>().SetIsMatchedHob( \
+      user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
 REGISTER_SLICE_ASSIGN_KERNELS(float)
 REGISTER_SLICE_ASSIGN_KERNELS(double)

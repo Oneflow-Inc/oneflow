@@ -21,7 +21,9 @@ import oneflow.typing as oft
 from test_util import GenArgDict
 
 
-def _test_slice_assign(test_case, var_shape, slice_tuples, split_axis, dst_device_tag, flow_dtype):
+def _test_slice_assign(
+    test_case, var_shape, slice_tuples, split_axis, dst_device_tag, flow_dtype
+):
     flow.clear_default_session()
     value_shape = [(s[1] - s[0] - 1) // s[2] + 1 for s in slice_tuples]
     flow_to_np_dtype_dict = {
@@ -29,8 +31,8 @@ def _test_slice_assign(test_case, var_shape, slice_tuples, split_axis, dst_devic
         flow.float32: np.single,
     }
     np_dtype = flow_to_np_dtype_dict[flow_dtype]
-    value = np.random.rand(*value_shape).astype(np_dtype)
-    if dst_device_tag == 'gpu':
+    value = np.random.uniform(low=-10, high=10, size=value_shape).astype(np_dtype)
+    if dst_device_tag == "gpu":
         flow.config.gpu_device_num(4)
 
     def get_var():
@@ -64,6 +66,12 @@ def _test_slice_assign(test_case, var_shape, slice_tuples, split_axis, dst_devic
         slice_objs.append(slice(s[0], s[1], s[2]))
     np_res[tuple(slice_objs)] = value
 
+    print(of_res[tuple(slice_objs)])
+    print("----")
+    print(np_res[tuple(slice_objs)])
+    print("----")
+    print(value)
+
     test_case.assertTrue(np.array_equal(of_res, np_res))
 
 
@@ -71,9 +79,9 @@ def test_slice_assign_4d(test_case):
     var_shape = (30, 40, 20, 15)
     slice_tuples = [(10, 20, 3), (1, 30, 4), (3, 16, 2), (5, 11, 1)]
     arg_dict = OrderedDict()
-    arg_dict['split_axis'] = list(range(4))
-    arg_dict['dst_device_tag'] = ['cpu', 'gpu']
-    arg_dict['flow_dtype'] = [flow.float32, flow.int8]
+    arg_dict["split_axis"] = list(range(4))
+    arg_dict["dst_device_tag"] = ["cpu", "gpu"]
+    arg_dict["flow_dtype"] = [flow.float32, flow.int8]
     for arg in GenArgDict(arg_dict):
         _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
 
@@ -82,9 +90,8 @@ def test_slice_assign_2d(test_case):
     var_shape = (30, 40)
     slice_tuples = [(10, 20, 3), (1, 30, 4)]
     arg_dict = OrderedDict()
-    arg_dict['split_axis'] = list(range(2))
-    arg_dict['dst_device_tag'] = ['cpu', 'gpu']
-    arg_dict['flow_dtype'] = [flow.float32, flow.int8]
+    arg_dict["split_axis"] = list(range(2))
+    arg_dict["dst_device_tag"] = ["cpu", "gpu"]
+    arg_dict["flow_dtype"] = [flow.float32, flow.int8]
     for arg in GenArgDict(arg_dict):
         _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
-
