@@ -156,7 +156,7 @@ class TestCase(unittest.TestCase):
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
-@oneflow_export("unittest.OneGpuTestCase")
+@oneflow_export("unittest.TestCase_1n1c")
 class TestCase_1n1c(TestCase):
     def setUp(self):
         if node_size() == 1 and gpu_device_num() == 1:
