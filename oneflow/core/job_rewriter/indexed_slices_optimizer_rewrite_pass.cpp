@@ -81,7 +81,7 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         && user_op_conf.op_type_name() != "adam_update") {
       return;
     }
-    if (user_op_conf.attr<double>("scale") != 1.0f || user_op_conf.attr<float>("l1") != 0.0f
+    if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
         || user_op_conf.attr<float>("l2") != 0.0f
         || user_op_conf.attr<float>("weight_decay") != 0.0f
         || user_op_conf.has_input("scale_by_tensor", 0)) {
