@@ -25,7 +25,7 @@ class AdamOptimizerOp : public OptimizerOp {
     xla::XlaOp weight = ctx->Input("model_0");
     xla::XlaOp m = ctx->Input("m_0");
     xla::XlaOp v = ctx->Input("v_0");
-    float scale_val = ctx->Attr<float>("scale");
+    double scale_val = ctx->Attr<double>("scale");
     float l1_val = ctx->Attr<float>("l1");
     float l2_val = ctx->Attr<float>("l2");
     float beta1_val = ctx->Attr<float>("beta1");
@@ -37,7 +37,7 @@ class AdamOptimizerOp : public OptimizerOp {
     xla::XlaOp lr;
     xla::XlaOp beta1_t;
     xla::XlaOp beta2_t;
-    xla::XlaOp mul_scalar;
+    xla::XlaOp scale_by_tensor;
     if (do_bias_correction) {
       beta1_t = ctx->Input("beta1_t_0");
       beta2_t = ctx->Input("beta2_t_0");
@@ -45,8 +45,8 @@ class AdamOptimizerOp : public OptimizerOp {
     } else {
       lr = learning_rate;
     }
-    if (ctx->HasInput("mul_scalar_0")) {
-        mul_scalar = ctx->Input("mul_scalar_0");
+    if (ctx->HasInput("scale_by_tensor_0")) {
+        scale_by_tensor = ctx->Input("scale_by_tensor_0");
     }
     Shape gradient_shape = ctx->InputShape("model_diff_0");
     if (gradient_shape.NumAxes() > 1) {
@@ -55,8 +55,8 @@ class AdamOptimizerOp : public OptimizerOp {
         bcast_sizes.push_back(gradient_shape.At(i));
       }
       lr = xla::Broadcast(lr, bcast_sizes);
-      if (ctx->HasInput("mul_scalar_0")) {
-        mul_scalar = xla::Broadcast(mul_scalar, bcast_sizes);
+      if (ctx->HasInput("scale_by_tensor_0")) {
+        scale_by_tensor = xla::Broadcast(scale_by_tensor, bcast_sizes);
       }
     }
     DataType model_dtype = ctx->InputType("model_0");
@@ -66,8 +66,8 @@ class AdamOptimizerOp : public OptimizerOp {
       xla::PrimitiveType data_type = DataTypeToPrimitiveType(model_dtype);
       gradient = xla::ConvertElementType(gradient, data_type);
     }
-    if (ctx->HasInput("mul_scalar_0")) {
-      gradient = gradient * mul_scalar;
+    if (ctx->HasInput("scale_by_tensor_0")) {
+      gradient = gradient * scale_by_tensor;
     }
     if(scale_val != 1) {
       xla::XlaOp scale = xla::ScalarLike(gradient, scale_val);
