@@ -49,7 +49,7 @@ def TrainCompare(test_case, func):
     test_case.assertTrue(np.allclose(enable_inplace_losses, disable_inplace_losses))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestInplace(flow.unittest.TestCase):
     def test_loss_inplace(test_case):
         def IdentityLoss(name):

@@ -38,7 +38,7 @@ def _run_test(test_case, x, dtype, device):
     _check(test_case, x, y.numpy())
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestSquareSum(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_square_sum_random_gpu(test_case):

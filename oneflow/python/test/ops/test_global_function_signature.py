@@ -20,7 +20,7 @@ import numpy as np
 from typing import Tuple, Dict, List
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestGlobalFunctionSignature(flow.unittest.TestCase):
     def test_annotation_return_None(test_case):
         flow.config.gpu_device_num(1)

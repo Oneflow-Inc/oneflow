@@ -98,7 +98,7 @@ def _test_model_io(test_case, shape, dtype, lr, num_iters):
     test_case.assertTrue(np.allclose(final_var, var_from_file))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestModelIo(flow.unittest.TestCase):
     def test_model_io_case_0(test_case):
         # _test_model_io(test_case, (10, 5, 7), flow.float32, 1e-2, 10)

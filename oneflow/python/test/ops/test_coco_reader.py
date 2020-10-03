@@ -387,7 +387,7 @@ class GroupedDistributedSampler(object):
         return sample
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case, verbose=VERBOSE):
         anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"

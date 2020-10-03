@@ -76,7 +76,7 @@ def _test_categorical_ordinal_encoder(
     test_case.assertEqual(len(vk_set), unique_size)
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestCategoricalOrdinalEncoder(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_categorical_ordinal_encoder_gpu_large(test_case):

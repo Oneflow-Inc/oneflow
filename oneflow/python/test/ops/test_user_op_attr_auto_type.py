@@ -33,7 +33,7 @@ def _test_user_op_attr_auto_type(input, attr1, attr2):
     )
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestUserOpAttrAutoType(flow.unittest.TestCase):
     def test_user_op_attr_auto_type(test_case):
         flow.clear_default_session()

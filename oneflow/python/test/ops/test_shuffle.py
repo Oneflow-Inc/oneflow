@@ -24,7 +24,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestShuffle(flow.unittest.TestCase):
     def test_shuffle(_):
         arg_dict = OrderedDict()

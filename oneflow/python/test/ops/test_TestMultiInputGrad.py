@@ -36,7 +36,7 @@ def TestMultiInput(x1, x2):
     )
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class Test_TestMultiInputGrad(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_TestMultiInput_grad_mirrored_inplace(test_case):

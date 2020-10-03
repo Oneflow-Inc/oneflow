@@ -144,7 +144,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestBinaryElementwiseOps(flow.unittest.TestCase):
     def test_floordiv(test_case):
         arg_dict = OrderedDict()

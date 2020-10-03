@@ -648,7 +648,7 @@ def compare_with_numpy_indexed_slices_adam(
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()

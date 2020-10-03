@@ -182,7 +182,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestBroadcastNormal(flow.unittest.TestCase):
     def test_broadcast_add(test_case):
         arg_dict = OrderedDict()

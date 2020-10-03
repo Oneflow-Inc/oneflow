@@ -49,7 +49,7 @@ def _test_reverse(test_case, input, axis, dtype, verbose=False):
     test_case.assertTrue(np.array_equal(output, of_output))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestReverse(flow.unittest.TestCase):
     def test_reverse_case_1(test_case):
         input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)

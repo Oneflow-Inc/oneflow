@@ -226,7 +226,7 @@ def _compare_gather_nd_dynamic_indices_with_tf(
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestGatherNd(flow.unittest.TestCase):
     def test_gather_nd(test_case):
         arg_dict = OrderedDict()

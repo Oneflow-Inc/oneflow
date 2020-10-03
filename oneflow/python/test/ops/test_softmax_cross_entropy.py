@@ -87,7 +87,7 @@ def compare_with_tensorflow(device_type, data_type, shape):
     flow.clear_default_session()
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestSoftmaxCrossEntropy(flow.unittest.TestCase):
     def test_softmax_cross_entropy_with_logits(test_case):
         arg_dict = OrderedDict()

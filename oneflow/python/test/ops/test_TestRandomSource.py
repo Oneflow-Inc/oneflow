@@ -30,7 +30,7 @@ def my_test_source(name, seed):
     )
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class Test_TestRandomSource(flow.unittest.TestCase):
     def test_testsource(test_case):
         func_config = flow.FunctionConfig()

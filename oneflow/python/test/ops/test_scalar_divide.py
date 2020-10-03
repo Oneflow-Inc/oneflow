@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestScalarDivide(flow.unittest.TestCase):
     def test_scalar_div_2(test_case):
         func_config = flow.FunctionConfig()

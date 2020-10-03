@@ -21,7 +21,7 @@ def AddLossUnderNormalMode():
     flow.losses.add_loss(None)
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestOneflowExport(flow.unittest.TestCase):
     def test_ApiNotImplementedError(test_case):
         test_case.assertRaises(NotImplementedError, AddLossUnderNormalMode)

@@ -163,7 +163,7 @@ def _compare_bbox_scale(
         test_case.assertTrue(np.allclose(bbox, of_bbox))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestObjectBboxScale(flow.unittest.TestCase):
     def test_object_bbox_scale(test_case):
         _compare_bbox_scale(

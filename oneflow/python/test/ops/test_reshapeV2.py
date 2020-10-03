@@ -71,7 +71,7 @@ def compare_with_tensorflow(device_type, input_shape, shape):
     )
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestReshapeV2(flow.unittest.TestCase):
     def test_reshape(test_case):
         arg_dict = OrderedDict()

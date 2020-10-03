@@ -161,7 +161,7 @@ def compare_with_tensorflow(
     )
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestLayersConv1d(flow.unittest.TestCase):
     def test_conv1(test_case):
         arg_dict = OrderedDict()

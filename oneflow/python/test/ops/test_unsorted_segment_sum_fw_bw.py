@@ -135,7 +135,7 @@ def _compare_unsorted_segment_sum_with_tf(
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestUnsortedSegmentSumFwBw(flow.unittest.TestCase):
     def test_unsorted_segment_sum(test_case):
         arg_dict = OrderedDict()

@@ -82,7 +82,7 @@ def _compare_with_np(test_case, shape, dtype, device_type):
     test_case.assertTrue(np.allclose(_np_relu(x), of_y))
 
 
-@flow.unittest.skip_if_not_1n1d
+@flow.unittest.skip_if_not_1n1d()
 class TestAssign(flow.unittest.TestCase):
     def test_assign(test_case):
         arg_dict = OrderedDict()
