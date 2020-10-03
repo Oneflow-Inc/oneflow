@@ -24,7 +24,7 @@ namespace oneflow {
 template<typename T, typename G>
 struct CastScaleRegularizeGradientFunctor {
   OF_DEVICE_FUNC
-  T operator()(G model_diff, T model, float scale, float l1, float l2) const {
+  T operator()(G model_diff, T model, T scale, float l1, float l2) const {
     return static_cast<T>(model_diff) * scale + l1 * ((model >= 0) - (model <= 0)) + l2 * model;
   }
 };
@@ -32,8 +32,8 @@ struct CastScaleRegularizeGradientFunctor {
 template<typename T, typename G>
 struct SGDUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, float scale, float l1, float l2,
-                  float weight_decay, float learning_rate) const {
+  void operator()(const G* model_diff, T* model, T scale, float l1, float l2, float weight_decay,
+                  float learning_rate) const {
     const T model_val = *model;
     const T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
@@ -44,8 +44,9 @@ struct SGDUpdateFunctor {
 
 template<DeviceType device_type, typename T, typename G>
 struct SGDUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float weight_decay,
-                     const float* learning_rate, const G* model_diff, T* model);
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model);
 };
 
 template<DeviceType device_type, typename T, typename K>
@@ -58,7 +59,7 @@ struct IndexedSlicesSGDUpdateKernelUtil final {
 template<typename T, typename G>
 struct MomentumUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, T* momentum, float scale, float l1, float l2,
+  void operator()(const G* model_diff, T* model, T* momentum, T scale, float l1, float l2,
                   float beta, float weight_decay, float learning_rate) const {
     const T model_val = *model;
     T model_diff_t =
@@ -73,7 +74,7 @@ struct MomentumUpdateFunctor {
 template<typename T, typename G>
 struct AdamUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, T* m, T* v, float scale, float l1, float l2,
+  void operator()(const G* model_diff, T* model, T* m, T* v, T scale, float l1, float l2,
                   float beta1, float beta2, float epsilon, float weight_decay,
                   float learning_rate) const {
     const T model_val = *model;
@@ -90,9 +91,9 @@ struct AdamUpdateFunctor {
 
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta,
-                     float weight_decay, const float* learning_rate, const G* model_diff, T* model,
-                     T* momentum);
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
+                     float weight_decay, const float* learning_rate, const T* scale_by_ptr,
+                     const G* model_diff, T* model, T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -105,10 +106,10 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil {
 
 template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, bool do_bias_correction, float weight_decay,
-                     const float* learning_rate, const G* model_diff, T* model, T* m, T* v,
-                     T* beta1_t, T* beta2_t);
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model, T* m, T* v, T* beta1_t, T* beta2_t);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
