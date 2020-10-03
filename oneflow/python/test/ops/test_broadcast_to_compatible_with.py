@@ -120,7 +120,7 @@ def _of_broadcast_to_compatible_with_grad(x, compatible_shape, dx_watcher):
     return broadcast_to_compatible_with_fn(x).get().numpy()
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
     def test_broadcast_to_compatible_with(test_case):
         x = np.random.standard_normal((5, 2)).astype(np.float32)

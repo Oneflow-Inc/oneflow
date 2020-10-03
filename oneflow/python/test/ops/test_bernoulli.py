@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestBernoulli(flow.unittest.TestCase):
     def test_bernoulli(test_case):
         func_config = flow.FunctionConfig()

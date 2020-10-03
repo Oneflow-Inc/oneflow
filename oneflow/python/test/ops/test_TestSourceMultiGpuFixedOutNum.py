@@ -30,7 +30,7 @@ def my_test_source(name, out_num):
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class Test_TestSourceMultiGpuFixedOutNum(flow.unittest.TestCase):
     def test_testsource_2_gpu(test_case):
         func_config = flow.FunctionConfig()

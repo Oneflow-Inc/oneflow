@@ -107,7 +107,7 @@ def _compare_bbox_flip(
         test_case.assertTrue(np.allclose(of_bbox.squeeze(), bbox))
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestObjectBboxFlip(flow.unittest.TestCase):
     def test_object_bbox_flip(test_case):
         _compare_bbox_flip(

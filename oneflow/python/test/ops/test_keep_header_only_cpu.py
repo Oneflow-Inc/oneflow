@@ -23,7 +23,7 @@ func_config.default_data_type(flow.float)
 func_config.default_logical_view(flow.scope.consistent_view())
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestKeepHeaderOnlyCpu(flow.unittest.TestCase):
     def test_keep_header_only_cpu(test_case):
         @flow.global_function(function_config=func_config)

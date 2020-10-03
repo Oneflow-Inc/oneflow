@@ -75,7 +75,7 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestReduceMean(flow.unittest.TestCase):
     def test_reduce_mean(test_case):
         arg_dict = OrderedDict()

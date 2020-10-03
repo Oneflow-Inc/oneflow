@@ -101,8 +101,7 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     test_case.assertTrue(np.allclose(out1.numpy(), out_arr))
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 4, "only runs when device_num is 4")
+@flow.unittest.skip_unless_1n4d()
 class TestUnsortedSegmentSumModelParallel(flow.unittest.TestCase):
     def test_unsorted_segment_sum_model_parallel_fw(test_case):
         arg_dict = OrderedDict()

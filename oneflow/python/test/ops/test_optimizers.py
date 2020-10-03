@@ -795,7 +795,7 @@ def compare_with_flow_job_fused_adam_model_update(
     assert np.allclose(var1.flatten(), var2.flatten(), rtol=1e-4, atol=1e-4,)
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()

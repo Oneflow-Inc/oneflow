@@ -37,7 +37,7 @@ def GenerateTest(test_case, a_shape, b_shape):
     test_case.assertTrue(np.array_equal(y, a + b))
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestAdd(flow.unittest.TestCase):
     def test_naive(test_case):
         @flow.global_function(function_config=func_config)

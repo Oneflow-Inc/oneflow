@@ -19,8 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 2, "only runs when node_size is 2")
-@unittest.skipIf(flow.unittest.env.device_num() != 1, "only runs when device_num is 1")
+@flow.unittest.skip_unless_2n1d()
 class TestDynamicBinary(flow.unittest.TestCase):
     def test_multi_node_dynamic_binary_split_concat_empty(test_case):
         func_config = flow.FunctionConfig()

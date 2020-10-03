@@ -27,7 +27,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
     def test_sqrt(test_case):
         arg_dict = OrderedDict()

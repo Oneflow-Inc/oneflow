@@ -499,7 +499,7 @@ def _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(
     test_case.assertTrue(np.allclose(z.numpy(), of_z))
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestScatterNd(flow.unittest.TestCase):
     def test_scatter_nd(test_case):
         arg_dict = OrderedDict()

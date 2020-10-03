@@ -82,7 +82,7 @@ def compare_with_tensorflow(
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestUpsample(flow.unittest.TestCase):
     def test_upsample(test_case):
         arg_dict = OrderedDict()

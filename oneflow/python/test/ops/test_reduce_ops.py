@@ -281,8 +281,7 @@ def compare_reduce_max_with_tensorflow(
     )
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 2, "only runs when device_num is 2")
+@flow.unittest.skip_unless_1n2d()
 class TestReduceOps(flow.unittest.TestCase):
     def test_reduce_any_func(test_case):
         arg_dict = OrderedDict()

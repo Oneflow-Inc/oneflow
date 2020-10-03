@@ -89,7 +89,7 @@ def _compare_jpg_decode_with_pil(test_case, images, print_debug_info=False):
         test_case.assertTrue(np.all(diff_abs_values == 1))
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestImageDecode(flow.unittest.TestCase):
     def test_image_decode(test_case):
         _compare_jpg_decode_with_pil(

@@ -101,7 +101,7 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestScalarByTensorOps(flow.unittest.TestCase):
     def test_add(test_case):
         arg_dict = OrderedDict()

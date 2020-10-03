@@ -32,8 +32,7 @@ def ccrelu(x, name):
     )
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 2, "only runs when node_size is 2")
-@unittest.skipIf(flow.unittest.env.device_num() != 1, "only runs when device_num is 1")
+@flow.unittest.skip_unless_2n1d()
 class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_multi_node_comm_net(test_case):

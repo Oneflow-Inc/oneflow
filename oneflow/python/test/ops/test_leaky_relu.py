@@ -72,7 +72,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, alpha):
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestLeakyRelu(flow.unittest.TestCase):
     def test_leaky_relu(test_case):
         arg_dict = OrderedDict()

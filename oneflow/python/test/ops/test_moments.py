@@ -78,7 +78,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestMoments(flow.unittest.TestCase):
     def test_moments(test_case):
         arg_dict = OrderedDict()

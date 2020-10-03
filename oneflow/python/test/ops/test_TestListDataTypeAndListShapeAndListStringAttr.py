@@ -76,7 +76,7 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class Test_TestListDataTypeAndListShapeAndListStringAttr(flow.unittest.TestCase):
     def test_data_type_attr(test_case):
         for arg in gen_arg_list():

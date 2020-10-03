@@ -101,8 +101,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 4, "only runs when device_num is 4")
+@flow.unittest.skip_unless_1n4d()
 class TestSparseSoftmaxCrossEntropyMs(flow.unittest.TestCase):
     def test_sparse_softmax_cross_entropy_with_logits(test_case):
         arg_dict = OrderedDict()

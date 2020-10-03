@@ -37,8 +37,7 @@ def _run_test(test_case, x, dtype, device):
     _check(test_case, x, y.numpy())
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 2, "only runs when device_num is 2")
+@flow.unittest.skip_unless_1n2d()
 class TestRsqrt(flow.unittest.TestCase):
     def test_rsqrt_random_gpu(test_case):
         flow.config.gpu_device_num(2)

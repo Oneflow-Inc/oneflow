@@ -164,7 +164,7 @@ def compare_with_tensorflow(
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestNnConv3d(flow.unittest.TestCase):
     def test_padding_valid_NDHWC(test_case):
         arg_dict = OrderedDict()

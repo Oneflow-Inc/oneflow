@@ -20,8 +20,7 @@ import oneflow.typing as oft
 from typing import Tuple
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 4, "only runs when device_num is 4")
+@flow.unittest.skip_unless_1n4d()
 class TestFunctionInputOutput(flow.unittest.TestCase):
     def test_FixedTensorDef(test_case):
         @flow.global_function()

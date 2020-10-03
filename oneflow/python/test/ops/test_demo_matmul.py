@@ -19,8 +19,7 @@ import oneflow.typing as tp
 import numpy as np
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 2, "only runs when device_num is 2")
+@flow.unittest.skip_unless_1n2d()
 class TestDemoMatmul(flow.unittest.TestCase):
     def test_watch(test_case):
         flow.config.gpu_device_num(2)

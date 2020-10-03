@@ -24,7 +24,7 @@ func_config.default_logical_view(flow.scope.mirrored_view())
 func_config.default_data_type(flow.float)
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestUnpackPack(flow.unittest.TestCase):
     def test_unpack_pack(test_case):
         if flow.eager_execution_enabled():

@@ -19,7 +19,7 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestTensorListInputOutput(flow.unittest.TestCase):
     def test_eager_tensor_list_input(test_case):
         flow.clear_default_session()

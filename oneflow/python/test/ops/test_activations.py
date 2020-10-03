@@ -90,7 +90,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol)
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestActivations(flow.unittest.TestCase):
     def test_activations(test_case):
         arg_dict = OrderedDict()

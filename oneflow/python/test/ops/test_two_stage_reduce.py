@@ -76,8 +76,7 @@ def _test_two_stage_reduce(
     _compare_with_numpy(test_case, np_func, x, y, axis=tuple(axis))
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 4, "only runs when device_num is 4")
+@flow.unittest.skip_unless_1n4d()
 class TestTwoStageReduce(flow.unittest.TestCase):
     def test_two_stage_reduce_max(test_case):
         arg_dict = OrderedDict()

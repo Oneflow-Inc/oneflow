@@ -22,8 +22,7 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 2, "only runs when device_num is 2")
+@flow.unittest.skip_unless_1n2d()
 class TestInterfaceOpReadAndWrite(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test(test_case):

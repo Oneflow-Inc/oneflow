@@ -47,7 +47,7 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestConstant(flow.unittest.TestCase):
     def test_constant(test_case):
         arg_dict = OrderedDict()

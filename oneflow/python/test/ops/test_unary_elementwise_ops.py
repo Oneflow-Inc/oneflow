@@ -20,8 +20,7 @@ from scipy.special import erf, erfc, gammaln
 import oneflow.typing as oft
 
 
-@unittest.skipIf(flow.unittest.env.node_size() != 1, "only runs when node_size is 1")
-@unittest.skipIf(flow.unittest.env.device_num() != 2, "only runs when device_num is 2")
+@flow.unittest.skip_unless_1n2d()
 class TestUnaryElementwiseOps(flow.unittest.TestCase):
     def test_abs(test_case):
         func_config = flow.FunctionConfig()

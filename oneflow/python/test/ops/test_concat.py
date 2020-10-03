@@ -351,7 +351,7 @@ def _test_hybrid_concat(
     )
 
 
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestConcat(flow.unittest.TestCase):
     def test_concat(test_case):
         arg_dict = OrderedDict()

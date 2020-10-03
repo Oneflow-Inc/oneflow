@@ -90,7 +90,7 @@ def _test_input_ndarray_contiguous(test_case, shape):
 #     foo_job()
 #     # ret = foo_job(input).get()
 #     # test_case.assertTrue(np.allclose(input, ret.numpy()))
-@flow.unittest.skip_if_not_1n1d()
+@flow.unittest.skip_unless_1n1d()
 class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
     def test_lazy_input_output(test_case):
         flow.clear_default_session()
