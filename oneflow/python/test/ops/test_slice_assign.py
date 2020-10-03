@@ -86,6 +86,17 @@ def test_slice_assign_4d(test_case):
         _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
 
 
+def test_slice_assign_4d_negative_start_stop(test_case):
+    var_shape = (30, 40, 20, 15)
+    slice_tuples = [(10, 20, 3), (-39, -10, 4), (-15, -5, 2), (5, 11, 1)]
+    arg_dict = OrderedDict()
+    arg_dict["split_axis"] = list(range(4))
+    arg_dict["dst_device_tag"] = ["cpu", "gpu"]
+    arg_dict["flow_dtype"] = [flow.float32]
+    for arg in GenArgDict(arg_dict):
+        _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
+
+
 def test_slice_assign_2d(test_case):
     var_shape = (30, 40)
     slice_tuples = [(10, 20, 3), (1, 30, 4)]

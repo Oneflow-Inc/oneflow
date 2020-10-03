@@ -380,7 +380,7 @@ def slice2(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    name = name or id_util.UniqueStr("SliceAssign_")
+    name = name or id_util.UniqueStr("Slice2_")
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
@@ -414,18 +414,22 @@ def slice2(
         if step is None:
             step = 1
 
-        if step == 0:
-            raise ValueError("slice step can't be 0")
+        if step <= 0:
+            raise ValueError("slice2 step must be greater than 0")
 
         if start is None:
-            start = 0 if step > 0 else np.iinfo(np.int64).max
+            start = 0
         elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice start must be in range [-size, size)")
+            raise ValueError("slice2 start must be in range [-size, size)")
+        elif start < 0:
+            start += dim_size
 
         if stop is None:
-            stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
-        elif stop < -dim_size - 1 or stop > dim_size:
-            raise ValueError("slice start must be in range [-size-1, size]")
+            stop = dim_size
+        elif stop < -dim_size or stop > dim_size:
+            raise ValueError("slice2 start must be in range [-size, size]")
+        elif stop < 0:
+            stop += dim_size
 
         start_list.append(start)
         stop_list.append(stop)
@@ -486,18 +490,22 @@ def slice_assign(
         if step is None:
             step = 1
 
-        if step == 0:
-            raise ValueError("slice step can't be 0")
+        if step <= 0:
+            raise ValueError("slice_assign step must be greater than 0")
 
         if start is None:
-            start = 0 if step > 0 else np.iinfo(np.int64).max
+            start = 0
         elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice start must be in range [-size, size)")
+            raise ValueError("slice_assign start must be in range [-size, size)")
+        elif start < 0:
+            start += dim_size
 
         if stop is None:
-            stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
-        elif stop < -dim_size - 1 or stop > dim_size:
-            raise ValueError("slice start must be in range [-size-1, size]")
+            stop = dim_size
+        elif stop < -dim_size or stop > dim_size:
+            raise ValueError("slice_assign start must be in range [-size, size]")
+        elif stop < 0:
+            stop += dim_size
 
         start_list.append(start)
         stop_list.append(stop)

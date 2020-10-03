@@ -29,11 +29,11 @@ int64_t get_size_in_slice(const int64_t start, const int64_t end, const int64_t 
   return (end - start - 1) / step + 1;
 }
 
-class SliceAssignOpKernelState final : public user_op::OpKernelState {
+class SliceState final : public user_op::OpKernelState {
  public:
-  SliceAssignOpKernelState(int64_t split_axis, int64_t lower, int64_t upper, int64_t length)
+  SliceState(int64_t split_axis, int64_t lower, int64_t upper, int64_t length)
       : split_axis_(split_axis), lower_(lower), upper_(upper), length_(length) {}
-  ~SliceAssignOpKernelState() override = default;
+  ~SliceState() override = default;
 
   int64_t split_axis() const { return split_axis_; }
   int64_t lower() const { return lower_; }
@@ -219,19 +219,19 @@ class SliceGradKernel final : public user_op::OpKernel {
 
 template<int NDIM, typename T>
 void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
-                user_op::Tensor* dst, const SliceAssignOpKernelState* slice_assign_state,
+                user_op::Tensor* dst, const SliceState* slice_state,
                 const bool from_large_to_small) {
   const user_op::Tensor* large = from_large_to_small ? src : dst;
   const user_op::Tensor* small = from_large_to_small ? dst : src;
-  CHECK_NOTNULL(slice_assign_state);
-  if (slice_assign_state->split_axis() != -1) {
-    CHECK_EQ(large->shape().At(slice_assign_state->split_axis()),
-             slice_assign_state->upper() - slice_assign_state->lower());
+  CHECK_NOTNULL(slice_state);
+  if (slice_state->split_axis() != -1) {
+    CHECK_EQ(large->shape().At(slice_state->split_axis()),
+             slice_state->upper() - slice_state->lower());
   }
 
-  const auto params_pair = ConstructSliceParams(
-      ctx, large, small, slice_assign_state->split_axis(), slice_assign_state->lower(),
-      slice_assign_state->upper(), slice_assign_state->length());
+  const auto params_pair =
+      ConstructSliceParams(ctx, large, small, slice_state->split_axis(), slice_state->lower(),
+                           slice_state->upper(), slice_state->length());
 
   const auto tensor_params = params_pair.first;
   const auto slice_params = params_pair.second;
@@ -265,6 +265,23 @@ DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
                                                   ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
+std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,
+                                                         const std::string& large_tensor_name) {
+  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
+  if (in_sbp.has_split_parallel() && ctx->parallel_ctx().parallel_num() > 1) {
+    const user_op::TensorDesc* in_logical_desc =
+        ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
+    const auto split_axis = in_sbp.split_parallel().axis();
+    const int64_t gather_dim_size = in_logical_desc->shape().At(split_axis);
+    BalancedSplitter bs(gather_dim_size, ctx->parallel_ctx().parallel_num());
+    return std::make_shared<SliceState>(
+        split_axis, bs.At(ctx->parallel_ctx().parallel_id()).begin(),
+        bs.At(ctx->parallel_ctx().parallel_id()).end(), gather_dim_size);
+  } else {
+    return std::make_shared<SliceState>(-1, 0, 0, 0);
+  }
+}
+
 template<typename T>
 class Slice2Kernel final : public user_op::OpKernel {
  public:
@@ -273,28 +290,16 @@ class Slice2Kernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-    if (in_sbp.has_split_parallel() && ctx->parallel_ctx().parallel_num() > 1) {
-      CHECK(ctx->SbpParallel4ArgNameAndIndex("y", 0).has_partial_sum_parallel());
-      const user_op::TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("x", 0);
-      const auto split_axis = in_sbp.split_parallel().axis();
-      const int64_t gather_dim_size = in_logical_desc->shape().At(split_axis);
-      BalancedSplitter bs(gather_dim_size, ctx->parallel_ctx().parallel_num());
-      return std::make_shared<SliceAssignOpKernelState>(
-          split_axis, bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-          bs.At(ctx->parallel_ctx().parallel_id()).end(), gather_dim_size);
-    } else {
-      return std::make_shared<SliceAssignOpKernelState>(-1, 0, 0, 0);
-    }
+    return CreateSliceState(ctx, "x");
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    auto* slice_assign_state = dynamic_cast<SliceAssignOpKernelState*>(state);
+    auto* slice_state = dynamic_cast<SliceState*>(state);
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
-                     y_tensor, slice_assign_state, true);
+                     y_tensor, slice_state, true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -307,28 +312,16 @@ class SliceAssignKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("ref", 0);
-    if (in_sbp.has_split_parallel() && ctx->parallel_ctx().parallel_num() > 1) {
-      CHECK(ctx->SbpParallel4ArgNameAndIndex("value", 0).has_broadcast_parallel());
-      const user_op::TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("ref", 0);
-      const auto split_axis = in_sbp.split_parallel().axis();
-      const int64_t gather_dim_size = in_logical_desc->shape().At(split_axis);
-      BalancedSplitter bs(gather_dim_size, ctx->parallel_ctx().parallel_num());
-      return std::make_shared<SliceAssignOpKernelState>(
-          split_axis, bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-          bs.At(ctx->parallel_ctx().parallel_id()).end(), gather_dim_size);
-    } else {
-      return std::make_shared<SliceAssignOpKernelState>(-1, 0, 0, 0);
-    }
+    return CreateSliceState(ctx, "ref");
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    auto* slice_assign_state = dynamic_cast<SliceAssignOpKernelState*>(state);
+    auto* slice_state = dynamic_cast<SliceState*>(state);
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
-                     value_tensor, ref_tensor, slice_assign_state, false);
+                     value_tensor, ref_tensor, slice_state, false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

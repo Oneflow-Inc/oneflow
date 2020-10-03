@@ -175,12 +175,20 @@ void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
 Maybe<void> InferSliceAssignTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
   user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
   CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
-  // CHECK_OR_RETURN(begin < end);
-  // CHECK_OR_RETURN(ref_desc->shape().At(axis) > end);
-  // CHECK_OR_RETURN(value_desc->shape().NumAxes() == 1);
-  // CHECK_OR_RETURN(value_desc->shape().Count(0) == (end - begin));
+  FOR_RANGE(size_t, i, 0, step_vec.size()) {
+    const int64_t step = step_vec.at(i);
+    const int64_t start = start_vec.at(i);
+    const int64_t stop = stop_vec.at(i);
+    CHECK_GT_OR_RETURN(step, 0) << "slice_assign step must be greater than 0";
+    CHECK_GT_OR_RETURN(start, 0) << "slice_assign start must be greater than 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "slice_assign stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "slice_assign start must be less than stop";
+  }
   CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
   return Maybe<void>::Ok();
 }
@@ -214,29 +222,18 @@ Maybe<void> InferSlice2TensorDesc(user_op::InferContext* ctx) {
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
-    // const int64_t dim_size = x_shape->At(i);
     const int64_t step = step_vec.at(i);
-    CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
-    // int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
-    // int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
-    int64_t start = start_vec.at(i);
-    int64_t stop = stop_vec.at(i);
-    if (step > 0) {
-      CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
-                                         ", otherwise empty result will be outputted.";
-    } else {
-      CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
-                                         ", otherwise empty result will be outputted.";
-    }
+    const int64_t start = start_vec.at(i);
+    const int64_t stop = stop_vec.at(i);
+    CHECK_GT_OR_RETURN(step, 0) << "slice2 step must be greater than 0";
+    CHECK_GT_OR_RETURN(start, 0) << "slice2 start must be greater than 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "slice2 stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "slice2 start must be less than stop";
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
     dim_vec[i] = diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  // CHECK_OR_RETURN(begin < end);
-  // CHECK_OR_RETURN(input_desc->shape().At(axis) > end);
-  // CHECK_OR_RETURN(value_desc->shape().NumAxes() == 1);
-  // CHECK_OR_RETURN(value_desc->shape().Count(0) == (end - begin));
   return Maybe<void>::Ok();
 }
 
