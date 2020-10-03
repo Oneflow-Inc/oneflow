@@ -142,14 +142,16 @@ class TestCase(unittest.TestCase):
             assert ctrl_port, "env var ONEFLOW_TEST_CTRL_PORT not set"
             oneflow.env.ctrl_port(int(ctrl_port))
 
-            oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
-
-        global _unittest_env_initilized
-        if _unittest_env_initilized == False:
-            oneflow.env.init()
-            _unittest_env_initilized = True
-            if has_node_list():
+            global _unittest_env_initilized
+            if _unittest_env_initilized == False:
+                oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
                 atexit.register(flow.deprecated.delete_worker)
+                oneflow.env.init()
+                _unittest_env_initilized = True
+        else:
+            if _unittest_env_initilized == False:
+                oneflow.env.init()
+                _unittest_env_initilized = True
 
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
