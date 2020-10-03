@@ -135,17 +135,18 @@ class TestCase(unittest.TestCase):
 
         if has_node_list():
             assert node_size() > 1
-            oneflow.env.machine(node_list())
-
-            ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
-            assert ctrl_port, "env var ONEFLOW_TEST_CTRL_PORT not set"
-            oneflow.env.ctrl_port(int(ctrl_port))
-
-            data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-            if data_port:
-                oneflow.env.data_port(int(data_port))
 
             if _unittest_worker_initilized == False:
+                oneflow.env.machine(node_list())
+
+                ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
+                assert ctrl_port, "env var ONEFLOW_TEST_CTRL_PORT not set"
+                oneflow.env.ctrl_port(int(ctrl_port))
+
+                data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                if data_port:
+                    oneflow.env.data_port(int(data_port))
+
                 oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
                 atexit.register(flow.deprecated.delete_worker)
                 _unittest_worker_initilized = True
