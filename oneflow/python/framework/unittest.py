@@ -171,31 +171,31 @@ def skip_unless(node_size, device_num):
         )
 
 
-@oneflow_export("unittest.skip_skip_unless_1n1d")
+@oneflow_export("unittest.skip_unless_1n1d")
 def skip_unless_1n1d():
     return skip_unless(1, 1)
 
 
-@oneflow_export("unittest.skip_skip_unless_1n2d")
+@oneflow_export("unittest.skip_unless_1n2d")
 def skip_unless_1n2d():
     return skip_unless(1, 2)
 
 
-@oneflow_export("unittest.skip_skip_unless_1n4d")
+@oneflow_export("unittest.skip_unless_1n4d")
 def skip_unless_1n4d():
     return skip_unless(1, 4)
 
 
-@oneflow_export("unittest.skip_skip_unless_2n1d")
+@oneflow_export("unittest.skip_unless_2n1d")
 def skip_unless_2n1d():
     return skip_unless(2, 1)
 
 
-@oneflow_export("unittest.skip_skip_unless_2n2d")
+@oneflow_export("unittest.skip_unless_2n2d")
 def skip_unless_2n2d():
     return skip_unless(2, 2)
 
 
-@oneflow_export("unittest.skip_skip_unless_2n4d")
+@oneflow_export("unittest.skip_unless_2n4d")
 def skip_unless_2n4d():
     return skip_unless(2, 4)
