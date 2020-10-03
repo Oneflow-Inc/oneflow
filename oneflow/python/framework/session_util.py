@@ -60,6 +60,7 @@ class Session(object):
         self.inter_user_job_info_ = None
         self.uuid2watch_handler_ = {}
         self.config_proto_ = None
+        self.resource_ = None
         self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
@@ -92,6 +93,13 @@ class Session(object):
         if self.config_proto_ is None:
             self.config_proto_ = _GetDefaultConfigProto()
         return self.config_proto_
+
+    @property
+    def resource(self):
+        if self.resource_ is None:
+            return oneflow.env.current_resource()
+        else:
+            return self.resource_
 
     @property
     def uuid2watch_handler(self):
@@ -210,14 +218,15 @@ class Session(object):
         if not c_api_util.IsEnvInited():
             oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto)
-        c_api_util.InitGlobalSession(self.config_proto)
+        self.resource_ = self.config_proto.resource
         if not c_api_util.EagerExecutionEnabled():
+            c_api_util.InitLazyGlobalSession(self.config_proto)
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(self, func_desc, self.config_proto)
                 self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
-            c_api_util.StartGlobalSession()
+            c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         return self
 
@@ -232,9 +241,10 @@ class Session(object):
         del self.var_name2var_blob_
         del self.job_name2module_name2module_
         self.ForceReleaseEagerBlobs()
-        c_api_util.StopGlobalSession()
-        c_api_util.DestroyGlobalSession()
+        c_api_util.StopLazyGlobalSession()
+        c_api_util.DestroyLazyGlobalSession()
         self.status_ = SessionStatus.CLOSED
+        self.resource_ = None
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
