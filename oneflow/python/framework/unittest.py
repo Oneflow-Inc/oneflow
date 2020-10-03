@@ -167,3 +167,11 @@ class TestCase_1n1d(TestCase):
         else:
             skip_reason = "only runs when node_size is 1 and device_num is 1"
             self.skipTest(skip_reason)
+
+
+@oneflow_export("unittest.skip_if_not_1n1d")
+def skip_if_not_1n1d(obj, attr):
+    if node_size() == 1 and device_num() == 1:
+        return lambda func: func
+    else:
+        return unittest.skip("only runs when node_size is 1 and device_num is 1")
