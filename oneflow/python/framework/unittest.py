@@ -160,8 +160,8 @@ class TestCase(unittest.TestCase):
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
-def skip_unless(node_size, device_num):
-    if node_size() == node_size and device_num() == device_num:
+def skip_unless(n, d):
+    if node_size() == n and device_num() == d:
         return lambda func: func
     else:
         return unittest.skip(
