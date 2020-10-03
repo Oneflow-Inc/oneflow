@@ -100,7 +100,7 @@ def compare_with_tensorflow_adam(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=func_config)
     def testAdam(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
@@ -170,7 +170,7 @@ def compare_with_numpy_adamw(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=func_config)
     def testAdamW(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
@@ -424,7 +424,7 @@ def compare_with_tensorflow_sgd(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
 
-    @flow.global_function(type="train", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=func_config)
     def testSGD(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
@@ -647,6 +647,153 @@ def compare_with_numpy_indexed_slices_adam(
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
 
 
+def compare_with_flow_job_fused_sgd_model_update(
+    device_type, x_shape, momentum, learning_rate, train_iters
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+
+    def flow_net(var_name, random_mask):
+        with flow.scope.placement(device_type, "0:0-0"):
+            x = flow.get_variable(
+                name=var_name,
+                shape=x_shape,
+                dtype=flow.float32,
+                initializer=flow.ones_initializer(),
+                trainable=True,
+            )
+            constant_val = flow.constant(3.0, dtype=flow.float32, shape=(1,))
+            x = x * constant_val
+            x = x * 2.0
+            if device_type == "gpu":
+                x = flow.cast(x, flow.float16)
+                x = flow.math.relu(x)
+                x = flow.cast(x, flow.float)
+            loss = flow.math.reduce_mean(x * random_mask)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                momentum=momentum,
+            ).minimize(loss)
+            return x
+
+    def make_sgd_job():
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float32)
+
+        @flow.global_function(type="train", function_config=func_config)
+        def testSGD(
+            random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
+        ) -> flow.typing.Numpy:
+            return flow_net("x1", random_mask)
+
+        return testSGD
+
+    def make_fused_sgd_job():
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float32)
+        func_config.enable_fuse_model_update_ops(True)
+
+        @flow.global_function(type="train", function_config=func_config)
+        def testFusedSGD(
+            random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
+        ) -> flow.typing.Numpy:
+            return flow_net("x2", random_mask)
+
+        return testFusedSGD
+
+    sgd_job = make_sgd_job()
+    fused_sgd_job = make_fused_sgd_job()
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    # generate random number sequences
+    random_masks_seq = []
+    for i in range(train_iters + 1):
+        random_masks_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
+    for i in range(train_iters + 1):
+        var1 = sgd_job(random_masks_seq[i])
+
+    for i in range(train_iters + 1):
+        var2 = fused_sgd_job(random_masks_seq[i])
+    assert np.allclose(var1.flatten(), var2.flatten(), rtol=1e-4, atol=1e-4,)
+
+
+def compare_with_flow_job_fused_adam_model_update(
+    device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+
+    def flow_net(var_name, random_mask):
+        with flow.scope.placement(device_type, "0:0-0"):
+            x = flow.get_variable(
+                name=var_name,
+                shape=x_shape,
+                dtype=flow.float32,
+                initializer=flow.ones_initializer(),
+                trainable=True,
+            )
+            constant_val = flow.constant(3.0, dtype=flow.float32, shape=(1,))
+            x = x * constant_val
+            x = x * 2.0
+            if device_type == "gpu":
+                x = flow.cast(x, flow.float16)
+                x = flow.math.relu(x)
+                x = flow.cast(x, flow.float)
+            loss = flow.math.reduce_mean(x * random_mask)
+            flow.optimizer.Adam(
+                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
+                beta1=beta1,
+                beta2=beta2,
+                epsilon=epsilon,
+                do_bias_correction=True,
+            ).minimize(loss)
+            return x
+
+    def make_adam_job():
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float32)
+
+        @flow.global_function(type="train", function_config=func_config)
+        def testAdam(
+            random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
+        ) -> flow.typing.Numpy:
+            return flow_net("x1", random_mask)
+
+        return testAdam
+
+    def make_fused_adam_job():
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float32)
+        func_config.enable_fuse_model_update_ops(True)
+
+        @flow.global_function(type="train", function_config=func_config)
+        def testFusedAdam(
+            random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
+        ) -> flow.typing.Numpy:
+            return flow_net("x2", random_mask)
+
+        return testFusedAdam
+
+    adam_job = make_adam_job()
+    fused_adam_job = make_fused_adam_job()
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    # generate random number sequences
+    random_masks_seq = []
+    for i in range(train_iters + 1):
+        random_masks_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
+    for i in range(train_iters + 1):
+        var1 = adam_job(random_masks_seq[i])
+
+    for i in range(train_iters + 1):
+        var2 = fused_adam_job(random_masks_seq[i])
+    assert np.allclose(var1.flatten(), var2.flatten(), rtol=1e-4, atol=1e-4,)
+
+
 def test_rmsprop(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
@@ -751,3 +898,27 @@ def test_indexed_slices_adam(test_case):
     arg_dict["mul_scalar"] = [1, 2]
     for arg in GenArgList(arg_dict):
         compare_with_numpy_indexed_slices_adam(*arg)
+
+
+def test_fused_sgd(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["x_shape"] = [(10,)]
+    arg_dict["momentum"] = [0.9, 0.0]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    for arg in GenArgList(arg_dict):
+        compare_with_flow_job_fused_sgd_model_update(*arg)
+
+
+def test_fused_adam(test_case):
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["x_shape"] = [(10,)]
+    arg_dict["beta1"] = [0.9]
+    arg_dict["beta2"] = [0.99]
+    arg_dict["epsilon"] = [1e-9]
+    arg_dict["learning_rate"] = [1]
+    arg_dict["train_iters"] = [10]
+    for arg in GenArgList(arg_dict):
+        compare_with_flow_job_fused_adam_model_update(*arg)
