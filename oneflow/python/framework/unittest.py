@@ -165,9 +165,7 @@ def skip_unless(n, d):
         return lambda func: func
     else:
         return unittest.skip(
-            "only runs when node_size is {} and device_num is {}".format(
-                node_size, device_num
-            )
+            "only runs when node_size is {} and device_num is {}".format(n, d)
         )
 
 
