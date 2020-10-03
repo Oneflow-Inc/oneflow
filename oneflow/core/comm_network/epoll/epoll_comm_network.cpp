@@ -94,6 +94,13 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
+void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
+  SocketMsg msg;
+  msg.msg_type = SocketMsgType::kTransport;
+  msg.transport_msg = transport_msg;
+  SendSocketMsg(dst_machine_id, msg);
+}
+
 void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
@@ -103,6 +110,13 @@ SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) {
   mem_desc->mem_ptr = ptr;
   mem_desc->byte_size = byte_size;
   return mem_desc;
+}
+
+EpollCommNet::EpollCommNet() {
+  pollers_.resize(Global<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
+  for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
+  InitSockets();
+  for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
 EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {

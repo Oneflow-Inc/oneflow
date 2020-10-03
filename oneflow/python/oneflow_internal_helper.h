@@ -44,7 +44,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/eager/eager_util.h"
+#include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
 
 #ifdef WITH_TENSORRT
@@ -106,6 +106,7 @@ Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendHalt();
+  // Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
@@ -271,12 +272,14 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
 
 Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
                                   const std::string& eager_symbol_list_str) {
-  return eager::RunLogicalInstruction(instruction_list_str, eager_symbol_list_str);
+  return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list_str,
+                                                                   eager_symbol_list_str);
 }
 
 Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
                                    const std::string& eager_symbol_list_str) {
-  return eager::RunPhysicalInstruction(instruction_list_str, eager_symbol_list_str);
+  return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list_str,
+                                                                    eager_symbol_list_str);
 }
 
 Maybe<long long> CurrentMachineId() {

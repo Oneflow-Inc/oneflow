@@ -29,7 +29,6 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     func_config = flow.FunctionConfig()
 
     if data_type == "float16":
-        func_config.enable_auto_mixed_precision(True)
         dtype = flow.float
     else:
         dtype = type_name_to_flow_type[data_type]
@@ -41,10 +40,19 @@ def of_run(device_type, x_shape, data_type, rate, seed):
                 "x",
                 shape=x_shape,
                 dtype=dtype,
-                initializer=flow.random_uniform_initializer(minval=1, maxval=10),
+                initializer=flow.random_uniform_initializer(minval=-1, maxval=1),
                 trainable=True,
             )
-            of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
+            if data_type == "float16":
+                x = flow.cast(flow.cast(x, flow.float16), dtype)
+                of_out = flow.cast(
+                    flow.nn.dropout(
+                        flow.cast(x, flow.float16), rate=rate, seed=seed, name="dropout"
+                    ),
+                    dtype,
+                )
+            else:
+                of_out = flow.nn.dropout(x, rate=rate, seed=seed, name="dropout")
             loss = flow.math.square(of_out)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0

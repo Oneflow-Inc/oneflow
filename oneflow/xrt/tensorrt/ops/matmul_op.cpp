@@ -43,7 +43,15 @@ class MatMulOp : public TrtOpKernel {
 
     auto *layer = ctx->builder()->addMatrixMultiply(*a, op0, *b, op1);
     layer->setName(ctx->op_name().c_str());
-    ctx->SetSoleOutput(layer->getOutput(0));
+    nvinfer1::ITensor *out = layer->getOutput(0);
+
+    if (ctx->HasInput("_add_to_output_0")) {
+      auto *add_layer = ctx->builder()->addElementWise(  // NOLINT
+          *out, *ctx->Input("_add_to_output_0"), nvinfer1::ElementWiseOperation::kSUM);
+      ctx->SetSoleOutput(add_layer->getOutput(0));
+    } else {
+      ctx->SetSoleOutput(out);
+    }
   }
 };
 
