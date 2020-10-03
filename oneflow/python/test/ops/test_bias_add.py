@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -127,25 +128,30 @@ def CompareBiasAddWithTensorFlow(
     assert np.allclose(of_x_diff2, tf_x_diff2, rtol=x_diff_rtol, atol=x_diff_atol)
 
 
-def test_bias_add_nchw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["data_type"] = ["float16", "float32"]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shapes"] = [((1, 20, 1, 11), (20,)), ((2, 20, 1, 11), (20,))]
-    arg_dict["op_args"] = [Args(["NCHW"])]
-    for arg in GenArgDict(arg_dict):
-        if arg["data_type"] == "float16" and arg["device_type"] == "cpu":
-            continue
-        CompareBiasAddWithTensorFlow(**arg)
+@flow.unittest.skip_unless_1n1d()
+class TestBiasAdd(flow.unittest.TestCase):
+    def test_bias_add_nchw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["data_type"] = ["float16", "float32"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shapes"] = [((1, 20, 1, 11), (20,)), ((2, 20, 1, 11), (20,))]
+        arg_dict["op_args"] = [Args(["NCHW"])]
+        for arg in GenArgDict(arg_dict):
+            if arg["data_type"] == "float16" and arg["device_type"] == "cpu":
+                continue
+            CompareBiasAddWithTensorFlow(**arg)
+
+    def test_bias_add_nhwc(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["data_type"] = ["float16", "float32"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shapes"] = [((30, 20, 5, 10), (10,)), ((2, 5, 7, 7), (7,))]
+        arg_dict["op_args"] = [Args(["NHWC"])]
+        for arg in GenArgDict(arg_dict):
+            if arg["data_type"] == "float16" and arg["device_type"] == "cpu":
+                continue
+            CompareBiasAddWithTensorFlow(**arg)
 
 
-def test_bias_add_nhwc(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["data_type"] = ["float16", "float32"]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shapes"] = [((30, 20, 5, 10), (10,)), ((2, 5, 7, 7), (7,))]
-    arg_dict["op_args"] = [Args(["NHWC"])]
-    for arg in GenArgDict(arg_dict):
-        if arg["data_type"] == "float16" and arg["device_type"] == "cpu":
-            continue
-        CompareBiasAddWithTensorFlow(**arg)
+if __name__ == "__main__":
+    unittest.main()

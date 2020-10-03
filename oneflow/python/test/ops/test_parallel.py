@@ -13,25 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
-
-
-def test_1n1c(test_case):
-    flow.config.gpu_device_num(1)
-    NaiveTest(test_case)
-
-
-def test_1n2c(test_case):
-    flow.config.gpu_device_num(2)
-    NaiveTest(test_case)
-
-
-@flow.unittest.num_nodes_required(2)
-def test_2n2c(test_case):
-    flow.config.gpu_device_num(1)
-    NaiveTest(test_case)
 
 
 def NaiveTest(test_case):
@@ -47,3 +32,24 @@ def NaiveTest(test_case):
     y = np.random.rand(*shape).astype(np.float32)
     z = AddJob(x, y).get().numpy()
     test_case.assertTrue(np.array_equal(z, x + y + y))
+
+
+class TestParallel(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n1d()
+    def test_1n1c(test_case):
+        flow.config.gpu_device_num(1)
+        NaiveTest(test_case)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_1n2c(test_case):
+        flow.config.gpu_device_num(2)
+        NaiveTest(test_case)
+
+    @flow.unittest.skip_unless_2n1d()
+    def test_2n2c(test_case):
+        flow.config.gpu_device_num(1)
+        NaiveTest(test_case)
+
+
+if __name__ == "__main__":
+    unittest.main()
