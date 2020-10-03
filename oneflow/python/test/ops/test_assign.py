@@ -20,7 +20,6 @@ import oneflow as flow
 from test_util import GenArgDict
 import oneflow.typing as oft
 import os
-import logging
 
 flow_to_np_dtype_dict = {
     flow.int32: np.int32,
@@ -111,10 +110,8 @@ def test_2node_assign(test_case):
     else:
         assign = flow.assign
     arg_dict = OrderedDict()
-    # arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    arg_dict["shape"] = [(30, 4)]
-    # arg_dict["dtype"] = [flow.float, flow.double]
-    arg_dict["dtype"] = [flow.float]
+    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+    arg_dict["dtype"] = [flow.float, flow.double]
     arg_dict["device_type"] = ["cpu"]
     arg_dict["assign"] = [assign]
     for arg in GenArgDict(arg_dict):
@@ -158,9 +155,7 @@ def _2node_of_assign_and_relu(value, dtype, device_type, assign=flow.assign):
                 dtype=dtype,
                 initializer=flow.constant_initializer(0),
             )
-        logging.info("+ flow.nn.relu")
         ret = flow.nn.relu(var)
-        logging.info("+ return ret")
         return ret
 
     assign_fn(value)

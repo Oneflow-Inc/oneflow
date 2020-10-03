@@ -11,6 +11,7 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/job/lbi_diff_watcher_info.proto";
 
 message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
@@ -30,6 +31,7 @@ message JobHelperConf {
   map<string, int64> lbn2logical_object_id = 5;
   map<string, OptInt64> lbn2batch_axis = 6;
   optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
+  optional LbiDiffWatcherInfo lbi_diff_watcher_info = 8;
 }
 
 message Job {

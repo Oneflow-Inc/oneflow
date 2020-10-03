@@ -126,10 +126,6 @@ void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* clust
   PullClusterInstruction(cluster_instruction);
 }
 
-void ClusterInstruction::HaltBarrier() {
-  LOG(INFO) << "before barrier";
-  OF_ENV_BARRIER();
-  LOG(INFO) << "after barrier";
-}
+void ClusterInstruction::HaltBarrier() { OF_ENV_BARRIER(); }
 
 }  // namespace oneflow

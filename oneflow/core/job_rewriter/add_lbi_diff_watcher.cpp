@@ -29,7 +29,7 @@ class AddLbiDiffWatcherOpConfs final : public OpGraphPass {
 
 Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   JobBuilder job_builder(job);
-  const auto& map = Global<LbiDiffWatcherInfo>::Get()->job_name2lbi_and_watcher_uuids();
+  const auto& map = job->helper().lbi_diff_watcher_info().job_name2lbi_and_watcher_uuids();
   if (map.find(GlobalJobDesc().job_name()) == map.end()) { return Maybe<void>::Ok(); }
   const auto& tag2lbi_relations = job->helper().tag2lbi_relations();
   const auto& conf_iter = tag2lbi_relations.find(kProducedLbi2ConsumedDiffLbi);

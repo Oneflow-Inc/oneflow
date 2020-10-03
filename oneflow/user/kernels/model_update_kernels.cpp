@@ -118,13 +118,20 @@ class SGDUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
-    const auto scale = ctx->Attr<float>("scale");
+    const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), scale, l1, l2, weight_decay,
-        learning_rate->dptr<float>(), model_diff->dptr<G>(), model->mut_dptr<T>());
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
+        learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -212,15 +219,22 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
-    const auto scale = ctx->Attr<float>("scale");
+    const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto beta = ctx->Attr<float>("beta");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), scale, l1, l2, beta, weight_decay,
-        learning_rate->dptr<float>(), model_diff->dptr<G>(), model->mut_dptr<T>(),
-        momentum->mut_dptr<T>());
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
+        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -318,7 +332,7 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
     user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
-    const auto scale = ctx->Attr<float>("scale");
+    const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto beta1 = ctx->Attr<float>("beta1");
@@ -326,6 +340,13 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     T* beta1_t_ptr = nullptr;
     T* beta2_t_ptr = nullptr;
     if (do_bias_correction) {
@@ -335,9 +356,10 @@ class AdamUpdateKernel final : public user_op::OpKernel {
       beta2_t_ptr = beta2_t->mut_dptr<T>();
     }
     AdamUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        do_bias_correction, weight_decay, learning_rate->dptr<float>(), model_diff->dptr<G>(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), beta1_t_ptr, beta2_t_ptr);
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
+        epsilon, do_bias_correction, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
+        beta1_t_ptr, beta2_t_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

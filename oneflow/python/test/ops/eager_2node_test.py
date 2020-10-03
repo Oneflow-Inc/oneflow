@@ -16,7 +16,6 @@ limitations under the License.
 import atexit
 import os
 
-import numpy
 import oneflow as flow
 from absl import app, flags
 from absl.testing import absltest
@@ -28,18 +27,18 @@ flags.DEFINE_string(
 flags.DEFINE_integer("ctrl_port", "9524", "control port")
 
 
-def Init():
-    flow.env.machine(FLAGS.nodes_list.split(","))
-    flow.env.ctrl_port(FLAGS.ctrl_port)
-    # flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
-    flow.env.init()
-    # atexit.register(flow.deprecated.delete_worker)
-
-
 class _ClearDefaultSession(object):
     def setUp(self):
         flow.clear_default_session()
         flow.enable_eager_execution(True)
+
+
+def Init():
+    flow.env.machine(FLAGS.nodes_list.split(","))
+    flow.env.ctrl_port(FLAGS.ctrl_port)
+    flow.deprecated.init_worker(scp_binary=True, use_uuid=True)
+    flow.env.init()
+    atexit.register(flow.deprecated.delete_worker)
 
 
 flow.unittest.register_test_cases(

@@ -307,7 +307,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<EpollCommNet>::New();
   Global<Transport>::New();
 
-  // OF_SESSION_ALL Must call before test,
+  // OF_ENV_BARRIER Must call before test,
   // to ensure that the Global<Transport> on each machine is created
   OF_ENV_BARRIER();
 

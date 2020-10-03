@@ -16,6 +16,7 @@ limitations under the License.
 #include <atomic>
 #include <pybind11/pybind11.h>
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/api/python/of_api_registry.h"
 
 namespace py = pybind11;
 
@@ -30,6 +31,7 @@ uint64_t NewTokenId() {
 PYBIND11_MODULE(oneflow_api, m) {
   m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
   m.def("NewTokenId", &NewTokenId);
+  ::oneflow::OneflowModuleRegistry().ImportAll(m);
 }
 
 }  // namespace oneflow
