@@ -19,6 +19,7 @@ import imp
 import inspect
 import os
 import unittest
+import functools
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
@@ -159,19 +160,12 @@ class TestCase(unittest.TestCase):
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
-@oneflow_export("unittest.TestCase_1n1d")
-class TestCase_1n1d(TestCase):
-    def setUp(self):
-        if node_size() == 1 and device_num() == 1:
-            super().setUp()
-        else:
-            skip_reason = "only runs when node_size is 1 and device_num is 1"
-            self.skipTest(skip_reason)
-
-
 @oneflow_export("unittest.skip_if_not_1n1d")
-def skip_if_not_1n1d(obj, attr):
-    if node_size() == 1 and device_num() == 1:
-        return lambda func: func
-    else:
-        return unittest.skip("only runs when node_size is 1 and device_num is 1")
+def skip_if_not_1n1d(o):
+    @functools.wraps(f)
+	def wrapper(*args, **kwargs):
+		if node_size() == 1 and device_num() == 1:
+			return f(*args, **kwargs)
+		else:
+			return unittest.skip("only runs when node_size is 1 and device_num is 1")
+	return wrapper
