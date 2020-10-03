@@ -5,6 +5,8 @@ set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
+set(gflags_URL https://github.com/Oneflow-Inc/gflags/archive/9314597d4.tar.gz)
+use_mirror(VARIABLE gflags_URL URL ${gflags_URL})
 
 if(WIN32)
     set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
@@ -33,7 +35,7 @@ if (THIRD_PARTY)
 
 ExternalProject_Add(gflags
     PREFIX gflags
-    URL https://github.com/Oneflow-Inc/gflags/archive/9314597d4.tar.gz
+    URL ${gflags_URL}
     URL_MD5 9677cc51d63642ba3d5f2a57a1fa2bd0
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
