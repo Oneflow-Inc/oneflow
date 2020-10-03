@@ -161,7 +161,7 @@ class TestCase(unittest.TestCase):
 
 
 @oneflow_export("unittest.skip_if_not_1n1d")
-def skip_if_not_1n1d(o):
+def skip_if_not_1n1d(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         if node_size() == 1 and device_num() == 1:
