@@ -66,12 +66,6 @@ def _test_slice_assign(
         slice_objs.append(slice(s[0], s[1], s[2]))
     np_res[tuple(slice_objs)] = value
 
-    print(of_res[tuple(slice_objs)])
-    print("----")
-    print(np_res[tuple(slice_objs)])
-    print("----")
-    print(value)
-
     test_case.assertTrue(np.array_equal(of_res, np_res))
 
 

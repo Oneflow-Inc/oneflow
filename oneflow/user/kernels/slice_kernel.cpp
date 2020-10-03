@@ -47,101 +47,80 @@ class SliceState final : public user_op::OpKernelState {
   const int64_t length_;
 };
 
-std::pair<SliceParams, SliceParams> ConstructSliceParams(user_op::KernelComputeContext* ctx,
-                                                         const user_op::Tensor* entire,
-                                                         const user_op::Tensor* sliced,
-                                                         const int64_t split_axis,
-                                                         const int64_t lower, const int64_t upper,
-                                                         const int64_t length) {
+std::pair<SliceParams, SliceParams> ConstructSliceParams(
+    user_op::KernelComputeContext* ctx, const user_op::Tensor* large, const user_op::Tensor* small,
+    const int64_t split_axis, const int64_t lower, const int64_t upper, const int64_t length) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  const int64_t ndim = entire->shape().NumAxes();
+  const int64_t ndim = large->shape().NumAxes();
   CHECK_LE(ndim, kSliceMaxDims);
-  CHECK_EQ(sliced->shape().NumAxes(), ndim);
+  CHECK_EQ(small->shape().NumAxes(), ndim);
   CHECK_EQ(start_vec.size(), ndim);
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  SliceParams tensor_params, slice_params;
-  std::memset(&tensor_params, 0, sizeof(SliceParams));
-  std::memset(&slice_params, 0, sizeof(SliceParams));
-  tensor_params.ndim = ndim;
-  slice_params.ndim = ndim;
-  FOR_RANGE(int, i, 0, tensor_params.ndim) {
-    const int64_t dim_size = entire->shape().At(i);
-    int64_t slice_size = sliced->shape().At(i);
+  SliceParams large_slice_param, small_slice_param;
+  std::memset(&large_slice_param, 0, sizeof(SliceParams));
+  std::memset(&small_slice_param, 0, sizeof(SliceParams));
+  large_slice_param.ndim = ndim;
+  small_slice_param.ndim = ndim;
+  FOR_RANGE(int, i, 0, large_slice_param.ndim) {
+    const int64_t dim_size = large->shape().At(i);
+    int64_t small_size = small->shape().At(i);
     const int64_t step = step_vec.at(i);
-    // TODO: support negative step
     CHECK_GE(step, 0);
-    const int64_t slice_in_full_input_start =
+    const int64_t slice_start_in_full_large =
         RegulateSliceStart(start_vec.at(i), i == split_axis ? length : dim_size);
-    const int64_t slice_in_full_input_stop =
+    const int64_t slice_stop_in_full_large =
         RegulateSliceStop(stop_vec.at(i), i == split_axis ? length : dim_size);
-    LOG(INFO) << i;
-    LOG(INFO) << length;
-    LOG(INFO) << stop_vec.at(i);
-    LOG(INFO) << slice_in_full_input_stop;
-    // if (step > 0) {
-    //   CHECK_LT(slice_in_full_input_start + step * (slice_size - 1), slice_in_full_input_stop);
-    // } else {
-    //   CHECK_GT(slice_in_full_input_start + step * (slice_size - 1), slice_in_full_input_stop);
-    // }
+    CHECK_LT(slice_start_in_full_large + step * (small_size - 1), slice_stop_in_full_large);
     {
-      int64_t slice_in_splited_input_start = slice_in_full_input_start;
-      int64_t slice_in_splited_input_stop = slice_in_full_input_stop;
+      int64_t slice_start_in_splitted_large = slice_start_in_full_large;
+      int64_t slice_stop_in_splitted_large = slice_stop_in_full_large;
+      int64_t slice_size = small_size;
       if (i == split_axis) {
-        if (slice_in_splited_input_start < lower) {
-          // TODO(daquexian): add comment
-          slice_in_splited_input_start =
-              lower + (step - (lower - slice_in_splited_input_start) % step) % step;
+        if (slice_start_in_splitted_large < lower) {
+          slice_start_in_splitted_large =
+              lower + (step - (lower - slice_start_in_splitted_large) % step) % step;
         }
-        // split
-        slice_in_splited_input_start =
-            std::min(std::max(slice_in_splited_input_start, lower), upper);
-        slice_in_splited_input_stop = std::min(std::max(slice_in_splited_input_stop, lower), upper);
-        slice_in_splited_input_start -= lower;
-        slice_in_splited_input_stop -= lower;
+        // assume large tensor has split sbp attribute
+        slice_start_in_splitted_large =
+            std::min(std::max(slice_start_in_splitted_large, lower), upper);
+        slice_stop_in_splitted_large =
+            std::min(std::max(slice_stop_in_splitted_large, lower), upper);
+        slice_start_in_splitted_large -= lower;
+        slice_stop_in_splitted_large -= lower;
         slice_size =
-            get_size_in_slice(slice_in_splited_input_start, slice_in_splited_input_stop, step);
-        LOG(INFO) << "-------------------" << std::endl;
-        LOG(INFO) << "lower: " << lower << ", " << slice_in_full_input_start << ", "
-                  << slice_in_full_input_stop << ", " << slice_size << std::endl;
-        LOG(INFO) << slice_in_splited_input_start << ", " << slice_in_splited_input_stop
-                  << std::endl;
+            get_size_in_slice(slice_start_in_splitted_large, slice_stop_in_splitted_large, step);
       }
-      tensor_params.dims[i] = dim_size;
-      tensor_params.start[i] = slice_in_splited_input_start;
-      tensor_params.step[i] = step;
-      tensor_params.size[i] = slice_size;
+      large_slice_param.dims[i] = dim_size;
+      large_slice_param.start[i] = slice_start_in_splitted_large;
+      large_slice_param.step[i] = step;
+      large_slice_param.size[i] = slice_size;
     }
     {
-      const int64_t dim_size = sliced->shape().At(i);
-      int64_t slice_in_full_slice_start = 0;
-      int64_t slice_in_full_slice_stop = dim_size;
+      // assume small tensor has broadcast/partialsum sbp attribute
+      const int64_t dim_size = small->shape().At(i);
+      int64_t slice_start_in_full_small = 0;
+      int64_t slice_stop_in_full_small = dim_size;
       if (i == split_axis) {
-        slice_in_full_slice_start = get_size_in_slice(slice_in_full_input_start, lower, step);
-        slice_in_full_slice_stop = get_size_in_slice(slice_in_full_input_start, upper, step);
-        LOG(INFO) << slice_in_full_slice_start << ", " << slice_in_full_slice_stop << std::endl;
-        LOG(INFO) << dim_size;
-        slice_in_full_slice_start =
-            std::min(std::max<int64_t>(slice_in_full_slice_start, 0), dim_size);
-        slice_in_full_slice_stop =
-            std::min(std::max<int64_t>(slice_in_full_slice_stop, 0), dim_size);
-        LOG(INFO) << __LINE__ << ", lower: " << lower << ", " << slice_in_full_slice_start << ", "
-                  << slice_in_full_slice_stop << std::endl;
+        slice_start_in_full_small = get_size_in_slice(slice_start_in_full_large, lower, step);
+        slice_stop_in_full_small = get_size_in_slice(slice_start_in_full_large, upper, step);
+        slice_start_in_full_small =
+            std::min(std::max<int64_t>(slice_start_in_full_small, 0), dim_size);
+        slice_stop_in_full_small =
+            std::min(std::max<int64_t>(slice_stop_in_full_small, 0), dim_size);
       }
-      int64_t slice_size = slice_in_full_slice_stop - slice_in_full_slice_start;
-      slice_params.dims[i] = dim_size;
-      slice_params.start[i] = slice_in_full_slice_start;
-      slice_params.step[i] = 1;
-      slice_params.size[i] = slice_size;
+      int64_t slice_size = slice_stop_in_full_small - slice_start_in_full_small;
+      small_slice_param.dims[i] = dim_size;
+      small_slice_param.start[i] = slice_start_in_full_small;
+      small_slice_param.step[i] = 1;
+      small_slice_param.size[i] = slice_size;
     }
   }
-  LOG(INFO) << "tp: " << tensor_params.elem_cnt() << std::endl;
-  LOG(INFO) << "sp: " << slice_params.elem_cnt() << std::endl;
-  CHECK_EQ(tensor_params.elem_cnt(), slice_params.elem_cnt());
-  return {tensor_params, slice_params};
+  CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
+  return {large_slice_param, small_slice_param};
 }
 
 SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
@@ -233,23 +212,23 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
       ConstructSliceParams(ctx, large, small, slice_state->split_axis(), slice_state->lower(),
                            slice_state->upper(), slice_state->length());
 
-  const auto tensor_params = params_pair.first;
-  const auto slice_params = params_pair.second;
+  const auto large_slice_param = params_pair.first;
+  const auto small_slice_param = params_pair.second;
 
-  int64_t elem_cnt = tensor_params.elem_cnt();
-  SliceIndexHelper<NDIM> entire_tensor_idx_cvtr(tensor_params.dims);
-  SliceIndexHelper<NDIM> sliced_tensor_idx_cvtr(tensor_params.size);
-  SliceIndexHelper<NDIM> entire_slice_idx_cvtr(slice_params.dims);
-  SliceIndexHelper<NDIM> sliced_slice_idx_cvtr(slice_params.size);
+  const int64_t elem_cnt = large_slice_param.elem_cnt();
+  SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr(large_slice_param.dims);
+  SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(large_slice_param.size);
+  SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(small_slice_param.dims);
+  SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(small_slice_param.size);
   const auto* src_ptr = src->dptr<T>();
   auto* dst_ptr = dst->mut_dptr<T>();
   FOR_RANGE(int, i, 0, elem_cnt) {
-    int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(i, tensor_params, entire_tensor_idx_cvtr,
-                                                           sliced_tensor_idx_cvtr);
-    int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(i, slice_params, entire_slice_idx_cvtr,
-                                                           sliced_slice_idx_cvtr);
-    int64_t src_offset = from_large_to_small ? large_offset : small_offset;
-    int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
+    const int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(
+        i, large_slice_param, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
+    const int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(
+        i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
+    const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
+    const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
     AutoMemcpy(ctx->device_ctx(), dst_ptr + dst_offset, src_ptr + src_offset,
                GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
   }
@@ -272,11 +251,11 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     const user_op::TensorDesc* in_logical_desc =
         ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
     const auto split_axis = in_sbp.split_parallel().axis();
-    const int64_t gather_dim_size = in_logical_desc->shape().At(split_axis);
-    BalancedSplitter bs(gather_dim_size, ctx->parallel_ctx().parallel_num());
+    const int64_t split_dim_size = in_logical_desc->shape().At(split_axis);
+    BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
     return std::make_shared<SliceState>(
         split_axis, bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-        bs.At(ctx->parallel_ctx().parallel_id()).end(), gather_dim_size);
+        bs.At(ctx->parallel_ctx().parallel_id()).end(), split_dim_size);
   } else {
     return std::make_shared<SliceState>(-1, 0, 0, 0);
   }
