@@ -3,7 +3,7 @@ include (ExternalProject)
 set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
 set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
 
-set(LIBJPEG_URL ${THIRD_PARTY_SUBMODULE_DIR}/libjpeg-turbo/src/libjpeg-turbo)
+set(LIBJPEG_URL https://github.com/Oneflow-Inc/libjpeg-turbo/archive/3041cf67f.tar.gz)
 use_mirror(VARIABLE LIBJPEG_URL URL ${LIBJPEG_URL})
 
 if(WIN32)
