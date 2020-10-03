@@ -276,7 +276,8 @@ def conv1d(
         raise ValueError("data_format must be in NCW or NWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+        kernel_initializer = flow.xavier_uniform_initializer(
+            data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -342,7 +343,8 @@ def conv1d(
             )
 
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+            output = flow.nn.bias_add(
+                output, bias, data_format, name="bias_add")
 
     if callable(activation):
         with flow.scope.namespace(name):
@@ -473,7 +475,8 @@ def conv2d(
         raise ValueError("data_format must be in NCHW or NHWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+        kernel_initializer = flow.xavier_uniform_initializer(
+            data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -539,12 +542,12 @@ def conv2d(
             )
 
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+            output = flow.nn.bias_add(
+                output, bias, data_format, name="bias_add")
 
     if callable(activation):
-        with flow.scope.placement("cpu", "0:0"):
-            with flow.scope.namespace(name):
-                output = activation(output, name="activation")
+        with flow.scope.namespace(name):
+            output = activation(output, name="activation")
 
     return output
 
@@ -678,7 +681,8 @@ def conv3d(
         raise ValueError("data_format must be in NCHW or NHWC")
 
     if kernel_initializer is None:
-        kernel_initializer = flow.xavier_uniform_initializer(data_format=data_format)
+        kernel_initializer = flow.xavier_uniform_initializer(
+            data_format=data_format)
 
     if weight_name is None:
         with flow.scope.namespace(name):
@@ -744,7 +748,8 @@ def conv3d(
             )
 
         with flow.scope.namespace(name):
-            output = flow.nn.bias_add(output, bias, data_format, name="bias_add")
+            output = flow.nn.bias_add(
+                output, bias, data_format, name="bias_add")
 
     if callable(activation):
         with flow.scope.namespace(name):
@@ -1009,7 +1014,8 @@ def _get_batch_normalization_variables(
                 reuse=False,
             )
         else:
-            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+            beta = flow.constant(0, dtype=params_dtype,
+                                 shape=params_shape, name="beta")
 
         if scale:
             gamma = flow.get_variable(
@@ -1163,12 +1169,14 @@ def batch_normalization(
             for dim in range(len(inputs.shape)):
                 if dim != axis:
                     reduce_axis.append(dim)
-            mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=False)
+            mean, variance = flow.nn.moments(
+                inputs, reduce_axis, keepdims=False)
 
             def update_moving(moving, this_batch):
                 moving_identity = flow.identity(moving)
                 flow.assign(
-                    moving, momentum * moving_identity + (1 - momentum) * this_batch
+                    moving, momentum * moving_identity +
+                    (1 - momentum) * this_batch
                 )
 
             update_moving(moving_mean, mean)
