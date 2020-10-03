@@ -160,9 +160,36 @@ class TestCase(unittest.TestCase):
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
-@oneflow_export("unittest.skip_if_not_1n1d")
-def skip_if_not_1n1d():
-    if node_size() == 1 and device_num() == 1:
+def skip_unless(node_size, device_num):
+    if node_size() == node_size and device_num() == device_num:
         return lambda func: func
     else:
-        return unittest.skip("only runs when node_size is 1 and device_num is 1")
+        return unittest.skip(
+            "only runs when node_size is {} and device_num is {}".format(
+                node_size, device_num
+            )
+        )
+
+@oneflow_export("unittest.skip_skip_unless_1n1d")
+def skip_unless_1n1d():
+    return skip_unless(1, 1)
+
+@oneflow_export("unittest.skip_skip_unless_1n2d")
+def skip_unless_1n2d():
+    return skip_unless(1, 2)
+
+@oneflow_export("unittest.skip_skip_unless_1n4d")
+def skip_unless_1n4d():
+    return skip_unless(1, 4)
+
+@oneflow_export("unittest.skip_skip_unless_2n1d")
+def skip_unless_2n1d():
+    return skip_unless(2, 1)
+
+@oneflow_export("unittest.skip_skip_unless_2n2d")
+def skip_unless_2n2d():
+    return skip_unless(2, 2)
+
+@oneflow_export("unittest.skip_skip_unless_2n4d")
+def skip_unless_2n4d():
+    return skip_unless(2, 4
