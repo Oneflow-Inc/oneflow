@@ -82,7 +82,8 @@ def compare_with_tensorflow(
     )
 
 
-class TestUpsample(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestUpsample(flow.unittest.TestCase):
     def test_upsample(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

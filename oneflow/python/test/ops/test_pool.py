@@ -134,7 +134,8 @@ def _GetSequence(value, n, name):
         )
 
 
-class TestPool(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestPool(flow.unittest.TestCase):
     def test_pool(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

@@ -88,7 +88,8 @@ def _compare_with_np(
     test_case.assertTrue(np.array_equal(y, of_y))
 
 
-class TestArgwhere(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestArgwhere(flow.unittest.TestCase):
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]

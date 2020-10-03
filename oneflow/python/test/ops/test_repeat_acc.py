@@ -23,7 +23,8 @@ func_config.default_logical_view(flow.scope.mirrored_view())
 func_config.default_data_type(flow.float)
 
 
-class TestRepeatAcc(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestRepeatAcc(flow.unittest.TestCase):
     def test_repeat_acc(test_case):
         if flow.eager_execution_enabled():
             return

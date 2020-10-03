@@ -119,7 +119,8 @@ def _compare_segm_poly_flip(
     test_case.assertTrue(np.allclose(of_poly.squeeze(), poly))
 
 
-class TestObjectSegmPolyFlip(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestObjectSegmPolyFlip(flow.unittest.TestCase):
     def test_object_segm_poly_flip(test_case):
         _compare_segm_poly_flip(
             test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1

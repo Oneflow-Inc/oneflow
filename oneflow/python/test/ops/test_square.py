@@ -73,7 +73,8 @@ def compare_with_tensorflow(device_type, x_shape):
     )
 
 
-class TestSquare(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestSquare(flow.unittest.TestCase):
     def test_square(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

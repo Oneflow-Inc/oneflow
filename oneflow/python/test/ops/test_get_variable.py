@@ -19,7 +19,8 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-class TestGetVariable(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestGetVariable(flow.unittest.TestCase):
     def test_get_variable_with_same_name(test_case):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()

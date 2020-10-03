@@ -33,7 +33,8 @@ def GenerateTest(test_case, a_shape, b_shape):
     test_case.assertTrue(np.allclose(y, a % b))
 
 
-class TestMod(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestMod(flow.unittest.TestCase):
     def test_naive(test_case):
         @flow.global_function(function_config=func_config)
         def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):

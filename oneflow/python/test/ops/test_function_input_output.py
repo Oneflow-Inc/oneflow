@@ -110,7 +110,7 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
             return image_label
 
         ndarray_lst = lambda shape: [
-            np.random.rand(*shape).astype(np.float32) for i in range(4)
+            np.random.rand(*shape).astype(np.float32) for i in range(num_gpus)
         ]
         images = ndarray_lst(image_shape)
         labels = ndarray_lst(label_shape)

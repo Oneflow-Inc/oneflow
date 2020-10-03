@@ -22,7 +22,8 @@ import oneflow.typing as oft
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-class TestSyncDynamicResize(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestSyncDynamicResize(flow.unittest.TestCase):
     def test_sync_dynamic_resize(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

@@ -71,7 +71,8 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-class TestExpandDims(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestExpandDims(flow.unittest.TestCase):
     def test_expand_dims(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)

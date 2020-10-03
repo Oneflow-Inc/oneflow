@@ -37,7 +37,8 @@ def GenerateTest(test_case, a_shape, b_shape):
     test_case.assertTrue(np.array_equal(y, a + b))
 
 
-class TestAdd(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestAdd(flow.unittest.TestCase):
     def test_naive(test_case):
         @flow.global_function(function_config=func_config)
         def AddJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):

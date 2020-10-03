@@ -64,7 +64,8 @@ def _make_global_func(test_case, x_shape, y_shape):
     return AddJob
 
 
-class TestUserOpModule(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestUserOpModule(flow.unittest.TestCase):
     def test_Add(test_case):
         @flow.global_function()
         def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):

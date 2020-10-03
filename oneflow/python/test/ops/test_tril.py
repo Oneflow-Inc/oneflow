@@ -88,7 +88,8 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     )
 
 
-class TestTril(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestTril(flow.unittest.TestCase):
     def test_tril_fw_bw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "gpu"]

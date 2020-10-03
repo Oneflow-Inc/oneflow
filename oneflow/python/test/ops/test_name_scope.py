@@ -18,7 +18,8 @@ import numpy as np
 import oneflow as flow
 
 
-class TestNameScope(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestNameScope(flow.unittest.TestCase):
     def test_name_scope(test_case):
         flow.clear_default_session()
         func_config = flow.FunctionConfig()

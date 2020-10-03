@@ -230,7 +230,8 @@ def _test_slice_with_grad(
 #     _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
 
 
-class TestSliceV2(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestSliceV2(flow.unittest.TestCase):
     def test_slice_base(test_case):
         input = np.random.rand(10)
         slice_args = [[(1, 7, 2)]]

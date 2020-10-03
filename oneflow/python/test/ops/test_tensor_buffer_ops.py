@@ -38,7 +38,8 @@ def _test_tensor_buffer_convert(test_case):
     test_case.assertTrue(np.array_equal(input_arr, output_arr))
 
 
-class TestTensorBufferOps(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestTensorBufferOps(flow.unittest.TestCase):
     def test_tensor_buffer_convert(test_case):
         _test_tensor_buffer_convert(test_case)
 

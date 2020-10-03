@@ -58,7 +58,8 @@ def _run_test(
     _check(test_case, x, y.numpy(), depth, on_value, off_value, axis)
 
 
-class TestOneHot(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestOneHot(flow.unittest.TestCase):
     def test_one_hot(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]

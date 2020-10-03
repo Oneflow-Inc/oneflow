@@ -96,7 +96,8 @@ def GenerateTest(
     flow.clear_default_session()
 
 
-class TestBroadcastLogicalOps(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestBroadcastLogicalOps(flow.unittest.TestCase):
     def test_naive(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)

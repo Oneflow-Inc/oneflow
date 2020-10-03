@@ -38,7 +38,8 @@ def _run_test(test_case, x, value, dtype=None, device="gpu"):
     _check(test_case, x, y.numpy(), value, dtype=dtype)
 
 
-class TestConstantLike(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestConstantLike(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_constant_like_gpu_float(test_case):
         x = np.random.rand(10, 3, 32, 1024).astype(np.float32)

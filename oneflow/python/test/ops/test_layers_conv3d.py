@@ -171,7 +171,8 @@ def compare_with_tensorflow(
     )
 
 
-class TestLayersConv3d(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestLayersConv3d(flow.unittest.TestCase):
     def test_conv1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

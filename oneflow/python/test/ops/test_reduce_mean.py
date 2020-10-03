@@ -75,7 +75,8 @@ def compare_with_tensorflow(device_type, input_shape, axis, keepdims):
     )
 
 
-class TestReduceMean(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestReduceMean(flow.unittest.TestCase):
     def test_reduce_mean(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

@@ -44,7 +44,8 @@ def of_run(device_type, x_shape, rate, seed):
     )
 
 
-class TestRandomMaskLike(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestRandomMaskLike(flow.unittest.TestCase):
     def test_random_mask_like(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

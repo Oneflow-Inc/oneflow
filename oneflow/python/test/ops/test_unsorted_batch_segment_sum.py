@@ -110,7 +110,8 @@ def _run_test(test_case, device, out_shape, num_segments, segment_ids_shape):
     )
 
 
-class TestUnsortedBatchSegmentSum(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestUnsortedBatchSegmentSum(flow.unittest.TestCase):
     def test_unsorted_batch_segment_sum(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

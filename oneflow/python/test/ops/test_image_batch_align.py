@@ -93,7 +93,8 @@ def _compare_image_batch_align(
     test_case.assertTrue(np.array_equal(image_tensor, empty_image_array))
 
 
-class TestImageBatchAlign(flow.unittest.TestCase_1n1d):
+@flow.unittest.skip_if_not_1n1d
+class TestImageBatchAlign(flow.unittest.TestCase):
     def test_image_batch_align(test_case):
         _compare_image_batch_align(
             test_case,
