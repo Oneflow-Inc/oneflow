@@ -19,7 +19,6 @@ import imp
 import inspect
 import os
 import unittest
-import functools
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
@@ -161,12 +160,8 @@ class TestCase(unittest.TestCase):
 
 
 @oneflow_export("unittest.skip_if_not_1n1d")
-def skip_if_not_1n1d(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        if node_size() == 1 and device_num() == 1:
-            return f(*args, **kwargs)
-        else:
-            return unittest.skip("only runs when node_size is 1 and device_num is 1")
-
-    return wrapper
+def skip_if_not_1n1d():
+    if node_size() == 1 and device_num() == 1:
+        return lambda func: func
+    else:
+        return unittest.skip("only runs when node_size is 1 and device_num is 1")
