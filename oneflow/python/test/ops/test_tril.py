@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 import numpy as np
 import oneflow as flow
@@ -87,14 +88,27 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal=0):
     )
 
 
-def test_tril_fw_bw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device"] = ["cpu", "gpu"]
-    arg_dict["type_name"] = ["float32", "float16", "double", "int8", "int32", "int64"]
-    arg_dict["shape"] = [(6, 6), (3, 6, 8), (3, 4, 8, 6)]
-    arg_dict["diagonal"] = [-8, -1, 0, 1, 8]
+@flow.unittest.skip_unless_1n1d()
+class TestTril(flow.unittest.TestCase):
+    def test_tril_fw_bw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "gpu"]
+        arg_dict["type_name"] = [
+            "float32",
+            "float16",
+            "double",
+            "int8",
+            "int32",
+            "int64",
+        ]
+        arg_dict["shape"] = [(6, 6), (3, 6, 8), (3, 4, 8, 6)]
+        arg_dict["diagonal"] = [-8, -1, 0, 1, 8]
 
-    for arg in GenArgDict(arg_dict):
-        if arg["device"] == "cpu" and arg["type_name"] == "float16":
-            continue
-        _test_tril_fw_bw(test_case, **arg)
+        for arg in GenArgDict(arg_dict):
+            if arg["device"] == "cpu" and arg["type_name"] == "float16":
+                continue
+            _test_tril_fw_bw(test_case, **arg)
+
+
+if __name__ == "__main__":
+    unittest.main()
