@@ -27,6 +27,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 from oneflow.python.oneflow_export import oneflow_export
+from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
 @oneflow_export("py.sigmoid")
@@ -72,4 +73,23 @@ def py_sigmoid_grad(
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("py.one2two")
+def py_one2two(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None,
+) -> List[remote_blob_util.BlobDef]:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("PyOne2Two_")
+        )
+        .Op("py_one2two")
+        .Input("in", [x])
+        .Output("out1")
+        .Output("out2")
+        .Attr("py_file", "py_one2two")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
     )
