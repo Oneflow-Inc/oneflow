@@ -124,34 +124,35 @@ def device_num():
 
 
 _unittest_env_initilized = False
+_unittest_worker_initilized = False
 
 
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
+        global _unittest_env_initilized
+        global _unittest_worker_initilized
 
         if has_node_list():
             assert node_size() > 1
             oneflow.env.machine(node_list())
 
-            data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-            assert data_port, "env var ONEFLOW_TEST_DATA_PORT not set"
-            oneflow.env.data_port(int(dport))
-
             ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
             assert ctrl_port, "env var ONEFLOW_TEST_CTRL_PORT not set"
             oneflow.env.ctrl_port(int(ctrl_port))
 
-            global _unittest_env_initilized
-            if _unittest_env_initilized == False:
+            data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+            if data_port:
+                oneflow.env.data_port(int(data_port))
+
+            if _unittest_worker_initilized == False:
                 oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
                 atexit.register(flow.deprecated.delete_worker)
-                oneflow.env.init()
-                _unittest_env_initilized = True
-        else:
-            if _unittest_env_initilized == False:
-                oneflow.env.init()
-                _unittest_env_initilized = True
+                _unittest_worker_initilized = True
+
+        if _unittest_env_initilized == False:
+            oneflow.env.init()
+            _unittest_env_initilized = True
 
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
