@@ -11,7 +11,8 @@ SET(RE2_LIBRARIES ${RE2_LIBRARY_DIR}/libre2.a)
 if (THIRD_PARTY)
     ExternalProject_Add(${RE2_PROJECT}
         PREFIX re2
-        URL ${THIRD_PARTY_SUBMODULE_DIR}/re2/src/re2
+        URL https://github.com/Oneflow-Inc/re2/archive/e17af7789.tar.gz
+        URL_MD5 3b2e20c1edd1cfe887aeef3b0747eac0
         UPDATE_COMMAND ""
         CMAKE_ARGS
           -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}

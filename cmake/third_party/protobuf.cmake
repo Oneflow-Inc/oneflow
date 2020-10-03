@@ -9,7 +9,7 @@ if(WITH_XLA)
   set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
   use_mirror(VARIABLE PROTOBUF_URL URL ${PROTOBUF_URL})
 else()
-  set(PROTOBUF_URL ${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf)
+  set(PROTOBUF_URL https://github.com/Oneflow-Inc/protobuf/archive/1d2c7b6c7.tar.gz)
 endif()
 
 if(WIN32)

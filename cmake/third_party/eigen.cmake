@@ -8,7 +8,7 @@ if(WITH_XLA)
   set(EIGEN_URL "https://gitlab.com/libeigen/eigen/-/archive/386d809bde475c65b7940f290efe80e6a05878c4/eigen-386d809bde475c65b7940f290efe80e6a05878c4.tar.gz")
   use_mirror(VARIABLE EIGEN_URL URL ${EIGEN_URL})
 else()
-  set(EIGEN_URL ${THIRD_PARTY_SUBMODULE_DIR}/eigen/src/eigen)
+  set(EIGEN_URL https://github.com/Oneflow-Inc/eigen-git-mirror/archive/e9e95489a.tar.gz)
 endif()
 
 add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_USE_GPU)
