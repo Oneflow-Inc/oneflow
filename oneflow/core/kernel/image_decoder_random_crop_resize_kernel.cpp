@@ -220,6 +220,7 @@ GpuDecodeHandle::~GpuDecodeHandle() {
 void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
                                        RandomCropGenerator* crop_generator, unsigned char* dst,
                                        size_t dst_max_length, int* dst_width, int* dst_height) {
+  // https://docs.nvidia.com/cuda/archive/10.2/nvjpeg/index.html#nvjpeg-decoupled-decode-api
   OF_NVJPEG_CHECK(nvjpegJpegStreamParse(jpeg_handle_, data, length, 0, 0, jpeg_stream_));
   unsigned int orig_width;
   unsigned int orig_height;
@@ -445,8 +446,9 @@ void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(
     tasks->at(task_id).dest = out_ptr + task_id * out_instance_size;
     tasks->at(task_id).crop_generator = random_crop_generators_.at(task_id).get();
   }
+  // Larger images will be processed first, balancing the work time of the workers.
   std::sort(tasks->begin(), tasks->end(),
-            [](const Task& a, const Task& b) { return a.length > b.length; });
+            [](const Task& a, const Task& b) { return b.length < a.length; });
   for (int64_t worker_id = 0; worker_id < workers_.size(); ++worker_id) {
     std::shared_ptr<Work> work(new Work());
     work->tasks = tasks;
