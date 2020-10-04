@@ -148,6 +148,7 @@ void NumaAwareCudaMallocHost(int32_t dev, T** ptr, size_t size) {
   NumaAwareCudaMallocHost(dev, reinterpret_cast<void**>(ptr), size);
 }
 
+// Set the CPU affinity to the closest processor(s) of a particular GPU.
 void CudaDeviceSetCpuAffinity(int32_t dev);
 
 #define CUDA_DATA_TYPE_SEQ                 \
