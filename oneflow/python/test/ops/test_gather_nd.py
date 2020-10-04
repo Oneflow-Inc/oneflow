@@ -226,78 +226,77 @@ def _compare_gather_nd_dynamic_indices_with_tf(
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-def test_gather_nd(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["params_shape"] = [(10,)]
-    arg_dict["indices_shape"] = [(5, 1)]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestGatherNd(flow.unittest.TestCase):
+    def test_gather_nd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["params_shape"] = [(10,)]
+        arg_dict["indices_shape"] = [(5, 1)]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_with_tf(test_case, *arg)
+
+    def test_gather_nd_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(20, 10, 10, 3, 3)]
+        arg_dict["indices_shape"] = [(2, 3, 3)]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_with_tf(test_case, *arg)
+
+    def test_gather_nd_case_2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["params_shape"] = [(10, 8, 4)]
+        arg_dict["indices_shape"] = [(2, 2)]
+        arg_dict["mirrored"] = [True]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_with_tf(test_case, *arg)
+
+    def test_gather_nd_case_3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(32, 60, 80, 25)]
+        arg_dict["indices_shape"] = [(128, 2)]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_with_tf(test_case, *arg)
+
+    def test_gather_nd_case_4(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(128, 64, 2, 16, 7)]
+        arg_dict["indices_shape"] = [(30, 10, 3)]
+        arg_dict["mirrored"] = [True]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dynamic_gather_nd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(30, 15)]
+        arg_dict["static_params_shape"] = [(32, 16)]
+        arg_dict["indices_shape"] = [(12, 1)]
+        for arg in GenArgList(arg_dict):
+            _compare_dynamic_gather_nd_with_tf(test_case, *arg)
+
+    def test_gather_nd_dynamic_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(25, 10)]
+        arg_dict["indices_shape"] = [(11, 1)]
+        arg_dict["indices_static_shape"] = [(15, 1)]
+        arg_dict["device_type"] = ["gpu"]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
+
+    def test_gather_nd_empty_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(12, 13, 7)]
+        arg_dict["indices_shape"] = [(5, 0, 2)]
+        arg_dict["indices_static_shape"] = [(5, 10, 2)]
+        arg_dict["device_type"] = ["gpu"]
+        for arg in GenArgList(arg_dict):
+            _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
 
 
-def test_gather_nd_case_1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(20, 10, 10, 3, 3)]
-    arg_dict["indices_shape"] = [(2, 3, 3)]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_case_2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(10, 8, 4)]
-    arg_dict["indices_shape"] = [(2, 2)]
-    arg_dict["mirrored"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_case_3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(32, 60, 80, 25)]
-    arg_dict["indices_shape"] = [(128, 2)]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_case_4(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(128, 64, 2, 16, 7)]
-    arg_dict["indices_shape"] = [(30, 10, 3)]
-    arg_dict["mirrored"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_dynamic_gather_nd(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(30, 15)]
-    arg_dict["static_params_shape"] = [(32, 16)]
-    arg_dict["indices_shape"] = [(12, 1)]
-    for arg in GenArgList(arg_dict):
-        _compare_dynamic_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_dynamic_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(25, 10)]
-    arg_dict["indices_shape"] = [(11, 1)]
-    arg_dict["indices_static_shape"] = [(15, 1)]
-    arg_dict["device_type"] = ["gpu"]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
-
-
-def test_gather_nd_empty_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(12, 13, 7)]
-    arg_dict["indices_shape"] = [(5, 0, 2)]
-    arg_dict["indices_static_shape"] = [(5, 10, 2)]
-    arg_dict["device_type"] = ["gpu"]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()
