@@ -42,10 +42,10 @@ __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* 
   const int64_t h2_n = n / 2;
   half2 h2_scale = __float2half2_rn(scale);
   const auto* x_h2 = reinterpret_cast<const half2*>(x);
-  const auto* mask_h2 = reinterpret_cast<const char2*>(mask);
+  const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
   auto* y_h2 = reinterpret_cast<half2*>(y);
   CUDA_1D_KERNEL_LOOP(i, h2_n) {
-    char2 mask_val = mask_h2[i];
+    char2 mask_val = mask_c2[i];
     half2 one_or_zero_h2;
     one_or_zero_h2.x = mask_val.x;
     one_or_zero_h2.y = mask_val.y;
@@ -70,10 +70,10 @@ __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const hal
   half2 h2_scale = __float2half2_rn(scale);
   const auto* x_h2 = reinterpret_cast<const half2*>(x);
   const auto* addend_h2 = reinterpret_cast<const half2*>(addend);
-  const auto* mask_h2 = reinterpret_cast<const char2*>(mask);
+  const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
   auto* y_h2 = reinterpret_cast<half2*>(y);
   CUDA_1D_KERNEL_LOOP(i, h2_n) {
-    char2 mask_val = mask_h2[i];
+    char2 mask_val = mask_c2[i];
     half2 one_or_zero_h2;
     one_or_zero_h2.x = mask_val.x;
     one_or_zero_h2.y = mask_val.y;
@@ -98,11 +98,27 @@ void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, cons
       n, scale, x, mask, y);
 }
 
+template<>
+void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
+                        const int8_t* mask, half* y) {
+  MaskAndScaleGpu<half>
+      <<<BlocksNum4ThreadsNum(n / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, scale, x,
+                                                                                        mask, y);
+}
+
 template<typename T>
 void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, const int8_t* mask,
                      const T* addend, T* y) {
   MaskAndScaleAddGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, x, mask, addend, y);
+}
+
+template<>
+void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
+                           const int8_t* mask, const half* addend, half* y) {
+  MaskAndScaleAddGpu<half>
+      <<<BlocksNum4ThreadsNum(n / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, scale, x, mask, addend, y);
 }
 
