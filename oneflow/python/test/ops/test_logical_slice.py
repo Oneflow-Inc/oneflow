@@ -22,7 +22,7 @@ import test_global_storage
 from test_util import GenArgDict
 
 
-def _test_slice2(
+def _test_logical_slice(
     test_case, var_shape, slice_tuples, split_axis, device_tag, flow_dtype, device_num
 ):
     flow.clear_default_session()
@@ -55,37 +55,39 @@ def _test_slice2(
     test_case.assertTrue(np.array_equal(of_res, var_np[tuple(slice_objs)]))
 
 
-def test_slice2_4d_2c(test_case):
-    var_shape = (30, 40, 20, 15)
-    slice_tuples = [(10, 20, 3), (1, 30, 4), (3, 16, 2), (5, 11, 1)]
-    arg_dict = OrderedDict()
-    arg_dict["split_axis"] = list(range(4))
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    arg_dict["flow_dtype"] = [flow.float, flow.int8]
-    arg_dict["device_num"] = [2]
-    for arg in GenArgDict(arg_dict):
-        _test_slice2(test_case, var_shape, slice_tuples, **arg)
+class TestLogicalSlice(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_logical_slice_4dim_2d(test_case):
+        var_shape = (30, 40, 20, 15)
+        slice_tuples = [(10, 20, 3), (1, 30, 4), (3, 16, 2), (5, 11, 1)]
+        arg_dict = OrderedDict()
+        arg_dict["split_axis"] = list(range(4))
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        arg_dict["flow_dtype"] = [flow.float, flow.int8]
+        arg_dict["device_num"] = [2]
+        for arg in GenArgDict(arg_dict):
+            _test_logical_slice(test_case, var_shape, slice_tuples, **arg)
 
+    @flow.unittest.skip_unless_1n4d()
+    def test_logical_slice_negative_start_stop_4dim_4d(test_case):
+        var_shape = (30, 40, 20, 15)
+        slice_tuples = [(10, None, 3), (1, -10, 4), (-15, -5, 2), (5, 11, 1)]
+        arg_dict = OrderedDict()
+        arg_dict["split_axis"] = list(range(4))
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        arg_dict["flow_dtype"] = [flow.float]
+        arg_dict["device_num"] = [4]
+        for arg in GenArgDict(arg_dict):
+            _test_logical_slice(test_case, var_shape, slice_tuples, **arg)
 
-def test_slice2_negative_start_stop_4d_4c(test_case):
-    var_shape = (30, 40, 20, 15)
-    slice_tuples = [(10, None, 3), (1, -10, 4), (-15, -5, 2), (5, 11, 1)]
-    arg_dict = OrderedDict()
-    arg_dict["split_axis"] = list(range(4))
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    arg_dict["flow_dtype"] = [flow.float]
-    arg_dict["device_num"] = [4]
-    for arg in GenArgDict(arg_dict):
-        _test_slice2(test_case, var_shape, slice_tuples, **arg)
-
-
-def test_slice2_2d_3c(test_case):
-    var_shape = (30, 40)
-    slice_tuples = [(10, 20, 3), (1, 30, 4)]
-    arg_dict = OrderedDict()
-    arg_dict["split_axis"] = list(range(2))
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    arg_dict["flow_dtype"] = [flow.float]
-    arg_dict["device_num"] = [3]
-    for arg in GenArgDict(arg_dict):
-        _test_slice2(test_case, var_shape, slice_tuples, **arg)
+    @flow.unittest.skip_unless_1n4d()
+    def test_logical_slice_2dim_3d(test_case):
+        var_shape = (30, 40)
+        slice_tuples = [(10, 20, 3), (1, 30, 4)]
+        arg_dict = OrderedDict()
+        arg_dict["split_axis"] = list(range(2))
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        arg_dict["flow_dtype"] = [flow.float]
+        arg_dict["device_num"] = [3]
+        for arg in GenArgDict(arg_dict):
+            _test_logical_slice(test_case, var_shape, slice_tuples, **arg)
