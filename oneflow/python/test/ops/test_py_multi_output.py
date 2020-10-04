@@ -21,8 +21,6 @@ import oneflow as flow
 import oneflow.typing as oft
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
-flow.config.enable_debug_mode(True)
-
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
