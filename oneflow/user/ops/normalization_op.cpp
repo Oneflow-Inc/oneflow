@@ -181,7 +181,6 @@ REGISTER_USER_OP("normalization_add_relu")
     .Input("gamma")
     .Input("beta")
     .Output("y")
-    .Output("mask")
     .Output("reserve_space")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
@@ -192,13 +191,9 @@ REGISTER_USER_OP("normalization_add_relu")
     .SetTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          *reserve_space->mut_data_type() = DataType::kChar;
-          *reserve_space->mut_shape() = Shape({1});
           const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-          auto* mask_desc = ctx->TensorDesc4ArgNameAndIndex("mask", 0);
-          CHECK_OR_RETURN(mask_desc != nullptr);
-          *mask_desc->mut_data_type() = DataType::kInt32;
-          *mask_desc->mut_shape() =
+          *reserve_space->mut_data_type() = DataType::kInt32;
+          *reserve_space->mut_shape() =
               Shape({static_cast<int64_t>(RoundUp(x_desc->shape().elem_cnt(), 32) / 32)});
           return Maybe<void>::Ok();
         }))
@@ -353,7 +348,6 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Input("beta")
     .Input("reserve_space")
     .Input("y")
-    .Input("mask")
     .Output("gamma_diff")
     .Output("beta_diff")
     .Output("dx")
@@ -574,7 +568,6 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
             .InputBind("mean", ctx->FwOp().output("mean", 0))
             .InputBind("inv_variance", ctx->FwOp().output("inv_variance", 0))
             .InputBind("y", ctx->FwOp().output("y", 0))
-            .InputBind("mask", ctx->FwOp().output("mask", 0))
             .Attr("axis", ctx->FwOp().attr<int32_t>("axis"))
             .Attr("epsilon", ctx->FwOp().attr<float>("epsilon"))
             .Output("gamma_diff")
