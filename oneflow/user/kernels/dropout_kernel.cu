@@ -82,8 +82,7 @@ __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const hal
   if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
     const int64_t last_idx = n - 1;
     half one_or_zero = mask[last_idx];
-    y[last_idx] =
-        __hadd(__hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x), addend[last_idx]);
+    y[last_idx] = __hadd(__hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x), addend[last_idx]);
   }
 #else
   printf("use half need nvcc arch >= 530");
