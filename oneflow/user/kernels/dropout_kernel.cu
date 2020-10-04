@@ -102,8 +102,8 @@ template<>
 void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
                         const int8_t* mask, half* y) {
   MaskAndScaleGpu<half>
-      <<<BlocksNum4ThreadsNum(n / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, scale, x,
-                                                                                        mask, y);
+      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, x, mask, y);
 }
 
 template<typename T>
@@ -118,7 +118,7 @@ template<>
 void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
                            const int8_t* mask, const half* addend, half* y) {
   MaskAndScaleAddGpu<half>
-      <<<BlocksNum4ThreadsNum(n / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, scale, x, mask, addend, y);
 }
 
