@@ -373,14 +373,14 @@ def slice_v2(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("slice2")
-def slice2(
+@oneflow_export("logical_slice")
+def logical_slice(
     x: remote_blob_util.BlobDef,
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    name = name or id_util.UniqueStr("Slice2_")
+    name = name or id_util.UniqueStr("LogicalSlice_")
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
@@ -415,19 +415,19 @@ def slice2(
             step = 1
 
         if step <= 0:
-            raise ValueError("slice2 step must be greater than 0")
+            raise ValueError("logical_slice step must be greater than 0")
 
         if start is None:
             start = 0
         elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice2 start must be in range [-size, size)")
+            raise ValueError("logical_slice start must be in range [-size, size)")
         elif start < 0:
             start += dim_size
 
         if stop is None:
             stop = dim_size
         elif stop < -dim_size or stop > dim_size:
-            raise ValueError("slice2 start must be in range [-size, size]")
+            raise ValueError("logical_slice start must be in range [-size, size]")
         elif stop < 0:
             stop += dim_size
 
@@ -437,7 +437,7 @@ def slice2(
 
     op = (
         flow.user_op_builder(name)
-        .Op("slice2")
+        .Op("logical_slice")
         .Input("x", [x])
         .Output("y")
         .Attr("start", start_list)
