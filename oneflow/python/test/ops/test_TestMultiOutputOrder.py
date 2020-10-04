@@ -61,13 +61,17 @@ def GenerateTest(test_case, shape):
     )
 
 
-def test_TestMultiOutputOrder_example_1(test_case):
-    GenerateTest(test_case, (7,))
+@flow.unittest.skip_unless_1n1d()
+class Test_TestMultiOutputOrder(flow.unittest.TestCase):
+    def test_TestMultiOutputOrder_example_1(test_case):
+        GenerateTest(test_case, (7,))
+
+    def test_TestMultiOutputOrder_example_2(test_case):
+        GenerateTest(test_case, (2, 5,))
+
+    def test_TestMultiOutputOrder_example_3(test_case):
+        GenerateTest(test_case, (3, 3, 2,))
 
 
-def test_TestMultiOutputOrder_example_2(test_case):
-    GenerateTest(test_case, (2, 5,))
-
-
-def test_TestMultiOutputOrder_example_3(test_case):
-    GenerateTest(test_case, (3, 3, 2,))
+if __name__ == "__main__":
+    unittest.main()
