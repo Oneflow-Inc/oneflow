@@ -55,7 +55,6 @@ def _test_slice_assign(
         with flow.scope.placement(dst_device_tag, "0:0-{}".format(device_num - 1)):
             var = get_var()
             flow.slice_assign(var, value_def, slice_tuples)
-            return var
 
     @flow.global_function()
     def identity_fn():
