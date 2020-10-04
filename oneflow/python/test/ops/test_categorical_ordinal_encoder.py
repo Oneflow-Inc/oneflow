@@ -76,51 +76,54 @@ def _test_categorical_ordinal_encoder(
     test_case.assertEqual(len(vk_set), unique_size)
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_categorical_ordinal_encoder_gpu_large(test_case):
-    _test_categorical_ordinal_encoder(
-        test_case=test_case,
-        device_tag="gpu",
-        dtype=flow.int64,
-        size=10000,
-        capacity=320000,
-        num_tokens=200000,
-        num_iters=256,
-    )
+@flow.unittest.skip_unless_1n1d()
+class TestCategoricalOrdinalEncoder(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_categorical_ordinal_encoder_gpu_large(test_case):
+        _test_categorical_ordinal_encoder(
+            test_case=test_case,
+            device_tag="gpu",
+            dtype=flow.int64,
+            size=10000,
+            capacity=320000,
+            num_tokens=200000,
+            num_iters=256,
+        )
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_categorical_ordinal_encoder_gpu_small(test_case):
+        _test_categorical_ordinal_encoder(
+            test_case=test_case,
+            device_tag="gpu",
+            dtype=flow.int32,
+            size=10,
+            capacity=250,
+            num_tokens=200,
+            num_iters=4,
+        )
+
+    def test_categorical_ordinal_encoder_cpu_large(test_case):
+        _test_categorical_ordinal_encoder(
+            test_case=test_case,
+            device_tag="cpu",
+            dtype=flow.int64,
+            size=20000,
+            capacity=220000,
+            num_tokens=200000,
+            num_iters=100,
+        )
+
+    def test_categorical_ordinal_encoder_cpu_very_large(test_case):
+        _test_categorical_ordinal_encoder(
+            test_case=test_case,
+            device_tag="cpu",
+            dtype=flow.int64,
+            size=50000,
+            capacity=1000000,
+            num_tokens=500000,
+            num_iters=100,
+        )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_categorical_ordinal_encoder_gpu_small(test_case):
-    _test_categorical_ordinal_encoder(
-        test_case=test_case,
-        device_tag="gpu",
-        dtype=flow.int32,
-        size=10,
-        capacity=250,
-        num_tokens=200,
-        num_iters=4,
-    )
-
-
-def test_categorical_ordinal_encoder_cpu_large(test_case):
-    _test_categorical_ordinal_encoder(
-        test_case=test_case,
-        device_tag="cpu",
-        dtype=flow.int64,
-        size=20000,
-        capacity=220000,
-        num_tokens=200000,
-        num_iters=100,
-    )
-
-
-def test_categorical_ordinal_encoder_cpu_very_large(test_case):
-    _test_categorical_ordinal_encoder(
-        test_case=test_case,
-        device_tag="cpu",
-        dtype=flow.int64,
-        size=50000,
-        capacity=1000000,
-        num_tokens=500000,
-        num_iters=100,
-    )
+if __name__ == "__main__":
+    unittest.main()
