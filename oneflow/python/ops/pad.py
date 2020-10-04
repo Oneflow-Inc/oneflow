@@ -90,7 +90,12 @@ def pad(
             padding_after.append(p[1])
     else:
         raise ValueError("paddings must be a tuple or a list.")
-    if x.dtype in [dtype_util.float, dtype_util.float32, dtype_util.float16, dtype_util.float64]:
+    if x.dtype in [
+        dtype_util.float,
+        dtype_util.float32,
+        dtype_util.float16,
+        dtype_util.float64,
+    ]:
         floating_constant_value = float(constant_value)
         integral_constant_value = 0
     else:
