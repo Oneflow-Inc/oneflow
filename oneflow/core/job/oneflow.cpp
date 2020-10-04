@@ -315,7 +315,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
     } else {
       PullPlan("complete_plan", &complete_plan);
     }
-    OF_BARRIER();
+    OF_SESSION_BARRIER();
     // Experiment Runtime
     { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
@@ -325,7 +325,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
       *improved_plan = *JUST(Improver().Improve(
           *Global<AvailableMemDesc>::Get(), naive_plan,
           JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename())));
-      OF_BARRIER();
+      OF_SESSION_BARRIER();
       TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
     }
   } else {
@@ -972,7 +972,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
   }
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   return Maybe<void>::Ok();
 }
 
