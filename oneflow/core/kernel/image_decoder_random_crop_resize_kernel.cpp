@@ -401,8 +401,6 @@ void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit() {
     random_crop_generators_.at(i).reset(
         new RandomCropGenerator(aspect_ratio_range, area_range, seeds.at(i), conf.num_attempts()));
   }
-  int dev;
-  OF_CUDA_CHECK(cudaGetDevice(&dev));
   workers_.resize(conf.num_workers());
   for (int64_t i = 0; i < conf.num_workers(); ++i) {
     workers_.at(i).reset(new Worker(CreateDecodeHandleFactory<device_type>(), conf.target_width(),
