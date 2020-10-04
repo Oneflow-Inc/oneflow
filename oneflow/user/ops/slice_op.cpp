@@ -185,7 +185,7 @@ Maybe<void> InferSliceAssignTensorDesc(user_op::InferContext* ctx) {
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
     CHECK_GT_OR_RETURN(step, 0) << "slice_assign step must be greater than 0";
-    CHECK_GT_OR_RETURN(start, 0) << "slice_assign start must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "slice_assign start must be greater or equal to 0";
     CHECK_GT_OR_RETURN(stop, 0) << "slice_assign stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "slice_assign start must be less than stop";
   }
@@ -226,7 +226,7 @@ Maybe<void> InferSlice2TensorDesc(user_op::InferContext* ctx) {
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
     CHECK_GT_OR_RETURN(step, 0) << "slice2 step must be greater than 0";
-    CHECK_GT_OR_RETURN(start, 0) << "slice2 start must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "slice2 start must be greater or equal to 0";
     CHECK_GT_OR_RETURN(stop, 0) << "slice2 stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "slice2 start must be less than stop";
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
