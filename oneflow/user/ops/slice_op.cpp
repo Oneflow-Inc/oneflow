@@ -172,6 +172,82 @@ void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   }
 }
 
+Maybe<void> InferSliceAssignTensorDesc(user_op::InferContext* ctx) {
+  user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
+  user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_OR_RETURN(!ref_desc->is_dynamic());
+  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
+  FOR_RANGE(size_t, i, 0, step_vec.size()) {
+    const int64_t step = step_vec.at(i);
+    const int64_t start = start_vec.at(i);
+    const int64_t stop = stop_vec.at(i);
+    CHECK_GT_OR_RETURN(step, 0) << "slice_assign step must be greater than 0";
+    CHECK_GT_OR_RETURN(start, 0) << "slice_assign start must be greater than 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "slice_assign stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "slice_assign start must be less than stop";
+  }
+  CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& ref_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0);
+  FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("ref", 0), axis)
+        .Broadcast(user_op::OpArg("value", 0))
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+void InferSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+                                      const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
+  CHECK(ref_modifier != nullptr);
+  ref_modifier->set_is_mutable(true);
+  user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
+  CHECK(value_modifier != nullptr);
+  value_modifier->set_requires_grad(false);
+}
+
+Maybe<void> InferSlice2TensorDesc(user_op::InferContext* ctx) {
+  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+  const int64_t ndim = x_shape->NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  DimVector dim_vec(ndim);
+  FOR_RANGE(size_t, i, 0, dim_vec.size()) {
+    const int64_t step = step_vec.at(i);
+    const int64_t start = start_vec.at(i);
+    const int64_t stop = stop_vec.at(i);
+    CHECK_GT_OR_RETURN(step, 0) << "slice2 step must be greater than 0";
+    CHECK_GT_OR_RETURN(start, 0) << "slice2 start must be greater than 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "slice2 stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "slice2 start must be less than stop";
+    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    dim_vec[i] = diff / step + 1;
+  }
+  *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
+  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSlice2SbpSignatures(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& input_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, axis, 0, input_desc.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), axis)
+        .PartialSum(user_op::OpArg("y", 0))
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 REGISTER_USER_OP("slice")
@@ -193,6 +269,25 @@ REGISTER_USER_OP("slice_grad")
     .SetTensorDescInferFn(InferSliceGradOpTensorDesc)
     .SetGetSbpFn(GetSliceGradOpSbpSignature)
     .SetInputArgModifyFn(InferSliceGradInputArgModifier);
+
+REGISTER_USER_OP("slice_assign")
+    .Input("ref")
+    .Input("value")
+    .Attr("start", UserOpAttrType::kAtListInt64)
+    .Attr("stop", UserOpAttrType::kAtListInt64)
+    .Attr("step", UserOpAttrType::kAtListInt64)
+    .SetTensorDescInferFn(InferSliceAssignTensorDesc)
+    .SetGetSbpFn(GetSliceAssignSbpSignatures)
+    .SetInputArgModifyFn(InferSliceAssignInputArgModifier);
+
+REGISTER_USER_OP("slice2")
+    .Input("x")
+    .Output("y")
+    .Attr("start", UserOpAttrType::kAtListInt64)
+    .Attr("stop", UserOpAttrType::kAtListInt64)
+    .Attr("step", UserOpAttrType::kAtListInt64)
+    .SetTensorDescInferFn(InferSlice2TensorDesc)
+    .SetGetSbpFn(GetSlice2SbpSignatures);
 
 REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
 

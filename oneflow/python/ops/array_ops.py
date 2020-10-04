@@ -373,6 +373,157 @@ def slice_v2(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
+@oneflow_export("slice2")
+def slice2(
+    x: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    name = name or id_util.UniqueStr("Slice2_")
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    ndim = len(x.shape)
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
+        raise ValueError(
+            "slice_tup_list must be a list or tuple with length "
+            "less than or equal to number of dimensions of input tensor"
+        )
+
+    # if length of slice_tup_list is less than number of dimensions of x, fill it to length of ndims reduce 1
+    if len(slice_tup_list) < ndim:
+        slice_tup_list += type(slice_tup_list)(
+            [(None, None, None)] * (ndim - len(slice_tup_list))
+        )
+
+    start_list = []
+    stop_list = []
+    step_list = []
+
+    for slice_tup, dim_size in zip(slice_tup_list, x.shape):
+        if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
+            raise ValueError(
+                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
+            )
+
+        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
+            raise ValueError("element of slice tuple must int or None")
+
+        (start, stop, step) = slice_tup
+        if step is None:
+            step = 1
+
+        if step <= 0:
+            raise ValueError("slice2 step must be greater than 0")
+
+        if start is None:
+            start = 0
+        elif start < -dim_size or start >= dim_size:
+            raise ValueError("slice2 start must be in range [-size, size)")
+        elif start < 0:
+            start += dim_size
+
+        if stop is None:
+            stop = dim_size
+        elif stop < -dim_size or stop > dim_size:
+            raise ValueError("slice2 start must be in range [-size, size]")
+        elif stop < 0:
+            stop += dim_size
+
+        start_list.append(start)
+        stop_list.append(stop)
+        step_list.append(step)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("slice2")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("start", start_list)
+        .Attr("stop", stop_list)
+        .Attr("step", step_list)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("slice_assign")
+def slice_assign(
+    x: remote_blob_util.BlobDef,
+    value: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    name = name or id_util.UniqueStr("SliceAssign_")
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    ndim = len(x.shape)
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
+        raise ValueError(
+            "slice_tup_list must be a list or tuple with length "
+            "less than or equal to number of dimensions of input tensor"
+        )
+
+    # if length of slice_tup_list is less than number of dimensions of x, fill it to length of ndims reduce 1
+    if len(slice_tup_list) < ndim:
+        slice_tup_list += type(slice_tup_list)(
+            [(None, None, None)] * (ndim - len(slice_tup_list))
+        )
+
+    start_list = []
+    stop_list = []
+    step_list = []
+
+    for slice_tup, dim_size in zip(slice_tup_list, x.shape):
+        if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
+            raise ValueError(
+                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
+            )
+
+        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
+            raise ValueError("element of slice tuple must int or None")
+
+        (start, stop, step) = slice_tup
+        if step is None:
+            step = 1
+
+        if step <= 0:
+            raise ValueError("slice_assign step must be greater than 0")
+
+        if start is None:
+            start = 0
+        elif start < -dim_size or start >= dim_size:
+            raise ValueError("slice_assign start must be in range [-size, size)")
+        elif start < 0:
+            start += dim_size
+
+        if stop is None:
+            stop = dim_size
+        elif stop < -dim_size or stop > dim_size:
+            raise ValueError("slice_assign start must be in range [-size, size]")
+        elif stop < 0:
+            stop += dim_size
+
+        start_list.append(start)
+        stop_list.append(stop)
+        step_list.append(step)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("slice_assign")
+        .Input("ref", [x])
+        .Input("value", [value])
+        .Attr("start", start_list)
+        .Attr("stop", stop_list)
+        .Attr("step", step_list)
+        .Build()
+    )
+    return op.InferAndTryRun()
+
+
 @oneflow_export("reverse")
 def reverse(
     input: remote_blob_util.BlobDef,
