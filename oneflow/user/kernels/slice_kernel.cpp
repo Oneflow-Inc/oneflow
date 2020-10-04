@@ -69,7 +69,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
     const int64_t dim_size = large->shape().At(i);
     int64_t small_size = small->shape().At(i);
     const int64_t step = step_vec.at(i);
-    CHECK_GE(step, 0);
+    CHECK_GT(step, 0);
     const int64_t slice_start_in_full_large =
         RegulateSliceStart(start_vec.at(i), i == split_axis ? length : dim_size);
     const int64_t slice_stop_in_full_large =

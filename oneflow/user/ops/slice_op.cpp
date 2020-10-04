@@ -229,7 +229,7 @@ Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
     CHECK_GE_OR_RETURN(start, 0) << "LogicalSlice start must be greater or equal to 0";
     CHECK_GT_OR_RETURN(stop, 0) << "LogicalSlice stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "LogicalSlice start must be less than stop";
-    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
