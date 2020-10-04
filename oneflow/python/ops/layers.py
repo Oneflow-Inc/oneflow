@@ -1324,6 +1324,7 @@ def batch_normalization_add_relu(
         .Input("gamma", [gamma])
         .Input("beta", [beta])
         .Output("y")
+        .Output("mask")
         .Output("mean")
         .Output("inv_variance")
         .Output("reserve_space")
