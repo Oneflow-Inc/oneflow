@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -87,13 +88,19 @@ def _compare_with_np(
     test_case.assertTrue(np.array_equal(y, of_y))
 
 
-def test_argwhere(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    arg_dict["value_dtype"] = [np.float32, np.int32]
-    arg_dict["index_dtype"] = [np.int32, np.int64]
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    arg_dict["verbose"] = [False]
-    for arg in GenArgList(arg_dict):
-        _compare_with_np(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestArgwhere(flow.unittest.TestCase):
+    def test_argwhere(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+        arg_dict["value_dtype"] = [np.float32, np.int32]
+        arg_dict["index_dtype"] = [np.int32, np.int64]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        arg_dict["verbose"] = [False]
+        for arg in GenArgList(arg_dict):
+            _compare_with_np(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

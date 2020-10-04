@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 import shutil
 from collections import OrderedDict
@@ -83,19 +84,6 @@ def of_run(device_type, x_shape, data_type, rate, seed):
     assert np.allclose(diff_scale, 1.0 / (1.0 - rate), atol=1e-5)
 
 
-def test_dropout(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(100, 100, 10, 20)]
-    arg_dict["data_type"] = ["float32", "double", "float16"]
-    arg_dict["rate"] = [0.75]
-    arg_dict["seed"] = [12345, None]
-    for arg in GenArgList(arg_dict):
-        if arg[0] == "cpu" and arg[2] == "float16":
-            continue
-        of_run(*arg)
-
-
 def of_run_module(device_type, x_shape, data_type, rate, seed):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -127,106 +115,124 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
     return of_out, of_out2
 
 
-def test_dropout_module(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(2, 2, 2, 2)]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["rate"] = [0.75]
-    arg_dict["seed"] = [12345]
+@flow.unittest.skip_unless_1n1d()
+class TestDropout(flow.unittest.TestCase):
+    def test_dropout(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(100, 100, 10, 20)]
+        arg_dict["data_type"] = ["float32", "double", "float16"]
+        arg_dict["rate"] = [0.75]
+        arg_dict["seed"] = [12345, None]
+        for arg in GenArgList(arg_dict):
+            if arg[0] == "cpu" and arg[2] == "float16":
+                continue
+            of_run(*arg)
 
-    literals = {
-        "cpu": [
-            np.array(
-                [
-                    4.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                ]
-            ),
-            np.array(
-                [
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                ]
-            ),
-        ],
-        "gpu": [
-            np.array(
-                [
-                    4.0,
-                    4.0,
-                    0.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                ]
-            ),
-            np.array(
-                [
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    0.0,
-                    4.0,
-                    4.0,
-                    0.0,
-                ]
-            ),
-        ],
-    }
+    def test_dropout_module(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(2, 2, 2, 2)]
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["rate"] = [0.75]
+        arg_dict["seed"] = [12345]
 
-    for arg in GenArgList(arg_dict):
-        of_out_a, of_out_b = of_run_module(*arg)
-        test_case.assertEqual(
-            (np.abs(literals[arg[0]][0] - of_out_a.flatten()) < 10e-7).all(), True
-        )
-        test_case.assertEqual(
-            (np.abs(literals[arg[0]][1] - of_out_b.flatten()) < 10e-7).all(), True
-        )
+        literals = {
+            "cpu": [
+                np.array(
+                    [
+                        4.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                    ]
+                ),
+                np.array(
+                    [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                    ]
+                ),
+            ],
+            "gpu": [
+                np.array(
+                    [
+                        4.0,
+                        4.0,
+                        0.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                    ]
+                ),
+                np.array(
+                    [
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        4.0,
+                        4.0,
+                        0.0,
+                    ]
+                ),
+            ],
+        }
+
+        for arg in GenArgList(arg_dict):
+            of_out_a, of_out_b = of_run_module(*arg)
+            test_case.assertEqual(
+                (np.abs(literals[arg[0]][0] - of_out_a.flatten()) < 10e-7).all(), True
+            )
+            test_case.assertEqual(
+                (np.abs(literals[arg[0]][1] - of_out_b.flatten()) < 10e-7).all(), True
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

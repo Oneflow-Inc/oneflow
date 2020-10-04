@@ -13,37 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import oneflow as flow
 import oneflow.typing as oft
 import numpy as np
 from typing import Tuple
-
-
-def test_Add(test_case):
-    @flow.global_function()
-    def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):
-        adder = flow.find_or_create_module("Add", Add)
-        x = adder(*xs)
-        y = adder(*xs)
-        return adder(x, y)
-
-    inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(2))
-    r = AddJob(inputs).get().numpy()
-    test_case.assertTrue(np.allclose(r, sum(inputs) * 2))
-    r = AddJob(inputs).get().numpy()
-    test_case.assertTrue(np.allclose(r, sum(inputs) * 2))
-
-
-def test_find_or_create_module_reuse(test_case):
-    @flow.global_function()
-    def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):
-        adder = flow.find_or_create_module("Add", Add, reuse=True)
-        adder = flow.find_or_create_module("Add", Add, reuse=True)
-        x = adder(*xs)
-        return adder(x, x)
-
-    inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(2))
-    r = AddJob(inputs).get().numpy()
 
 
 class Add(flow.nn.Module):
@@ -90,11 +64,42 @@ def _make_global_func(test_case, x_shape, y_shape):
     return AddJob
 
 
-def test_user_op_module_builder_in_namespace(test_case):
-    x = np.random.rand(2, 5).astype(np.float32)
-    y = np.random.rand(2, 5).astype(np.float32)
+@flow.unittest.skip_unless_1n1d()
+class TestUserOpModule(flow.unittest.TestCase):
+    def test_Add(test_case):
+        @flow.global_function()
+        def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):
+            adder = flow.find_or_create_module("Add", Add)
+            x = adder(*xs)
+            y = adder(*xs)
+            return adder(x, y)
 
-    flow.clear_default_session()
-    add_func = _make_global_func(test_case, x.shape, y.shape)
-    ret = add_func(x, y)
-    test_case.assertTrue(np.array_equal(ret, x + y))
+        inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(2))
+        r = AddJob(inputs).get().numpy()
+        test_case.assertTrue(np.allclose(r, sum(inputs) * 2))
+        r = AddJob(inputs).get().numpy()
+        test_case.assertTrue(np.allclose(r, sum(inputs) * 2))
+
+    def test_find_or_create_module_reuse(test_case):
+        @flow.global_function()
+        def AddJob(xs: Tuple[(oft.Numpy.Placeholder((5, 2)),) * 2]):
+            adder = flow.find_or_create_module("Add", Add, reuse=True)
+            adder = flow.find_or_create_module("Add", Add, reuse=True)
+            x = adder(*xs)
+            return adder(x, x)
+
+        inputs = tuple(np.random.rand(5, 2).astype(np.float32) for i in range(2))
+        r = AddJob(inputs).get().numpy()
+
+    def test_user_op_module_builder_in_namespace(test_case):
+        x = np.random.rand(2, 5).astype(np.float32)
+        y = np.random.rand(2, 5).astype(np.float32)
+
+        flow.clear_default_session()
+        add_func = _make_global_func(test_case, x.shape, y.shape)
+        ret = add_func(x, y)
+        test_case.assertTrue(np.array_equal(ret, x + y))
+
+
+if __name__ == "__main__":
+    unittest.main()
