@@ -37,7 +37,7 @@ constexpr int kNumChannels = 3;
 struct Task {
   const unsigned char* data;
   size_t length;
-  unsigned char* dest;
+  unsigned char* dst;
   RandomCropGenerator* crop_generator;
 };
 
@@ -112,8 +112,8 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
   }
   cv::Mat resized;
   cv::resize(cropped, resized, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
-  cv::Mat dest(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
-  cv::cvtColor(resized, dest, cv::COLOR_BGR2RGB);
+  cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
+  cv::cvtColor(resized, dst_mat, cv::COLOR_BGR2RGB);
 }
 
 template<>
@@ -355,8 +355,7 @@ class Worker final {
         if (task_id >= work->tasks->size()) { break; }
         const Task& task = work->tasks->at(task_id);
         handle->DecodeRandomCropResize(task.data, task.length, task.crop_generator, work->workspace,
-                                       work->workspace_size, task.dest, target_width,
-                                       target_height);
+                                       work->workspace_size, task.dst, target_width, target_height);
         handle->Synchronize();
       }
       work->done_counter->Decrease();
@@ -443,7 +442,7 @@ void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(
     CHECK_EQ(buffer->data_type(), DataType::kUInt8);
     tasks->at(task_id).data = buffer->data<unsigned char>();
     tasks->at(task_id).length = buffer->elem_cnt();
-    tasks->at(task_id).dest = out_ptr + task_id * out_instance_size;
+    tasks->at(task_id).dst = out_ptr + task_id * out_instance_size;
     tasks->at(task_id).crop_generator = random_crop_generators_.at(task_id).get();
   }
   // Larger images will be processed first, balancing the work time of the workers.
