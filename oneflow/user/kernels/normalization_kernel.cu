@@ -229,39 +229,41 @@ REGISTER_BN_INFERENCE_KERNEL(double)
 
 #undef REGISTER_BN_INFERENCE_KERNEL
 
+constexpr int64_t kCudaWarpSize = 32;
+
 template<typename T>
 __global__ void ReluGpu(int64_t n, const T* x, T* y, int32_t* mask) {
-  const int32_t lane_id = threadIdx.x % 32;
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T x_val = x[i];
     const bool is_positive = (x_val > 0);
-    int32_t ballot_result = __ballot_sync(__activemask(), static_cast<int>(is_positive));
-    if (lane_id == 0) { mask[i / 32] = ballot_result; }
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? x_val : 0;
   }
 }
 
 template<>
 __global__ void ReluGpu<half>(int64_t n, const half* x, half* y, int32_t* mask) {
-  const int32_t lane_id = threadIdx.x % 32;
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
   const half zero = __float2half(0.0f);
   CUDA_1D_KERNEL_LOOP(i, n) {
     const half x_val = x[i];
     const bool is_positive = __hgt(x_val, zero);
-    int32_t ballot_result = __ballot_sync(__activemask(), static_cast<int>(is_positive));
-    if (lane_id == 0) { mask[i / 32] = ballot_result; }
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? x_val : zero;
   }
 }
 
 template<typename T>
 __global__ void AddReluGpu(int64_t n, const T* x, const T* addend, T* y, int32_t* mask) {
-  const int32_t lane_id = threadIdx.x % 32;
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T sum = x[i] + addend[i];
     const bool is_positive = (sum > 0);
-    int32_t ballot_result = __ballot_sync(__activemask(), static_cast<int>(is_positive));
-    if (lane_id == 0) { mask[i / 32] = ballot_result; }
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? sum : 0;
   }
 }
@@ -269,13 +271,13 @@ __global__ void AddReluGpu(int64_t n, const T* x, const T* addend, T* y, int32_t
 template<>
 __global__ void AddReluGpu<half>(int64_t n, const half* x, const half* addend, half* y,
                                  int32_t* mask) {
-  const int32_t lane_id = threadIdx.x % 32;
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
   const half zero = __float2half(0.0f);
   CUDA_1D_KERNEL_LOOP(i, n) {
     const half sum = __hadd(x[i], addend[i]);
     const bool is_positive = __hgt(sum, zero);
-    int32_t ballot_result = __ballot_sync(__activemask(), static_cast<int>(is_positive));
-    if (lane_id == 0) { mask[i / 32] = ballot_result; }
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? sum : zero;
   }
 }
@@ -306,9 +308,9 @@ void AddRelu<float16>(DeviceCtx* device_ctx, int64_t n, const float16* x, const 
 
 template<typename T>
 __global__ void ReluBackwardGpu(int64_t n, const int32_t* mask, const T* dy, T* addend_diff) {
-  int32_t lane_id = threadIdx.x % 32;
+  int32_t lane_id = threadIdx.x % kCudaWarpSize;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    int32_t mask_val = mask[i / 32];
+    int32_t mask_val = mask[i / kCudaWarpSize];
     bool is_positive = mask_val & (1 << lane_id);
     addend_diff[i] = static_cast<T>(is_positive) * dy[i];
   }
