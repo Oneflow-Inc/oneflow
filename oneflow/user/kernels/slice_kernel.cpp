@@ -24,7 +24,7 @@ namespace oneflow {
 namespace {
 
 // [start, end)
-int64_t get_size_in_slice(const int64_t start, const int64_t end, const int64_t step) {
+int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t step) {
   if (end <= start) { return 0; }
   return (end - start - 1) / step + 1;
 }
@@ -92,7 +92,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
         slice_start_in_splitted_large -= lower;
         slice_stop_in_splitted_large -= lower;
         slice_size =
-            get_size_in_slice(slice_start_in_splitted_large, slice_stop_in_splitted_large, step);
+            GetSizeInSlice(slice_start_in_splitted_large, slice_stop_in_splitted_large, step);
       }
       large_slice_param.dims[i] = dim_size;
       large_slice_param.start[i] = slice_start_in_splitted_large;
@@ -105,8 +105,8 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
       int64_t slice_start_in_full_small = 0;
       int64_t slice_stop_in_full_small = dim_size;
       if (i == split_axis) {
-        slice_start_in_full_small = get_size_in_slice(slice_start_in_full_large, lower, step);
-        slice_stop_in_full_small = get_size_in_slice(slice_start_in_full_large, upper, step);
+        slice_start_in_full_small = GetSizeInSlice(slice_start_in_full_large, lower, step);
+        slice_stop_in_full_small = GetSizeInSlice(slice_start_in_full_large, upper, step);
         slice_start_in_full_small =
             std::min(std::max<int64_t>(slice_start_in_full_small, 0), dim_size);
         slice_stop_in_full_small =

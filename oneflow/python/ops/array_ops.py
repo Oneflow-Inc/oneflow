@@ -411,14 +411,18 @@ def _GetSliceAttrs(slice_tup_list, input):
         if start is None:
             start = 0
         elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice_assign/logical_slice start must be in range [-size, size)")
+            raise ValueError(
+                "slice_assign/logical_slice start must be in range [-size, size)"
+            )
         elif start < 0:
             start += dim_size
 
         if stop is None:
             stop = dim_size
         elif stop < -dim_size or stop > dim_size:
-            raise ValueError("slice_assign/logical_slice start must be in range [-size, size]")
+            raise ValueError(
+                "slice_assign/logical_slice start must be in range [-size, size]"
+            )
         elif stop < 0:
             stop += dim_size
 
