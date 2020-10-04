@@ -110,10 +110,10 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     } else if (device_type() == DeviceType::kGPU) {
       const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
       const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
-      int64_t device_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
-      OperatorConf host_op_conf = op_conf();
-      host_op_conf.set_device_tag("cpu");
-      int64_t host_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(host_op_conf));
+      const int64_t device_parallel_desc_symbol_id =
+          scope.scope_proto().device_parallel_desc_symbol_id();
+      const int64_t host_parallel_desc_symbol_id =
+          scope.scope_proto().host_parallel_desc_symbol_id();
       mut_parallel_signature()->set_op_parallel_desc_symbol_id(device_parallel_desc_symbol_id);
       auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
       for (const auto& ibn : input_bns()) { (*map)[ibn] = host_parallel_desc_symbol_id; }
