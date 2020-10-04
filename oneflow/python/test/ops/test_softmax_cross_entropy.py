@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 import numpy as np
 import tensorflow as tf
@@ -86,10 +87,16 @@ def compare_with_tensorflow(device_type, data_type, shape):
     flow.clear_default_session()
 
 
-def test_softmax_cross_entropy_with_logits(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["data_type"] = ["double", "float32"]
-    arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestSoftmaxCrossEntropy(flow.unittest.TestCase):
+    def test_softmax_cross_entropy_with_logits(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["data_type"] = ["double", "float32"]
+        arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()
