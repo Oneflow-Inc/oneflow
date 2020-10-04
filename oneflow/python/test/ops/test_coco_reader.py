@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import math
 import os
 
@@ -386,90 +387,104 @@ class GroupedDistributedSampler(object):
         return sample
 
 
-def test_coco_reader(test_case, verbose=VERBOSE):
-    anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
-    image_dir = "/dataset/mscoco_2017/val2017"
+@flow.unittest.skip_unless_1n1d()
+class TestCocoReader(flow.unittest.TestCase):
+    def test_coco_reader(test_case, verbose=VERBOSE):
+        anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+        image_dir = "/dataset/mscoco_2017/val2017"
 
-    of_coco_load_fn = _make_coco_data_load_fn(anno_file, image_dir, 1, 2, True, True)
-    image_id, image_size, image, bbox, label, poly, poly_index = of_coco_load_fn().get()
-    image_id = image_id.numpy()
-    image_size = image_size.numpy()
-    image = image.numpy_lists()
-    bbox = bbox.numpy_lists()
-    label = label.numpy_lists()
-    poly = poly.numpy_lists()
-    poly_index = poly_index.numpy_lists()
-
-    samples = _get_coco_image_samples(anno_file, image_dir, image_id)
-    for i, sample in enumerate(samples):
-        if verbose:
-            print(
-                "#{} of label:\n".format(i),
-                label[0][i].squeeze(),
-                type(label[0][i].squeeze()),
-                label[0][i].squeeze().shape,
-            )
-            print(
-                "#{} coco label:\n".format(i),
-                sample["label"],
-                type(sample["label"]),
-                sample["label"].shape,
-            )
-        test_case.assertTrue(np.array_equal(image[0][i].squeeze(), sample["image"]))
-        test_case.assertTrue(np.array_equal(image_size[i], sample["image_size"]))
-        test_case.assertTrue(np.allclose(bbox[0][i].squeeze(), sample["bbox"]))
-        cur_label = label[0][i].squeeze()
-        if len(cur_label.shape) == 0:
-            # when cur_label is scalar
-            cur_label = np.array([cur_label])
-        test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
-        test_case.assertTrue(np.allclose(poly[0][i].squeeze(), sample["poly"]))
-        test_case.assertTrue(
-            np.array_equal(poly_index[0][i].squeeze(), sample["poly_index"])
+        of_coco_load_fn = _make_coco_data_load_fn(
+            anno_file, image_dir, 1, 2, True, True
         )
+        (
+            image_id,
+            image_size,
+            image,
+            bbox,
+            label,
+            poly,
+            poly_index,
+        ) = of_coco_load_fn().get()
+        image_id = image_id.numpy()
+        image_size = image_size.numpy()
+        image = image.numpy_lists()
+        bbox = bbox.numpy_lists()
+        label = label.numpy_lists()
+        poly = poly.numpy_lists()
+        poly_index = poly_index.numpy_lists()
 
-
-def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
-    anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
-    image_dir = "/dataset/mscoco_2017/val2017"
-
-    image_info_list = _get_coco_sorted_imgs(anno_file)
-    if verbose:
-        print("Info of the first 20 images:")
-        for i, image_info in enumerate(image_info_list[:20]):
-            print(
-                "index: {}, image_id: {}, group_id: {}, anno len: {}".format(
-                    i,
-                    image_info["image_id"],
-                    image_info["group_id"],
-                    image_info["anno_len"],
+        samples = _get_coco_image_samples(anno_file, image_dir, image_id)
+        for i, sample in enumerate(samples):
+            if verbose:
+                print(
+                    "#{} of label:\n".format(i),
+                    label[0][i].squeeze(),
+                    type(label[0][i].squeeze()),
+                    label[0][i].squeeze().shape,
                 )
+                print(
+                    "#{} coco label:\n".format(i),
+                    sample["label"],
+                    type(sample["label"]),
+                    sample["label"].shape,
+                )
+            test_case.assertTrue(np.array_equal(image[0][i].squeeze(), sample["image"]))
+            test_case.assertTrue(np.array_equal(image_size[i], sample["image_size"]))
+            test_case.assertTrue(np.allclose(bbox[0][i].squeeze(), sample["bbox"]))
+            cur_label = label[0][i].squeeze()
+            if len(cur_label.shape) == 0:
+                # when cur_label is scalar
+                cur_label = np.array([cur_label])
+            test_case.assertTrue(np.array_equal(cur_label, sample["label"]))
+            test_case.assertTrue(np.allclose(poly[0][i].squeeze(), sample["poly"]))
+            test_case.assertTrue(
+                np.array_equal(poly_index[0][i].squeeze(), sample["poly_index"])
             )
 
-    sampler = GroupedDistributedSampler(4, 8, image_info_list, True)
-    of_coco_load_fn = _make_coco_data_load_fn(
-        anno_file, image_dir, 4, 8, True, False, True
-    )
-    for i, sample_ids in enumerate(sampler):
-        image_id = of_coco_load_fn().get().numpy()
+    def test_coco_reader_distributed_stride(test_case, verbose=VERBOSE):
+        anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+        image_dir = "/dataset/mscoco_2017/val2017"
+
+        image_info_list = _get_coco_sorted_imgs(anno_file)
         if verbose:
-            print("#{} image_id:".format(i), image_id)
-            print("#{} sample_ids:".format(i), sample_ids)
-        test_case.assertTrue(np.array_equal(image_id, sample_ids))
+            print("Info of the first 20 images:")
+            for i, image_info in enumerate(image_info_list[:20]):
+                print(
+                    "index: {}, image_id: {}, group_id: {}, anno len: {}".format(
+                        i,
+                        image_info["image_id"],
+                        image_info["group_id"],
+                        image_info["anno_len"],
+                    )
+                )
+
+        sampler = GroupedDistributedSampler(4, 8, image_info_list, True)
+        of_coco_load_fn = _make_coco_data_load_fn(
+            anno_file, image_dir, 4, 8, True, False, True
+        )
+        for i, sample_ids in enumerate(sampler):
+            image_id = of_coco_load_fn().get().numpy()
+            if verbose:
+                print("#{} image_id:".format(i), image_id)
+                print("#{} sample_ids:".format(i), sample_ids)
+            test_case.assertTrue(np.array_equal(image_id, sample_ids))
+
+    def test_coco_reader_distributed_contiguous(test_case, verbose=VERBOSE):
+        anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
+        image_dir = "/dataset/mscoco_2017/val2017"
+
+        image_info_list = _get_coco_sorted_imgs(anno_file)
+        sampler = GroupedDistributedSampler(4, 8, image_info_list, False)
+        of_coco_load_fn = _make_coco_data_load_fn(
+            anno_file, image_dir, 4, 8, False, False, True
+        )
+        for i, sample_ids in enumerate(sampler):
+            image_id = of_coco_load_fn().get().numpy()
+            if verbose:
+                print("#{} image_id:".format(i), image_id)
+                print("#{} sample_ids:".format(i), sample_ids)
+            test_case.assertTrue(np.array_equal(image_id, sample_ids))
 
 
-def test_coco_reader_distributed_contiguous(test_case, verbose=VERBOSE):
-    anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
-    image_dir = "/dataset/mscoco_2017/val2017"
-
-    image_info_list = _get_coco_sorted_imgs(anno_file)
-    sampler = GroupedDistributedSampler(4, 8, image_info_list, False)
-    of_coco_load_fn = _make_coco_data_load_fn(
-        anno_file, image_dir, 4, 8, False, False, True
-    )
-    for i, sample_ids in enumerate(sampler):
-        image_id = of_coco_load_fn().get().numpy()
-        if verbose:
-            print("#{} image_id:".format(i), image_id)
-            print("#{} sample_ids:".format(i), sample_ids)
-        test_case.assertTrue(np.array_equal(image_id, sample_ids))
+if __name__ == "__main__":
+    unittest.main()

@@ -116,7 +116,6 @@ endif()
 message(STATUS "Found python library ${Python_LIBRARIES}")
 
 set(oneflow_third_party_libs
-    ${CMAKE_THREAD_LIBS_INIT}
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
     ${GOOGLETEST_STATIC_LIBRARIES}
@@ -133,6 +132,7 @@ set(oneflow_third_party_libs
     ${CARES_STATIC_LIBRARIES}
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 if (NOT WITH_XLA)
