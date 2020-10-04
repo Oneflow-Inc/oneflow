@@ -84,7 +84,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
           slice_start_in_splitted_large =
               lower + (step - (lower - slice_start_in_splitted_large) % step) % step;
         }
-        // assume large tensor has split sbp attribute
+        // large tensor has split sbp attribute
         slice_start_in_splitted_large =
             std::min(std::max(slice_start_in_splitted_large, lower), upper);
         slice_stop_in_splitted_large =
@@ -100,7 +100,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
       large_slice_param.size[i] = slice_size;
     }
     {
-      // assume small tensor has broadcast/partialsum sbp attribute
+      // small tensor has broadcast/partialsum sbp attribute
       const int64_t dim_size = small->shape().At(i);
       int64_t slice_start_in_full_small = 0;
       int64_t slice_stop_in_full_small = dim_size;
