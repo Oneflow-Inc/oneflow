@@ -23,8 +23,6 @@ jobs:
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
         docker run --rm -v $ONEFLOW_CI_TMP_DIR/:$HOME/ci-tmp/ busybox rm -rf $HOME/ci-tmp/wheelhouse
     - uses: actions/checkout@v2
-    - name: Setup submodule
-      uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
         export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla-102
@@ -46,10 +44,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Setup submodule
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Pack OneFlow source code
       if: github.ref == 'refs/heads/master'
       env:
