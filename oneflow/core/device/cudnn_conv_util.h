@@ -207,7 +207,9 @@ class CudnnConvAlgoCache final {
   ~CudnnConvAlgoCache() = default;
 
   template<typename perf_t>
-  using Store = HashMap<CudnnConvParams, std::vector<std::pair<size_t, perf_t>>>;
+  using WorkspaceSizeAndPerfT = std::pair<size_t, perf_t>;
+  template<typename perf_t>
+  using Store = HashMap<CudnnConvParams, std::list<WorkspaceSizeAndPerfT<perf_t>>>;
 
   template<typename perf_t>
   perf_t Remember(const CudnnConvParams& params,

@@ -136,18 +136,19 @@ perf_t CudnnConvAlgoGetOrInfer(const CudnnConvParams& params,
                                CudnnConvAlgoCache::Store<perf_t>* store, std::mutex* mutex) {
   const size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
   auto InferWithCache = [&](const CudnnConvParams& p) -> perf_t {
-    std::unique_lock<std::mutex> lock(*mutex);
     CudnnConvParams params_without_ws = p;
     params_without_ws.max_ws_size = 0;
-    auto key_it = store->find(params_without_ws);
+    std::unique_lock<std::mutex> lock(*mutex);
+    const auto& key_it = store->find(params_without_ws);
     if (key_it != store->cend()) {
-      auto perf_it =
-          std::find_if(key_it->second.cbegin(), key_it->second.cend(),
-                       [&](const std::pair<size_t, perf_t>& pair) {
-                         // The best algorithm for larger workspace can also be used for smaller
-                         // workspace
-                         return pair.first >= p.max_ws_size && pair.second.memory <= p.max_ws_size;
-                       });
+      const auto& perf_it = std::find_if(
+          key_it->second.cbegin(), key_it->second.cend(),
+          [&](const std::pair<size_t, perf_t>& pair) {
+            // There might be a case that only memory size pair.second.memory was required for the
+            // best algorithm even though a workspace pair.first supplied
+            return pair.second.memory <= p.max_ws_size /* for memory safety */
+                   && pair.first >= p.max_ws_size /* a case with larger workspace infered before */;
+          });
       if (perf_it != key_it->second.cend()) { return perf_it->second; }
     }
     perf_t perf = InferFn(p);
