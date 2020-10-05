@@ -60,7 +60,7 @@ const char* CurandGetErrorString(curandStatus_t error) {
   return "Unknown curand status";
 }
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error) {
   switch (error) {

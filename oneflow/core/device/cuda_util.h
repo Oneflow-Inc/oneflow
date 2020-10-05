@@ -29,7 +29,7 @@ limitations under the License.
 #include <cuda_fp16.h>
 #include <device_launch_parameters.h>
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020
 
 #include <nvjpeg.h>
 
@@ -41,7 +41,7 @@ const char* CublasGetErrorString(cublasStatus_t error);
 
 const char* CurandGetErrorString(curandStatus_t error);
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
@@ -75,7 +75,7 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
   LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
              << " (" << _of_nccl_check_status << ") "
 
-#if defined(WITH_CUDA) && CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020
 
 #define OF_NVJPEG_CHECK(condition)                                                                 \
   for (nvjpegStatus_t _of_nvjpeg_check_status = (condition);                                       \
