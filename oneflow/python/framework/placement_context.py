@@ -54,17 +54,24 @@ class EmptyPlacementScope(PlacementScope):
         pass
 
 
-def GlobalModePlacementScope(device_tag, machine_device_ids):
-    if isinstance(machine_device_ids, (list, tuple)) == False:
-        machine_device_ids = [machine_device_ids]
-    sess = session_ctx.GetDefaultSession()
+class GlobalModePlacementScope(PlacementScope):
+    def __init__(self, device_tag, machine_device_ids):
+        if isinstance(machine_device_ids, (list, tuple)) == False:
+            machine_device_ids = [machine_device_ids]
+        sess = session_ctx.GetDefaultSession()
 
-    def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewParallelDesc(
-            builder, device_tag, machine_device_ids
-        )
+        def BuildScope(old_scope, builder):
+            return old_scope.BuildWithNewParallelDesc(
+                builder, device_tag, machine_device_ids
+            )
 
-    return sess.NewCurrentScope(sess.MakeScope(BuildScope))
+        self.scope_ctx_ = sess.NewCurrentScope(sess.MakeScope(BuildScope))
+
+    def __enter__(self):
+        self.scope_ctx_.__enter__()
+
+    def __exit__(self, *args):
+        self.scope_ctx_.__exit__(*args)
 
 
 def MakeParallelConf4Resource(device_tag, resource):
