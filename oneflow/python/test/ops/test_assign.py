@@ -150,6 +150,7 @@ class TestAssign(flow.unittest.TestCase):
         arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
         arg_dict["dtype"] = [flow.float, flow.double]
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["assign"] = [flow.assign]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
