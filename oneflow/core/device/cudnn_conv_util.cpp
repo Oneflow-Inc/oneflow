@@ -130,7 +130,58 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
   return perf_vec.at(found_algo_idx);
 }
 
+template<typename perf_t>
+perf_t CudnnConvAlgoGetOrInfer(const CudnnConvParams& params,
+                               const std::function<perf_t(const CudnnConvParams&)>& InferFn,
+                               CudnnConvAlgoCache::Store<perf_t>* store, std::mutex* mutex) {
+  const size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
+  auto InferWithCache = [&](const CudnnConvParams& p) -> perf_t {
+    std::unique_lock<std::mutex> lock(*mutex);
+    CudnnConvParams params_without_ws = p;
+    params_without_ws.max_ws_size = 0;
+    auto key_it = store->find(params_without_ws);
+    if (key_it != store->cend()) {
+      auto perf_it =
+          std::find_if(key_it->second.cbegin(), key_it->second.cend(),
+                       [&](const std::pair<size_t, perf_t>& pair) {
+                         // The best algorithm for larger workspace can also be used for smaller
+                         // workspace
+                         return pair.first >= p.max_ws_size && pair.second.memory <= p.max_ws_size;
+                       });
+      if (perf_it != key_it->second.cend()) { return perf_it->second; }
+    }
+    perf_t perf = InferFn(p);
+    (*store)[params_without_ws].push_back(std::make_pair(p.max_ws_size, perf));
+    return perf;
+  };
+  return ThreadLocalCachedCall(cache_size, InferWithCache, params);
+}
+
 }  // namespace
+
+template<>
+cudnnConvolutionFwdAlgoPerf_t CudnnConvAlgoCache::Remember(
+    const CudnnConvParams& params,
+    const std::function<cudnnConvolutionFwdAlgoPerf_t(const CudnnConvParams&)>& InferFn) {
+  return CudnnConvAlgoGetOrInfer<cudnnConvolutionFwdAlgoPerf_t>(params, InferFn, &fwd_algo_store_,
+                                                                &fwd_algo_store_mutex_);
+}
+
+template<>
+cudnnConvolutionBwdDataAlgoPerf_t CudnnConvAlgoCache::Remember(
+    const CudnnConvParams& params,
+    const std::function<cudnnConvolutionBwdDataAlgoPerf_t(const CudnnConvParams&)>& InferFn) {
+  return CudnnConvAlgoGetOrInfer<cudnnConvolutionBwdDataAlgoPerf_t>(
+      params, InferFn, &bwd_data_algo_store_, &bwd_data_algo_store_mutex_);
+}
+
+template<>
+cudnnConvolutionBwdFilterAlgoPerf_t CudnnConvAlgoCache::Remember(
+    const CudnnConvParams& params,
+    const std::function<cudnnConvolutionBwdFilterAlgoPerf_t(const CudnnConvParams&)>& InferFn) {
+  return CudnnConvAlgoGetOrInfer<cudnnConvolutionBwdFilterAlgoPerf_t>(
+      params, InferFn, &bwd_filter_algo_store_, &bwd_filter_algo_cache_mutex_);
+}
 
 CudnnConvDesc::~CudnnConvDesc() { OF_CUDNN_CHECK(cudnnDestroyConvolutionDescriptor(val_)); }
 
@@ -405,8 +456,7 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
     }
     return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
-  size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
-  return ThreadLocalCachedCall(cache_size, Infer, args->params);
+  return Global<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
 }
 
 template<typename perf_t, typename algo_t>

@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -91,12 +92,14 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerJobBuildAndInferCtxMgr>::New();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
+  Global<CudnnConvAlgoCache>::New();
 #endif
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
+  Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
