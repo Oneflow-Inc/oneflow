@@ -411,3 +411,57 @@ def decode_random(
 
     interpret_util.ConsistentForward(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export(
+    "data.image_decoder_random_crop_resize", "data.ImageDecoderRandomCropResize"
+)
+def image_decoder_random_crop_resize(
+    input_blob: remote_blob_util.BlobDef,
+    target_width: int,
+    target_height: int,
+    num_attempts: Optional[int] = None,
+    seed: Optional[int] = None,
+    random_area: Optional[Sequence[float]] = None,
+    random_aspect_ratio: Optional[Sequence[float]] = None,
+    num_workers: Optional[int] = None,
+    warmup_size: Optional[int] = None,
+    max_num_pixels: Optional[int] = None,
+    name: Optional[str] = None,
+) -> Tuple[remote_blob_util.BlobDef]:
+    if name is None:
+        name = id_util.UniqueStr("ImageDecoderRandomCropResize_")
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.image_decoder_random_crop_resize_conf, "in", input_blob.unique_name)
+    op_conf.image_decoder_random_crop_resize_conf.out = "out"
+    op_conf.image_decoder_random_crop_resize_conf.target_width = target_width
+    op_conf.image_decoder_random_crop_resize_conf.target_height = target_height
+    if num_attempts is not None:
+        op_conf.image_decoder_random_crop_resize_conf.num_attempts = num_attempts
+    if seed is not None:
+        op_conf.image_decoder_random_crop_resize_conf.seed = seed
+    if random_area is not None:
+        assert len(random_area) == 2
+        op_conf.image_decoder_random_crop_resize_conf.random_area_min = random_area[0]
+        op_conf.image_decoder_random_crop_resize_conf.random_area_max = random_area[1]
+    if random_aspect_ratio is not None:
+        assert len(random_aspect_ratio) == 2
+        op_conf.image_decoder_random_crop_resize_conf.random_aspect_ratio_min = random_aspect_ratio[
+            0
+        ]
+        op_conf.image_decoder_random_crop_resize_conf.random_aspect_ratio_max = random_aspect_ratio[
+            1
+        ]
+    if num_workers is not None:
+        op_conf.image_decoder_random_crop_resize_conf.num_workers = num_workers
+    if warmup_size is not None:
+        op_conf.image_decoder_random_crop_resize_conf.warmup_size = warmup_size
+    if max_num_pixels is not None:
+        op_conf.image_decoder_random_crop_resize_conf.max_num_pixels = max_num_pixels
+    interpret_util.Forward(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
