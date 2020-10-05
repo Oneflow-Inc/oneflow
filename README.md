@@ -122,13 +122,15 @@
 
 3. #### Build and Install OneFlow
 
-    ```
-    mkdir build
-    cd build
-    cmake ..
-    make -j$(nproc)
-    make pip_install
-    ```
+    - In the root directory of OneFlow source code, run:
+
+      ```
+      mkdir build
+      cd build
+      cmake ..
+      make -j$(nproc)
+      make pip_install
+      ```
 
     - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
     - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
