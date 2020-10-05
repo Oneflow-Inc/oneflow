@@ -898,7 +898,7 @@ message ImageDecoderRandomCropResizeOpConf {
   required string out = 2;
   required int64 target_width = 3;
   required int64 target_height = 4;
-  optional int64 num_workers = 5 [default = 4];
+  optional int64 num_workers = 5 [default = 3];
   optional int64 max_num_pixels = 6 [default = 67108864];
   optional int64 warmup_size = 7 [default = 6400];
   optional int64 seed = 8;
