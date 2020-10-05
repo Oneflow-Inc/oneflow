@@ -58,9 +58,7 @@ def InterpretScope(session, function_desc, config_proto):
     job_conf.job_name = function_desc.job_func.__name__
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
-        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
-            oneflow.env.current_resource()
-        )
+        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
         placement_scope = placement_util.GetPlacementScope(*tag_and_dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:

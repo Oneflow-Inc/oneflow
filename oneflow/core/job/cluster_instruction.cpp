@@ -69,13 +69,13 @@ void OccasionallyClearCtrlKV(const std::string& key) {
   Global<ObsoleteCtrlKeys>::Get()->Add(key);
   // 1 instead of 0 is better for avoid clearing no ctrl kv
   if ((seq++) % interval == 1) {
-    OF_BARRIER_ALL();
+    OF_ENV_BARRIER();
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       Global<ObsoleteCtrlKeys>::Get()->ForEach(
           [](const std::string& k) { Global<CtrlClient>::Get()->ClearMasterKV(k); });
     }
     Global<ObsoleteCtrlKeys>::Get()->Clear();
-    OF_BARRIER_ALL();
+    OF_ENV_BARRIER();
   }
 }
 
@@ -94,10 +94,10 @@ void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
 }  // namespace
 
 void ClusterInstruction::NewSessionBarrier() {
-  OF_BARRIER_ALL();
+  OF_ENV_BARRIER();
   Global<CtrlClient>::Get()->Clear();
   Global<ObsoleteCtrlKeys>::Get()->Clear();
-  OF_BARRIER_ALL();
+  OF_ENV_BARRIER();
 }
 
 void ClusterInstruction::MasterSendSessionStart() {
@@ -124,6 +124,6 @@ void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* clust
   PullClusterInstruction(cluster_instruction);
 }
 
-void ClusterInstruction::HaltBarrier() { OF_BARRIER_ALL(); }
+void ClusterInstruction::HaltBarrier() { OF_ENV_BARRIER(); }
 
 }  // namespace oneflow

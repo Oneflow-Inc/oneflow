@@ -55,10 +55,10 @@ class TestLayerNorm(unittest.TestCase):
         check_point.init()
         a = f1(x).get()
         b = f2(x).get()
-        print("without xla: ", a)
-        print("with xla", b)
+        print("without xla: ", a.numpy())
+        print("with xla", b.numpy())
         self.assertTrue(
-            np.allclose(a.numpy(), b.numpy(), rtol=1e-4, atol=5e-3),
+            np.allclose(a.numpy(), b.numpy(), rtol=5e-3, atol=5e-3),
             a.numpy() - b.numpy(),
         )
         flow.clear_default_session()
