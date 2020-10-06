@@ -20,42 +20,8 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.device_scope_stack as device_scope_stack
 import oneflow
 import traceback
-
-
-@oneflow_export("placement.current_scope")
-def api_current_placement_scope() -> placement_ctx.PlacementScope:
-    r"""Get current placement scope object.
-
-    For instance:
-
-        if "cpu" == flow.placement.current_scope().default_device_tag:
-            print("ops shall run in the cpu mode only")
-
-    Returns:
-        placement_ctx.PlacementScope: [description]
-    """
-    print(
-        "WARNING: oneflow.placement.current_scope has been deprecated. "
-        "Please use oneflow.current_scope.device_parallel_desc_symbol instead."
-    )
-    print(traceback.format_stack()[-2])
-    api = enable_if.unique(
-        [global_mode_cur_placement_scope, normal_mode_cur_placement_scope]
-    )
-    return api()
-
-
-@enable_if.condition(hob.in_global_mode & hob.in_placement_scope)
-def global_mode_cur_placement_scope():
-    return placement_ctx.PlacementScopeStackTop()
-
-
-@enable_if.condition(hob.in_normal_mode)
-def normal_mode_cur_placement_scope():
-    return device_scope_stack.CurrentPlacement()
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
@@ -97,16 +63,21 @@ def api_placement(
 
     if with_cuda == False:
         device_tag = "cpu"
-    func = enable_if.unique([GetPlacementScope, GetNormalModePlacementScope])
+    func = enable_if.unique(
+        [
+            GetEmptyPlacementScope,
+            GetNormalModePlacementScope,
+            GetGlobalModePlacementScope,
+        ]
+    )
     return func(device_tag, machine_device_ids)
 
 
 @enable_if.condition(
-    hob.in_global_mode
-    | (hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized)
+    hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized
 )
-def GetPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.PlacementScope(device_tag, machine_device_ids)
+def GetEmptyPlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.EmptyPlacementScope(device_tag, machine_device_ids)
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
@@ -118,6 +89,11 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids):
         )
     )
     return sess.NewCurrentScope(scope)
+
+
+@enable_if.condition(hob.in_global_mode)
+def GetGlobalModePlacementScope(device_tag, machine_device_ids):
+    return placement_ctx.GlobalModePlacementScope(device_tag, machine_device_ids)
 
 
 def GetDefaultMachineDeviceIds(resource):
