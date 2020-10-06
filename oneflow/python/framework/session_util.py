@@ -61,7 +61,6 @@ class Session(object):
         self.uuid2watch_handler_ = {}
         self.config_proto_ = None
         self.resource_ = None
-        self.placement_scope_stack_ = []
         self.is_mirrored_strategy_enabled_stack_ = []
         self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
@@ -104,10 +103,6 @@ class Session(object):
     @property
     def uuid2watch_handler(self):
         return self.uuid2watch_handler_
-
-    @property
-    def placement_scope_stack(self):
-        return self.placement_scope_stack_
 
     @property
     def is_mirrored_strategy_enabled_stack(self):
