@@ -70,7 +70,6 @@ class Session(object):
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
-        self.scope_stack_ = []
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
         self.instruction_list_ = instr_util.InstructionListProto()
@@ -138,41 +137,6 @@ class Session(object):
     @property
     def var_name2var_blob(self):
         return self.var_name2var_blob_
-
-    def InitNormalModeScope(self):
-        job_conf = job_conf_pb.JobConfigProto()
-        job_conf.predict_conf.SetInParent()
-        job_conf.job_name = ""
-        scope = compiler.MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
-        self.scope_stack_ = [scope]
-
-    def MakeScope(self, build_func):
-        scope = None
-        old_scope = oneflow.current_scope()
-        assert old_scope is not None
-
-        def BuildScope(builder):
-            nonlocal scope
-            scope = build_func(old_scope, builder)
-            assert scope is not None
-
-        vm_util.LogicalRun(BuildScope)
-        return scope
-
-    @contextmanager
-    def NewCurrentScope(self, scope):
-        old_scope = self.GetCurrentScope()
-        self.scope_stack_.append(scope)
-        try:
-            yield
-        finally:
-            assert self.GetCurrentScope() is scope
-            self.scope_stack_.pop()
-            assert self.GetCurrentScope() is old_scope
-
-    def GetCurrentScope(self):
-        assert len(self.scope_stack_) > 0
-        return self.scope_stack_[-1]
 
     def GetLazyFunctionDesc(self, job_name):
         if job_name in self.job_name2function_desc_:
@@ -427,14 +391,6 @@ def api_clear_default_session() -> None:
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
-    session_ctx.GetDefaultSession().InitNormalModeScope()
-
-
-@oneflow_export("current_scope")
-def api_current_scope():
-    r""" Return current scope
-    """
-    return session_ctx.GetDefaultSession().GetCurrentScope()
 
 
 @oneflow_export("sync_default_session")
@@ -471,18 +427,3 @@ def _GetDefaultConfigProto():
 
 
 session_ctx.OpenDefaultSession(Session())
-
-
-@oneflow_export("scope.current_scope")
-@oneflow_deprecate()
-def deprecated_current_scope(*args, **kwargs):
-    print(
-        "WARNING:",
-        "oneflow.scope.current_scope",
-        "will be removed in the future, use {} instead.".format(
-            "oneflow.current_scope"
-        ),
-    )
-    print(traceback.format_stack()[-2])
-
-    return current_scope(*args, **kwargs)

@@ -22,7 +22,7 @@ import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.scope_util as scope_util
+import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow
 
 
@@ -55,17 +55,8 @@ class EmptyPlacementScope(PlacementScope):
 
 
 class GlobalModePlacementScope(PlacementScope):
-    def __init__(self, device_tag, machine_device_ids):
-        if isinstance(machine_device_ids, (list, tuple)) == False:
-            machine_device_ids = [machine_device_ids]
-        sess = session_ctx.GetDefaultSession()
-
-        def BuildScope(old_scope, builder):
-            return old_scope.BuildWithNewParallelDesc(
-                builder, device_tag, machine_device_ids
-            )
-
-        self.scope_ctx_ = sess.NewCurrentScope(sess.MakeScope(BuildScope))
+    def __init__(self, scope_ctx):
+        self.scope_ctx_ = scope_ctx
 
     def __enter__(self):
         self.scope_ctx_.__enter__()

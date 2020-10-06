@@ -29,6 +29,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
+import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
@@ -72,11 +73,11 @@ def InterpretScope(session, function_desc, config_proto):
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    scope = MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
+    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
     with _JobBuildAndInferCtx(job_conf.job_name), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-            with session.NewCurrentScope(scope):
+            with scope_util.ScopeContext(scope):
                 yield
 
 
@@ -206,16 +207,3 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
         "oneflow.global_function returns "
         + "RemoteBlob or list/tuple/dict nested RemoteBlob only"
     )
-
-
-def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
-    scope = None
-
-    def BuildInitialScope(builder):
-        nonlocal scope
-        scope = scope_util.BuildInitialScope(
-            builder, job_conf, device_tag, machine_device_ids, is_mirrored
-        )
-
-    vm_util.LogicalRun(BuildInitialScope)
-    return scope
