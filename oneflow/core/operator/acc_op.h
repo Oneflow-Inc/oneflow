@@ -28,7 +28,6 @@ class AccOp final : public Operator {
   ~AccOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new AccLogicalNode; }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

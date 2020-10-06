@@ -26,7 +26,6 @@ class UniqueWithCountsOp final : public Operator {
   ~UniqueWithCountsOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -53,10 +52,6 @@ void UniqueWithCountsOp::InitFromOpConf() {
   EnrollOutputBn("count", false);
   EnrollOutputBn("num_unique", false);
   EnrollTmpBn("workspace");
-}
-
-const PbMessage& UniqueWithCountsOp::GetCustomizedConf() const {
-  return op_conf().unique_with_counts_conf();
 }
 
 Maybe<void> UniqueWithCountsOp::InferBlobDescs(

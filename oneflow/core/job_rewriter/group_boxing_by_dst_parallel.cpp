@@ -66,10 +66,9 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
         const OpNode* consumer = consumer7ibn.first;
         const std::string& ibn = consumer7ibn.second;
         OperatorConf& consumer_op_conf = op_node2op_conf[consumer];
-        PbMessage* consumer_op_type_conf =
-            MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
-        ReplaceInputLbnInOpCustomizedConf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
-                                          GenLogicalBlobName(grouped_lbi));
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn,
+                                                                GenLogicalBlobName(grouped_lbi));
+        CHECK_EQ(GenLogicalBlobName(lbi), old_val);
       }
     }
   }

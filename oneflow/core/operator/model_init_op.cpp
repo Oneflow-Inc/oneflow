@@ -21,8 +21,6 @@ class ModelInitOp : public Operator {
  public:
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
 
@@ -39,8 +37,6 @@ void ModelInitOp::InitFromOpConf() {
   if (op_conf().model_init_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollRepeatedOutputBn("out", false);
 }
-
-const PbMessage& ModelInitOp::GetCustomizedConf() const { return op_conf().model_init_conf(); }
 
 Maybe<void> ModelInitOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
