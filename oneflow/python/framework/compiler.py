@@ -76,14 +76,8 @@ def InterpretScope(session, function_desc, config_proto):
     with _JobBuildAndInferCtx(job_conf.job_name), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-            with _SessionInitialScope(session, scope):
+            with session.NewCurrentScope(scope):
                 yield
-
-
-def _SessionInitialScope(session, scope):
-    job_name = scope.job_desc_symbol.data.job_name
-    session.InitNoneScope(job_name)
-    return session.NewCurrentScope(scope)
 
 
 def _CompileJob(function_desc):

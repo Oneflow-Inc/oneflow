@@ -70,13 +70,12 @@ class Session(object):
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
-        self.job_name2current_scope_ = {}
+        self.scope_stack_ = []
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
         self.instruction_list_ = instr_util.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
-        self.InitNormalModeNoneScope()
         self.snapshot_mgr_ = SnapshotManager()
 
     @property
@@ -145,7 +144,7 @@ class Session(object):
         job_conf.predict_conf.SetInParent()
         job_conf.job_name = ""
         scope = compiler.MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
-        self.job_name2current_scope_[""] = scope
+        self.scope_stack_ = [scope]
 
     def MakeScope(self, build_func):
         scope = None
@@ -162,27 +161,18 @@ class Session(object):
 
     @contextmanager
     def NewCurrentScope(self, scope):
-        job_name = scope.job_desc_symbol.data.job_name
-        old_scope = self.GetCurrentScope(job_name)
-        self.job_name2current_scope_[job_name] = scope
+        old_scope = self.GetCurrentScope()
+        self.scope_stack_.append(scope)
         try:
             yield
         finally:
-            assert self.GetCurrentScope(job_name) is scope
-            self.job_name2current_scope_[job_name] = old_scope
+            assert self.GetCurrentScope() is scope
+            self.scope_stack_.pop()
+            assert self.GetCurrentScope() is old_scope
 
-    def InitNormalModeNoneScope(self):
-        self.InitNoneScope("")
-
-    def InitNoneScope(self, job_name):
-        if job_name not in self.job_name2current_scope_:
-            assert isinstance(job_name, str)
-            self.job_name2current_scope_[job_name] = None
-        assert self.job_name2current_scope_[job_name] is None, "job_name: %s" % job_name
-
-    def GetCurrentScope(self, job_name):
-        assert job_name in self.job_name2current_scope_, "job_name: %s" % job_name
-        return self.job_name2current_scope_[job_name]
+    def GetCurrentScope(self):
+        assert len(self.scope_stack_) > 0
+        return self.scope_stack_[-1]
 
     def GetLazyFunctionDesc(self, job_name):
         if job_name in self.job_name2function_desc_:
@@ -426,9 +416,15 @@ def api_eager_execution_enabled() -> bool:
 
 
 @oneflow_export("clear_default_session")
-def clear_default_session() -> None:
+def api_clear_default_session() -> None:
     r"""Clear the default session. All compiled OneFlow functions will be deleted.
     """
+    func = enable_if.unique([clear_default_session])
+    return func()
+
+
+@enable_if.condition(hob.in_normal_mode)
+def clear_default_session():
     session_ctx.TryCloseDefaultSession()
     session_ctx.OpenDefaultSession(Session())
     session_ctx.GetDefaultSession().InitNormalModeScope()
@@ -438,25 +434,19 @@ def clear_default_session() -> None:
 def api_current_scope():
     r""" Return current scope
     """
-    api = enable_if.unique([global_mode_current_scope, normal_mode_current_scope])
-    return api()
-
-
-@enable_if.condition(hob.in_global_mode)
-def global_mode_current_scope():
-    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
-    return session_ctx.GetDefaultSession().GetCurrentScope(job_name)
-
-
-@enable_if.condition(hob.in_normal_mode)
-def normal_mode_current_scope():
-    return session_ctx.GetDefaultSession().GetCurrentScope("")
+    return session_ctx.GetDefaultSession().GetCurrentScope()
 
 
 @oneflow_export("sync_default_session")
-def sync_default_session() -> None:
+def api_sync_default_session() -> None:
     r"""Synchronize the default session. Block until every synchronous OneFlow function and its callback finishes running.
     """
+    func = enable_if.unique([sync_default_session])
+    return func()
+
+
+@enable_if.condition(hob.in_normal_mode)
+def sync_default_session() -> None:
     session_ctx.GetDefaultSession().Sync()
 
 
