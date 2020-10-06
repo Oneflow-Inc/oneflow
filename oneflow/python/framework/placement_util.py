@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import re
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
@@ -83,17 +84,27 @@ def GetEmptyPlacementScope(device_tag, machine_device_ids):
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def GetNormalModePlacementScope(device_tag, machine_device_ids):
     sess = session_ctx.GetDefaultSession()
-    scope = sess.MakeScope(
+    scope = scope_util.MakeScope(
         lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
             builder, device_tag, machine_device_ids
         )
     )
-    return sess.NewCurrentScope(scope)
+    return scope_util.ScopeContext(scope)
 
 
 @enable_if.condition(hob.in_global_mode)
 def GetGlobalModePlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.GlobalModePlacementScope(device_tag, machine_device_ids)
+    if isinstance(machine_device_ids, (list, tuple)) == False:
+        machine_device_ids = [machine_device_ids]
+    sess = session_ctx.GetDefaultSession()
+
+    def BuildScope(old_scope, builder):
+        return old_scope.BuildWithNewParallelDesc(
+            builder, device_tag, machine_device_ids
+        )
+
+    scope_ctx = scope_util.ScopeContext(scope_util.MakeScope(BuildScope))
+    return placement_ctx.GlobalModePlacementScope(scope_ctx)
 
 
 def GetDefaultMachineDeviceIds(resource):
