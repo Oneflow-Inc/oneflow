@@ -17,17 +17,26 @@ limitations under the License.
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
+#include "oneflow/xrt/xla/xla_helpers.h"
+
 namespace oneflow {
 namespace xrt {
 namespace mola {
 
+xla::XlaOp Square(const xla::XlaOp &x) {
+  return xla::Dot(x,x);
+}
+
 class SquareSumOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    xla::XlaOp x = ctx->Input("x");  
-    sum = xla::Add(xla::Square(x), Shape({1}));
-    }
-
+    xla::XlaOp x = ctx->Input("x");
+    xla::XlaBuilder *builder = ctx->builder(); 
+    DataType data_type = ctx->SoleInputType();
+    xla::XlaOp sum;
+    
+    xla::XlaComputation add_func = CreateAddFunc(data_type);
+    sum = xla::Reduce(Square(x), Zero(builder, data_type), add_func, {1});
     ctx->SetSoleOutput(sum);
   }
 };
