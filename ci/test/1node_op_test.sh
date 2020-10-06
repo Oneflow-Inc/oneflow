@@ -12,7 +12,11 @@ cd $test_tmp_dir
 
 cd test/ops/
 
-true \
-  && ONEFLOW_TEST_DEVICE_NUM=1 python3 -m unittest --failfast --verbose \
-  && ONEFLOW_TEST_DEVICE_NUM=2 python3 -m unittest --failfast --verbose \
-  && ONEFLOW_TEST_DEVICE_NUM=4 python3 -m unittest --failfast --verbose
+export ONEFLOW_TEST_DEVICE_NUM=1
+python3 -m unittest --failfast --verbose
+
+export ONEFLOW_TEST_DEVICE_NUM=2
+python3 -m unittest --failfast --verbose
+
+export ONEFLOW_TEST_DEVICE_NUM=4
+python3 -m unittest --failfast --verbose
