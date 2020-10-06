@@ -13,32 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_XRT_XLA_OPS_UNARY_OP_H_
-#define ONEFLOW_XRT_XLA_OPS_UNARY_OP_H_
-
-#include "oneflow/xrt/xla/xla_data_type.h"
+#include "oneflow/xrt/xla/ops/op_context.h"
+#include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace oneflow {
 namespace xrt {
 namespace mola {
-namespace op {
 
-#define OFXLA_DECLARE_UNARY_OP(op)                                    \
-  struct op {                                                         \
-    xla::XlaOp operator()(const xla::XlaOp &x) { return xla::op(x); } \
-  };
+class SquareSumOp : public XlaOpKernel {
+ public:
+  void Compile(XlaOpContext *ctx) override {
+    xla::XlaOp x = ctx->Input("x");  
+    sum = xla::Add(xla::Square(x), Shape({1}));
+    }
 
-OFXLA_DECLARE_UNARY_OP(Abs);
-OFXLA_DECLARE_UNARY_OP(Logistic);
-OFXLA_DECLARE_UNARY_OP(Tanh);
-OFXLA_DECLARE_UNARY_OP(Rsqrt);
+    ctx->SetSoleOutput(sum);
+  }
+};
 
-#undef OFXLA_DECLARE_UNARY_OP
+REGISTER_XLA_OP_KERNEL(SquareSum, SquareSumOp).Finalize();
 
-}  // namespace op
 }  // namespace mola
 }  // namespace xrt
 }  // namespace oneflow
-
-#endif  // ONEFLOW_XRT_XLA_OPS_UNARY_OP_H_
