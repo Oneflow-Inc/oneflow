@@ -34,10 +34,6 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     EnrollTmpBn("tmp");
   }
 
-  const PbMessage& GetCustomizedConf() const override {
-    return this->op_conf().image_decoder_random_crop_resize_conf();
-  }
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =

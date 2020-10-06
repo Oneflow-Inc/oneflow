@@ -77,8 +77,9 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       auto new_parallel_cast_op_conf = parallel_cast_op_conf;
       const std::string cast_input = cast_conf_wrapper.input("in", 0);
       const std::string parallel_cast_input = parallel_cast_op_conf.parallel_cast_conf().in();
-      ReplaceInputLbnInOpCustomizedConf(new_parallel_cast_op_conf.mutable_parallel_cast_conf(),
-                                        "in", parallel_cast_input, cast_input);
+      const auto& old_val =
+          ReplaceInputLbnInOpCustomizedConf(&new_parallel_cast_op_conf, "in", cast_input);
+      CHECK_EQ(parallel_cast_input, old_val);
 
       op_conf_cache.Put(new_parallel_cast_op_conf);
     }
@@ -88,8 +89,9 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       const std::string parallel_cast_output =
           parallel_cast_op_conf.name() + "/" + parallel_cast_op_conf.parallel_cast_conf().out();
       const std::string cast_input = cast_conf_wrapper.input("in", 0);
-      ReplaceInputLbnInOpCustomizedConf(new_cast_op_conf.mutable_user_conf(), "in_0", cast_input,
-                                        parallel_cast_output);
+      const auto& old_val =
+          ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output);
+      CHECK_EQ(cast_input, old_val);
       op_conf_cache.Put(new_cast_op_conf);
     }
 
@@ -104,9 +106,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
 
       OpNode* dst_node = edge->dst_node();
       OperatorConf dst_op_conf = op_conf_cache.GetLatest(dst_node->op().op_conf());
-      PbMessage* dst_op_type_conf =
-          MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, cast_output);
+      CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, cast_output));
       op_conf_cache.Put(dst_op_conf);
     }
   });

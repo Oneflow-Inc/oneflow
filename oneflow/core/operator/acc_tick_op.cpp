@@ -41,8 +41,6 @@ Maybe<void> AccTickOp::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& AccTickOp::GetCustomizedConf() const { return op_conf().acc_tick_conf(); }
-
 Maybe<void> AccTickOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   BatchAxis4BnInOp("acc")->clear_value();
