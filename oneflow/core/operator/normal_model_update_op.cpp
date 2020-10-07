@@ -32,10 +32,6 @@ Maybe<void> NormalModelUpdtOp::InferBlobDescs(
   return MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-const PbMessage& NormalModelUpdtOp::GetCustomizedConf() const {
-  return op_conf().normal_mdupdt_conf();
-}
-
 LogicalBlobId NormalModelUpdtOp::lbi4obn(const std::string& output_bn) const {
   const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);

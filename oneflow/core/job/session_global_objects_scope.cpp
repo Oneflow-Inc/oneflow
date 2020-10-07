@@ -30,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
@@ -89,7 +88,6 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
     Global<LazyJobBuildAndInferCtxMgr>::New();
-    Global<LbiDiffWatcherInfo>::New();
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
@@ -101,7 +99,6 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
-    Global<LbiDiffWatcherInfo>::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<InterUserJobInfo>::Delete();
     Global<CriticalSectionDesc>::Delete();

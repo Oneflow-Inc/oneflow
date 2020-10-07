@@ -80,17 +80,17 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   HandoutTasks(other_tasks);
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
   LOG(INFO) << "Actors on this machine constructed";
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
   if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
 }
 
 Runtime::~Runtime() {
   Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero("running_actor_cnt");
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   DeleteAllGlobal();
 }
 

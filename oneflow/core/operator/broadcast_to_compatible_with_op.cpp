@@ -54,10 +54,6 @@ class BroadcastToCompatibleWithOp final : public Operator {
     EnrollOutputBn("y");
   }
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().broadcast_to_compatible_with_conf();
-  }
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();

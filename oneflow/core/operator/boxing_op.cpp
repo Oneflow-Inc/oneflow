@@ -42,14 +42,12 @@ void BoxingOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& BoxingOp::GetCustomizedConf() const { return op_conf().boxing_conf(); }
-
 LogicalBlobId BoxingOp::lbi4ibn(const std::string& input_bn) const {
-  return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
+  return op_conf().boxing_conf().lbi();
 }
 
 LogicalBlobId BoxingOp::lbi4obn(const std::string& output_bn) const {
-  return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
+  return op_conf().boxing_conf().lbi();
 }
 
 Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
