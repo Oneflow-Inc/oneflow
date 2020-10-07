@@ -94,7 +94,7 @@ class ProtoReflectionUtil:
     def oneof_type_field_enum_value_name(self, field):
         return "k" + self._underline_name_to_camel(field.name)
 
-    def oneof_type_field_enum_value_number(self, field):
+    def field_number(self, field):
         return field.number
 
     def field_oneof_name(self, field):
