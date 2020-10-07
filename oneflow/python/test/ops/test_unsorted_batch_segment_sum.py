@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -109,11 +110,17 @@ def _run_test(test_case, device, out_shape, num_segments, segment_ids_shape):
     )
 
 
-def test_unsorted_batch_segment_sum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["out_shape"] = [(2, 4, 7, 6)]
-    arg_dict["num_segments"] = [7]
-    arg_dict["segment_ids_shape"] = [(2, 4, 5)]
-    for arg in GenArgList(arg_dict):
-        _run_test(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestUnsortedBatchSegmentSum(flow.unittest.TestCase):
+    def test_unsorted_batch_segment_sum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["out_shape"] = [(2, 4, 7, 6)]
+        arg_dict["num_segments"] = [7]
+        arg_dict["segment_ids_shape"] = [(2, 4, 5)]
+        for arg in GenArgList(arg_dict):
+            _run_test(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import cv2
 import numpy as np
 import oneflow as flow
@@ -74,13 +75,19 @@ def _compare_image_normalize(test_case, image_files, std, mean):
         test_case.assertTrue(np.allclose(exp_norm_image, norm_image))
 
 
-def test_image_normalize(test_case):
-    _compare_image_normalize(
-        test_case,
-        [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-        ],
-        (102.9801, 115.9465, 122.7717),
-        (1.0, 1.0, 1.0),
-    )
+@flow.unittest.skip_unless_1n1d()
+class TestImageNormalize(flow.unittest.TestCase):
+    def test_image_normalize(test_case):
+        _compare_image_normalize(
+            test_case,
+            [
+                "/dataset/mscoco_2017/val2017/000000000139.jpg",
+                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+            ],
+            (102.9801, 115.9465, 122.7717),
+            (1.0, 1.0, 1.0),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

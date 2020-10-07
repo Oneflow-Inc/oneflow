@@ -28,7 +28,6 @@ class DecodeOFRecordOp final : public Operator {
   ~DecodeOFRecordOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
 
   LogicalNode* NewProperLogicalNode() const override { return new DecodeLogicalNode; }
 

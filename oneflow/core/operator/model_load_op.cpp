@@ -21,8 +21,6 @@ class ModelLoadOp : public Operator {
  public:
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
 
@@ -39,8 +37,6 @@ void ModelLoadOp::InitFromOpConf() {
   EnrollInputBn("path", false);
   EnrollRepeatedOutputBn("out", false);
 }
-
-const PbMessage& ModelLoadOp::GetCustomizedConf() const { return op_conf().model_load_conf(); }
 
 Maybe<void> ModelLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
