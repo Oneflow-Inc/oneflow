@@ -929,28 +929,30 @@ def masked_fill(
     value_like_x = flow.constant_like(like=x, value=value, name=name + "_ConstantLike")
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
 
+
 @oneflow_export("gather_dim")
 def gather_dim(
-    input: remote_blob_util.BlobDef, 
-    dim: int, 
-    index: remote_blob_util.BlobDef, 
-    out: remote_blob_util.BlobDef=None, 
-    sparse_grad: bool =False,
-    name: Optional[str] = None
+    input: remote_blob_util.BlobDef,
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    out: remote_blob_util.BlobDef = None,
+    sparse_grad: bool = False,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("GatherDim_")
-            )
-            .Op("gather_dim")
-            .Input("input", [input])
-            .Input("index", [index])
-            .Output("out")
-            .Attr("dim", int(dim))
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GatherDim_")
         )
+        .Op("gather_dim")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Output("out")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 
 @oneflow_export("scatter_dim_add")
 def scatter_dim_add(

@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace user_op{
+namespace user_op {
 REGISTER_USER_OP("gather_dim")
     .Input("input")
     .Input("index")
@@ -38,11 +38,9 @@ REGISTER_USER_OP("gather_dim")
       const int64_t dim = ctx->Attr<int64_t>("dim");
       CHECK_GE_OR_RETURN(dim, 0);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
-      
-      FOR_RANGE(int64_t, i, 0, input_num_axes){
-        if(i == dim){
-          continue;
-        }
+
+      FOR_RANGE(int64_t, i, 0, input_num_axes) {
+        if (i == dim) { continue; }
         CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
       }
 
@@ -73,14 +71,12 @@ REGISTER_USER_OP("scatter_dim_add")
       CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
       CHECK_LE_OR_RETURN(src_num_axes, params_shape.NumAxes());
 
-      FOR_RANGE(int64_t, i, 0, src_num_axes){
+      FOR_RANGE(int64_t, i, 0, src_num_axes) {
         CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
       }
 
-      FOR_RANGE(int64_t, i, 0, src_num_axes){
-        if(i == dim){
-          continue;
-        }
+      FOR_RANGE(int64_t, i, 0, src_num_axes) {
+        if (i == dim) { continue; }
         CHECK_LE_OR_RETURN(index->shape().At(i), params_shape.At(i));
       }
 
@@ -91,30 +87,27 @@ REGISTER_USER_OP("scatter_dim_add")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("gather_dim")
-    .SetBackwardOpConfGenFn(
-    [](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
 
-      const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
+  const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
-      ctx->DefineOp(op_grad_name, 
-        [&ctx](user_op::BackwardOpBuilder& builder) {
-          return builder.OpTypeName("scatter_dim_add") // scatter_dim_add(dim, index, src) -> output
-              .InputBind("index", ctx->FwOp().input("index", 0)) //scatter.index <- gather.index
-              .InputBind("src", ctx->FwOp().output_grad("out", 0)) //scatter.src <- grad of gather.out
-              .Output("out")
-              .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
-              .Attr("shape", ctx->FwOp().TensorDesc4ArgNameAndIndex("out", 0).shape())
-              .Build();
-        });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("input", 0), 
-        [&ctx, &op_grad_name]() -> const std::string& {
-          return ctx->GetOp(op_grad_name)
-                .output("out", 0);
-        });
+  ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder
+        .OpTypeName("scatter_dim_add")  // scatter_dim_add(dim, index, src) -> output
+        .InputBind("index", ctx->FwOp().input("index", 0))    // scatter.index <- gather.index
+        .InputBind("src", ctx->FwOp().output_grad("out", 0))  // scatter.src <- grad of gather.out
+        .Output("out")
+        .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
+        .Attr("shape", ctx->FwOp().TensorDesc4ArgNameAndIndex("out", 0).shape())
+        .Build();
   });
 
-} // namespace user_op
+  ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
+                            [&ctx, &op_grad_name]() -> const std::string& {
+                              return ctx->GetOp(op_grad_name).output("out", 0);
+                            });
+});
+
+}  // namespace user_op
 
 }  // namespace oneflow
