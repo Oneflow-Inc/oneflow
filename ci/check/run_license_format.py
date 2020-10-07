@@ -33,7 +33,11 @@ def get_txt(path: str):
 
 def check_file(path):
     with open(path) as f:
-        content = f.read()
+        try:
+            content = f.read()
+        except Exception as e:
+            print(path)
+            raise e
         txt = get_txt(path)
         if content.startswith(txt) or (not content):
             return (True, content)
