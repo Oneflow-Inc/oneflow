@@ -207,7 +207,7 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
 }
 
 void CudaDeviceSetCpuAffinity(int32_t dev) {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
