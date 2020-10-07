@@ -940,7 +940,7 @@ def gather_dim(
 ) -> remote_blob_util.BlobDef:
         return (
             flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("TorchGather_")
+                name if name is not None else id_util.UniqueStr("GatherDim_")
             )
             .Op("gather_dim")
             .Input("input", [input])
