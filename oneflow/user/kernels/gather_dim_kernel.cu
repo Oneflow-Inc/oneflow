@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/torch_gather_util.h"
+#include "oneflow/user/kernels/gather_dim_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class TorchGatherGpuKernel final : public user_op::OpKernel {
+class GatherDimGpuKernel final : public user_op::OpKernel {
  public:
-  TorchGatherGpuKernel() = default;
-  ~TorchGatherGpuKernel() override = default;
+  GatherDimGpuKernel() = default;
+  ~GatherDimGpuKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -138,9 +138,9 @@ class ScatterDimAddGpuKernel<DeviceType::kGPU, float16, IDX_T> final : public us
 };
 
 #define REGISTER_GATHERDIM_GPUKERNEL(device, in_type, indices_type)                              \
-  REGISTER_USER_KERNEL("torch_gather")                                                             \
+  REGISTER_USER_KERNEL("gather_dim")                                                             \
       .SetCreateFn<                                                                                \
-        TorchGatherGpuKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+        GatherDimGpuKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
                        & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));

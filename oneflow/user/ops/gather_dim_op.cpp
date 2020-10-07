@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace user_op{
-REGISTER_USER_OP("torch_gather")
+REGISTER_USER_OP("gather_dim")
     .Input("input")
     .Input("index")
     .Output("out")
@@ -65,7 +65,7 @@ REGISTER_USER_OP("scatter_dim_add")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("torch_gather")
+REGISTER_USER_OP_GRAD("gather_dim")
     .SetBackwardOpConfGenFn(
     [](user_op::BackwardOpConfContext* ctx) {
 

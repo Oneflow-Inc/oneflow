@@ -15,17 +15,17 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/user/kernels/torch_gather_util.h"
+#include "oneflow/user/kernels/gather_dim_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class TorchGatherKernel final : public user_op::OpKernel {
+class GatherDimCpuKernel final : public user_op::OpKernel {
  public:
-  TorchGatherKernel() = default;
-  ~TorchGatherKernel() override = default;
+  GatherDimCpuKernel() = default;
+  ~GatherDimCpuKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -90,14 +90,14 @@ class ScatterDimAddKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_GATHER_DIM_KERNEL(device, in_type, indices_type)                              \
-  REGISTER_USER_KERNEL("torch_gather")                                                             \
+  REGISTER_USER_KERNEL("gather_dim")                                                             \
       .SetCreateFn<                                                                                \
-          TorchGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()  \
+          GatherDimCpuKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
                        & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-#define REGISTER_SCATTER_KERNEL(device, in_type, indices_type)                              \
+#define REGISTER_DIMSCATTER_KERNEL(device, in_type, indices_type)                              \
   REGISTER_USER_KERNEL("scatter_dim_add")                                                             \
       .SetCreateFn<                                                                                \
           ScatterDimAddKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()  \
@@ -114,7 +114,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_DIM_KERNEL,
                                 GATHER_DATA_TYPE_SEQ,
                                 INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMSCATTER_KERNEL,
                                 (DeviceType::kCPU), 
                                 GATHER_DATA_TYPE_SEQ,
                                 INDEX_DATA_TYPE_SEQ)
