@@ -929,8 +929,8 @@ def masked_fill(
     value_like_x = flow.constant_like(like=x, value=value, name=name + "_ConstantLike")
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
 
-@oneflow_export("torch_gather")
-def torch_gather(
+@oneflow_export("gather_dim")
+def gather_dim(
     input: remote_blob_util.BlobDef, 
     dim: int, 
     index: remote_blob_util.BlobDef, 
@@ -942,7 +942,7 @@ def torch_gather(
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("TorchGather_")
             )
-            .Op("torch_gather")
+            .Op("gather_dim")
             .Input("input", [input])
             .Input("index", [index])
             .Output("out")

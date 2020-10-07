@@ -1,13 +1,9 @@
 #ifndef ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow{
-
-template<DeviceType device_type, typename T>
-struct DeviceAdd {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y += *x; }
-};
 
 /*
   A converter that converts coordinate of high-dimensions tensor
@@ -68,7 +64,7 @@ struct CoordinateOffsetConverter{
 };
 
 template<typename IN_T, typename IDX_T>
-void DoGatherDim(
+OF_DEVICE_FUNC void DoGatherDim(
   CoordinateOffsetConverter<IDX_T> input_helper,
   CoordinateOffsetConverter<IDX_T> index_helper,
   int64_t elem_cnt,
@@ -78,7 +74,7 @@ void DoGatherDim(
   IN_T* output
   )
 {
-  FOR_RANGE(IDX_T, index_offset, 0, elem_cnt){
+  XPU_1D_KERNEL_LOOP(index_offset, elem_cnt){
     
     // get coordinate of index tensor
     index_helper.setOffset(index_offset);
@@ -106,25 +102,19 @@ __global__ void DoCUDAGatherDim(
   IN_T* output
   )
 {
-    CUDA_1D_KERNEL_LOOP(index_offset, elem_cnt){
-    
-    // get coordinate of index tensor
-    index_helper.setOffset(index_offset);
-    index_helper.idxToCoordinate();
-
-    // get coordinate of input tensor by replacing "dim" axis   
-    const IDX_T x = index[index_offset];
-    input_helper.copyCoordinate(index_helper);
-    input_helper.coordinate_[dim] = x;
-
-    // set output value at index_offset
-    IDX_T input_offset = input_helper.coordinateToIdx();    
-    output[index_offset] = input[input_offset];
-  }
+    DoGatherDim<IN_T, IDX_T>(
+      input_helper,
+      index_helper,
+      elem_cnt,
+      dim,
+      index,
+      input,
+      output
+    );
 }
 
 template<typename IN_T, typename IDX_T>
-void DoScatterDimAdd(
+OF_DEVICE_FUNC void DoScatterDimAdd(
   CoordinateOffsetConverter<IDX_T> src_helper,
   CoordinateOffsetConverter<IDX_T> output_helper,
   int64_t elem_cnt,
@@ -134,7 +124,7 @@ void DoScatterDimAdd(
   IN_T* output
   )
 {
-  FOR_RANGE(IDX_T, src_offset, 0, elem_cnt){
+  XPU_1D_KERNEL_LOOP(src_offset, elem_cnt){
     //output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
     // index.shape == src.shape
 
@@ -163,23 +153,15 @@ __global__ void DoCUDAScatterDimAdd(
   IN_T* output
   )
 {
-  CUDA_1D_KERNEL_LOOP_T(int64_t, src_offset, elem_cnt){
-    //output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
-    // index.shape == src.shape
-
-    // get coordinate of src tensor
-    src_helper.setOffset(src_offset);
-    src_helper.idxToCoordinate();
-
-    // get coordinate of output tensor by replacing "dim" axis
-    output_helper.copyCoordinate(src_helper);
-    output_helper.coordinate_[dim] = index[src_offset];
-
-    // set output value at index_offset
-    IDX_T output_offset = output_helper.coordinateToIdx(); 
-
-    output[output_offset] += src[src_offset];
-  }
+  DoScatterDimAdd<IN_T, IDX_T>(
+    src_helper,
+    output_helper,
+    elem_cnt,
+    dim,
+    index,
+    src,
+    output
+  );
 }
 
 } // oneflow
