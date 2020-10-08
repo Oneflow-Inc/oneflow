@@ -85,7 +85,6 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K> final {
   }
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template<typename K>
 struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
   static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const float16* data,
@@ -97,7 +96,6 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
         outer_dim_size, inner_dim_size, segment_id_offset, reinterpret_cast<half*>(out));
   }
 };
-#endif
 
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU(in_type_pair, index_type_pair)             \
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
