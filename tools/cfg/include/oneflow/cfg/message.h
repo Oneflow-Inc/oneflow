@@ -13,6 +13,24 @@ class Message {
   Message() = default;
   virtual ~Message() = default;
 
+  // Returns nullptr if field not exists or T is field type.
+  template<typename T>
+  const T* FieldPtr4FieldName(const std::string& field_name) const {
+    return FieldPtr4FieldNumber<T>(FieldNumber4FieldName(field_name));
+  }
+
+  // Returns nullptr if field not exists or T is field type.
+  template<typename T>
+  T* MutableFieldPtr4FieldName(const std::string& field_name) {
+    return MutableFieldPtr4FieldNumber<T>(FieldNumber4FieldName(field_name));
+  }
+
+  // Returns true if field_name defined.
+  // This is nothing related to has_xxx().
+  bool HasField4FieldName(const std::string& field_name) const {
+    return HasField4FieldNumber(FieldNumber4FieldName(field_name));
+  }
+
   template<typename T>
   const T* FieldPtr4FieldNumber(int field_number) const {
     const auto& type_index = TypeIndex4FieldNumber(field_number);
@@ -24,11 +42,6 @@ class Message {
   }
 
   template<typename T>
-  const T* FieldPtr4FieldName(const std::string& field_name) const {
-    return FieldPtr4FieldNumber<T>(FieldNumber4FieldName(field_name));
-  }
-
-  template<typename T>
   T* MutableFieldPtr4FieldNumber(int field_number) {
     const auto& type_index = TypeIndex4FieldNumber(field_number);
     if (type_index != typeid(T)) { return nullptr; }
@@ -36,15 +49,6 @@ class Message {
     if (void_ptr == nullptr) { return nullptr; }
     T* __attribute__((__may_alias__)) ptr = reinterpret_cast<T*>(void_ptr);
     return ptr;
-  }
-
-  template<typename T>
-  T* MutableFieldPtr4FieldName(const std::string& field_name) {
-    return MutableFieldPtr4FieldNumber<T>(FieldNumber4FieldName(field_name));
-  }
-
-  bool HasField4FieldName(const std::string& field_name) const {
-    return HasField4FieldNumber(FieldNumber4FieldName(field_name));
   }
 
   virtual int FieldNumber4FieldName(const std::string& field_name) const = 0;
