@@ -750,7 +750,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     return 0;
   }
 
-  bool HasField4FieldNumber(int field_number) const override {
+  bool FieldDefined4FieldNumber(int field_number) const override {
     switch (field_number) {
 {% for field in util.message_type_fields(cls) %}
       case {{ util.field_number(field) }}:
@@ -761,23 +761,29 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     }
   }
 
-  const std::type_index& TypeIndex4FieldNumber(int field_number) const {
+  const std::set<std::type_index>& ValidTypeIndexes4FieldNumber(int field_number) const {
     switch (field_number) {
 {% for field in util.message_type_fields(cls) %}
       case {{ util.field_number(field) }}: {
+        static const ::std::set<::std::type_index> type_indexes{
 {% if util.field_has_repeated_label(field) %}
-        static const ::std::type_index type_index(typeid(::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>));
+          typeid(::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>)
 {% elif util.field_has_map_label(field) %}
-        static const ::std::type_index type_index(typeid(::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>));
+          typeid(::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>)
 {% else %}
-        static const ::std::type_index type_index(typeid({{ util.field_type_name(field) }}));
+          typeid({{ util.field_type_name(field) }}),
+{% if util.field_is_message_type(field) %}
+          typeid(::oneflow::cfg::Message),
+          typeid(Const{{ util.field_type_name(field) }}),
+{% endif %}{# field message type #}
 {% endif %}{# field_label #}
-        return type_index;
+        };
+        return type_indexes;
       }
 {% endfor %}{# field #}
       default: {
-        static const ::std::type_index type_index(typeid(::oneflow::cfg::Message::UndefinedField));
-        return type_index;
+        static const ::std::set<::std::type_index> empty;
+        return empty;
       }
     }
   }
