@@ -928,3 +928,19 @@ def masked_fill(
         name = id_util.UniqueStr("MaskedFill_")
     value_like_x = flow.constant_like(like=x, value=value, name=name + "_ConstantLike")
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
+
+
+@oneflow_export("amp_white_identity")
+def amp_white_identity(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("AmpWhiteIdentity_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("amp_white_identity")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
