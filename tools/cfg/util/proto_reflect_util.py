@@ -94,7 +94,7 @@ class ProtoReflectionUtil:
     def oneof_type_field_enum_value_name(self, field):
         return "k" + self._underline_name_to_camel(field.name)
 
-    def oneof_type_field_enum_value_number(self, field):
+    def field_number(self, field):
         return field.number
 
     def field_oneof_name(self, field):
@@ -173,10 +173,16 @@ class ProtoReflectionUtil:
         return field.message_type.fields_by_name["value"]
 
     def field_map_pair_type_name(self, field):
-        return f"{self.field_map_key_type_name(field)}, {self.field_map_value_type_name(field)}"
+        return "%s, %s" % (
+            self.field_map_key_type_name(field),
+            self.field_map_value_type_name(field),
+        )
 
     def field_map_pair_type_name_with_cfg_namespace(self, field):
-        return f"{self.field_map_key_type_name(field)}, {self.field_map_value_type_name_with_cfg_namespace(field)}"
+        return "%s, %s" % (
+            self.field_map_key_type_name(field),
+            self.field_map_value_type_name_with_cfg_namespace(field),
+        )
 
     def field_is_message_type(self, field):
         return field.message_type is not None
@@ -209,7 +215,10 @@ class ProtoReflectionUtil:
         return _ToValidVarName("_%s_RepeatedField_%s_" % (module_prefix, type_name))
 
     def field_map_pair_type_name_with_underline(self, field):
-        return f"{self.field_map_key_type_name(field)}_{self.field_map_value_type_name(field)}"
+        return "%s_%s" % (
+            self.field_map_key_type_name(field),
+            self.field_map_value_type_name(field),
+        )
 
     def field_map_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)

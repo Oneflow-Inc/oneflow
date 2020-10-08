@@ -76,13 +76,8 @@ bool TxtString2PbMessage(const std::string& proto_str, PbMessage* proto);
 bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
-
-const PbFd* GetPbFdFromPbMessage(const PbMessage&, const std::string& field_name);
-
 template<typename T>
 T GetValFromPbMessage(const PbMessage&, const std::string& field_name);
-
-int32_t GetEnumFromPbMessage(const PbMessage&, const std::string& field_name);
 
 template<typename T>
 const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg, const std::string& field_name) {
