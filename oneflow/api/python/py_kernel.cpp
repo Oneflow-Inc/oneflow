@@ -13,12 +13,94 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/tensor_numpy_converter.h"
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#include <numpy/arrayobject.h>
+
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/util.h"
 
 namespace oneflow {
-
 namespace {
+void OFDataTypeToNumpyType(DataType of_data_type, int* out_numpy_type) {
+  switch (of_data_type) {
+    case DataType::kFloat: *out_numpy_type = NPY_FLOAT32; break;
+    case DataType::kDouble: *out_numpy_type = NPY_FLOAT64; break;
+    case DataType::kInt8: *out_numpy_type = NPY_INT8; break;
+    case DataType::kInt32: *out_numpy_type = NPY_INT32; break;
+    case DataType::kInt64: *out_numpy_type = NPY_INT64; break;
+    case DataType::kUInt8: *out_numpy_type = NPY_UINT8; break;
+    case DataType::kFloat16: *out_numpy_type = NPY_FLOAT16; break;
+    default:
+      LOG(FATAL) << "OneFlow data type " << DataType_Name(of_data_type)
+                 << " is not valid to Numpy data type.";
+  }
+}
+
+void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
+  int py_array_type = PyArray_TYPE(array);
+  switch (py_array_type) {
+    case NPY_FLOAT32: *of_data_type = DataType::kFloat; break;
+    case NPY_FLOAT64: *of_data_type = DataType::kDouble; break;
+    case NPY_INT8: *of_data_type = DataType::kInt8; break;
+    case NPY_INT32: *of_data_type = DataType::kInt32; break;
+    case NPY_INT64: *of_data_type = DataType::kInt64; break;
+    case NPY_UINT8: *of_data_type = DataType::kUInt8; break;
+    case NPY_FLOAT16: *of_data_type = DataType::kFloat16; break;
+    default:
+      LOG(FATAL) << "Numpy data type " << py_array_type << " is not valid to OneFlow data type.";
+  }
+}
+
+template<typename T>
+void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
+  if (tensor == nullptr) {
+    Py_INCREF(Py_None);
+    *arg_ptr = Py_None;
+    return;
+  }
+  int type_num = -1;
+  OFDataTypeToNumpyType(tensor->data_type(), &type_num);
+  LOG(INFO) << "Tensor data type " << DataType_Name(tensor->data_type()) << " Numpy type "
+            << type_num;
+  int dim_size = tensor->shape().NumAxes();
+  npy_intp dims[dim_size];
+  FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
+  void* data = static_cast<void*>(const_cast<T*>(tensor->dptr<T>()));
+  auto* np_array =
+      reinterpret_cast<PyArrayObject*>(PyArray_SimpleNewFromData(dim_size, dims, type_num, data));
+  // Numpy will not release the data
+  PyArray_CLEARFLAGS(np_array, NPY_ARRAY_OWNDATA);
+  *arg_ptr = reinterpret_cast<PyObject*>(np_array);
+}
+
+template<typename T>
+void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
+  PyObject* ro_array = PyArray_FromAny(arg, nullptr, 0, 0, NPY_ARRAY_CARRAY_RO, nullptr);
+  // PyArray_FromAny has increased the reference count
+  Py_DECREF(ro_array);
+  PyArrayObject* array = reinterpret_cast<PyArrayObject*>(ro_array);
+
+  DataType of_data_type = DataType::kFloat;
+  NumpyTypeToOFDataType(array, &of_data_type);
+  CHECK_EQ(of_data_type, tensor->data_type())
+      << "Numpy to OneFlow data type " << DataType_Name(of_data_type)
+      << " is not equal to OneFlow tensor data type " << DataType_Name(tensor->data_type());
+
+  int64_t array_elem_cnt = 1;
+  FOR_RANGE(int, i, 0, PyArray_NDIM(array)) { array_elem_cnt *= PyArray_SHAPE(array)[i]; }
+  CHECK_EQ(array_elem_cnt, tensor->shape().elem_cnt())
+      << "Numpy array element count " << array_elem_cnt
+      << " is not equal to OneFlow tensor element count " << tensor->shape().elem_cnt();
+
+  void* array_data_void = PyArray_DATA(array);
+  T* array_data = static_cast<T*>(array_data_void);
+  FOR_RANGE(int64_t, i, 0, array_elem_cnt) { tensor->mut_dptr<T>()[i] = array_data[i]; }
+}
+
 template<typename T>
 void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
                   PyObject** py_inputs) {
@@ -130,12 +212,6 @@ class PyKernel : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute<T>(ctx, "forward"); }
 };  // namespace oneflow
 
-#define REGISTER_PY_KERNEL(cpp_type, dtype)                                     \
-  REGISTER_USER_KERNEL("py").SetCreateFn<PyKernel<cpp_type>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType("in", 0) == dtype));
-
-OF_PP_FOR_EACH_TUPLE(REGISTER_PY_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
-
 template<typename T>
 class PyGradKernel final : public user_op::OpKernel {
  public:
@@ -146,11 +222,5 @@ class PyGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute<T>(ctx, "backward"); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-#define REGISTER_PY_GRAD_KERNEL(cpp_type, dtype)                                     \
-  REGISTER_USER_KERNEL("pyg").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType("dx", 0) == dtype));
-
-OF_PP_FOR_EACH_TUPLE(REGISTER_PY_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

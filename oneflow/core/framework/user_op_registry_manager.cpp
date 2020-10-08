@@ -97,11 +97,7 @@ std::string GetErrorMsgOfSearchedOp(const KernelRegContext& ctx) {
 
 Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResult(
     const std::string& op_type_name, const KernelRegContext& ctx) {
-  // support python op, python op use same c++ kernel
-  auto real_op_type_name = op_type_name;
-  if (op_type_name.rfind("py_", 0) == 0) { real_op_type_name = "py"; }
-  if (op_type_name.rfind("pyg_", 0) == 0) { real_op_type_name = "pyg"; }
-  auto it = op_kernel_reg_result_.find(real_op_type_name);
+  auto it = op_kernel_reg_result_.find(op_type_name);
   if (it == op_kernel_reg_result_.end()) {
     return Error::OpKernelNotFoundError("There is no kernel registered for Current OperatorConf. ",
                                         {})

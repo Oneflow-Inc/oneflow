@@ -47,6 +47,13 @@ def get_compile_flags() -> List[str]:
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L{}".format(get_lib()))
-    _, oneflow_internal_lib_path, _ = imp.find_module("_oneflow_internal", [get_lib()])
+    _, oneflow_internal_lib_path, _ = imp.find_module(
+        "_oneflow_internal", [get_lib()])
     flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags
+
+
+@oneflow_export("sysconfig.get_python_cpp_api")
+def get_python_cpp_api() -> str:
+    # TODO(strint) : get python cpp api path
+    return os.path.join(os.path.dirname(oneflow.__file__), "todo")
