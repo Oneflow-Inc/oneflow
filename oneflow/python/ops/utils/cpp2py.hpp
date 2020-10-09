@@ -167,7 +167,13 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   PyObject *py_inputs, *py_outputs;
 
   // load python kernel
-  const std::string& py_file_name = ctx->Attr<std::string>("py_file");
+  const std::string grad_suffix = "_grad";
+  std::string py_file_name = op_type_name;
+  if (op_type_name.size() > grad_suffix.size()
+      && op_type_name.rfind(grad_suffix) == (op_type_name.size() - grad_suffix.size())) {
+    py_file_name = op_type_name.substr(0, op_type_name.size() - grad_suffix.size());
+  }
+  py_file_name += "_py_kernel";
   py_file_str = PyUnicode_DecodeFSDefault(py_file_name.c_str());
   py_module = PyImport_Import(py_file_str);
   Py_DECREF(py_file_str);

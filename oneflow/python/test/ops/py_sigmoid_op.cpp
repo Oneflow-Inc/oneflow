@@ -20,7 +20,6 @@ namespace oneflow {
 REGISTER_USER_OP("py_sigmoid")
     .Input("in")
     .Output("out")
-    .Attr("py_file", UserOpAttrType::kAtString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -42,11 +41,10 @@ REGISTER_USER_OP("py_sigmoid")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("pyg_sigmoid")
+REGISTER_USER_OP("py_sigmoid_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr("py_file", UserOpAttrType::kAtString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
@@ -74,10 +72,9 @@ REGISTER_USER_OP("pyg_sigmoid")
 REGISTER_USER_OP_GRAD("py_sigmoid").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto py_grad_op_name = ctx->FwOp().op_name() + "_grad";
   const auto& py_grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("pyg_sigmoid")
+    return builder.OpTypeName("py_sigmoid_grad")
         .InputBind("y", ctx->FwOp().output("out", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr<std::string>("py_file", "py_sigmoid")
         .Output("dx")
         .Build();
   };

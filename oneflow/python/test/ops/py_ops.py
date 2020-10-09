@@ -30,7 +30,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
-@oneflow_export("py.sigmoid")
 def py_sigmoid(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -48,14 +47,12 @@ def py_sigmoid(
         .Op("py_sigmoid")
         .Input("in", [x])
         .Output("out")
-        .Attr("py_file", "py_sigmoid")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
 
-@oneflow_export("py.sigmoid_grad")
 def py_sigmoid_grad(
     y: remote_blob_util.BlobDef,
     dy: remote_blob_util.BlobDef,
@@ -65,31 +62,29 @@ def py_sigmoid_grad(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("PySigmoidGrad_")
         )
-        .Op("pyg_sigmoid")
+        .Op("py_sigmoid_grad")
         .Input("y", [y])
         .Input("dy", [dy])
         .Output("dx")
-        .Attr("py_file", "py_sigmoid")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
 
 
-@oneflow_export("py.one2two")
-def py_one2two(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None,
-) -> List[remote_blob_util.BlobDef]:
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("PyOne2Two_")
-        )
-        .Op("py_one2two")
-        .Input("in", [x])
-        .Output("out1")
-        .Output("out2")
-        .Attr("py_file", "py_one2two")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()
-    )
+# def py_one2two(
+#     x: remote_blob_util.BlobDef, name: Optional[str] = None,
+# ) -> List[remote_blob_util.BlobDef]:
+#     return (
+#         flow.user_op_builder(
+#             name if name is not None else id_util.UniqueStr("PyOne2Two_")
+#         )
+#         .Op("py_one2two")
+#         .Input("in", [x])
+#         .Output("out1")
+#         .Output("out2")
+#         .Attr("py_file", "py_one2two")
+#         .Build()
+#         .InferAndTryRun()
+#         .RemoteBlobList()
+#     )
