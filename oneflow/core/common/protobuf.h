@@ -73,7 +73,7 @@ void PbMessage2TxtString(const PbMessage& proto, std::string* str);
 bool TxtString2PbMessage(const std::string& proto_str, PbMessage* proto);
 
 // Does PbMessage have the field_name
-bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
+bool FieldDefinedInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
 template<typename T>
@@ -107,8 +107,6 @@ const PbMessage& GetMessageInPbMessage(const PbMessage& msg, const std::string& 
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
-PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& field_name,
-                                             int index);
 
 // Get/Replace str val maybe repeated;  field_name with index is like "name_0"
 std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx);
@@ -157,30 +155,6 @@ template<typename K, typename V>
 google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
   using RetType = google::protobuf::Map<K, V>;
   return RetType(hash_map.begin(), hash_map.end());
-}
-
-// Hack Oneof Getter
-
-template<typename T = PbMessage>
-const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_REFLECTION(msg, field_name);
-  if (r->HasField(msg, fd)) {
-    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
-  } else {
-    return nullptr;
-  }
-}
-
-template<typename T = PbMessage>
-const T* TryGetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_GET_FIELDDESC(msg, field_name);
-  if (fd == nullptr) { return nullptr; }
-  auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
-  if (r->HasField(msg, fd)) {
-    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
-  } else {
-    return nullptr;
-  }
 }
 
 // If value exists in RepeatedField
