@@ -23,30 +23,37 @@ namespace oneflow {
 template<typename Key, typename Base, typename... Args>
 struct AutoRegistrationFactory {
  public:
+  using Creator = std::function<Base*(Args&&...)>;
   template<typename Derived>
   struct RawRegisterType {
     RawRegisterType(Key k) {
       CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
-                 .creators_.emplace(k, [](Args&&...) { return new Derived; })
+                 .mutable_creators()
+                 ->emplace(k, [](Args&&...) { return new Derived; })
                  .second))
           << k;
     }
   };
 
   struct CreatorRegisterType {
-    CreatorRegisterType(Key k, std::function<Base*(Args&&...)> v) {
-      CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get().creators_.emplace(k, v).second))
+    CreatorRegisterType(Key k, Creator v) {
+      CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
+                 .mutable_creators()
+                 ->emplace(k, v)
+                 .second))
           << k;
     }
   };
 
-  Base* New(Key k, Args&&... args) {
-    auto creators_it = creators_.find(k);
-    CHECK(creators_it != creators_.end()) << "Unregistered: " << k;
+  Base* New(Key k, Args&&... args) const {
+    auto creators_it = creators().find(k);
+    CHECK(creators_it != creators().end()) << "Unregistered: " << k;
     return creators_it->second(std::forward<Args>(args)...);
   }
 
-  bool IsClassRegistered(Key k, Args&&... args) { return creators_.find(k) != creators_.end(); }
+  bool IsClassRegistered(Key k, Args&&... args) const {
+    return creators().find(k) != creators().end();
+  }
 
   static AutoRegistrationFactory<Key, Base, Args...>& Get() {
     static AutoRegistrationFactory<Key, Base, Args...> obj;
@@ -54,7 +61,19 @@ struct AutoRegistrationFactory {
   }
 
  private:
-  HashMap<Key, std::function<Base*(Args&&...)>> creators_;
+  std::unique_ptr<HashMap<Key, Creator>> creators_;
+
+  bool has_creators() const { return creators_.get() != nullptr; }
+
+  const HashMap<Key, Creator>& creators() const {
+    CHECK(has_creators()) << "Unregistered key type: " << typeid(Key).name();
+    return *creators_.get();
+  }
+
+  HashMap<Key, Creator>* mutable_creators() {
+    if (!creators_) { creators_.reset(new HashMap<Key, Creator>); }
+    return creators_.get();
+  }
 };
 
 #define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __COUNTER__)
