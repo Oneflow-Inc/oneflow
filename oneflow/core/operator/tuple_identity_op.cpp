@@ -27,10 +27,6 @@ void TupleIdentityOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", out_size);
 }
 
-const PbMessage& TupleIdentityOp::GetCustomizedConf() const {
-  return op_conf().tuple_identity_conf();
-}
-
 Maybe<void> TupleIdentityOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

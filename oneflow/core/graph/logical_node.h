@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
 #include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 
 namespace oneflow {
 
@@ -208,6 +209,7 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DecodeH2D);
 
 }  // namespace oneflow
 

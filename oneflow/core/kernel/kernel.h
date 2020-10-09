@@ -131,25 +131,6 @@ class Kernel {
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                                   \
-  template<typename T>                                                                   \
-  T GetValFromCustomized##conf_type(const std::string& field_name) const {               \
-    const PbMessage& customized_conf = GetCustomized##conf_type();                       \
-    return GetValFromPbMessage<T>(customized_conf, field_name);                          \
-  }                                                                                      \
-  template<typename T>                                                                   \
-  const PbRf<T>& GetPbRfFromCustomized##conf_type(const std::string& field_name) const { \
-    return GetPbRfFromPbMessage<T>(GetCustomized##conf_type(), field_name);              \
-  }                                                                                      \
-  int32_t GetEnumFromCustomized##conf_type(const std::string& field_name) const {        \
-    return GetEnumFromPbMessage(GetCustomized##conf_type(), field_name);                 \
-  }
-
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(OpConf);
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(KernelConf);
-
-#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
-
  private:
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;

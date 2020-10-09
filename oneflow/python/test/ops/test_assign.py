@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -81,10 +82,16 @@ def _compare_with_np(test_case, shape, dtype, device_type):
     test_case.assertTrue(np.allclose(_np_relu(x), of_y))
 
 
-def test_assign(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
-    arg_dict["dtype"] = [flow.float, flow.double]
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    for arg in GenArgDict(arg_dict):
-        _compare_with_np(test_case, **arg)
+@flow.unittest.skip_unless_1n1d()
+class TestAssign(flow.unittest.TestCase):
+    def test_assign(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+        arg_dict["dtype"] = [flow.float, flow.double]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

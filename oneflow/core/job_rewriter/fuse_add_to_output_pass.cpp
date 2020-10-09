@@ -114,10 +114,9 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
           OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-          PbMessage* conf =
-              MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
-          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(out),
-                                            GenLogicalBlobName(*sum_lbi));
+          const auto& new_val = GenLogicalBlobName(*sum_lbi);
+          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
+          CHECK_EQ(GenLogicalBlobName(out), old_val);
         }
       }
     }

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -46,10 +47,16 @@ def compare_with_tensorflow(test_case, device_type, value, shape, rtol=1e-5, ato
     )
 
 
-def test_constant(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["value"] = [6, 6.66]
-    arg_dict["shape"] = [(2, 3), (3, 3, 3)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestConstant(flow.unittest.TestCase):
+    def test_constant(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["value"] = [6, 6.66]
+        arg_dict["shape"] = [(2, 3), (3, 3, 3)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

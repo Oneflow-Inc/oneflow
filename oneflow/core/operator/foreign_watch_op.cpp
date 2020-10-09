@@ -30,10 +30,6 @@ Maybe<void> ForeignWatchOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& ForeignWatchOp::GetCustomizedConf() const {
-  return op_conf().foreign_watch_conf();
-}
-
 Maybe<void> ForeignWatchOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
