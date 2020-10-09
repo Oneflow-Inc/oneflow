@@ -18,6 +18,7 @@ from __future__ import absolute_import
 from typing import Optional, Sequence, Union
 
 import oneflow
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
@@ -89,6 +90,17 @@ def pad(
             padding_after.append(p[1])
     else:
         raise ValueError("paddings must be a tuple or a list.")
+    if x.dtype in [
+        dtype_util.float,
+        dtype_util.float32,
+        dtype_util.float16,
+        dtype_util.float64,
+    ]:
+        floating_constant_value = float(constant_value)
+        integral_constant_value = 0
+    else:
+        floating_constant_value = 0
+        integral_constant_value = int(constant_value)
     return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))
         .Op("pad")
@@ -96,8 +108,8 @@ def pad(
         .Output("y")
         .Attr("padding_before", padding_before)
         .Attr("padding_after", padding_after)
-        .Attr("floating_constant_value", float(constant_value))
-        .Attr("integral_constant_value", int(constant_value))
+        .Attr("floating_constant_value", floating_constant_value)
+        .Attr("integral_constant_value", integral_constant_value)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
