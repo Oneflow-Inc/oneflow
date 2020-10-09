@@ -35,12 +35,12 @@ inline ::std::string {{ util.enum_name(enm) }}_Name({{ util.enum_name(enm) }} va
   }
 }
 
-inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }}& cfg_enum) {
+inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}& cfg_enum) {
   return {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}(int(cfg_enum));
 }
 
-inline {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
-  return {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }}(int(proto_enum));
+inline {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
+  return {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}(int(proto_enum));
 }
 {% endfor %}{# enm #}
 
@@ -228,7 +228,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
         }
   {% elif util.field_is_enum_type(field) %}
         for (const int& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}() ) {
-          add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::cfg::{{ util.field_enum_name(field) }}(elem));
+          add_{{ util.field_name(field) }}({{ util.module_package_cfg_namespace(module) }}::{{ util.field_enum_name(field) }}(elem));
         }
   {% else %}
         for (const {{ util.field_type_name_with_cfg_namespace(field) }}& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()) {
@@ -302,7 +302,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
         }
   {% elif util.field_is_enum_type(field) %}
         for (const int& elem : {{ util.field_name(field) }}() ) {
-          proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}(::oneflow::{{ util.field_enum_name(field) }}(elem));
+          proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::{{ util.field_enum_name(field) }}(elem));
         }
   {% else %}
         for (const {{ util.field_type_name_with_cfg_namespace(field) }}& elem : {{ util.field_name(field) }}()) {
