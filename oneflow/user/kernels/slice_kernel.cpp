@@ -24,7 +24,7 @@ namespace oneflow {
 namespace {
 
 // [start, end)
-int64_t get_size_in_slice(const int64_t start, const int64_t end, const int64_t step) {
+int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t step) {
   if (end <= start) { return 0; }
   return (end - start - 1) / step + 1;
 }
@@ -69,7 +69,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
     const int64_t dim_size = large->shape().At(i);
     int64_t small_size = small->shape().At(i);
     const int64_t step = step_vec.at(i);
-    CHECK_GE(step, 0);
+    CHECK_GT(step, 0);
     const int64_t slice_start_in_full_large =
         RegulateSliceStart(start_vec.at(i), i == split_axis ? length : dim_size);
     const int64_t slice_stop_in_full_large =
@@ -84,7 +84,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
           slice_start_in_splitted_large =
               lower + (step - (lower - slice_start_in_splitted_large) % step) % step;
         }
-        // assume large tensor has split sbp attribute
+        // large tensor has split sbp attribute
         slice_start_in_splitted_large =
             std::min(std::max(slice_start_in_splitted_large, lower), upper);
         slice_stop_in_splitted_large =
@@ -92,7 +92,7 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
         slice_start_in_splitted_large -= lower;
         slice_stop_in_splitted_large -= lower;
         slice_size =
-            get_size_in_slice(slice_start_in_splitted_large, slice_stop_in_splitted_large, step);
+            GetSizeInSlice(slice_start_in_splitted_large, slice_stop_in_splitted_large, step);
       }
       large_slice_param.dims[i] = dim_size;
       large_slice_param.start[i] = slice_start_in_splitted_large;
@@ -100,13 +100,13 @@ std::pair<SliceParams, SliceParams> ConstructSliceParams(
       large_slice_param.size[i] = slice_size;
     }
     {
-      // assume small tensor has broadcast/partialsum sbp attribute
+      // small tensor has broadcast/partialsum sbp attribute
       const int64_t dim_size = small->shape().At(i);
       int64_t slice_start_in_full_small = 0;
       int64_t slice_stop_in_full_small = dim_size;
       if (i == split_axis) {
-        slice_start_in_full_small = get_size_in_slice(slice_start_in_full_large, lower, step);
-        slice_stop_in_full_small = get_size_in_slice(slice_start_in_full_large, upper, step);
+        slice_start_in_full_small = GetSizeInSlice(slice_start_in_full_large, lower, step);
+        slice_stop_in_full_small = GetSizeInSlice(slice_start_in_full_large, upper, step);
         slice_start_in_full_small =
             std::min(std::max<int64_t>(slice_start_in_full_small, 0), dim_size);
         slice_stop_in_full_small =
@@ -262,13 +262,22 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
 }
 
 template<typename T>
-class Slice2Kernel final : public user_op::OpKernel {
+class LogicalSliceKernel final : public user_op::OpKernel {
  public:
-  Slice2Kernel() = default;
-  ~Slice2Kernel() = default;
+  LogicalSliceKernel() = default;
+  ~LogicalSliceKernel() = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
+    const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    const SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      if (x_sbp.has_split_parallel()) {
+        CHECK(y_sbp.has_partial_sum_parallel());
+      } else {
+        CHECK(y_sbp.has_broadcast_parallel());
+      }
+    }
     return CreateSliceState(ctx, "x");
   }
 
@@ -277,6 +286,17 @@ class Slice2Kernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* slice_state = dynamic_cast<SliceState*>(state);
+#if defined(WITH_CUDA)
+    if (y_tensor->mem_case().has_host_mem()) {
+#endif
+      memset(y_tensor->mut_dptr(), 0,
+             y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
+#if defined(WITH_CUDA)
+    } else if (y_tensor->mem_case().has_device_cuda_mem()) {
+      cudaMemset(y_tensor->mut_dptr(), 0,
+                 y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
+    }
+#endif
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_state, true);
   }
@@ -291,6 +311,8 @@ class SliceAssignKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
+    const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
+    if (ctx->parallel_ctx().parallel_num() > 1) { CHECK(value_sbp.has_broadcast_parallel()); }
     return CreateSliceState(ctx, "ref");
   }
 
@@ -328,21 +350,22 @@ REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
 #endif
 
-#define REGISTER_SLICE_ASSIGN_KERNELS(dtype)                                         \
+#define REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)                       \
   REGISTER_USER_KERNEL("slice_assign")                                               \
       .SetCreateFn<SliceAssignKernel<dtype>>()                                       \
       .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
-  REGISTER_USER_KERNEL("slice2").SetCreateFn<Slice2Kernel<dtype>>().SetIsMatchedHob( \
-      user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
+  REGISTER_USER_KERNEL("logical_slice")                                              \
+      .SetCreateFn<LogicalSliceKernel<dtype>>()                                      \
+      .SetIsMatchedHob(user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
-REGISTER_SLICE_ASSIGN_KERNELS(float)
-REGISTER_SLICE_ASSIGN_KERNELS(double)
-REGISTER_SLICE_ASSIGN_KERNELS(int32_t)
-REGISTER_SLICE_ASSIGN_KERNELS(int64_t)
-REGISTER_SLICE_ASSIGN_KERNELS(int8_t)
-REGISTER_SLICE_ASSIGN_KERNELS(uint8_t)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(double)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int32_t)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int64_t)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int8_t)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(uint8_t)
 #ifdef WITH_CUDA
-REGISTER_SLICE_ASSIGN_KERNELS(float16)
+REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float16)
 #endif
 
 }  // namespace oneflow

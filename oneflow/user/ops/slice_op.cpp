@@ -185,7 +185,7 @@ Maybe<void> InferSliceAssignTensorDesc(user_op::InferContext* ctx) {
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
     CHECK_GT_OR_RETURN(step, 0) << "slice_assign step must be greater than 0";
-    CHECK_GT_OR_RETURN(start, 0) << "slice_assign start must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "slice_assign start must be greater or equal to 0";
     CHECK_GT_OR_RETURN(stop, 0) << "slice_assign stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "slice_assign start must be less than stop";
   }
@@ -214,7 +214,7 @@ void InferSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgMo
   value_modifier->set_requires_grad(false);
 }
 
-Maybe<void> InferSlice2TensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
   const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
   const int64_t ndim = x_shape->NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
@@ -225,11 +225,11 @@ Maybe<void> InferSlice2TensorDesc(user_op::InferContext* ctx) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "slice2 step must be greater than 0";
-    CHECK_GT_OR_RETURN(start, 0) << "slice2 start must be greater than 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "slice2 stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "slice2 start must be less than stop";
-    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    CHECK_GT_OR_RETURN(step, 0) << "LogicalSlice step must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "LogicalSlice start must be greater or equal to 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "LogicalSlice stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "LogicalSlice start must be less than stop";
+    const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
@@ -237,7 +237,7 @@ Maybe<void> InferSlice2TensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSlice2SbpSignatures(user_op::SbpContext* ctx) {
+Maybe<void> GetLogicalSliceSbpSignatures(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, axis, 0, input_desc.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -280,14 +280,14 @@ REGISTER_USER_OP("slice_assign")
     .SetGetSbpFn(GetSliceAssignSbpSignatures)
     .SetInputArgModifyFn(InferSliceAssignInputArgModifier);
 
-REGISTER_USER_OP("slice2")
+REGISTER_USER_OP("logical_slice")
     .Input("x")
     .Output("y")
     .Attr("start", UserOpAttrType::kAtListInt64)
     .Attr("stop", UserOpAttrType::kAtListInt64)
     .Attr("step", UserOpAttrType::kAtListInt64)
-    .SetTensorDescInferFn(InferSlice2TensorDesc)
-    .SetGetSbpFn(GetSlice2SbpSignatures);
+    .SetTensorDescInferFn(InferLogicalSliceTensorDesc)
+    .SetGetSbpFn(GetLogicalSliceSbpSignatures);
 
 REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
 

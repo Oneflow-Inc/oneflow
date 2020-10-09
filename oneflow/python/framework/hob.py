@@ -69,16 +69,6 @@ def is_trainable(ctx):
         return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 
-@bool_functor("In a placement scope")
-def in_placement_scope(ctx):
-    return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
-
-
-@bool_functor("Current placement is physical")
-def is_current_placement_physical(ctx):
-    return oneflow.placement.current_scope().is_physical_placement
-
-
 @bool_functor("Current machine is master")
 def is_current_machine_master(ctx):
     return c_api_util.CurrentMachineId() == 0
