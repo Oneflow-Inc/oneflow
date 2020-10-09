@@ -189,6 +189,10 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
   JUST(CheckScalarTensorDesc(beta1_t, data_type));
   JUST(CheckScalarTensorDesc(beta2_t, data_type));
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+    JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -440,11 +444,12 @@ REGISTER_USER_OP("lamb_update")
     .Input("model")
     .Input("model_diff")
     .Input("learning_rate")
+    .OptionalInput("scale_by_tensor")
     .Attr("beta1", UserOpAttrType::kAtFloat)
     .Attr("beta2", UserOpAttrType::kAtFloat)
     .Attr("epsilon", UserOpAttrType::kAtFloat)
     .Attr("adam", UserOpAttrType::kAtBool)
-    .Attr<float>("scale", UserOpAttrType::kAtFloat, 1.0)
+    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
     .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)

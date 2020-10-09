@@ -275,9 +275,11 @@ __global__ void IndexedSlicesAdamUpdateGpu(float beta1, float beta2, float epsil
 }
 
 template<typename T, typename G>
-__global__ void LambGradGpu(int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-                            float epsilon, const T* beta1_t, const T* beta2_t, const G* model_diff,
-                            T* adam_diff, T* model, T* m, T* v) {
+__global__ void LambGradGpu(int64_t n, T scale, float l1, float l2, float beta1, float beta2,
+                            float epsilon, const T* beta1_t, const T* beta2_t,
+                            const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model,
+                            T* m, T* v) {
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
     LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
                             v + i, scale, l1, l2, beta1, beta2, epsilon);
@@ -341,21 +343,22 @@ template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kGPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool adam,
-                     const float* learning_rate, const G* model_diff, T* adam_diff, T* model, T* m,
-                     T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 template<typename T, typename G>
 void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, bool adam, const float* learning_rate, const G* model_diff,
-    T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t) {
+    float epsilon, float weight_decay, bool adam, const float* learning_rate, const T* scale_by_ptr,
+    const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t,
+    T* beta2_t) {
   if (adam == false) {
     AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(beta1, beta2, beta1_t, beta2_t);
   }
   LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, scale, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, model_diff, adam_diff, model, m,
-      v);
+      n, scale, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, scale_by_ptr, model_diff,
+      adam_diff, model, m, v);
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &norm_buffer[0]);
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, &norm_buffer[1]);
   KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
@@ -370,18 +373,18 @@ template<typename T>
 struct LambUpdateKernelUtil<DeviceType::kGPU, T, float16> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool adam,
-                     const float* learning_rate, const float16* model_diff, T* adam_diff, T* model,
-                     T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     const float* learning_rate, const T* scale_by_ptr, const float16* model_diff,
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 template<typename T>
 void LambUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
     DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, bool adam, const float* learning_rate,
+    float epsilon, float weight_decay, bool adam, const float* learning_rate, const T* scale_by_ptr,
     const float16* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t,
     T* beta2_t) {
   LambUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
-      ctx, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, adam, learning_rate,
+      ctx, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, adam, learning_rate, scale_by_ptr,
       reinterpret_cast<const half*>(model_diff), adam_diff, model, m, v, norm_buffer, beta1_t,
       beta2_t);
 }
