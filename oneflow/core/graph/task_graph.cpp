@@ -529,6 +529,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
+  CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+    CompTaskNode* src = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
+    Connect<TaskNode>(src, NewEdge(), dst);
+  }
+}
+
 void TaskGraph::BuildTaskPath(
     CompTaskNode* src, CompTaskNode* dst,
     std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>

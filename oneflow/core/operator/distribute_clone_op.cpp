@@ -30,8 +30,6 @@ class DistributeCloneOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   LogicalNode* NewProperLogicalNode() const override { return new DistributeSplitLogicalNode; }
 
  private:
@@ -59,10 +57,6 @@ void DistributeCloneOp::InitFromOpConf() {
   EnrollRepeatedOutputBnWithSetter("out", [&](OutputBlobModifier* ob_modifier) {
     ob_modifier->set_is_mutable(op_conf().distribute_clone_conf().is_variable_ref());
   });
-}
-
-const PbMessage& DistributeCloneOp::GetCustomizedConf() const {
-  return op_conf().distribute_clone_conf();
 }
 
 Maybe<void> DistributeCloneOp::InferBlobDescs(

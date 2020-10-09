@@ -157,8 +157,8 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
           }
-          case CudaWorkType::kMdUpdt: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
+          case CudaWorkType::kDecodeH2D: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
             break;
           }
           default: UNIMPLEMENTED();
@@ -216,9 +216,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       }
     }
   }
-  if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  }
   std::string k = ConcatTypeName(src_node, dst_node);
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
   if (it == GetFuncForFindBldSubTskGphMthd()->end()) {
@@ -228,6 +225,9 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     it = GetFuncForFindBldSubTskGphMthd()->find("*" + dst_node->TypeName());
   }
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
+  if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
   if (src_pd->parallel_num() == dst_pd->parallel_num()
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
@@ -246,6 +246,10 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
                               "*",
                               &TaskGraph::BldSubTskGphByPartialOutLbiConnect);
+
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "DecodeH2D",
+                              &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D);
 
 #define LOGICAL_TYPE_SEQ                                   \
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \

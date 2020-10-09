@@ -26,8 +26,6 @@ void SourceTickOp::InitFromOpConf() {
 
 LogicalNode* SourceTickOp::NewProperLogicalNode() const { return new SourceTickLogicalNode(); }
 
-const PbMessage& SourceTickOp::GetCustomizedConf() const { return op_conf().source_tick_conf(); }
-
 Maybe<void> SourceTickOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

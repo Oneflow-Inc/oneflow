@@ -67,21 +67,21 @@ bool IsSessionInited() {
   return Global<SessionGlobalObjectsScope>::Get() != nullptr;
 }
 
-void InitGlobalSession(const std::string& config_proto_str, std::string* error_str) {
+void InitLazyGlobalSession(const std::string& config_proto_str, std::string* error_str) {
   using namespace oneflow;
-  return InitGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
+  return InitLazyGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
 }
 
-void DestroyGlobalSession(std::string* error_str) {
-  return oneflow::DestroyGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void DestroyLazyGlobalSession(std::string* error_str) {
+  return oneflow::DestroyLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StartGlobalSession(std::string* error_str) {
-  return oneflow::StartGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void StartLazyGlobalSession(std::string* error_str) {
+  return oneflow::StartLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StopGlobalSession(std::string* error_str) {
-  return oneflow::StopGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void StopLazyGlobalSession(std::string* error_str) {
+  return oneflow::StopLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
