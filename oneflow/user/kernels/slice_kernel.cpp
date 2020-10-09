@@ -286,13 +286,17 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* slice_state = dynamic_cast<SliceState*>(state);
+#if defined(WITH_CUDA)
     if (y_tensor->mem_case().has_host_mem()) {
+#endif
       memset(y_tensor->mut_dptr(), 0,
              y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
+#if defined(WITH_CUDA)
     } else if (y_tensor->mem_case().has_device_cuda_mem()) {
       cudaMemset(y_tensor->mut_dptr(), 0,
                  y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
     }
+#endif
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_state, true);
   }
