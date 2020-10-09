@@ -1,5 +1,5 @@
-#ifndef CFG_PYBIND_REGISTRY_H_
-#define CFG_PYBIND_REGISTRY_H_
+#ifndef ONEFLOW_CFG_PYBIND_REGISTRY_H_
+#define ONEFLOW_CFG_PYBIND_REGISTRY_H_
 #include <pybind11/pybind11.h>
 #include <map>
 #include <vector>
@@ -39,4 +39,4 @@ class Pybind11ModuleRegistry {
   }                                                                  \
   static void OneflowCfgPythonModule##__LINE__(pybind11::module& m)
 
-#endif // CFG_PYBIND_REGISTRY_H_
+#endif // ONEFLOW_CFG_PYBIND_REGISTRY_H_
