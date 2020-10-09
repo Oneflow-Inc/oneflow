@@ -25,9 +25,6 @@ endif()
 message(STATUS ${TENSORFLOW_BUILD_CMD})
 
 set(TENSORFLOW_PROJECT  tensorflow)
-set(TENSORFLOW_GIT_URL  https://github.com/OneFlow-Inc/tensorflow.git)
-#set(TENSORFLOW_GIT_TAG  master)
-set(TENSORFLOW_GIT_TAG  dea9488e5f05ffcaff7e729f33d475af3a7021ba)
 set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
@@ -70,6 +67,7 @@ link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
 if(NOT XRT_TF_URL)
   set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip)
+  use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
 endif()
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}

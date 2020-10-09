@@ -32,7 +32,11 @@ class FuseAddToOutputPass final : public OpGraphPass {
 
 Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
-      {{"conv_data_grad", user_op::OpArg("dx", 0)}, {"normalization", user_op::OpArg("y", 0)}});
+      {{"conv_data_grad", user_op::OpArg("dx", 0)},
+       {"normalization", user_op::OpArg("y", 0)},
+       {"dropout", user_op::OpArg("out", 0)},
+       {"matmul", user_op::OpArg("out", 0)},
+       {"batch_matmul", user_op::OpArg("out", 0)}});
   HashMap<std::string, OperatorConf> op_name2op_conf;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();
@@ -110,10 +114,9 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
           OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-          PbMessage* conf =
-              MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
-          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(out),
-                                            GenLogicalBlobName(*sum_lbi));
+          const auto& new_val = GenLogicalBlobName(*sum_lbi);
+          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
+          CHECK_EQ(GenLogicalBlobName(out), old_val);
         }
       }
     }

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/naive_model_update_op.h"
+#include "oneflow/core/operator/normal_model_update_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -30,10 +30,6 @@ Maybe<void> NormalModelUpdtOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-}
-
-const PbMessage& NormalModelUpdtOp::GetCustomizedConf() const {
-  return op_conf().normal_mdupdt_conf();
 }
 
 LogicalBlobId NormalModelUpdtOp::lbi4obn(const std::string& output_bn) const {

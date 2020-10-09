@@ -24,8 +24,6 @@ class AssignOp final : public Operator {
   ~AssignOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
 
@@ -44,8 +42,6 @@ void AssignOp::InitFromOpConf() {
   EnrollInputBn("ref")->set_is_mutable(true);
   EnrollInputBn("value");
 }
-
-const PbMessage& AssignOp::GetCustomizedConf() const { return op_conf().assign_conf(); }
 
 std::string DebugString(const BlobDesc& blob_desc) {
   BlobDescProto blob_desc_proto;

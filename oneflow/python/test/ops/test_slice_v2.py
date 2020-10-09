@@ -334,269 +334,260 @@ def _test_slice_update_grad(
     test_case.assertTrue(np.array_equal(ret, output))
 
 
-def test_slice_base(test_case):
-    input = np.random.rand(10)
-    slice_args = [[(1, 7, 2)]]
-    outputs = [input[1:7:2]]
+@flow.unittest.skip_unless_1n1d()
+class TestSliceV2(flow.unittest.TestCase):
+    def test_slice_base(test_case):
+        input = np.random.rand(10)
+        slice_args = [[(1, 7, 2)]]
+        outputs = [input[1:7:2]]
 
-    arg_dict = collections.OrderedDict()
-    arg_dict["dtype"] = [
-        flow.uint8,
-        flow.int8,
-        flow.int32,
-        flow.int64,
-        flow.float32,
-        flow.float64,
-    ]
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    # arg_dict["verbose"] = [True]
-    for kwarg in test_util.GenArgDict(arg_dict):
-        _test_slice(test_case, input, slice_args, outputs, **kwarg)
-
-
-def test_slice_into_two_parts(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [
-        [(None, None, None), (0, 2, None), (None, None, None)],
-        [(None, None, None), (2, None, None), (None, None, None)],
-    ]
-    outputs = [input[:, 0:2, :], input[:, 2:, :]]
-    _test_slice(test_case, input, slice_args, outputs)
-
-
-def test_slice_at_first_dim(test_case):
-    input = np.random.rand(4, 5, 4)
-    slice_args = [[(2, None, None)]]
-    outputs = [input[2:None, :, :]]
-    _test_slice(test_case, input, slice_args, outputs)
-
-
-def test_slice_at_two_dims(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (0, 2, None), (2, None, None)]]
-    outputs = [input[:, 0:2, 2:]]
-    _test_slice(test_case, input, slice_args, outputs)
-
-
-def test_slice_with_collapse_dims(test_case):
-    input = np.random.rand(2, 5, 4, 4, 3)
-    slice_args = [
-        [
-            (None, None, None),
-            (0, 2, None),
-            (None, None, None),
-            (None, None, None),
-            (1, None, None),
+        arg_dict = collections.OrderedDict()
+        arg_dict["dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
         ]
-    ]
-    outputs = [input[:, 0:2, :, :, 1:]]
-    _test_slice(test_case, input, slice_args, outputs)
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        # arg_dict["verbose"] = [True]
+        for kwarg in test_util.GenArgDict(arg_dict):
+            _test_slice(test_case, input, slice_args, outputs, **kwarg)
 
+    def test_slice_into_two_parts(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [
+            [(None, None, None), (0, 2, None), (None, None, None)],
+            [(None, None, None), (2, None, None), (None, None, None)],
+        ]
+        outputs = [input[:, 0:2, :], input[:, 2:, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
-def test_slice_with_step_two(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (1, None, 2)]]
-    outputs = [input[:, 1::2, :]]
-    _test_slice(test_case, input, slice_args, outputs)
+    def test_slice_at_first_dim(test_case):
+        input = np.random.rand(4, 5, 4)
+        slice_args = [[(2, None, None)]]
+        outputs = [input[2:None, :, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
+    def test_slice_at_two_dims(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (0, 2, None), (2, None, None)]]
+        outputs = [input[:, 0:2, 2:]]
+        _test_slice(test_case, input, slice_args, outputs)
 
-def test_slice_at_two_dim_with_step_more_than_one(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (1, None, 3), (None, None, 2)]]
-    outputs = [input[:, 1::3, ::2]]
-    _test_slice(test_case, input, slice_args, outputs)
+    def test_slice_with_collapse_dims(test_case):
+        input = np.random.rand(2, 5, 4, 4, 3)
+        slice_args = [
+            [
+                (None, None, None),
+                (0, 2, None),
+                (None, None, None),
+                (None, None, None),
+                (1, None, None),
+            ]
+        ]
+        outputs = [input[:, 0:2, :, :, 1:]]
+        _test_slice(test_case, input, slice_args, outputs)
 
+    def test_slice_with_step_two(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (1, None, 2)]]
+        outputs = [input[:, 1::2, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
-def test_slice_with_neg_start(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (-4, None, None)]]
-    outputs = [input[:, -4:, :]]
-    _test_slice(test_case, input, slice_args, outputs)
+    def test_slice_at_two_dim_with_step_more_than_one(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (1, None, 3), (None, None, 2)]]
+        outputs = [input[:, 1::3, ::2]]
+        _test_slice(test_case, input, slice_args, outputs)
 
+    def test_slice_with_neg_start(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (-4, None, None)]]
+        outputs = [input[:, -4:, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
-def test_slice_with_neg_stop(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (None, -2, None)]]
-    outputs = [input[:, :-2, :]]
-    _test_slice(test_case, input, slice_args, outputs)
+    def test_slice_with_neg_stop(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (None, -2, None)]]
+        outputs = [input[:, :-2, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
+    def test_slice_with_neg_step(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (None, None, -1)]]
+        outputs = [input[:, ::-1, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
-def test_slice_with_neg_step(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (None, None, -1)]]
-    outputs = [input[:, ::-1, :]]
-    _test_slice(test_case, input, slice_args, outputs)
+    def test_slice_with_neg_step_two(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_args = [[(None, None, None), (-1, 1, -2)]]
+        outputs = [input[:, -1:1:-2, :]]
+        _test_slice(test_case, input, slice_args, outputs)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_slice_with_float16(test_case):
+        input = np.random.rand(10).astype(np.float32)
+        slice_args = [[(2, 7, None)]]
+        outputs = [input[2:7]]
 
-def test_slice_with_neg_step_two(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_args = [[(None, None, None), (-1, 1, -2)]]
-    outputs = [input[:, -1:1:-2, :]]
-    _test_slice(test_case, input, slice_args, outputs)
+        flow.clear_default_session()
+        flow.config.gpu_device_num(1)
+        slice_func = _make_slice_with_fp16_func(slice_args, input.shape)
+        of_outputs = slice_func(input)
+        # print("outputs[0]:\n{}".format(outputs[0]))
+        # print("of_outputs[0]:\n{}".format(of_outputs[0]))
+        test_case.assertTrue(
+            np.allclose(outputs[0], of_outputs[0], rtol=1e-03, atol=1e-04)
+        )
 
+    def test_slice_dynamic_base(test_case):
+        input = np.random.rand(2, 4, 4)
+        slice_args = [[(None, None, None), (1, None, None)]]
+        outputs = [input[:, 1:, :]]
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_slice_with_float16(test_case):
-    input = np.random.rand(10).astype(np.float32)
-    slice_args = [[(2, 7, None)]]
-    outputs = [input[2:7]]
+        arg_dict = collections.OrderedDict()
+        arg_dict["dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
+        ]
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        for kwarg in test_util.GenArgDict(arg_dict):
+            _test_slice_dynamic(
+                test_case, input, slice_args, outputs, static_shape=(2, 5, 5), **kwarg
+            )
 
-    flow.clear_default_session()
-    flow.config.gpu_device_num(1)
-    slice_func = _make_slice_with_fp16_func(slice_args, input.shape)
-    of_outputs = slice_func(input)
-    # print("outputs[0]:\n{}".format(outputs[0]))
-    # print("of_outputs[0]:\n{}".format(of_outputs[0]))
-    test_case.assertTrue(np.allclose(outputs[0], of_outputs[0], rtol=1e-03, atol=1e-04))
-
-
-def test_slice_dynamic_base(test_case):
-    input = np.random.rand(2, 4, 4)
-    slice_args = [[(None, None, None), (1, None, None)]]
-    outputs = [input[:, 1:, :]]
-
-    arg_dict = collections.OrderedDict()
-    arg_dict["dtype"] = [
-        flow.uint8,
-        flow.int8,
-        flow.int32,
-        flow.int64,
-        flow.float32,
-        flow.float64,
-    ]
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    for kwarg in test_util.GenArgDict(arg_dict):
+    def test_slice_dynamic_at_two_dims(test_case):
+        input = np.random.rand(2, 3, 2, 2)
+        slice_args = [
+            [(None, None, None), (2, None, None), (None, None, None), (1, None, None)]
+        ]
+        outputs = [input[:, 2:, :, 1:]]
         _test_slice_dynamic(
-            test_case, input, slice_args, outputs, static_shape=(2, 5, 5), **kwarg
+            test_case, input, slice_args, outputs, static_shape=(2, 5, 3, 3)
         )
 
-
-def test_slice_dynamic_at_two_dims(test_case):
-    input = np.random.rand(2, 3, 2, 2)
-    slice_args = [
-        [(None, None, None), (2, None, None), (None, None, None), (1, None, None)]
-    ]
-    outputs = [input[:, 2:, :, 1:]]
-    _test_slice_dynamic(
-        test_case, input, slice_args, outputs, static_shape=(2, 5, 3, 3)
-    )
-
-
-def test_slice_dynamic_at_first_dim_and_last_dim(test_case):
-    input = np.random.rand(3, 6, 3, 3)
-    slice_args = [
-        [(1, None, None), (None, None, None), (None, None, None), (1, None, None)]
-    ]
-    outputs = [input[1:, :, :, 1:]]
-    _test_slice_dynamic(
-        test_case, input, slice_args, outputs, static_shape=(4, 5, 5, 3)
-    )
-
-
-def test_slice_dynamic_neg_start(test_case):
-    input = np.random.rand(2, 10)
-    slice_args = [[(None, None, None), (-5, None, None)]]
-    outputs = [input[:, -5:]]
-    _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
-
-
-def test_slice_dynamic_neg_step(test_case):
-    input = np.random.rand(2, 10)
-    slice_args = [[(None, None, None), (None, -5, -1)]]
-    outputs = [input[:, :-5:-1]]
-    _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
-
-
-# This test case will raise fatal error, error infomation is like below:
-# F0808 00:20:19.768465 23960 user_kernel.cpp:451] Check failed: shape_view.elem_cnt() <= static_shape.elem_cnt() (12 vs. 9)
-# InferShape of OpKernel (op_type_name: slice, op_name: SliceDynamic_0) raise error,
-# output arg's (name: y, index: 0) runtime shape (2,6) surpass the limit of static shape (3,3)
-# *** Check failure stack trace: ***
-# ...
-# The reason is the dismatch between static slice (for memory) and dynamic slice (real slice)
-# The result shape of slice [:, 3:-1] for static shape (3, 7) is (3, 3)
-# which indicate that blob has prod(3, 3) memory limit,
-# and the result shape of slice [:, 3:-1] for dynamic shape (2, 10) is (2, 6)
-# which will cause blob to be out of memory limit.
-# def test_slice_dynamic_dismatch(test_case):
-#     input = np.random.rand(2, 10)
-#     slice_args = [[(None, None, None), (3, -1, None)]]
-#     outputs = [input[:, 3:-1]]
-#     _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
-
-
-# static shape after slice is (5, 4)
-# dynamic shape after slice is (4, 5)
-def test_slice_dynamic_anomaly(test_case):
-    input = np.random.rand(4, 7)
-    slice_args = [[(None, None, None), (2, None, None)]]
-    outputs = [input[:, 2:]]
-    _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
-
-
-# static shape after slice is (5, 3)
-# dynamic shape after slice is (4, 4)
-# def test_slice_dynamic_anomaly_failed(test_case):
-#     input = np.random.rand(4, 7)
-#     slice_args = [[(None, None, None), (3, None, None)]]
-#     outputs = [input[:, 3:]]
-#     _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
-
-
-def test_slice_with_grad(test_case):
-    input = np.random.rand(2, 5, 4)
-    slice_tup_list = [(None, None, None), (2, -2, None)]
-    output = input[:, 2:-2, :]
-    diff = np.zeros(input.shape, dtype=input.dtype)
-    diff[:, 2:-2, :] = 1
-
-    arg_dict = collections.OrderedDict()
-    arg_dict["dtype"] = [flow.float32, flow.float64]
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    arg_dict["verbose"] = [False]
-    for kwarg in test_util.GenArgDict(arg_dict):
-        _test_slice_with_grad(test_case, input, slice_tup_list, output, diff, **kwarg)
-
-
-def test_slice_update(test_case):
-    input = np.random.rand(10, 5, 4)
-    update = input[5:, :-1, ::2]
-    update = np.random.rand(*update.shape)
-    output = np.copy(input)
-    output[5:, :-1, ::2] = update
-    slice_tup_list = [(5, None, None), (None, -1, None), (None, None, 2)]
-
-    arg_dict = collections.OrderedDict()
-    arg_dict["dtype"] = [flow.float32, flow.float64]
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    arg_dict["verbose"] = [False]
-    for kwarg in test_util.GenArgDict(arg_dict):
-        _test_slice_update(test_case, input, update, slice_tup_list, output, **kwarg)
-
-
-def test_slice_update_grad(test_case):
-    input = np.random.rand(2, 7)
-    update = input[:, 1:4]
-    update = np.random.rand(*update.shape)
-    update_diff = np.ones(update.shape)
-    input_diff = np.ones(input.shape)
-    input_diff[:, 1:4] = 0
-    output = np.copy(input)
-    output[:, 1:4] = update
-    slice_tup_list = [(None, None, None), (1, 4, None)]
-
-    arg_dict = collections.OrderedDict()
-    arg_dict["dtype"] = [flow.float32, flow.float64]
-    arg_dict["device_tag"] = ["cpu", "gpu"]
-    arg_dict["verbose"] = [False]
-    for kwarg in test_util.GenArgDict(arg_dict):
-        _test_slice_update_grad(
-            test_case,
-            input,
-            update,
-            slice_tup_list,
-            output,
-            input_diff,
-            update_diff,
-            **kwarg
+    def test_slice_dynamic_at_first_dim_and_last_dim(test_case):
+        input = np.random.rand(3, 6, 3, 3)
+        slice_args = [
+            [(1, None, None), (None, None, None), (None, None, None), (1, None, None)]
+        ]
+        outputs = [input[1:, :, :, 1:]]
+        _test_slice_dynamic(
+            test_case, input, slice_args, outputs, static_shape=(4, 5, 5, 3)
         )
+
+    def test_slice_dynamic_neg_start(test_case):
+        input = np.random.rand(2, 10)
+        slice_args = [[(None, None, None), (-5, None, None)]]
+        outputs = [input[:, -5:]]
+        _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
+
+    def test_slice_dynamic_neg_step(test_case):
+        input = np.random.rand(2, 10)
+        slice_args = [[(None, None, None), (None, -5, -1)]]
+        outputs = [input[:, :-5:-1]]
+        _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
+
+    def test_slice_dynamic_anomaly(test_case):
+        input = np.random.rand(4, 7)
+        slice_args = [[(None, None, None), (2, None, None)]]
+        outputs = [input[:, 2:]]
+        _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
+
+    """This test case will raise fatal error, error infomation is like below:
+    F0808 00:20:19.768465 23960 user_kernel.cpp:451] Check failed: shape_view.elem_cnt() <= static_shape.elem_cnt() (12 vs. 9)
+    InferShape of OpKernel (op_type_name: slice, op_name: SliceDynamic_0) raise error,
+    output arg's (name: y, index: 0) runtime shape (2,6) surpass the limit of static shape (3,3)
+    *** Check failure stack trace: ***
+    ...
+    The reason is the dismatch between static slice (for memory) and dynamic slice (real slice)
+    The result shape of slice [:, 3:-1] for static shape (3, 7) is (3, 3)
+    which indicate that blob has prod(3, 3) memory limit,
+    and the result shape of slice [:, 3:-1] for dynamic shape (2, 10) is (2, 6)
+    which will cause blob to be out of memory limit.
+    """
+    # def test_slice_dynamic_dismatch(test_case):
+    #     input = np.random.rand(2, 10)
+    #     slice_args = [[(None, None, None), (3, -1, None)]]
+    #     outputs = [input[:, 3:-1]]
+    #     _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
+
+    """
+    static shape after slice is (5, 4)
+    dynamic shape after slice is (4, 5)
+    static shape after slice is (5, 3)
+    dynamic shape after slice is (4, 4)
+    """
+    # def test_slice_dynamic_anomaly_failed(test_case):
+    #     input = np.random.rand(4, 7)
+    #     slice_args = [[(None, None, None), (3, None, None)]]
+    #     outputs = [input[:, 3:]]
+    #     _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
+
+    def test_slice_with_grad(test_case):
+        input = np.random.rand(2, 5, 4)
+        slice_tup_list = [(None, None, None), (2, -2, None)]
+        output = input[:, 2:-2, :]
+        diff = np.zeros(input.shape, dtype=input.dtype)
+        diff[:, 2:-2, :] = 1
+
+        arg_dict = collections.OrderedDict()
+        arg_dict["dtype"] = [flow.float32, flow.float64]
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        arg_dict["verbose"] = [False]
+        for kwarg in test_util.GenArgDict(arg_dict):
+            _test_slice_with_grad(
+                test_case, input, slice_tup_list, output, diff, **kwarg
+            )
+
+    def test_slice_update(test_case):
+        input = np.random.rand(10, 5, 4)
+        update = input[5:, :-1, ::2]
+        update = np.random.rand(*update.shape)
+        output = np.copy(input)
+        output[5:, :-1, ::2] = update
+        slice_tup_list = [(5, None, None), (None, -1, None), (None, None, 2)]
+
+        arg_dict = collections.OrderedDict()
+        arg_dict["dtype"] = [flow.float32, flow.float64]
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        arg_dict["verbose"] = [False]
+        for kwarg in test_util.GenArgDict(arg_dict):
+            _test_slice_update(test_case, input, update, slice_tup_list, output, **kwarg)
+
+    def test_slice_update_grad(test_case):
+        input = np.random.rand(2, 7)
+        update = input[:, 1:4]
+        update = np.random.rand(*update.shape)
+        update_diff = np.ones(update.shape)
+        input_diff = np.ones(input.shape)
+        input_diff[:, 1:4] = 0
+        output = np.copy(input)
+        output[:, 1:4] = update
+        slice_tup_list = [(None, None, None), (1, 4, None)]
+
+        arg_dict = collections.OrderedDict()
+        arg_dict["dtype"] = [flow.float32, flow.float64]
+        arg_dict["device_tag"] = ["cpu", "gpu"]
+        arg_dict["verbose"] = [False]
+        for kwarg in test_util.GenArgDict(arg_dict):
+            _test_slice_update_grad(
+                test_case,
+                input,
+                update,
+                slice_tup_list,
+                output,
+                input_diff,
+                update_diff,
+                **kwarg
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

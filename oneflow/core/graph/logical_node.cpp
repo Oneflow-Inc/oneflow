@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
@@ -156,8 +157,8 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
           }
-          case CudaWorkType::kMdUpdt: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
+          case CudaWorkType::kDecodeH2D: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
             break;
           }
           default: UNIMPLEMENTED();
@@ -215,9 +216,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       }
     }
   }
-  if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  }
   std::string k = ConcatTypeName(src_node, dst_node);
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
   if (it == GetFuncForFindBldSubTskGphMthd()->end()) {
@@ -227,6 +225,9 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     it = GetFuncForFindBldSubTskGphMthd()->find("*" + dst_node->TypeName());
   }
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
+  if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
   if (src_pd->parallel_num() == dst_pd->parallel_num()
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
@@ -246,8 +247,11 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
                               "*",
                               &TaskGraph::BldSubTskGphByPartialOutLbiConnect);
 
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "DecodeH2D",
+                              &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D);
+
 #define LOGICAL_TYPE_SEQ                                   \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)    \
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
@@ -260,6 +264,27 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
   CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
+
+std::string NormalForwardLogicalNode::TypeName() const { return "NormalForward"; }
+
+CompTaskNode* NormalForwardLogicalNode::NewCompTaskNode() const {
+  return new NormalForwardCompTaskNode;
+}
+
+int64_t NormalForwardLogicalNode::GetAreaId() const {
+  if (this->SoleOp()->op_conf().has_user_conf()) {
+    auto* registration_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
+        this->SoleOp()->op_conf().user_conf().op_type_name());
+    CHECK_NOTNULL(registration_val);
+    if (registration_val->area_id != AreaType::kInvalidArea) {
+      return registration_val->area_id;
+    } else {
+      return AreaType::kDataForwardArea;
+    }
+  } else {
+    return AreaType::kDataForwardArea;
+  }
+}
 
 std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 

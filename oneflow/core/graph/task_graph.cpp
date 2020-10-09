@@ -133,7 +133,7 @@ bool IsInplaceAllowed(
     if (first_blob == nullptr) {
       first_blob = blob_desc;
     } else {
-      if (!(first_blob->shape() == blob_desc->shape()
+      if (!(first_blob->shape().elem_cnt() == blob_desc->shape().elem_cnt()
             && first_blob->data_type() == blob_desc->data_type())) {
         return false;
       }
@@ -526,6 +526,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
     if (lbis.find(lbi) != lbis.end()) {
       BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), MutBufTask, true);
     }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
+  CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+    CompTaskNode* src = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
+    Connect<TaskNode>(src, NewEdge(), dst);
   }
 }
 

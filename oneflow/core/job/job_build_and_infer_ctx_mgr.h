@@ -34,7 +34,6 @@ class JobBuildAndInferCtxMgr {
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName() const;
   Maybe<void> CloseCurrentJobBuildAndInferCtx();
-  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) const;
 
   const JobSet& job_set() const { return job_set_; }
   std::string structure_graph() const;

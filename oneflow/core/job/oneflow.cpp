@@ -222,8 +222,17 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
                                     const std::function<void(const PlanTaskNode*)>& Handler) {
       if (!IsCollectiveBoxingNode(node)) {
-        node->ForEachNodeOnOutEdge(
-            [&](const PlanTaskNode* node_on_out_edge) { Handler(node_on_out_edge); });
+        node->ForEachNodeOnOutEdge([&](const PlanTaskNode* node_on_out_edge) {
+          bool has_unvisited_collective_boxing_node_on_in_edges = false;
+          node_on_out_edge->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+            if (!has_unvisited_collective_boxing_node_on_in_edges
+                && IsCollectiveBoxingNode(node_on_in_edge)
+                && all_visited.count(node_on_in_edge) == 0) {
+              has_unvisited_collective_boxing_node_on_in_edges = true;
+            }
+          });
+          if (!has_unvisited_collective_boxing_node_on_in_edges) { Handler(node_on_out_edge); }
+        });
       }
     };
     HashSet<const PlanTaskNode*> visited;
@@ -306,7 +315,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
     } else {
       PullPlan("complete_plan", &complete_plan);
     }
-    OF_BARRIER();
+    OF_SESSION_BARRIER();
     // Experiment Runtime
     { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
@@ -316,7 +325,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
       *improved_plan = *JUST(Improver().Improve(
           *Global<AvailableMemDesc>::Get(), naive_plan,
           JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename())));
-      OF_BARRIER();
+      OF_SESSION_BARRIER();
       TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
     }
   } else {
@@ -963,7 +972,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
   }
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   return Maybe<void>::Ok();
 }
 

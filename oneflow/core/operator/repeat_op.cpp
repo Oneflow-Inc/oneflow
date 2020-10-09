@@ -35,8 +35,6 @@ Maybe<void> RepeatOp::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& RepeatOp::GetCustomizedConf() const { return op_conf().repeat_conf(); }
-
 Maybe<void> RepeatOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
