@@ -49,6 +49,12 @@ REGISTER_USER_OP("gather_dim")
       *out->mut_data_type() = in->data_type();
 
       return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
+      CHECK(indices_modifier != nullptr);
+      indices_modifier->set_requires_grad(false);
     });
 
 REGISTER_USER_OP("scatter_dim_add")

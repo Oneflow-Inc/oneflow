@@ -53,7 +53,7 @@ g_samples = [
 def _make_gather_dim_fn(input, index, dim, device_type, mirrored):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.int32)
+    func_config.default_data_type(flow.float)
 
     def do_gather(x_blob, i_blob):
         with flow.scope.placement(device_type, "0:0"):
@@ -61,7 +61,7 @@ def _make_gather_dim_fn(input, index, dim, device_type, mirrored):
             x = flow.get_variable(
                 "input",
                 shape=input.shape,
-                dtype=flow.int32,
+                dtype=flow.float,
                 initializer=flow.constant_initializer(0),
             )
             x = flow.cast_to_current_logical_view(x)
@@ -75,7 +75,7 @@ def _make_gather_dim_fn(input, index, dim, device_type, mirrored):
 
     @flow.global_function(type="train", function_config=func_config)
     def gather_fn(
-        params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.int32),
+        params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float),
         indices_def: oft.Numpy.Placeholder(index.shape, dtype=flow.int32),
     ):
         return do_gather(params_def, indices_def)
@@ -100,13 +100,13 @@ def test_gather(test_case):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
     for sample in g_samples:
-        input = np.array(sample["input"]).astype(np.int32)
+        input = np.array(sample["input"]).astype(np.float32)
         index = np.array(sample["index"]).astype(np.int32)
         _compare_gatherdim_with_samples(
             test_case,
             "gpu",
             input,
             index,
-            np.array(sample["out"]).astype(np.int32),
+            np.array(sample["out"]).astype(np.float32),
             sample["dim"],
         )
