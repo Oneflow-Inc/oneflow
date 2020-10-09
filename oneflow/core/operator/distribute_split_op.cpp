@@ -30,8 +30,6 @@ class DistributeSplitOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   LogicalNode* NewProperLogicalNode() const override { return new DistributeSplitLogicalNode; }
 
  private:
@@ -65,10 +63,6 @@ void DistributeSplitOp::InitFromOpConf() {
     ob_modifier->set_header_infered_before_compute(false);
     ob_modifier->set_is_mutable(op_conf().distribute_split_conf().is_variable_ref());
   });
-}
-
-const PbMessage& DistributeSplitOp::GetCustomizedConf() const {
-  return op_conf().distribute_split_conf();
 }
 
 Maybe<void> DistributeSplitOp::InferBlobDescs(

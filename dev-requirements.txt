@@ -5,3 +5,4 @@ wheel
 tqdm
 requests
 onnx
+jinja2

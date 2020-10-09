@@ -27,7 +27,6 @@ class LARSModelUpdateOp final : public NormalModelUpdtOp {
   LARSModelUpdateOp() = default;
   ~LARSModelUpdateOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new OptimizerLogicalNode; }
 
  private:

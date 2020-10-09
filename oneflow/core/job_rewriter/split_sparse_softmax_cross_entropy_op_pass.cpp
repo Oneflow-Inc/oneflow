@@ -27,9 +27,8 @@ void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_
     OperatorConf new_conf = out_node->op().op_conf();
     if (new_conf.has_user_conf()
         && new_conf.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms_grad") {
-      ReplaceInputLbnInOpCustomizedConf(new_conf.mutable_user_conf(), "prob_0",
-                                        GenLogicalBlobName(out_node->op().BnInOp2Lbi("prob_0")),
-                                        new_prob_lbn);
+      CHECK_EQ(GenLogicalBlobName(out_node->op().BnInOp2Lbi("prob_0")),
+               ReplaceInputLbnInOpCustomizedConf(&new_conf, "prob_0", new_prob_lbn));
       job_builder->MutOpsOnlyOnce({new_conf});
     }
   }
