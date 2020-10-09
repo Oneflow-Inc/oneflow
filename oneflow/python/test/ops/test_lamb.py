@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -104,20 +105,6 @@ def compare_with_tensorflow_addons_lamb(
     )
 
 
-def test_lamb(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["test_case"] = [test_case]
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(10,)]
-    arg_dict["beta1"] = [0.1]
-    arg_dict["beta2"] = [0.1]
-    arg_dict["epsilon"] = [1e-9]
-    arg_dict["learning_rate"] = [0.5]
-    arg_dict["train_iters"] = [10]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_addons_lamb(*arg)
-
-
 def compare_with_tensorflow_adam(
     device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
 ):
@@ -182,14 +169,33 @@ def compare_with_tensorflow_adam(
     assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-3, atol=1e-3,), diff
 
 
-def test_lamb_as_adam(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(10,)]
-    arg_dict["beta1"] = [0.9]
-    arg_dict["beta2"] = [0.99]
-    arg_dict["epsilon"] = [1e-9]
-    arg_dict["learning_rate"] = [1]
-    arg_dict["train_iters"] = [100]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_adam(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestLamb(flow.unittest.TestCase):
+    def test_lamb(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["beta1"] = [0.1]
+        arg_dict["beta2"] = [0.1]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["learning_rate"] = [0.5]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_addons_lamb(*arg)
+
+    def test_lamb_as_adam(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.99]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [100]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_adam(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()
