@@ -28,7 +28,6 @@ class UnpackOp final : public Operator {
   ~UnpackOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override { return op_conf().unpack_conf(); }
   LogicalNode* NewProperLogicalNode() const override { return new UnpackForwardLogicalNode; }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

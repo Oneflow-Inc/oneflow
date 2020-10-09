@@ -307,9 +307,9 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<EpollCommNet>::New();
   Global<Transport>::New();
 
-  // OF_BARRIER Must call before test,
+  // OF_ENV_BARRIER Must call before test,
   // to ensure that the Global<Transport> on each machine is created
-  OF_BARRIER_ALL();
+  OF_ENV_BARRIER();
 
   // Test for correctness
   // Each machine will send and receive 100 messages (50 send and 50 recv) alternately.
@@ -320,7 +320,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
 
   TestThroughput();
 
-  OF_BARRIER_ALL();
+  OF_ENV_BARRIER();
   std::cout << "Deleting all global..." << std::endl;
   Global<Transport>::Delete();
   Global<EpollCommNet>::Delete();

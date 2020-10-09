@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -141,33 +142,38 @@ def compare_with_tensorflow(
     )
 
 
-def test_padding_valid(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["x_shape"] = [(10, 32, 10)]
-    arg_dict["filters"] = [64]
-    arg_dict["kernel_size"] = [3, 2]
-    arg_dict["groups"] = [1]
-    arg_dict["of_padding"] = ["VALID"]
-    arg_dict["tf_padding"] = ["VALID"]
-    arg_dict["stride"] = [2]
-    arg_dict["data_format"] = ["NCW", "NWC"]
-    arg_dict["dilation"] = [2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestNnConv1d(flow.unittest.TestCase):
+    def test_padding_valid(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10, 32, 10)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [3, 2]
+        arg_dict["groups"] = [1]
+        arg_dict["of_padding"] = ["VALID"]
+        arg_dict["tf_padding"] = ["VALID"]
+        arg_dict["stride"] = [2]
+        arg_dict["data_format"] = ["NCW", "NWC"]
+        arg_dict["dilation"] = [2]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_padding_same(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [(10, 32, 11)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [2]
+        arg_dict["groups"] = [1]
+        arg_dict["of_padding"] = ["SAME_UPPER"]
+        arg_dict["tf_padding"] = ["SAME"]
+        arg_dict["stride"] = [2]
+        arg_dict["data_format"] = ["NCW"]
+        arg_dict["dilation"] = [1]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
-def test_padding_same(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 32, 11)]
-    arg_dict["filters"] = [64]
-    arg_dict["kernel_size"] = [2]
-    arg_dict["groups"] = [1]
-    arg_dict["of_padding"] = ["SAME_UPPER"]
-    arg_dict["tf_padding"] = ["SAME"]
-    arg_dict["stride"] = [2]
-    arg_dict["data_format"] = ["NCW"]
-    arg_dict["dilation"] = [1]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

@@ -28,8 +28,6 @@ void InputOp::InitFromOpConf() {
   modifier->set_header_infered_before_compute(false);
 }
 
-const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_conf(); }
-
 Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const {

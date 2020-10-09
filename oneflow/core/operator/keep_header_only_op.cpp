@@ -19,8 +19,8 @@ limitations under the License.
 namespace oneflow {
 
 void KeepHeaderOnlyOp::InitFromOpConf() {
-  CHECK_EQ(GetPbRpfFromCustomizedConf<std::string>("in").size(),
-           GetPbRpfFromCustomizedConf<std::string>("out").size());
+  CHECK_EQ(op_conf().keep_header_only_conf().in().size(),
+           op_conf().keep_header_only_conf().out().size());
   EnrollRepeatedInputBn("in", false);
   EnrollRepeatedOutputBn("out", false);
 }
@@ -28,7 +28,7 @@ void KeepHeaderOnlyOp::InitFromOpConf() {
 Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  size_t in_num = GetPbRpfFromCustomizedConf<std::string>("in").size();
+  size_t in_num = op_conf().keep_header_only_conf().in().size();
   for (size_t i = 0; i < in_num; ++i) {
     BlobDesc* out = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
     *out = *GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
@@ -39,7 +39,7 @@ Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
 
 Maybe<void> KeepHeaderOnlyOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  size_t in_num = GetPbRpfFromCustomizedConf<std::string>("in").size();
+  size_t in_num = op_conf().keep_header_only_conf().in().size();
   for (size_t i = 0; i < in_num; ++i) {
     *BatchAxis4BnInOp(GenRepeatedBn("out", i)) = *BatchAxis4BnInOp(GenRepeatedBn("in", i));
   }

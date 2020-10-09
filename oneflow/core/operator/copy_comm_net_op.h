@@ -27,7 +27,6 @@ class CopyCommNetOp final : public Operator {
   ~CopyCommNetOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;

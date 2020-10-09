@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
@@ -69,9 +70,14 @@ def _of_tensor_list_to_tensor_buffer(test_case, verbose=False):
     test_case.assertTrue(np.array_equal(input_2, ret_arr_list[0][1]))
 
 
-def test_tensor_list_input_output(test_case):
-    _of_tensor_list_identity(test_case)
+@flow.unittest.skip_unless_1n1d()
+class TestTensorListAndTensorBuffer(flow.unittest.TestCase):
+    def test_tensor_list_input_output(test_case):
+        _of_tensor_list_identity(test_case)
+
+    def test_tensor_list_and_tensor_buffer_conversion(test_case):
+        _of_tensor_list_to_tensor_buffer(test_case)
 
 
-def test_tensor_list_and_tensor_buffer_conversion(test_case):
-    _of_tensor_list_to_tensor_buffer(test_case)
+if __name__ == "__main__":
+    unittest.main()

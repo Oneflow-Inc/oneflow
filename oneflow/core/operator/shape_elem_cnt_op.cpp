@@ -54,10 +54,6 @@ void ShapeElemCntOp::InitFromOpConf() {
   EnrollOutputBn("y", false);
 }
 
-const PbMessage& ShapeElemCntOp::GetCustomizedConf() const {
-  return op_conf().shape_elem_cnt_conf();
-}
-
 Maybe<void> ShapeElemCntOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

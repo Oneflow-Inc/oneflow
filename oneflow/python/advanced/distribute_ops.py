@@ -42,7 +42,7 @@ def distribute_clone(x, name=None):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
     setattr(op_conf.distribute_clone_conf, "in", x.unique_name)
-    parallel_size = oneflow.placement.current_scope().parallel_size
+    parallel_size = oneflow.current_scope().device_parallel_desc_symbol.parallel_num
     op_conf.distribute_clone_conf.out.extend(
         ["out_%d" % i for i in range(parallel_size)]
     )
@@ -67,7 +67,7 @@ def api_distribute_add(
 
 @enable_if.condition(hob.in_global_mode)
 def distribute_add(xs, name=None):
-    assert oneflow.placement.current_scope().parallel_size == len(xs)
+    assert oneflow.current_scope().device_parallel_desc_symbol.parallel_num == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeAdd_")
     op_conf = op_conf_util.OperatorConf()
@@ -99,7 +99,7 @@ def distribute_split(x, axis=0, name=None):
     op_conf.name = name
     setattr(op_conf.distribute_split_conf, "in", x.unique_name)
     op_conf.distribute_split_conf.axis = axis
-    parallel_size = oneflow.placement.current_scope().parallel_size
+    parallel_size = oneflow.current_scope().device_parallel_desc_symbol.parallel_num
     op_conf.distribute_split_conf.out.extend(
         ["out_%d" % i for i in range(parallel_size)]
     )
@@ -124,7 +124,7 @@ def api_distribute_concat(
 
 @enable_if.condition(hob.in_global_mode)
 def distribute_concat(xs, axis=0, name=None):
-    assert oneflow.placement.current_scope().parallel_size == len(xs)
+    assert oneflow.current_scope().device_parallel_desc_symbol.parallel_num == len(xs)
     if name is None:
         name = id_util.UniqueStr("DistributeConcat_")
     op_conf = op_conf_util.OperatorConf()
@@ -209,14 +209,17 @@ def _TryWrapTuple(ys):
 
 
 def _UnderSingleDevicePlacementScope(f, *args):
-    current_scope = oneflow.placement.current_scope()
-    for machine_id, device_id in _EachMachineIdAndDeviceId(current_scope):
+    parallel_desc_symbol = oneflow.current_scope().device_parallel_desc_symbol
+    for machine_id, device_id in _EachMachineIdAndDeviceId(parallel_desc_symbol):
         mch_dev_str = "%d:%d" % (machine_id, device_id)
-        with oneflow.scope.placement(current_scope.default_device_tag, mch_dev_str):
+        with oneflow.scope.placement(parallel_desc_symbol.device_tag, mch_dev_str):
             return f(*args)
 
 
-def _EachMachineIdAndDeviceId(placement_scope):
-    for machine_id, device_id_list in placement_scope.machine_id2device_id_list.items():
+def _EachMachineIdAndDeviceId(parallel_desc_symbol):
+    for (
+        machine_id,
+        device_id_list,
+    ) in parallel_desc_symbol.machine_id2device_id_list.items():
         for device_id in device_id_list:
             yield machine_id, device_id

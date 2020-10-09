@@ -774,7 +774,7 @@ def set_default_placement(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    assert isinstance(value, placement_ctx.PlacementScope)
+    assert isinstance(value, placement_ctx.EmptyPlacementScope)
     func_desc.function_attribute.default_placement_scope = value
 
 

@@ -19,17 +19,17 @@ jobs:
     steps:
     - name: Fix permissions
       run: |
-        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla-102
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-        docker run --rm -v $ONEFLOW_CI_TMP_DIR/:$HOME/ci-tmp/ busybox rm -rf $HOME/ci-tmp/wheelhouse
     - uses: actions/checkout@v2
     - name: Setup submodule
       uses: ./.github/actions/setup
     - name: Build OneFlow
       run: |
-        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-xla-102
+        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-rel-102
+        docker run --rm -v $ONEFLOW_CI_TMP_DIR/:$HOME/ci-tmp/ busybox rm -rf $HOME/ci-tmp/wheelhouse
         export ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
-        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=ON"
+        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=OFF"
+        export ONEFLOW_CI_BUILD_WHEEL_BASH_ARGS=" "
         export ONEFLOW_CI_PACKAGE_SUFFIX="_cu102"
         if [ -d $ONEFLOW_CI_TMP_DIR/wheelhouse ]; then
             echo "existing wheelhouse found"

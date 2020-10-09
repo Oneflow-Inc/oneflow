@@ -63,15 +63,16 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         && user_op_conf.op_type_name() != "adam_update") {
       return;
     }
-    if (user_op_conf.attr<float>("scale") != 1.0f || user_op_conf.attr<float>("l1") != 0.0f
+    if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
         || user_op_conf.attr<float>("l2") != 0.0f) {
       return;
     }
     float l1 = 0;
     float l2 = 0;
-    float scale = 1;
+    double scale = 1;
     bool fused = false;
     LogicalBlobId model_diff_lbi = GenLogicalBlobId(user_op_conf.input("model_diff", 0));
+    std::string scale_by_tensor_lbn;
 
     [&]() {
       do {
@@ -92,13 +93,24 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
       do {
         const OpNode* producer = op_graph.OpNode4OpName(model_diff_lbi.op_name());
+        if (!IsUserOpWithTypeName(producer->op().op_conf(), "scalar_mul_by_tensor")) { break; }
+        if (!IsSafeToDelete(producer)) { return; }
+        const user_op::UserOpConfWrapper scalar_mul_by_tensor_op_conf(producer->op().op_conf());
+        model_diff_lbi = GenLogicalBlobId(scalar_mul_by_tensor_op_conf.input("x", 0));
+        scale_by_tensor_lbn = scalar_mul_by_tensor_op_conf.input("scalar", 0);
+        job_builder->DelOps({producer->op().op_conf()});
+        fused = true;
+      } while (false);
+
+      do {
+        const OpNode* producer = op_graph.OpNode4OpName(model_diff_lbi.op_name());
         if (!IsUserOpWithTypeName(producer->op().op_conf(), "scalar_mul")) { break; }
         if (!IsSafeToDelete(producer)) { return; }
         const user_op::UserOpConfWrapper scalar_mul_op_conf(producer->op().op_conf());
         if (scalar_mul_op_conf.attr<bool>("has_int_operand")) {
-          scale = static_cast<float>(scalar_mul_op_conf.attr<int64_t>("int_operand"));
+          scale = static_cast<double>(scalar_mul_op_conf.attr<int64_t>("int_operand"));
         } else if (scalar_mul_op_conf.attr<bool>("has_float_operand")) {
-          scale = static_cast<float>(scalar_mul_op_conf.attr<double>("float_operand"));
+          scale = scalar_mul_op_conf.attr<double>("float_operand");
         } else {
           UNIMPLEMENTED();
         }
@@ -130,10 +142,13 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         .Input("model", user_op_conf.input("model", 0))
         .Input("model_diff", GenLogicalBlobName(model_diff_lbi))
         .Input("learning_rate", user_op_conf.input("learning_rate", 0))
-        .Attr<float>("scale", scale)
+        .Attr<double>("scale", scale)
         .Attr<float>("l1", l1)
         .Attr<float>("l2", l2)
         .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
+    if (scale_by_tensor_lbn != "") {
+      fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
+    }
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
