@@ -598,12 +598,6 @@ void Operator::EnrollConstBufBn(const std::string& cbbn) {
   CHECK(mut_bn_in_op2lbi()->insert({cbbn, cbbn2lbi(cbbn)}).second);
 }
 
-void Operator::StrFieldTolower(const std::string& field_name) {
-  std::string field_val = GetValFromCustomizedConf<std::string>(field_name);
-  std::transform(field_val.begin(), field_val.end(), field_val.begin(), ::tolower);
-  SetValInCustomizedConf(field_name, field_val);
-}
-
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
   CHECK_GE(idx, 0);
   return bn_prefix + "_" + std::to_string(idx);
@@ -686,8 +680,7 @@ Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
   PbMessage* op_type_conf = MutableMessageInPbMessage(&op_conf, op_conf.op_type_case());
   for (const auto& ibn : input_bns()) {
     if (!HasStrFieldInPbFdOrPbRpf(*op_type_conf, ibn)) { continue; }
-    const std::string& lbn = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
-    ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn, "undefined-op-name/undefined-ibn");
+    ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, "undefined-op-name/undefined-ibn");
   }
   return SymbolOf(op_conf);
 }
@@ -799,8 +792,9 @@ Maybe<void> InferOpSbpSignature(
   return Maybe<void>::Ok();
 }
 
-std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
                                           const std::string& fd_name_may_have_idx) {
+  const PbMessage& msg = GetMessageInPbMessage(op_conf, op_conf.op_type_case());
   const PbMessage* msg_ptr = &msg;
   const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(msg_ptr);
   if (user_conf) {
@@ -817,20 +811,30 @@ std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
   }
 }
 
-void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
-                                       const std::string& old_val, const std::string& new_val) {
+// return old value
+std::string ReplaceInputLbnInOpTypeConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                        const std::string& new_val) {
   UserOpConf* user_conf = dynamic_cast<UserOpConf*>(msg);
+  std::string old_val;
   if (user_conf) {
     std::pair<std::string, int32_t> pair = GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
     CHECK(user_conf->input().find(pair.first) != user_conf->input().end())
         << "cannot find input arg val in user op conf. (arg_name = " << pair.first
         << ", id = " << std::to_string(pair.second) << ")\n"
-        << "old lbn = " << old_val << " new lbn = " << new_val;
-    CHECK_EQ(user_conf->input().at(pair.first).s(pair.second), old_val);
+        << " new lbn = " << new_val;
+    old_val = user_conf->input().at(pair.first).s(pair.second);
     (*(user_conf->mutable_input()))[pair.first].set_s(pair.second, new_val);
   } else {
-    ReplaceStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx, old_val, new_val);
+    old_val = ReplaceStrValInPbFdOrPbRpf(msg, fd_name_may_have_idx, new_val);
   }
+  return old_val;
+}
+
+std::string ReplaceInputLbnInOpCustomizedConf(OperatorConf* op_conf,
+                                              const std::string& fd_name_may_have_idx,
+                                              const std::string& new_val) {
+  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+  return ReplaceInputLbnInOpTypeConf(op_type_conf, fd_name_may_have_idx, new_val);
 }
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {

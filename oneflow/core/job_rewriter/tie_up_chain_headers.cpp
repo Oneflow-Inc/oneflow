@@ -73,12 +73,11 @@ void AddIdentityOpAndReconnect(
   HashMap<LogicalBlobId, SbpParallel> old_lbi2sbp_parallel;
   for (OpEdge* edge : op_edges) {
     OperatorConf* op_conf = MutOperatorConf4OpName(edge->dst_node()->op().op_name());
-    PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
     for (const LogicalBlobId& lbi : edge->lbis()) {
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        CHECK_EQ(lbn_check, ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, identity_out_lbn));
         const auto& sbp_parallel = edge->dst_node()->SbpParallel4BnInOp(ibn);
         const auto& sbp_iter = old_lbi2sbp_parallel.find(lbi);
         if (sbp_iter == old_lbi2sbp_parallel.end()) {

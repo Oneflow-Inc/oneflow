@@ -39,8 +39,6 @@ void XrtLaunchOp::InitFromOpConf() {
   if (outputs_num > 0) { EnrollRepeatedOutputBn("out"); }
 }
 
-const PbMessage &XrtLaunchOp::GetCustomizedConf() const { return op_conf().xrt_launch_conf(); }
-
 Maybe<void> XrtLaunchOp::InferBlobDescs(
     std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
     const ParallelContext *parallel_ctx) const {

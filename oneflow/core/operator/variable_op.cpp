@@ -43,8 +43,6 @@ void VariableOp::InitFromOpConf() {
   EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
 }
 
-const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
-
 Maybe<void> VariableOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

@@ -76,13 +76,8 @@ bool TxtString2PbMessage(const std::string& proto_str, PbMessage* proto);
 bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
-
-const PbFd* GetPbFdFromPbMessage(const PbMessage&, const std::string& field_name);
-
 template<typename T>
 T GetValFromPbMessage(const PbMessage&, const std::string& field_name);
-
-int32_t GetEnumFromPbMessage(const PbMessage&, const std::string& field_name);
 
 template<typename T>
 const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg, const std::string& field_name) {
@@ -119,8 +114,9 @@ PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& 
 std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx);
 std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
 bool HasStrFieldInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
-void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
-                                const std::string& old_val, const std::string& new_val);
+// return old value
+std::string ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& new_val);
 
 // Add In PbMessage RepeatedField
 
