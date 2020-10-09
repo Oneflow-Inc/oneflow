@@ -45,13 +45,15 @@ struct AutoRegistrationFactory {
     }
   };
 
-  Base* New(Key k, Args&&... args) {
+  Base* New(Key k, Args&&... args) const {
     auto creators_it = creators().find(k);
     CHECK(creators_it != creators().end()) << "Unregistered: " << k;
     return creators_it->second(std::forward<Args>(args)...);
   }
 
-  bool IsClassRegistered(Key k, Args&&... args) { return creators().find(k) != creators().end(); }
+  bool IsClassRegistered(Key k, Args&&... args) const {
+    return creators().find(k) != creators().end();
+  }
 
   static AutoRegistrationFactory<Key, Base, Args...>& Get() {
     static AutoRegistrationFactory<Key, Base, Args...> obj;
