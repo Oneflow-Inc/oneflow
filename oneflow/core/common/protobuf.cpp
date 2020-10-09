@@ -74,12 +74,6 @@ bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
   return fd != nullptr;
 }
 
-const PbFd* GetPbFdFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_GET_FIELDDESC(msg, field_name);
-  CHECK_NOTNULL(fd);
-  return fd;
-}
-
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(cpp_type, pb_type_name)                                   \
   template<>                                                                                    \
   cpp_type GetValFromPbMessage<cpp_type>(const PbMessage& msg, const std::string& field_name) { \
@@ -89,11 +83,6 @@ const PbFd* GetPbFdFromPbMessage(const PbMessage& msg, const std::string& field_
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_PBMESSAGE,
                      PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(const PbMessage&, Message))
-
-int32_t GetEnumFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_REFLECTION(msg, field_name);
-  return r->GetEnumValue(msg, fd);
-}
 
 #define DEFINE_SET_VAL_IN_PBMESSAGE(cpp_type, pb_type_name)                                    \
   template<>                                                                                   \

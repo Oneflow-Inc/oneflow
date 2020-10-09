@@ -166,6 +166,9 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     const std::string& lbn = pair.first;
     OpNode* src_node = pair.second.front()->src_node();
 
+    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(lbn));
+    if (blob_desc.data_type() != DataType::kFloat) { continue; }
+
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
     DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
     auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
