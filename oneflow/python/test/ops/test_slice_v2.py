@@ -559,7 +559,9 @@ class TestSliceV2(flow.unittest.TestCase):
         arg_dict["device_tag"] = ["cpu", "gpu"]
         arg_dict["verbose"] = [False]
         for kwarg in test_util.GenArgDict(arg_dict):
-            _test_slice_update(test_case, input, update, slice_tup_list, output, **kwarg)
+            _test_slice_update(
+                test_case, input, update, slice_tup_list, output, **kwarg
+            )
 
     def test_slice_update_grad(test_case):
         input = np.random.rand(2, 7)
