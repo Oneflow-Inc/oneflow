@@ -59,9 +59,9 @@ class SquareSumKernel final : public user_op::OpKernel {
 #define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                                \
   REGISTER_USER_KERNEL("square_sum")                                                             \
       .SetCreateFn<                                                                          \
-          SquareSumKernel<device, dtype>>() \
+          SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));       \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));       \
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
