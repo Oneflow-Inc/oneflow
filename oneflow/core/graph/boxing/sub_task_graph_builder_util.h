@@ -44,7 +44,7 @@ struct SubTskGphBuilderUtil {
   static bool IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst);
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
-  static bool IsErrorBoxingNotSupported(const ErrorProto& error);
+  static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
