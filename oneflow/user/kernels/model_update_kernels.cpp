@@ -509,7 +509,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     LambTmpBufferManager<device_type, T> tbm(tmp_buffer->mut_dptr(), model->shape().elem_cnt());
-    const auto scale = ctx->Attr<float>("scale");
+    const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto beta1 = ctx->Attr<float>("beta1");
