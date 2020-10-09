@@ -893,6 +893,22 @@ message CastToStaticShapeOpConf {
   required string out = 2;
 }
 
+message ImageDecoderRandomCropResizeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 target_width = 3;
+  required int64 target_height = 4;
+  optional int64 num_workers = 5 [default = 3];
+  optional int64 max_num_pixels = 6 [default = 67108864];
+  optional int64 warmup_size = 7 [default = 6400];
+  optional int64 seed = 8;
+  optional int64 num_attempts = 9 [default = 10];
+  optional float random_area_min = 10 [default = 0.08];
+  optional float random_area_max = 11 [default = 1.0];
+  optional float random_aspect_ratio_min = 12 [default = 0.75];
+  optional float random_aspect_ratio_max = 13 [default = 1.333333];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -976,6 +992,7 @@ message OperatorConf {
     ModelInitV2OpConf model_init_v2_conf = 346;
     ModelLoadV2OpConf model_load_v2_conf = 347;
     ModelSaveV2OpConf model_save_v2_conf = 348;
+    ImageDecoderRandomCropResizeOpConf image_decoder_random_crop_resize_conf = 349;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op

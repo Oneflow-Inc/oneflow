@@ -128,9 +128,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     for (const OpNode* node : op_nodes_apply_to_diff) {
       OperatorConf new_conf = node->op().op_conf();
       if (new_conf.has_user_conf() && new_conf.user_conf().op_type_name() == "scalar_mul") {
-        ReplaceInputLbnInOpCustomizedConf(new_conf.mutable_user_conf(), "in_0",
-                                          GenLogicalBlobName(node->op().BnInOp2Lbi("in_0")),
-                                          values_lbn);
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&new_conf, "in_0", values_lbn);
+        CHECK_EQ(GenLogicalBlobName(node->op().BnInOp2Lbi("in_0")), old_val);
         values_lbn = GenLogicalBlobName(new_conf.name(), "out_0");
         job_builder->MutOpsOnlyOnce({new_conf});
       } else {

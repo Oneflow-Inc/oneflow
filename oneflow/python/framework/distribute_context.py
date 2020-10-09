@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 
 
 class DistributeStrategy(object):
@@ -29,7 +30,9 @@ class DistributeStrategy(object):
             def BuildScope(old_scope, builder):
                 return old_scope.BuildWithNewIsMirrored(builder, is_mirrored)
 
-            self.scope_context_ = sess.NewCurrentScope(sess.MakeScope(BuildScope))
+            self.scope_context_ = scope_util.ScopeContext(
+                scope_util.MakeScope(BuildScope)
+            )
 
     def __enter__(self, *argc, **kwarg):
         PushMirroredStrategyEnabled(self.is_mirrored_)

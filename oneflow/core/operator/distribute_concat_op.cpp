@@ -31,8 +31,6 @@ class DistributeConcatOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext*) const override;
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
@@ -60,10 +58,6 @@ void DistributeConcatOp::InitFromOpConf() {
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
-}
-
-const PbMessage& DistributeConcatOp::GetCustomizedConf() const {
-  return op_conf().distribute_concat_conf();
 }
 
 Maybe<void> DistributeConcatOp::InferBlobDescs(

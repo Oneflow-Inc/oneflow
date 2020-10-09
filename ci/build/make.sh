@@ -6,6 +6,7 @@ extra_oneflow_cmake_args=${ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS:-""}
 package_suffix=${ONEFLOW_CI_PACKAGE_SUFFIX:-""}
 cuda_version=${ONEFLOW_CI_CUDA_VERSION:-"10.2"}
 python_version_args=${ONEFLOW_CI_PYTHON_VERSION_ARGS:-"--python3.6"}
+build_wheel_bash_args=${ONEFLOW_CI_BUILD_WHEEL_BASH_ARGS:-"-l"}
 mkdir -p $tmp_dir
 docker_tag=${ONEFLOW_CI_DOCKER_TAG:-"oneflow:ci-manylinux2014-cuda10.2"}
 
@@ -40,7 +41,7 @@ function build() {
         -v $tmp_dir:/ci-tmp \
         -w /ci-tmp \
         "$docker_tag" \
-        bash -l /oneflow-src/docker/package/manylinux/build_wheel.sh \
+        bash ${build_wheel_bash_args} /oneflow-src/docker/package/manylinux/build_wheel.sh \
             ${python_version_args} \
             --house-dir /ci-tmp/wheelhouse \
             --package-name oneflow${package_suffix} \
