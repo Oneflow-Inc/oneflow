@@ -177,7 +177,7 @@ def reshape(
     r"""This operator reshapes a Blob. 
     If the Blob is dynamic, it will call `flow.dynamic_reshape` automatically
     
-    We can set one element in `shape` as `-1`, the operator will infer the complete shape. 
+    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape. 
 
     Args:
         x: A `Blob`.
@@ -253,7 +253,7 @@ def reshape_like(
     like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator reshapes the Blob `x` into the same shape will Blob `like`. 
+    """This operator reshapes the Blob x to be the same as Blob `like` . 
 
     Args:
         x (remote_blob_util.BlobDef): The input Blob. 
@@ -441,7 +441,7 @@ def slice(
         x: A `Blob`.
         begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal
             to x's number of dimensions, the first element of begin must be set to None.
-            (because oneflow internal slice op do not support slice at dim0 at present)
+            (Because the internal op of OneFlow does not support 0-dimension slice at present.)
         size: A list or a tuple, indicate each dimension slice size, whose length must be equal
             to x's number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
@@ -534,6 +534,9 @@ def slice_v2(
 
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
+
+    Note: Because the internal op of OneFlow does not support 0-dimension slice at present, we should 
+    set the zero element in `slice_tup_list` as `None`. 
 
     For example: 
 
@@ -807,7 +810,15 @@ def gather_nd(
     indices: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator gathers slices according to `indices` .
+    """This operator is a high-dimensional extension of `gather`, `indices` is a K-dimensional 
+    tensor, which is regarded as a index of input Blob `params`. 
+    
+    Each element defines a slice of `params`:
+
+    .. math:: 
+
+        output[(i_0,i_1,...,i_{K-2})] = param[indices(i_{0},i_{1},...,i_{K-2})]
+
 
     Args:
         params (remote_blob_util.BlobDef): The input Blob. 
@@ -843,8 +854,8 @@ def gather_nd(
         indice = np.array([[0], [2]]).astype(np.int32)
         out = gather_nd_Job(x, indice)
 
-        # out [[[1. 2. 3.]]
-        #      [[7. 8. 9.]]]
+        # out [[1. 2. 3.]
+        #      [7. 8. 9.]]
 
     Example 2: 
 
@@ -870,11 +881,33 @@ def gather_nd(
         indice = np.array([[0, 2], [2, 1]]).astype(np.int32)
         out = gather_nd_Job(x, indice)
 
-        # out [[[1. 2. 3.]
-        #       [7. 8. 9.]]
+        # out [3. 8.]
 
-        #      [[7. 8. 9.]   
-        #       [4. 5. 6.]]]
+    Example3: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+                        indice: tp.Numpy.Placeholder(shape=(3, 2), dtype=flow.int32)
+        ) -> tp.Numpy:
+            gather_nd_blob = flow.gather_nd(params=x, 
+                                            indices=indice)
+            return gather_nd_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        indice = np.array([[0, 1], [1, 0], [2, 2]]).astype(np.int32)
+        out = gather_nd_Job(x, indice)
+
+        # out [2. 4. 9.]
 
     """
     if name is None:
@@ -900,7 +933,7 @@ def scatter_nd(
     """This operator inserts the elements in `updates` according to the `indices` and create a new Blob.
 
     Args:
-        indices (remote_blob_util.BlobDef): The indice of `updates`. Its type should be `flow.int32`. 
+        indices (remote_blob_util.BlobDef): The indice of `updates`. Its type should be `flow.int`. 
         updates (remote_blob_util.BlobDef): The update Blob. 
         shape (Sequence[int]): The constant tensor shape, the constant tensor elements are all zero. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -1057,7 +1090,7 @@ def tensor_scatter_nd_add(
     updates: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator adds elements from 'updates' to Blob 'params' based on the index.
+    """This operator adds elements from 'updates' to Blob 'params' based on the `indices`.
 
     Args:
         params (remote_blob_util.BlobDef): The input Blob. 
@@ -1126,10 +1159,11 @@ def argwhere(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator finds the indices of input Blob `condition` elements that are non-zero. It returns a List. 
+    Each element in the output is a coordinate that points to a non-zero element in the condition. 
 
     Args:
         condition (remote_blob_util.BlobDef): The input Blob. 
-        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        dtype (Optional[dtype_util.dtype], optional): The data type of output. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1189,8 +1223,6 @@ def nonzero(
     a: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """This operator finds the indices of input Blob `condition` elements that are non-zero.
-
-    Still Unavailabe: `flow.transpose` does not support dynamic tensor. 
 
     Args:
         a (remote_blob_util.BlobDef): The input Blob. 
@@ -1402,14 +1434,14 @@ def sync_dynamic_resize(
             return resize_Blob
 
         x = np.array([[1, 2, 3], 
-                    [1, 2, 3], 
-                    [1, 2, 3],
-                    [1, 2, 3]]).astype(np.float32)
+                    [4, 5, 6], 
+                    [7, 8, 9],
+                    [10, 11, 12]]).astype(np.float32)
         size = np.array([2]).astype(np.int32)
         out = sync_dynamic_resize_Job(x, size)
 
         # out [array([[1., 2., 3.],
-        #             [1., 2., 3.]], dtype=float32)]
+        #             [4., 5., 6.]], dtype=float32)]
 
     """
     op_conf = op_conf_util.OperatorConf()
@@ -1473,7 +1505,7 @@ def generate_random_batch_permutation_indices(
     seed: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator generates a random permutation indice in batch axis. 
+    """This operator generates a random permutation of indices in batch axis. 
 
     Args:
         value (remote_blob_util.BlobDef): The input Blob. 
@@ -1625,8 +1657,9 @@ def identity(
 def identity_n(
     inputs: Iterable[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> List[remote_blob_util.BlobDef]:
-    """This operator returns a list of `Blob` that has identical content and data type to the list of input `Blob`. 
-    
+    """This operator is similar to `oneflow.identity`. The difference is that the input and output 
+    of `identity_n` is `List`. 
+
     Args:
         inputs (Iterable[remote_blob_util.BlobDef]): A List of input Blob. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -1692,6 +1725,8 @@ def squeeze(
 ) -> remote_blob_util.BlobDef:
     """This operator removes the specified dimention which size is 1 of the input Blob. 
     If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Blob. 
+    
+    The amount of element in return value is the same as Blob `input`. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob. 
@@ -1770,6 +1805,7 @@ def expand_dims(
     input: remote_blob_util.BlobDef, axis: int, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """This operator inserts a dimention at the specified axis in the input Blob. 
+    The size of new dimension can only be 1, and the amount of element in return value is the same as Blob `input`. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob. 

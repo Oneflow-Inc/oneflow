@@ -30,11 +30,7 @@ from typing import Optional, Sequence, Tuple
 def tensor_list_to_tensor_buffer(
     input: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """This operation converts `TensorList` to `TensorBuffer`. 
-
-    `TensorList` is a variable data type. The difference between `TensorList` and `TensorBuffer` is 
-    the memory of `TensorList` is continious. It can contain some Blobs with different shape. 
-    Some operators about data movement can process the `TensorList` directly. 
+    """This operator converts `TensorList` to `TensorBuffer`. 
 
     Args:
         input (remote_blob_util.BlobDef): The input `TensorList`. 
@@ -91,11 +87,7 @@ def tensor_buffer_to_tensor_list(
     dtype: dtype_util.dtype,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operation converts `TensorBuffer` to `TensorList`. 
-
-    `TensorList` is a variable data type. The difference between `TensorList` and `TensorBuffer` is 
-    the memory of `TensorList` is continious. It can contain some Blobs with different shape. 
-    Some operators about data movement can process the `TensorList` directly. 
+    """This operator converts `TensorBuffer` to `TensorList`. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Tensor Buffer. 
@@ -156,7 +148,7 @@ def tensor_buffer_to_tensor_list(
 def tensor_list_split(
     input_tensor_list: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> Tuple[remote_blob_util.BlobDef]:
-    """This operation splits the input `TensorList`. 
+    """This operator splits the input `TensorList`. 
 
     Args:
         input_tensor_list (remote_blob_util.BlobDef): The input `TensorList`. 
