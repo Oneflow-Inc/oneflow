@@ -30,7 +30,7 @@ xla::XlaOp Square(const xla::XlaOp &x) {
 class SquareSumOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
-    xla::XlaOp x = ctx->Input("x");
+    xla::XlaOp x = ctx->Input("x_0");
     xla::XlaBuilder *builder = ctx->builder(); 
     DataType data_type = ctx->SoleInputType();
     xla::XlaOp sum;
