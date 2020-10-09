@@ -39,7 +39,7 @@ def scan_urls(dir_path):
 
 def convert_url_to_oss_key(url):
     parsed = urlparse(url)
-    assert parsed.scheme == "https"
+    assert parsed.scheme == "https", url
     assert not parsed.params
     assert not parsed.query
     assert not parsed.port
