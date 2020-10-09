@@ -266,8 +266,7 @@ def zeros_like(
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator creates a Blob with all elements set to `0` that has the same shape as `like`.
-
+    """This operator creates a Blob that has the same shape as `like` whose all elements are set to `0`. 
 
     Args:
         like (remote_blob_util.BlobDef): A Blob. 
