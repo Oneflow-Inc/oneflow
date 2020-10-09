@@ -761,11 +761,11 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     }
   }
 
-  const std::set<std::type_index>& ValidTypeIndexes4FieldNumber(int field_number) const {
+  const std::set<std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const {
     switch (field_number) {
 {% for field in util.message_type_fields(cls) %}
       case {{ util.field_number(field) }}: {
-        static const ::std::set<::std::type_index> type_indexes{
+        static const ::std::set<::std::type_index> type_indices{
 {% if util.field_has_repeated_label(field) %}
           typeid(::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>)
 {% elif util.field_has_map_label(field) %}
@@ -778,7 +778,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 {% endif %}{# field message type #}
 {% endif %}{# field_label #}
         };
-        return type_indexes;
+        return type_indices;
       }
 {% endfor %}{# field #}
       default: {

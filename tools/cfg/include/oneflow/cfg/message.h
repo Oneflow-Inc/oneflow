@@ -31,8 +31,8 @@ class Message {
   template<typename T>
   bool FieldDefined4FieldName(const std::string& field_name) const {
     int field_number = FieldNumber4FieldName(field_name);
-    const auto& type_indexes = ValidTypeIndexes4FieldNumber(field_number);
-    return FieldDefined4FieldNumber(field_number) && type_indexes.count(typeid(T)) > 0;
+    const auto& type_indices = ValidTypeIndices4FieldNumber(field_number);
+    return FieldDefined4FieldNumber(field_number) && type_indices.count(typeid(T)) > 0;
   }
 
   bool FieldDefined4FieldName(const std::string& field_name) const {
@@ -41,8 +41,8 @@ class Message {
 
   template<typename T>
   const T* FieldPtr4FieldNumber(int field_number) const {
-    const auto& type_indexes = ValidTypeIndexes4FieldNumber(field_number);
-    if (type_indexes.count(typeid(T)) == 0) { return nullptr; }
+    const auto& type_indices = ValidTypeIndices4FieldNumber(field_number);
+    if (type_indices.count(typeid(T)) == 0) { return nullptr; }
     const void* void_ptr = FieldPtr4FieldNumber(field_number);
     if (void_ptr == nullptr) { return nullptr; }
     const T* __attribute__((__may_alias__)) ptr = reinterpret_cast<const T*>(void_ptr);
@@ -51,8 +51,8 @@ class Message {
 
   template<typename T>
   T* MutableFieldPtr4FieldNumber(int field_number) {
-    const auto& type_indexes = ValidTypeIndexes4FieldNumber(field_number);
-    if (type_indexes.count(typeid(T)) == 0) { return nullptr; }
+    const auto& type_indices = ValidTypeIndices4FieldNumber(field_number);
+    if (type_indices.count(typeid(T)) == 0) { return nullptr; }
     void* void_ptr = MutableFieldPtr4FieldNumber(field_number);
     if (void_ptr == nullptr) { return nullptr; }
     T* __attribute__((__may_alias__)) ptr = reinterpret_cast<T*>(void_ptr);
@@ -61,7 +61,7 @@ class Message {
 
   virtual int FieldNumber4FieldName(const std::string& field_name) const = 0;
   virtual bool FieldDefined4FieldNumber(int field_number) const = 0; 
-  virtual const std::set<std::type_index>& ValidTypeIndexes4FieldNumber(int field_number) const = 0;
+  virtual const std::set<std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const = 0;
   virtual const void* FieldPtr4FieldNumber(int field_number) const = 0;
   virtual void* MutableFieldPtr4FieldNumber(int field_number) { return nullptr; }
 
