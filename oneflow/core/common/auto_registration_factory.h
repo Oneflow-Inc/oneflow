@@ -46,8 +46,8 @@ struct AutoRegistrationFactory {
   };
 
   Base* New(Key k, Args&&... args) {
-    auto creators_it = mutable_creators()->find(k);
-    CHECK(creators_it != mutable_creators()->end()) << "Unregistered: " << k;
+    auto creators_it = creators().find(k);
+    CHECK(creators_it != creators().end()) << "Unregistered: " << k;
     return creators_it->second(std::forward<Args>(args)...);
   }
 
