@@ -31,13 +31,9 @@ def tensor_buffer_to_tensor(
     instance_shape: Sequence[int],
     name: Optional[str] = None,
 ) -> BlobDef:
-    r"""Converts the Blob's type from TensorBuffer to Tensor. 
-
-    In some situations, Our input tensor shape is not fixed. For example, when we read some images, 
-    each image's shape is different, we can't allocatate the fixed memory in GPU. So we use a more dynamic 
-    tensor `TensorBuffer`. After some operations like `flow.images.Resize` , the tensor shape is fixed, 
-    so we can allocate the corresponding memory in GPU. Thus we need to convert `TensorBuffer` to `Tensor`.
-
+    r"""This operator converts the Blob's type from TensorBuffer to Tensor. 
+    Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
+    to `Tensor`. 
 
     Args:
         x (BlobDef): Input `Blob`.
@@ -91,17 +87,11 @@ def tensor_buffer_to_tensor(
 def tensor_to_tensor_buffer(
     x: BlobDef, instance_dims: int, name: Optional[str] = None,
 ) -> BlobDef:
-    r"""Converts the Blob's type from Tensor to TensorBuffer. 
-
-    In some situations, Our input tensor shape is not fixed. For example, when we read some images, 
-    each image's shape is different, we can't allocatate the fixed memory in GPU. So we use a more dynamic 
-    tensor `TensorBuffer`. After some operations like `flow.images.Resize` , the tensor shape is fixed, 
-    so we can allocate the corresponding memory in GPU. Thus we need to convert `TensorBuffer` to `Tensor`.
-
+    r"""This operator converts the Blob's type from Tensor to TensorBuffer. 
 
     Args:
         x (BlobDef): Input `Blob`.
-        instance_dims (int): The dims of dynamic tensor instance. 
+        instance_dims (int): The dimensions of dynamic tensor instance. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
