@@ -19,6 +19,7 @@ from contextlib import contextmanager
 
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
+import oneflow.python.framework.scope_util as scope_util
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import traceback
 
@@ -62,7 +63,7 @@ def name_scope(name: str) -> None:
 
     sess = session_context.GetDefaultSession()
     try:
-        with sess.NewCurrentScope(sess.MakeScope(BuildScope)):
+        with scope_util.ScopeContext(scope_util.MakeScope(BuildScope)):
             yield
     finally:
         name_scope_stack_pop()

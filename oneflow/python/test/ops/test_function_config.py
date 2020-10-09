@@ -26,7 +26,7 @@ class TestFunctionConfig(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo():
             test_case.assertEqual(
-                "cpu", flow.placement.current_scope().default_device_tag
+                "cpu", flow.current_scope().device_parallel_desc_symbol.device_tag
             )
             return flow.get_variable(
                 "w", (10,), initializer=flow.constant_initializer(1)
