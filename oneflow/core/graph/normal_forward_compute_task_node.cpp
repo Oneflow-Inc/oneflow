@@ -25,9 +25,9 @@ namespace oneflow {
 namespace {
 
 size_t RegstNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
-  if (IsClassRegistered<RuntimeRegstNum4OpSameOutputBlob>(op_type_case)) {
+  if (IsClassRegistered<int32_t, RuntimeRegstNum4OpSameOutputBlob>(op_type_case)) {
     std::unique_ptr<RuntimeRegstNum4OpSameOutputBlob> ptr;
-    ptr.reset(NewObj<RuntimeRegstNum4OpSameOutputBlob>(op_type_case));
+    ptr.reset(NewObj<int32_t, RuntimeRegstNum4OpSameOutputBlob>(op_type_case));
     return *ptr;
   } else {
     return -1;
