@@ -276,7 +276,7 @@ REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemo
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
   return std::unique_ptr<DefaultMemoryCopierCreator>(
-             NewObj<DefaultMemoryCopierCreator>(device_type))
+             NewObj<int32_t, DefaultMemoryCopierCreator>(device_type))
       ->Create();
 }
 

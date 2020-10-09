@@ -108,8 +108,8 @@ class DefaultMemoryCopierCreator final {
   const Func func_;
 };
 
-#define REGISTER_DEFAULT_MEMORY_COPIER(device_type, func)         \
-  REGISTER_CLASS_CREATOR(device_type, DefaultMemoryCopierCreator, \
+#define REGISTER_DEFAULT_MEMORY_COPIER(device_type, func)                  \
+  REGISTER_CLASS_CREATOR(int32_t, device_type, DefaultMemoryCopierCreator, \
                          ([] { return new DefaultMemoryCopierCreator(func); }))
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type);
