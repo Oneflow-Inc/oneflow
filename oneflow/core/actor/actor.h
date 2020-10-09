@@ -252,7 +252,7 @@ class Actor {
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 
-#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, Actor, ActorType)
+#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(int32_t, task_type, Actor, ActorType)
 
 }  // namespace oneflow
 

@@ -29,7 +29,7 @@ void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& par
                                JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
-  auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
+  auto* obj = NewObj<int32_t, GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
   obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
