@@ -56,6 +56,24 @@ def OFRecordRawDecoder(
     )
 
 
+@oneflow_export("data.OFRecordBytesDecoder", "data.ofrecord_bytes_decoder")
+def OFRecordBytesDecoder(
+    input_blob: BlobDef, blob_name: str, name: Optional[str] = None,
+) -> BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("OFRecordBytesDecoder_")
+    return (
+        flow.user_op_builder(name)
+        .Op("ofrecord_bytes_decoder")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("name", blob_name)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export(
     "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
 )
