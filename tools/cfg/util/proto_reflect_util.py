@@ -56,7 +56,7 @@ class ProtoReflectionUtil:
         if package:
             return (cls.full_name)[len(package) + 1 :].replace(".", "_")
         else:
-            return (cls.full_name)[len(package) :].replace(".", "_")
+            return (cls.full_name).replace(".", "_")
 
     def class_name_under_line(self, cls):
         return "_" + self.class_name(cls) + "_"
@@ -201,35 +201,45 @@ class ProtoReflectionUtil:
         if package:
             return (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
         else:
-            return (field.message_type.full_name)[len(package) :].replace(".", "_")
+            return (field.message_type.full_name).replace(".", "_")
 
     def field_message_type_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package
         if package:
-            return (
-                "::"
-                + package.replace(".", "::")
-                + "::cfg::"
-                + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+            return "::%s::cfg::%s" % (
+                package.replace(".", "::"),
+                (field.message_type.full_name)[len(package) + 1 :].replace(".", "_"),
             )
+            # return (
+            #     "::"
+            #     + package.replace(".", "::")
+            #     + "::cfg::"
+            #     + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+            # )
         else:
-            return "::cfg::" + (field.message_type.full_name)[len(package) :].replace(
-                ".", "_"
-            )
+            return "::cfg::%" % ((field.message_type.full_name).replace(".", "_"))
+            # return "::cfg::" + (field.message_type.full_name).replace(
+            #     ".", "_"
+            # )
 
     def field_message_type_name_with_proto_namespace(self, field):
         package = field.message_type.file.package
         if package:
-            return (
-                "::"
-                + package.replace(".", "::")
-                + "::"
-                + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+            return "::%s::%s" % (
+                package.replace(".", "::"),
+                (field.message_type.full_name)[len(package) + 1 :].replace(".", "_"),
             )
+            # return (
+            #     "::"
+            #     + package.replace(".", "::")
+            #     + "::"
+            #     + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+            # )
         else:
-            return "::" + (field.message_type.full_name)[len(package) :].replace(
-                ".", "_"
-            )
+            return "::%" % ((field.message_type.full_name).replace(".", "_"))
+            # return "::" + (field.message_type.full_name).replace(
+            #     ".", "_"
+            # )
 
     def field_repeated_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)

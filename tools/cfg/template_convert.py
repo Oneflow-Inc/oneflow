@@ -39,7 +39,6 @@ def convert_hpp(dst_hpp_path):
     dst_file.close()
 
 
-
 def convert_pybind(dst_pybind_path):
     if not os.path.exists(os.path.dirname(dst_pybind_path)):
         if os.path.dirname(dst_pybind_path):
