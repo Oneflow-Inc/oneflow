@@ -99,6 +99,7 @@ def test_gather(test_case):
     global g_samples
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
+    flow.config.gpu_device_num(1)
     for sample in g_samples:
         input = np.array(sample["input"]).astype(np.float32)
         index = np.array(sample["index"]).astype(np.int32)

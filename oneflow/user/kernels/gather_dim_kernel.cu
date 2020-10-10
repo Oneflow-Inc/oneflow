@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/gather_dim_util.h"
+#include "oneflow/user/kernels/gather_dim_kernel_util.h"
 
 namespace oneflow {
 
@@ -30,7 +30,7 @@ class GatherDimGpuKernel final : public user_op::OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
 
     if (index_tensor->shape().elem_cnt() == 0) { return; }
@@ -43,7 +43,7 @@ class GatherDimGpuKernel final : public user_op::OpKernel {
     CoordinateOffsetConverter<IDX_T> index_nd_helper(index_tensor->shape());
     int64_t elem_cnt = input_tensor->shape().elem_cnt();
     RUN_CUDA_KERNEL((DoCUDAGatherDim<IN_T, IDX_T>), ctx->device_ctx(),
-                    BlocksNum4ThreadsNum(elem_cnt),  // TODO: how to choose thread num?
+                    BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, index_nd_helper, elem_cnt, dim, index, input, output);
   }
 
@@ -60,7 +60,7 @@ class ScatterDimAddGpuKernel final : public user_op::OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
 
     if (index_tensor->shape().elem_cnt() == 0) { return; }
@@ -89,7 +89,7 @@ class ScatterDimAddGpuKernel<DeviceType::kGPU, float16, IDX_T> final : public us
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
     const Shape& shape = ctx->Attr<Shape>("shape");
 

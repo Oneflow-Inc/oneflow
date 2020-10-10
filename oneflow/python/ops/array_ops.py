@@ -935,7 +935,7 @@ def gather_dim(
     input: remote_blob_util.BlobDef,
     dim: int,
     index: remote_blob_util.BlobDef,
-    out: remote_blob_util.BlobDef = None,
+    output: remote_blob_util.BlobDef = None,
     sparse_grad: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -946,7 +946,7 @@ def gather_dim(
         .Op("gather_dim")
         .Input("input", [input])
         .Input("index", [index])
-        .Output("out")
+        .Output("output")
         .Attr("dim", int(dim))
         .Build()
         .InferAndTryRun()

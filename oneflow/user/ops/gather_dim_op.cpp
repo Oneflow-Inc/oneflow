@@ -21,7 +21,7 @@ namespace user_op {
 REGISTER_USER_OP("gather_dim")
     .Input("input")
     .Input("index")
-    .Output("out")
+    .Output("output")
     .Attr("dim", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
@@ -44,7 +44,7 @@ REGISTER_USER_OP("gather_dim")
         CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
       }
 
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_shape() = index->shape();
       *out->mut_data_type() = in->data_type();
 
@@ -64,7 +64,7 @@ REGISTER_USER_OP("gather_dim")
             indices_batch_axis->value(),
             ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
       }
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *indices_batch_axis;
+      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -78,18 +78,18 @@ REGISTER_USER_OP("gather_dim")
           ctx->NewBuilder()
               .Split(user_op::OpArg("index", 0), i)
               .Split(user_op::OpArg("input", 0), i)
-              .Split(user_op::OpArg("out", 0), i)
+              .Split(user_op::OpArg("output", 0), i)
               .Build();
         }else if(i == dim){
           ctx->NewBuilder()
               .Split(user_op::OpArg("input", 0), i)
               .Broadcast(user_op::OpArg("index", 0))
-              .Broadcast(user_op::OpArg("out", 0))
+              .Broadcast(user_op::OpArg("output", 0))
               .Build();
           ctx->NewBuilder()
               .Broadcast(user_op::OpArg("input", 0))
               .Split(user_op::OpArg("index", 0), i)
-              .Split(user_op::OpArg("out", 0), i)
+              .Split(user_op::OpArg("output", 0), i)
               .Build();   
         }
 
@@ -98,13 +98,13 @@ REGISTER_USER_OP("gather_dim")
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("input", 0))
           .Broadcast(user_op::OpArg("index", 0))
-          .Broadcast(user_op::OpArg("out", 0))
+          .Broadcast(user_op::OpArg("output", 0))
           .Build();
 
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("input", 0))
           .PartialSum(user_op::OpArg("index", 0))
-          .PartialSum(user_op::OpArg("out", 0))
+          .PartialSum(user_op::OpArg("output", 0))
           .Build();
       return Maybe<void>::Ok();
     });
@@ -113,7 +113,7 @@ REGISTER_USER_OP("scatter_dim_add_like")
     .Input("like")
     .Input("src")
     .Input("index")
-    .Output("out")
+    .Output("output")
     .Attr("dim", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
@@ -144,7 +144,7 @@ REGISTER_USER_OP("scatter_dim_add_like")
         CHECK_LE_OR_RETURN(index->shape().At(i), params_shape.At(i));
       }
 
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_shape() = params_shape;
       *out->mut_data_type() = src->data_type();
 
@@ -165,16 +165,16 @@ REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardO
     return builder
         .OpTypeName("scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
         .InputBind("index", ctx->FwOp().input("index", 0))    // scatter.index <- gather.index
-        .InputBind("src", ctx->FwOp().output_grad("out", 0))  // scatter.src <- grad of gather.out
+        .InputBind("src", ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
         .InputBind("like", ctx->FwOp().input("input", 0))
-        .Output("out")
+        .Output("output")
         .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
         .Build();
   });
 
   ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
                             [&ctx, &op_grad_name]() -> const std::string& {
-                              return ctx->GetOp(op_grad_name).output("out", 0);
+                              return ctx->GetOp(op_grad_name).output("output", 0);
                             });
 });
 
