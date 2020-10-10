@@ -178,8 +178,9 @@ class KernelIf : public Kernel {
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
-  REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
-#define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, k, Kernel, KernelType, const KernelConf&)
+#define REGISTER_KERNEL_CREATOR(k, f) \
+  REGISTER_CLASS_CREATOR(int32_t, k, Kernel, f, const KernelConf&)
 
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
                                               DeviceCtx*);

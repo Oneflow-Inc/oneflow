@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -71,6 +71,6 @@ class Global<IBVerbsCommNet> final {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_
