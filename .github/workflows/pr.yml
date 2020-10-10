@@ -1,3 +1,5 @@
+name: Check PR
+
 on:
     pull_request:
      types: [opened, labeled, unlabeled, synchronize]
