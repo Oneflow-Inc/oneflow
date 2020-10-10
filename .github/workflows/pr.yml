@@ -5,13 +5,13 @@ on:
     types: [opened, labeled, unlabeled, synchronize]
 
 jobs:
-  check_pr_labels:
+  check_labels:
     runs-on: ubuntu-latest
-    name: Check PR labels
+    name: Check labels
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Check PR labels
+      - name: Check labels
         uses: OneFlow-Inc/verify-pr-label-action@master
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
