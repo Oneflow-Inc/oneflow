@@ -222,10 +222,12 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
                             v + i, scale, l1, l2, beta1, beta2, epsilon);
   }
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &norm_buffer[0]);
-  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, &norm_buffer[1]);
+  T* w_norm = norm_buffer;
+  T* g_norm = norm_buffer + 1;
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, w_norm);
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, g_norm);
   KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
-  const float lr = LambLRFunctor<T>()(*learning_rate, adam, norm_buffer);
+  const float lr = LambLRFunctor<T>()(*learning_rate, adam, w_norm, g_norm);
   FOR_RANGE(int64_t, i, 0, n) {
     LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i);
   }

@@ -288,9 +288,9 @@ __global__ void LambGradGpu(int64_t n, T scale, float l1, float l2, float beta1,
 
 template<typename T>
 __global__ void LambUpdateGpu(int64_t n, float weight_decay, bool adam, const float* learning_rate,
-                              const T* norm_buffer, const T* beta1_t, const T* beta2_t,
+                              const T* w_norm, const T* g_norm, const T* beta1_t, const T* beta2_t,
                               const T* adam_diff, T* model) {
-  const float lr = LambLRFunctor<T>()(*learning_rate, adam, norm_buffer);
+  const float lr = LambLRFunctor<T>()(*learning_rate, adam, w_norm, g_norm);
   CUDA_1D_KERNEL_LOOP(i, n) { LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i); }
 }
 
@@ -359,11 +359,13 @@ void LambUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, scale_by_ptr, model_diff,
       adam_diff, model, m, v);
-  KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &norm_buffer[0]);
-  KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, &norm_buffer[1]);
+  T* w_norm = norm_buffer;
+  T* g_norm = norm_buffer + 1;
+  KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, w_norm);
+  KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, g_norm);
   KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
   LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, weight_decay, adam, learning_rate, norm_buffer, beta1_t, beta2_t, adam_diff, model);
+      n, weight_decay, adam, learning_rate, w_norm, g_norm, beta1_t, beta2_t, adam_diff, model);
   if (adam) {
     AdamUpdateBetaTGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(beta1, beta2, beta1_t, beta2_t);
   }
