@@ -30,7 +30,11 @@ import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
+
+oneflow_api = oneflow.oneflow_api
 
 
 @oneflow_export("assign")
@@ -75,6 +79,17 @@ def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=
     vm_util.LogicalRun(
         lambda builder: boxing_util.BuildAssignInstruction(
             builder, ref.blob_object, value.blob_object, op_conf
+        )
+    )
+    return ref
+
+
+@oneflow_export("experimental.eager_assign_121")
+def api_one_to_one_assign(ref, value):
+    assert hob.eager_execution_enabled(None)
+    vm_util.LogicalRun(
+        lambda builder: builder.Build121AssignInstruction(
+            ref.blob_object, value.blob_object
         )
     )
     return ref

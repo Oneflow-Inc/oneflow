@@ -64,7 +64,7 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
           SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
       CompTaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
       SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
-      const auto src_machine_id = src_parallel_desc.MachineIdForParallelId(0);
+      const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, src_machine_id,
                          Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_machine_id));
