@@ -7,11 +7,11 @@ on:
 jobs:
   check_labels:
     runs-on: ubuntu-latest
-    name: Check labels
+    name: Labels
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Labels
+      - name: Check labels
         uses: OneFlow-Inc/verify-pr-label-action@master
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
