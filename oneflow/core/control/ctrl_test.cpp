@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -31,30 +32,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
-  sockaddr_in sa;
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
-  return sa;
-}
-
-int FindAvailablePort() {
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-
-  for (uint16_t port = 10000; port < GetMaxVal<uint16_t>(); ++port) {
-    sockaddr_in sa = GetSockAddr("0.0.0.0", port);
-    int bind_result = bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
-    if (bind_result == 0) {
-      shutdown(sock, SHUT_RDWR);
-      close(sock);
-      return port;
-    }
-  }
-
-  return -1;
-}
 
 EnvProto GetEnvProto(int port) {
   EnvProto ret;
@@ -77,7 +54,7 @@ Resource GetResource() {
 }  // namespace
 
 TEST(CtrlServer, new_delete) {
-  int port = FindAvailablePort();
+  int port = CtrlUtil().FindAvailablePort();
   if (port == -1) { return; }
   EnvProto env_proto = GetEnvProto(port);
   Global<EnvDesc>::New(env_proto);
