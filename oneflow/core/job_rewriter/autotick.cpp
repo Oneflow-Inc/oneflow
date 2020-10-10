@@ -24,8 +24,8 @@ namespace {
 
 std::unique_ptr<MutOpConTickInputHelper> NewMutOpConTickInputHelper(const OperatorConf& op_conf) {
   std::unique_ptr<MutOpConTickInputHelper> ret;
-  if (IsClassRegistered<MutOpConTickInputHelper>(op_conf.op_type_case())) {
-    ret.reset(NewObj<MutOpConTickInputHelper>(op_conf.op_type_case()));
+  if (IsClassRegistered<int32_t, MutOpConTickInputHelper>(op_conf.op_type_case())) {
+    ret.reset(NewObj<int32_t, MutOpConTickInputHelper>(op_conf.op_type_case()));
     ret->InitFromOpConf(op_conf);
   }
   return ret;
