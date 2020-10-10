@@ -60,8 +60,9 @@ Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {
-  return NewObj<NormalModelUpdtOp>(op_conf.normal_mdupdt_conf().user_conf().normal_mdupdt_case());
-});
+REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, ([](const OperatorConf& op_conf) -> Operator* {
+                      return NewObj<int32_t, NormalModelUpdtOp>(
+                          op_conf.normal_mdupdt_conf().user_conf().normal_mdupdt_case());
+                    }));
 
 }  // namespace oneflow

@@ -247,8 +247,7 @@ REGISTER_USER_OP("sgd_update")
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("indexed_slices_sgd_update")
     .Input("model")
@@ -281,8 +280,7 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("momentum_update")
     .Input("model")
@@ -311,8 +309,7 @@ REGISTER_USER_OP("momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model")
@@ -350,8 +347,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("adam_update")
     .Input("model")
@@ -385,8 +381,7 @@ REGISTER_USER_OP("adam_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetAreaId(AreaType::kMdUpdtArea);
+    .SetInputArgModifyFn(AdamInputArgModifyFn);
 
 REGISTER_USER_OP("indexed_slices_adam_update")
     .Input("model")
@@ -433,8 +428,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetAreaId(AreaType::kMdUpdtArea);
+    .SetInputArgModifyFn(AdamInputArgModifyFn);
 
 REGISTER_USER_OP("lamb_update")
     .Input("m")

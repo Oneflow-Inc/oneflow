@@ -130,7 +130,7 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   return prop.totalGlobalMem;
 }
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace {
 
@@ -193,7 +193,7 @@ void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
 #endif
 
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   cpu_set_t saved_cpu_set;
@@ -207,7 +207,7 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
 }
 
 void CudaDeviceSetCpuAffinity(int32_t dev) {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);

@@ -197,7 +197,8 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
     }
     auto IsTickNode = [&](const LogicalNode* node) {
-      return IsClassRegistered<IsTickTockOpTypeCase>(node->SoleOp()->op_conf().op_type_case());
+      return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(
+          node->SoleOp()->op_conf().op_type_case());
     };
     if (IsTickNode(src_node) || IsTickNode(dst_node)) {
       if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
@@ -273,11 +274,11 @@ CompTaskNode* NormalForwardLogicalNode::NewCompTaskNode() const {
 
 int64_t NormalForwardLogicalNode::GetAreaId() const {
   if (this->SoleOp()->op_conf().has_user_conf()) {
-    auto* registration_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
-        this->SoleOp()->op_conf().user_conf().op_type_name());
-    CHECK_NOTNULL(registration_val);
-    if (registration_val->area_id != AreaType::kInvalidArea) {
-      return registration_val->area_id;
+    const std::string& op_type_name = this->SoleOp()->op_conf().user_conf().op_type_name();
+    if (IsClassRegistered<std::string, UserOpAreaIdCreator>(op_type_name)) {
+      return std::unique_ptr<UserOpAreaIdCreator>(
+                 NewObj<std::string, UserOpAreaIdCreator>(op_type_name))
+          ->GetAreaId();
     } else {
       return AreaType::kDataForwardArea;
     }
@@ -296,5 +297,12 @@ int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;
   return ++next_area_id;
 }
+
+REGISTER_USER_OP_AREA_ID("sgd_update", AreaType::kMdUpdtArea)
+REGISTER_USER_OP_AREA_ID("indexed_slices_sgd_update", AreaType::kMdUpdtArea)
+REGISTER_USER_OP_AREA_ID("momentum_update", AreaType::kMdUpdtArea)
+REGISTER_USER_OP_AREA_ID("indexed_slices_momentum_update", AreaType::kMdUpdtArea)
+REGISTER_USER_OP_AREA_ID("adam_update", AreaType::kMdUpdtArea)
+REGISTER_USER_OP_AREA_ID("indexed_slices_adam_update", AreaType::kMdUpdtArea)
 
 }  // namespace oneflow
