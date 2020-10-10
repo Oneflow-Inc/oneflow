@@ -38,6 +38,9 @@ import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
+import oneflow
+
+oneflow_api = oneflow.oneflow_api
 
 
 def PhysicalRun(build):
@@ -413,6 +416,56 @@ class InstructionsBuilder(object):
             parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
         )
         return OpKernelObject(object_id, op_conf, self.release_object_)
+
+    def Build121AssignInstruction(self, ref_blob_object, value_blob_object):
+        parallel_num = ref_blob_object.parallel_desc_symbol.parallel_num
+        assert parallel_num == value_blob_object.parallel_desc_symbol.parallel_num
+        token_ids = (
+            [oneflow_api.NewTokenId() for _ in range(parallel_num)],
+            [oneflow_api.NewTokenId() for _ in range(parallel_num)],
+        )
+        self._BuildSendInstruction(
+            ref_blob_object.parallel_desc_symbol, value_blob_object, token_ids
+        )
+        self._BuildRecvInstruction(
+            value_blob_object.parallel_desc_symbol, ref_blob_object, token_ids
+        )
+
+    def _BuildSendInstruction(
+        self, dst_parallel_desc_symbol, src_blob_object, token_ids
+    ):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "SendBlob"
+        instruction.parallel_desc_symbol_id = (
+            src_blob_object.parallel_desc_symbol.symbol_id
+        )
+        instruction.operand.append(_SymbolOperand(dst_parallel_desc_symbol.symbol_id))
+        instruction.operand.append(_ConstOperand(src_blob_object.object_id))
+        instruction.operand.append(_OperandSeparator())
+        for token_id in token_ids[0]:
+            instruction.operand.append(_Uint64Operand(token_id))
+        instruction.operand.append(_OperandSeparator())
+        for token_id in token_ids[1]:
+            instruction.operand.append(_Uint64Operand(token_id))
+        self.instruction_list_.instruction.append(instruction)
+
+    def _BuildRecvInstruction(
+        self, src_parallel_desc_symbol, dst_blob_object, token_ids
+    ):
+        instruction = instr_util.InstructionProto()
+        instruction.instr_type_name = "ReceiveBlob"
+        instruction.parallel_desc_symbol_id = (
+            dst_blob_object.parallel_desc_symbol.symbol_id
+        )
+        instruction.operand.append(_SymbolOperand(src_parallel_desc_symbol.symbol_id))
+        instruction.operand.append(_Mut2Operand(dst_blob_object.object_id))
+        instruction.operand.append(_OperandSeparator())
+        for token_id in token_ids[0]:
+            instruction.operand.append(_Uint64Operand(token_id))
+        instruction.operand.append(_OperandSeparator())
+        for token_id in token_ids[1]:
+            instruction.operand.append(_Uint64Operand(token_id))
+        self.instruction_list_.instruction.append(instruction)
 
     def _NewOpKernelObject(self, parallel_desc_symbol, job_desc_sym, op_conf_sym):
         object_id = self._NewObjectId(parallel_desc_symbol)
@@ -950,6 +1003,7 @@ class InstructionsBuilder(object):
     def _DeleteObject(self, blob_object):
         instruction = instr_util.InstructionProto()
         instruction.instr_type_name = "DeleteObject"
+        instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_DelObjectOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
@@ -1004,6 +1058,12 @@ def _DelObjectOperand(val):
 def _Int64Operand(val):
     operand = instr_util.InstructionOperandProto()
     operand.int64_operand = val
+    return operand
+
+
+def _Uint64Operand(val):
+    operand = instr_util.InstructionOperandProto()
+    operand.uint64_operand = val
     return operand
 
 
