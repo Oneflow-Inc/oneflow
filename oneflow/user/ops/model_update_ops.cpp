@@ -450,8 +450,7 @@ REGISTER_USER_OP("lamb_update")
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     // every bn has sbp broadcast signature
-    .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetAreaId(AreaType::kMdUpdtArea);
+    .SetInputArgModifyFn(LambInputArgModifyFn);
 
 }  // namespace
 
