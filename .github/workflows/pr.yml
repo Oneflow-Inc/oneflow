@@ -16,4 +16,4 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           required-type-labels: 'bug, enhancement, purge, feature'
-          required-component-labels: 'op, system, eager, build, xla, python, ci, test, tooling'
+          required-component-labels: 'op, system, eager, build, xla, python, ci, test, tooling, onnx'
