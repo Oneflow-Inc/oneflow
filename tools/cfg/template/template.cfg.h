@@ -18,8 +18,6 @@ namespace {{ package }} {
 {% endfor %}
 namespace cfg {
 
-using PbMessage = ::google::protobuf::Message;
-
 {% for enm in util.module_enum_types(module) %}
 enum {{ util.enum_name(enm) }} {
 {% for value in util.enum_values(enm) %}
@@ -732,6 +730,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   }
   ~Const{{ util.class_name(cls) }}() override = default;
 
+  using PbMessage = ::google::protobuf::Message;
   void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override {
     __SharedPtrOrDefault__()->ToProto(dynamic_cast<{{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}*>(proto_{{ util.class_name(cls).lower() }}));
   }
@@ -928,8 +927,9 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   // enable nothrow for std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept = default;
   {{ util.class_name(cls) }}() = default;
-  {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }})
-    : Const{{ util.class_name(cls) }}(proto_{{ util.class_name(cls).lower() }}) {}
+  {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
+    InitFromProto(proto_{{ util.class_name(cls).lower() }});
+  }
 
   ~{{ util.class_name(cls) }}() = default;
 

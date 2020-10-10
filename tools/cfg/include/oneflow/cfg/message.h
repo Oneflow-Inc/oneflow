@@ -17,7 +17,6 @@ namespace oneflow {
 namespace cfg {
 
 
-using PbMessage = ::google::protobuf::Message;
 class Message {
  public:
   Message() = default;
@@ -73,6 +72,8 @@ class Message {
   virtual const std::set<std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const = 0;
   virtual const void* FieldPtr4FieldNumber(int field_number) const = 0;
   virtual void* MutableFieldPtr4FieldNumber(int field_number) { return nullptr; }
+  
+  using PbMessage = ::google::protobuf::Message;
   virtual void ToProto(PbMessage*) const = 0;
   virtual void InitFromProto(const PbMessage&) {};
 
