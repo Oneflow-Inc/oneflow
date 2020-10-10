@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -79,4 +79,4 @@ TEST(CtrlServer, new_delete) {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

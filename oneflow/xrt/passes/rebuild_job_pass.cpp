@@ -61,7 +61,10 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
                                                                            fixed_blob_name);
       break;
     }
-    default: ReplaceStrValInPbFdOrPbRpf(spec_conf, input, blob_name, fixed_blob_name);
+    default: {
+      const auto& old_val = ReplaceStrValInPbFdOrPbRpf(spec_conf, input, fixed_blob_name);
+      CHECK_EQ(old_val, blob_name);
+    }
   }
 }
 

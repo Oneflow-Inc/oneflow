@@ -168,9 +168,6 @@ class EagerUserOp(UserOp):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
 
-in_physical_placement = hob.env_initialized & hob.is_current_placement_physical
-
-
 @oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()

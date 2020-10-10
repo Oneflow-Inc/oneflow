@@ -32,10 +32,6 @@ Maybe<void> NormalModelUpdtOp::InferBlobDescs(
   return MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-const PbMessage& NormalModelUpdtOp::GetCustomizedConf() const {
-  return op_conf().normal_mdupdt_conf();
-}
-
 LogicalBlobId NormalModelUpdtOp::lbi4obn(const std::string& output_bn) const {
   const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
@@ -64,8 +60,9 @@ Maybe<void> NormalModelUpdtOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {
-  return NewObj<NormalModelUpdtOp>(op_conf.normal_mdupdt_conf().user_conf().normal_mdupdt_case());
-});
+REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, ([](const OperatorConf& op_conf) -> Operator* {
+                      return NewObj<int32_t, NormalModelUpdtOp>(
+                          op_conf.normal_mdupdt_conf().user_conf().normal_mdupdt_case());
+                    }));
 
 }  // namespace oneflow

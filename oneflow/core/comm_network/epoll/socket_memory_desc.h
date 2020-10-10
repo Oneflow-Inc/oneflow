@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -29,6 +29,6 @@ struct SocketMemDesc {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_

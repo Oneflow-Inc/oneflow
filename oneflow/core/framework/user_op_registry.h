@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
-#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 
@@ -48,8 +47,7 @@ using GetOutputArgModifier =
 using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
 
 struct OpRegistryResult {
-  OpRegistryResult()
-      : cpu_only_supported(false), same_output_regst_num(-1), area_id(AreaType::kInvalidArea) {}
+  OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
@@ -64,7 +62,6 @@ struct OpRegistryResult {
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
   OutputArgModifyFn output_arg_modify_fn;
-  int64_t area_id;
 };
 
 class OpRegistry final {
@@ -87,7 +84,6 @@ class OpRegistry final {
 
   OpRegistry& SupportCpuOnly();
   OpRegistry& SetOutputBufferNum(int32_t num);
-  OpRegistry& SetAreaId(int64_t area_id);
 
   OpRegistry& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>

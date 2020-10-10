@@ -30,7 +30,7 @@ import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.scope_util as scope_util
+import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.placement_context as placement_ctx
@@ -360,7 +360,7 @@ class InstructionsBuilder(object):
         serialized_scope_proto = scope_proto.SerializeToString()
         if symbol_storage.HasSymbol4SerializedScopeProto(serialized_scope_proto):
             return symbol_storage.GetSymbol4SerializedScopeProto(serialized_scope_proto)
-        symbol = scope_util.ScopeSymbol(symbol_id, scope_proto, parent_scope_symbol)
+        symbol = scope_symbol.ScopeSymbol(symbol_id, scope_proto, parent_scope_symbol)
         symbol_storage.SetSymbol4Id(symbol_id, symbol)
         symbol_storage.SetSymbol4SerializedScopeProto(serialized_scope_proto, symbol)
         return symbol
