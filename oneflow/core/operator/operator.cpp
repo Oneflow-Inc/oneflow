@@ -39,7 +39,7 @@ DataType GetDataTypeFromBnInOpVec(
 
 std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf,
                                               const JobDesc* job_desc) {
-  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
+  Operator* rptr = NewObj<int32_t, Operator>(op_conf.op_type_case(), op_conf);
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
   if (IsCpuOnly(op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
   rptr->Init(op_conf, job_desc);
@@ -610,7 +610,7 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
 bool IsCpuOnly(const OperatorConf& op_conf) {
   OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
   using CpuOnly = OnlyCpuSupportPredicator;
-  auto* ptr = NewObj<CpuOnly>(op_type_case);
+  auto* ptr = NewObj<int32_t, CpuOnly>(op_type_case);
   CHECK(ptr != nullptr) << "op_conf\n" << op_conf.DebugString();
   if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
   if (!op_conf.has_user_conf()) { return false; }

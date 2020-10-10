@@ -27,7 +27,7 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     const SbpParallel& dst_sbp_parallel) const {
   const LogicalNode* dst_logical_node = sorted_dst_comp_tasks.front()->logical_node();
   if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
-  if (!IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(
+  if (!IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(
           dst_logical_node->SoleOp()->op_conf().op_type_case())) {
     return Error::BoxingNotSupportedError();
   }
