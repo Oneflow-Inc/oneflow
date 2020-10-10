@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/transport/transport.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
 
@@ -118,4 +118,4 @@ void SocketReadHelper::SetStatusWhenTransportMsgHeadDone() {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
