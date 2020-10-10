@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/comm_network/comm_network.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -73,6 +73,6 @@ using CallBackList = std::list<std::function<void()>>;
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_

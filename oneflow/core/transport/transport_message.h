@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -41,6 +41,6 @@ struct TransportMsg {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_TRANSPORT_TRANSPORT_MESSAGE_H_
