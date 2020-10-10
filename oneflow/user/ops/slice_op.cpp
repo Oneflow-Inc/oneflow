@@ -157,16 +157,12 @@ void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModi
 }
 
 Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
-  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  const int64_t ndim = x_shape->NumAxes();
-  Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-  *y_shape = *x_shape;
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = x_dtype;
+  const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const int64_t ndim = x_desc->shape().NumAxes();
+  const auto* update_desc = ctx->TensorDesc4ArgNameAndIndex("update", 0);
+  CHECK_EQ_OR_RETURN(update_desc->shape().NumAxes(), ndim);
+  CHECK_EQ_OR_RETURN(update_desc->data_type(), x_desc->data_type());
 
-  const Shape* update_shape = ctx->Shape4ArgNameAndIndex("update", 0);
-  CHECK_EQ_OR_RETURN(update_shape->NumAxes(), ndim);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("update", 0), x_dtype);
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
@@ -175,7 +171,7 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
   // validate update shape and start, stop, step attributes
   FOR_RANGE(int, i, 0, ndim) {
-    const int64_t dim_size = x_shape->At(i);
+    const int64_t dim_size = x_desc->shape().At(i);
     const int64_t step = step_vec.at(i);
     CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
     int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
@@ -189,9 +185,9 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
     }
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
     const int64_t sliced_dim_size = diff / step + 1;
-    CHECK_EQ_OR_RETURN(sliced_dim_size, update_shape->At(i))
+    CHECK_EQ_OR_RETURN(sliced_dim_size, update_desc->shape().At(i))
         << "sliced dim size " << sliced_dim_size << " at axis " << i
-        << " not equal to the update shape " << update_shape->ToString();
+        << " not equal to the update shape " << update_desc->shape().ToString();
   }
   // the split axis can't be sliced
   const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
@@ -200,8 +196,11 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
     CHECK_GE_OR_RETURN(split_axis, 0);
     CHECK_LT_OR_RETURN(split_axis, ndim);
     CHECK_OR_RETURN(IsFullSlice(start_vec.at(split_axis), stop_vec.at(split_axis),
-                                step_vec.at(split_axis), x_shape->At(split_axis)));
+                                step_vec.at(split_axis), x_desc->shape().At(split_axis)));
   }
+
+  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  *y_desc = *x_desc;
   return Maybe<void>::Ok();
 }
 
@@ -221,11 +220,6 @@ Maybe<void> GetSliceUpdateOpSbpSignature(user_op::SbpContext* ctx) {
     }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("x", 0))
-      .Broadcast(user_op::OpArg("update", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("x", 0))
       .PartialSum(user_op::OpArg("update", 0))
