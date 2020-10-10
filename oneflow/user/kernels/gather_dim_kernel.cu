@@ -62,7 +62,6 @@ class ScatterDimAddGpuKernel final : public user_op::OpKernel {
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
-    const Shape& shape = ctx->Attr<Shape>("shape");
 
     if (index_tensor->shape().elem_cnt() == 0) { return; }
 
@@ -74,7 +73,7 @@ class ScatterDimAddGpuKernel final : public user_op::OpKernel {
     CoordinateOffsetConverter<IDX_T> output_nd_helper(out_tensor->shape());
     int64_t elem_cnt = src_tensor->shape().elem_cnt();
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx->device_ctx(),
-                    BlocksNum4ThreadsNum(elem_cnt),  // TODO: how to choose thread num?
+                    BlocksNum4ThreadsNum(elem_cnt),
                     src_nd_helper, output_nd_helper, elem_cnt, dim, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -119,7 +118,7 @@ class ScatterDimAddGpuKernel<DeviceType::kGPU, float16, IDX_T> final : public us
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 #define REGISTER_SCATTERDIMADD_GPUKERNEL(device, in_type, indices_type)                 \
-  REGISTER_USER_KERNEL("scatter_dim_add")                                               \
+  REGISTER_USER_KERNEL("scatter_dim_add_like")                                               \
       .SetCreateFn<ScatterDimAddGpuKernel<device, OF_PP_PAIR_FIRST(in_type),            \
                                           OF_PP_PAIR_FIRST(indices_type)>>()            \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \

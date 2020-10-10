@@ -84,7 +84,7 @@ class ScatterDimAddKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 #define REGISTER_DIMSCATTER_KERNEL(device, in_type, indices_type)                       \
-  REGISTER_USER_KERNEL("scatter_dim_add")                                               \
+  REGISTER_USER_KERNEL("scatter_dim_add_like")                                               \
       .SetCreateFn<ScatterDimAddKernel<device, OF_PP_PAIR_FIRST(in_type),               \
                                        OF_PP_PAIR_FIRST(indices_type)>>()               \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \

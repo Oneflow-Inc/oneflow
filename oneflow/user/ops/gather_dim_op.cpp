@@ -55,18 +55,76 @@ REGISTER_USER_OP("gather_dim")
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
+      if (indices_batch_axis->has_value()) {
+        CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
+        CHECK_LT_OR_RETURN(
+            indices_batch_axis->value(),
+            ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
+      }
+      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *indices_batch_axis;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& index_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
+      int64_t index_num_axes = index_tensor.shape().NumAxes();
+      const int64_t dim = ctx->Attr<int64_t>("dim");
+
+      FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
+        if(i != dim){
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("index", 0), i)
+              .Split(user_op::OpArg("input", 0), i)
+              .Split(user_op::OpArg("out", 0), i)
+              .Build();
+        }else if(i == dim){
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("input", 0), i)
+              .Broadcast(user_op::OpArg("index", 0))
+              .Broadcast(user_op::OpArg("out", 0))
+              .Build();
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("input", 0))
+              .Split(user_op::OpArg("index", 0), i)
+              .Split(user_op::OpArg("out", 0), i)
+              .Build();   
+        }
+
+      }
+      
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("input", 0))
+          .Broadcast(user_op::OpArg("index", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
+
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("input", 0))
+          .PartialSum(user_op::OpArg("index", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
+      return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("scatter_dim_add")
+REGISTER_USER_OP("scatter_dim_add_like")
+    .Input("like")
     .Input("src")
     .Input("index")
     .Output("out")
     .Attr("dim", UserOpAttrType::kAtInt64)
-    .Attr("shape", UserOpAttrType::kAtShape)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
-      const Shape& params_shape = ctx->Attr<Shape>("shape");
+      const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
+      
+      CHECK_OR_RETURN(src != nullptr);
+      CHECK_OR_RETURN(index != nullptr);
+      CHECK_OR_RETURN(like != nullptr);
+
+      const Shape& params_shape = like->shape();
       int64_t dim = ctx->Attr<int64_t>("dim");
 
       int64_t src_num_axes = src->shape().NumAxes();
@@ -91,6 +149,12 @@ REGISTER_USER_OP("scatter_dim_add")
       *out->mut_data_type() = src->data_type();
 
       return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+      CHECK(like_arg_modifier != nullptr);
+      like_arg_modifier->set_use_header_only(true);
     });
 
 REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
@@ -99,12 +163,12 @@ REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardO
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder
-        .OpTypeName("scatter_dim_add")  // scatter_dim_add(dim, index, src) -> output
+        .OpTypeName("scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
         .InputBind("index", ctx->FwOp().input("index", 0))    // scatter.index <- gather.index
         .InputBind("src", ctx->FwOp().output_grad("out", 0))  // scatter.src <- grad of gather.out
+        .InputBind("like", ctx->FwOp().input("input", 0))
         .Output("out")
         .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
-        .Attr("shape", ctx->FwOp().TensorDesc4ArgNameAndIndex("out", 0).shape())
         .Build();
   });
 
