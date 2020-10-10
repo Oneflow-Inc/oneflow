@@ -189,7 +189,7 @@ def get_eager_variable(
         )
 
     if job_var_blob is None:
-        op_conf = _GenerateVariableOpConf(
+        op_conf = GenerateVariableOpConf(
             name=name,
             shape=shape,
             dtype=dtype,
@@ -250,7 +250,7 @@ def get_lazy_variable(
         )
 
     if job_var_blob is None:
-        op_conf = _GenerateVariableOpConf(
+        op_conf = GenerateVariableOpConf(
             name=name,
             shape=shape,
             dtype=dtype,
@@ -275,7 +275,7 @@ def get_lazy_variable(
     return job_var_blob
 
 
-def _GenerateVariableOpConf(
+def GenerateVariableOpConf(
     name,
     shape,
     dtype=None,
@@ -285,6 +285,7 @@ def _GenerateVariableOpConf(
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
+    need_root_path=True,
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -293,11 +294,14 @@ def _GenerateVariableOpConf(
     assert dtype is not None
     op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
-    root_path = (
-        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
-    )
-    dir_path = os.path.join(root_path, name)
-    file_path = os.path.join(dir_path, "out")
+    if need_root_path:
+        root_path = (
+            compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+        )
+        dir_path = os.path.join(root_path, name)
+        file_path = os.path.join(dir_path, "out")
+    else:
+        root_path = None
     if root_path and os.path.isfile(file_path):
         op_conf.variable_conf.initialize_with_snapshot.path = dir_path
         op_conf.variable_conf.initialize_with_snapshot.key = "out"
