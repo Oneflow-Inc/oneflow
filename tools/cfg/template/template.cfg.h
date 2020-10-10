@@ -911,7 +911,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     if (!*data_) { data_->reset(new _{{ util.class_name(cls) }}_()); }
     return data_;
   }
-  // use a protected member method to avoid someone change member method variable(data_) by Const{{ util.class_name(cls) }}
+  // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
   void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) {
     data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(dynamic_cast<const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}&>(proto_{{ util.class_name(cls).lower() }})));
   }
