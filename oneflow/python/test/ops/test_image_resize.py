@@ -441,7 +441,6 @@ def _test_image_resize_with_cv(
         test_case.assertTrue(np.allclose(of_new_size, cv_new_size))
 
 
-@unittest.skip("TODO(tsai): ask wx for help")
 @flow.unittest.skip_unless_1n1d()
 class TestImageResize(flow.unittest.TestCase):
     def test_image_resize_to_fixed_size(test_case):
