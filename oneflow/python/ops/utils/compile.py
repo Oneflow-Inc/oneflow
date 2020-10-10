@@ -83,11 +83,11 @@ class UserOpCompiler(object):
 
 class UserOpsLoader(object):
     def __init__(self):
-        pass
+        self.so_names = []
 
-    def LoadAll(self):
+    def Prepare(self):
         for op in op_so_names:
-            oneflow.config.load_library(op + ".so")
+            self.so_names.append(op + ".so")
         if len(py_op_types) > 0:
             # need to add py_kernel.cpp
             def get_one_reg_src(op_type_name):
@@ -128,4 +128,7 @@ class UserOpsLoader(object):
             py_lflags = lflags
             py_lflags += " -L" + sysconfig.get_paths()['stdlib']
             compile("g++", py_cflags, py_lflags, "cpp2py.o", "cpp2py.so")
-            oneflow.config.load_library("cpp2py.so")
+            self.so_names.append("cpp2py.so")
+
+    def GetAll(self):
+        return self.so_names

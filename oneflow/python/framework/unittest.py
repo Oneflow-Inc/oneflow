@@ -62,7 +62,8 @@ def register_test_cases(
             name for name in dir(module) if FilterMethodName(module, name)
         ]
         method_dict = {k: getattr(module, k) for k in test_func_names}
-        scope[class_name] = type(class_name, (test_case_mixin, base_class), method_dict)
+        scope[class_name] = type(
+            class_name, (test_case_mixin, base_class), method_dict)
 
 
 @oneflow_export("unittest.num_nodes_required")
@@ -155,7 +156,7 @@ class TestCase(unittest.TestCase):
             oneflow.env.init()
             _unittest_env_initilized = True
 
-        oneflow.clear_default_session()
+        # oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 
