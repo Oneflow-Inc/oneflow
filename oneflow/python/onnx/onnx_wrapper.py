@@ -16,7 +16,7 @@ limitations under the License.
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT license.
 
-# oneflow.python.onnx.graph - class to manage graph manipulation on top of onnx
+# oneflow.python.onnx.onnx_wrapper - class to manage graph manipulation on top of onnx
 
 from __future__ import division
 from __future__ import print_function
@@ -43,7 +43,7 @@ from onnx import (
 from oneflow.python.framework import id_util
 from oneflow.python.onnx import util
 from oneflow.python.onnx.util import FindOpset
-from oneflow.python.onnx import optimizer
+from oneflow.python.onnx.save import optimizer
 from oneflow.python.onnx.schemas import get_schema, InferOnnxShapeDtype
 from oneflow.python.onnx import constants
 
@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 class Node(object):
     """A Node - wrapper around onnx nodes that we use for graph manipulations."""
 
-    def __init__(self, node, graph, skip_conversion=False):
+    def __init__(self, node, graph=None, skip_conversion=False):
         """Create Node.
         Args:
             node: Onnx node in NodeProto
@@ -68,7 +68,8 @@ class Node(object):
         self._output = list(node.output)
         self.attrs = {}
 
-        graph.set_node_by_name(self)
+        if graph is not None:
+            graph.set_node_by_name(self)
         # dict to original attributes
         for a in node.attribute:
             attr_val = helper.get_attribute_value(a)

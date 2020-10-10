@@ -13,21 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT license.
+import torch
+from torch import nn
 
-# oneflow.python.onnx package
+from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
-__all__ = ["util", "onnx_wrapper", "schemas", "save"]
+# TODO(daquexian): add tests for 0 and -1 after flow.reshape supports it
+def test_reshape(test_case):
+    class Net(nn.Module):
+        def forward(self, x):
+            x = torch.reshape(x, (5, 12))
+            return x
 
-from oneflow.python.onnx import (
-    util,
-    onnx_wrapper,
-    schemas,
-    save,
-)  # pylint: disable=wrong-import-order
+    load_pytorch_module_and_check(test_case, Net, (2, 5, 3, 2))

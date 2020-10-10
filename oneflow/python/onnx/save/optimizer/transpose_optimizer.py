@@ -25,7 +25,7 @@ import numpy as np
 import onnx
 from oneflow.python.framework import id_util
 from oneflow.python.onnx.constants import NCHW_TO_NHWC, NHWC_TO_NCHW
-from .. import util
+from oneflow.python.onnx import util
 from .optimizer_base import GraphOptimizerBase
 
 

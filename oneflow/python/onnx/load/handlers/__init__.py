@@ -13,21 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT license.
+import os
+import pkgutil
 
-# oneflow.python.onnx package
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
-__all__ = ["util", "onnx_wrapper", "schemas", "save"]
-
-from oneflow.python.onnx import (
-    util,
-    onnx_wrapper,
-    schemas,
-    save,
-)  # pylint: disable=wrong-import-order
+__all__ = [
+    modname
+    for _, modname, _ in pkgutil.walk_packages(path=[os.path.split(__file__)[0]])
+]

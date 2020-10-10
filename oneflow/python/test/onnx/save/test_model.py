@@ -13,21 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT license.
+import os
+import numpy
+from absl import app
+from absl.testing import absltest
+import oneflow as flow
 
-# oneflow.python.onnx package
+flow.unittest.register_test_cases(
+    scope=globals(),
+    directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), "models"),
+    filter_by_num_nodes=lambda x: True,
+    base_class=absltest.TestCase,
+)
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
-__all__ = ["util", "onnx_wrapper", "schemas", "save"]
+def main(argv):
+    flow.env.init()
+    absltest.main()
 
-from oneflow.python.onnx import (
-    util,
-    onnx_wrapper,
-    schemas,
-    save,
-)  # pylint: disable=wrong-import-order
+
+if __name__ == "__main__":
+    app.run(main)

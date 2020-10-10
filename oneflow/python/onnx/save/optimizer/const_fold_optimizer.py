@@ -21,8 +21,8 @@ limitations under the License.
 # for example, input of transpose node is const then we can do transpose statically instead of at runtime
 
 from oneflow.python.framework import id_util
-from .. import util
-from .optimizer_base import GraphOptimizerBase
+from oneflow.python.onnx import util
+from oneflow.python.onnx.save.optimizer.optimizer_base import GraphOptimizerBase
 
 # pylint: disable=logging-not-lazy,unused-argument,missing-docstring
 

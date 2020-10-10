@@ -26,9 +26,9 @@ from __future__ import unicode_literals
 import collections
 import inspect
 
-from oneflow.python.onnx import constants
+from onnx import defs
 
-# pylint: disable=unused-argument,missing-docstring,invalid-name
+from oneflow.python.onnx import constants
 
 
 class flow_op:

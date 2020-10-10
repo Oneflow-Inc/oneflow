@@ -13,21 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT license.
+import torchvision
 
-# oneflow.python.onnx package
+from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
 
-__all__ = ["util", "onnx_wrapper", "schemas", "save"]
-
-from oneflow.python.onnx import (
-    util,
-    onnx_wrapper,
-    schemas,
-    save,
-)  # pylint: disable=wrong-import-order
+def test_resnet18(test_case):
+    load_pytorch_module_and_check(
+        test_case, torchvision.models.resnet18, input_size=(1, 3, 224, 224)
+    )

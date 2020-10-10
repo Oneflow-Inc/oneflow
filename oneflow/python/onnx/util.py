@@ -119,7 +119,7 @@ def Onnx2FlowDtype(dtype):
     for flow_dtype, onnx_dtype in FLOW_2_ONNX_DTYPE.items():
         if onnx_dtype == dtype:
             return flow_dtype
-    raise ValueError("unsupported dtype " + np_dtype + " for mapping")
+    raise ValueError("unsupported dtype " + dtype + " for mapping")
 
 
 def Numpy2OnnxDtype(np_dtype):
