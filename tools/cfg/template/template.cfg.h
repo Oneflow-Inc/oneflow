@@ -18,6 +18,8 @@ namespace {{ package }} {
 {% endfor %}
 namespace cfg {
 
+using PbMessage = ::google::protobuf::Message;
+
 {% for enm in util.module_enum_types(module) %}
 enum {{ util.enum_name(enm) }} {
 {% for value in util.enum_values(enm) %}
@@ -726,12 +728,12 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept = default;
   Const{{ util.class_name(cls) }}(): data_(::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>()) {}
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
-    data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(proto_{{ util.class_name(cls).lower() }}));
+    BuildFromProto(proto_{{ util.class_name(cls).lower() }});
   }
   ~Const{{ util.class_name(cls) }}() override = default;
 
-  void ToProto({{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}* proto_{{ util.class_name(cls).lower() }}) const {
-    __SharedPtrOrDefault__()->ToProto(proto_{{ util.class_name(cls).lower() }});
+  void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override {
+    __SharedPtrOrDefault__()->ToProto(dynamic_cast<{{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}*>(proto_{{ util.class_name(cls).lower() }}));
   }
   
   ::std::string DebugString() const {
@@ -903,6 +905,9 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     if (!*data_) { data_->reset(new _{{ util.class_name(cls) }}_()); }
     return data_;
   }
+  void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) {
+    data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(dynamic_cast<const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}&>(proto_{{ util.class_name(cls).lower() }})));
+  }
   // use std::shared_ptr for sharing reference between mutable object and const object
   // use std::unique_ptr for moving ownership 
   ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_;
@@ -916,11 +921,15 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   // enable nothrow for std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept = default;
   {{ util.class_name(cls) }}() = default;
-    {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }})
+  {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }})
     : Const{{ util.class_name(cls) }}(proto_{{ util.class_name(cls).lower() }}) {}
 
   ~{{ util.class_name(cls) }}() = default;
 
+  void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override {
+    BuildFromProto(proto_{{ util.class_name(cls).lower() }});
+  }
+  
   void* MutableFieldPtr4FieldNumber(int field_number) override {
     switch (field_number) {
 {% for field in util.message_type_fields(cls) %}

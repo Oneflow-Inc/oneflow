@@ -4,10 +4,19 @@
 #include <typeinfo>
 #include <typeindex>
 
+namespace google {
+namespace protobuf {
+
+class Message;
+
+}
+}
+
 namespace oneflow {
 namespace cfg {
 
 
+using PbMessage = ::google::protobuf::Message;
 class Message {
  public:
   Message() = default;
@@ -56,6 +65,8 @@ class Message {
   virtual const std::type_index& TypeIndex4FieldNumber(int field_number) const = 0;
   virtual const void* FieldPtr4FieldNumber(int field_number) const = 0;
   virtual void* MutableFieldPtr4FieldNumber(int field_number) { return nullptr; }
+  virtual void ToProto(PbMessage*) const = 0;
+  virtual void InitFromProto(const PbMessage&) {};
 
   struct UndefinedField {};
 };
