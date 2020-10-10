@@ -31,6 +31,8 @@ class _RepeatedField_ {
     CopyFrom(other);
   }
   _RepeatedField_(_RepeatedField_&&) = default;
+  template<typename InputIt>
+  _RepeatedField_(InputIt begin, InputIt end): data_(std::make_shared<std::vector<T>>(begin, end)) {}
   ~_RepeatedField_() = default;
 
   iterator begin() noexcept { return data_->begin(); }

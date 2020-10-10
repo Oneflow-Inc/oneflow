@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
@@ -114,6 +115,28 @@ std::string CleanPath(const std::string& unclean_path) {
     path.assign(1, '.');
   }
   return path;
+}
+
+void GetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix, int32_t* index) {
+  const size_t underline_pos = prefix_and_idx.rfind('_');
+  CHECK_NE(underline_pos, std::string::npos);
+  CHECK_GT(underline_pos, 0);
+  CHECK_LT(underline_pos, prefix_and_idx.size() - 1);
+  *prefix = prefix_and_idx.substr(0, underline_pos);
+  *index = oneflow_cast<int32_t>(prefix_and_idx.substr(underline_pos + 1));
+  CHECK_GE(*index, 0);
+}
+
+bool TryGetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix, int32_t* index) {
+  const size_t underline_pos = prefix_and_idx.rfind('_');
+  if (underline_pos == std::string::npos) { return false; }
+  if (underline_pos == 0) { return false; }
+  if (underline_pos == prefix_and_idx.size() - 1) { return false; }
+  *prefix = prefix_and_idx.substr(0, underline_pos);
+  std::string index_str = prefix_and_idx.substr(underline_pos + 1);
+  if (IsStrInt(index_str) == false) { return false; }
+  *index = oneflow_cast<int32_t>(index_str);
+  return *index >= 0;
 }
 
 namespace internal {

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CFG_CFG_MESSAGE_H_
 #define ONEFLOW_CFG_CFG_MESSAGE_H_
 
+#include <set>
 #include <typeinfo>
 #include <typeindex>
 
@@ -36,14 +37,21 @@ class Message {
 
   // Returns true if field_name defined.
   // This is nothing related to has_xxx().
-  bool HasField4FieldName(const std::string& field_name) const {
-    return HasField4FieldNumber(FieldNumber4FieldName(field_name));
+  template<typename T>
+  bool FieldDefined4FieldName(const std::string& field_name) const {
+    int field_number = FieldNumber4FieldName(field_name);
+    const auto& type_indices = ValidTypeIndices4FieldNumber(field_number);
+    return FieldDefined4FieldNumber(field_number) && type_indices.count(typeid(T)) > 0;
+  }
+
+  bool FieldDefined4FieldName(const std::string& field_name) const {
+    return FieldDefined4FieldNumber(FieldNumber4FieldName(field_name));
   }
 
   template<typename T>
   const T* FieldPtr4FieldNumber(int field_number) const {
-    const auto& type_index = TypeIndex4FieldNumber(field_number);
-    if (type_index != typeid(T)) { return nullptr; }
+    const auto& type_indices = ValidTypeIndices4FieldNumber(field_number);
+    if (type_indices.count(typeid(T)) == 0) { return nullptr; }
     const void* void_ptr = FieldPtr4FieldNumber(field_number);
     if (void_ptr == nullptr) { return nullptr; }
     const T* __attribute__((__may_alias__)) ptr = reinterpret_cast<const T*>(void_ptr);
@@ -52,8 +60,8 @@ class Message {
 
   template<typename T>
   T* MutableFieldPtr4FieldNumber(int field_number) {
-    const auto& type_index = TypeIndex4FieldNumber(field_number);
-    if (type_index != typeid(T)) { return nullptr; }
+    const auto& type_indices = ValidTypeIndices4FieldNumber(field_number);
+    if (type_indices.count(typeid(T)) == 0) { return nullptr; }
     void* void_ptr = MutableFieldPtr4FieldNumber(field_number);
     if (void_ptr == nullptr) { return nullptr; }
     T* __attribute__((__may_alias__)) ptr = reinterpret_cast<T*>(void_ptr);
@@ -61,14 +69,13 @@ class Message {
   }
 
   virtual int FieldNumber4FieldName(const std::string& field_name) const = 0;
-  virtual bool HasField4FieldNumber(int field_number) const = 0; 
-  virtual const std::type_index& TypeIndex4FieldNumber(int field_number) const = 0;
+  virtual bool FieldDefined4FieldNumber(int field_number) const = 0; 
+  virtual const std::set<std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const = 0;
   virtual const void* FieldPtr4FieldNumber(int field_number) const = 0;
   virtual void* MutableFieldPtr4FieldNumber(int field_number) { return nullptr; }
   virtual void ToProto(PbMessage*) const = 0;
   virtual void InitFromProto(const PbMessage&) {};
 
-  struct UndefinedField {};
 };
 
 }

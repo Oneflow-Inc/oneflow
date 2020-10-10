@@ -33,6 +33,8 @@ class _MapField_ {
     CopyFrom(other);
   }
   _MapField_(_MapField_&&) = default;
+  template<typename InputIt>
+  _MapField_(InputIt begin, InputIt end): data_(std::make_shared<std::map<Key, T>>(begin, end)) {}
   ~_MapField_() = default;
 
   iterator begin() noexcept { return data_->begin(); }

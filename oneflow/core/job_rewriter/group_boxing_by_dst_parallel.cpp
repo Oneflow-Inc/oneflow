@@ -26,7 +26,7 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   op_graph.ForEachNode([&](const OpNode* node) {
     OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
-    if (IsClassRegistered<DisableInputBoxingGroup>(op_type_case)) { return; }
+    if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
