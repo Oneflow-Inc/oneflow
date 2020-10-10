@@ -516,7 +516,6 @@ class LambUpdateKernel final : public user_op::OpKernel {
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
-    const auto adam = ctx->Attr<bool>("adam");
     const T* scale_by_ptr = nullptr;
     if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -526,7 +525,7 @@ class LambUpdateKernel final : public user_op::OpKernel {
     }
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, adam, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
+        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
         tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
         tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
   }

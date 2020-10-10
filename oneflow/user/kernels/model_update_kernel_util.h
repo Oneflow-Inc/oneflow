@@ -109,16 +109,13 @@ struct LambGradFunctor {
 template<typename T>
 struct LambLRFunctor {
   OF_DEVICE_FUNC
-  float operator()(const float learning_rate, const bool adam, const T* w_norm,
-                   const T* g_norm) const {
+  float operator()(const float learning_rate, const T* w_norm, const T* g_norm) const {
     float lr = learning_rate;
-    if (adam == false) {
-      const T w_norm_val = *w_norm;
-      const T g_norm_val = *g_norm;
-      T trust_ratio = 1;
-      if (w_norm_val > 0 && g_norm_val > 0) { trust_ratio = w_norm_val / g_norm_val; }
-      lr *= trust_ratio;
-    }
+    const T w_norm_val = *w_norm;
+    const T g_norm_val = *g_norm;
+    T trust_ratio = 1;
+    if (w_norm_val > 0 && g_norm_val > 0) { trust_ratio = w_norm_val / g_norm_val; }
+    lr *= trust_ratio;
     return lr;
   }
 };
@@ -169,9 +166,9 @@ template<DeviceType device_type, typename T, typename G>
 struct LambUpdateKernelUtil {
  public:
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, bool adam,
-                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
-                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+                     T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 #endif

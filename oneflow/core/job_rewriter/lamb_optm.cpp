@@ -72,7 +72,6 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
       .Attr<float>("beta1", lamb_conf.beta1())
       .Attr<float>("beta2", lamb_conf.beta2())
       .Attr<float>("epsilon", lamb_conf.epsilon())
-      .Attr<bool>("adam", lamb_conf.adam())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
   const auto lamb_update_op = lamb_update_op_builder.Build();

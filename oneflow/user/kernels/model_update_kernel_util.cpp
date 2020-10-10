@@ -202,21 +202,19 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KE
 template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, bool adam,
-                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
-                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+                     T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 template<typename T, typename G>
 void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, bool adam, const float* learning_rate, const T* scale_by_ptr,
+    float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
     const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t,
     T* beta2_t) {
-  if (adam == false) {
-    *beta1_t *= beta1;
-    *beta2_t *= beta2;
-  }
+  *beta1_t *= beta1;
+  *beta2_t *= beta2;
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   FOR_RANGE(int64_t, i, 0, n) {
     LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
@@ -227,13 +225,9 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, w_norm);
   KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, adam_diff, 1, adam_diff, 1, g_norm);
   KernelUtil<DeviceType::kCPU, T>::Sqrt(ctx, 2, norm_buffer, norm_buffer);
-  const float lr = LambLRFunctor<T>()(*learning_rate, adam, w_norm, g_norm);
+  const float lr = LambLRFunctor<T>()(*learning_rate, w_norm, g_norm);
   FOR_RANGE(int64_t, i, 0, n) {
     LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i);
-  }
-  if (adam) {
-    *beta1_t *= beta1;
-    *beta2_t *= beta2;
   }
 }
 
