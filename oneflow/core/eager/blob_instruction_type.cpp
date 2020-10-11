@@ -53,7 +53,8 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
   }
   void Compute(vm::Instruction* instruction) const override {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
@@ -78,7 +79,8 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
   }
   void Compute(vm::Instruction* instruction) const override {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob = instruction->mut_operand_type(args->blob())->Mut<BlobObject>()->mut_blob();
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
     CHECK(blob->mem_case().has_host_mem());
     if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
     void* dptr = blob->mut_dptr();
@@ -96,7 +98,7 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
   FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
   vm::RwMutexedObject* eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
   const auto* lbn_operand = instruction->operand_type(args->lbn_sym_id());
-  const auto lbn = JUST(lbn_operand->template Get<vm::StringObject>())->str();
+  const auto lbn = JUST(lbn_operand->template Get<vm::StringObject>()).str();
   ParallelContext parallel_ctx;
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));

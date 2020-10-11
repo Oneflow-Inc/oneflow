@@ -13,22 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_
-#define ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_
-
-#include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
-
-#ifdef OF_PLATFORM_POSIX
+#ifndef ONEFLOW_CORE_CONTROL_CTR_TEST_H_
+#define ONEFLOW_CORE_CONTROL_CTR_TEST_H_
 
 namespace oneflow {
 
-struct SocketMemDesc {
-  void* mem_ptr;
-  size_t byte_size;
+class CtrlUtil {
+ public:
+  CtrlUtil() = default;
+  ~CtrlUtil() = default;
+
+  int FindAvailablePort() const;
 };
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
-
-#endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MEMORY_DESC_H_
+#endif  // ONEFLOW_CORE_CONTROL_CTR_TEST_H_
