@@ -464,9 +464,9 @@ class InstructionsBuilder(object):
         )
         return OpKernelObject(object_id, op_conf, self.release_object_)
 
-    def Build121To(self, blob_object, op_arg_parallal_attr):
+    def Build121To(self, blob_object, parallel_desc_symbol):
         ref_blob_object = _MakeNewBlobObjectLike(
-            self, blob_object, op_arg_parallal_attr.parallel_desc_symbol
+            self, blob_object, parallel_desc_symbol
         )
         self.Build121AssignInstruction(ref_blob_object, blob_object)
         return ref_blob_object
