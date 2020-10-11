@@ -340,40 +340,40 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
 };
 
 #define REGISTER_OP(op_type_case, OpType)                                       \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,       \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_CPU_OP(op_type_case, OpType)                                  \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,      \
                          ([] { return new OnlyCpuSupportPredicator(true); })); \
-  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator)                              \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,       \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, Operator, creator, const OperatorConf&)
 
-#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)        \
-  REGISTER_CLASS_CREATOR(op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
+#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)                 \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
                          ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
 
 struct IsInterfaceOpConf4OpTypeCase final {};
 
-#define REGISTER_INTERFACE_OP(op_type_case)                          \
-  REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
+#define REGISTER_INTERFACE_OP(op_type_case)                                   \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
 
 struct DisableInputBoxingGroup final {};
 
-#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)       \
-  REGISTER_CLASS_CREATOR(op_type_case, DisableInputBoxingGroup, \
+#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, DisableInputBoxingGroup, \
                          ([] { return new DisableInputBoxingGroup(); }))
 
 struct IsTickTockOpTypeCase final {};
 
-#define REGISTER_TICK_TOCK_OP(op_type_case)                  \
-  REGISTER_CLASS_CREATOR(op_type_case, IsTickTockOpTypeCase, \
+#define REGISTER_TICK_TOCK_OP(op_type_case)                           \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsTickTockOpTypeCase, \
                          ([] { return new IsTickTockOpTypeCase; }))
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);

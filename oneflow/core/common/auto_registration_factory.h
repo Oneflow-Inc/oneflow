@@ -20,59 +20,81 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename Base, typename... Args>
+template<typename Key, typename Base, typename... Args>
 struct AutoRegistrationFactory {
  public:
+  using Creator = std::function<Base*(Args&&...)>;
   template<typename Derived>
   struct RawRegisterType {
-    RawRegisterType(int32_t k) {
-      CHECK((AutoRegistrationFactory<Base, Args...>::Get()
-                 .creators_.emplace(k, [](Args&&...) { return new Derived; })
+    RawRegisterType(Key k) {
+      CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
+                 .mutable_creators()
+                 ->emplace(k, [](Args&&...) { return new Derived; })
                  .second))
           << k;
     }
   };
 
   struct CreatorRegisterType {
-    CreatorRegisterType(int32_t k, std::function<Base*(Args&&...)> v) {
-      CHECK((AutoRegistrationFactory<Base, Args...>::Get().creators_.emplace(k, v).second)) << k;
+    CreatorRegisterType(Key k, Creator v) {
+      CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
+                 .mutable_creators()
+                 ->emplace(k, v)
+                 .second))
+          << k;
     }
   };
 
-  Base* New(int32_t k, Args&&... args) {
-    auto creators_it = creators_.find(k);
-    CHECK(creators_it != creators_.end()) << "Unregistered: " << k;
+  Base* New(Key k, Args&&... args) const {
+    auto creators_it = creators().find(k);
+    CHECK(creators_it != creators().end()) << "Unregistered: " << k;
     return creators_it->second(std::forward<Args>(args)...);
   }
 
-  bool IsClassRegistered(int32_t k, Args&&... args) { return creators_.find(k) != creators_.end(); }
+  bool IsClassRegistered(Key k, Args&&... args) const {
+    return creators().find(k) != creators().end();
+  }
 
-  static AutoRegistrationFactory<Base, Args...>& Get() {
-    static AutoRegistrationFactory<Base, Args...> obj;
+  static AutoRegistrationFactory<Key, Base, Args...>& Get() {
+    static AutoRegistrationFactory<Key, Base, Args...> obj;
     return obj;
   }
 
  private:
-  HashMap<int32_t, std::function<Base*(Args&&...)>> creators_;
+  std::unique_ptr<HashMap<Key, Creator>> creators_;
+
+  bool has_creators() const { return creators_.get() != nullptr; }
+
+  const HashMap<Key, Creator>& creators() const {
+    CHECK(has_creators()) << "Unregistered key type: " << typeid(Key).name();
+    return *creators_.get();
+  }
+
+  HashMap<Key, Creator>* mutable_creators() {
+    if (!creators_) { creators_.reset(new HashMap<Key, Creator>); }
+    return creators_.get();
+  }
 };
 
 #define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __COUNTER__)
 
-#define REGISTER_CLASS(k, Base, Derived) \
-  static AutoRegistrationFactory<Base>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
-#define REGISTER_CLASS_WITH_ARGS(k, Base, Derived, ...) \
-  static AutoRegistrationFactory<Base, __VA_ARGS__>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
-#define REGISTER_CLASS_CREATOR(k, Base, f, ...) \
-  static AutoRegistrationFactory<Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME(k, f)
+#define REGISTER_CLASS(Key, k, Base, Derived) \
+  static AutoRegistrationFactory<Key, Base>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
+#define REGISTER_CLASS_WITH_ARGS(Key, k, Base, Derived, ...)                       \
+  static AutoRegistrationFactory<Key, Base, __VA_ARGS__>::RawRegisterType<Derived> \
+      REGISTER_VAR_NAME(k)
+#define REGISTER_CLASS_CREATOR(Key, k, Base, f, ...)                                               \
+  static AutoRegistrationFactory<Key, Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME( \
+      k, f)
 
-template<typename Base, typename... Args>
-inline Base* NewObj(int32_t k, Args&&... args) {
-  return AutoRegistrationFactory<Base, Args...>::Get().New(k, std::forward<Args>(args)...);
+template<typename Key, typename Base, typename... Args>
+inline Base* NewObj(Key k, Args&&... args) {
+  return AutoRegistrationFactory<Key, Base, Args...>::Get().New(k, std::forward<Args>(args)...);
 }
 
-template<typename Base, typename... Args>
-inline bool IsClassRegistered(int32_t k, Args&&... args) {
-  return AutoRegistrationFactory<Base, Args...>::Get().IsClassRegistered(
+template<typename Key, typename Base, typename... Args>
+inline bool IsClassRegistered(Key k, Args&&... args) {
+  return AutoRegistrationFactory<Key, Base, Args...>::Get().IsClassRegistered(
       k, std::forward<Args>(args)...);
 }
 

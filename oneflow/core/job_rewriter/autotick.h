@@ -45,7 +45,7 @@ class MutOpConTickInputHelper {
 };
 
 #define REGISTER_AUTO_TICK(op_type_case, HelperType) \
-  REGISTER_CLASS(op_type_case, MutOpConTickInputHelper, HelperType)
+  REGISTER_CLASS(int32_t, op_type_case, MutOpConTickInputHelper, HelperType)
 
 }  // namespace oneflow
 

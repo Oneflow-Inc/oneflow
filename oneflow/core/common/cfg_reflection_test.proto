@@ -7,10 +7,11 @@ message ReflectionTestFoo {
   optional string optional_string = 2 [default = "undefined"];
 
   repeated int32 repeated_int32 = 3;
-  map<int32, int32> map_int32 = 4;
+  repeated string repeated_string = 4;
+  map<int32, int32> map_int32 = 5;
   oneof type {
-    int32 oneof_int32 = 5;
-    int32 another_oneof_int32 = 6;
+    int32 oneof_int32 = 6;
+    int32 another_oneof_int32 = 7;
   }
 }
 
