@@ -18,11 +18,11 @@ from __future__ import absolute_import
 import re
 from contextlib import contextmanager
 
-import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.core.job.placement_pb2 as placement_pb_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_pb
+import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
-import oneflow.core.vm.instruction_pb2 as instr_util
+import oneflow.core.vm.instruction_pb2 as instr_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.object as object_util
@@ -84,8 +84,8 @@ class InstructionsBuilder(object):
     ):
         self.id_generator_ = id_generator
         self.release_object_ = release_object
-        assert isinstance(instruction_list, instr_util.InstructionListProto)
-        assert isinstance(eager_symbol_list, eager_symbol_util.EagerSymbolList)
+        assert isinstance(instruction_list, instr_pb.InstructionListProto)
+        assert isinstance(eager_symbol_list, eager_symbol_pb.EagerSymbolList)
         self.instruction_list_ = instruction_list
         self.eager_symbol_list_ = eager_symbol_list
 
@@ -97,9 +97,12 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
+        def FetchDelegateBlobObject(x_blob_object, op_arg_parallel_attr):
+            return boxing_util.BoxingTo(self, x_blob_object, op_arg_parallel_attr)
+
         def GetDelegateBlobObject(blob_object, op_arg_parallel_attr):
             return _FindOrCreateDelegateBlobObject(
-                self, blob_object, op_arg_parallel_attr
+                self, FetchDelegateBlobObject, blob_object, op_arg_parallel_attr
             )
 
         self._StatelessCall(
@@ -111,7 +114,7 @@ class InstructionsBuilder(object):
             get_delegate_blob_object=GetDelegateBlobObject,
         )
 
-    def BoxingStatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
+    def NoBoxingStatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
         op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
         self._CheckRefInBlobObjectParallelDesc(
             op_attribute,
@@ -119,8 +122,25 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
-        def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
-            return blob_object
+        def FetchDelegateBlobObject(blob_object, op_arg_parallel_attr):
+            from_pd = blob_object.parallel_desc_symbol
+            to_pd = op_arg_parallel_attr.parallel_desc_symbol
+            if from_pd == to_pd:
+                return blob_object
+            assert from_pd.device_tag == 'cpu'
+            assert to_pd.device_tag == 'cpu'
+            assert from_pd.parallel_num == to_pd.parallel_num
+            from_machine_ids = from_pd.machine_id2device_id_list.keys()
+            to_machine_ids = to_pd.machine_id2device_id_list.keys()
+            if (len(from_pd.machine_id2device_id_list) == from_pd.parallel_num
+                and  from_machine_ids == to_machine_ids):
+                return self.BroadcastBlobReference(blob_object, to_pd)
+            return self.Build121To(blob_object, to_pd)
+
+        def GetDirectOr121BlobObject(blob_object, op_arg_parallel_attr):
+            return _FindOrCreateDelegateBlobObject(
+                self, FetchDelegateBlobObject, blob_object, op_arg_parallel_attr
+            )
 
         self._StatelessCall(
             "compute",
@@ -128,10 +148,10 @@ class InstructionsBuilder(object):
             op_parallel_desc_sym=op_parallel_desc_sym,
             blob_parallel_desc_sym=op_parallel_desc_sym,
             bn_in_op2blob_object=bn_in_op2blob_object,
-            get_delegate_blob_object=GetDirectBlobObject,
+            get_delegate_blob_object=GetDirectOr121BlobObject,
         )
 
-    def BoxingCudaD2HStatelessCall(
+    def NoBoxingCudaD2HStatelessCall(
         self, op_attribute, in_parallel_conf, bn_in_op2blob_object={}
     ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(in_parallel_conf)
@@ -156,7 +176,7 @@ class InstructionsBuilder(object):
             get_delegate_blob_object=GetDirectBlobObject,
         )
 
-    def BoxingCudaH2DStatelessCall(
+    def NoBoxingCudaH2DStatelessCall(
         self, op_attribute, out_parallel_conf, bn_in_op2blob_object={}
     ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(out_parallel_conf)
@@ -178,6 +198,26 @@ class InstructionsBuilder(object):
             get_delegate_blob_object=GetDirectBlobObject,
         )
 
+    def RawStatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
+        op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        self._CheckRefInBlobObjectParallelDesc(
+            op_attribute,
+            op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+        )
+
+        def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
+            return blob_object
+
+        self._StatelessCall(
+            "compute",
+            op_attribute,
+            op_parallel_desc_sym=op_parallel_desc_sym,
+            blob_parallel_desc_sym=op_parallel_desc_sym,
+            bn_in_op2blob_object=bn_in_op2blob_object,
+            get_delegate_blob_object=GetDirectBlobObject,
+        )
+
     def StatefulCall(self, op_attribute, opkernel_object, bn_in_op2blob_object={}):
         op_parallel_desc_sym = opkernel_object.parallel_desc_symbol
         parallel_sig = op_attribute.parallel_signature
@@ -189,9 +229,12 @@ class InstructionsBuilder(object):
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
 
+        def FetchDelegateBlobObject(x_blob_object, op_arg_parallel_attr):
+            return boxing_util.BoxingTo(self, x_blob_object, op_arg_parallel_attr)
+
         def GetDelegateBlobObject(blob_object, op_arg_parallel_attr):
             return _FindOrCreateDelegateBlobObject(
-                self, blob_object, op_arg_parallel_attr
+                self, FetchDelegateBlobObject, blob_object, op_arg_parallel_attr
             )
 
         self._StatefulCall(
@@ -207,7 +250,7 @@ class InstructionsBuilder(object):
 
     def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "RemoveForeignCallback"
         instruction.operand.append(_DelObjectOperand(object_id))
         instruction.operand.append(_Int64Operand(unique_callback_id))
@@ -262,7 +305,7 @@ class InstructionsBuilder(object):
         phy_parallel_desc_symbols = []
 
         def AppendPhyParallelDescSymbol(machine_id, device_id):
-            parallel_conf = placement_pb_util.ParallelConf()
+            parallel_conf = placement_pb.ParallelConf()
             parallel_conf.device_tag = device_tag
             parallel_conf.device_name.append("%d:%d" % (machine_id, device_id))
             phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
@@ -417,6 +460,13 @@ class InstructionsBuilder(object):
         )
         return OpKernelObject(object_id, op_conf, self.release_object_)
 
+    def Build121To(self, blob_object, op_arg_parallal_attr)
+        ref_blob_object = _MakeNewBlobObjectLike(
+            self, blob_object, op_arg_parallal_attr.parallel_desc_symbol
+        )
+        self.Build121AssignInstruction(ref_blob_object, blob_object)
+        return ref_blob_object
+
     def Build121AssignInstruction(self, ref_blob_object, value_blob_object):
         parallel_num = ref_blob_object.parallel_desc_symbol.parallel_num
         assert parallel_num == value_blob_object.parallel_desc_symbol.parallel_num
@@ -434,7 +484,7 @@ class InstructionsBuilder(object):
     def _BuildSendInstruction(
         self, dst_parallel_desc_symbol, src_blob_object, token_ids
     ):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "SendBlob"
         instruction.parallel_desc_symbol_id = (
             src_blob_object.parallel_desc_symbol.symbol_id
@@ -452,7 +502,7 @@ class InstructionsBuilder(object):
     def _BuildRecvInstruction(
         self, src_parallel_desc_symbol, dst_blob_object, token_ids
     ):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "ReceiveBlob"
         instruction.parallel_desc_symbol_id = (
             dst_blob_object.parallel_desc_symbol.symbol_id
@@ -469,7 +519,7 @@ class InstructionsBuilder(object):
 
     def _NewOpKernelObject(self, parallel_desc_symbol, job_desc_sym, op_conf_sym):
         object_id = self._NewObjectId(parallel_desc_symbol)
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "InitOpKernelObject"
         instruction.parallel_desc_symbol_id = parallel_desc_symbol.symbol_id
         instruction.operand.append(_SymbolOperand(job_desc_sym.symbol_id))
@@ -590,14 +640,14 @@ class InstructionsBuilder(object):
         )
 
     def _CudaHostRegisterBlob(self, blob_object):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "CudaHostRegisterBlob"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_MutOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
     def _CudaHostUnregisterBlob(self, blob_object):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "CudaHostUnregisterBlob"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_MutOperand(blob_object.object_id))
@@ -801,7 +851,7 @@ class InstructionsBuilder(object):
         mut1_operand_blob_objects,
         mut2_operand_blob_objects,
     ):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "%s.%s" % (
             parallel_desc_sym.device_tag,
             instr_name,
@@ -844,7 +894,7 @@ class InstructionsBuilder(object):
         mut1_operand_blob_objects,
         mut2_operand_blob_objects,
     ):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "%s.%s" % (
             parallel_desc_sym.device_tag,
             instr_name,
@@ -876,7 +926,7 @@ class InstructionsBuilder(object):
 
     def _NewSymbolId(self):
         symbol_id = self.id_generator_.NewSymbolId()
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "NewSymbol"
         instruction.operand.append(_Int64Operand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
@@ -884,7 +934,7 @@ class InstructionsBuilder(object):
 
     def _NewObjectId(self, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "NewObject"
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_Int64Operand(object_id))
@@ -892,7 +942,7 @@ class InstructionsBuilder(object):
         return object_id
 
     def _LazyReference(self, blob_object, interface_op_name):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "{}.LazyReference".format(device_tag)
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
@@ -905,7 +955,7 @@ class InstructionsBuilder(object):
 
     def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
         object_id = self.id_generator_.NewObjectId()
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "BroadcastObjectReference"
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         instruction.operand.append(_Int64Operand(object_id))
@@ -914,68 +964,68 @@ class InstructionsBuilder(object):
         return object_id
 
     def _InitStringSymbol(self, symbol_id, string):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "InitStringSymbol"
         instruction.operand.append(_InitSymbolOperand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
-        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         eager_symbol.string_symbol = string
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _NewParallelConfSymbol(self, symbol_id, parallel_conf):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "NewParallelDescSymbol"
         instruction.operand.append(_Int64Operand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
-        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         eager_symbol.parallel_conf_symbol.CopyFrom(parallel_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _NewScopeSymbol(self, scope_proto):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "InitScopeSymbol"
         instruction.operand.append(_InitSymbolOperand(scope_proto.symbol_id))
         self.instruction_list_.instruction.append(instruction)
-        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = scope_proto.symbol_id
         eager_symbol.scope_symbol.CopyFrom(scope_proto)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitJobConfSymbol(self, symbol_id, job_conf):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "InitJobDescSymbol"
         instruction.operand.append(_InitSymbolOperand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
-        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         eager_symbol.job_conf_symbol.CopyFrom(job_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "InitOperatorConfSymbol"
         instruction.operand.append(_InitSymbolOperand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
-        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "InitOpNodeSignatureDescSymbol"
         instruction.operand.append(_InitSymbolOperand(symbol_id))
         self.instruction_list_.instruction.append(instruction)
-        eager_symbol = eager_symbol_util.EagerSymbol()
+        eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         eager_symbol.op_node_signature_symbol.CopyFrom(op_node_signature)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _FetchBlob(self, instruction_name, blob_object, fetcher):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "%s.%s" % (device_tag, instruction_name)
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
@@ -985,7 +1035,7 @@ class InstructionsBuilder(object):
 
     def FeedBlob(self, blob_object, feeder):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(feeder)
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
         instruction.instr_type_name = "%s.%s" % (device_tag, "FeedBlob")
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
@@ -994,21 +1044,21 @@ class InstructionsBuilder(object):
         self.instruction_list_.instruction.append(instruction)
 
     def _TryClearObject(self, obj):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "TryClearObject"
         instruction.parallel_desc_symbol_id = obj.parallel_desc_symbol.symbol_id
         instruction.operand.append(_MutOperand(obj.object_id))
         self.instruction_list_.instruction.append(instruction)
 
     def _DeleteObject(self, blob_object):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "DeleteObject"
         instruction.parallel_desc_symbol_id = blob_object.parallel_desc_symbol.symbol_id
         instruction.operand.append(_DelObjectOperand(blob_object.object_id))
         self.instruction_list_.instruction.append(instruction)
 
     def _ReplaceMirrored(self, parallel_desc_sym, lhs_objects, rhs_objects):
-        instruction = instr_util.InstructionProto()
+        instruction = instr_pb.InstructionProto()
         instruction.instr_type_name = "ReplaceMirrored"
         instruction.parallel_desc_symbol_id = parallel_desc_sym.symbol_id
         for lhs_object in lhs_objects:
@@ -1019,56 +1069,76 @@ class InstructionsBuilder(object):
         self.instruction_list_.instruction.append(instruction)
 
 
+def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
+    op_conf = op_conf_pb.OperatorConf()
+    op_conf.name = id_util.UniqueStr("Input")
+    op_conf.device_tag = new_parallel_desc_symbol.device_tag
+    op_conf.input_conf.out = "out"
+    blob_object.op_arg_parallel_attr.DumpToToInterfaceBlobConf(
+        op_conf.input_conf.blob_conf
+    )
+    blob_object.op_arg_blob_attr.DumpToToInterfaceBlobConf(op_conf.input_conf.blob_conf)
+    op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
+    upstream_signature = op_attribute_pb.OpNodeSignature()
+    op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
+    parallel_conf = new_parallel_desc_symbol.parallel_conf
+    bn_in_op2blob_object = {}
+    builder.RawStatelessCall(
+        op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+    )
+    return bn_in_op2blob_object["out"]
+
+
 def _SymbolOperand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     _SetSoleMirroredOperand(operand.symbol_operand, val)
     return operand
 
 
 def _InitSymbolOperand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     _SetSoleMirroredOperand(operand.init_symbol_operand, val)
     return operand
 
 
 def _ConstOperand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     _SetMirroredOperand(operand.const_operand, val)
     return operand
 
 
 def _MutOperand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     _SetMirroredOperand(operand.mut_operand, val)
     return operand
 
 
 def _Mut2Operand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     _SetMirroredOperand(operand.mut2_operand, val)
     return operand
 
 
 def _DelObjectOperand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     _SetAllMirroredOperand(operand.mut_operand, val)
     return operand
 
 
 def _Int64Operand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     operand.int64_operand = val
     return operand
 
 
 def _Uint64Operand(val):
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     operand.uint64_operand = val
     return operand
 
 
 def _OperandSeparator():
-    operand = instr_util.InstructionOperandProto()
+    operand = instr_pb.InstructionOperandProto()
     operand.separator.SetInParent()
     return operand
 
@@ -1088,14 +1158,10 @@ def _SetAllMirroredOperand(operand, val):
     operand.all_mirrored_object.SetInParent()
 
 
-def _FindOrCreateDelegateBlobObject(builder, x_blob_object, op_arg_parallel_attr):
+def _FindOrCreateDelegateBlobObject(builder, Fetch, x_blob_object, op_arg_parallel_attr):
     if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
         return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
-
-    def Fetch(x_blob_object, op_arg_parallel_attr):
-        return boxing_util.BoxingTo(builder, x_blob_object, op_arg_parallel_attr)
-
     return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
 
 

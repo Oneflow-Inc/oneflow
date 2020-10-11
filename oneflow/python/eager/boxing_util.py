@@ -250,13 +250,9 @@ MatchInterNodeOneToOne = (
 
 @boxing_condition(MatchInterNodeOneToOne)
 def InterNodeOneToOne(builder, produced_blob_object, consumer_op_arg_parallel_attr):
-    receive_blob_object = _MakeNewBlobObjectLike(
-        builder,
-        produced_blob_object,
-        consumer_op_arg_parallel_attr.parallel_desc_symbol,
+    return builder.Build121To(
+        produced_blob_object, consumer_op_arg_parallel_attr.parallel_desc_symbol
     )
-    builder.Build121AssignInstruction(receive_blob_object, produced_blob_object)
-    return receive_blob_object
 
 
 MatchCpuBroadcastOneToOne = (
@@ -335,7 +331,7 @@ def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_att
     parallel_conf = consumer_op_arg_parallel_attr.parallel_desc_symbol.parallel_conf
     bn_in_op2blob_object = dict(in_0=produced_blob_object)
     op_attribute = _GetEagerNcclAllReduce(parallel_conf, bn_in_op2blob_object)
-    builder.BoxingStatelessCall(
+    builder.NoBoxingStatelessCall(
         op_attribute,
         parallel_conf=parallel_conf,
         bn_in_op2blob_object=bn_in_op2blob_object,
@@ -520,7 +516,7 @@ def BuildNaiveCpuBoxing(
     bn_in_op2blob_object = {}
     for i in range(len(physical_in_blob_objects)):
         bn_in_op2blob_object["in_%s" % i] = physical_in_blob_objects[i]
-    builder.BoxingStatelessCall(
+    builder.NoBoxingStatelessCall(
         op_attribute,
         parallel_conf=boxing_parallel_desc_symbol.parallel_conf,
         bn_in_op2blob_object=bn_in_op2blob_object,
@@ -673,7 +669,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
     assert to_device_tag != x_device_tag, (to_device_tag, x_device_tag)
     if to_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = produced_blob_object.parallel_desc_symbol.parallel_conf
-        builder.BoxingCudaD2HStatelessCall(
+        builder.NoBoxingCudaD2HStatelessCall(
             op_attribute, x_parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
     elif to_device_tag == "gpu" and x_device_tag == "cpu":
@@ -682,7 +678,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
         )
         out_parallel_conf = out_parallel_desc_symbol.parallel_conf
         with builder.CudaHostPinBlob(produced_blob_object):
-            builder.BoxingCudaH2DStatelessCall(
+            builder.NoBoxingCudaH2DStatelessCall(
                 op_attribute,
                 out_parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object,
@@ -721,19 +717,19 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
     op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
     if ref_device_tag == value_device_tag:
-        builder.BoxingStatelessCall(
+        builder.NoBoxingStatelessCall(
             op_attribute,
             parallel_conf=ref_parallel_conf,
             bn_in_op2blob_object=bn_in_op2blob_object,
         )
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
-        builder.BoxingCudaD2HStatelessCall(
+        builder.NoBoxingCudaD2HStatelessCall(
             op_attribute, value_parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
         with builder.CudaHostPinBlob(value_blob_object):
-            builder.BoxingCudaH2DStatelessCall(
+            builder.NoBoxingCudaH2DStatelessCall(
                 op_attribute,
                 ref_parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object,
@@ -764,26 +760,6 @@ def _GetEagerNcclAllReduce(parallel_conf, ibn2blob_object):
     op_conf.user_conf.output["out"].s.append("eager_nccl_all_reduce/out_0")
     op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
     return op_infer_util.Infer(op_conf, ibn2blob_object)
-
-
-def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
-    op_conf = op_conf_pb.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Input")
-    op_conf.device_tag = new_parallel_desc_symbol.device_tag
-    op_conf.input_conf.out = "out"
-    blob_object.op_arg_parallel_attr.DumpToToInterfaceBlobConf(
-        op_conf.input_conf.blob_conf
-    )
-    blob_object.op_arg_blob_attr.DumpToToInterfaceBlobConf(op_conf.input_conf.blob_conf)
-    op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
-    upstream_signature = op_attribute_pb.OpNodeSignature()
-    op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
-    parallel_conf = new_parallel_desc_symbol.parallel_conf
-    bn_in_op2blob_object = {}
-    builder.BoxingStatelessCall(
-        op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
-    )
-    return bn_in_op2blob_object["out"]
 
 
 NcclAllReduce = Sequential(
