@@ -109,7 +109,7 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 }  // namespace fs
 
 fs::FileSystem* LocalFS() {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   static fs::FileSystem* fs = new fs::PosixFileSystem;
 #endif
   return fs;

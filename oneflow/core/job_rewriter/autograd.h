@@ -63,8 +63,8 @@ class GenerateBackwardOpConfWrapperStruct final {
   const std::unique_ptr<const MaybeFunc> maybe_func_;
 };
 
-#define REGISTER_OP_GRAD(op_type_case, gen_grad_func)                       \
-  REGISTER_CLASS_CREATOR(op_type_case, GenerateBackwardOpConfWrapperStruct, \
+#define REGISTER_OP_GRAD(op_type_case, gen_grad_func)                                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, GenerateBackwardOpConfWrapperStruct, \
                          ([] { return new GenerateBackwardOpConfWrapperStruct(gen_grad_func); }))
 
 }  // namespace oneflow
