@@ -53,8 +53,8 @@ TEST(StringStreamType, init_string_object) {
   ASSERT_NE(logical_object, nullptr);
   auto* mirrored_object = logical_object->mut_global_device_id2mirrored_object()->FindPtr(0);
   ASSERT_NE(mirrored_object, nullptr);
-  const auto* string_obj = CHECK_JUST(mirrored_object->rw_mutexed_object().Get<StringObject>());
-  ASSERT_TRUE(string_obj->str() == "foobar");
+  const auto& string_obj = CHECK_JUST(mirrored_object->rw_mutexed_object().Get<StringObject>());
+  ASSERT_TRUE(string_obj.str() == "foobar");
 }
 
 }  // namespace test
