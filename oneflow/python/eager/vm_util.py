@@ -114,7 +114,9 @@ class InstructionsBuilder(object):
             get_delegate_blob_object=GetDelegateBlobObject,
         )
 
-    def NoBoxingStatelessCall(self, op_attribute, parallel_conf, bn_in_op2blob_object={}):
+    def NoBoxingStatelessCall(
+        self, op_attribute, parallel_conf, bn_in_op2blob_object={}
+    ):
         op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
         self._CheckRefInBlobObjectParallelDesc(
             op_attribute,
@@ -127,13 +129,15 @@ class InstructionsBuilder(object):
             to_pd = op_arg_parallel_attr.parallel_desc_symbol
             if from_pd == to_pd:
                 return blob_object
-            assert from_pd.device_tag == 'cpu'
-            assert to_pd.device_tag == 'cpu'
+            assert from_pd.device_tag == "cpu"
+            assert to_pd.device_tag == "cpu"
             assert from_pd.parallel_num == to_pd.parallel_num
             from_machine_ids = from_pd.machine_id2device_id_list.keys()
             to_machine_ids = to_pd.machine_id2device_id_list.keys()
-            if (len(from_pd.machine_id2device_id_list) == from_pd.parallel_num
-                and  from_machine_ids == to_machine_ids):
+            if (
+                len(from_pd.machine_id2device_id_list) == from_pd.parallel_num
+                and from_machine_ids == to_machine_ids
+            ):
                 return self.BroadcastBlobReference(blob_object, to_pd)
             return self.Build121To(blob_object, to_pd)
 
@@ -460,7 +464,7 @@ class InstructionsBuilder(object):
         )
         return OpKernelObject(object_id, op_conf, self.release_object_)
 
-    def Build121To(self, blob_object, op_arg_parallal_attr)
+    def Build121To(self, blob_object, op_arg_parallal_attr):
         ref_blob_object = _MakeNewBlobObjectLike(
             self, blob_object, op_arg_parallal_attr.parallel_desc_symbol
         )
@@ -1158,7 +1162,9 @@ def _SetAllMirroredOperand(operand, val):
     operand.all_mirrored_object.SetInParent()
 
 
-def _FindOrCreateDelegateBlobObject(builder, Fetch, x_blob_object, op_arg_parallel_attr):
+def _FindOrCreateDelegateBlobObject(
+    builder, Fetch, x_blob_object, op_arg_parallel_attr
+):
     if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
         return x_blob_object
     blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
