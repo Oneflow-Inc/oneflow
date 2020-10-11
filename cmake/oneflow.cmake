@@ -204,6 +204,9 @@ add_dependencies(of_protoobj make_pyproto_dir)
 include(cfg)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR} ${of_all_rel_pybinds})
 oneflow_add_library(of_cfgobj ${CFG_HRCS})
+if (NOT BUILD_CUDA)
+  set_target_properties(of_cfgobj PROPERTIES LINKER_LANGUAGE CXX)
+endif()
 add_dependencies(of_cfgobj of_protoobj)
 
 # cc obj lib
