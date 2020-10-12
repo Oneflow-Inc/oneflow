@@ -87,6 +87,7 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
 void EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   mut_job_set()->clear_job();
   clear_job_name2infer_ctx();
+  Global<JobDesc>::Delete();
 }
 
 }  // namespace oneflow
