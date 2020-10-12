@@ -157,27 +157,28 @@ REGISTER_USER_OP("scatter_dim_add_like")
       like_arg_modifier->set_use_header_only(true);
     });
 
-REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("gather_dim")
+  .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
 
-  const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
+    const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
-  ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder
-        .OpTypeName(
-            "scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
-        .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
-        .InputBind("src",
-                   ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
-        .InputBind("like", ctx->FwOp().input("input", 0))
-        .Output("output")
-        .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
-        .Build();
-  });
+    ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+      return builder
+          .OpTypeName(
+              "scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
+          .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
+          .InputBind("src",
+                    ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
+          .InputBind("like", ctx->FwOp().input("input", 0))
+          .Output("output")
+          .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
+          .Build();
+    });
 
-  ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
-                            [&ctx, &op_grad_name]() -> const std::string& {
-                              return ctx->GetOp(op_grad_name).output("output", 0);
-                            });
+    ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
+                              [&ctx, &op_grad_name]() -> const std::string& {
+                                return ctx->GetOp(op_grad_name).output("output", 0);
+                              });
 });
 
 }  // namespace user_op
