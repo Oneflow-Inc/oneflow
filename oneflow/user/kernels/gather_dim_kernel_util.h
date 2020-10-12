@@ -36,6 +36,10 @@ struct CoordinateOffsetConverter {
     }
 
     FOR_RANGE(int64_t, i, 0, axisNum_) { shape_[i] = tensorShape.At(i); }
+
+    if(axisNum_ == 1){
+      shape_[axisNum_] = 1;
+    }
   }
 
   OF_DEVICE_FUNC void setOffset(IDXTYPE idx) { offset_ = idx; }

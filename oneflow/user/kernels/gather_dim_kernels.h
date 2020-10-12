@@ -49,7 +49,7 @@ class GatherDimKernel final : public user_op::OpKernel {
     CoordinateOffsetConverter<IDX_T> input_nd_helper(input_tensor->shape());
     CoordinateOffsetConverter<IDX_T> index_nd_helper(index_tensor->shape());
     GatherDimFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, index_nd_helper,
-                                                 input_tensor->shape().elem_cnt(), dim, index,
+                                                 index_tensor->shape().elem_cnt(), dim, index,
                                                  input, output, ctx->device_ctx());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
