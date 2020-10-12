@@ -16,15 +16,10 @@ limitations under the License.
 import unittest
 import cv2
 import numpy as np
-import random
-import os
 import typing as tp
 import oneflow as flow
 import oneflow.typing as otp
-
-global_coco_dict = dict()
-default_coco_anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
-default_coco_image_dir = "/dataset/mscoco_2017/val2017"
+import image_test_util
 
 
 def _make_image_resize_to_fixed_func(
@@ -88,7 +83,7 @@ def _make_image_resize_keep_aspect_ratio_func(
             interpolation_type=interpolation_type,
         )
 
-        out_shape = _infer_keep_aspect_ratio_resized_image_static_shape(
+        out_shape = image_test_util.infer_keep_aspect_ratio_resized_images_static_shape(
             target_size=target_size,
             min_size=min_size,
             max_size=max_size,
@@ -126,7 +121,7 @@ def _of_image_resize(
     assert all(image.ndim == 3 for image in image_list)
     assert all(image.shape[2] == channels for image in image_list)
 
-    image_static_shape, aspect_ratio_list = _infer_images_static_shape(
+    image_static_shape, aspect_ratio_list = image_test_util.infer_images_static_shape(
         image_list, channels
     )
     if print_debug_info:
@@ -173,83 +168,6 @@ def _of_image_resize(
         return (res_image[0], scale[0], new_size)
 
 
-def _infer_images_static_shape(images, channels=3):
-    image_shapes = [image.shape for image in images]
-    assert all(image.ndim == 3 for image in images)
-    assert all(image.shape[2] == channels for image in images)
-    image_shapes = np.asarray(image_shapes)
-
-    max_h = np.max(image_shapes[:, 0]).item()
-    max_w = np.max(image_shapes[:, 1]).item()
-    image_static_shape = (len(images), max_h, max_w, channels)
-
-    group_ids = []  # 0: h < w, 1: h >= w
-    aspect_ratio_list = []  # shorter / longer
-    for image_shape in image_shapes:
-        h, w = image_shape[0:2]
-        if h < w:
-            group_id = 0
-            aspect_ratio = h / w
-        else:
-            group_id = 1
-            aspect_ratio = w / h
-        group_ids.append(group_id)
-        aspect_ratio_list.append(aspect_ratio)
-    assert all(group_id == group_ids[0] for group_id in group_ids)
-    return image_static_shape, aspect_ratio_list
-
-
-def _infer_keep_aspect_ratio_resized_image_static_shape(
-    target_size,
-    min_size,
-    max_size,
-    aspect_ratio_list,
-    resize_side="shorter",
-    channels=3,
-):
-    resized_size_list = []
-    for aspect_ratio in aspect_ratio_list:
-        resized_size_list.append(
-            _get_keep_aspect_ratio_resized_size(
-                target_size, min_size, max_size, aspect_ratio, resize_side
-            )
-        )
-
-    res_min_size, res_max_size = max(
-        resized_size_list, key=lambda size: size[0] * size[1]
-    )
-    return (res_min_size, res_max_size, channels)
-
-
-def _cv_read_images_from_files(image_files, dtype):
-    np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-    images = [cv2.imread(image_file).astype(np_dtype) for image_file in image_files]
-    assert all(isinstance(image, np.ndarray) for image in images)
-    assert all(image.ndim == 3 for image in images)
-    assert all(image.shape[2] == 3 for image in images)
-    return images
-
-
-def _get_keep_aspect_ratio_resized_size(
-    target_size, min_size, max_size, aspect_ratio, resize_side
-):
-    if resize_side == "shorter":
-        min_res_size = target_size
-        max_res_size = int(round(min_res_size / aspect_ratio))
-        if max_size is not None and max_res_size > max_size:
-            max_res_size = max_size
-            min_res_size = int(round(max_res_size * aspect_ratio))
-    elif resize_side == "longer":
-        max_res_size = target_size
-        min_res_size = int(round(max_res_size * aspect_ratio))
-        if min_size is not None and min_res_size < min_size:
-            min_res_size = min_size
-            max_res_size = int(round(min_res_size / aspect_ratio))
-    else:
-        raise NotImplementedError
-    return (min_res_size, max_res_size)
-
-
 def _get_resize_size_and_scale(
     w,
     h,
@@ -262,7 +180,10 @@ def _get_resize_size_and_scale(
     if keep_aspect_ratio:
         assert isinstance(target_size, int)
         aspect_ratio = float(min((w, h))) / float(max((w, h)))
-        min_res_size, max_res_size = _get_keep_aspect_ratio_resized_size(
+        (
+            min_res_size,
+            max_res_size,
+        ) = image_test_util.compute_keep_aspect_ratio_resized_size(
             target_size, min_size, max_size, aspect_ratio, resize_side
         )
         if w < h:
@@ -313,46 +234,6 @@ def _cv_image_resize(
     return res_image_list, res_scale_list, res_size_list
 
 
-def _coco(anno_file):
-    global global_coco_dict
-
-    if anno_file not in global_coco_dict:
-        from pycocotools.coco import COCO
-
-        global_coco_dict[anno_file] = COCO(anno_file)
-
-    return global_coco_dict[anno_file]
-
-
-def _coco_random_sample_images(
-    anno_file=default_coco_anno_file, image_dir=default_coco_image_dir, batch_size=2
-):
-    image_files = []
-    image_ids = []
-    batch_group_id = -1
-
-    coco = _coco(anno_file)
-    img_ids = coco.getImgIds()
-
-    while len(image_files) < batch_size:
-        rand_img_id = random.choice(img_ids)
-        img_h = coco.imgs[rand_img_id]["height"]
-        img_w = coco.imgs[rand_img_id]["width"]
-        group_id = int(img_h / img_w)
-
-        if batch_group_id == -1:
-            batch_group_id = group_id
-
-        if group_id != batch_group_id:
-            continue
-
-        image_files.append(os.path.join(image_dir, coco.imgs[rand_img_id]["file_name"]))
-        image_ids.append(rand_img_id)
-
-    assert len(image_files) == len(image_ids)
-    return image_files, image_ids
-
-
 def _test_image_resize_with_cv(
     test_case,
     image_files,
@@ -367,8 +248,8 @@ def _test_image_resize_with_cv(
 ):
     if origin_dtype is None:
         origin_dtype = dtype
-    image_list = _cv_read_images_from_files(image_files, origin_dtype)
 
+    image_list = image_test_util.read_images_by_pil(image_files, origin_dtype)
     if print_debug_info:
         print("origin images shapes: {}".format([image.shape for image in image_list]))
         print(
@@ -444,7 +325,7 @@ def _test_image_resize_with_cv(
 @flow.unittest.skip_unless_1n1d()
 class TestImageResize(flow.unittest.TestCase):
     def test_image_resize_to_fixed_size(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -454,7 +335,7 @@ class TestImageResize(flow.unittest.TestCase):
         )
 
     def test_image_resize_shorter_to_target_size(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -465,7 +346,7 @@ class TestImageResize(flow.unittest.TestCase):
         )
 
     def test_image_resize_longer_to_target_size(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -476,7 +357,7 @@ class TestImageResize(flow.unittest.TestCase):
         )
 
     def test_image_resize_shorter_to_target_size_with_max_size(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -488,7 +369,7 @@ class TestImageResize(flow.unittest.TestCase):
         )
 
     def test_image_resize_longer_to_target_size_with_min_size(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -500,7 +381,7 @@ class TestImageResize(flow.unittest.TestCase):
         )
 
     def test_image_resize_to_fixed_size_with_dtype_uint8(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -513,7 +394,7 @@ class TestImageResize(flow.unittest.TestCase):
     def test_image_resize_shorter_to_target_size_with_max_size_with_dtype_uint8(
         test_case,
     ):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
@@ -526,7 +407,7 @@ class TestImageResize(flow.unittest.TestCase):
         )
 
     def test_image_resize_uint8_to_float(test_case):
-        image_files, _ = _coco_random_sample_images()
+        image_files, _ = image_test_util.random_sample_images_from_coco()
         _test_image_resize_with_cv(
             test_case,
             image_files,
