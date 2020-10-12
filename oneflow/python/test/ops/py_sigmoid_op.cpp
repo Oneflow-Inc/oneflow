@@ -17,6 +17,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 REGISTER_USER_OP("py_sigmoid")
     .Input("in")
     .Output("out")
@@ -85,5 +87,7 @@ REGISTER_USER_OP_GRAD("py_sigmoid").SetBackwardOpConfGenFn([](user_op::BackwardO
   };
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), dx_get_func);
 });
+
+}  // namespace
 
 }  // namespace oneflow

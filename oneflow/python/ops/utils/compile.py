@@ -1,3 +1,4 @@
+import os
 import os.path
 import shutil
 import subprocess as sp
@@ -30,12 +31,14 @@ def compile(compiler, flags, link, inputs, output):
         cmd = f"{compiler} {' '.join(inputs)} {flags} {link} -o {output}"
     else:
         cmd = f"{compiler} {inputs} {flags} {link} -o {output}"
+    print(cmd)
     run_cmd(cmd)
     return True
 
 
 cflags = ' '.join(oneflow.sysconfig.get_compile_flags())
-lflags = ' '.join(oneflow.sysconfig.get_link_flags())
+lflags = ' '.join(oneflow.sysconfig.get_link_flags()) + \
+    ' -Wl,-rpath ' + oneflow.sysconfig.get_lib()
 cpp2py_path = os.path.join(
     oneflow.sysconfig.get_lib(), "python/ops/utils/cpp2py.hpp")
 py_op_types = []
@@ -52,7 +55,7 @@ class UserOpCompiler(object):
 
     def AddOpDef(self):
         flags = "-std=c++11 -c -fPIC -O2 " + cflags
-        compile("g++", flags, "",
+        compile("g++", flags, lflags,
                 f"{self.op_type_name}_op.cpp", f"{self.op_type_name}_op.o")
         self.objs.append(f"{self.op_type_name}_op.o")
         self.has_def = True
@@ -75,9 +78,10 @@ class UserOpCompiler(object):
         raise NotImplementedError
 
     def Finish(self):
-        flags = "-std=c++11 -shared -fPIC " + cflags
-        compile("g++", flags, lflags, self.objs, f"{self.op_type_name}.so")
-        op_so_names.append(self.op_type_name)
+        if len(self.objs) > 0:
+            flags = "-std=c++11 -shared -fPIC " + cflags
+            compile("g++", flags, lflags, self.objs, f"{self.op_type_name}.so")
+            op_so_names.append(self.op_type_name)
         return True
 
 
@@ -85,9 +89,10 @@ class UserOpsLoader(object):
     def __init__(self):
         self.so_names = []
 
-    def Prepare(self):
+    def LoadAll(self):
         for op in op_so_names:
-            self.so_names.append(op + ".so")
+            self.so_names.append(os.getcwd() + "/" + op + ".so")
+            oneflow.config.load_library(os.getcwd() + "/" + op + ".so")
         if len(py_op_types) > 0:
             # need to add py_kernel.cpp
             def get_one_reg_src(op_type_name):
@@ -128,7 +133,5 @@ class UserOpsLoader(object):
             py_lflags = lflags
             py_lflags += " -L" + sysconfig.get_paths()['stdlib']
             compile("g++", py_cflags, py_lflags, "cpp2py.o", "cpp2py.so")
-            self.so_names.append("cpp2py.so")
-
-    def GetAll(self):
-        return self.so_names
+            self.so_names.append(os.getcwd() + "/cpp2py.so")
+            oneflow.config.load_library(os.getcwd() + "/cpp2py.so")

@@ -31,12 +31,7 @@ py_sigmoid_op_compi.AddPythonKernel()
 py_sigmoid_op_compi.Finish()
 
 user_ops_ld = compi.UserOpsLoader()
-user_ops_ld.Prepare()
-print(user_ops_ld.GetAll())
-
-for so in user_ops_ld.GetAll():
-    print(so)
-    flow.config.load_library(so)
+user_ops_ld.LoadAll()
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
