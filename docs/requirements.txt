@@ -1,0 +1,5 @@
+Sphinx==2.2.0
+recommonmark==0.6.0
+sphinx_material==0.0.30
+sphinx_rtd_theme==0.5.0
+https://oneflow-public.oss-cn-beijing.aliyuncs.com/nightly/oneflow_cu102-0.2.0-cp37-cp37m-manylinux2014_x86_64.whl
