@@ -63,7 +63,7 @@ def _make_image_resize_keep_aspect_ratio_func(
     min_size,
     max_size,
     image_static_shape,
-    origin_image_size_range,
+    aspect_ratio_list,
     dtype,
     channels=3,
     resize_side="shorter",
@@ -88,8 +88,13 @@ def _make_image_resize_keep_aspect_ratio_func(
             interpolation_type=interpolation_type,
         )
 
-        out_shape = _infer_resized_image_static_shape(
-            target_size, origin_image_size_range, resize_side, channels,
+        out_shape = _infer_keep_aspect_ratio_resized_image_static_shape(
+            target_size=target_size,
+            min_size=min_size,
+            max_size=max_size,
+            aspect_ratio_list=aspect_ratio_list,
+            resize_side=resize_side,
+            channels=channels,
         )
         if print_debug_info:
             print("resized image_static_shape: {}".format(out_shape))
@@ -121,12 +126,12 @@ def _of_image_resize(
     assert all(image.ndim == 3 for image in image_list)
     assert all(image.shape[2] == channels for image in image_list)
 
-    image_static_shape, image_size_range = _infer_images_static_shape(
+    image_static_shape, aspect_ratio_list = _infer_images_static_shape(
         image_list, channels
     )
     if print_debug_info:
         print("image_static_shape: {}".format(image_static_shape))
-        print("image_size_range: {}".format(image_size_range))
+        print("aspect_ratio_list: {}".format(aspect_ratio_list))
 
     flow.clear_default_session()
     func_cfg = flow.FunctionConfig()
@@ -139,7 +144,7 @@ def _of_image_resize(
             min_size=min_size,
             max_size=max_size,
             image_static_shape=image_static_shape,
-            origin_image_size_range=image_size_range,
+            aspect_ratio_list=aspect_ratio_list,
             dtype=dtype,
             channels=channels,
             resize_side=resize_side,
@@ -173,54 +178,47 @@ def _infer_images_static_shape(images, channels=3):
     assert all(image.ndim == 3 for image in images)
     assert all(image.shape[2] == channels for image in images)
     image_shapes = np.asarray(image_shapes)
+
     max_h = np.max(image_shapes[:, 0]).item()
     max_w = np.max(image_shapes[:, 1]).item()
     image_static_shape = (len(images), max_h, max_w, channels)
 
-    group_ids = [int(image.shape[0] / image.shape[1]) for image in images]
-    min_h = np.min(image_shapes[:, 0]).item()
-    min_w = np.min(image_shapes[:, 1]).item()
+    group_ids = []  # 0: h < w, 1: h >= w
+    aspect_ratio_list = []  # shorter / longer
+    for image_shape in image_shapes:
+        h, w = image_shape[0:2]
+        if h < w:
+            group_id = 0
+            aspect_ratio = h / w
+        else:
+            group_id = 1
+            aspect_ratio = w / h
+        group_ids.append(group_id)
+        aspect_ratio_list.append(aspect_ratio)
     assert all(group_id == group_ids[0] for group_id in group_ids)
-    if group_ids[0] == 0:
-        image_size_range = (min_h, max_h, min_w, max_w)
-    else:
-        image_size_range = (min_w, max_w, min_h, max_h)
-
-    return image_static_shape, image_size_range
+    return image_static_shape, aspect_ratio_list
 
 
-def _infer_resized_image_static_shape(
+def _infer_keep_aspect_ratio_resized_image_static_shape(
     target_size,
-    origin_size_range=None,
+    min_size,
+    max_size,
+    aspect_ratio_list,
     resize_side="shorter",
     channels=3,
-    keep_aspect_ratio=True,
 ):
-    assert isinstance(origin_size_range, (list, tuple))
-    assert len(origin_size_range) == 4
+    resized_size_list = []
+    for aspect_ratio in aspect_ratio_list:
+        resized_size_list.append(
+            _get_keep_aspect_ratio_resized_size(
+                target_size, min_size, max_size, aspect_ratio, resize_side
+            )
+        )
 
-    min_aspect_ratio = origin_size_range[0] / origin_size_range[3]
-    max_aspect_ratio = origin_size_range[1] / origin_size_range[2]
-
-    res_shape = None
-    if keep_aspect_ratio:
-        assert isinstance(target_size, int)
-        if resize_side == "shorter":
-            max_size = int(round(target_size / min_aspect_ratio))
-            res_shape = (target_size, max_size, channels)
-        elif resize_side == "longer":
-            min_size = int(round(target_size * max_aspect_ratio))
-            res_shape = (min_size, target_size, channels)
-        else:
-            raise NotImplementedError
-    else:
-        assert isinstance(target_size, (list, tuple))
-        assert len(target_size) == 2
-        assert all(isinstance(size, int) for size in target_size)
-        res_w, res_h = target_size
-        res_shape = (res_h, res_w, channels)
-
-    return res_shape
+    res_min_size, res_max_size = max(
+        resized_size_list, key=lambda size: size[0] * size[1]
+    )
+    return (res_min_size, res_max_size, channels)
 
 
 def _cv_read_images_from_files(image_files, dtype):
@@ -230,6 +228,26 @@ def _cv_read_images_from_files(image_files, dtype):
     assert all(image.ndim == 3 for image in images)
     assert all(image.shape[2] == 3 for image in images)
     return images
+
+
+def _get_keep_aspect_ratio_resized_size(
+    target_size, min_size, max_size, aspect_ratio, resize_side
+):
+    if resize_side == "shorter":
+        min_res_size = target_size
+        max_res_size = int(round(min_res_size / aspect_ratio))
+        if max_size is not None and max_res_size > max_size:
+            max_res_size = max_size
+            min_res_size = int(round(max_res_size * aspect_ratio))
+    elif resize_side == "longer":
+        max_res_size = target_size
+        min_res_size = int(round(max_res_size * aspect_ratio))
+        if min_size is not None and min_res_size < min_size:
+            min_res_size = min_size
+            max_res_size = int(round(min_res_size / aspect_ratio))
+    else:
+        raise NotImplementedError
+    return (min_res_size, max_res_size)
 
 
 def _get_resize_size_and_scale(
@@ -243,28 +261,10 @@ def _get_resize_size_and_scale(
 ):
     if keep_aspect_ratio:
         assert isinstance(target_size, int)
-
-        min_org_size = float(min((w, h)))
-        max_org_size = float(max((w, h)))
-        aspect_ratio = min_org_size / max_org_size
-
-        if resize_side == "shorter":
-            min_res_size = target_size
-            max_res_size = int(round(min_res_size / aspect_ratio))
-            if max_size is not None and max_res_size > max_size:
-                max_res_size = max_size
-                min_res_size = int(round(max_res_size * aspect_ratio))
-
-        elif resize_side == "longer":
-            max_res_size = target_size
-            min_res_size = int(round(max_res_size * aspect_ratio))
-            if min_size is not None and min_res_size < min_size:
-                min_res_size = min_size
-                max_res_size = int(round(min_res_size / aspect_ratio))
-
-        else:
-            raise NotImplementedError
-
+        aspect_ratio = float(min((w, h))) / float(max((w, h)))
+        min_res_size, max_res_size = _get_keep_aspect_ratio_resized_size(
+            target_size, min_size, max_size, aspect_ratio, resize_side
+        )
         if w < h:
             res_w = min_res_size
             res_h = max_res_size
