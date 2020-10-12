@@ -81,9 +81,10 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         && user_op_conf.op_type_name() != "adam_update") {
       return;
     }
-    if (user_op_conf.attr<float>("scale") != 1.0f || user_op_conf.attr<float>("l1") != 0.0f
+    if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
         || user_op_conf.attr<float>("l2") != 0.0f
-        || user_op_conf.attr<float>("weight_decay") != 0.0f) {
+        || user_op_conf.attr<float>("weight_decay") != 0.0f
+        || user_op_conf.has_input("scale_by_tensor", 0)) {
       return;
     }
     const LogicalBlobId& model_lbi = GenLogicalBlobId(user_op_conf.input("model", 0));
@@ -127,9 +128,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     for (const OpNode* node : op_nodes_apply_to_diff) {
       OperatorConf new_conf = node->op().op_conf();
       if (new_conf.has_user_conf() && new_conf.user_conf().op_type_name() == "scalar_mul") {
-        ReplaceInputLbnInOpCustomizedConf(new_conf.mutable_user_conf(), "in_0",
-                                          GenLogicalBlobName(node->op().BnInOp2Lbi("in_0")),
-                                          values_lbn);
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&new_conf, "in_0", values_lbn);
+        CHECK_EQ(GenLogicalBlobName(node->op().BnInOp2Lbi("in_0")), old_val);
         values_lbn = GenLogicalBlobName(new_conf.name(), "out_0");
         job_builder->MutOpsOnlyOnce({new_conf});
       } else {

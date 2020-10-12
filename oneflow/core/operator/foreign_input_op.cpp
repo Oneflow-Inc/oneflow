@@ -30,10 +30,6 @@ void ForeignInputOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& ForeignInputOp::GetCustomizedConf() const {
-  return op_conf().foreign_input_conf();
-}
-
 Maybe<void> ForeignInputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

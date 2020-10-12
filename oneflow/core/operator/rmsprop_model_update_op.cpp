@@ -36,15 +36,12 @@ Maybe<void> RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
-  return op_conf().rmsprop_model_update_conf();
-}
-
 const HashSet<std::string> RMSPropModelUpdateOp::AlwaysBroadcastParallelBns() const {
   return HashSet<std::string>{};
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp, RMSPropModelUpdateOp);
+REGISTER_CLASS(int32_t, NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp,
+               RMSPropModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kRmspropModelUpdateConf, RMSPropModelUpdateOp);
 

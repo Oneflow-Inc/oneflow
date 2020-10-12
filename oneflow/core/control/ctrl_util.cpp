@@ -15,13 +15,13 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/platform.h"
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #include "oneflow/core/control/ctrl_util.h"
 #include "oneflow/core/common/util.h"
@@ -29,7 +29,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace {
 
@@ -62,5 +62,5 @@ int CtrlUtil::FindAvailablePort() const {
 
 int CtrlUtil::FindAvailablePort() const { UNIMPLEMENTED(); }
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 }

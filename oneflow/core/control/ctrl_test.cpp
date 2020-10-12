@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -67,7 +67,7 @@ TEST(CtrlServer, new_delete) {
   Global<ResourceDesc, ForSession>::New(GetResource());
 
   // do test
-  // OF_BARRIER_ALL();
+  // OF_ENV_BARRIER();
 
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
@@ -79,4 +79,4 @@ TEST(CtrlServer, new_delete) {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

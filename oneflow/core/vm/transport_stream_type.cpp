@@ -50,7 +50,7 @@ void TransportStreamType::Compute(Instruction* instruction) const {
   instr_type_id.instruction_type().Compute(instruction);
 }
 
-// Specifys transport stream description of the virtual machine to be used
+// Specifies transport stream description of the virtual machine to be used
 template<typename DerivedT>
 ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
@@ -72,13 +72,13 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   return ret;
 }
 
-// Specify transport sender stream description 
+// Specifies transport sender stream description
 ObjectMsgPtr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportSenderStreamType>(resource, this_machine_id);
 }
 
-// Specify transport receiver stream description
+// Specifies transport receiver stream description
 ObjectMsgPtr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportReceiverStreamType>(resource, this_machine_id);

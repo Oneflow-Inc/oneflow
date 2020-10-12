@@ -118,6 +118,44 @@ REGISTER_RAW_DECODER_KERNEL(int32_t)
 REGISTER_RAW_DECODER_KERNEL(int64_t)
 REGISTER_RAW_DECODER_KERNEL(uint8_t)
 
+class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
+ public:
+  OFRecordBytesDecoderKernel() = default;
+  ~OFRecordBytesDecoderKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(out->shape(), in->shape());
+    CHECK_EQ(in->data_type(), DataType::kOFRecord);
+    CHECK_EQ(out->data_type(), DataType::kTensorBuffer);
+    const int64_t num_instances = in->shape().elem_cnt();
+    const auto* records = in->dptr<OFRecord>();
+    auto* buffers = out->mut_dptr<TensorBuffer>();
+    const std::string& name = ctx->Attr<std::string>("name");
+    MultiThreadLoop(num_instances, [&](size_t i) {
+      const OFRecord& record = *(records + i);
+      TensorBuffer* buffer = buffers + i;
+      auto it = record.feature().find(name);
+      CHECK(it != record.feature().end()) << "Field " << name << " not found";
+      const Feature& feature = it->second;
+      CHECK(feature.has_bytes_list());
+      CHECK_EQ(feature.bytes_list().value_size(), 1);
+      const int64_t size = feature.bytes_list().value(0).size();
+      buffer->Resize(Shape({size}), DataType::kUInt8);
+      memcpy(buffer->mut_data(), feature.bytes_list().value(0).data(), size);
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
+    .SetCreateFn<OFRecordBytesDecoderKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
+                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord)
+                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+
 namespace {
 
 void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,

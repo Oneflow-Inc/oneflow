@@ -926,6 +926,120 @@ def batch_normalization(
         raise NotImplementedError
 
 
+@oneflow_export("nn.layer_norm")
+def layer_norm(
+    inputs: remote_blob_util.BlobDef,
+    gamma: Optional[remote_blob_util.BlobDef] = None,
+    beta: Optional[remote_blob_util.BlobDef] = None,
+    begin_norm_axis: int = 1,
+    begin_params_axis: int = -1,
+    epsilon: float = 1e-5,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Layer Normalization.
+
+    Args:
+        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        gamma (Optional[remote_blob_util.BlobDef]).
+        beta (Optional[remote_blob_util.BlobDef]).
+        begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
+        begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
+        epsilon (float, optional): A small float is added to avoid division by zero. Defaults to 1e-5.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def layer_norm_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            layer_norm = flow.nn.layer_norm(
+                x,
+                name="LayerNorm1"
+            )
+            return layer_norm
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = layer_norm_Job(x)
+
+        # out.shape (1, 64, 128, 128)
+
+    """
+    param_shape = inputs.shape[begin_params_axis:]
+
+    if name is None:
+        name = id_util.UniqueStr("LayerNorm_")
+
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
+        if begin_norm_axis < 0:
+            begin_norm_axis = begin_norm_axis + len(inputs.shape)
+
+        reduce_axis = []
+        for dim in range(len(inputs.shape)):
+            if dim >= begin_norm_axis:
+                reduce_axis.append(dim)
+        mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=True)
+
+        axis = begin_norm_axis
+        normalized = flow.nn.batch_normalization(
+            x=inputs,
+            mean=mean,
+            variance=variance,
+            variance_epsilon=epsilon,
+            axis=axis,
+            name=name,
+        )
+        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(
+            param_shape
+        )
+        affined = normalized
+        if gamma:
+            gamma = flow.reshape(gamma, nd_params_shape)
+            affined *= gamma
+        if beta:
+            beta = flow.reshape(beta, nd_params_shape)
+            affined += beta
+        return affined
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("layer_norm")
+            .Input("x", [inputs])
+            .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+        )
+        scale = False
+        center = False
+        if beta is not None:
+            center = True
+            op_builder.Input("beta", [beta])
+        if gamma is not None:
+            scale = True
+            op_builder.Input("gamma", [gamma])
+            op_builder.Output("normalized")
+        op_builder.Attr("center", center)
+        op_builder.Attr("scale", scale)
+        op_builder.Attr("begin_norm_axis", begin_norm_axis)
+        op_builder.Attr("begin_params_axis", begin_params_axis)
+        op_builder.Attr("epsilon", epsilon)
+
+        y = op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
+        return y
+    else:
+        raise NotImplementedError
+
+
 @oneflow_export("nn.compat_conv2d")
 def tf_conv2d(
     input: remote_blob_util.BlobDef,

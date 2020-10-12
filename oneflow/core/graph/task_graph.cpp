@@ -44,7 +44,7 @@ bool IsInterfaceTask(const TaskNode* node) {
   if (comp_task_node == nullptr) { return false; }
   if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
   auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
+  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
@@ -529,6 +529,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
+  CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+    CompTaskNode* src = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
+    Connect<TaskNode>(src, NewEdge(), dst);
+  }
+}
+
 void TaskGraph::BuildTaskPath(
     CompTaskNode* src, CompTaskNode* dst,
     std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
@@ -594,7 +603,7 @@ TaskNode* TaskGraph::BuildTaskStep(
 
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
   if (IsInterfaceTask(task)) { return nullptr; }
-  if (IsClassRegistered<TickTockTaskType>(task->GetTaskType())) { return nullptr; }
+  if (IsClassRegistered<int32_t, TickTockTaskType>(task->GetTaskType())) { return nullptr; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());

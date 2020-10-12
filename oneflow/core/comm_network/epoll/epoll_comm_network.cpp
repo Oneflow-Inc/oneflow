@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
 
@@ -78,7 +78,8 @@ EpollCommNet::~EpollCommNet() {
     LOG(INFO) << "CommNet Thread " << i << " finish";
     pollers_[i]->Stop();
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   for (IOEventPoller* poller : pollers_) { delete poller; }
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
@@ -212,4 +213,4 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

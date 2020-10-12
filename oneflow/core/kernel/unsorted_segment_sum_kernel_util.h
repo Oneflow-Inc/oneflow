@@ -28,13 +28,8 @@ struct UnsortedSegmentSumKernelUtil final {
                                  int64_t segment_id_offset, T* out);
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 #define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) FLOAT16_DATA_TYPE_SEQ
-#else
-#define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-#endif
 
 }  // namespace oneflow
 
