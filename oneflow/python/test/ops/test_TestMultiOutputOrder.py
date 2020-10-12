@@ -20,7 +20,6 @@ import unittest
 import os
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def TestMultiOutputOrder(x, name):
     return (
         flow.user_op_builder(name)
@@ -34,6 +33,7 @@ def TestMultiOutputOrder(x, name):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def GenerateTest(test_case, shape):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -44,12 +44,9 @@ def GenerateTest(test_case, shape):
         return TestMultiOutputOrder(x, "my_2_output_op")
 
     x = np.random.rand(*shape).astype(np.float32)
-    # print("x", x)
     out1, out2 = TestMultiOutputOrderJob(x).get()
     out1_ndarray = out1.numpy()
     out2_ndarray = out2.numpy()
-    # print("out1", out1_ndarray)
-    # print("out2", out2_ndarray)
     out2_shape = list(shape)
     out2_shape[-1] = out2_shape[-1] * 2
     out2_shape = tuple(out2_shape)
