@@ -52,9 +52,7 @@ def _of_image_target_resize(
             channels=3,
         )
         res_image = flow.tensor_buffer_to_tensor_list(
-            res_image_buffer,
-            shape=out_shape,
-            dtype=flow.float,
+            res_image_buffer, shape=out_shape, dtype=flow.float,
         )
         return res_image, new_size, scale
 
@@ -101,7 +99,9 @@ def _compare_image_target_resize_with_cv(
     test_case, image_files, target_size, max_size, print_debug_info=False
 ):
     images = image_test_util.read_images_by_cv(image_files, flow.float)
-    image_static_shape, aspect_ratio_list = image_test_util.infer_images_static_shape(images)
+    image_static_shape, aspect_ratio_list = image_test_util.infer_images_static_shape(
+        images
+    )
     expand_images = [np.expand_dims(image, axis=0) for image in images]
 
     resized_images, size, scale = _of_image_target_resize(
