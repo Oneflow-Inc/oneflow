@@ -36,7 +36,7 @@ void TransportStreamType::DeleteInstructionStatus(const Stream& stream,
   // do nothing
 }
 
-// Returns true if RefCntType is eaqual to 0
+// Returns true if RefCntType eaquals to 0
 bool TransportStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   const char* data = status_buffer.buffer().data();
@@ -50,7 +50,7 @@ void TransportStreamType::Compute(Instruction* instruction) const {
   instr_type_id.instruction_type().Compute(instruction);
 }
 
-// Specifys transport stream description of the virtual machine to be used
+// Stream description used by virtual machine initialization
 template<typename DerivedT>
 ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
@@ -72,7 +72,7 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   return ret;
 }
 
-// Specify transport sender stream description 
+// Specify transport sender stream description
 ObjectMsgPtr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportSenderStreamType>(resource, this_machine_id);
