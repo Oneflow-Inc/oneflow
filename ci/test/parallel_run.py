@@ -72,7 +72,9 @@ if __name__ == "__main__":
     parser.add_argument("--cmd", type=str, required=False, default=sys.executable)
     parser.add_argument("--timeout", type=int, required=False, default=2)
     parser.add_argument("--chunk", type=int, required=True)
-    parser.add_argument("--verbose", type=bool, required=False, default=False)
+    parser.add_argument(
+        "--verbose", type=bool, action="store_true", required=False, default=False
+    )
     args = parser.parse_args()
     cmds = gen_cmds(args.cmd, args.dir)
     start = time.time()
