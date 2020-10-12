@@ -105,6 +105,8 @@ message MemoryZoneOutOfMemoryError {
 
 message LossBlobNotFoundError { }
 
+message RwMutexedObjectNotFoundError { }
+
 message UnkownError { }
 
 message ErrorStackFrame {
@@ -147,6 +149,7 @@ message ErrorProto {
     PlacementError placement_error= 470;
     BlobSplitAxisInferError blob_split_axis_infer_error = 480;
     UnknownJobBuildAndInferError unknown_job_build_and_infer_error = 500;
+    RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
     UnkownError unknown_error = 900;
   }
 }

@@ -28,6 +28,7 @@ limitations under the License.
 #include <nccl.h>
 #include <cuda_fp16.h>
 #include <device_launch_parameters.h>
+#include "oneflow/core/device/cuda_pseudo_half.h"
 
 #if CUDA_VERSION >= 10020
 
