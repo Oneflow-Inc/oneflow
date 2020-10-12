@@ -220,11 +220,6 @@ Maybe<void> GetSliceUpdateOpSbpSignature(user_op::SbpContext* ctx) {
     }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("update", 0))
-      .Broadcast(user_op::OpArg("y", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 
