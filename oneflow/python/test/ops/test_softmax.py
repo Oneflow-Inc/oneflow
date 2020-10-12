@@ -93,6 +93,9 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
     def test_softmax(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [
