@@ -198,6 +198,34 @@ struct hash<oneflow::CudnnConvParams> final {
 
 }  // namespace std
 
+namespace oneflow {
+
+class CudnnConvAlgoCache final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvAlgoCache);
+  CudnnConvAlgoCache() = default;
+  ~CudnnConvAlgoCache() = default;
+
+  template<typename perf_t>
+  using WorkspaceSizeAndPerfT = std::pair<size_t, perf_t>;
+  template<typename perf_t>
+  using Store = HashMap<CudnnConvParams, std::list<WorkspaceSizeAndPerfT<perf_t>>>;
+
+  template<typename perf_t>
+  perf_t Remember(const CudnnConvParams& params,
+                  const std::function<perf_t(const CudnnConvParams& param)>& InferFn);
+
+ private:
+  Store<cudnnConvolutionFwdAlgoPerf_t> fwd_algo_store_;
+  std::mutex fwd_algo_store_mutex_;
+  Store<cudnnConvolutionBwdDataAlgoPerf_t> bwd_data_algo_store_;
+  std::mutex bwd_data_algo_store_mutex_;
+  Store<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filter_algo_store_;
+  std::mutex bwd_filter_algo_cache_mutex_;
+};
+
+}  // namespace oneflow
+
 #endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDNN_CONV_UTIL_H_

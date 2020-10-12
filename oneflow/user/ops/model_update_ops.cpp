@@ -65,6 +65,10 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+    JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -88,6 +92,10 @@ Maybe<void> InferMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckTensorDescLike(momentum, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+    JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -117,6 +125,10 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckTensorDescLike(v, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+    JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
+  }
   if (ctx->Attr<bool>("do_bias_correction")) {
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
     CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
@@ -177,7 +189,8 @@ REGISTER_USER_OP("sgd_update")
     .Input("model")
     .Input("model_diff")
     .Input("learning_rate")
-    .Attr<float>("scale", UserOpAttrType::kAtFloat, 1.0)
+    .OptionalInput("scale_by_tensor")
+    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
     .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
@@ -196,8 +209,7 @@ REGISTER_USER_OP("sgd_update")
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("indexed_slices_sgd_update")
     .Input("model")
@@ -230,15 +242,15 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("momentum_update")
     .Input("model")
     .Input("model_diff")
     .Input("learning_rate")
     .Input("momentum")
-    .Attr<float>("scale", UserOpAttrType::kAtFloat, 1.0)
+    .OptionalInput("scale_by_tensor")
+    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
     .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("beta", UserOpAttrType::kAtFloat, 0.9)
@@ -259,8 +271,7 @@ REGISTER_USER_OP("momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model")
@@ -298,18 +309,18 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-    })
-    .SetAreaId(AreaType::kMdUpdtArea);
+    });
 
 REGISTER_USER_OP("adam_update")
     .Input("model")
     .Input("model_diff")
     .Input("learning_rate")
+    .OptionalInput("scale_by_tensor")
     .Input("m")
     .Input("v")
     .OptionalInput("beta1_t")
     .OptionalInput("beta2_t")
-    .Attr<float>("scale", UserOpAttrType::kAtFloat, 1.0)
+    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
     .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
     .Attr<float>("beta1", UserOpAttrType::kAtFloat, 0.9)
@@ -332,8 +343,7 @@ REGISTER_USER_OP("adam_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetAreaId(AreaType::kMdUpdtArea);
+    .SetInputArgModifyFn(AdamInputArgModifyFn);
 
 REGISTER_USER_OP("indexed_slices_adam_update")
     .Input("model")
@@ -380,8 +390,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetAreaId(AreaType::kMdUpdtArea);
+    .SetInputArgModifyFn(AdamInputArgModifyFn);
 
 }  // namespace
 

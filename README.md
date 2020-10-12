@@ -105,40 +105,35 @@
 
 2. #### Clone Source Code
 
-    - #### Option 1: Download from Aliyun
+    - #### Option 1: Clone source code from github
 
-      If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow
+      ```
+
+    - #### Option 2: Download from Aliyun
+
+      If you are in China, please download OneFlow source code from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
       ```bash
       curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
       unzip oneflow-src.zip
       ```
 
-    - #### Option 2: Clone source code and submodules
-
-      ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow
-      cd oneflow
-      git submodule update --init --recursive
-      ```
-
-    - #### Option 3: Clone the repo with `--recursive` flag to clone third_party submodules together
-
-      ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow --recursive
-      ```
-
 3. #### Build and Install OneFlow
 
-    ```
-    cd build
-    cmake ..
-    make -j$(nproc)
-    make pip_install
-    ```
+    - In the root directory of OneFlow source code, run:
 
+      ```
+      mkdir build
+      cd build
+      cmake ..
+      make -j$(nproc)
+      make pip_install
+      ```
+
+    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
     - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
-    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files. 
 
 ### Troubleshooting
 

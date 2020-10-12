@@ -72,13 +72,13 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   return ret;
 }
 
-// Specify transport sender stream description
+// Specifies transport sender stream description
 ObjectMsgPtr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportSenderStreamType>(resource, this_machine_id);
 }
 
-// Specify transport receiver stream description
+// Specifies transport receiver stream description
 ObjectMsgPtr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportReceiverStreamType>(resource, this_machine_id);

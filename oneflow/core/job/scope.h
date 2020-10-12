@@ -39,6 +39,7 @@ class Scope final {
   const OptMirroredParallel& opt_mirrored_parallel_conf() const {
     return scope_proto_.opt_mirrored_parallel_conf();
   }
+  const ScopeProto& scope_proto() const { return scope_proto_; }
 
  private:
   Maybe<void> Init();

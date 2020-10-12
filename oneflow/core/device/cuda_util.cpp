@@ -60,6 +60,27 @@ const char* CurandGetErrorString(curandStatus_t error) {
   return "Unknown curand status";
 }
 
+#if CUDA_VERSION >= 10020
+
+const char* NvjpegGetErrorString(nvjpegStatus_t error) {
+  switch (error) {
+    case NVJPEG_STATUS_SUCCESS: return "NVJPEG_STATUS_SUCCESS";
+    case NVJPEG_STATUS_NOT_INITIALIZED: return "NVJPEG_STATUS_NOT_INITIALIZED";
+    case NVJPEG_STATUS_INVALID_PARAMETER: return "NVJPEG_STATUS_INVALID_PARAMETER";
+    case NVJPEG_STATUS_BAD_JPEG: return "NVJPEG_STATUS_BAD_JPEG";
+    case NVJPEG_STATUS_JPEG_NOT_SUPPORTED: return "NVJPEG_STATUS_JPEG_NOT_SUPPORTED";
+    case NVJPEG_STATUS_ALLOCATOR_FAILURE: return "NVJPEG_STATUS_ALLOCATOR_FAILURE";
+    case NVJPEG_STATUS_EXECUTION_FAILED: return "NVJPEG_STATUS_EXECUTION_FAILED";
+    case NVJPEG_STATUS_ARCH_MISMATCH: return "NVJPEG_STATUS_ARCH_MISMATCH";
+    case NVJPEG_STATUS_INTERNAL_ERROR: return "NVJPEG_STATUS_INTERNAL_ERROR";
+    case NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:
+      return "NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED";
+  }
+  return "Unknown nvjpeg status";
+}
+
+#endif
+
 void InitGlobalCudaDeviceProp() {
   CHECK(Global<cudaDeviceProp>::Get() == nullptr) << "initialized Global<cudaDeviceProp> twice";
   Global<cudaDeviceProp>::New();
@@ -109,7 +130,7 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   return prop.totalGlobalMem;
 }
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace {
 
@@ -172,7 +193,7 @@ void CudaDeviceGetCpuAffinity(int32_t dev_id, cpu_set_t* cpu_set) {
 #endif
 
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   cpu_set_t new_cpu_set;
   CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
   cpu_set_t saved_cpu_set;
@@ -180,6 +201,16 @@ void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
   OF_CUDA_CHECK(cudaMallocHost(ptr, size));
   CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set), 0);
+#else
+  UNIMPLEMENTED();
+#endif
+}
+
+void CudaDeviceSetCpuAffinity(int32_t dev) {
+#ifdef OF_PLATFORM_POSIX
+  cpu_set_t new_cpu_set;
+  CudaDeviceGetCpuAffinity(dev, &new_cpu_set);
+  CHECK_EQ(sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set), 0);
 #else
   UNIMPLEMENTED();
 #endif

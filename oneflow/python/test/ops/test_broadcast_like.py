@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -46,21 +47,26 @@ def compare_broadcast_like_with_tf(
     assert np.allclose(of_out.numpy(), np_out, rtol=rtol, atol=atol)
 
 
-def test_broadcast_like(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(5, 2)]
-    arg_dict["like_shape"] = [(4, 5, 2)]
-    arg_dict["broadcast_axes"] = [[0]]
-    for arg in GenArgList(arg_dict):
-        compare_broadcast_like_with_tf(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestBroadcastLike(flow.unittest.TestCase):
+    def test_broadcast_like(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(5, 2)]
+        arg_dict["like_shape"] = [(4, 5, 2)]
+        arg_dict["broadcast_axes"] = [[0]]
+        for arg in GenArgList(arg_dict):
+            compare_broadcast_like_with_tf(*arg)
+
+    def test_broadcast_like2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(5, 2)]
+        arg_dict["like_shape"] = [(4, 6, 5, 2)]
+        arg_dict["broadcast_axes"] = [[0, 1]]
+        for arg in GenArgList(arg_dict):
+            compare_broadcast_like_with_tf(*arg)
 
 
-def test_broadcast_like2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(5, 2)]
-    arg_dict["like_shape"] = [(4, 6, 5, 2)]
-    arg_dict["broadcast_axes"] = [[0, 1]]
-    for arg in GenArgList(arg_dict):
-        compare_broadcast_like_with_tf(*arg)
+if __name__ == "__main__":
+    unittest.main()

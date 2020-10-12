@@ -191,8 +191,10 @@ REGISTER_USER_OP("normalization_add_relu")
     .SetTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          *reserve_space->mut_data_type() = DataType::kChar;
-          *reserve_space->mut_shape() = Shape({1});
+          const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          *reserve_space->mut_data_type() = DataType::kInt32;
+          *reserve_space->mut_shape() =
+              Shape({static_cast<int64_t>(RoundUp(x_desc->shape().elem_cnt(), 32) / 32)});
           return Maybe<void>::Ok();
         }))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)

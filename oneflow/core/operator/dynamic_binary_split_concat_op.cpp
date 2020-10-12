@@ -26,8 +26,6 @@ class DynamicBinarySplitOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
  private:
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -45,10 +43,6 @@ void DynamicBinarySplitOp::InitFromOpConf() {
   EnrollRepeatedOutputBnWithSetter("out", [](OutputBlobModifier* ob_modifier) {
     ob_modifier->set_header_infered_before_compute(false);
   });
-}
-
-const PbMessage& DynamicBinarySplitOp::GetCustomizedConf() const {
-  return op_conf().dynamic_binary_split_conf();
 }
 
 Maybe<void> DynamicBinarySplitOp::InferBlobDescs(
@@ -114,8 +108,6 @@ class DynamicBinaryConcatOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
  private:
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -136,10 +128,6 @@ void DynamicBinaryConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_dynamic_binary_concat_conf());
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
-}
-
-const PbMessage& DynamicBinaryConcatOp::GetCustomizedConf() const {
-  return op_conf().dynamic_binary_concat_conf();
 }
 
 Maybe<void> DynamicBinaryConcatOp::InferBlobDescs(
