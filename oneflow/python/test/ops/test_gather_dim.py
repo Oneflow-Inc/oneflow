@@ -56,18 +56,18 @@ def _make_gather_dim_fn(input, index, dim, device_type, mirrored):
     func_config.default_data_type(flow.float)
 
     def do_gather(x_blob, i_blob):
-        # with flow.scope.placement(device_type, "0:0"):
-        func_config.default_logical_view(flow.scope.consistent_view())
-        x = flow.get_variable(
-            "input",
-            shape=input.shape,
-            dtype=flow.float,
-            initializer=flow.constant_initializer(0),
-        )
-        x = flow.cast_to_current_logical_view(x)
-        x = x + x_blob
+        with flow.scope.placement(device_type, "0:0"):
+            func_config.default_logical_view(flow.scope.consistent_view())
+            x = flow.get_variable(
+                "input",
+                shape=input.shape,
+                dtype=flow.float,
+                initializer=flow.constant_initializer(0),
+            )
+            x = flow.cast_to_current_logical_view(x)
+            x = x + x_blob
 
-        y = flow.gather_dim(x, dim, i_blob)
+            y = flow.gather_dim(x, dim, i_blob)
         flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
         ).minimize(y)

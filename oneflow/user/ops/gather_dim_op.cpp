@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/gather_dim_kernel_util.h"
 
 namespace oneflow {
 
@@ -27,12 +28,12 @@ REGISTER_USER_OP("gather_dim")
       const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       int64_t input_num_axes = in->shape().NumAxes();
       CHECK_GT_OR_RETURN(input_num_axes, 0);
-      CHECK_LE_OR_RETURN(input_num_axes, 8);
+      CHECK_LE_OR_RETURN(input_num_axes, MAX_DIM_COUNT);
 
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       int64_t index_num_axes = index->shape().NumAxes();
       CHECK_GT_OR_RETURN(index_num_axes, 0);
-      CHECK_LE_OR_RETURN(index_num_axes, 8);
+      CHECK_LE_OR_RETURN(index_num_axes, MAX_DIM_COUNT);
       CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
 
       const int64_t dim = ctx->Attr<int64_t>("dim");
@@ -74,13 +75,13 @@ REGISTER_USER_OP("gather_dim")
       const int64_t dim = ctx->Attr<int64_t>("dim");
 
       FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
-        if(i != dim){
+        if (i != dim) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("index", 0), i)
               .Split(user_op::OpArg("input", 0), i)
               .Split(user_op::OpArg("output", 0), i)
               .Build();
-        }else if(i == dim){
+        } else if (i == dim) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("input", 0), i)
               .Broadcast(user_op::OpArg("index", 0))
@@ -90,11 +91,10 @@ REGISTER_USER_OP("gather_dim")
               .Broadcast(user_op::OpArg("input", 0))
               .Split(user_op::OpArg("index", 0), i)
               .Split(user_op::OpArg("output", 0), i)
-              .Build();   
+              .Build();
         }
-
       }
-      
+
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("input", 0))
           .Broadcast(user_op::OpArg("index", 0))
@@ -119,7 +119,7 @@ REGISTER_USER_OP("scatter_dim_add_like")
       const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
-      
+
       CHECK_OR_RETURN(src != nullptr);
       CHECK_OR_RETURN(index != nullptr);
       CHECK_OR_RETURN(like != nullptr);
@@ -129,7 +129,7 @@ REGISTER_USER_OP("scatter_dim_add_like")
 
       int64_t src_num_axes = src->shape().NumAxes();
       CHECK_GT_OR_RETURN(src_num_axes, 0);
-      CHECK_LE_OR_RETURN(src_num_axes, 8);
+      CHECK_LE_OR_RETURN(src_num_axes, MAX_DIM_COUNT);
 
       int64_t index_num_axes = index->shape().NumAxes();
       CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
@@ -163,9 +163,11 @@ REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardO
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder
-        .OpTypeName("scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
-        .InputBind("index", ctx->FwOp().input("index", 0))    // scatter.index <- gather.index
-        .InputBind("src", ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
+        .OpTypeName(
+            "scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
+        .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
+        .InputBind("src",
+                   ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
         .InputBind("like", ctx->FwOp().input("input", 0))
         .Output("output")
         .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
