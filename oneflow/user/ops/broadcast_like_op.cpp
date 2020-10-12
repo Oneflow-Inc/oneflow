@@ -106,7 +106,8 @@ REGISTER_USER_OP_GRAD("broadcast_like")
             .InputBind("x", ctx->FwOp().output_grad("y", 0))
             .InputBind("like", ctx->FwOp().input("x", 0))
             .Output("y")
-            .Attr("axis", static_cast<std::vector<int32_t>>(ctx->FwOp().attr<std::vector<int32_t>>("broadcast_axes")))
+            .Attr("axis", static_cast<std::vector<int32_t>>(
+                              ctx->FwOp().attr<std::vector<int32_t>>("broadcast_axes")))
             .Build();
       });
 
