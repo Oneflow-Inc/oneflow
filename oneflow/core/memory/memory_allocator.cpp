@@ -91,7 +91,24 @@ MemoryAllocator::~MemoryAllocator() {
 
 char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
+
+  size_t free_before, total_before;
+  size_t free_after, total_after;
+  cudaMemGetInfo(&free_before, &total_before);
   char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
+  cudaMemGetInfo(&free_after, &total_after);
+  size_t size_to_check = size;
+  if (mem_case.has_host_mem()) { size_to_check = 0; }
+  if (size_to_check > 0) {
+    LOG(ERROR) << "\n"
+               << "size_to_check: " << size_to_check << "\n"
+               << "free_before: " << free_before << "\n"
+               << "free_after: " << free_after << "\n"
+               << "free_diff: " << (free_before - free_after) << "\n"
+               << "total_before: " << total_before << "\n"
+               << "total_after: " << total_after << "\n"
+               << "============================";
+  }
   if (mem_case.has_host_mem()) {
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
