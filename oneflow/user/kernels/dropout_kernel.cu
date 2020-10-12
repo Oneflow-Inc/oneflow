@@ -38,7 +38,6 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
 template<>
 __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* x,
                                       const int8_t* mask, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const int64_t h2_n = n / 2;
   half2 h2_scale = __float2half2_rn(scale);
   const auto* x_h2 = reinterpret_cast<const half2*>(x);
@@ -56,16 +55,11 @@ __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* 
     half one_or_zero = mask[last_idx];
     y[last_idx] = __hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x);
   }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<>
 __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const half* x,
                                          const int8_t* mask, const half* addend, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   const int64_t h2_n = n / 2;
   half2 h2_scale = __float2half2_rn(scale);
   const auto* x_h2 = reinterpret_cast<const half2*>(x);
@@ -84,10 +78,6 @@ __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const hal
     half one_or_zero = mask[last_idx];
     y[last_idx] = __hadd(__hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x), addend[last_idx]);
   }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
 template<typename T>
