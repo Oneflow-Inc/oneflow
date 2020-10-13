@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/client/lib/math.h"
 
 #include "oneflow/xrt/xla/xla_helpers.h"
 
@@ -23,20 +24,20 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-xla::XlaOp Square(const xla::XlaOp &x) {
-  return xla::Dot(x,x);
-}
-
 class SquareSumOp : public XlaOpKernel {
  public:
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp x = ctx->Input("x_0");
+    Shape x_shape = ctx->InputShape("x_0");
     xla::XlaBuilder *builder = ctx->builder(); 
     DataType data_type = ctx->SoleInputType();
     xla::XlaOp sum;
-    
+    std::vector<long long>  x_dims(x_shape.NumAxes());
+    std::cout <<  "x shape NumAxes :  " << x_shape.NumAxes()<<std::endl;
+    std::iota(x_dims.begin(), x_dims.end(), 0);
+    //std::cout <<"x_dims:  "<< x_dims <<std::endl; 
     xla::XlaComputation add_func = CreateAddFunc(data_type);
-    sum = xla::Reduce(Square(x), Zero(builder, data_type), add_func, {1});
+    sum = xla::Reduce(xla::Square(x), Zero(builder, data_type), add_func, x_dims);
     ctx->SetSoleOutput(sum);
   }
 };
