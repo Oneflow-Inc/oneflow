@@ -21,23 +21,6 @@ namespace oneflow {
 
 namespace user_op {
 
-namespace {
-
-class SquareSumOpKernelState final : public user_op::OpKernelState {
- public:
-  SquareSumOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~SquareSumOpKernelState() override = default;
-
-  int64_t lower() const { return lower_; }
-  int64_t upper() const { return upper_; }
-
- private:
-  const int64_t lower_;
-  const int64_t upper_;
-};
-
-}  // namespace
-
 template<DeviceType device_type, typename T>
 class SquareSumKernel final : public user_op::OpKernel {
  public:
@@ -56,12 +39,12 @@ class SquareSumKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                                \
-  REGISTER_USER_KERNEL("square_sum")                                                             \
-      .SetCreateFn<                                                                          \
-          SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));       \
+#define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                                              \
+  REGISTER_USER_KERNEL("square_sum")                                                           \
+      .SetCreateFn<                                                                            \
+          SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));          \
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)

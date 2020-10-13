@@ -28,9 +28,6 @@ REGISTER_USER_OP("square_sum")
       *y->mut_data_type() = x->data_type();
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       ctx->BatchAxis4ArgNameAndIndex("y", 0)->clear_value();
       return Maybe<void>::Ok();
