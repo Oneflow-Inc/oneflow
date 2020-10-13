@@ -61,13 +61,8 @@ class Operator {
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const;
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
-  virtual const PbMessage& GetCustomizedConf() const {
-    UNIMPLEMENTED();
-    return *static_cast<const PbMessage*>(nullptr);
-  }
-
-  bool HasFieldInCustomizedConf(const std::string& field_name) const {
-    return HasFieldInPbMessage(GetCustomizedConf(), field_name);
+  const PbMessage& GetCustomizedConf() const {
+    return GetMessageInPbMessage(op_conf(), op_conf().op_type_case());
   }
 
   template<typename T>
@@ -75,19 +70,6 @@ class Operator {
     return GetValFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
-  int32_t GetEnumFromCustomizedConf(const std::string& field_name) const {
-    return GetEnumFromPbMessage(GetCustomizedConf(), field_name);
-  }
-
-  template<typename T>
-  const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
-    return static_cast<const T&>(GetValFromCustomizedConf<const PbMessage&>(field_name));
-  }
-
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedConf(const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
-  }
   template<typename T>
   const PbRpf<T>& GetPbRpfFromCustomizedConf(const std::string& field_name) const {
     return GetPbRpfFromPbMessage<T>(GetCustomizedConf(), field_name);
@@ -244,31 +226,6 @@ class Operator {
     UNIMPLEMENTED();
     return nullptr;
   }
-  template<typename T>
-  void SetValInCustomizedConf(const std::string& field_name, const T& val) const {
-    SetValInPbMessage<T>(&const_cast<PbMessage&>(GetCustomizedConf()), field_name, val);
-  }
-
-  template<typename T>
-  void SetValInCustomizedKernelConf(KernelConf* kernel_conf, const std::string& field_name,
-                                    const T& val) const {
-    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    SetValInPbMessage<T>(customized_conf, field_name, val);
-  }
-
-  template<typename T>
-  T* MutableMsgInCustomizedKernelConf(KernelConf* kernel_conf,
-                                      const std::string& field_name) const {
-    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    return static_cast<T*>(MutableMessageInPbMessage(customized_conf, field_name));
-  }
-
-  template<typename T>
-  void AddValToPbRfInCustomizedKernelConf(KernelConf* kernel_conf, const std::string& field_name,
-                                          const T& val) const {
-    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    AddValInPbRf<T>(customized_conf, field_name, val);
-  }
 
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
@@ -323,8 +280,6 @@ class Operator {
   InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
   OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff);
   OutputBlobModifier* EnrollOutputBn(const std::string& obn) { return EnrollOutputBn(obn, true); }
-
-  void StrFieldTolower(const std::string& field_name);
 
   InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
@@ -385,40 +340,40 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
 };
 
 #define REGISTER_OP(op_type_case, OpType)                                       \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,       \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_CPU_OP(op_type_case, OpType)                                  \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,      \
                          ([] { return new OnlyCpuSupportPredicator(true); })); \
-  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator)                              \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,       \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, Operator, creator, const OperatorConf&)
 
-#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)        \
-  REGISTER_CLASS_CREATOR(op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
+#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)                 \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
                          ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
 
 struct IsInterfaceOpConf4OpTypeCase final {};
 
-#define REGISTER_INTERFACE_OP(op_type_case)                          \
-  REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
+#define REGISTER_INTERFACE_OP(op_type_case)                                   \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
 
 struct DisableInputBoxingGroup final {};
 
-#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)       \
-  REGISTER_CLASS_CREATOR(op_type_case, DisableInputBoxingGroup, \
+#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, DisableInputBoxingGroup, \
                          ([] { return new DisableInputBoxingGroup(); }))
 
 struct IsTickTockOpTypeCase final {};
 
-#define REGISTER_TICK_TOCK_OP(op_type_case)                  \
-  REGISTER_CLASS_CREATOR(op_type_case, IsTickTockOpTypeCase, \
+#define REGISTER_TICK_TOCK_OP(op_type_case)                           \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsTickTockOpTypeCase, \
                          ([] { return new IsTickTockOpTypeCase; }))
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
@@ -462,10 +417,13 @@ Maybe<void> InferOpSbpSignature(
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
     std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
 
-std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
                                           const std::string& fd_name_may_have_idx);
-void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
-                                       const std::string& old_val, const std::string& new_val);
+
+// return old value
+std::string ReplaceInputLbnInOpCustomizedConf(OperatorConf* op_conf,
+                                              const std::string& fd_name_may_have_idx,
+                                              const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 

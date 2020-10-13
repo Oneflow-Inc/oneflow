@@ -32,8 +32,6 @@ class TensorListSplitOp final : public Operator {
     });
   }
 
-  const PbMessage& GetCustomizedConf() const override { return op_conf().tensor_list_split_conf(); }
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp(SoleIbn());

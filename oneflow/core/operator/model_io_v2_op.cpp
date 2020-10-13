@@ -52,8 +52,6 @@ class ModelInitV2Op : public Operator {
     EnrollInputBn("tick", false);
   }
 
-  const PbMessage& GetCustomizedConf() const override { return op_conf().model_init_v2_conf(); }
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
@@ -100,8 +98,6 @@ class ModelLoadV2Op : public Operator {
     EnrollOutputBn("out", false);
     EnrollInputBn("tick", false);
   }
-
-  const PbMessage& GetCustomizedConf() const override { return op_conf().model_load_v2_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
@@ -154,8 +150,6 @@ class ModelSaveV2Op final : public Operator {
     EnrollOutputBn("out", false);
     EnrollInputBn("tick", false);
   }
-
-  const PbMessage& GetCustomizedConf() const override { return op_conf().model_save_v2_conf(); }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {

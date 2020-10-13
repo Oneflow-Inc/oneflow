@@ -166,6 +166,9 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     const std::string& lbn = pair.first;
     OpNode* src_node = pair.second.front()->src_node();
 
+    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(lbn));
+    if (blob_desc.data_type() != DataType::kFloat) { continue; }
+
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
     DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
     auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
@@ -198,10 +201,8 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
             dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf())));
       }
       OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
-      PbMessage* dst_op_type_conf =
-          MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string new_lbn = cast_op.op_name() + "/out_0";
-      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
+      CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, new_lbn));
     }
 
     if (cast_is_consumed) {

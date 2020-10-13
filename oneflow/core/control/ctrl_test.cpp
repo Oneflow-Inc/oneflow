@@ -17,19 +17,28 @@ limitations under the License.
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+
+#ifdef OF_PLATFORM_POSIX
+
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
 
 namespace oneflow {
 
 namespace {
 
-EnvProto GetEnvProto() {
+EnvProto GetEnvProto(int port) {
   EnvProto ret;
   auto* machine0 = ret.add_machine();
   machine0->set_id(0);
   machine0->set_addr("127.0.0.1");
-  ret.set_ctrl_port(46323);
+  ret.set_ctrl_port(port);
   return ret;
 }
 
@@ -45,7 +54,9 @@ Resource GetResource() {
 }  // namespace
 
 TEST(CtrlServer, new_delete) {
-  EnvProto env_proto = GetEnvProto();
+  int port = CtrlUtil().FindAvailablePort();
+  if (port == -1) { return; }
+  EnvProto env_proto = GetEnvProto(port);
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
@@ -55,8 +66,8 @@ TEST(CtrlServer, new_delete) {
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
 
-  // maybe do some
-  // OF_BARRIER_ALL();
+  // do test
+  // OF_ENV_BARRIER();
 
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
@@ -67,3 +78,5 @@ TEST(CtrlServer, new_delete) {
 }
 
 }  // namespace oneflow
+
+#endif  // OF_PLATFORM_POSIX

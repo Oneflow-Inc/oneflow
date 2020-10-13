@@ -30,8 +30,6 @@ class DistributeAddOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext*) const override;
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
@@ -53,10 +51,6 @@ void DistributeAddOp::InitFromOpConf() {
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
-}
-
-const PbMessage& DistributeAddOp::GetCustomizedConf() const {
-  return op_conf().distribute_add_conf();
 }
 
 Maybe<void> DistributeAddOp::InferParallelSignature() {

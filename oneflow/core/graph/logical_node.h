@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
 #include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 
 namespace oneflow {
 
@@ -208,6 +209,27 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DecodeH2D);
+
+class UserOpAreaIdCreator {
+ public:
+  virtual ~UserOpAreaIdCreator() = default;
+  virtual int64_t GetAreaId() = 0;
+};
+
+class FixedUserOpAreaIdCreator : public UserOpAreaIdCreator {
+ public:
+  explicit FixedUserOpAreaIdCreator(int64_t area_id) : area_id_(area_id) {}
+
+  int64_t GetAreaId() override { return area_id_; }
+
+ private:
+  int64_t area_id_;
+};
+
+#define REGISTER_USER_OP_AREA_ID(op_type_name, area_id)                  \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, UserOpAreaIdCreator, \
+                         ([] { return new FixedUserOpAreaIdCreator(area_id); }));
 
 }  // namespace oneflow
 

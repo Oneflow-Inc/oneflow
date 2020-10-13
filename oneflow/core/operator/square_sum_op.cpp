@@ -25,7 +25,6 @@ class SquareSumOp final : public Operator {
   ~SquareSumOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
 
  private:
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -42,8 +41,6 @@ void SquareSumOp::InitFromOpConf() {
   EnrollInputBn("x");
   EnrollOutputBn("y");
 }
-
-const PbMessage& SquareSumOp::GetCustomizedConf() const { return op_conf().square_sum_conf(); }
 
 Maybe<void> SquareSumOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

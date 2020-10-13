@@ -67,9 +67,10 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_type_case))
+  CHECK_OR_RETURN((IsClassRegistered<int32_t, OnlyCpuSupport>(op_type_case)))
       << ": op_type_case = " << op_type_case;
-  return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
+  return static_cast<bool>(
+      *std::unique_ptr<OnlyCpuSupport>(NewObj<int32_t, OnlyCpuSupport>(op_type_case)));
 }
 
 Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
@@ -106,6 +107,7 @@ Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendHalt();
+  // Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
@@ -114,7 +116,7 @@ void FixCpuDeviceNum(ConfigProto* config_proto) {
   config_proto->mutable_resource()->set_cpu_device_num(std::thread::hardware_concurrency());
 }
 
-Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
+Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
 
@@ -133,14 +135,14 @@ Maybe<void> InitGlobalSession(const std::string& config_proto_str) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DestroyGlobalSession() {
+Maybe<void> DestroyLazyGlobalSession() {
   if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   Global<SessionGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StartGlobalSession() {
+Maybe<void> StartLazyGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
@@ -162,7 +164,7 @@ Maybe<std::string> GetSerializedStructureGraph() {
   return job_ctx_mgr->structure_graph();
 }
 
-Maybe<void> StopGlobalSession() {
+Maybe<void> StopLazyGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());

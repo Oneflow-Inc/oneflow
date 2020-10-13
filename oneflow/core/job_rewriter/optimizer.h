@@ -24,6 +24,9 @@ namespace oneflow {
 void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 
+float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_update_conf,
+                                  const VariableOp& op);
+
 template<typename T>
 void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
                            JobBuilder* job_builder, T*);
@@ -40,8 +43,8 @@ class GenerateOptimizerOpConfWrapperStruct final {
   const std::unique_ptr<const Func> func_;
 };
 
-#define REGISTER_OPTIMIZER(model_update_case, gen_grad_func)                      \
-  REGISTER_CLASS_CREATOR(model_update_case, GenerateOptimizerOpConfWrapperStruct, \
+#define REGISTER_OPTIMIZER(model_update_case, gen_grad_func)                               \
+  REGISTER_CLASS_CREATOR(int32_t, model_update_case, GenerateOptimizerOpConfWrapperStruct, \
                          ([] { return new GenerateOptimizerOpConfWrapperStruct(gen_grad_func); }))
 
 }  // namespace oneflow

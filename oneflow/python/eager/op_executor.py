@@ -26,6 +26,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
@@ -257,7 +258,7 @@ def _EagerRunModelInit(var_op_conf):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+    with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelInitInstruction)
 
     return bn_in_op2blob_object["out_0"]
@@ -315,7 +316,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+    with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
         vm_util.LogicalRun(BuildModelLoadInstruction)
@@ -351,7 +352,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+    with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
         vm_util.LogicalRun(BuildModelSaveInstruction)

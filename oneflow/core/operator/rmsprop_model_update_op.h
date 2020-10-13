@@ -26,7 +26,6 @@ class RMSPropModelUpdateOp final : public NormalModelUpdtOp {
   OF_DISALLOW_COPY_AND_MOVE(RMSPropModelUpdateOp);
   RMSPropModelUpdateOp() = default;
   ~RMSPropModelUpdateOp() = default;
-  const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new OptimizerLogicalNode; }
 
  private:

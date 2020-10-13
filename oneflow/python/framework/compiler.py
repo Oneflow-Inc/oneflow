@@ -25,9 +25,11 @@ import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.placement_util as placement_util
+import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
+import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
@@ -58,31 +60,25 @@ def InterpretScope(session, function_desc, config_proto):
     job_conf.job_name = function_desc.job_func.__name__
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
-        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
-            oneflow.env.current_resource()
+        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
+    else:
+        assert isinstance(placement_scope, placement_ctx.EmptyPlacementScope)
+        tag_and_dev_ids = (
+            placement_scope.device_tag,
+            placement_scope.machine_device_ids,
         )
-        placement_scope = placement_util.GetPlacementScope(*tag_and_dev_ids)
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeConsistentStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
-        placement_scope.default_parallel_conf
-    )
-    scope = MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
-    with _JobBuildAndInferCtx(job_conf.job_name), placement_scope, distribute_strategy:
+    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
+    with _JobBuildAndInferCtx(job_conf.job_name), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
-            with _SessionInitialScope(session, scope):
+            with scope_util.ScopeContext(scope):
                 yield
-
-
-def _SessionInitialScope(session, scope):
-    job_name = scope.job_desc_symbol.data.job_name
-    session.InitNoneScope(job_name)
-    return session.NewCurrentScope(scope)
 
 
 def _CompileJob(function_desc):
@@ -211,16 +207,3 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
         "oneflow.global_function returns "
         + "RemoteBlob or list/tuple/dict nested RemoteBlob only"
     )
-
-
-def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
-    scope = None
-
-    def BuildInitialScope(builder):
-        nonlocal scope
-        scope = scope_util.BuildInitialScope(
-            builder, job_conf, device_tag, machine_device_ids, is_mirrored
-        )
-
-    vm_util.LogicalRun(BuildInitialScope)
-    return scope

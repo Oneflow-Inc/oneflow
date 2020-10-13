@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import cv2
 import numpy as np
 import oneflow as flow
@@ -92,15 +93,21 @@ def _compare_image_batch_align(
     test_case.assertTrue(np.array_equal(image_tensor, empty_image_array))
 
 
-def test_image_batch_align(test_case):
-    _compare_image_batch_align(
-        test_case,
-        [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-            "/dataset/mscoco_2017/val2017/000000000785.jpg",
-            "/dataset/mscoco_2017/val2017/000000001000.jpg",
-        ],
-        16,
-        # True,
-    )
+@flow.unittest.skip_unless_1n1d()
+class TestImageBatchAlign(flow.unittest.TestCase):
+    def test_image_batch_align(test_case):
+        _compare_image_batch_align(
+            test_case,
+            [
+                "/dataset/mscoco_2017/val2017/000000000139.jpg",
+                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+                "/dataset/mscoco_2017/val2017/000000000785.jpg",
+                "/dataset/mscoco_2017/val2017/000000001000.jpg",
+            ],
+            16,
+            # True,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
