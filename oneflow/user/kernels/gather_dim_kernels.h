@@ -80,6 +80,8 @@ class ScatterDimKernel final : public user_op::OpKernel {
     const IN_T* src = src_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
+    size_t out_bytes_size = out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
+    Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
     CoordinateOffsetConverter<IDX_T> src_nd_helper(src_tensor->shape());
     CoordinateOffsetConverter<IDX_T> output_nd_helper(out_tensor->shape());

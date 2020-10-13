@@ -94,13 +94,6 @@ OF_DEVICE_FUNC void DoGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
 }
 
 template<typename IN_T, typename IDX_T>
-__global__ void DoCUDAGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
-                                CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt,
-                                int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
-  DoGatherDim<IN_T, IDX_T>(input_helper, index_helper, elem_cnt, dim, index, input, output);
-}
-
-template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
                                     CoordinateOffsetConverter<IDX_T> output_helper,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
@@ -120,15 +113,8 @@ OF_DEVICE_FUNC void DoScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
     // set output value at index_offset
     IDX_T output_offset = output_helper.coordinateToIdx();
     output[output_offset] += src[src_offset];
-  }
-}
 
-template<typename IN_T, typename IDX_T>
-__global__ void DoCUDAScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
-                                    CoordinateOffsetConverter<IDX_T> output_helper,
-                                    int64_t elem_cnt, int64_t dim, const IDX_T* index,
-                                    const IN_T* src, IN_T* output) {
-  DoScatterDimAdd<IN_T, IDX_T>(src_helper, output_helper, elem_cnt, dim, index, src, output);
+  }
 }
 
 }  // namespace oneflow

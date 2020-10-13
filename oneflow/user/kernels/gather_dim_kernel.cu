@@ -21,6 +21,13 @@ namespace oneflow {
 
 namespace user_op {
 
+template<typename IN_T, typename IDX_T>
+__global__ void DoCUDAGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
+                                CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt,
+                                int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
+  DoGatherDim<IN_T, IDX_T>(input_helper, index_helper, elem_cnt, dim, index, input, output);
+}
+
 template<typename IDX_T, typename IN_T>
 struct GatherDimFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   void operator()(CoordinateOffsetConverter<IDX_T> input_nd_helper,
@@ -30,6 +37,14 @@ struct GatherDimFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
                     input_nd_helper, index_nd_helper, elem_cnt, dim, index, input, output);
   }
 };
+
+template<typename IN_T, typename IDX_T>
+__global__ void DoCUDAScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
+                                    CoordinateOffsetConverter<IDX_T> output_helper,
+                                    int64_t elem_cnt, int64_t dim, const IDX_T* index,
+                                    const IN_T* src, IN_T* output) {
+  DoScatterDimAdd<IN_T, IDX_T>(src_helper, output_helper, elem_cnt, dim, index, src, output);
+}
 
 template<typename IN_T, typename IDX_T>
 struct ScatterDimAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {

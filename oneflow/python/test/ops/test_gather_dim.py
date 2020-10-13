@@ -54,9 +54,9 @@ def _make_gather_dim_fn(
         pass
     else:
         def _compare_diff(blob: oft.Numpy):
-            # print("##", grad.shape, blob.shape)
-            # print("##", grad)
-            # print("##", blob)
+            print("##", grad.shape, blob.shape)
+            print("##", grad)
+            print("##", blob)
             test_case.assertTrue(
                 np.array_equal(grad, blob)
             )

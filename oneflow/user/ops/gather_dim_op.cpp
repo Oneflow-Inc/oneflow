@@ -40,6 +40,9 @@ REGISTER_USER_OP("gather_dim")
       CHECK_GE_OR_RETURN(dim, 0);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
+      CHECK_OR_RETURN(!in->is_dynamic());
+      CHECK_OR_RETURN(!index->is_dynamic());
+      
       FOR_RANGE(int64_t, i, 0, input_num_axes) {
         if (i == dim) { continue; }
         CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
