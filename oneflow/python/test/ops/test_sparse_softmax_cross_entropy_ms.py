@@ -104,6 +104,9 @@ def compare_with_tensorflow(
 @flow.unittest.skip_unless_1n4d()
 class TestSparseSoftmaxCrossEntropyMs(flow.unittest.TestCase):
     def test_sparse_softmax_cross_entropy_with_logits(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["data_type"] = ["float32", "double"]
