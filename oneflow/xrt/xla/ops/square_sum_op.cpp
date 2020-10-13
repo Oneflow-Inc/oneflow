@@ -33,12 +33,10 @@ class SquareSumOp : public XlaOpKernel {
     DataType data_type = ctx->SoleInputType();
     xla::XlaOp sum;
     std::vector<long long>  x_dims(x_shape.NumAxes());
-    std::cout <<  "x shape NumAxes :  " << x_shape.NumAxes()<<std::endl;
     std::iota(x_dims.begin(), x_dims.end(), 0);
-    //std::cout <<"x_dims:  "<< x_dims <<std::endl; 
     xla::XlaComputation add_func = CreateAddFunc(data_type);
     sum = xla::Reduce(xla::Square(x), Zero(builder, data_type), add_func, x_dims);
-    ctx->SetSoleOutput(sum);
+    ctx->SetSoleOutput(Reshape(sum, Shape({1})));
   }
 };
 
