@@ -573,7 +573,7 @@ def slice_v2(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Extracts a slice from a tensor.
-    The `slice_tup_list` assigns the slice index in each dimension, the format is (start, stop, step). 
+    The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step). 
     The operator will slice the Blob according to the `slice_top_list`. 
     
     Args:
