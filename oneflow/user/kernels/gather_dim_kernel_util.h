@@ -21,13 +21,15 @@ limitations under the License.
 namespace oneflow {
 
 #define MAX_DIM_COUNT 8
-/*
-  A converter that converts coordinate of high-dimensions tensor
-  and offset in one-dimension tensor.
-*/
+/**
+ * @brief The converter of one dimension offset and high dimension coordinate
+ * 
+ * @tparam IDXTYPE the type of index (int32_t or int64_t)
+ */
 template<typename IDXTYPE>
 struct CoordinateOffsetConverter {
   static const unsigned int MAX_AXIS = MAX_DIM_COUNT;
+
   CoordinateOffsetConverter(const ShapeView& tensorShape)
       : offset_(0), axisNum_(tensorShape.NumAxes()) {
     FOR_RANGE(int64_t, i, 0, MAX_AXIS) {

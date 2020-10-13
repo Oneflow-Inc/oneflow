@@ -155,6 +155,45 @@ REGISTER_USER_OP("scatter_dim_add_like")
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& index_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
+      int64_t index_num_axes = index_tensor.shape().NumAxes();
+      const int64_t dim = ctx->Attr<int64_t>("dim");
+
+      FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
+        if (i != dim) {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("index", 0), i)
+              .Split(user_op::OpArg("src", 0), i)
+              .Split(user_op::OpArg("output", 0), i)
+              .Split(user_op::OpArg("like", 0), i)
+              .Build();
+        } else if (i == dim) {
+          ctx->NewBuilder()
+              .Broadcast(user_op::OpArg("src", 0))
+              .Split(user_op::OpArg("index", 0), i)
+              .Split(user_op::OpArg("output", 0), i)
+              .Split(user_op::OpArg("like", 0), i)
+              .Build();
+        }
+      }
+
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("src", 0))
+          .Broadcast(user_op::OpArg("index", 0))
+          .Broadcast(user_op::OpArg("output", 0))
+          .Broadcast(user_op::OpArg("like", 0))
+          .Build();
+
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("src", 0))
+          .PartialSum(user_op::OpArg("index", 0))
+          .PartialSum(user_op::OpArg("output", 0))
+          .PartialSum(user_op::OpArg("like", 0))
+          .Build();
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("gather_dim")
