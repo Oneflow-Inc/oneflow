@@ -216,7 +216,7 @@ Error Error::LossBlobNotFoundError(const std::string& error_summary) {
 }
 
 Error Error::RwMutexedObjectNotFoundError() {
-  auto error = std::make_shared<ErrorProto>();
+  auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_rw_mutexed_object_not_found_error();
   return error;
 }
