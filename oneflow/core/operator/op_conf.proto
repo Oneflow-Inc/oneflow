@@ -229,6 +229,12 @@ message LazyAdamModelUpdateConf {
   optional float epsilon = 3 [default = 1e-8];
 }
 
+message LambModelUpdateConf {
+  required float beta1 = 1;
+  required float beta2 = 2;
+  required float epsilon = 3;
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -341,6 +347,7 @@ message NormalModelUpdateOpUserConf {
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LambModelUpdateConf lamb_conf = 1006;
   }
 }
 
@@ -637,7 +644,7 @@ message AccOpConf {
   required string one = 1;
   // out
   required string acc = 2;
-  optional int32 max_acc_num = 3 [default = 1];   
+  optional int32 max_acc_num = 3 [default = 1];
 }
 
 message AccTickOpConf {
@@ -645,7 +652,7 @@ message AccTickOpConf {
   required string one = 1;
   // out
   required string acc = 2;
-  optional int32 max_acc_num = 3 [default = 1];   
+  optional int32 max_acc_num = 3 [default = 1];
 }
 
 message ModelInitOpConf {
@@ -962,7 +969,7 @@ message OperatorConf {
     TensorListSplitOpConf tensor_list_split_conf = 172;
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     UserOpConf user_conf = 199;
-    
+
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
