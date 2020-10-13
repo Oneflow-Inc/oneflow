@@ -25,14 +25,6 @@ import oneflow.python.ops.utils.compile as compi
 import py_ops
 
 
-py_sigmoid_op_compi = compi.UserOpCompiler("py_sigmoid")
-py_sigmoid_op_compi.AddOpDef()
-py_sigmoid_op_compi.AddPythonKernel()
-py_sigmoid_op_compi.Finish()
-
-user_ops_ld = compi.UserOpsLoader()
-user_ops_ld.LoadAll()
-
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
@@ -88,6 +80,14 @@ def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
 @flow.unittest.skip_unless_1n1d()
 class TestAdd(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
+        py_sigmoid_op_compi = compi.UserOpCompiler("py_sigmoid")
+        py_sigmoid_op_compi.AddOpDef()
+        py_sigmoid_op_compi.AddPythonKernel()
+        py_sigmoid_op_compi.Finish()
+
+        user_ops_ld = compi.UserOpsLoader()
+        user_ops_ld.LoadAll()
+
         x = np.ones((1, 10), dtype=np.float32)
         sig_job = make_job(x.shape)
         py_sig_job = make_py_job(x.shape)

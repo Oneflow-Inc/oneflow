@@ -156,7 +156,7 @@ class TestCase(unittest.TestCase):
             oneflow.env.init()
             _unittest_env_initilized = True
 
-        # oneflow.clear_default_session()
+        oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
         oneflow.experimental.enable_typing_check(typing_check_enabled())
 

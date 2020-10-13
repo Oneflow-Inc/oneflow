@@ -236,17 +236,6 @@ foreach(swig_name ${of_all_swig})
 endforeach()
 
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
-<<<<<<< HEAD
-                              ${PROJECT_SOURCE_DIR}
-                              ${of_all_rel_swigs})
-pybind11_add_module(oneflow_internal SHARED ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
-set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-#target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
-target_link_libraries(oneflow_internal PUBLIC ${of_libs} ${oneflow_third_party_libs})
-include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-=======
                           ${PROJECT_SOURCE_DIR}
                           ${of_all_rel_swigs})
 
@@ -257,7 +246,6 @@ set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${of_cfgobj} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
->>>>>>> master
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_target(of_pyscript_copy ALL
