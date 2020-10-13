@@ -201,12 +201,18 @@ oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 add_dependencies(of_protoobj make_pyproto_dir)
 
+include(cfg)
+GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR} ${of_all_rel_pybinds})
+oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
+add_dependencies(of_cfgobj of_protoobj)
+
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
+add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
   add_dependencies(of_ccobj of_git_version)
 endif()
@@ -230,6 +236,7 @@ foreach(swig_name ${of_all_swig})
 endforeach()
 
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
+<<<<<<< HEAD
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
 pybind11_add_module(oneflow_internal SHARED ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
@@ -239,6 +246,18 @@ set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PR
 #target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
 target_link_libraries(oneflow_internal PUBLIC ${of_libs} ${oneflow_third_party_libs})
 include_directories(${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+=======
+                          ${PROJECT_SOURCE_DIR}
+                          ${of_all_rel_swigs})
+
+pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc} ${PYBIND_REGISTRY_CC})
+set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
+add_dependencies(oneflow_internal of_cfgobj)
+set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
+set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${of_cfgobj} ${oneflow_third_party_libs})
+target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+>>>>>>> master
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_target(of_pyscript_copy ALL
@@ -295,7 +314,7 @@ set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
+  target_link_libraries(${main_name} ${of_libs} ${of_cfgobj} ${oneflow_third_party_libs})
   set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endforeach()
 
@@ -304,7 +323,7 @@ if(BUILD_TESTING)
   if(BUILD_CUDA)
     if (of_all_test_cc)
       oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+      target_link_libraries(oneflow_testexe ${of_libs} ${of_cfgobj} ${oneflow_third_party_libs})
       set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
       add_test(NAME oneflow_test COMMAND oneflow_testexe)
       #  foreach(cc ${of_all_test_cc})
@@ -319,7 +338,7 @@ if(BUILD_TESTING)
         get_filename_component(test_name ${cc} NAME_WE)
         string(CONCAT test_exe_name ${test_name} exe)
         oneflow_add_executable(${test_exe_name} ${cc})
-        target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+        target_link_libraries(${test_exe_name} ${of_libs} ${of_cfgobj} ${oneflow_third_party_libs})
       endforeach()
     endif()
   endif()

@@ -139,8 +139,8 @@ int32_t GetNumLocalDecodeThreads(int32_t num_decode_threads_per_machine,
     num_decode_threads_per_machine =
         Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize();
   }
-  const int64_t machine_id = parallel_desc.MachineIdForParallelId(parallel_ctx.parallel_id());
-  const int64_t parallel_num_on_this_machine = parallel_desc.sorted_dev_phy_ids(machine_id).size();
+  int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_ctx.parallel_id()));
+  int64_t parallel_num_on_this_machine = parallel_desc.sorted_dev_phy_ids(machine_id).size();
   return std::max<int32_t>(num_decode_threads_per_machine / parallel_num_on_this_machine, 1);
 }
 

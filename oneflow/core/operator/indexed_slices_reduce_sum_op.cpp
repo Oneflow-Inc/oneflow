@@ -26,7 +26,6 @@ class IndexedSlicesReduceSumOp final : public Operator {
   ~IndexedSlicesReduceSumOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -46,10 +45,6 @@ void IndexedSlicesReduceSumOp::InitFromOpConf() {
   EnrollOutputBn("y_values");
   EnrollOutputBn("num_unique", false);
   EnrollTmpBn("workspace");
-}
-
-const PbMessage& IndexedSlicesReduceSumOp::GetCustomizedConf() const {
-  return op_conf().indexed_slices_reduce_sum_conf();
 }
 
 Maybe<void> IndexedSlicesReduceSumOp::InferBatchAxis(

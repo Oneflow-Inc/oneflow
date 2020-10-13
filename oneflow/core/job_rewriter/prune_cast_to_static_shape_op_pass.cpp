@@ -57,12 +57,11 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
         op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
       }
       OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-      PbMessage* conf =
-          MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == cast_out_lbi) {
-          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(cast_out_lbi),
-                                            GenLogicalBlobName(cast_in_lbi));
+          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn,
+                                                                  GenLogicalBlobName(cast_in_lbi));
+          CHECK_EQ(GenLogicalBlobName(cast_out_lbi), old_val);
         }
       }
     }

@@ -28,7 +28,6 @@ class UserOp final : public Operator {
   ~UserOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override { return op_conf().user_conf(); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override;

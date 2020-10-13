@@ -56,20 +56,20 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   op_desc->set_backend(Backend::kBackendNCCL);
   rank_desc->set_rank(parallel_id);
 
-  const int64_t machine_id = parallel_desc.MachineIdForParallelId(parallel_id);
-  const int64_t device_id = parallel_desc.DeviceIdForParallelId(parallel_id);
+  const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+  const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
   const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuNcclThrdId(device_id);
   node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
 }
 
 int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
   CHECK_EQ(sole_device.parallel_num(), 1);
-  const int64_t root_machine_id = sole_device.MachineIdForParallelId(0);
-  const int64_t root_device_id = sole_device.DeviceIdForParallelId(0);
+  const int64_t root_machine_id = CHECK_JUST(sole_device.MachineId4ParallelId(0));
+  const int64_t root_device_id = CHECK_JUST(sole_device.DeviceId4ParallelId(0));
   int64_t root_parallel_id = -1;
   FOR_RANGE(int64_t, i, 0, multi_device.parallel_num()) {
-    if (multi_device.MachineIdForParallelId(i) == root_machine_id
-        && multi_device.DeviceIdForParallelId(i) == root_device_id) {
+    if (CHECK_JUST(multi_device.MachineId4ParallelId(i)) == root_machine_id
+        && CHECK_JUST(multi_device.DeviceId4ParallelId(i)) == root_device_id) {
       root_parallel_id = i;
       break;
     }
@@ -289,7 +289,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
             SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
-        const auto src_machine_id = src_parallel_desc.MachineIdForParallelId(0);
+        const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, src_machine_id,
                          Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_machine_id));
         slice_node->ConnectToSrcNodeWithSlice(src_node, ctx->task_graph()->NewEdge(), in_slice);
