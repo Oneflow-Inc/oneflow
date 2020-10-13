@@ -451,7 +451,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                                      .ScopeSymbolId(scope_symbol_id)
                                                      .Build();
 
-    job_builder->AddOps(lbi2parallel_desc.at(lbi)->parallel_conf(), {square_sum_op.op_conf()});
+    job_builder->AddOps(lbi2parallel_desc.at(diff_lbi)->parallel_conf(), {square_sum_op.op_conf()});
     lbns_to_add.push_back(square_sum_op.output("y", 0));
   }
   while (lbns_to_add.size() != 1) {
