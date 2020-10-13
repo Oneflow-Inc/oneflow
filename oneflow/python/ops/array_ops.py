@@ -515,7 +515,6 @@ def slice(
     return slice_v2(x, slice_tup_list, name=name)
 
 
-
 def _check_slice_tup_list(slice_tup_list, shape):
     ndim = len(shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
@@ -574,12 +573,40 @@ def slice_v2(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Extracts a slice from a tensor.
-
+    The `slice_tup_list` assigns the slice index in each dimension, the format is (start, stop, step). 
+    The operator will slice the Blob according to the `slice_top_list`. 
+    
     Args:
         x: A `Blob`.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
         name: A name for the operation (optional).
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    
+    Note: Because the internal op of OneFlow does not support 0-dimension slice at present, we should 
+    set the zero element in `slice_tup_list` as `None`. 
+    
+    For example: 
 
+    .. code-block:: python 
+        
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        @flow.global_function()
+        def slicev2_Job(x: tp.Numpy.Placeholder(shape=(3, 6, 9), dtype=flow.float32)
+        ) -> tp.Numpy:
+            slicev2_blob = flow.slice_v2(x, 
+                                        slice_tup_list=[[None, None, None], 
+                                                        [0, 5, 2], # slice in dimension 1, extract [0, 2, 4]
+                                                        [0, 6, 3]]) # slice in dimension 2, extract [0, 3]
+            return slicev2_blob
+        x = np.random.randn(3, 6, 9).astype(np.float32)
+        out = slicev2_Job(x)
+        
+        # out.shape (3, 3, 2)
+    
     """
     name = name or id_util.UniqueStr("Slice_")
     if not isinstance(name, str):
