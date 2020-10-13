@@ -304,5 +304,6 @@ REGISTER_USER_OP_AREA_ID("momentum_update", AreaType::kMdUpdtArea)
 REGISTER_USER_OP_AREA_ID("indexed_slices_momentum_update", AreaType::kMdUpdtArea)
 REGISTER_USER_OP_AREA_ID("adam_update", AreaType::kMdUpdtArea)
 REGISTER_USER_OP_AREA_ID("indexed_slices_adam_update", AreaType::kMdUpdtArea)
+REGISTER_USER_OP_AREA_ID("lamb_update", AreaType::kMdUpdtArea)
 
 }  // namespace oneflow
