@@ -42,6 +42,10 @@ jobs:
         python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         python3 -m pip install oss2 beautifulsoup4 --user
         python3 tools/create_pip_index.py --dir_key staging/${dir} -b oneflow-static --index_key=staging/${git_branch}/pip.index.html
+      name: Update API docs
+      if: github.ref == 'refs/heads/master'
+      run: |
+        curl -X POST -d "branches=master" -d "${{ secrets.READTHEDOCS_TOKEN }}"  https://readthedocs.org/api/v2/webhook/oneflow/135376/
   pack_src:
     name: Pack source code
     runs-on: ubuntu-latest
