@@ -295,25 +295,8 @@ def slice(
     return slice_v2(x, slice_tup_list, name=name)
 
 
-@oneflow_export("slice_v2")
-def slice_v2(
-    x: remote_blob_util.BlobDef,
-    slice_tup_list: Sequence[Tuple[int, int, int]],
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    r"""Extracts a slice from a tensor.
-
-    Args:
-        x: A `Blob`.
-        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
-        name: A name for the operation (optional).
-
-    """
-    name = name or id_util.UniqueStr("Slice_")
-    if not isinstance(name, str):
-        raise ValueError("name must be a string")
-
-    ndim = len(x.shape)
+def _check_slice_tup_list(slice_tup_list, shape):
+    ndim = len(shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
         raise ValueError(
             "slice_tup_list must be a list or tuple with length "
@@ -330,7 +313,7 @@ def slice_v2(
     stop_list = []
     step_list = []
 
-    for slice_tup, dim_size in zip(slice_tup_list, x.shape):
+    for slice_tup, dim_size in zip(slice_tup_list, shape):
         if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
             raise ValueError(
                 "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
@@ -360,14 +343,75 @@ def slice_v2(
         stop_list.append(stop)
         step_list.append(step)
 
+    return start_list, stop_list, step_list
+
+
+@oneflow_export("slice_v2")
+def slice_v2(
+    x: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Extracts a slice from a tensor.
+
+    Args:
+        x: A `Blob`.
+        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
+        name: A name for the operation (optional).
+
+    """
+    name = name or id_util.UniqueStr("Slice_")
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
+
     op = (
         flow.user_op_builder(name)
         .Op("slice")
         .Input("x", [x])
         .Output("y")
-        .Attr("start", start_list)
-        .Attr("stop", stop_list)
-        .Attr("step", step_list)
+        .Attr("start", start)
+        .Attr("stop", stop)
+        .Attr("step", step)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("slice_update")
+def api_slice_update(
+    x: remote_blob_util.BlobDef,
+    update: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Update a slice of tensor `x`.
+
+    Args:
+        x: A `Blob`, whose slice will be updated.
+        update: A `Blob`, indicate the update content.
+        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
+        name: A name for the operation (optional).
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("SliceUpdate_")
+
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("slice_update")
+        .Input("x", [x])
+        .Input("update", [update])
+        .Output("y")
+        .Attr("start", start)
+        .Attr("stop", stop)
+        .Attr("step", step)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
