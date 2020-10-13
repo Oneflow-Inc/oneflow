@@ -39,6 +39,9 @@ jobs:
         timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
         dir=${git_branch}/${timestamp}-${git_hash}
         $HOME/ossutil64 cp --update -r $ONEFLOW_CI_TMP_DIR/wheelhouse oss://oneflow-static/staging/${dir}
+        python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+        python3 -m pip install oss2 --user
+        python3 tools/create_pip_index.py --dir_key staging/${dir} -b oneflow-static --index_key=staging/${git_branch}/pip.index.html
   pack_src:
     name: Pack source code
     runs-on: ubuntu-latest
