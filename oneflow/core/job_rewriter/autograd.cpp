@@ -451,7 +451,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                                      .ScopeSymbolId(scope_symbol_id)
                                                      .Build();
 
-    job_builder->AddOps(lbi2parallel_desc.at(diff_lbi)->parallel_conf(), {square_sum_op.op_conf()});
+    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op.op_conf()});
     lbns_to_add.push_back(square_sum_op.output("y", 0));
   }
   while (lbns_to_add.size() != 1) {
@@ -552,10 +552,10 @@ Maybe<void> GenerateBackwardOpConfIf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   std::unique_ptr<GenerateBackwardOpConfWrapperStruct> obj;
   const auto& op_type_case = op.op_conf().op_type_case();
-  if (!IsClassRegistered<GenerateBackwardOpConfWrapperStruct>(op_type_case)) {
+  if (!IsClassRegistered<int32_t, GenerateBackwardOpConfWrapperStruct>(op_type_case)) {
     return Error::GradientFunctionNotFound() << PbMessage2TxtString(op.op_conf());
   }
-  obj.reset(NewObj<GenerateBackwardOpConfWrapperStruct>(op_type_case));
+  obj.reset(NewObj<int32_t, GenerateBackwardOpConfWrapperStruct>(op_type_case));
   return obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 

@@ -36,15 +36,12 @@ Maybe<void> LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& LARSModelUpdateOp::GetCustomizedConf() const {
-  return op_conf().lars_model_update_conf();
-}
-
 const HashSet<std::string> LARSModelUpdateOp::AlwaysBroadcastParallelBns() const {
   return HashSet<std::string>{"lars_data_tmp"};
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kLarsConf, NormalModelUpdtOp, LARSModelUpdateOp);
+REGISTER_CLASS(int32_t, NormalModelUpdateOpUserConf::kLarsConf, NormalModelUpdtOp,
+               LARSModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kLarsModelUpdateConf, LARSModelUpdateOp);
 

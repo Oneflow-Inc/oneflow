@@ -24,8 +24,6 @@ void RecordLoadOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& RecordLoadOp::GetCustomizedConf() const { return op_conf().record_load_conf(); }
-
 Maybe<void> RecordLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {

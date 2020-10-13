@@ -24,7 +24,6 @@ class ParallelCastOp final : public Operator {
   ~ParallelCastOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
 
@@ -48,10 +47,6 @@ Maybe<void> ParallelCastOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
-}
-
-const PbMessage& ParallelCastOp::GetCustomizedConf() const {
-  return op_conf().parallel_cast_conf();
 }
 
 Maybe<void> ParallelCastOp::InferBatchAxis(

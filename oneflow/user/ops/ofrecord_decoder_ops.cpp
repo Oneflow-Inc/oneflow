@@ -58,6 +58,27 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     });
 
+REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
+    .Input("in")
+    .Output("out")
+    .Attr("name", UserOpAttrType::kAtString)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in->data_type() == DataType::kOFRecord);
+      *out = *in;
+      *out->mut_data_type() = DataType::kTensorBuffer;
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
+      CHECK_NOTNULL(in_modifier);
+      in_modifier->set_requires_grad(false);
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+
 REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
     .Input("in")
     .Output("out")

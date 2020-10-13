@@ -94,7 +94,7 @@ const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) 
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
+  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {

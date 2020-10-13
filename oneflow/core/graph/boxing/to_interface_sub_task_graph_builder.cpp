@@ -27,7 +27,7 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     const SbpParallel& dst_sbp_parallel) const {
   const LogicalNode* dst_logical_node = sorted_dst_comp_tasks.front()->logical_node();
   if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
-  if (!IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(
+  if (!IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(
           dst_logical_node->SoleOp()->op_conf().op_type_case())) {
     return Error::BoxingNotSupportedError();
   }
@@ -64,7 +64,7 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
           SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
       CompTaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
       SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
-      const auto src_machine_id = src_parallel_desc.MachineIdForParallelId(0);
+      const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, src_machine_id,
                          Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_machine_id));
