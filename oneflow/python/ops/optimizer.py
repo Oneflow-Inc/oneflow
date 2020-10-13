@@ -1236,7 +1236,6 @@ class AdamW(Optimizer):
 class RMSProp(Optimizer):
     r"""The optimizer of the RMSProp algorithm.
 
-
     This algorithm uses mean squared gradient to adjust the learning rate.
 
     The equation of parameters updating is:
@@ -1248,6 +1247,7 @@ class RMSProp(Optimizer):
                 & mg_t = mg * \beta_1 + (1 - \beta_1) * grad
     
                 & denom_t = S_t - mg_t * mg_t
+        
         else:
     
             .. math::
