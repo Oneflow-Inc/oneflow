@@ -40,7 +40,8 @@ const HashSet<std::string> RMSPropModelUpdateOp::AlwaysBroadcastParallelBns() co
   return HashSet<std::string>{};
 }
 
-REGISTER_CLASS(NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp, RMSPropModelUpdateOp);
+REGISTER_CLASS(int32_t, NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp,
+               RMSPropModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kRmspropModelUpdateConf, RMSPropModelUpdateOp);
 

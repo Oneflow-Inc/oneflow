@@ -67,9 +67,10 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
 
 Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
   using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  CHECK_OR_RETURN(IsClassRegistered<OnlyCpuSupport>(op_type_case))
+  CHECK_OR_RETURN((IsClassRegistered<int32_t, OnlyCpuSupport>(op_type_case)))
       << ": op_type_case = " << op_type_case;
-  return static_cast<bool>(*std::unique_ptr<OnlyCpuSupport>(NewObj<OnlyCpuSupport>(op_type_case)));
+  return static_cast<bool>(
+      *std::unique_ptr<OnlyCpuSupport>(NewObj<int32_t, OnlyCpuSupport>(op_type_case)));
 }
 
 Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {

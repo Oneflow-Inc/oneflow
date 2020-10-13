@@ -215,6 +215,12 @@ Error Error::LossBlobNotFoundError(const std::string& error_summary) {
   return error;
 }
 
+Error Error::RwMutexedObjectNotFoundError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_rw_mutexed_object_not_found_error();
+  return error;
+}
+
 Error Error::GradientFunctionNotFound() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_gradient_function_not_found_error();

@@ -3,7 +3,8 @@ include (ExternalProject)
 set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
 set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
 
-set(LIBJPEG_URL ${THIRD_PARTY_SUBMODULE_DIR}/libjpeg-turbo/src/libjpeg-turbo)
+set(LIBJPEG_URL https://github.com/Oneflow-Inc/libjpeg-turbo/archive/3041cf67f.tar.gz)
+use_mirror(VARIABLE LIBJPEG_URL URL ${LIBJPEG_URL})
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
@@ -50,6 +51,7 @@ if(THIRD_PARTY)
 ExternalProject_Add(libjpeg-turbo
     PREFIX libjpeg-turbo
     URL ${LIBJPEG_URL}
+    URL_MD5 04e30c853d771ce0c29192579043dd86
     UPDATE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1
