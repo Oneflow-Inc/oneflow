@@ -46,12 +46,14 @@ def generate_index_file(endpoint, bucket, dir_key, file_path, index_key=None):
     bucket_obj = oss2.Bucket(auth, endpoint, bucket)
 
     files = bucket_obj.list_objects(dir_key + "/")
+    count = 0
     for f in files.object_list:
         key = f.key
         print(key)
         link = url4key(endpoint, bucket, key)
         append_link(soup, link)
-
+        count += 1
+    assert count
     html = soup.prettify()
     with open(file_path, "w+") as f:
         f.write(html)
