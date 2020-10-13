@@ -252,11 +252,11 @@ class Operator {
         .Broadcast(input_bns())
         .Split(output_bns(), 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-        */
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+        */
     return Maybe<void>::Ok();
   }
   virtual Maybe<void> InferMirroredSignature(
