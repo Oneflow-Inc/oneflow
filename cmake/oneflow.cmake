@@ -240,6 +240,7 @@ RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                           ${of_all_rel_swigs})
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc} ${PYBIND_REGISTRY_CC})
+set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
