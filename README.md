@@ -105,29 +105,34 @@
 
 2. #### Clone Source Code
 
-    Clone source code and submodules (faster, recommended)
+    - #### Option 1: Clone source code from github
 
-    ```
-    git clone https://github.com/Oneflow-Inc/oneflow
-    cd oneflow
-    git submodule update --init --recursive
-    ```
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow
+      ```
 
-    Or you could also clone the repo with `--recursive` flag to clone third_party submodules together
+    - #### Option 2: Download from Aliyun
 
-    ```
-    git clone https://github.com/Oneflow-Inc/oneflow --recursive
-    ```
+      If you are in China, please download OneFlow source code from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
+
+      ```bash
+      curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
+      unzip oneflow-src.zip
+      ```
 
 3. #### Build and Install OneFlow
 
-    ```
-    cd build
-    cmake ..
-    make -j$(nproc)
-    make pip_install
-    ```
+    - In the root directory of OneFlow source code, run:
 
+      ```
+      mkdir build
+      cd build
+      cmake ..
+      make -j$(nproc)
+      make pip_install
+      ```
+
+    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
     - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 
 ### Troubleshooting
@@ -167,7 +172,7 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 #### Usage & Design Docs
 * [link](http://docs.oneflow.org/)
 #### API Reference
-* [link](https://oneflow-api.readthedocs.io/en/latest/)
+* [link](https://oneflow.readthedocs.io/en/master/)
 #### OneFlow System Design
 For those who would like to understand the OneFlow internals, please read the document below:
 * [link](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)

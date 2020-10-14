@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/comm_network/comm_network.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -31,13 +31,15 @@ limitations under the License.
 #include <sys/types.h>
 #include <unistd.h>
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/transport/transport_message.h"
 
 namespace oneflow {
 
 #define SOCKET_MSG_TYPE_SEQ                         \
   OF_PP_MAKE_TUPLE_SEQ(RequestWrite, request_write) \
   OF_PP_MAKE_TUPLE_SEQ(RequestRead, request_read)   \
-  OF_PP_MAKE_TUPLE_SEQ(Actor, actor)
+  OF_PP_MAKE_TUPLE_SEQ(Actor, actor)                \
+  OF_PP_MAKE_TUPLE_SEQ(Transport, transport)
 
 enum class SocketMsgType {
 #define MAKE_ENTRY(x, y) k##x,
@@ -71,6 +73,6 @@ using CallBackList = std::list<std::function<void()>>;
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_SOCKET_MESSAGE_H_

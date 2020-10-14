@@ -29,10 +29,6 @@ class SyncDynamicResizeOp : public Operator {
     EnrollOutputBn("out")->set_header_infered_before_compute(false);
   }
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().sync_dynamic_resize_conf();
-  }
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     const SyncDynamicResizeOpConf& conf = op_conf().sync_dynamic_resize_conf();

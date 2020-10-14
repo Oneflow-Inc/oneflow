@@ -31,5 +31,6 @@ REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingAll2AllPack, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingAll2AllUnpack, NaiveActor);
+REGISTER_ACTOR(TaskType::kDecodeH2D, NaiveActor);
 
 }  // namespace oneflow

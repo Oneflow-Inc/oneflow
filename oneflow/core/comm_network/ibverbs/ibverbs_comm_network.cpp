@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
 
@@ -66,7 +66,8 @@ void IBVerbsCommNet::RegisterMemoryDone() {
                 .second);
     }
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   Global<CtrlClient>::Get()->ClearKV(GenTokensMsgKey(this_machine_id));
 }
 
@@ -111,14 +112,17 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
     qp_vec_.at(peer_id)->Connect(conn_info);
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
@@ -164,4 +168,4 @@ COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX

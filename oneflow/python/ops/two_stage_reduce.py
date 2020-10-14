@@ -70,13 +70,13 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
     device_stage_count_list = []
     distribute_axis = x.distribute.axis
     x_list = flow.advanced.distribute_split(x, axis=distribute_axis)
-    current_placement_scope = flow.placement.current_scope()
-    device_tag = current_placement_scope.default_device_tag
+    parallel_desc_symbol = flow.current_scope().device_parallel_desc_symbol
+    device_tag = parallel_desc_symbol.device_tag
     parallel_id = 0
     for (
         machine_id,
         device_ids,
-    ) in current_placement_scope.machine_id2device_id_list.items():
+    ) in parallel_desc_symbol.machine_id2device_id_list.items():
         for device_id in device_ids:
             with flow.scope.placement(
                 device_tag, str(machine_id) + ":" + str(device_id)

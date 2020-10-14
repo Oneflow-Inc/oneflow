@@ -229,38 +229,106 @@ REGISTER_BN_INFERENCE_KERNEL(double)
 
 #undef REGISTER_BN_INFERENCE_KERNEL
 
+constexpr int64_t kCudaWarpSize = 32;
+
 template<typename T>
-__global__ void AddReluGpu(int64_t n, const T* x, const T* addend, T* y) {
+__global__ void ReluGpu(int64_t n, const T* x, T* y, int32_t* mask) {
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T sum = x[i] + addend[i];
-    y[i] = sum > 0 ? sum : 0;
+    const T x_val = x[i];
+    const bool is_positive = (x_val > 0);
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
+    y[i] = is_positive ? x_val : 0;
   }
 }
 
 template<>
-__global__ void AddReluGpu<half>(int64_t n, const half* x, const half* addend, half* y) {
+__global__ void ReluGpu<half>(int64_t n, const half* x, half* y, int32_t* mask) {
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
   const half zero = __float2half(0.0f);
   CUDA_1D_KERNEL_LOOP(i, n) {
-    const half sum = __hadd(x[i], addend[i]);
-    if (__hgt(sum, zero)) {
-      y[i] = sum;
-    } else {
-      y[i] = zero;
-    }
+    const half x_val = x[i];
+    const bool is_positive = __hgt(x_val, zero);
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
+    y[i] = is_positive ? x_val : zero;
   }
 }
 
 template<typename T>
-void AddRelu(DeviceCtx* device_ctx, int64_t n, const T* x, const T* addend, T* y) {
+__global__ void AddReluGpu(int64_t n, const T* x, const T* addend, T* y, int32_t* mask) {
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const T sum = x[i] + addend[i];
+    const bool is_positive = (sum > 0);
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
+    y[i] = is_positive ? sum : 0;
+  }
+}
+
+template<>
+__global__ void AddReluGpu<half>(int64_t n, const half* x, const half* addend, half* y,
+                                 int32_t* mask) {
+  const int32_t lane_id = threadIdx.x % kCudaWarpSize;
+  const half zero = __float2half(0.0f);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const half sum = __hadd(x[i], addend[i]);
+    const bool is_positive = __hgt(sum, zero);
+    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
+    y[i] = is_positive ? sum : zero;
+  }
+}
+
+template<typename T>
+void Relu(DeviceCtx* device_ctx, int64_t n, const T* x, T* y, int32_t* mask) {
+  ReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
+      n, x, y, mask);
+}
+
+template<>
+void Relu<float16>(DeviceCtx* device_ctx, int64_t n, const float16* x, float16* y, int32_t* mask) {
+  Relu<half>(device_ctx, n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y), mask);
+}
+
+template<typename T>
+void AddRelu(DeviceCtx* device_ctx, int64_t n, const T* x, const T* addend, T* y, int32_t* mask) {
   AddReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-      n, x, addend, y);
+      n, x, addend, y, mask);
 }
 
 template<>
 void AddRelu<float16>(DeviceCtx* device_ctx, int64_t n, const float16* x, const float16* addend,
-                      float16* y) {
+                      float16* y, int32_t* mask) {
   AddRelu<half>(device_ctx, n, reinterpret_cast<const half*>(x),
-                reinterpret_cast<const half*>(addend), reinterpret_cast<half*>(y));
+                reinterpret_cast<const half*>(addend), reinterpret_cast<half*>(y), mask);
+}
+
+template<typename T>
+__global__ void ReluBackwardGpu(int64_t n, const int32_t* mask, const T* dy, T* addend_diff) {
+  int32_t lane_id = threadIdx.x % kCudaWarpSize;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int32_t mask_val = mask[i / kCudaWarpSize];
+    bool is_positive = mask_val & (1 << lane_id);
+    addend_diff[i] = static_cast<T>(is_positive) * dy[i];
+  }
+}
+
+template<typename T>
+void ReluBackward(DeviceCtx* device_ctx, int64_t n, const int32_t* mask, const T* dy,
+                  T* addend_diff) {
+  ReluBackwardGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
+          n, mask, dy, addend_diff);
+}
+
+template<>
+void ReluBackward<float16>(DeviceCtx* device_ctx, int64_t n, const int32_t* mask, const float16* dy,
+                           float16* addend_diff) {
+  ReluBackward<half>(device_ctx, n, mask, reinterpret_cast<const half*>(dy),
+                     reinterpret_cast<half*>(addend_diff));
 }
 
 template<typename T>
@@ -354,12 +422,14 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
     if (ctx->user_op_conf().op_type_name() == "normalization_add_relu") {
       CHECK(!ctx->user_op_conf().has_input("_add_to_output", 0));
       const int64_t elem_cnt = x->shape().elem_cnt();
+      auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
       if (ctx->user_op_conf().has_input("addend", 0)) {
         const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
-        AddRelu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), addend->dptr<T>(), y->mut_dptr<T>());
+        AddRelu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), addend->dptr<T>(), y->mut_dptr<T>(),
+                mask->mut_dptr<int32_t>());
       } else {
-        NewKernelUtil<DeviceType::kGPU>::Relu(ctx->device_ctx(), elem_cnt, y->dptr<T>(),
-                                              y->mut_dptr<T>());
+        Relu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), y->mut_dptr<T>(),
+             mask->mut_dptr<int32_t>());
       }
     }
   }
@@ -443,12 +513,12 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
       bn_dy_ptr = dy->dptr();
     } else if (ctx->user_op_conf().op_type_name() == "normalization_add_relu_grad") {
       const int64_t elem_cnt = dy->shape().elem_cnt();
+      const auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
       user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
       if (ctx->user_op_conf().has_output("addend_diff", 0)) {
         user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
-        NewKernelUtil<DeviceType::kGPU>::ReluBackward(ctx->device_ctx(), elem_cnt, nullptr,
-                                                      y->dptr<T>(), dy->dptr<T>(),
-                                                      addend_diff->mut_dptr<T>());
+        ReluBackward(ctx->device_ctx(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
+                     addend_diff->mut_dptr<T>());
         bn_workspace_ptr = tmp_buffer->mut_dptr();
         bn_workspace_size = tmp_buffer->shape().elem_cnt();
         bn_dy_ptr = addend_diff->dptr();
@@ -457,9 +527,8 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
         const size_t relu_dx_size =
             GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         CHECK_GE(tmp_buffer_size, relu_dx_size);
-        NewKernelUtil<DeviceType::kGPU>::ReluBackward(ctx->device_ctx(), elem_cnt, nullptr,
-                                                      y->dptr<T>(), dy->dptr<T>(),
-                                                      reinterpret_cast<T*>(tmp_buffer->mut_dptr()));
+        ReluBackward(ctx->device_ctx(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
+                     reinterpret_cast<T*>(tmp_buffer->mut_dptr()));
         bn_workspace_ptr = tmp_buffer->mut_dptr<char>() + relu_dx_size;
         bn_workspace_size = tmp_buffer_size - relu_dx_size;
         bn_dy_ptr = tmp_buffer->dptr();

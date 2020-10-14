@@ -37,6 +37,7 @@ enum TaskType {
   kBoxingIdentity = 59;
   kBoxingAll2AllPack = 60;
   kBoxingAll2AllUnpack = 61;
+  kDecodeH2D = 60;
 };
 
 enum AreaType {

@@ -37,8 +37,9 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     const ParallelDesc parallel_desc(parallel_conf);
     FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
-      device_set.emplace(std::make_pair(parallel_desc.MachineIdForParallelId(parallel_id),
-                                        parallel_desc.DeviceIdForParallelId(parallel_id)));
+      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
     }
     ncclComm_t comm = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),

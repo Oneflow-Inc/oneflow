@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -81,13 +82,19 @@ def compare_with_tensorflow(
     )
 
 
-def test_upsample(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(2, 11, 12, 13)]
-    arg_dict["dtype"] = ["float32", "double"]
-    arg_dict["size"] = [(2, 2), 3, (1, 2)]
-    arg_dict["data_format"] = ["NCHW", "NHWC"]
-    arg_dict["interpolation"] = ["nearest", "bilinear"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestUpsample(flow.unittest.TestCase):
+    def test_upsample(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(2, 11, 12, 13)]
+        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["size"] = [(2, 2), 3, (1, 2)]
+        arg_dict["data_format"] = ["NCHW", "NHWC"]
+        arg_dict["interpolation"] = ["nearest", "bilinear"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

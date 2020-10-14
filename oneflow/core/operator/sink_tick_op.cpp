@@ -37,8 +37,6 @@ Maybe<void> SinkTickOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& SinkTickOp::GetCustomizedConf() const { return op_conf().sink_tick_conf(); }
-
 Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();

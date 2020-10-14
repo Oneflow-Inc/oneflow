@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
@@ -32,18 +33,24 @@ def _test_user_op_attr_auto_type(input, attr1, attr2):
     )
 
 
-def test_user_op_attr_auto_type(test_case):
-    flow.clear_default_session()
-    function_config = flow.FunctionConfig()
-    function_config.default_data_type(flow.float)
+@flow.unittest.skip_unless_1n1d()
+class TestUserOpAttrAutoType(flow.unittest.TestCase):
+    def test_user_op_attr_auto_type(test_case):
+        flow.clear_default_session()
+        function_config = flow.FunctionConfig()
+        function_config.default_data_type(flow.float)
 
-    @flow.global_function(function_config=function_config)
-    def _test_user_op_attr_auto_type_job(
-        input: oft.Numpy.Placeholder((1,), dtype=flow.float)
-    ):
-        attr1 = 1
-        attr2 = 2
-        return _test_user_op_attr_auto_type(input, attr1, attr2)
+        @flow.global_function(function_config=function_config)
+        def _test_user_op_attr_auto_type_job(
+            input: oft.Numpy.Placeholder((1,), dtype=flow.float)
+        ):
+            attr1 = 1
+            attr2 = 2
+            return _test_user_op_attr_auto_type(input, attr1, attr2)
 
-    input = [1]
-    _test_user_op_attr_auto_type_job(np.array(input, dtype=np.float32))
+        input = [1]
+        _test_user_op_attr_auto_type_job(np.array(input, dtype=np.float32))
+
+
+if __name__ == "__main__":
+    unittest.main()
