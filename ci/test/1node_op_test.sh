@@ -18,5 +18,6 @@ do
         --gpu_num=${gpu_num} \
         --dir=test/ops \
         --timeout=1 \
+        --verbose \
         --chunk=${CHUNK}
 done
