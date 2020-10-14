@@ -21,7 +21,7 @@ from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
 import oneflow as flow
 import oneflow.typing as oft
-import oneflow.python.ops.utils.compile as compi
+import oneflow.python.ops.utils.op_lib_registry as op_lib_registry
 import py_ops
 
 
@@ -80,12 +80,12 @@ def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
 @flow.unittest.skip_unless_1n1d()
 class TestAdd(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
-        py_sigmoid_lib = compi.OpLib("py_sigmoid")
+        py_sigmoid_lib = op_lib_registry.OpLib("py_sigmoid")
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
         py_sigmoid_lib.Build()
 
-        op_lib_ld = compi.OpLibLoader()
+        op_lib_ld = op_lib_registry.OpLibLoader()
         op_lib_ld.AddLib(py_sigmoid_lib)
         op_lib_ld.Link()
         op_lib_ld.Load()
@@ -104,12 +104,12 @@ class TestAdd(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
     def test_py_sigmoid_grad(test_case):
-        py_sigmoid_lib = compi.OpLib("py_sigmoid")
+        py_sigmoid_lib = op_lib_registry.OpLib("py_sigmoid")
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
         py_sigmoid_lib.Build()
 
-        op_lib_ld = compi.OpLibLoader()
+        op_lib_ld = op_lib_registry.OpLibLoader()
         op_lib_ld.AddLib(py_sigmoid_lib)
         op_lib_ld.Link()
         op_lib_ld.Load()
