@@ -3,7 +3,7 @@
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "{{ util.module_cfg_header_name(module) }}"
 
-ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
+ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m, ctx) {
 {% if util.module_has_package(module) %}
   using namespace {{ "::".join(util.module_package_list(module)) }}::cfg;
 {% else %}
@@ -25,7 +25,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated python class registered for each repeated field type #}
 {% if util.field_has_repeated_label(field) and util.add_visited_repeated_field_type_name(field) %}
-  {
+  if (ctx->IsTypeIndexRegistered(typeid(util.add_visited_repeated_field_type_name(field)))) {
     pybind11::class_<Const{{ util.field_repeated_container_name(field) }}, std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}>> registry(m, "Const{{ util.field_repeated_container_name(field) }}");
     registry.def("__len__", &Const{{ util.field_repeated_container_name(field) }}::size);
     registry.def(pybind11::self == pybind11:: self);
@@ -37,6 +37,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
     registry.def("__getitem__", &Const{{ util.field_repeated_container_name(field) }}::Get);
     registry.def("Get", &Const{{ util.field_repeated_container_name(field) }}::Get);
 {% endif %}
+    ctx->RegisterTypeIndex(typeid(util.add_visited_repeated_field_type_name(field)));
   }
   {
     pybind11::class_<{{ util.field_repeated_container_name(field) }}, std::shared_ptr<{{ util.field_repeated_container_name(field) }}>> registry(m, "{{ util.field_repeated_container_name(field) }}");

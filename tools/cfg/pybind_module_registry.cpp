@@ -6,6 +6,11 @@ namespace cfg {
 
 namespace {
 
+std::set<std::type_index>* Pybind11Context::GetRegisteredTypeIndices() {
+  static std::set<std::type_index> registered_type_indices;
+  return &registered_type_indices;
+}
+
 // If different APIs are registered under the same path, the BuildModuleFuntion of which will be
 // saved in the corresponding vector.
 using SubModuleMap = std::map<std::string, std::vector<std::function<void(pybind11::module&)>>>;
