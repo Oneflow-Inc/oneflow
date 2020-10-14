@@ -26,10 +26,9 @@ def make_job(x_shape, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def rsqrt_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-    ):
-        return flow.math.rsqrt(x);
+    def rsqrt_job(x=flow.FixedTensorDef(x_shape, dtype=dtype),):
+        return flow.math.rsqrt(x)
+
     return rsqrt_job
 
 
@@ -38,12 +37,11 @@ def make_xla_job(x_shape, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def xla_rsqrt_job(
-        x=flow.FixedTensorDef(x_shape, dtype=dtype),
-    ):
-        return flow.math.rsqrt(x);
+    def xla_rsqrt_job(x=flow.FixedTensorDef(x_shape, dtype=dtype),):
+        return flow.math.rsqrt(x)
 
     return xla_rsqrt_job
+
 
 class TestAdd(unittest.TestCase):
     def _test_body(self, x, dtype=np.float32):

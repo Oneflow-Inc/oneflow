@@ -36,12 +36,13 @@ def square_sum(
 ) -> remote_blob_util.BlobDef:
 
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("SquareSum_"))
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SquareSum_")
+        )
         .Op("square_sum")
         .Input("x", [x])
         .Output("y")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
-)
-
+    )

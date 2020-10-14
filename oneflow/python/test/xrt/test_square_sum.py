@@ -26,10 +26,9 @@ def make_job(x_shape, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def square_sum_job(
-        x:flow.typing.Numpy.Placeholder(x_shape, dtype=dtype),
-    ):
-        return flow.experimental.square_sum(x);
+    def square_sum_job(x: flow.typing.Numpy.Placeholder(x_shape, dtype=dtype),):
+        return flow.experimental.square_sum(x)
+
     return square_sum_job
 
 
@@ -38,12 +37,11 @@ def make_xla_job(x_shape, dtype=flow.float32):
     config.use_tensorrt(False)
 
     @flow.global_function(config)
-    def xla_square_sum_job(
-        x:flow.typing.Numpy.Placeholder(x_shape, dtype=dtype),
-    ):
-        return flow.experimental.square_sum(x);
+    def xla_square_sum_job(x: flow.typing.Numpy.Placeholder(x_shape, dtype=dtype),):
+        return flow.experimental.square_sum(x)
 
     return xla_square_sum_job
+
 
 class TestAdd(unittest.TestCase):
     def _test_body(self, x, dtype=np.float32):

@@ -177,5 +177,6 @@ class TestBroadcastMinOp(TestBroadcastOp):
 
         return xla_broadcast_min_job
 
+
 if __name__ == "__main__":
     unittest.main()
