@@ -27,8 +27,7 @@ import oneflow
 
 def run_cmd(cmd, cwd=None):
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True,
-                     stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -58,8 +57,7 @@ lflags = (
     + " -Wl,-rpath "
     + oneflow.sysconfig.get_lib()
 )
-cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(),
-                           "python/ops/utils/cpp2py.hpp")
+cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(), "python/ops/utils/cpp2py.hpp")
 
 
 class OpLib(object):
@@ -71,6 +69,15 @@ class OpLib(object):
         self.has_cpu_kernel = False
         self.got_so = False
         self.api = None
+        self.src_prefix = (
+            os.getcwd() + "/" + self.op_type_name + "/" + self.op_type_name
+        )
+
+        out_path = os.getcwd() + "/" + self.op_type_name + "/out"
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+        self.out_prefix = out_path + "/" + self.op_type_name
+        self.so_path = ""
 
     def AddOpDef(self):
         flags = "-std=c++11 -c -fPIC -O2 " + cflags
@@ -78,16 +85,16 @@ class OpLib(object):
             "g++",
             flags,
             lflags,
-            f"{self.op_type_name}_op.cpp",
-            f"{self.op_type_name}_op.o",
+            f"{self.src_prefix}_op.cpp",
+            f"{self.out_prefix}_op.o",
         )
-        self.objs.append(f"{self.op_type_name}_op.o")
+        self.objs.append(f"{self.out_prefix}_op.o")
         self.has_def = True
         return True
 
     def AddPythonAPI(self):
         spec = importlib.util.spec_from_file_location(
-            self.op_type_name, f"./{self.op_type_name}_py_api.py"
+            self.op_type_name, f"{self.src_prefix}_py_api.py"
         )
         self.api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.api)
@@ -95,7 +102,7 @@ class OpLib(object):
         print(self.api)
 
     def AddPythonKernel(self):
-        assert os.path.exists(f"{self.op_type_name}_py_kernel.py")
+        assert os.path.exists(f"{self.src_prefix}_py_kernel.py")
         self.has_py_kernel = True
 
     def AddCPUKernel(self):
@@ -104,10 +111,10 @@ class OpLib(object):
             "g++",
             flags,
             "",
-            f"{self.op_type_name}_cpu_kernel.cpp",
-            f"{self.op_type_name}_cpu_kernel.o",
+            f"{self.src_prefix}_cpu_kernel.cpp",
+            f"{self.out_prefix}_cpu_kernel.o",
         )
-        self.objs.append(f"{self.op_type_name}_cpu_kernel.o")
+        self.objs.append(f"{self.out_prefix}_cpu_kernel.o")
         self.has_cpu_kernel = True
         return True
 
@@ -117,11 +124,11 @@ class OpLib(object):
     def Build(self):
         if len(self.objs) > 0:
             flags = "-std=c++11 -shared -fPIC " + cflags
-            compile("g++", flags, lflags, self.objs, f"{self.op_type_name}.so")
+            compile("g++", flags, lflags, self.objs, f"{self.out_prefix}.so")
             self.got_so = True
-            return os.getcwd() + "/" + self.op_type_name + ".so"
-        else:
-            return ""
+            self.so_path = self.out_prefix + ".so"
+
+        return self.so_path
 
 
 class OpLibLoader(object):
@@ -133,13 +140,13 @@ class OpLibLoader(object):
 
     def AddLib(self, op_lib_builder):
         if op_lib_builder.got_so:
-            self.so_names.append(op_lib_builder.op_type_name)
+            self.so_names.append(op_lib_builder.so_path)
         if op_lib_builder.has_py_kernel:
             self.py_names.append(op_lib_builder.op_type_name)
 
     def Link(self):
-        for op in self.so_names:
-            self.lib_names.append(os.getcwd() + "/" + op + ".so")
+        for so in self.so_names:
+            self.lib_names.append(so)
 
         if len(self.py_names) > 0:
 
@@ -166,22 +173,28 @@ class OpLibLoader(object):
                 """
                 return full_reg_src
 
-            shutil.copy2(cpp2py_path, "./cpp2py_tmp.cpp")
-            with open("./cpp2py_tmp.cpp", "a") as f:
+            out_path = os.getcwd() + "/op_lib_loader_out"
+            if not os.path.exists(out_path):
+                os.makedirs(out_path)
+            gen_src_path = out_path + "/cpp2py_gen.cpp"
+            gen_obj_path = out_path + "/cpp2py.o"
+            gen_so_path = out_path + "/cpp2py.so"
+            shutil.copy2(cpp2py_path, gen_src_path)
+            with open(gen_src_path, "a") as f:
                 f.write(get_reg_src())
             # compile obj
             py_cflags = "-std=c++11 -c -fPIC -O2 " + cflags
             py_cflags += " -I" + sysconfig.get_paths()["include"]
             py_cflags += " -I" + numpy.get_include()
-            compile("g++", py_cflags, "", "cpp2py_tmp.cpp", "cpp2py.o")
+            compile("g++", py_cflags, "", gen_src_path, gen_obj_path)
             # compile so
             py_cflags = "-std=c++11 -shared -fPIC " + cflags
             py_cflags += " -I" + sysconfig.get_paths()["include"]
             py_cflags += " -I" + numpy.get_include()
             py_lflags = lflags
             py_lflags += " -L" + sysconfig.get_paths()["stdlib"]
-            compile("g++", py_cflags, py_lflags, "cpp2py.o", "cpp2py.so")
-            self.lib_names.append(os.getcwd() + "/cpp2py.so")
+            compile("g++", py_cflags, py_lflags, gen_obj_path, gen_so_path)
+            self.lib_names.append(gen_so_path)
         self.linked = True
 
     def Load(self):
