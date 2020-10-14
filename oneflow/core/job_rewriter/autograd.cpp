@@ -443,15 +443,16 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
-    auto square_sum_op = user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-SquareSum-"
-                                                     + NewUniqueId())
-                                                     .Op("square_sum")
-                                                     .Input("x", GenLogicalBlobName(diff_lbi))
-                                                     .Output("y")
-                                                     .ScopeSymbolId(scope_symbol_id)
-                                                     .Build();
+    auto square_sum_op = user_op::UserOpConfWrapperBuilder(
+                             "System-ClipGradient-GlobalNorm-SquareSum-" + NewUniqueId())
+                             .Op("square_sum")
+                             .Input("x", GenLogicalBlobName(diff_lbi))
+                             .Output("y")
+                             .ScopeSymbolId(scope_symbol_id)
+                             .Build();
 
-    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op.op_conf()});
+    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(),
+                        {square_sum_op.op_conf()});
     lbns_to_add.push_back(square_sum_op.output("y", 0));
   }
   while (lbns_to_add.size() != 1) {
