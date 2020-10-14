@@ -49,12 +49,12 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     if proc.returncode == 0:
                         procs_to_release.append(proc)
                     else:
-                        for gpu_id, proc in procs.items():
+                        for proc in proc2gpu_ids.keys():
                             proc.kill()
                             proc.wait()
                         raise ValueError("non-zero returncode found, exiting")
                 except TimeoutExpired:
-                    continue
+                    pass
             for proc in procs_to_release:
                 proc2gpu_ids.pop(proc)
     else:
