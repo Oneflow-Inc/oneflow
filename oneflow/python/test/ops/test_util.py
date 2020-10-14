@@ -22,6 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
 
+import tensorflow as tf
 import test_global_storage
 
 
@@ -87,8 +88,6 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
 
 
 def RunTensorFlowOp(tf_op, x, tf_args):
-    import tensorflow as tf
-
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
