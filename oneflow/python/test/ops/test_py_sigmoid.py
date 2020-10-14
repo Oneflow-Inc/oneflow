@@ -22,7 +22,6 @@ from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 import oneflow as flow
 import oneflow.typing as oft
 import oneflow.python.ops.utils.op_lib_registry as op_lib_registry
-import py_ops
 
 
 func_config = flow.FunctionConfig()
@@ -56,31 +55,11 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
     return sigmoid_grad_job
 
 
-def make_py_job(input_shape, dtype=flow.float32):
-    @flow.global_function(function_config=func_config)
-    def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
-        with flow.scope.placement("cpu", "0:0"):
-            return py_ops.py_sigmoid(x)
-
-    return sigmoid_py_job
-
-
-def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
-    @flow.global_function(function_config=func_config)
-    def sigmoid_py_grad_job(
-        y: oft.Numpy.Placeholder(y_shape, dtype=dtype),
-        dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype),
-    ):
-        with flow.scope.placement("cpu", "0:0"):
-            return py_ops.py_sigmoid_grad(y, dy)
-
-    return sigmoid_py_grad_job
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestAdd(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
         py_sigmoid_lib = op_lib_registry.OpLib("py_sigmoid")
+        py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
         py_sigmoid_lib.Build()
@@ -90,6 +69,14 @@ class TestAdd(flow.unittest.TestCase):
         op_lib_ld.Link()
         op_lib_ld.Load()
         print(op_lib_ld.LibList())
+
+        def make_py_job(input_shape, dtype=flow.float32):
+            @flow.global_function(function_config=func_config)
+            def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
+                with flow.scope.placement("cpu", "0:0"):
+                    return py_sigmoid_lib.api.py_sigmoid(x)
+
+            return sigmoid_py_job
 
         x = np.ones((1, 10), dtype=np.float32)
         sig_job = make_job(x.shape)
@@ -105,6 +92,7 @@ class TestAdd(flow.unittest.TestCase):
 
     def test_py_sigmoid_grad(test_case):
         py_sigmoid_lib = op_lib_registry.OpLib("py_sigmoid")
+        py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
         py_sigmoid_lib.Build()
@@ -114,6 +102,17 @@ class TestAdd(flow.unittest.TestCase):
         op_lib_ld.Link()
         op_lib_ld.Load()
         print(op_lib_ld.LibList())
+
+        def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
+            @flow.global_function(function_config=func_config)
+            def sigmoid_py_grad_job(
+                y: oft.Numpy.Placeholder(y_shape, dtype=dtype),
+                dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype),
+            ):
+                with flow.scope.placement("cpu", "0:0"):
+                    return py_sigmoid_lib.api.py_sigmoid_grad(y, dy)
+
+            return sigmoid_py_grad_job
 
         x = np.ones((1, 10), dtype=np.float32)
         y = 0.5 * np.ones((1, 10), dtype=np.float32)

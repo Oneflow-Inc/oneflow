@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import importlib.util
 import os
 import os.path
 import shutil
@@ -26,7 +27,8 @@ import oneflow
 
 def run_cmd(cmd, cwd=None):
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True,
+                     stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -56,7 +58,8 @@ lflags = (
     + " -Wl,-rpath "
     + oneflow.sysconfig.get_lib()
 )
-cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(), "python/ops/utils/cpp2py.hpp")
+cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(),
+                           "python/ops/utils/cpp2py.hpp")
 
 
 class OpLib(object):
@@ -67,6 +70,7 @@ class OpLib(object):
         self.has_py_kernel = False
         self.has_cpu_kernel = False
         self.got_so = False
+        self.api = None
 
     def AddOpDef(self):
         flags = "-std=c++11 -c -fPIC -O2 " + cflags
@@ -80,6 +84,15 @@ class OpLib(object):
         self.objs.append(f"{self.op_type_name}_op.o")
         self.has_def = True
         return True
+
+    def AddPythonAPI(self):
+        spec = importlib.util.spec_from_file_location(
+            self.op_type_name, f"./{self.op_type_name}_py_api.py"
+        )
+        self.api = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.api)
+        print(spec)
+        print(self.api)
 
     def AddPythonKernel(self):
         assert os.path.exists(f"{self.op_type_name}_py_kernel.py")
