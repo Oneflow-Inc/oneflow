@@ -62,8 +62,7 @@ def register_test_cases(
             name for name in dir(module) if FilterMethodName(module, name)
         ]
         method_dict = {k: getattr(module, k) for k in test_func_names}
-        scope[class_name] = type(
-            class_name, (test_case_mixin, base_class), method_dict)
+        scope[class_name] = type(class_name, (test_case_mixin, base_class), method_dict)
 
 
 @oneflow_export("unittest.num_nodes_required")

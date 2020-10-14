@@ -33,13 +33,6 @@ from typing import Union, Tuple, List, Optional, Sequence, Callable
 def py_sigmoid(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Computes sigmoid of `x` element-wise by python kernel.
-
-    Args:
-        x: Input `Blob`.
-    Returns:
-        A `Blob`
-    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("PySigmoid_")

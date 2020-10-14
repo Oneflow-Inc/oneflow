@@ -80,13 +80,16 @@ def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
 @flow.unittest.skip_unless_1n1d()
 class TestAdd(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
-        py_sigmoid_op_compi = compi.UserOpCompiler("py_sigmoid")
-        py_sigmoid_op_compi.AddOpDef()
-        py_sigmoid_op_compi.AddPythonKernel()
-        py_sigmoid_op_compi.Finish()
+        py_sigmoid_lib = compi.OpLib("py_sigmoid")
+        py_sigmoid_lib.AddOpDef()
+        py_sigmoid_lib.AddPythonKernel()
+        py_sigmoid_lib.Build()
 
-        user_ops_ld = compi.UserOpsLoader()
-        user_ops_ld.LoadAll()
+        op_lib_ld = compi.OpLibLoader()
+        op_lib_ld.AddLib(py_sigmoid_lib)
+        op_lib_ld.Link()
+        op_lib_ld.Load()
+        print(op_lib_ld.LibList())
 
         x = np.ones((1, 10), dtype=np.float32)
         sig_job = make_job(x.shape)
@@ -98,10 +101,20 @@ class TestAdd(flow.unittest.TestCase):
         print("py_sig : ", py_sig)
         print("numpy_sig : ", numpy_sig)
         test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
-        test_case.assertTrue(np.allclose(
-            py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
+        test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
-    def _test_py_sigmoid_grad(test_case):
+    def test_py_sigmoid_grad(test_case):
+        py_sigmoid_lib = compi.OpLib("py_sigmoid")
+        py_sigmoid_lib.AddOpDef()
+        py_sigmoid_lib.AddPythonKernel()
+        py_sigmoid_lib.Build()
+
+        op_lib_ld = compi.OpLibLoader()
+        op_lib_ld.AddLib(py_sigmoid_lib)
+        op_lib_ld.Link()
+        op_lib_ld.Load()
+        print(op_lib_ld.LibList())
+
         x = np.ones((1, 10), dtype=np.float32)
         y = 0.5 * np.ones((1, 10), dtype=np.float32)
         dy = 0.2 * np.ones((1, 10), dtype=np.float32)
@@ -113,8 +126,7 @@ class TestAdd(flow.unittest.TestCase):
         print("sig_grad", sig_grad)
         print("py_sig_grad", py_sig_grad)
         print("numpy_sig_grad", numpy_sig_grad)
-        test_case.assertTrue(np.allclose(
-            sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
+        test_case.assertTrue(np.allclose(sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
         test_case.assertTrue(
             np.allclose(py_sig_grad, numpy_sig_grad, rtol=1e-03, atol=1e-05)
         )

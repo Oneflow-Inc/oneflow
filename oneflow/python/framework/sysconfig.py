@@ -47,7 +47,6 @@ def get_compile_flags() -> List[str]:
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L{}".format(get_lib()))
-    _, oneflow_internal_lib_path, _ = imp.find_module(
-        "_oneflow_internal", [get_lib()])
+    _, oneflow_internal_lib_path, _ = imp.find_module("_oneflow_internal", [get_lib()])
     flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags
