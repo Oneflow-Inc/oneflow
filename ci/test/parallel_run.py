@@ -83,4 +83,5 @@ if __name__ == "__main__":
         verbose=args.verbose,
     )
     elapsed = time.time() - start
-    time.strftime("elapsed: %H:%M:%S", time.gmtime(elapsed))
+    elapsed_time_txt = time.strftime("elapsed: %H:%M:%S", time.gmtime(elapsed))
+    print(elapsed_time_txt)
