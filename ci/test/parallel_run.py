@@ -51,7 +51,7 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                         for gpu_id, proc in procs.items():
                             proc.kill()
                             proc.wait()
-                        exit(-1)
+                        raise ValueError("non-zero returncode found, exiting")
                 except TimeoutExpired:
                     if len(available_slots()) >= chunk:
                         break
