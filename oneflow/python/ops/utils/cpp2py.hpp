@@ -173,7 +173,9 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
       && op_type_name.rfind(grad_suffix) == (op_type_name.size() - grad_suffix.size())) {
     py_file_name = op_type_name.substr(0, op_type_name.size() - grad_suffix.size());
   }
-  py_file_name = "./" + py_file_name + "/" + py_file_name + "_py_kernel";
+  PyObject* sys_path = PySys_GetObject("path");
+  PyList_Append(sys_path, PyUnicode_FromString(("./" + py_file_name).c_str()));
+  py_file_name += "_py_kernel";
   py_file_str = PyUnicode_DecodeFSDefault(py_file_name.c_str());
   py_module = PyImport_Import(py_file_str);
   Py_DECREF(py_file_str);
