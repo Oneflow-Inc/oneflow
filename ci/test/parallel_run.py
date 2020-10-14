@@ -5,11 +5,20 @@ import subprocess
 import glob
 import sys
 import time
+import socket
+from contextlib import closing
 
 
 def gen_cmds(cmd, dir):
     paths = glob.glob(os.path.join(dir, "test_*.py"), recursive=False)
     return ["{} {} --failfast --verbose".format(cmd, p) for p in paths]
+
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("localhost", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
 
 
 def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
@@ -37,7 +46,11 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     print("cuda_visible_devices:", cuda_visible_devices, "cmd:", cmd)
                 proc = subprocess.Popen(
                     cmd,
-                    env=dict(os.environ, CUDA_VISIBLE_DEVICES=cuda_visible_devices),
+                    env=dict(
+                        os.environ,
+                        CUDA_VISIBLE_DEVICES=cuda_visible_devices,
+                        ONEFLOW_TEST_CTRL_PORT=str(find_free_port()),
+                    ),
                     shell=True,
                 )
                 proc2gpu_ids[proc] = gpu_ids_to_occupy
