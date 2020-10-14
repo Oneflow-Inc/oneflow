@@ -38,6 +38,7 @@ def tensor_buffer_to_tensor(
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorBuffer. 
 
+
     Args:
         x (BlobDef): Input `Blob`.
         dtype (dtype_util.dtype): The data dtype.
@@ -94,6 +95,7 @@ def tensor_to_tensor_buffer(
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorBuffer. 
+
 
     Args:
         x (BlobDef): Input `Blob`.
