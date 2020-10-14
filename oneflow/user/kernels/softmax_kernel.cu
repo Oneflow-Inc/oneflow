@@ -64,11 +64,6 @@ int GetMinNumClasses() {
 }
 
 template<typename T>
-int GetMaxNumClasses() {
-  return 16 * 1024 / sizeof(T);
-}
-
-template<typename T>
 __global__ void SoftmaxGpuForwardImpl(const int num_instances, const int num_classes, const T* in,
                                       T* prob) {
   using SU = SoftmaxUtil<T>;
@@ -127,6 +122,34 @@ void SoftmaxForwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const i
 }
 
 template<typename T>
+int GetForwardFusedKernelMaxActiveBlocks(const int num_classes) {
+  int max_active_blocks;
+  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &max_active_blocks, SoftmaxGpuForwardImpl<T>, GetSoftmaxBlockSize(),
+      GetForwardDynamicSharedMemorySize<T>(num_classes)));
+  return max_active_blocks;
+}
+
+template<>
+int GetForwardFusedKernelMaxActiveBlocks<float16>(const int num_classes) {
+  int max_active_blocks;
+  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &max_active_blocks, SoftmaxGpuForwardImpl<half>, GetSoftmaxBlockSize(),
+      GetForwardDynamicSharedMemorySize<half>(num_classes)));
+  return max_active_blocks;
+}
+
+template<typename T>
+bool IsForwardFusedKernelSupported(const int num_classes) {
+  if (num_classes >= GetMinNumClasses<T>()
+      && GetForwardFusedKernelMaxActiveBlocks<T>(num_classes) > 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
 __global__ void SoftmaxGpuBackwardImpl(const int num_instances, const int num_classes, const T* dy,
                                        const T* prob, T* dx) {
   using SU = SoftmaxUtil<T>;
@@ -179,6 +202,34 @@ void SoftmaxBackwardGpu<float16>(DeviceCtx* ctx, const int num_instances, const 
 }
 
 template<typename T>
+int GetBackwardFusedKernelMaxActiveBlocks(const int num_classes) {
+  int max_active_blocks;
+  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &max_active_blocks, SoftmaxGpuBackwardImpl<T>, GetSoftmaxBlockSize(),
+      GetBackwardDynamicSharedMemorySize<T>(num_classes)));
+  return max_active_blocks;
+}
+
+template<>
+int GetBackwardFusedKernelMaxActiveBlocks<float16>(const int num_classes) {
+  int max_active_blocks;
+  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+      &max_active_blocks, SoftmaxGpuBackwardImpl<half>, GetSoftmaxBlockSize(),
+      GetBackwardDynamicSharedMemorySize<half>(num_classes)));
+  return max_active_blocks;
+}
+
+template<typename T>
+bool IsBackwardFusedKernelSupported(const int num_classes) {
+  if (num_classes >= GetMinNumClasses<T>()
+      && GetBackwardFusedKernelMaxActiveBlocks<T>(num_classes) > 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T>
 class SoftmaxKernel final : public user_op::OpKernel {
  public:
   SoftmaxKernel() = default;
@@ -191,7 +242,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
-    if (num_classes >= GetMinNumClasses<T>() && num_classes <= GetMaxNumClasses<T>()) {
+    if (IsForwardFusedKernelSupported<T>(num_classes)) {
       SoftmaxForwardGpu<T>(ctx->device_ctx(), num_instances, num_classes, in->dptr<T>(),
                            out->mut_dptr<T>());
     } else {
@@ -236,7 +287,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
 
     const int64_t num_classes = y->shape().At(y->shape().NumAxes() - 1);
     const int64_t num_instances = y->shape().elem_cnt() / num_classes;
-    if (num_classes >= GetMinNumClasses<T>() && num_classes <= GetMaxNumClasses<T>()) {
+    if (IsBackwardFusedKernelSupported<T>(num_classes)) {
       SoftmaxBackwardGpu<T>(ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(),
                             y->dptr<T>(), dx->mut_dptr<T>());
     } else {

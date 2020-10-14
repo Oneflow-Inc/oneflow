@@ -60,6 +60,8 @@ class Error final {
                                              const std::vector<std::string>& error_msgs);
   static Error LossBlobNotFoundError(const std::string& error_summary);
 
+  static Error RwMutexedObjectNotFoundError();
+
   // gradient
   static Error GradientFunctionNotFound();
 
