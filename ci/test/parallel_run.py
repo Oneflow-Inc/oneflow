@@ -1,6 +1,5 @@
 import os
 import argparse
-import multiprocessing as mp
 from subprocess import TimeoutExpired
 import subprocess
 import glob
@@ -16,21 +15,24 @@ def gen_cmds(cmd, dir):
 def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
     "CUDA_VISIBLE_DEVICES"
     if gpu_num > 0:
-        procs = {}
+        proc2gpu_ids = {}
         while len(cmds):
 
             def available_slots():
-                return set(range(gpu_num)) - set(procs.keys())
+                occupied_gpu_ids = set({})
+                for _p, gpu_ids in proc2gpu_ids.items():
+                    assert isinstance(gpu_ids, list)
+                    occupied_gpu_ids.update(gpu_ids)
+                return set(range(gpu_num)) - occupied_gpu_ids
 
             while len(available_slots()) >= chunk and len(cmds):
                 available_gpu_ids = available_slots()
-                gpu_ids = []
+                gpu_ids_to_occupy = []
                 for _i in range(chunk):
                     gpu_id = available_gpu_ids.pop()
-                    assert (gpu_id in procs) == False
-                    gpu_ids.append(gpu_id)
+                    gpu_ids_to_occupy.append(gpu_id)
                 cmd = cmds.pop()
-                cuda_visible_devices = ",".join([str(i) for i in gpu_ids])
+                cuda_visible_devices = ",".join([str(i) for i in gpu_ids_to_occupy])
                 if verbose:
                     print("cuda_visible_devices:", cuda_visible_devices, "cmd:", cmd)
                 proc = subprocess.Popen(
@@ -38,29 +40,24 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     env=dict(os.environ, CUDA_VISIBLE_DEVICES=cuda_visible_devices),
                     shell=True,
                 )
-                for gpu_id in gpu_ids:
-                    procs[gpu_id] = proc
+                proc2gpu_ids[proc] = gpu_ids_to_occupy
 
-            gpu_ids_to_release = []
-            for gpu_id, proc in procs.items():
+            procs_to_release = []
+            for proc, gpu_ids in proc2gpu_ids.items():
                 try:
                     proc.wait(timeout=timeout)
                     if proc.returncode == 0:
-                        gpu_ids_to_release.append(gpu_id)
+                        procs_to_release.append(proc)
                     else:
                         for gpu_id, proc in procs.items():
                             proc.kill()
                             proc.wait()
                         raise ValueError("non-zero returncode found, exiting")
                 except TimeoutExpired:
-                    if len(available_slots()) >= chunk:
-                        break
-                    else:
-                        continue
-            for gpu_id_to_release in gpu_ids_to_release:
-                procs.pop(gpu_id_to_release)
+                    continue
+            for proc in procs_to_release:
+                proc2gpu_ids.pop(proc)
     else:
-        mp.cpu_count()
         raise NotImplementedError
 
 
