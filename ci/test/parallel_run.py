@@ -17,7 +17,6 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
     "CUDA_VISIBLE_DEVICES"
     if gpu_num > 0:
         procs = {}
-        # gpu_occupant_status = [False] * gpu_num
         while len(cmds):
 
             def available_slots():
