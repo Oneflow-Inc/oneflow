@@ -56,7 +56,7 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAdd(flow.unittest.TestCase):
+class TestPySigmoid(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
         py_sigmoid_lib = op_lib_registry.OpLib("py_sigmoid")
         py_sigmoid_lib.AddPythonAPI()

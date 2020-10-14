@@ -46,7 +46,6 @@ def compile(compiler, flags, link, inputs, output):
         cmd = f"{compiler} {' '.join(inputs)} {flags} {link} -o {output}"
     else:
         cmd = f"{compiler} {inputs} {flags} {link} -o {output}"
-    print(cmd)
     run_cmd(cmd)
     return True
 
@@ -98,8 +97,6 @@ class OpLib(object):
         )
         self.api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.api)
-        print(spec)
-        print(self.api)
 
     def AddPythonKernel(self):
         assert os.path.exists(f"{self.src_prefix}_py_kernel.py")
@@ -136,6 +133,7 @@ class OpLibLoader(object):
         self.py_names = []
         self.so_names = []
         self.lib_names = []
+        self.py_kernel_lib = ""
         self.linked = False
 
     def AddLib(self, op_lib_builder):
@@ -173,12 +171,13 @@ class OpLibLoader(object):
                 """
                 return full_reg_src
 
-            out_path = os.getcwd() + "/op_lib_loader_out"
-            if not os.path.exists(out_path):
-                os.makedirs(out_path)
-            gen_src_path = out_path + "/cpp2py_gen.cpp"
-            gen_obj_path = out_path + "/cpp2py.o"
-            gen_so_path = out_path + "/cpp2py.so"
+            self.out_path = os.getcwd() + "/op_lib_loader_out"
+            if os.path.exists(self.out_path):
+                shutil.rmtree(self.out_path)
+                os.makedirs(self.out_path)
+            gen_src_path = self.out_path + "/cpp2py_gen.cpp"
+            gen_obj_path = self.out_path + "/cpp2py.o"
+            gen_so_path = self.out_path + "/cpp2py.so"
             shutil.copy2(cpp2py_path, gen_src_path)
             with open(gen_src_path, "a") as f:
                 f.write(get_reg_src())
@@ -194,6 +193,7 @@ class OpLibLoader(object):
             py_lflags = lflags
             py_lflags += " -L" + sysconfig.get_paths()["stdlib"]
             compile("g++", py_cflags, py_lflags, gen_obj_path, gen_so_path)
+            self.py_kernel_lib = gen_so_path
             self.lib_names.append(gen_so_path)
         self.linked = True
 
@@ -205,3 +205,7 @@ class OpLibLoader(object):
     def LibList(self):
         assert self.linked
         return self.lib_names
+
+    def PythonKernelLib(self):
+        assert self.linked
+        return self.py_kernel_lib

@@ -21,8 +21,6 @@ import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
-# import oneflow.python.framework.dtype as dtype_util
-# import oneflow.python.framework.module as module_util
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 

@@ -21,7 +21,6 @@ REGISTER_USER_OP("py_one2two")
     .Input("in")
     .Output("out1")
     .Output("out2")
-    .Attr("py_file", UserOpAttrType::kAtString)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out1_shape = ctx->Shape4ArgNameAndIndex("out1", 0);
