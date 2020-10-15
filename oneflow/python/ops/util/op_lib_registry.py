@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from __future__ import absolute_import
+
 import importlib.util
 import os
 import os.path
@@ -22,12 +24,15 @@ import sys
 import sysconfig
 import numpy
 
+from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.sysconfig as oneflow_sysconfig
 import oneflow
 
 
 def run_cmd(cmd, cwd=None):
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True,
+                     stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -50,15 +55,17 @@ def compile(compiler, flags, link, inputs, output):
     return True
 
 
-cflags = " ".join(oneflow.sysconfig.get_compile_flags())
+cflags = " ".join(oneflow_sysconfig.get_compile_flags())
 lflags = (
-    " ".join(oneflow.sysconfig.get_link_flags())
+    " ".join(oneflow_sysconfig.get_link_flags())
     + " -Wl,-rpath "
-    + oneflow.sysconfig.get_lib()
+    + oneflow_sysconfig.get_lib()
 )
-cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(), "python/ops/utils/cpp2py.hpp")
+cpp2py_path = os.path.join(oneflow_sysconfig.get_lib(),
+                           "python/ops/util/cpp2py.hpp")
 
 
+@oneflow_export("util.op_lib")
 class OpLib(object):
     def __init__(self, op_type_name):
         self.op_type_name = op_type_name
@@ -128,6 +135,7 @@ class OpLib(object):
         return self.so_path
 
 
+@oneflow_export("util.op_lib_loader")
 class OpLibLoader(object):
     def __init__(self):
         self.py_names = []

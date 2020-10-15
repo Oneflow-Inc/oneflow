@@ -20,7 +20,6 @@ from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
 import oneflow as flow
 import oneflow.typing as oft
-import oneflow.python.ops.utils.op_lib_registry as op_lib_registry
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -29,13 +28,13 @@ func_config.default_data_type(flow.float)
 @flow.unittest.skip_unless_1n1d()
 class TestPyOne2Two(flow.unittest.TestCase):
     def test_py_one2two(test_case):
-        py_one2two_lib = op_lib_registry.OpLib("py_one2two")
+        py_one2two_lib = flow.util.op_lib("py_one2two")
         py_one2two_lib.AddPythonAPI()
         py_one2two_lib.AddOpDef()
         py_one2two_lib.AddPythonKernel()
         py_one2two_lib.Build()
 
-        op_lib_ld = op_lib_registry.OpLibLoader()
+        op_lib_ld = flow.util.op_lib_loader()
         op_lib_ld.AddLib(py_one2two_lib)
         op_lib_ld.Link()
         op_lib_ld.Load()
@@ -54,7 +53,8 @@ class TestPyOne2Two(flow.unittest.TestCase):
         outs = py_job(x).get()
         for out in outs:
             print("out:", out.numpy())
-            test_case.assertTrue(np.allclose(x, out.numpy(), rtol=1e-03, atol=1e-05))
+            test_case.assertTrue(np.allclose(
+                x, out.numpy(), rtol=1e-03, atol=1e-05))
 
 
 if __name__ == "__main__":
