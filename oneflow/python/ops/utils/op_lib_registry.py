@@ -27,7 +27,8 @@ import oneflow
 
 def run_cmd(cmd, cwd=None):
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True,
+                     stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -56,7 +57,8 @@ lflags = (
     + " -Wl,-rpath "
     + oneflow.sysconfig.get_lib()
 )
-cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(), "python/ops/utils/cpp2py.hpp")
+cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(),
+                           "python/ops/utils/cpp2py.hpp")
 
 
 class OpLib(object):
@@ -174,7 +176,7 @@ class OpLibLoader(object):
             self.out_path = os.getcwd() + "/op_lib_loader_out"
             if os.path.exists(self.out_path):
                 shutil.rmtree(self.out_path)
-                os.makedirs(self.out_path)
+            os.makedirs(self.out_path)
             gen_src_path = self.out_path + "/cpp2py_gen.cpp"
             gen_obj_path = self.out_path + "/cpp2py.o"
             gen_so_path = self.out_path + "/cpp2py.so"
