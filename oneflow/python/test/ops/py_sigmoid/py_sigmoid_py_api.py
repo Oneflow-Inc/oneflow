@@ -57,21 +57,3 @@ def py_sigmoid_grad(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
-
-# def py_one2two(
-#     x: remote_blob_util.BlobDef, name: Optional[str] = None,
-# ) -> List[remote_blob_util.BlobDef]:
-#     return (
-#         flow.user_op_builder(
-#             name if name is not None else id_util.UniqueStr("PyOne2Two_")
-#         )
-#         .Op("py_one2two")
-#         .Input("in", [x])
-#         .Output("out1")
-#         .Output("out2")
-#         .Attr("py_file", "py_one2two")
-#         .Build()
-#         .InferAndTryRun()
-#         .RemoteBlobList()
-#     )
