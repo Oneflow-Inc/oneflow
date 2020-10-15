@@ -3,8 +3,6 @@ name: Build and Test CI
 on:
   pull_request:
     types: [synchronize, opened, reopened, ready_for_review]
-    branches:
-      - master
     paths-ignore:
       - '**.md'
       - '.gitignore'
@@ -18,7 +16,7 @@ jobs:
   check_license_and_format:
     name: License and format
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.ref == 'refs/heads/master'
     steps:
     - uses: actions/checkout@v2
     - name: Check license and format (please run 'make of_format' if failed)
@@ -27,7 +25,7 @@ jobs:
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.ref == 'refs/heads/master'
     steps:
     - uses: actions/checkout@v2
     - name: Mirror dependencies to aliyun
@@ -43,7 +41,7 @@ jobs:
     needs: check_license_and_format
     name: CUDA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.ref == 'refs/heads/master'
     steps:
     - name: Fix permissions
       run: |
@@ -123,7 +121,7 @@ jobs:
     needs: [check_license_and_format, build_and_test_cuda, mirror_third_party]
     name: XLA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.ref == 'refs/heads/master'
     steps:
     - name: Fix permissions
       run: |
@@ -159,7 +157,7 @@ jobs:
     needs: [check_license_and_format, build_and_test_cuda]
     name: CPU-only
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.ref == 'refs/heads/master'
     steps:
     - name: Fix permissions
       run: |
