@@ -1030,6 +1030,7 @@ def image_decode(
         import numpy as np
         from PIL import Image
 
+
         def _of_image_decode(images):
             image_files = [open(im, "rb") for im in images]
             images_bytes = [imf.read() for imf in image_files]
@@ -1044,7 +1045,7 @@ def image_decode(
             @flow.global_function(function_config=func_config)
             def image_decode_job(
                 images_def: tp.ListListNumpy.Placeholder(shape=static_shape, dtype=flow.int8)
-            ):
+            )->tp.ListListNumpy:
                 # convert to tensor buffer
                 images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
                 decoded_images_buffer = flow.image_decode(images_buffer)
@@ -1057,8 +1058,9 @@ def image_decode(
             images_np_arr = [
                 np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes
             ]
-            decoded_images = image_decode_job([images_np_arr]).get().numpy_lists()
+            decoded_images = image_decode_job([images_np_arr])
             return decoded_images[0]
+            
 
         if __name__ == "__main__": 
             img = _of_image_decode(['./img/1.jpg'])

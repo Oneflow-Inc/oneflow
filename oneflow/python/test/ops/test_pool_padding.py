@@ -176,10 +176,14 @@ class TestPoolPadding(flow.unittest.TestCase):
             dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
             def assert_grad(b):
-                assert np.allclose(dx_tf.numpy(), b.numpy()), (
+                if is_dynamic:
+                    b_ndarray = b.numpy_list()[0]
+                else:
+                    b_ndarray = b.numpy()
+                assert np.allclose(dx_tf.numpy(), b_ndarray), (
                     case,
                     dx_tf.numpy(),
-                    b.numpy(),
+                    b_ndarray,
                 )
 
             # 1F results

@@ -400,6 +400,6 @@ OF_DEVICE_FUNC const Out ConvertSatNorm(In value) {
   return converter_t<Out, In>::ConvertSatNorm(value);
 }
 
-}  // namespace oneflow
+}  // namespace
 
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_CONVERTER_H_
