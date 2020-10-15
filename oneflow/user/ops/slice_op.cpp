@@ -156,6 +156,73 @@ void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModi
   like_modifier->set_requires_grad(false);
 }
 
+Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
+  const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const int64_t ndim = x_desc->shape().NumAxes();
+  const auto* update_desc = ctx->TensorDesc4ArgNameAndIndex("update", 0);
+  CHECK_EQ_OR_RETURN(update_desc->shape().NumAxes(), ndim);
+  CHECK_EQ_OR_RETURN(update_desc->data_type(), x_desc->data_type());
+
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+  // validate update shape and start, stop, step attributes
+  FOR_RANGE(int, i, 0, ndim) {
+    const int64_t dim_size = x_desc->shape().At(i);
+    const int64_t step = step_vec.at(i);
+    CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
+    int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
+    int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
+    if (step > 0) {
+      CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
+                                         ", otherwise empty result will be outputted.";
+    } else {
+      CHECK_GT_OR_RETURN(start, stop) << "slice start must be more than stop when step < 0"
+                                         ", otherwise empty result will be outputted.";
+    }
+    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    const int64_t sliced_dim_size = diff / step + 1;
+    CHECK_EQ_OR_RETURN(sliced_dim_size, update_desc->shape().At(i))
+        << "sliced dim size " << sliced_dim_size << " at axis " << i
+        << " not equal to the update shape " << update_desc->shape().ToString();
+  }
+  // the split axis can't be sliced
+  const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+  if (ctx->parallel_ctx().parallel_num() != 1 && x_sbp.has_split_parallel()) {
+    const int64_t split_axis = x_sbp.split_parallel().axis();
+    CHECK_GE_OR_RETURN(split_axis, 0);
+    CHECK_LT_OR_RETURN(split_axis, ndim);
+    CHECK_OR_RETURN(IsFullSlice(start_vec.at(split_axis), stop_vec.at(split_axis),
+                                step_vec.at(split_axis), x_desc->shape().At(split_axis)));
+  }
+
+  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  *y_desc = *x_desc;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSliceUpdateOpSbpSignature(user_op::SbpContext* ctx) {
+  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const int64_t ndim = x_shape.NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  FOR_RANGE(int, i, 0, ndim) {
+    if (IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), x_shape.At(i))) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
 void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
@@ -170,6 +237,44 @@ void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
     AddOp(grad_op);
   }
+}
+
+void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
+  const std::string update_grad_op_name = ctx->FwOp().op_name() + "_update_grad";
+  ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("slice")
+        .InputBind("x", ctx->FwOp().output_grad("y", 0))
+        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
+        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
+        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
+        .Output("y")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("update", 0), [&]() -> const std::string& {
+    return ctx->GetOp(update_grad_op_name).output("y", 0);
+  });
+
+  const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
+  ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("zero_like")
+        .InputBind("like", ctx->FwOp().input("update", 0))
+        .Output("out")
+        .Build();
+  });
+  const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+  ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("slice_update")
+        .InputBind("x", ctx->FwOp().output_grad("y", 0))
+        .InputBind("update", ctx->GetOp(zero_grad_op_name).output("out", 0))
+        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
+        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
+        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
+        .Output("y")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
+    return ctx->GetOp(x_grad_op_name).output("y", 0);
+  });
 }
 
 }  // namespace
@@ -195,5 +300,17 @@ REGISTER_USER_OP("slice_grad")
     .SetInputArgModifyFn(InferSliceGradInputArgModifier);
 
 REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
+
+REGISTER_USER_OP("slice_update")
+    .Input("x")
+    .Input("update")
+    .Output("y")
+    .Attr("start", UserOpAttrType::kAtListInt64)
+    .Attr("stop", UserOpAttrType::kAtListInt64)
+    .Attr("step", UserOpAttrType::kAtListInt64)
+    .SetTensorDescInferFn(InferSliceUpdateOpTensorDesc)
+    .SetGetSbpFn(GetSliceUpdateOpSbpSignature);
+
+REGISTER_USER_OP_GRAD("slice_update").SetBackwardOpConfGenFn(GenSliceUpdateGradOp);
 
 }  // namespace oneflow
