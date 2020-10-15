@@ -27,8 +27,7 @@ import oneflow
 
 def run_cmd(cmd, cwd=None):
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True,
-                     stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -57,8 +56,7 @@ lflags = (
     + " -Wl,-rpath "
     + oneflow.sysconfig.get_lib()
 )
-cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(),
-                           "python/ops/utils/cpp2py.hpp")
+cpp2py_path = os.path.join(oneflow.sysconfig.get_lib(), "python/ops/utils/cpp2py.hpp")
 
 
 class OpLib(object):
