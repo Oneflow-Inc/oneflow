@@ -13,27 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
-#define ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
+#ifndef ONEFLOW_CORE_JOB_SESSION_H_
+#define ONEFLOW_CORE_JOB_SESSION_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/common/maybe.h"
+#include <memory>
+#include <string>
 
 namespace oneflow {
 
-class SessionGlobalObjectsScope final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SessionGlobalObjectsScope);
-  SessionGlobalObjectsScope();
-  ~SessionGlobalObjectsScope();
+int64_t NewSessionId();
 
-  Maybe<void> Init(const ConfigProto& config_proto);
+class ConfigProto;
+class ConfigProtoContext {
+ public:
+  ConfigProtoContext(const ConfigProto& config_proto);
+  ~ConfigProtoContext();
+
+  int64_t session_id() const { return session_id_; }
 
  private:
-  ConfigProto config_proto_;
+  int64_t session_id_;
+};
+
+class LogicalConfigProtoContext {
+ public:
+  LogicalConfigProtoContext(const std::string& config_proto_str);
+  ~LogicalConfigProtoContext();
+
+  std::unique_ptr<ConfigProtoContext> config_proto_ctx_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
+#endif  // ONEFLOW_CORE_JOB_SESSION_H_

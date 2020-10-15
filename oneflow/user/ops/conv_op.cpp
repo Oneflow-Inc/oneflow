@@ -402,6 +402,7 @@ REGISTER_USER_OP("conv_filter_grad")
       user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
       *filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
       *filter_diff->mut_data_type() = x->data_type();
+      filter_diff->set_is_dynamic(false);
 
       return Maybe<void>::Ok();
     })
