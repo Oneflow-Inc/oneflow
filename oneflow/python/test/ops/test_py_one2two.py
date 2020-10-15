@@ -53,8 +53,7 @@ class TestPyOne2Two(flow.unittest.TestCase):
         outs = py_job(x).get()
         for out in outs:
             print("out:", out.numpy())
-            test_case.assertTrue(np.allclose(
-                x, out.numpy(), rtol=1e-03, atol=1e-05))
+            test_case.assertTrue(np.allclose(x, out.numpy(), rtol=1e-03, atol=1e-05))
 
 
 if __name__ == "__main__":
