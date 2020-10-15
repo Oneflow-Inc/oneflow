@@ -43,9 +43,10 @@ Maybe<void> BatchAxisInferFnUtil::NaiveInferBatchAxis(BatchAxisContext* ctx) {
   for (const auto& in_arg_pair : ctx->inputs()) {
     const OptInt64* const cur_in_batch_axis =
         ctx->BatchAxis4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    // if (cur_in_batch_axis->has_value() == false) { continue; }
+    if (cur_in_batch_axis->has_value() == false) { continue; }
     if (batch_axis) {
       CHECK_EQ_OR_RETURN(batch_axis->value(), cur_in_batch_axis->value());
+      // continue;
     } else {
       batch_axis = cur_in_batch_axis;
     }
