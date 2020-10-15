@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList
-import oneflow.typing as oft
+import oneflow.typing as tp
 
 
 def compare_broadcast_like_with_tf(
@@ -34,8 +34,8 @@ def compare_broadcast_like_with_tf(
 
     @flow.global_function(function_config=func_config)
     def broadcast_like_forward(
-        x: oft.Numpy.Placeholder(shape=input_shape, dtype=flow.float),
-        y: oft.Numpy.Placeholder(shape=like_shape, dtype=flow.float),
+        x: tp.Numpy.Placeholder(shape=input_shape, dtype=flow.float),
+        y: tp.Numpy.Placeholder(shape=like_shape, dtype=flow.float),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.broadcast_like(x, y, broadcast_axes=broadcast_axes)
@@ -66,6 +66,29 @@ class TestBroadcastLike(flow.unittest.TestCase):
         arg_dict["broadcast_axes"] = [[0, 1]]
         for arg in GenArgList(arg_dict):
             compare_broadcast_like_with_tf(*arg)
+
+    def test_broadcast_like_grad(test_case):
+        def watch_diff_handler(blob: tp.Numpy):
+            test_case.assertTrue(np.array_equal(blob, [[3.0], [3.0], [3.0]]))
+
+        @flow.global_function(type="train")
+        def watch_matmul_diff_job(
+            images: tp.Numpy.Placeholder((3, 3), dtype=flow.float),
+        ) -> None:
+            weight_initializer = flow.constant_initializer(2)
+            weight_shape = (3, 1)
+            weight = flow.get_variable(
+                "three-weight", shape=weight_shape, initializer=weight_initializer
+            )
+            weight_broadcast = flow.broadcast_like(
+                weight, like=images, broadcast_axes=(1,)
+            )
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(weight_broadcast)
+            flow.watch_diff(weight, watch_diff_handler)
+
+        x = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]]).astype(np.float32)
+        watch_matmul_diff_job(x)
 
 
 if __name__ == "__main__":
