@@ -17,10 +17,34 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 #include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
 #define MAX_DIM_COUNT 8
+
+template<typename T>
+using GatherDimIndexHelper = NdIndexOffsetHelper<T, MAX_DIM_COUNT>;
+
+template <typename IDX_T>
+struct NdIndexArg {
+  static const unsigned int MAX_AXIS = MAX_DIM_COUNT;
+
+  NdIndexArg(const ShapeView& tensorShape)
+      : num_axis(tensorShape.NumAxes()) {
+    FOR_RANGE(int64_t, i, 0, MAX_AXIS) {
+      shape[i] = 0;
+      coordinate[i] = 0;
+    }
+
+    FOR_RANGE(int64_t, i, 0, num_axis) { shape[i] = tensorShape.At(i); }
+  }
+
+  IDX_T shape[MAX_AXIS];
+  IDX_T coordinate[MAX_AXIS];
+  int64_t num_axis;
+};
+
 /**
  * @brief The converter of one dimension offset and high dimension coordinate
  * 

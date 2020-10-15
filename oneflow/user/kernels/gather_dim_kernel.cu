@@ -21,7 +21,6 @@ namespace oneflow {
 
 namespace user_op {
 
-namespace{
 
 template<>
 struct DeviceAdd<DeviceType::kGPU, float16> {
@@ -35,7 +34,6 @@ struct DeviceAdd<DeviceType::kGPU, T> {
   __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
 };
 
-} // anonymous namespace
 
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDAGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
