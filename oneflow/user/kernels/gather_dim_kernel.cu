@@ -36,48 +36,48 @@ struct DeviceAdd<DeviceType::kGPU, T> {
 
 
 template<typename IN_T, typename IDX_T>
-__global__ void DoCUDAGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
-                                CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt,
+__global__ void DoCUDAGatherDim(NdIndexArg<IDX_T> inputArg,
+                                NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
                                 int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
-  DoGatherDim<IN_T, IDX_T>(input_helper, index_helper, elem_cnt, dim, index, input, output);
+  DoGatherDim<IN_T, IDX_T>(inputArg, indexArg, elem_cnt, dim, index, input, output);
 }
 
 template<typename IDX_T, typename IN_T>
 struct GatherDimFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
-  void operator()(CoordinateOffsetConverter<IDX_T> input_nd_helper,
-                  CoordinateOffsetConverter<IDX_T> index_nd_helper, int64_t elem_cnt, int64_t dim,
+  void operator()(NdIndexArg<IDX_T> inputArg,
+                  NdIndexArg<IDX_T> indexArg, int64_t elem_cnt, int64_t dim,
                   const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx) {
     RUN_CUDA_KERNEL((DoCUDAGatherDim<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                    input_nd_helper, index_nd_helper, elem_cnt, dim, index, input, output);
+                    inputArg, indexArg, elem_cnt, dim, index, input, output);
   }
 };
 
 template<typename IN_T, typename IDX_T>
-__global__ void DoCUDAScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
-                                    CoordinateOffsetConverter<IDX_T> output_helper,
+__global__ void DoCUDAScatterDimAdd(NdIndexArg<IDX_T> srcArg,
+                                    NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* src, IN_T* output) {
-  DoScatterDimAdd<DeviceType::kGPU, IN_T, IDX_T>(src_helper, output_helper, elem_cnt, dim, index, src, output);
+  DoScatterDimAdd<DeviceType::kGPU, IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src, output);
 }
 
 template<typename IN_T, typename IDX_T>
 struct ScatterDimAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
-  void operator()(CoordinateOffsetConverter<IDX_T> src_nd_helper,
-                  CoordinateOffsetConverter<IDX_T> output_nd_helper, int64_t elem_cnt, int64_t dim,
+  void operator()(NdIndexArg<IDX_T> srcArg,
+                  NdIndexArg<IDX_T> outputArg, int64_t elem_cnt, int64_t dim,
                   const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                    src_nd_helper, output_nd_helper, elem_cnt, dim, index, src, output);
+                    srcArg, outputArg, elem_cnt, dim, index, src, output);
   }
 };
 
 // float16 special case of ScatterDimAddFunctor template
 template<typename IDX_T>
 struct ScatterDimAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
-  void operator()(CoordinateOffsetConverter<IDX_T> src_nd_helper,
-                  CoordinateOffsetConverter<IDX_T> output_nd_helper, int64_t elem_cnt, int64_t dim,
+  void operator()(NdIndexArg<IDX_T> srcArg,
+                  NdIndexArg<IDX_T> outputArg, int64_t elem_cnt, int64_t dim,
                   const IDX_T* index, const float16* src, float16* output, DeviceCtx* ctx) {
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                    src_nd_helper, output_nd_helper, elem_cnt, dim, index,
+                    srcArg, outputArg, elem_cnt, dim, index,
                     reinterpret_cast<const half*>(src), reinterpret_cast<half*>(output));
   }
 };

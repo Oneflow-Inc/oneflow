@@ -22,8 +22,8 @@ namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct GatherDimFunctor final {
-  void operator()(CoordinateOffsetConverter<IDX_T> input_helper,
-                  CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt, int64_t dim,
+  void operator()(NdIndexArg<IDX_T> inputArg,
+                  NdIndexArg<IDX_T> indexArg, int64_t elem_cnt, int64_t dim,
                   const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
 };
 
@@ -46,9 +46,9 @@ class GatherDimKernel final : public user_op::OpKernel {
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
-    CoordinateOffsetConverter<IDX_T> input_nd_helper(input_tensor->shape());
-    CoordinateOffsetConverter<IDX_T> index_nd_helper(index_tensor->shape());
-    GatherDimFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, index_nd_helper,
+    NdIndexArg<IDX_T> inputArg(input_tensor->shape());
+    NdIndexArg<IDX_T> indexArg(index_tensor->shape());
+    GatherDimFunctor<device_type, IN_T, IDX_T>()(inputArg, indexArg,
                                                  index_tensor->shape().elem_cnt(), dim, index,
                                                  input, output, ctx->device_ctx());
   }
@@ -57,8 +57,8 @@ class GatherDimKernel final : public user_op::OpKernel {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct ScatterDimAddFunctor final {
-  void operator()(CoordinateOffsetConverter<IDX_T> src_nd_helper,
-                  CoordinateOffsetConverter<IDX_T> output_nd_helper, int64_t elem_cnt, int64_t dim,
+  void operator()(NdIndexArg<IDX_T> srcArg,
+                  NdIndexArg<IDX_T> outputArg, int64_t elem_cnt, int64_t dim,
                   const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
 };
 
@@ -83,9 +83,9 @@ class ScatterDimKernel final : public user_op::OpKernel {
     size_t out_bytes_size = out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
-    CoordinateOffsetConverter<IDX_T> src_nd_helper(src_tensor->shape());
-    CoordinateOffsetConverter<IDX_T> output_nd_helper(out_tensor->shape());
-    ScatterDimAddFunctor<device_type, IN_T, IDX_T>()(src_nd_helper, output_nd_helper,
+    NdIndexArg<IDX_T> srcArg(src_tensor->shape());
+    NdIndexArg<IDX_T> outputArg(out_tensor->shape());
+    ScatterDimAddFunctor<device_type, IN_T, IDX_T>()(srcArg, outputArg,
                                                      src_tensor->shape().elem_cnt(), dim, index,
                                                      src, output, ctx->device_ctx());
   }

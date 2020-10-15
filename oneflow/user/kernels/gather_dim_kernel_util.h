@@ -45,75 +45,22 @@ struct NdIndexArg {
   int64_t num_axis;
 };
 
-/**
- * @brief The converter of one dimension offset and high dimension coordinate
- * 
- * @tparam IDXTYPE the type of index (int32_t or int64_t)
- */
-template<typename IDXTYPE>
-struct CoordinateOffsetConverter {
-  static const unsigned int MAX_AXIS = MAX_DIM_COUNT;
-
-  CoordinateOffsetConverter(const ShapeView& tensorShape)
-      : offset_(0), axisNum_(tensorShape.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, MAX_AXIS) {
-      shape_[i] = 0;
-      coordinate_[i] = 0;
-    }
-
-    FOR_RANGE(int64_t, i, 0, axisNum_) { shape_[i] = tensorShape.At(i); }
-
-    if (axisNum_ == 1) { shape_[axisNum_] = 1; }
-  }
-
-  OF_DEVICE_FUNC void setOffset(IDXTYPE idx) { offset_ = idx; }
-
-  OF_DEVICE_FUNC IDXTYPE coordinateToIdx() {
-    offset_ = 0;
-    FOR_RANGE(IDXTYPE, i, 0, axisNum_) {
-      IDXTYPE tmp = 1;
-      for (IDXTYPE j = i + 1; j < axisNum_; j++) { tmp *= shape_[j]; }
-      offset_ += tmp * coordinate_[i];
-    }
-
-    return offset_;
-  }
-
-  OF_DEVICE_FUNC void idxToCoordinate() {
-    IDXTYPE tmp = offset_;
-    for (IDXTYPE i = axisNum_ - 1; i >= 0; --i) {
-      coordinate_[i] = tmp % shape_[i];
-      tmp = (tmp - coordinate_[i]) / shape_[i];
-    }
-  }
-
-  OF_DEVICE_FUNC void copyCoordinate(CoordinateOffsetConverter otherConverter) {
-    FOR_RANGE(int64_t, i, 0, axisNum_) { coordinate_[i] = otherConverter.coordinate_[i]; }
-  }
-
-  IDXTYPE coordinate_[MAX_AXIS];
-  IDXTYPE offset_;
-  int64_t axisNum_;
-  int64_t shape_[MAX_AXIS];
-};
-
 namespace user_op {
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
-                                CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt,
+OF_DEVICE_FUNC void DoGatherDim(NdIndexArg<IDX_T> inputArg,
+                                NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
                                 int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
-    // get coordinate of index tensor
-    index_helper.setOffset(index_offset);
-    index_helper.idxToCoordinate();
+    GatherDimIndexHelper<IDX_T> inputHelper(inputArg.shape, inputArg.num_axis);
+    GatherDimIndexHelper<IDX_T> indexHelper(indexArg.shape, indexArg.num_axis);
 
-    // get coordinate of input tensor by replacing "dim" axis
+    // output[i][j][k] = input[i][x][k] # dim == 1, x = index[i][j][k]
+    // output.shape == index.shape
     const IDX_T x = index[index_offset];
-    input_helper.copyCoordinate(index_helper);
-    input_helper.coordinate_[dim] = x;
+    indexHelper.OffsetToNdIndex(index_offset,  inputArg.coordinate);
+    inputArg.coordinate[dim] = x;
 
-    // set output value at index_offset
-    IDX_T input_offset = input_helper.coordinateToIdx();
+    IDX_T input_offset  = inputHelper.NdIndexToOffset(inputArg.coordinate, inputArg.num_axis);
     output[index_offset] = input[input_offset];
   }
 }
@@ -126,24 +73,20 @@ struct DeviceAdd {
 
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
-                                    CoordinateOffsetConverter<IDX_T> output_helper,
+OF_DEVICE_FUNC void DoScatterDimAdd(NdIndexArg<IDX_T> srcArg,
+                                    NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* src, IN_T* output) {
   XPU_1D_KERNEL_LOOP(src_offset, elem_cnt) {
-    // output[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
+    // output[x][j][k] = src[i][j][k]  # if dim == 0, x = index[i][j][k]
     // index.shape == src.shape
 
-    // get coordinate of src tensor
-    src_helper.setOffset(src_offset);
-    src_helper.idxToCoordinate();
+    GatherDimIndexHelper<IDX_T> srcHelper(srcArg.shape, srcArg.num_axis);
+    GatherDimIndexHelper<IDX_T> outputHelper(outputArg.shape, outputArg.num_axis);
+    srcHelper.OffsetToNdIndex(src_offset, outputArg.coordinate);
+    outputArg.coordinate[dim] = index[src_offset];
 
-    // get coordinate of output tensor by replacing "dim" axis
-    output_helper.copyCoordinate(src_helper);
-    output_helper.coordinate_[dim] = index[src_offset];
-
-    // set output value at index_offset
-    IDX_T output_offset = output_helper.coordinateToIdx();
+    IDX_T output_offset = outputHelper.NdIndexToOffset(outputArg.coordinate, outputArg.num_axis);
     DeviceAdd<device_type, IN_T>::Invoke(src + src_offset, output + output_offset);
   }
 }
