@@ -89,11 +89,10 @@ Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
 
 Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc != nullptr)
-  {
-      CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
-      CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
-      Global<JobDesc>::Delete();
+  if (job_desc != nullptr) {
+    CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
+    CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
+    Global<JobDesc>::Delete();
   }
   mut_job_set()->clear_job();
   clear_job_name2infer_ctx();
