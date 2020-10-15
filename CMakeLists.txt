@@ -42,6 +42,8 @@ if (WITH_TENSORRT)
 endif()
 if (USE_CXX11_ABI)
   add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+else()
+  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 endif()
 
 enable_testing()

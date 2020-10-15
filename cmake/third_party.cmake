@@ -98,26 +98,6 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-find_package(Python3 COMPONENTS Development)
-if (Python3_Development_FOUND AND Python3_LIBRARIES)
-  set(Python_LIBRARIES ${Python3_LIBRARIES})
-endif()
-if (NOT Python_LIBRARIES)
-  message(STATUS "Getting python library from sysconfig..")
-  execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])"
-    OUTPUT_VARIABLE Python_LIBRARIES
-    RESULT_VARIABLE ret_code)
-  string(STRIP "${Python_LIBRARIES}" Python_LIBRARIES)
-  if ((NOT (ret_code EQUAL "0")))
-    set(Python_LIBRARIES "")
-  endif()
-endif()
-if (NOT Python_LIBRARIES)
-  message(FATAL_ERROR "Cannot find python library")
-endif()
-message(STATUS "Found python library ${Python_LIBRARIES}")
-
 set(oneflow_third_party_libs
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
@@ -131,7 +111,6 @@ set(oneflow_third_party_libs
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
-    ${Python_LIBRARIES}
     ${CARES_STATIC_LIBRARIES}
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
