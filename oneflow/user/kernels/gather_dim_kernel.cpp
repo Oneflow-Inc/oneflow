@@ -36,7 +36,7 @@ struct ScatterDimAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
   void operator()(CoordinateOffsetConverter<IDX_T> src_nd_helper,
                   CoordinateOffsetConverter<IDX_T> output_nd_helper, int64_t elem_cnt, int64_t dim,
                   const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
-    DoScatterDimAdd<IN_T, IDX_T>(src_nd_helper, output_nd_helper, elem_cnt, dim, index, src,
+    DoScatterDimAdd<DeviceType::kCPU, IN_T, IDX_T>(src_nd_helper, output_nd_helper, elem_cnt, dim, index, src,
                                  output);
   }
 };

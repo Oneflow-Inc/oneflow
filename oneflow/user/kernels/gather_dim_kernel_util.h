@@ -73,6 +73,7 @@ struct CoordinateOffsetConverter {
   int64_t shape_[MAX_AXIS];
 };
 
+namespace user_op {
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
                                 CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt,
@@ -93,7 +94,14 @@ OF_DEVICE_FUNC void DoGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
   }
 }
 
-template<typename IN_T, typename IDX_T>
+
+template<DeviceType device_type, typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y){ *y += *x;};
+};
+
+
+template<DeviceType device_type, typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
                                     CoordinateOffsetConverter<IDX_T> output_helper,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
@@ -112,11 +120,11 @@ OF_DEVICE_FUNC void DoScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
 
     // set output value at index_offset
     IDX_T output_offset = output_helper.coordinateToIdx();
-    output[output_offset] += src[src_offset];
-
+    DeviceAdd<device_type, IN_T>::Invoke(src + src_offset, output + output_offset);
   }
 }
 
+} // namespace user_op
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_

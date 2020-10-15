@@ -55,9 +55,9 @@ def _make_gather_dim_fn(
         pass
     else:
         def _compare_diff(blob: oft.Numpy):
-            print("##", grad.shape, blob.shape)
-            print("##", grad)
-            print("##", blob)
+            # print("##", grad.shape, blob.shape)
+            # print("##", grad)
+            # print("##", blob)
             test_case.assertTrue(
                 np.array_equal(grad, blob)
             )
@@ -120,7 +120,7 @@ def _compare_gatherdim_with_samples(
     test_case.assertTrue(np.array_equal(out, of_y))
     
 @flow.unittest.skip_unless_1n1d()
-class TestAdd(flow.unittest.TestCase):
+class TestGatherDim1n1d(flow.unittest.TestCase):
     def test_gather_dim_cpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
@@ -149,19 +149,23 @@ class TestAdd(flow.unittest.TestCase):
                 test_case, *arg
             )
 
-    # def test_gather_dim_2cards(test_case):
-    #     global g_samples
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["samples"] = g_samples
-    #     arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
-    #     arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-    #     arg_dict["machine_ids"] = ["0:0-1"]
-    #     arg_dict["device_count"] = [2]
-    #     for arg in GenArgList(arg_dict):
-    #         _compare_gatherdim_with_samples(
-    #             test_case, *arg
-    #         )
+# @flow.unittest.skip_unless_1n2d()
+# class TestGatherDim1n2d(flow.unittest.TestCase):
+#     def test_gather_dim_2cards(test_case):
+#         flow.clear_default_session()
+#         flow.config.gpu_device_num(2)
+#         global g_samples
+#         arg_dict = OrderedDict()
+#         arg_dict["device_type"] = ["gpu"]
+#         arg_dict["samples"] = g_samples
+#         arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
+#         arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
+#         arg_dict["machine_ids"] = ["0:0-1"]
+#         arg_dict["device_count"] = [2]
+#         for arg in GenArgList(arg_dict):
+#             _compare_gatherdim_with_samples(
+#                 test_case, *arg
+#             )
 
 if __name__ == "__main__":
     unittest.main()

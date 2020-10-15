@@ -21,6 +21,22 @@ namespace oneflow {
 
 namespace user_op {
 
+namespace{
+
+template<>
+struct DeviceAdd<DeviceType::kGPU, float16> {
+  __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
+    gpu_atomic_add(reinterpret_cast<half*>(y), *(reinterpret_cast<const half*>(x)));
+  }
+};
+
+template<typename T>
+struct DeviceAdd<DeviceType::kGPU, T> {
+  __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
+};
+
+} // anonymous namespace
+
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDAGatherDim(CoordinateOffsetConverter<IDX_T> input_helper,
                                 CoordinateOffsetConverter<IDX_T> index_helper, int64_t elem_cnt,
@@ -43,7 +59,7 @@ __global__ void DoCUDAScatterDimAdd(CoordinateOffsetConverter<IDX_T> src_helper,
                                     CoordinateOffsetConverter<IDX_T> output_helper,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* src, IN_T* output) {
-  DoScatterDimAdd<IN_T, IDX_T>(src_helper, output_helper, elem_cnt, dim, index, src, output);
+  DoScatterDimAdd<DeviceType::kGPU, IN_T, IDX_T>(src_helper, output_helper, elem_cnt, dim, index, src, output);
 }
 
 template<typename IN_T, typename IDX_T>
@@ -84,13 +100,15 @@ struct ScatterDimAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
                        & (user_op::HobDataType("src", 0) == OF_PP_PAIR_SECOND(in_type))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-
+#define GATHER_SCATTER_DIM_DATA_TYPE_SEQ \
+  FLOATING_DATA_TYPE_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+  
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHERDIM_GPUKERNEL, (DeviceType::kGPU),
-                                 GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                GATHER_SCATTER_DIM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTERDIMADD_GPUKERNEL, (DeviceType::kGPU),
-                                 GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                GATHER_SCATTER_DIM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow
