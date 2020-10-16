@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include <cstring>
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 
@@ -41,7 +42,7 @@ size_t GetBufferSize(int64_t session_id) {
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, uint64_t offset,
                                        bool cyclic, bool with_local_copy)
-    : PersistentInStream(-1, fs, file_paths, offset, cyclic, with_local_copy) {}
+    : PersistentInStream(kInvalidSessionId, fs, file_paths, offset, cyclic, with_local_copy) {}
 
 PersistentInStream::PersistentInStream(int64_t session_id, fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, uint64_t offset,

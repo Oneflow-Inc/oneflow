@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 #include <glog/logging.h>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 
@@ -44,7 +45,7 @@ class Global final {
   }
   // for each session
   static T* Get(int32_t session_id) {
-    if (session_id == -1) { return Get(); }
+    if (session_id == kInvalidSessionId) { return Get(); }
     return GetPPtr(session_id)->get();
   }
   static void SetAllocated(int32_t session_id, T* val) { GetPPtr(session_id)->reset(val); }
