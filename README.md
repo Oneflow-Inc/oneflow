@@ -102,6 +102,10 @@
       ```
       sudo yum -y install openblas-devel
       ```
+      On Ubuntu, your codes mybe like this:
+      ```
+      apt install libopenblas-dev
+      ```
 
 2. #### Clone Source Code
 
