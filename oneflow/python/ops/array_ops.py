@@ -666,15 +666,17 @@ def api_slice_update(
 
 
 # Get slice attrs for slice_assign and logical_slice
-def _GetSliceAttrs(slice_tup_list, input):
-    ndim = len(input.shape)
-    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
+# Note the step in slice_tup_list must be greater than 0
+# as slice_assign and logical_slice only support step > 0
+def _GetSliceAttrs(slice_tup_list, input_shape):
+    ndim = len(input_shape)
+    if not (isinstance(slice_tup_list, (list, tuple)) and len(slice_tup_list) <= ndim):
         raise ValueError(
             "slice_tup_list must be a list or tuple with length "
             "less than or equal to number of dimensions of input tensor"
         )
 
-    # if length of slice_tup_list is less than number of dimensions of inputx, fill it to length of ndims reduce 1
+    # Right extends slice_tup_list with [None, None, None] if len(slice_tup_list) < len(input_shape)
     if len(slice_tup_list) < ndim:
         slice_tup_list += type(slice_tup_list)(
             [(None, None, None)] * (ndim - len(slice_tup_list))
@@ -684,8 +686,8 @@ def _GetSliceAttrs(slice_tup_list, input):
     stop_list = []
     step_list = []
 
-    for slice_tup, dim_size in zip(slice_tup_list, input.shape):
-        if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
+    for slice_tup, dim_size in zip(slice_tup_list, input_shape):
+        if not (isinstance(slice_tup, (tuple, list)) and len(slice_tup) == 3):
             raise ValueError(
                 "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
             )
@@ -732,11 +734,11 @@ def logical_slice(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    name = name or id_util.UniqueStr("LogicalSlice_")
+    name = id_util.UniqueStr("LogicalSlice_") if name is None else name
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
-    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x)
+    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
     op = (
         flow.user_op_builder(name)
         .Op("logical_slice")
@@ -758,11 +760,11 @@ def slice_assign(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    name = name or id_util.UniqueStr("SliceAssign_")
+    name = id_util.UniqueStr("SliceAssign_") if name is None else name
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
-    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x)
+    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
     op = (
         flow.user_op_builder(name)
         .Op("slice_assign")
