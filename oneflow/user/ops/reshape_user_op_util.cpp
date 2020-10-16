@@ -33,14 +33,6 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
     } else if (dim > 0) {
       CHECK_LE_OR_RETURN(dim, in_shape.elem_cnt()) << "invalid axis: " << axis << ", dim: " << dim;
       total_elem_dim_exclude_minus_1 *= dim;
-      // temperory print out data test
-      if(total_elem_dim_exclude_minus_1 >= 32768){
-        std::cout << "in shape: ";
-        for(const auto& i:in_shape.dim_vec()) std::cout << i << ", ";
-        std::cout << std::endl << "reshape proto: ";
-        for(const auto& i:dim_vec) std::cout << i << ", ";
-        std::cout << std::endl;
-      }
       CHECK_LE_OR_RETURN(total_elem_dim_exclude_minus_1, in_shape.elem_cnt())
           << "element number in reshape_conf is bigger than input blob";
     } else {
