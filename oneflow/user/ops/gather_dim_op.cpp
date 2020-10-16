@@ -40,6 +40,13 @@ REGISTER_USER_OP("gather_dim")
       CHECK_GE_OR_RETURN(dim, 0);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
+      // split_axs should NOT equals dim when in consistent view
+      const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+      int64_t split_axis = in_sbp.split_parallel().axis();
+      if (ctx->parallel_ctx().parallel_num() != 1 && in_sbp.has_split_parallel()){
+        CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
+      }
+
       CHECK_OR_RETURN(!in->is_dynamic());
       CHECK_OR_RETURN(!index->is_dynamic());
       
@@ -129,6 +136,12 @@ REGISTER_USER_OP("scatter_dim_add_like")
 
       const Shape& params_shape = like->shape();
       int64_t dim = ctx->Attr<int64_t>("dim");
+
+      const SbpParallel& src_sbp = ctx->SbpParallel4ArgNameAndIndex("src", 0);
+      int64_t split_axis = src_sbp.split_parallel().axis();
+      if (ctx->parallel_ctx().parallel_num() != 1 && src_sbp.has_split_parallel()){
+        CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
+      }
 
       int64_t src_num_axes = src->shape().NumAxes();
       CHECK_GT_OR_RETURN(src_num_axes, 0);

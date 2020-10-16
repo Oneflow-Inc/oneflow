@@ -84,7 +84,7 @@ OF_DEVICE_FUNC void DoScatterDimAdd(NdIndexArg<IDX_T> srcArg,
     GatherDimIndexHelper<IDX_T> srcHelper(srcArg.shape, srcArg.num_axis);
     GatherDimIndexHelper<IDX_T> outputHelper(outputArg.shape, outputArg.num_axis);
     srcHelper.OffsetToNdIndex(src_offset, outputArg.coordinate);
-    outputArg.coordinate[dim] = index[src_offset];
+    outputArg.coordinate[dim] = index[src_offset]; //x == index[src_offset]
 
     IDX_T output_offset = outputHelper.NdIndexToOffset(outputArg.coordinate, outputArg.num_axis);
     DeviceAdd<device_type, IN_T>::Invoke(src + src_offset, output + output_offset);
