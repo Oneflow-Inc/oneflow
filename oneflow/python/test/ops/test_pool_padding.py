@@ -176,7 +176,9 @@ class TestPoolPadding(flow.unittest.TestCase):
             dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
 
             def assert_grad(b):
-                if is_dynamic:
+                # TODO(hanbinbin): In eager mode, cannot derive b's is_dynamic correctly, therefore, using if .. else ...
+                # Don't warry, is_dynamic will be removed in the next refactor and the problem will gone.
+                if b.is_dynamic:
                     b_ndarray = b.numpy_list()[0]
                 else:
                     b_ndarray = b.numpy()
