@@ -19,7 +19,6 @@ limitations under the License.
 namespace oneflow {
 
 static const int64_t kInvalidSessionId = -1;
-
 }
 
-#endif // ONEFLOW_CORE_COMMON_CONSTANT_H_
+#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_
