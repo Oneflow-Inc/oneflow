@@ -50,4 +50,4 @@ RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.
 
 RUN echo "source scl_source enable devtoolset-7" >> ~/.bashrc
 
-CMD ["/oneflow-src/docker/package/manylinux/build_wheel.sh"]
+ENV PATH=/opt/python/cp37-cp37m/bin:$PATH
