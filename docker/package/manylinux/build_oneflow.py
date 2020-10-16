@@ -7,7 +7,7 @@ def build_arg_env(env_var_name):
     return f"--build-arg {env_var_name}={val}"
 
 
-def build_img(cuda_version, oneflow_src_dir, use_tuna=False, use_system_proxy=True):
+def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy):
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
         cudnn_version = 8
@@ -15,7 +15,7 @@ def build_img(cuda_version, oneflow_src_dir, use_tuna=False, use_system_proxy=Tr
     img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
     tuna_build_arg = ""
     if use_tuna:
-        tuna_build_arg = '--build-arg use_tuna_yum=0 --build-arg pip_args=""'
+        tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
     proxy_build_args = []
     if use_system_proxy:
         for v in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
@@ -63,5 +63,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--skip_wheel", default=False, action="store_true", required=False
     )
+    parser.add_argument(
+        "--use_tuna", default=False, action="store_true", required=False
+    )
+    parser.add_argument(
+        "--use_system_proxy", default=False, action="store_true", required=False
+    )
     args = parser.parse_args()
-    build_img(args.cuda_version, args.oneflow_src_dir)
+    build_img(
+        args.cuda_version, args.oneflow_src_dir, args.use_tuna, args.use_system_proxy
+    )

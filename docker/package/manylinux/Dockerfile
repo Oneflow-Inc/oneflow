@@ -1,6 +1,6 @@
 ARG from
-ARG use_tuna_yum=1
-ARG pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"
+ARG use_tuna_yum=0
+ARG pip_args=""
 FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
@@ -16,7 +16,7 @@ ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
 COPY docker/package/manylinux/CentOS-Base.repo /tmp/CentOS-Base.repo
-RUN if [ "${use_tuna}" = "1" ]; then mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
+RUN if [ "${use_tuna_yum}" = "1" ]; then mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
 # in 10.1, cuda yum repo will update cublas to 10.2 and breaks build
 RUN yum-config-manager --disable cuda
