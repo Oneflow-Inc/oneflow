@@ -54,7 +54,11 @@ def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_a
     pwd_arg = f"-v {cwd}:{cwd}"
     cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
-    cmd = f"docker run --rm -it -v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {third_party_build_dir} {img_tag} {cmake_cmd}"
+    docker_cmd = f"docker run --rm -it -v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {third_party_build_dir} {img_tag} {cmake_cmd}"
+    cmd = f"{docker_cmd} {cmake_cmd}"
+    print(cmd)
+    subprocess.check_call(cmd, shell=True)
+    cmd = f"{docker_cmd} make -j`nproc` prepare_oneflow_third_party"
     print(cmd)
     subprocess.check_call(cmd, shell=True)
 
