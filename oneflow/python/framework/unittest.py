@@ -23,6 +23,7 @@ import atexit
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
+import uuid
 
 
 class _ClearDefaultSession(object):
@@ -158,6 +159,7 @@ class TestCase(unittest.TestCase):
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
         oneflow.experimental.enable_typing_check(typing_check_enabled())
+        oneflow.env.log_dir("./unittest-log-" + uuid.uuid4())
 
 
 def skip_unless(n, d):
