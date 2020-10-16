@@ -256,9 +256,6 @@ void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
     // select first BlobDesc
     concatenated_blob_desc->CopyAllFrom(*blob_descs.at(0));
   }
-  if(concatenated_blob_desc->shape().At(0)==16){
-    std::cout << op().op_name() << std::endl;
-  }
 }
 
 int64_t OpNode::GetAxisParallelNum(
@@ -524,40 +521,6 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
     return op_node->op().BatchAxis4BnInOp(bn_in_op);
   };
-  // temporary test
-  // std::cout << op_node->op().op_name() << std::endl;
-  /*
-  if (op_node->op().op_name().compare("Resnet-Reshape_67") == 0) {
-  // {
-    int32_t s = 0, b = 0, p = 0;
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-      OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
-      const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-      const Shape& lbi_shape = logical_blob_desc->shape();
-      std::cout << producer->op().op_name() << " in shape: ";
-      for(const auto& i:lbi_shape.dim_vec()) std::cout << i << ", ";
-      std::cout << std::endl;
-      const SbpParallel* sbp = &producer->SbpParallel4Lbi(lbi);
-      if (sbp->has_split_parallel()) s++;
-      if (sbp->has_broadcast_parallel()) b++;
-      if (sbp->has_partial_sum_parallel()) p++;
-    }
-    std::cout << "Op Graph Source node: s: " << s << ", b: " << b << ", p: " << p << std::endl;
-    s = 0;
-    b = 0;
-    p = 0;
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      auto* sbp_sig = op_node->mut_op()->mut_sbp_signature();
-      auto* ibn2sbp = sbp_sig->mutable_bn_in_op2sbp_parallel();
-      const SbpParallel& sbp = (*ibn2sbp)[ibn];
-      if (sbp.has_split_parallel()) s++;
-      if (sbp.has_broadcast_parallel()) b++;
-      if (sbp.has_partial_sum_parallel()) p++;
-    }
-    std::cout << "Reshape node: s: " << s << ", b: " << b << ", p: " << p << std::endl;
-  }
-  */
   CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
                                  ibn2sbp_infer_hint, BatchAxis4BnInOp));
   op_node->InitLbi2SbpParallel();
@@ -588,14 +551,6 @@ Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirro
 }
 
 Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
-  // debugging
-  if (op_node->op().op_name().compare("Resnet-Reshape_67") == 0
-      || op_node->op().op_name().compare("Resnet-pool5") == 0
-      || op_node->op().op_name().compare("Return_72") == 0
-      || op_node->op().op_name().compare("DecodeRandom_0") == 0
-      || op_node->op().op_name().find("OneHot") != std::string::npos) {
-    std::cout << op_node->op().op_name() << std::endl;
-  }
   auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
   op_node->SplitLogicalInputBlobDesc();
   int64_t parallel_num = op_node->parallel_desc().parallel_num();
@@ -678,32 +633,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
         [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
           return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
-    // test if blob description match sbp parallel
-    /*
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      auto* sbp_sig = op_node->mut_op()->mut_sbp_signature();
-      auto* ibn2sbp = sbp_sig->mutable_bn_in_op2sbp_parallel();
-      const SbpParallel& sbp = (*ibn2sbp)[ibn];
-      if (sbp.has_split_parallel()){
-        const BlobDesc& logical_blob_desc_ =
-    op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
-        if(logical_blob_desc_.shape().At(0)==64){
-          std::cout << op_node->op().op_name() << " has split parallel but 64 data sets" <<
-    std::endl; }else{ std::cout << op_node->op().op_name() << " has split parallel but " <<
-    logical_blob_desc_.shape().At(0) << " data sets" << std::endl;
-        }
-      }
-      if (sbp.has_broadcast_parallel()){
-        const BlobDesc& logical_blob_desc_ =
-    op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
-        if(logical_blob_desc_.shape().At(0)==16){
-          std::cout << op_node->op().op_name() << " has broadcast parallel but 16 data sets" <<
-    std::endl; }else{ std::cout << op_node->op().op_name() << " has broadcast parallel but " <<
-    logical_blob_desc_.shape().At(0) << " data sets" << std::endl;
-        }
-      }
-      // if (sbp.has_partial_sum_parallel()) p++;
-    }*/
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();

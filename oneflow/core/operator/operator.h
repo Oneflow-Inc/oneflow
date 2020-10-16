@@ -217,8 +217,6 @@ class Operator {
   Maybe<void> FillLogicalBlobDescSignature(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp);
 
-  virtual bool ifIdentical() const { return op_name().find("Reshape")!=std::string::npos; }
-
  protected:
   virtual Maybe<void> InferParallelSignature();
   // overloaded
@@ -243,20 +241,13 @@ class Operator {
     // UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     // std::cout << " GetSbpSignatures implemented, op name: " << op_name() << std::endl;
     // S(0)->B and B->S(0) might not be supported.
-    /*
-    SbpSignatureBuilder()
-        .Split(input_bns(), 0)
-        .Broadcast(output_bns())
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    SbpSignatureBuilder()
-        .Broadcast(input_bns())
-        .Split(output_bns(), 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    SbpSignatureBuilder()
-        .Split(input_bns(), 0)
-        .Split(output_bns(), 0)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-        */
+    // (I can not use input_bns_size() and output_bns_size().)
+    // if (input_bns().size() == 1 && output_bns().size() == 1) {
+    //   SbpSignatureBuilder()
+    //       .Split(input_bns(), 0)
+    //       .Split(output_bns(), 0)
+    //       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    // }
     return Maybe<void>::Ok();
   }
   virtual Maybe<void> InferMirroredSignature(
