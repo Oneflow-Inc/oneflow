@@ -160,8 +160,7 @@ def _MakeModelInitJobFunc():
 
 def _MakeModelLoadJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(np.frombuffer(
-            path.encode("ascii"), dtype=np.int8))
+        blob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
 
     def finish_cb():
         pass
@@ -176,8 +175,7 @@ def _MakeModelLoadJobFunc(path):
 
 def _MakeModelSaveJobFunc(path):
     def push_cb(blob):
-        blob.CopyFromNdarray(np.frombuffer(
-            path.encode("ascii"), dtype=np.int8))
+        blob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
 
     def finish_cb():
         pass
@@ -212,8 +210,7 @@ class SimpleCheckPointManager(object):
         def is_snapshot(name):
             if not name.startswith(self._prefix):
                 return False
-            snapshot_done = os.path.join(
-                self._GetSnapshotPath(name), "snapshot_done")
+            snapshot_done = os.path.join(self._GetSnapshotPath(name), "snapshot_done")
             return os.path.exists(snapshot_done) and os.path.isfile(snapshot_done)
 
         return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
@@ -314,8 +311,7 @@ class FileBackendVariableBlob:
                 self.dtype_ = dtype
                 self.has_meta_info_ = True
             elif shape is not None or dtype is not None:
-                raise RuntimeError(
-                    "both or neither of shape and dtype should be None")
+                raise RuntimeError("both or neither of shape and dtype should be None")
 
     def read_slice_as_numpy(self):
         assert self.shape is not None
@@ -329,12 +325,12 @@ class FileBackendVariableBlob:
                     length = SLICE_LEN if remainder >= SLICE_LEN else remainder
                     remainder -= length
                     stop_idx = start_idx + length
-                    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(
-                        self.dtype))
+                    np_dtype = np.dtype(
+                        dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
+                    )
                     slice = f.read(length * np_dtype.itemsize)
                     yield start_idx, stop_idx, np.frombuffer(
-                        slice,
-                        dtype=np_dtype,
+                        slice, dtype=np_dtype,
                     ).reshape([1] * (len(self.shape) - 1) + [-1])
                     start_idx = stop_idx
 
@@ -411,7 +407,7 @@ def load(path):
     return var_dict
 
 
-def read_slice_from_blob(blob):
+def read_slice_from_blob(blob, scope_symbol_id):
     assert blob.shape is not None
     SLICE_LEN = 8192
     start_idx = 0
@@ -424,8 +420,8 @@ def read_slice_from_blob(blob):
             stop_idx = start_idx + length
             start = np.unravel_index(start_idx, blob.shape)
             stop = np.unravel_index(stop_idx - 1, blob.shape)
-            stop = [x+1 for x in stop]
-            yield logical_slice(blob.blob_object, start, stop, [1] * len(blob.shape))
+            stop = [x + 1 for x in stop]
+            yield logical_slice(blob.blob_object, start, stop, [1] * len(blob.shape), scope_symbol_id)
             start_idx = stop_idx
 
 
@@ -440,14 +436,16 @@ def save(var_dict, path):
         meta_info.data_type = var.dtype.oneflow_proto_dtype
         param_path = os.path.join(path, name, "out")
         os.makedirs(os.path.dirname(param_path), exist_ok=True)
+        sess = session_ctx.GetDefaultSession()
+        var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
-            for slice in read_slice_from_blob(var):
+            for slice in read_slice_from_blob(var, var_op_conf.scope_symbol_id):
                 f.write(slice.tobytes())
     with open(os.path.join(path, META_INFO_FILENAME), "w") as f:
         f.write(text_format.MessageToString(meta_infos))
 
 
-def logical_slice(input_blob_object, start, stop, step):
+def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
     def AsyncSlice(Yield):
         def build(builder):
             op_conf = op_conf_pb.OperatorConf()
@@ -458,8 +456,7 @@ def logical_slice(input_blob_object, start, stop, step):
             op_conf.user_conf.input["x"].s.append("logical_slice/x_0")
             op_conf.user_conf.output["y"].s.append("logical_slice/y_0")
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
-            op_conf.user_conf.attr["parallel_conf"].at_string = str(
-                parallel_conf)
+            op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
             attribute = user_op_attr_util.UserOpAttrVal()
             attribute.at_list_int64.val[:] = start
             op_conf.user_conf.attr["start"].CopyFrom(attribute)
@@ -470,7 +467,7 @@ def logical_slice(input_blob_object, start, stop, step):
             attribute.at_list_int64.val[:] = step
             op_conf.user_conf.attr["step"].CopyFrom(attribute)
             bn_in_op2blob_object = dict(x_0=input_blob_object)
-            op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
+            op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object, scope_symbol_id)
             builder.StatelessCall(
                 op_attribute,
                 parallel_conf=parallel_conf,
@@ -493,8 +490,7 @@ def logical_slice(input_blob_object, start, stop, step):
 
 
 def get_variable_blob_from_numpy(np_array: np.ndarray):
-    flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(
-        np_array.dtype)
+    flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
     op_conf = get_variable.GenerateVariableOpConf(
         name="system_checkpoint",
         shape=np_array.shape,
@@ -530,7 +526,7 @@ def get_variable_blob_from_numpy(np_array: np.ndarray):
     return var_blob
 
 
-def slice_assign(ref_blob_object, value_blob_object, start, stop, step):
+def slice_assign(ref_blob_object, value_blob_object, start, stop, step, scope_symbol_id):
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
@@ -550,9 +546,8 @@ def slice_assign(ref_blob_object, value_blob_object, start, stop, step):
         attribute = user_op_attr_util.UserOpAttrVal()
         attribute.at_list_int64.val[:] = step
         op_conf.user_conf.attr["step"].CopyFrom(attribute)
-        bn_in_op2blob_object = dict(
-            ref_0=ref_blob_object, value_0=value_blob_object)
-        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
+        bn_in_op2blob_object = dict(ref_0=ref_blob_object, value_0=value_blob_object)
+        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object, scope_symbol_id)
         builder.StatelessCall(
             op_attribute,
             parallel_conf=parallel_conf,
@@ -568,24 +563,31 @@ def _FeedValueToVariable(var_name, value_blob):
         var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
         interface_op_read_and_write.Assign(value_blob, var_blob)
     elif isinstance(value_blob, FileBackendVariableBlob):
-        var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(
-            var_name)
+        var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
                 value_blob.name, value_blob.root_dir_, var_blob.dtype, var_blob.shape
             )
         assert var_blob.shape == value_blob.shape
+        sess = session_ctx.GetDefaultSession()
+        var_op_conf = sess.OpConf4InterfaceOpName(var_name)
+        scope_symbol_id = var_op_conf.scope_symbol_id
         for start_idx, stop_idx, slice in value_blob.read_slice_as_numpy():
             start_nd_idx = np.unravel_index(start_idx, value_blob.shape)
             stop_idx -= 1
             stop_nd_idx = np.unravel_index(stop_idx, value_blob.shape)
             stop_nd_idx = [x + 1 for x in stop_nd_idx]
             value_eager_blob = get_variable_blob_from_numpy(slice)
-            slice_assign(var_blob.blob_object, value_eager_blob.blob_object, start_nd_idx,
-                         stop_nd_idx, [1] * len(value_blob.shape))
+            slice_assign(
+                var_blob.blob_object,
+                value_eager_blob.blob_object,
+                start_nd_idx,
+                stop_nd_idx,
+                [1] * len(value_blob.shape),
+                scope_symbol_id
+            )
     else:
-        raise RuntimeError("Unknown value_blob type: " +
-                           type(value_blob).__name__)
+        raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
 
 
 @oneflow_export("checkpoint.load_variables")

@@ -44,10 +44,14 @@ class TestCheckpoint(flow.unittest.TestCase):
                     # distribute=flow.distribute.broadcast(),
                 )
                 y = flow.get_variable(
-                    name="y", shape=(2, 3), initializer=flow.random_uniform_initializer(),
+                    name="y",
+                    shape=(2, 3),
+                    initializer=flow.random_uniform_initializer(),
                 )
                 z = flow.get_variable(
-                    name="z", shape=(2, 3), initializer=flow.xavier_uniform_initializer(),
+                    name="z",
+                    shape=(2, 3),
+                    initializer=flow.xavier_uniform_initializer(),
                 )
                 return flow.math.add_n([x, y, z])
 
@@ -59,35 +63,42 @@ class TestCheckpoint(flow.unittest.TestCase):
             check_point.init()
 
         vars_in_mem = flow.get_all_variables()
-        with get_placement():
-            flow.checkpoint.load_variables({"y": vars_in_mem["x"]})
-            test_case.assertTrue(np.array_equal(
-                vars_in_mem['y'].numpy(), vars_in_mem['x'].numpy()))
+        flow.checkpoint.load_variables({"y": vars_in_mem["x"]})
+        test_case.assertTrue(
+            np.array_equal(vars_in_mem["y"].numpy(), vars_in_mem["x"].numpy())
+        )
 
-            if flow.legacy_checkpoint_used():
-                save_dir = "/tmp/legacy_cp"
-                shutil.rmtree(save_dir)
-                check_point.save(save_dir)
-                flow.sync_default_session()
-            else:
-                save_dir = "/tmp/cp"
-                flow.save(vars_in_mem, save_dir)
+        if flow.legacy_checkpoint_used():
+            save_dir = "/tmp/legacy_cp"
+            shutil.rmtree(save_dir)
+            check_point.save(save_dir)
+            flow.sync_default_session()
+        else:
+            save_dir = "/tmp/cp"
+            flow.save(vars_in_mem, save_dir)
 
-            vars_in_file = flow.load(save_dir)
-            test_case.assertTrue(np.array_equal(
-                vars_in_mem['x'].numpy(), vars_in_file['x'].numpy()))
-            test_case.assertTrue(np.array_equal(
-                vars_in_mem['y'].numpy(), vars_in_file['y'].numpy()))
-            test_case.assertTrue(np.array_equal(
-                vars_in_mem['z'].numpy(), vars_in_file['z'].numpy()))
-            flow.checkpoint.load_variables({"y": vars_in_file["z"]})
-            test_case.assertTrue(np.array_equal(
-                vars_in_mem['y'].numpy(), vars_in_file['z'].numpy()))
+        vars_in_file = flow.load(save_dir)
+        test_case.assertTrue(
+            np.array_equal(vars_in_mem["x"].numpy(), vars_in_file["x"].numpy())
+        )
+        test_case.assertTrue(
+            np.array_equal(vars_in_mem["y"].numpy(), vars_in_file["y"].numpy())
+        )
+        test_case.assertTrue(
+            np.array_equal(vars_in_mem["z"].numpy(), vars_in_file["z"].numpy())
+        )
+        flow.checkpoint.load_variables({"y": vars_in_file["z"]})
+        test_case.assertTrue(
+            np.array_equal(vars_in_mem["y"].numpy(), vars_in_file["z"].numpy())
+        )
 
-            net_result = add()
-            np_result = vars_in_mem['x'].numpy(
-            ) + vars_in_mem['y'].numpy() + vars_in_mem['z'].numpy()
-            test_case.assertTrue(np.array_equal(net_result, np_result))
+        net_result = add()
+        np_result = (
+            vars_in_mem["x"].numpy()
+            + vars_in_mem["y"].numpy()
+            + vars_in_mem["z"].numpy()
+        )
+        test_case.assertTrue(np.array_equal(net_result, np_result))
 
 
 if __name__ == "__main__":
