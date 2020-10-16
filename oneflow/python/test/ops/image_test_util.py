@@ -86,7 +86,12 @@ def read_images_by_pil(image_files, dtype, channels=3):
             # convert to BGR
             images.append(np.asarray(im).astype(np_dtype)[:, :, ::-1])
         elif band == "L":
-            images.append(np.asarray(im.convert(mode="BGR")).astype(np_dtype))
+            gs_image = np.asarray(im).astype(np_dtype)
+            gs_image_shape = gs_image.shape
+            assert len(gs_image_shape) == 2
+            gs_image = gs_image.reshape(gs_image_shape + (1,))
+            gs_image = np.broadcast_to(gs_image, shape=gs_image_shape + (3,))
+            images.append(gs_image)
         elif band == "BGR":
             images.append(np.asarray(im).astype(np_dtype))
         else:
