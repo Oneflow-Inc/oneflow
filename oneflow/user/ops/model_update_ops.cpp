@@ -236,13 +236,12 @@ REGISTER_USER_OP("sgd_update")
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      std::vector<user_op::OpArg> broadcast_args;
-      broadcast_args.emplace_back("learning_rate", 0);
-      if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
-        broadcast_args.emplace_back("scale_by_tensor", 0);
-      }
       FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder().Split(ctx->inputs(), axis).Broadcast(broadcast_args).Build();
+        ctx->NewBuilder()
+            .Broadcast(ctx->inputs())
+            .Split(user_op::OpArg("model", 0), axis)
+            .Split(user_op::OpArg("model_diff", 0), axis)
+            .Build();
       }
       return Maybe<void>::Ok();
     })
@@ -299,13 +298,13 @@ REGISTER_USER_OP("momentum_update")
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-      std::vector<user_op::OpArg> broadcast_args;
-      broadcast_args.emplace_back("learning_rate", 0);
-      if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
-        broadcast_args.emplace_back("scale_by_tensor", 0);
-      }
       FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder().Split(ctx->inputs(), axis).Broadcast(broadcast_args).Build();
+        ctx->NewBuilder()
+            .Broadcast(ctx->inputs())
+            .Split(user_op::OpArg("model", 0), axis)
+            .Split(user_op::OpArg("model_diff", 0), axis)
+            .Split(user_op::OpArg("momentum", 0), axis)
+            .Build();
       }
       return Maybe<void>::Ok();
     })
