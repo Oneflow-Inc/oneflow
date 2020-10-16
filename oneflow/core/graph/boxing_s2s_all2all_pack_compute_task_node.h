@@ -13,33 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_BOXING_ALL2ALL_PACK_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_BOXING_ALL2ALL_PACK_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_BOXING_S2S_ALL2ALL_PACK_COMPUTE_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_BOXING_S2S_ALL2ALL_PACK_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
-class BoxingAll2AllPackCompTaskNode : public CompTaskNode {
+class BoxingS2SAll2AllPackCompTaskNode : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingAll2AllPackCompTaskNode);
-  BoxingAll2AllPackCompTaskNode() = default;
-  ~BoxingAll2AllPackCompTaskNode() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingS2SAll2AllPackCompTaskNode);
+  BoxingS2SAll2AllPackCompTaskNode() = default;
+  ~BoxingS2SAll2AllPackCompTaskNode() override = default;
 
-  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const bool need_transpose,
-            const int64_t dst_split_axis);
-  TaskType GetTaskType() const override { return TaskType::kBoxingAll2AllPack; }
+  void Init(const CompTaskNode* src_node, const LogicalBlobId& lbi, const int64_t dst_split_axis);
+  TaskType GetTaskType() const override { return TaskType::kBoxingS2SAll2AllPack; }
 
  private:
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
-  bool need_transpose_;
   int64_t dst_split_axis_;
   LogicalBlobId lbi_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_ALL2ALL_PACK_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_BOXING_S2S_ALL2ALL_PACK_COMPUTE_TASK_NODE_H_

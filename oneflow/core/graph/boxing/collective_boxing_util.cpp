@@ -31,7 +31,7 @@ Shape GetSplitShape(const RankDesc& rank_desc) {
   return shape;
 }
 
-Shape GetFlattenShape(const RankDesc& rank_desc) {
+Shape GetFlattenSplitShape(const RankDesc& rank_desc) {
   Shape shape(rank_desc.op_desc().shape());
   CHECK_GT(shape.NumAxes(), 0);
   CHECK(shape.elem_cnt() % rank_desc.op_desc().num_ranks() == 0);
@@ -80,7 +80,7 @@ Shape GenericOpGetInputShape(const RankDesc& rank_desc) {
   } else if (op_type == OpType::kOpTypeAllGather) {
     return GetSplitShape(rank_desc);
   } else if (op_type == OpType::kOpTypeAll2All) {
-    return GetFlattenShape(rank_desc);
+    return GetFlattenSplitShape(rank_desc);
   } else {
     UNIMPLEMENTED();
     return Shape();
@@ -96,7 +96,7 @@ Shape GenericOpGetOutputShape(const RankDesc& rank_desc) {
   } else if (op_type == OpType::kOpTypeReduceScatter) {
     return GetSplitShape(rank_desc);
   } else if (op_type == OpType::kOpTypeAll2All) {
-    return GetFlattenShape(rank_desc);
+    return GetFlattenSplitShape(rank_desc);
   } else {
     UNIMPLEMENTED();
     return Shape();

@@ -900,20 +900,18 @@ message CastToStaticShapeOpConf {
   required string out = 2;
 }
 
-message BoxingAll2AllPackOpConf {
+message BoxingS2SAll2AllPackOpConf {
   required LogicalBlobId lbi = 1;
-  required bool need_transpose = 2;
-  required int64 dst_split_axis = 3;
-  required int64 parallel_num = 4;
+  required int64 dst_split_axis = 2;
+  required int64 num_ranks = 3;
 }
 
-message BoxingAll2AllUnpackOpConf {
+message BoxingS2SAll2AllUnpackOpConf {
   required LogicalBlobId lbi = 1;
-  required bool need_transpose = 2;
-  required int64 src_split_axis = 3;
-  required int64 dst_split_axis = 4;
-  required int64 parallel_num = 5;
-  required ShapeProto logical_shape = 6;
+  required int64 src_split_axis = 2;
+  required int64 dst_split_axis = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
 }
 
 message ImageDecoderRandomCropResizeOpConf {
@@ -984,8 +982,8 @@ message OperatorConf {
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
-    BoxingAll2AllPackOpConf boxing_all2all_pack_conf = 174;
-    BoxingAll2AllUnpackOpConf boxing_all2all_unpack_conf = 175;
+    BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
+    BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
     UserOpConf user_conf = 199;
 
     

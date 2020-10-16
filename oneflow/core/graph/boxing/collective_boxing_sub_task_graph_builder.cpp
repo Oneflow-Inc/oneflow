@@ -19,8 +19,8 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
-#include "oneflow/core/graph/boxing_all2all_pack_compute_task_node.h"
-#include "oneflow/core/graph/boxing_all2all_unpack_compute_task_node.h"
+#include "oneflow/core/graph/boxing_s2s_all2all_pack_compute_task_node.h"
+#include "oneflow/core/graph/boxing_s2s_all2all_unpack_compute_task_node.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
@@ -410,39 +410,28 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         && src_sbp_parallel.split_parallel().axis() != dst_sbp_parallel.split_parallel().axis()
         && SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
-      bool in_need_transpose = false;
-      bool out_need_transpose = false;
-      if (src_sbp_parallel.split_parallel().axis() == 0) {
-        in_need_transpose = true;
-      } else if (dst_sbp_parallel.split_parallel().axis() == 0) {
-        out_need_transpose = true;
-      } else {
-        in_need_transpose = true;
-        out_need_transpose = true;
-      }
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
         CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
         CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
 
-        BoxingAll2AllPackCompTaskNode* all2all_pack_node =
-            ctx->task_graph()->NewNode<BoxingAll2AllPackCompTaskNode>();
-        all2all_pack_node->Init(src_node, lbi, in_need_transpose,
-                                dst_sbp_parallel.split_parallel().axis());
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), all2all_pack_node);
+        BoxingS2SAll2AllPackCompTaskNode* pack_node =
+            ctx->task_graph()->NewNode<BoxingS2SAll2AllPackCompTaskNode>();
+        pack_node->Init(src_node, lbi, dst_sbp_parallel.split_parallel().axis());
+        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAll2All, -1);
-        Connect<TaskNode>(all2all_pack_node, ctx->task_graph()->NewEdge(), collective_node);
+        Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
 
-        BoxingAll2AllUnpackCompTaskNode* all2all_unpack_node =
-            ctx->task_graph()->NewNode<BoxingAll2AllUnpackCompTaskNode>();
-        all2all_unpack_node->Init(src_node, lbi, logical_blob_desc.shape(), out_need_transpose,
-                                  src_sbp_parallel.split_parallel().axis(),
-                                  dst_sbp_parallel.split_parallel().axis());
+        BoxingS2SAll2AllUnpackCompTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<BoxingS2SAll2AllUnpackCompTaskNode>();
+        unpack_node->Init(src_node, lbi, logical_blob_desc.shape(),
+                          src_sbp_parallel.split_parallel().axis(),
+                          dst_sbp_parallel.split_parallel().axis());
 
-        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), all2all_unpack_node);
-        Connect<TaskNode>(all2all_unpack_node, ctx->task_graph()->NewEdge(), dst_node);
+        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
+        Connect<TaskNode>(unpack_node, ctx->task_graph()->NewEdge(), dst_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,

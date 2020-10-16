@@ -19,11 +19,11 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BoxingAll2AllPackKernel final : public KernelIf<device_type> {
+class BoxingS2SAll2AllPackKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingAll2AllPackKernel);
-  BoxingAll2AllPackKernel() = default;
-  ~BoxingAll2AllPackKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingS2SAll2AllPackKernel);
+  BoxingS2SAll2AllPackKernel() = default;
+  ~BoxingS2SAll2AllPackKernel() override = default;
 
  private:
   bool IsStateless() const override { return false; }
@@ -32,21 +32,21 @@ class BoxingAll2AllPackKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-void BoxingAll2AllPackKernel<device_type, T>::ForwardDataContent(
+void BoxingS2SAll2AllPackKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
-  const BoxingAll2AllPackOpConf& boxing_all2all_pack_conf =
-      this->op_conf().boxing_all2all_pack_conf();
-  const int64_t dst_split_axis = boxing_all2all_pack_conf.dst_split_axis();
-  const int64_t parallel_num = boxing_all2all_pack_conf.parallel_num();
-  if (boxing_all2all_pack_conf.need_transpose()) {
+  const BoxingS2SAll2AllPackOpConf& pack_conf = this->op_conf().boxing_s2s_all2all_pack_conf();
+  const int64_t dst_split_axis = pack_conf.dst_split_axis();
+  const int64_t num_ranks = pack_conf.num_ranks();
+  const bool need_transpose = !(dst_split_axis == 0);
+  if (need_transpose) {
     DimVector dim_vec;
     const ShapeView& in_shape = in->shape();
     FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) {
       if (i == dst_split_axis) {
-        dim_vec.push_back(parallel_num);
-        dim_vec.push_back(in_shape.At(i) / parallel_num);
+        dim_vec.push_back(num_ranks);
+        dim_vec.push_back(in_shape.At(i) / num_ranks);
       } else {
         dim_vec.push_back(in_shape.At(i));
       }
@@ -74,15 +74,16 @@ void BoxingAll2AllPackKernel<device_type, T>::ForwardDataContent(
 }
 
 #ifdef WITH_CUDA
-#define REGISTER_BOXING_ALL2ALL_PACK_KERNEL(dtype)                                              \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingAll2AllPackConf, DeviceType::kGPU, \
-                                        dtype, BoxingAll2AllPackKernel<DeviceType::kGPU, dtype>)
-REGISTER_BOXING_ALL2ALL_PACK_KERNEL(float16);
-REGISTER_BOXING_ALL2ALL_PACK_KERNEL(float);
-REGISTER_BOXING_ALL2ALL_PACK_KERNEL(double);
-REGISTER_BOXING_ALL2ALL_PACK_KERNEL(int8_t);
-REGISTER_BOXING_ALL2ALL_PACK_KERNEL(int32_t);
-REGISTER_BOXING_ALL2ALL_PACK_KERNEL(int64_t);
+#define REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(dtype)                                             \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingS2SAll2AllPackConf, DeviceType::kGPU, \
+                                        dtype,                                                     \
+                                        BoxingS2SAll2AllPackKernel<DeviceType::kGPU, dtype>)
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(float16);
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(float);
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(double);
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(int8_t);
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(int32_t);
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(int64_t);
 #endif
 
 }  // namespace oneflow

@@ -218,8 +218,6 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
       return collective_boxing_conf_.nccl_fusion_reduce();
     } else if (op_type == OpType::kOpTypeBroadcast) {
       return collective_boxing_conf_.nccl_fusion_broadcast();
-    } else if (op_type == OpType::kOpTypeAll2All) {
-      return collective_boxing_conf_.nccl_fusion_all2all();
     } else {
       UNIMPLEMENTED();
       return false;
@@ -381,19 +379,22 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         } else if (op_type == OpType::kOpTypeBroadcast) {
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
-#if NCCL_VERSION_CODE > 2700
         } else if (op_type == OpType::kOpTypeAll2All) {
+#if NCCL_VERSION_CODE > 2700
+          const int64_t elem_per_rank = elem_cnt / num_ranks;
+          const int64_t elem_per_chunk = elem_per_rank / num_ranks;
+          const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
+          const int64_t chunk_size = elem_per_chunk * dtype_size;
           for (int64_t j = 0; j < num_ranks; ++j) {
-            const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
-            OF_NCCL_CHECK(ncclSend(
-                reinterpret_cast<const void*>(reinterpret_cast<const char*>(send_buff)
-                                              + dtype_size * j * elem_cnt / num_ranks / num_ranks),
-                elem_cnt / num_ranks / num_ranks, nccl_data_type, j, comm, device_ctx->stream));
+            OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
+                                       reinterpret_cast<const char*>(send_buff) + j * chunk_size),
+                                   elem_per_chunk, nccl_data_type, j, comm, device_ctx->stream));
             OF_NCCL_CHECK(ncclRecv(
-                reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff)
-                                        + dtype_size * j * elem_cnt / num_ranks / num_ranks),
-                elem_cnt / num_ranks / num_ranks, nccl_data_type, j, comm, device_ctx->stream));
+                reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + j * chunk_size),
+                elem_per_chunk, nccl_data_type, j, comm, device_ctx->stream));
           }
+#else
+          UNIMPLEMENTED();
 #endif
         } else {
           UNIMPLEMENTED();
