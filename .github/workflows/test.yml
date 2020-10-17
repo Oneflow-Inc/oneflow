@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [synchronize, opened, reopened, ready_for_review]
     branches:
-      - master
+      - '*'
     paths-ignore:
       - '**.md'
       - '.gitignore'
@@ -27,7 +27,7 @@ jobs:
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
     - uses: actions/checkout@v2
     - name: Mirror dependencies to aliyun
@@ -39,10 +39,11 @@ jobs:
         python3 -m pip install oss2
         python3 tools/package_mirror.py -i cmake
 
-  build_and_test:
+  build_and_test_cuda:
+    needs: check_license_and_format
     name: CUDA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
     - name: Fix permissions
       run: |
@@ -119,10 +120,10 @@ jobs:
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
   build_and_test_xla:
-    needs: mirror_third_party
+    needs: [check_license_and_format, build_and_test_cuda, mirror_third_party]
     name: XLA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
     - name: Fix permissions
       run: |
@@ -155,9 +156,10 @@ jobs:
           bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
 
   build_and_test_cpu:
+    needs: [check_license_and_format, build_and_test_cuda]
     name: CPU-only
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
     - name: Fix permissions
       run: |
