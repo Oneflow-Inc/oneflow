@@ -446,6 +446,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 }  // namespace
 
 CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
+  const CollectiveBoxingConf collective_boxing_conf =
+      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new NcclCollectiveBoxingAllReduceSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());
@@ -453,9 +455,11 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
+  if (collective_boxing_conf.enable_nccl_all2all()) {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-  builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
+    builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
 #endif
+  }
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
 }
 
