@@ -167,6 +167,35 @@ Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
+  const float beta1 = ctx->Attr<float>("beta1");
+  const float beta2 = ctx->Attr<float>("beta2");
+  CHECK_GE_OR_RETURN(beta1, 0);
+  CHECK_LT_OR_RETURN(beta1, 1);
+  CHECK_GE_OR_RETURN(beta2, 0);
+  CHECK_LT_OR_RETURN(beta2, 1);
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const DataType data_type = model->data_type();
+  const Shape& shape = model->shape();
+  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
+  const user_op::TensorDesc* m = ctx->TensorDesc4ArgNameAndIndex("m", 0);
+  JUST(CheckTensorDescLike(m, model));
+  const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
+  JUST(CheckTensorDescLike(v, model));
+  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+  JUST(CheckLearningRateTenserDesc(learning_rate));
+  const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
+  const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
+  JUST(CheckScalarTensorDesc(beta1_t, data_type));
+  JUST(CheckScalarTensorDesc(beta2_t, data_type));
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+    JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
+  }
+  return Maybe<void>::Ok();
+}
+
 void SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
@@ -183,6 +212,15 @@ void AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifie
     SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0);
     SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0);
   }
+}
+
+void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                          const user_op::UserOpConfWrapper& conf) {
+  SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0);
+  SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0);
 }
 
 REGISTER_USER_OP("sgd_update")
@@ -391,6 +429,27 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn(AdamInputArgModifyFn);
+
+REGISTER_USER_OP("lamb_update")
+    .Input("m")
+    .Input("v")
+    .Input("beta1_t")
+    .Input("beta2_t")
+    .Input("model")
+    .Input("model_diff")
+    .Input("learning_rate")
+    .OptionalInput("scale_by_tensor")
+    .Attr("beta1", UserOpAttrType::kAtFloat)
+    .Attr("beta2", UserOpAttrType::kAtFloat)
+    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
+    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
+    .SetTensorDescInferFn(InferLambUpdateTensorDesc)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    // every bn has sbp broadcast signature
+    .SetInputArgModifyFn(LambInputArgModifyFn);
 
 }  // namespace
 

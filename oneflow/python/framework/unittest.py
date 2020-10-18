@@ -19,7 +19,7 @@ import imp
 import inspect
 import os
 import unittest
-
+import atexit
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
@@ -148,7 +148,7 @@ class TestCase(unittest.TestCase):
                     oneflow.env.data_port(int(data_port))
 
                 oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
-                atexit.register(flow.deprecated.delete_worker)
+                atexit.register(oneflow.deprecated.delete_worker)
                 _unittest_worker_initilized = True
 
         if _unittest_env_initilized == False:
@@ -158,6 +158,9 @@ class TestCase(unittest.TestCase):
         oneflow.clear_default_session()
         oneflow.enable_eager_execution(eager_execution_enabled())
         oneflow.experimental.enable_typing_check(typing_check_enabled())
+        log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
+        if log_dir:
+            oneflow.env.log_dir(log_dir)
 
 
 def skip_unless(n, d):
