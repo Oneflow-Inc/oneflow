@@ -108,6 +108,8 @@ def build_oneflow(
     extra_oneflow_cmake_args,
     python_version,
     skip_wheel,
+    package_name,
+    house_dir,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -135,10 +137,11 @@ cmake --build . -j `nproc`
 make -j`nproc` prepare_oneflow_third_party
 """
     if skip_wheel == False:
-        bash_cmd += """
-rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
-$PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
-auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+        bash_cmd += f"""
+export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
+{python_bin} setup.py bdist_wheel -d tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+auditwheel repair tmp_wheel/*.whl --wheel-dir {house_dir}
 """
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
 
@@ -222,3 +225,25 @@ if __name__ == "__main__":
         build_third_party(
             img_tag, args.oneflow_src_dir, cache_dir, extra_oneflow_cmake_args
         )
+        cuda_version_trim = "".join(cuda_version.split("."))
+        assert len(cuda_version_trim) == 3
+        python_versions = args.python_version.split(",")
+        python_versions = [pv.strip() for pv in python_versions]
+        package_name = None
+        if args.cpu:
+            package_name = "oneflow_cpu"
+        else:
+            package_name = "oneflow_cu{cuda_version_trim}"
+            if args.xla:
+                package_name += "_xla"
+        for python_version in python_versions:
+            build_oneflow(
+                img_tag,
+                args.oneflow_src_dir,
+                cache_dir,
+                extra_oneflow_cmake_args,
+                python_version,
+                args.skip_wheel,
+                package_name,
+                args.wheel_house_dir,
+            )
