@@ -135,7 +135,6 @@ set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 {cmake_cmd}
 cmake --build . -j `nproc`
-make -j`nproc` prepare_oneflow_third_party
 """
     if skip_wheel == False:
         bash_cmd += f"""
