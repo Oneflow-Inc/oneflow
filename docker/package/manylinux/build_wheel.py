@@ -132,13 +132,13 @@ def build_oneflow(
     docker_cmd = f"docker run --rm -it {common_docker_args}"
     bash_cmd = f"""
 set -ex
+export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 {cmake_cmd}
 cmake --build . -j `nproc`
 make -j`nproc` prepare_oneflow_third_party
 """
     if skip_wheel == False:
         bash_cmd += f"""
-export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 {python_bin} setup.py bdist_wheel -d tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair tmp_wheel/*.whl --wheel-dir {house_dir}
