@@ -86,7 +86,7 @@ make -j`nproc` prepare_oneflow_third_party
         cache_dir=cache_dir,
         current_dir=third_party_build_dir,
     )
-    docker_cmd = f"docker run --rm -it {common_docker_args}"
+    docker_cmd = f"docker run --rm {common_docker_args}"
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
 
 
@@ -129,7 +129,7 @@ def build_oneflow(
         cache_dir=cache_dir,
         current_dir=oneflow_build_dir,
     )
-    docker_cmd = f"docker run --rm -it {common_docker_args}"
+    docker_cmd = f"docker run --rm {common_docker_args}"
     bash_cmd = f"""
 set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
