@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_LOAD_MODEL_H_
 #define ONEFLOW_CORE_JOB_LOAD_MODEL_H_
 
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-Maybe<void> LoadModel(const std::string& load_model_proto_str);
+std::string ApiLoadModel(const std::string& load_model_proto_str);
 
 }  // namespace oneflow
 

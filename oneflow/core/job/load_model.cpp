@@ -21,20 +21,33 @@ limitations under the License.
 
 namespace oneflow {
 
-void LoadSavedModelProtoFromFile(const LoadModelProto& load_model_proto) {
+namespace {
+
+void LoadSavedModelProtoFromFile(const LoadModelProto& load_model_proto,
+                                 SavedModel* saved_model_proto) {
   std::string saved_model_proto_path =
       JoinPath(load_model_proto.model_path(), std::to_string(load_model_proto.version()),
-               "saved_model.proto");
-
-  SavedModel saved_model_proto;
-  ParseProtoFromTextFile(saved_model_proto_path, &saved_model_proto);
+               "saved_model.prototxt");
+  ParseProtoFromTextFile(saved_model_proto_path, saved_model_proto);
 }
 
 Maybe<void> LoadModel(const std::string& load_model_proto_str) {
   LoadModelProto load_model_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(load_model_proto_str, &load_model_proto))
       << "load_model_proto parse failed";
+  SavedModel saved_model_proto;
+  LoadSavedModelProtoFromFile(load_model_proto, &saved_model_proto);
+  std::cout << "saved model:\n" << PbMessage2TxtString(saved_model_proto) << std::endl;
+
   return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+std::string ApiLoadModel(const std::string& load_model_proto_str) {
+  std::string error_str;
+  LoadModel(load_model_proto_str).GetDataAndSerializedErrorProto(&error_str);
+  return error_str;
 }
 
 }  // namespace oneflow

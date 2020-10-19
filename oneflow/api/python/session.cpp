@@ -22,5 +22,5 @@ namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
-  m.def("LoadModel", &LoadModel);
+  m.def("LoadModel", &ApiLoadModel);
 }
