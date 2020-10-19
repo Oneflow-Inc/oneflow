@@ -16,7 +16,13 @@ class ProtoReflectionUtil:
         return filter(lambda x: len(x) > 0, module.package.split("."))
 
     def module_package_namespace(self, module):
-        return "::" + module.package.replace(".", "::")
+        if module.package:
+            return "::" + module.package.replace(".", "::")
+        else:
+            return ""
+
+    def module_package_cfg_namespace(self, module):
+        return self.module_package_namespace(module) + "::cfg"
 
     def module_cfg_header_name(self, module):
         return module.name[0:-5] + "cfg.h"
@@ -47,7 +53,10 @@ class ProtoReflectionUtil:
 
     def class_name(self, cls):
         package = cls.file.package
-        return (cls.full_name)[len(package) + 1 :].replace(".", "_")
+        if package:
+            return (cls.full_name)[len(package) + 1 :].replace(".", "_")
+        else:
+            return (cls.full_name).replace(".", "_")
 
     def class_name_under_line(self, cls):
         return "_" + self.class_name(cls) + "_"
@@ -198,16 +207,20 @@ class ProtoReflectionUtil:
 
     def field_message_type_name(self, field):
         package = field.message_type.file.package
-        return (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+        if package:
+            return (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+        else:
+            return (field.message_type.full_name).replace(".", "_")
 
     def field_message_type_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package
-        return (
-            "::"
-            + package.replace(".", "::")
-            + "::cfg::"
-            + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
-        )
+        if package:
+            return "::%s::cfg::%s" % (
+                package.replace(".", "::"),
+                (field.message_type.full_name)[len(package) + 1 :].replace(".", "_"),
+            )
+        else:
+            return "::cfg::%s" % ((field.message_type.full_name).replace(".", "_"))
 
     def field_message_type_const_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package
@@ -220,12 +233,13 @@ class ProtoReflectionUtil:
 
     def field_message_type_name_with_proto_namespace(self, field):
         package = field.message_type.file.package
-        return (
-            "::"
-            + package.replace(".", "::")
-            + "::"
-            + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
-        )
+        if package:
+            return "::%s::%s" % (
+                package.replace(".", "::"),
+                (field.message_type.full_name)[len(package) + 1 :].replace(".", "_"),
+            )
+        else:
+            return "::%s" % ((field.message_type.full_name).replace(".", "_"))
 
     def field_repeated_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)

@@ -44,12 +44,12 @@ inline ::std::string {{ util.enum_name(enm) }}_Name({{ util.enum_name(enm) }} va
   }
 }
 
-inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }}& cfg_enum) {
+inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}& cfg_enum) {
   return {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}(int(cfg_enum));
 }
 
-inline {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
-  return {{ util.module_package_namespace(module) }}::cfg::{{ util.enum_name(enm) }}(int(proto_enum));
+inline {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
+  return {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}(int(proto_enum));
 }
 {% endfor %}{# enm #}
 
@@ -214,7 +214,12 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     _{{ util.class_name(cls) }}_() { Clear(); }
     explicit _{{ util.class_name(cls) }}_(const _{{ util.class_name(cls) }}_& other) { CopyFrom(other); }
     explicit _{{ util.class_name(cls) }}_(_{{ util.class_name(cls) }}_&& other) = default;
-    _{{ util.class_name(cls) }}_(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) { 
+    _{{ util.class_name(cls) }}_(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
+      InitFromProto(proto_{{ util.class_name(cls).lower() }});
+    }
+    ~_{{ util.class_name(cls) }}_() = default;
+
+    void InitFromProto(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
   {% for field in util.message_type_fields(cls) %}
   {% if util.field_has_required_or_optional_label(field) %}
       // required_or_optional field: {{ util.field_name(field) }}
@@ -236,7 +241,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
         }
   {% elif util.field_is_enum_type(field) %}
         for (const int& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}() ) {
-          add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::cfg::{{ util.field_enum_name(field) }}(elem));
+          add_{{ util.field_name(field) }}({{ util.module_package_cfg_namespace(module) }}::{{ util.field_enum_name(field) }}(elem));
         }
   {% else %}
         for (const {{ util.field_type_name_with_cfg_namespace(field) }}& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()) {
@@ -280,10 +285,8 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
           break;
         }
       }
-  {% endfor %}{# oneofs #}
+  {% endfor %}{# oneofs #}    
     }
-    ~_{{ util.class_name(cls) }}_() = default;
-
     void ToProto({{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}* proto_{{ util.class_name(cls).lower() }}) const {
   {% for field in util.message_type_fields(cls) %}
   {% if util.field_has_required_or_optional_label(field) %}
@@ -310,7 +313,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
         }
   {% elif util.field_is_enum_type(field) %}
         for (const int& elem : {{ util.field_name(field) }}() ) {
-          proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}(::oneflow::{{ util.field_enum_name(field) }}(elem));
+          proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::{{ util.field_enum_name(field) }}(elem));
         }
   {% else %}
         for (const {{ util.field_type_name_with_cfg_namespace(field) }}& elem : {{ util.field_name(field) }}()) {
@@ -731,12 +734,13 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept = default;
   Const{{ util.class_name(cls) }}(): data_(::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>()) {}
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
-    data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(proto_{{ util.class_name(cls).lower() }}));
+    BuildFromProto(proto_{{ util.class_name(cls).lower() }});
   }
   ~Const{{ util.class_name(cls) }}() override = default;
 
-  void ToProto({{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}* proto_{{ util.class_name(cls).lower() }}) const {
-    __SharedPtrOrDefault__()->ToProto(proto_{{ util.class_name(cls).lower() }});
+  using PbMessage = ::google::protobuf::Message;
+  void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override {
+    __SharedPtrOrDefault__()->ToProto(dynamic_cast<{{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}*>(proto_{{ util.class_name(cls).lower() }}));
   }
   
   ::std::string DebugString() const {
@@ -914,6 +918,10 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     if (!*data_) { data_->reset(new _{{ util.class_name(cls) }}_()); }
     return data_;
   }
+  // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
+  void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) {
+    data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(dynamic_cast<const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}&>(proto_{{ util.class_name(cls).lower() }})));
+  }
   // use std::shared_ptr for sharing reference between mutable object and const object
   // use std::unique_ptr for moving ownership 
   ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_;
@@ -927,11 +935,16 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   // enable nothrow for std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept = default;
   {{ util.class_name(cls) }}() = default;
-    {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }})
-    : Const{{ util.class_name(cls) }}(proto_{{ util.class_name(cls).lower() }}) {}
+  {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
+    InitFromProto(proto_{{ util.class_name(cls).lower() }});
+  }
 
   ~{{ util.class_name(cls) }}() = default;
 
+  void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override {
+    BuildFromProto(proto_{{ util.class_name(cls).lower() }});
+  }
+  
   void* MutableFieldPtr4FieldNumber(int field_number) override {
     switch (field_number) {
 {% for field in util.message_type_fields(cls) %}
