@@ -455,9 +455,12 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
-  if (collective_boxing_conf.enable_nccl_all2all()) {
+  if (collective_boxing_conf.nccl_enable_all_to_all()) {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
     builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
+#else
+    LOG(WARNING)
+        << "nccl_enable_all_to_all is not available, because it requires NCCL_VERSION > 2700. ";
 #endif
   }
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));

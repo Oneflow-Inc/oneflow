@@ -42,23 +42,26 @@ void BoxingS2SAll2AllUnpackKernel<device_type, T>::ForwardDataContent(
   const int64_t dst_split_axis = unpack_conf.dst_split_axis();
   const int64_t num_ranks = unpack_conf.num_ranks();
   const Shape logical_shape(unpack_conf.logical_shape());
-  const bool need_transpose = !(src_split_axis == 0);
+  const bool need_transpose = (src_split_axis != 0);
   if (need_transpose) {
-    DimVector dim_vec = logical_shape.dim_vec();
-    dim_vec[src_split_axis] = dim_vec.at(src_split_axis) / num_ranks;
-    dim_vec[dst_split_axis] = dim_vec.at(dst_split_axis) / num_ranks;
-    dim_vec.insert(dim_vec.begin(), num_ranks);
-    const Shape transpose_in_shape = Shape(dim_vec);
+    DimVector transpose_in_dim_vec = logical_shape.dim_vec();
+    CHECK_EQ(transpose_in_dim_vec.at(src_split_axis) % num_ranks, 0);
+    CHECK_EQ(transpose_in_dim_vec.at(dst_split_axis) % num_ranks, 0);
+    transpose_in_dim_vec[src_split_axis] = transpose_in_dim_vec.at(src_split_axis) / num_ranks;
+    transpose_in_dim_vec[dst_split_axis] = transpose_in_dim_vec.at(dst_split_axis) / num_ranks;
+    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin(), num_ranks);
+    const Shape transpose_in_shape(transpose_in_dim_vec);
 
-    DimVector out_dim_vec;
+    DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, transpose_in_shape.NumAxes()) {
       perm.push_back(i);
-      out_dim_vec.push_back(transpose_in_shape.At(i));
+      transpose_out_dim_vec.push_back(transpose_in_shape.At(i));
     }
     perm.insert(perm.begin() + src_split_axis, 0);
-    out_dim_vec.insert(out_dim_vec.begin() + src_split_axis, transpose_in_shape.At(0));
-    const Shape transpose_out_shape = Shape(out_dim_vec);
+    transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + src_split_axis,
+                                 transpose_in_shape.At(0));
+    const Shape transpose_out_shape(transpose_out_dim_vec);
     NewKernelUtil<device_type>::Transpose(
         ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, perm,
         transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
@@ -68,17 +71,16 @@ void BoxingS2SAll2AllUnpackKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-#ifdef WITH_CUDA
-#define REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(dtype)                           \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingS2SAll2AllUnpackConf, \
-                                        DeviceType::kGPU, dtype,                   \
-                                        BoxingS2SAll2AllUnpackKernel<DeviceType::kGPU, dtype>)
-REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(float16);
-REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(float);
-REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(double);
-REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(int8_t);
-REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(int32_t);
-REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(int64_t);
+#define REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(device_type_v, dtype_pair)                  \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                                      \
+      OperatorConf::kBoxingS2SAll2AllUnpackConf, device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+      BoxingS2SAll2AllUnpackKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
+
+#if defined(WITH_CUDA)
+REGISTER_BOXING_S2S_ALL2ALL_UNPACK_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
 #endif
 
 }  // namespace oneflow

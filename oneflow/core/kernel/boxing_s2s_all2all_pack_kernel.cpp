@@ -39,31 +39,33 @@ void BoxingS2SAll2AllPackKernel<device_type, T>::ForwardDataContent(
   const BoxingS2SAll2AllPackOpConf& pack_conf = this->op_conf().boxing_s2s_all2all_pack_conf();
   const int64_t dst_split_axis = pack_conf.dst_split_axis();
   const int64_t num_ranks = pack_conf.num_ranks();
-  const bool need_transpose = !(dst_split_axis == 0);
+  const bool need_transpose = (dst_split_axis != 0);
   if (need_transpose) {
-    DimVector dim_vec;
+    DimVector transpose_in_dim_vec;
     const ShapeView& in_shape = in->shape();
     FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) {
       if (i == dst_split_axis) {
-        dim_vec.push_back(num_ranks);
-        dim_vec.push_back(in_shape.At(i) / num_ranks);
+        transpose_in_dim_vec.push_back(num_ranks);
+        CHECK_EQ(in_shape.At(i) % num_ranks, 0);
+        transpose_in_dim_vec.push_back(in_shape.At(i) / num_ranks);
       } else {
-        dim_vec.push_back(in_shape.At(i));
+        transpose_in_dim_vec.push_back(in_shape.At(i));
       }
     }
-    Shape transpose_in_shape = Shape(dim_vec);
+    const Shape transpose_in_shape(transpose_in_dim_vec);
 
-    DimVector out_dim_vec;
+    DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
     perm.push_back(dst_split_axis);
-    out_dim_vec.push_back(transpose_in_shape.At(dst_split_axis));
+    transpose_out_dim_vec.push_back(transpose_in_shape.At(dst_split_axis));
     FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
       if (i != dst_split_axis) {
         perm.push_back(i);
-        out_dim_vec.push_back(transpose_in_shape.At(i));
+        transpose_out_dim_vec.push_back(transpose_in_shape.At(i));
       }
     }
-    Shape transpose_out_shape = Shape(out_dim_vec);
+    const Shape transpose_out_shape(transpose_out_dim_vec);
+
     NewKernelUtil<device_type>::Transpose(
         ctx.device_ctx, transpose_in_shape.NumAxes(), transpose_in_shape, transpose_out_shape, perm,
         transpose_in_shape.elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
@@ -73,17 +75,16 @@ void BoxingS2SAll2AllPackKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-#ifdef WITH_CUDA
-#define REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(dtype)                                             \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(OperatorConf::kBoxingS2SAll2AllPackConf, DeviceType::kGPU, \
-                                        dtype,                                                     \
-                                        BoxingS2SAll2AllPackKernel<DeviceType::kGPU, dtype>)
-REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(float16);
-REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(float);
-REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(double);
-REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(int8_t);
-REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(int32_t);
-REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(int64_t);
+#define REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(device_type_v, dtype_pair)                  \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                                    \
+      OperatorConf::kBoxingS2SAll2AllPackConf, device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+      BoxingS2SAll2AllPackKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
+
+#if defined(WITH_CUDA)
+REGISTER_BOXING_S2S_ALL2ALL_PACK_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
 #endif
 
 }  // namespace oneflow

@@ -547,21 +547,21 @@ def nccl_fusion_max_ops(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_fusion_max_ops = val
 
 
-@oneflow_export("config.collective_boxing.enable_nccl_all2all")
-def api_enable_nccl_all2all(val: bool) -> None:
+@oneflow_export("config.collective_boxing.nccl_enable_all_to_all")
+def api_nccl_enable_all_to_all(val: bool) -> None:
     r"""Whether or not use nccl all2all during s2s boxing
 
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([enable_nccl_all2all, do_nothing])(val)
+    return enable_if.unique([nccl_enable_all_to_all, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_nccl_all2all(val):
+def nccl_enable_all_to_all(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.enable_nccl_all2all = val
+    sess.config_proto.resource.collective_boxing_conf.nccl_enable_all_to_all = val
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
