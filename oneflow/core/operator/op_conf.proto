@@ -603,11 +603,6 @@ message SinkTickOpConf {
   required string out = 2;
 }
 
-message TupleIdentityOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-}
-
 message KeepHeaderOnlyOpConf {
   repeated string in = 1;
   repeated string out = 2;
@@ -987,7 +982,6 @@ message OperatorConf {
     UserOpConf user_conf = 199;
 
     // domain op
-    TupleIdentityOpConf tuple_identity_conf = 200;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
