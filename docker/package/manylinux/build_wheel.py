@@ -50,7 +50,10 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd):
         f_name = "/host" + f.name
         cmd = f"{docker_cmd} bash {f_name}"
         print(cmd)
-        subprocess.check_call(cmd, shell=True)
+        returncode = subprocess.run(cmd, shell=True).returncode
+        if returncode != 0:
+            print("failed, retrying, cmd:", cmd)
+            subprocess.check_call(cmd, shell=True)
 
 
 def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=None):
