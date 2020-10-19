@@ -48,16 +48,21 @@ REGISTER_USER_OP("transpose")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      if (!ctx->Attr<bool>("batch_axis_non_change")) {  // 根据 batch_axis_non_change 来确定是否推导
-                                                        // batch_axis, 后续需要删除掉
-        if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
+      // 根据 batch_axis_non_change 来确定是否推导
+      // batch_axis, 后续需要删除掉
+      if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
+        if (!ctx->Attr<bool>("batch_axis_non_change")) {
           const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
           ctx->BatchAxis4ArgNameAndIndex("output", 0)
               ->set_value(perm.at(ctx->BatchAxis4ArgNameAndIndex("input", 0)->value()));
         } else {
-          ctx->BatchAxis4ArgNameAndIndex("output", 0)->clear_value();
+          ctx->BatchAxis4ArgNameAndIndex("output", 0)
+              ->set_value(ctx->BatchAxis4ArgNameAndIndex("input", 0)->value());
         }
+      } else {
+        ctx->BatchAxis4ArgNameAndIndex("output", 0)->clear_value();
       }
+
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
