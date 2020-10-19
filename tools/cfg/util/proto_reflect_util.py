@@ -221,7 +221,7 @@ class ProtoReflectionUtil:
                 (field.message_type.full_name)[len(package) + 1 :].replace(".", "_"),
             )
         else:
-            return "::%" % ((field.message_type.full_name).replace(".", "_"))
+            return "::%s" % ((field.message_type.full_name).replace(".", "_"))
 
     def field_repeated_container_name(self, field):
         module_prefix = self.module_header_macro_lock(field.containing_type.file)
