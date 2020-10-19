@@ -9,13 +9,17 @@ def build_arg_env(env_var_name):
     return f"--build-arg {env_var_name}={val}"
 
 
-def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, skip_img):
+def build_img(
+    cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, skip_img, img_tag
+):
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
         cudnn_version = 8
     from_img = f"nvidia/cuda:{cuda_version}-cudnn{cudnn_version}-devel-centos7"
-    img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
-    if skip_img == False:
+
+    if skip_img:
+        return
+    else:
         tuna_build_arg = ""
         if use_tuna:
             tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
@@ -27,7 +31,6 @@ def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, skip_im
         cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
         print(cmd)
         subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
-    return img_tag
 
 
 def common_cmake_args(cache_dir):
@@ -41,7 +44,13 @@ def get_build_dir_arg(cache_dir, oneflow_src_dir):
     return f"-v {build_dir_real}:{build_dir_mount}"
 
 
-def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, cache_dir):
+def force_rm_dir(dir_to_clean):
+    print("cleaning:", dir)
+    clean_cmd = f"docker run --rm -v {dir_to_clean}:{dir_to_clean} -w {dir_to_clean} busybox rm -rf {dir_to_clean}/*"
+    subprocess.check_call(clean_cmd, shell=True)
+
+
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, dir_to_clean=None):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         f.write(bash_cmd)
         f.flush()
@@ -50,12 +59,7 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, cache_dir):
         f_name = "/host" + f.name
         cmd = f"{docker_cmd} bash {f_name}"
         print(cmd)
-        returncode = subprocess.run(cmd, shell=True).returncode
-        if returncode != 0:
-            print("failed, retrying, cleaning:", cache_dir)
-            clean_cmd = f"docker run --rm -v {cache_dir}:{cache_dir} -w {cache_dir} busybox rm -rf {cache_dir}/*"
-            subprocess.check_call(clean_cmd, shell=True)
-            subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=True)
 
 
 def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=None):
@@ -69,7 +73,9 @@ def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=Non
     return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
 
 
-def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args):
+def build_third_party(
+    img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args, skip_third_party
+):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
         [
@@ -92,7 +98,10 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
-    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
+    if skip_third_party:
+        return
+    else:
+        create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
 
 
 def get_python_bin(version):
@@ -141,7 +150,9 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
-    if skip_wheel == False:
+    if skip_wheel:
+        return 0
+    else:
         bash_cmd += f"""
 rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 cd {oneflow_src_dir}
@@ -149,7 +160,7 @@ rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
-    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
+        return create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
 
 
 if __name__ == "__main__":
@@ -196,13 +207,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     args = parser.parse_args()
-    img_tag = build_img(
-        args.cuda_version,
-        args.oneflow_src_dir,
-        args.use_tuna,
-        args.use_system_proxy,
-        args.skip_img,
-    )
     extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
 
     cuda_versions = []
@@ -214,6 +218,7 @@ if __name__ == "__main__":
     else:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=ON"
     cuda_versions = args.cuda_version.split(",")
+    cuda_versions = [v.strip() for v in cuda_versions]
     if args.xla:
         extra_oneflow_cmake_args += " --DWITH_XLA=ON"
     else:
@@ -221,40 +226,64 @@ if __name__ == "__main__":
     if args.xla == True and args.cpu == True:
         raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
-        cuda_version = cuda_version.strip()
+
         cache_dir = None
-        if args.cache_dir:
-            cache_dir = args.cache_dir
-        else:
-            cache_dir = os.path.join(os.getcwd(), "manylinux2014-build-cache")
-            sub_dir = cuda_version
-            if args.xla:
-                sub_dir += "-xla"
-            if args.cpu:
-                sub_dir = "cpu"
-            cache_dir = os.path.join(cache_dir, sub_dir)
-        build_third_party(
-            img_tag, args.oneflow_src_dir, cache_dir, extra_oneflow_cmake_args
-        )
-        cuda_version_literal = "".join(cuda_version.split("."))
-        assert len(cuda_version_literal) == 3
-        python_versions = args.python_version.split(",")
-        python_versions = [pv.strip() for pv in python_versions]
-        package_name = None
-        if args.cpu:
-            package_name = "oneflow_cpu"
-        else:
-            package_name = f"oneflow_cu{cuda_version_literal}"
-            if args.xla:
-                package_name += "_xla"
-        for python_version in python_versions:
-            build_oneflow(
+
+        def build():
+            img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
+            build_img(
+                args.cuda_version,
+                args.oneflow_src_dir,
+                args.use_tuna,
+                args.use_system_proxy,
+                args.skip_img,
+                img_tag,
+            )
+            if args.cache_dir:
+                cache_dir = args.cache_dir
+            else:
+                cache_dir = os.path.join(os.getcwd(), "manylinux2014-build-cache")
+                sub_dir = cuda_version
+                if args.xla:
+                    sub_dir += "-xla"
+                if args.cpu:
+                    sub_dir = "cpu"
+                cache_dir = os.path.join(cache_dir, sub_dir)
+            build_third_party(
                 img_tag,
                 args.oneflow_src_dir,
                 cache_dir,
                 extra_oneflow_cmake_args,
-                python_version,
-                args.skip_wheel,
-                package_name,
-                args.wheel_house_dir,
+                args.skip_third_party,
             )
+            cuda_version_literal = "".join(cuda_version.split("."))
+            assert len(cuda_version_literal) == 3
+            python_versions = args.python_version.split(",")
+            python_versions = [pv.strip() for pv in python_versions]
+            package_name = None
+            if args.cpu:
+                package_name = "oneflow_cpu"
+            else:
+                package_name = f"oneflow_cu{cuda_version_literal}"
+                if args.xla:
+                    package_name += "_xla"
+            for python_version in python_versions:
+                build_oneflow(
+                    img_tag,
+                    args.oneflow_src_dir,
+                    cache_dir,
+                    extra_oneflow_cmake_args,
+                    python_version,
+                    args.skip_wheel,
+                    package_name,
+                    args.wheel_house_dir,
+                )
+
+        try:
+            build()
+        except subprocess.CalledProcessError as e:
+            print("failed: ", cmd)
+            print("clean: ", cache_dir)
+            print("retry: ", cmd)
+            assert cache_dir != None
+            force_rm_dir(cache_dir)
