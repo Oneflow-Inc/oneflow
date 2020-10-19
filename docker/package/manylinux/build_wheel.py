@@ -123,7 +123,9 @@ def build_oneflow(
         ]
     )
     common_docker_args = get_common_docker_args(
-        oneflow_src_dir=oneflow_src_dir, cache_dir=third_party_cache_dir
+        oneflow_src_dir=oneflow_src_dir,
+        cache_dir=cache_dir,
+        current_dir=oneflow_build_dir,
     )
     docker_cmd = f"docker run --rm -it {common_docker_args}"
     bash_cmd = f"""
