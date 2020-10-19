@@ -41,7 +41,7 @@ def get_build_dir_arg(cache_dir, oneflow_src_dir):
     return f"-v {build_dir_real}:{build_dir_mount}"
 
 
-def create_tmp_bash_and_run(docker_cmd, img, bash_cmd):
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, cache_dir):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         f.write(bash_cmd)
         f.flush()
@@ -52,7 +52,9 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd):
         print(cmd)
         returncode = subprocess.run(cmd, shell=True).returncode
         if returncode != 0:
-            print("failed, retrying, cmd:", cmd)
+            print("failed, retrying, cleaning:", cache_dir)
+            clean_cmd = f"docker run --rm -v {cache_dir}:{cache_dir} -w {cache_dir} busybox rm -rf {cache_dir}/*"
+            subprocess.check_call(clean_cmd, shell=True)
             subprocess.check_call(cmd, shell=True)
 
 
@@ -90,7 +92,7 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
-    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
 
 
 def get_python_bin(version):
@@ -147,7 +149,7 @@ rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
-    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
 
 
 if __name__ == "__main__":
