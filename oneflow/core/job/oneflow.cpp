@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -207,8 +222,17 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
                                     const std::function<void(const PlanTaskNode*)>& Handler) {
       if (!IsCollectiveBoxingNode(node)) {
-        node->ForEachNodeOnOutEdge(
-            [&](const PlanTaskNode* node_on_out_edge) { Handler(node_on_out_edge); });
+        node->ForEachNodeOnOutEdge([&](const PlanTaskNode* node_on_out_edge) {
+          bool has_unvisited_collective_boxing_node_on_in_edges = false;
+          node_on_out_edge->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+            if (!has_unvisited_collective_boxing_node_on_in_edges
+                && IsCollectiveBoxingNode(node_on_in_edge)
+                && all_visited.count(node_on_in_edge) == 0) {
+              has_unvisited_collective_boxing_node_on_in_edges = true;
+            }
+          });
+          if (!has_unvisited_collective_boxing_node_on_in_edges) { Handler(node_on_out_edge); }
+        });
       }
     };
     HashSet<const PlanTaskNode*> visited;
@@ -291,7 +315,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
     } else {
       PullPlan("complete_plan", &complete_plan);
     }
-    OF_BARRIER();
+    OF_SESSION_BARRIER();
     // Experiment Runtime
     { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
@@ -301,7 +325,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
       *improved_plan = *JUST(Improver().Improve(
           *Global<AvailableMemDesc>::Get(), naive_plan,
           JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename())));
-      OF_BARRIER();
+      OF_SESSION_BARRIER();
       TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
     }
   } else {
@@ -643,7 +667,8 @@ void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names
   critical_section_sink_lbi->set_blob_name("out");
 
   ParallelConf parallel_conf;
-  parallel_conf.add_device_name("0:cpu:0");
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
   JobBuilder(main_job).AddOps(parallel_conf, op_confs);
   auto* job_conf = main_job->mutable_job_conf();
   job_conf->set_job_name("MainJob-unamed");
@@ -816,7 +841,8 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     foreign_output_conf->set_in(input_op_conf.name() + "/out");
     foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
     job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
   }
   auto* job_conf = job->mutable_job_conf();
@@ -846,7 +872,8 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
     ParallelConf parallel_conf;
-    parallel_conf.add_device_name("0:cpu:0");
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
     job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
   }
   OperatorConf output_op_conf;
@@ -945,7 +972,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
   }
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   return Maybe<void>::Ok();
 }
 

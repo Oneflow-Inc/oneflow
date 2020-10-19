@@ -1,3 +1,20 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#ifdef WITH_CUDA
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/eager/opkernel_object.h"
@@ -90,29 +107,43 @@ class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
 COMMAND(vm::RegisterInstructionType<CudaCopyD2HSystemStatelessCallOpKernelInstructionType>(
     "gpu.copy_d2h.SystemStatelessCallOpKernel"));
 
-class GpuWatchBlobHeaderInstructionType final : public WatchBlobHeaderInstructionType {
+class GpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructionType {
  public:
-  GpuWatchBlobHeaderInstructionType() = default;
-  ~GpuWatchBlobHeaderInstructionType() override = default;
+  GpuFetchBlobHeaderInstructionType() = default;
+  ~GpuFetchBlobHeaderInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<GpuWatchBlobHeaderInstructionType>("gpu.WatchBlobHeader"));
+COMMAND(vm::RegisterInstructionType<GpuFetchBlobHeaderInstructionType>("gpu.FetchBlobHeader"));
 
-class GpuWatchBlobBodyInstructionType final : public WatchBlobBodyInstructionType {
+class GpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionType {
  public:
-  GpuWatchBlobBodyInstructionType() = default;
-  ~GpuWatchBlobBodyInstructionType() override = default;
+  GpuFetchBlobBodyInstructionType() = default;
+  ~GpuFetchBlobBodyInstructionType() override = default;
 
   using stream_type = vm::CudaStreamType;
 
  private:
   const char* device_tag() const override { return stream_type().device_tag(); }
 };
-COMMAND(vm::RegisterInstructionType<GpuWatchBlobBodyInstructionType>("gpu.WatchBlobBody"));
+COMMAND(vm::RegisterInstructionType<GpuFetchBlobBodyInstructionType>("gpu.FetchBlobBody"));
+
+class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
+ public:
+  GpuFeedBlobInstructionType() = default;
+  ~GpuFeedBlobInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"));
 
 }  // namespace eager
 }  // namespace oneflow
+
+#endif

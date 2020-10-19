@@ -3,8 +3,9 @@ include (ExternalProject)
 set(COCOAPI_INCLUDE_DIR ${THIRD_PARTY_DIR}/cocoapi/include)
 set(COCOAPI_LIBRARY_DIR ${THIRD_PARTY_DIR}/cocoapi/lib)
 
-set(COCOAPI_URL https://github.com/cocodataset/cocoapi.git)
-set(COCOAPI_TAG ed842bffd41f6ff38707c4f0968d2cfd91088688)
+set(COCOAPI_URL https://github.com/Oneflow-Inc/cocoapi/archive/ed842bf.tar.gz)
+use_mirror(VARIABLE COCOAPI_URL URL ${COCOAPI_URL})
+set(COCOAPI_URL_HASH e7e0504231e5614ffaa34f081773f7f1)
 set(COCOAPI_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cocoapi/src/cocoapi)
 set(COCOAPI_LIBRARY_NAME libcocoapi_static.a)
 
@@ -19,8 +20,8 @@ if(THIRD_PARTY)
 
 ExternalProject_Add(cocoapi
     PREFIX cocoapi
-    GIT_REPOSITORY ${COCOAPI_URL}
-    GIT_TAG ${COCOAPI_TAG}
+    URL ${COCOAPI_URL}
+    URL_HASH MD5=${COCOAPI_URL_HASH}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1

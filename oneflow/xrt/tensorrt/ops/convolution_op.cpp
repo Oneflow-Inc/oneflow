@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "NvInfer.h"
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
@@ -33,10 +48,11 @@ class ConvolutionOp : public TrtOpKernel {
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
     layer->setDilation(nvinfer1::DimsHW(dilation[0], dilation[1]));
-    // The default padding mode is valid for TensorRT.
-    if (ctx->Attr<std::string>("padding") == "same") {
-      layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
-    }
+    
+    const auto& pads = ctx->Attr<std::vector<int32_t>>("padding_before");
+    layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
+    layer->setPrePadding(nvinfer1::DimsHW(pads[0], pads[1]));
+    layer->setPostPadding(nvinfer1::DimsHW(pads[0], pads[1]));
     ctx->SetOutput("out_0", layer->getOutput(0));
   }
 };

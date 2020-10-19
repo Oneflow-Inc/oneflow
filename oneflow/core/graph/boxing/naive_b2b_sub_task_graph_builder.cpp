@@ -1,9 +1,24 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/boxing/naive_b2b_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 
 namespace oneflow {
 
-Maybe<void> NaiveB2BSubTskGphBuilder::Build(
+Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
@@ -20,9 +35,12 @@ Maybe<void> NaiveB2BSubTskGphBuilder::Build(
                                           dst_node->machine_id(), dst_node->MemZoneId121());
       Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     }
-    return Maybe<void>::Ok();
+    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
+                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
+                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+                                           lbi, logical_blob_desc, "NaiveB2BSubTskGphBuilder", ""));
   } else {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
 }
 

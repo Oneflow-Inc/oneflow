@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_XRT_UTILITY_MESSAGE_ATTR_H_
 #define ONEFLOW_XRT_UTILITY_MESSAGE_ATTR_H_
 
@@ -19,7 +34,7 @@ inline void Attr(const PbMessage &message, const std::string &attr_name, T *valu
     UserOpAttrVal val = user_conf->attr().at(attr_name);
     *value = user_op::AttrValAccessor<T>::Attr(val);
   } else {
-    CHECK(HasFieldInPbMessage(message, attr_name));
+    CHECK(FieldDefinedInPbMessage(message, attr_name));
     *value = GetValFromPbMessage<T>(message, attr_name);
   }
 }
@@ -31,7 +46,7 @@ inline void Attr(PbMessage *message, const std::string &attr_name, const T &valu
 
 template<>
 inline void Attr<Shape>(const PbMessage &message, const std::string &attr_name, Shape *value) {
-  CHECK(HasFieldInPbMessage(message, attr_name));
+  CHECK(FieldDefinedInPbMessage(message, attr_name));
   *value = Shape(GetValFromPbMessage<ShapeProto>(message, attr_name));
 }
 
@@ -44,7 +59,7 @@ inline void Attr<Shape>(PbMessage *message, const std::string &attr_name, const 
 
 template<typename T>
 inline void GetMessage(const PbMessage &message, const std::string &attr_name, T **value) {
-  CHECK(HasFieldInPbMessage(message, attr_name));
+  CHECK(FieldDefinedInPbMessage(message, attr_name));
   *value = dynamic_cast<T *>(
       const_cast<oneflow::PbMessage *>(&GetMessageInPbMessage(message, attr_name)));
 }

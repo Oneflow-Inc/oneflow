@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/gather_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/kernel.h"
@@ -72,7 +87,6 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
   }
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template<typename K>
 struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
   static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const float16* in,
@@ -82,7 +96,6 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
         reinterpret_cast<half*>(out), offset);
   }
 };
-#endif
 
 #define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \

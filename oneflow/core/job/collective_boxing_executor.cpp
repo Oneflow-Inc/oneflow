@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
@@ -7,6 +22,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
@@ -16,6 +32,7 @@ namespace collective {
 
 namespace {
 
+#ifdef WITH_CUDA
 ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
   if (reduce_method == kReduceMethodSum) {
     return ncclRedOp_t::ncclSum;
@@ -23,6 +40,7 @@ ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
     UNIMPLEMENTED();
   }
 }
+#endif
 
 void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
   std::sort(requests->begin(), requests->end(),
@@ -53,6 +71,8 @@ int64_t GetAlignedRequestSize(const RequestDesc* request) {
 }
 
 }  // namespace
+
+#ifdef WITH_CUDA
 
 void CollectiveBoxingExecutorBackend::GroupRequests(
     const std::vector<const RequestDesc*>& requests,
@@ -90,6 +110,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
     char* fusion_buffer = nullptr;
   };
 
+  int32_t num_devices_;
   int64_t num_streams_;
   int64_t fusion_threshold_;
   const CollectiveBoxingConf collective_boxing_conf_;
@@ -103,6 +124,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   std::condition_variable event_list_cond_;
   bool shutdown_;
   std::mutex mutex_;
+  std::shared_ptr<ThreadPool> callback_executor_pool_;
 
   int64_t current_stream_id_ = 0;
 };
@@ -110,6 +132,8 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
     : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
+  OF_CUDA_CHECK(cudaGetDeviceCount(&num_devices_));
+  callback_executor_pool_.reset(new ThreadPool(num_devices_));
   CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
   num_streams_ = collective_boxing_conf_.nccl_num_streams();
   CHECK_GE(collective_boxing_conf_.nccl_fusion_threshold_mb(), 0);
@@ -126,17 +150,20 @@ NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
       }
       if (local_event_list.empty() && shutdown_) { break; }
       for (auto it = local_event_list.begin(); it != local_event_list.end();) {
-        CudaCheck(cudaSetDevice(it->device_id));
+        OF_CUDA_CHECK(cudaSetDevice(it->device_id));
         cudaError_t err = cudaEventQuery(it->cuda_event);
         if (err == cudaErrorNotReady) {
           ++it;
           continue;
         } else if (err == cudaSuccess) {
-          CudaCheck(cudaEventDestroy(it->cuda_event));
-          it->callback(Maybe<void>::Ok());
+          OF_CUDA_CHECK(cudaEventDestroy(it->cuda_event));
+          auto callback_ptr =
+              std::make_shared<std::function<void(Maybe<void>)>>(std::move(it->callback));
+          callback_executor_pool_->AddWork(
+              [callback_ptr]() { (*callback_ptr)(Maybe<void>::Ok()); });
           local_event_list.erase(it++);
         } else {
-          CudaCheck(err);
+          OF_CUDA_CHECK(err);
           UNIMPLEMENTED();
         }
       }
@@ -151,20 +178,21 @@ NcclCollectiveBoxingExecutorBackend::~NcclCollectiveBoxingExecutorBackend() {
     event_list_cond_.notify_all();
   }
   event_list_poll_thread_.join();
+  callback_executor_pool_.reset();
   CudaCurrentDeviceGuard guard;
   for (auto& device_id2device_ctx : stream_id2device_id2device_ctx_) {
     for (auto& device_id7device_ctx : device_id2device_ctx) {
-      CudaCheck(cudaSetDevice(device_id7device_ctx.first));
-      CudaCheck(cudaStreamSynchronize(device_id7device_ctx.second->stream));
-      CudaCheck(cudaStreamDestroy(device_id7device_ctx.second->stream));
-      CudaCheck(cudaFree(device_id7device_ctx.second->fusion_buffer));
+      OF_CUDA_CHECK(cudaSetDevice(device_id7device_ctx.first));
+      OF_CUDA_CHECK(cudaStreamSynchronize(device_id7device_ctx.second->stream));
+      OF_CUDA_CHECK(cudaStreamDestroy(device_id7device_ctx.second->stream));
+      OF_CUDA_CHECK(cudaFree(device_id7device_ctx.second->fusion_buffer));
     }
   }
   for (auto& device_set7stream_id2device_id2comm : device_set2stream_id2device_id2comm_) {
     for (auto& device_id2comm : device_set7stream_id2device_id2comm.second) {
       for (auto& device_id7comm : device_id2comm) {
-        CudaCheck(cudaSetDevice(device_id7comm.first));
-        NcclCheck(ncclCommDestroy(device_id7comm.second));
+        OF_CUDA_CHECK(cudaSetDevice(device_id7comm.first));
+        OF_NCCL_CHECK(ncclCommDestroy(device_id7comm.second));
       }
     }
   }
@@ -217,7 +245,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
 
   for (const RequestDesc* request : requests) {
     const int64_t size = GetAlignedRequestSize(request);
-    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_) {
+    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_
+        || group.size() >= collective_boxing_conf_.nccl_fusion_max_ops()) {
       if (!group.empty()) {
         groups->emplace_back();
         groups->back().swap(group);
@@ -281,32 +310,32 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
       offset += aligned_size;
     }
     for (auto& device_id7copy_in_params : device_id2copy_in_params) {
-      CudaCheck(cudaSetDevice(device_id7copy_in_params.first));
+      OF_CUDA_CHECK(cudaSetDevice(device_id7copy_in_params.first));
       BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(
           device_id2device_ctx.at(device_id7copy_in_params.first).get(),
           device_id7copy_in_params.second);
     }
-    NcclCheck(ncclGroupStart());
+    OF_NCCL_CHECK(ncclGroupStart());
     const int64_t size_of_data_type = GetSizeOfDataType(group.front()->op_desc().data_type());
     CHECK_EQ(offset % size_of_data_type, 0);
     const int64_t elem_cnt = offset / size_of_data_type;
     for (auto& device_id7comm : device_id2comm) {
-      CudaCheck(cudaSetDevice(device_id7comm.first));
+      OF_CUDA_CHECK(cudaSetDevice(device_id7comm.first));
       auto& device_ctx = device_id2device_ctx.at(device_id7comm.first);
-      NcclCheck(ncclAllReduce(device_ctx->fusion_buffer, device_ctx->fusion_buffer, elem_cnt,
-                              GetNcclDataType(group.front()->op_desc().data_type()),
-                              GetNcclReduceOp(group.front()->op_desc().reduce_method()),
-                              device_id7comm.second, device_ctx->stream));
+      OF_NCCL_CHECK(ncclAllReduce(device_ctx->fusion_buffer, device_ctx->fusion_buffer, elem_cnt,
+                                  GetNcclDataType(group.front()->op_desc().data_type()),
+                                  GetNcclReduceOp(group.front()->op_desc().reduce_method()),
+                                  device_id7comm.second, device_ctx->stream));
     }
-    NcclCheck(ncclGroupEnd());
+    OF_NCCL_CHECK(ncclGroupEnd());
     for (auto& device_id7copy_out_params : device_id2copy_out_params) {
-      CudaCheck(cudaSetDevice(device_id7copy_out_params.first));
+      OF_CUDA_CHECK(cudaSetDevice(device_id7copy_out_params.first));
       BatchMemcpyKernelUtil<DeviceType::kGPU>::Copy(
           device_id2device_ctx.at(device_id7copy_out_params.first).get(),
           device_id7copy_out_params.second);
     }
   } else {
-    NcclCheck(ncclGroupStart());
+    OF_NCCL_CHECK(ncclGroupStart());
     for (int64_t i = 0; i < group.size(); ++i) {
       const RequestDesc* request_desc = group.at(i);
       const OpDesc& op_desc = request_desc->op_desc();
@@ -316,7 +345,7 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         const RuntimeRequestInfo& request_info = rank7request_info.second;
         const DeviceDesc& device_desc = request_desc->device_set().device().Get(rank);
         const int64_t device_id = device_desc.device_id();
-        CudaCheck(cudaSetDevice(device_id));
+        OF_CUDA_CHECK(cudaSetDevice(device_id));
         ncclComm_t comm = device_id2comm.at(device_id);
         auto& device_ctx = device_id2device_ctx.at(device_id);
         ncclDataType_t nccl_data_type = GetNcclDataType(op_desc.data_type());
@@ -327,38 +356,38 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         void* recv_buff = request_info.recv_buff;
         device_id2callbacks[device_id].push_back(request_info.callback);
         if (op_type == OpType::kOpTypeAllReduce) {
-          NcclCheck(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
-                                  GetNcclReduceOp(op_desc.reduce_method()), comm,
-                                  device_ctx->stream));
-        } else if (op_type == OpType::kOpTypeAllGather) {
-          CHECK_EQ(elem_cnt % num_ranks, 0);
-          NcclCheck(ncclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type, comm,
-                                  device_ctx->stream));
-        } else if (op_type == OpType::kOpTypeReduceScatter) {
-          CHECK_EQ(elem_cnt % num_ranks, 0);
-          NcclCheck(ncclReduceScatter(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
+          OF_NCCL_CHECK(ncclAllReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       GetNcclReduceOp(op_desc.reduce_method()), comm,
                                       device_ctx->stream));
+        } else if (op_type == OpType::kOpTypeAllGather) {
+          CHECK_EQ(elem_cnt % num_ranks, 0);
+          OF_NCCL_CHECK(ncclAllGather(send_buff, recv_buff, elem_cnt / num_ranks, nccl_data_type,
+                                      comm, device_ctx->stream));
+        } else if (op_type == OpType::kOpTypeReduceScatter) {
+          CHECK_EQ(elem_cnt % num_ranks, 0);
+          OF_NCCL_CHECK(ncclReduceScatter(send_buff, recv_buff, elem_cnt / num_ranks,
+                                          nccl_data_type, GetNcclReduceOp(op_desc.reduce_method()),
+                                          comm, device_ctx->stream));
         } else if (op_type == OpType::kOpTypeReduce) {
-          NcclCheck(ncclReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
-                               GetNcclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
-                               device_ctx->stream));
+          OF_NCCL_CHECK(ncclReduce(send_buff, recv_buff, elem_cnt, nccl_data_type,
+                                   GetNcclReduceOp(op_desc.reduce_method()), op_desc.root(), comm,
+                                   device_ctx->stream));
         } else if (op_type == OpType::kOpTypeBroadcast) {
-          NcclCheck(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type, op_desc.root(),
-                                  comm, device_ctx->stream));
+          OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
+                                      op_desc.root(), comm, device_ctx->stream));
         } else {
           UNIMPLEMENTED();
         }
       }
     }
-    NcclCheck(ncclGroupEnd());
+    OF_NCCL_CHECK(ncclGroupEnd());
   }
   for (auto& device_id7callbacks : device_id2callbacks) {
     const int64_t device_id = device_id7callbacks.first;
-    CudaCheck(cudaSetDevice(device_id));
+    OF_CUDA_CHECK(cudaSetDevice(device_id));
     cudaEvent_t event;
-    CudaCheck(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    CudaCheck(cudaEventRecord(event, device_id2device_ctx.at(device_id)->stream));
+    OF_CUDA_CHECK(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
+    OF_CUDA_CHECK(cudaEventRecord(event, device_id2device_ctx.at(device_id)->stream));
     {
       std::unique_lock<std::mutex> event_list_lock(event_list_mutex_);
       event_list_.emplace_back(Event{device_id, event, [=](const Maybe<void>& status) {
@@ -402,7 +431,7 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
         }
         ncclUniqueId nccl_unique_id{};
         if (local_ranks.count(0) > 0) {
-          NcclCheck(ncclGetUniqueId(&nccl_unique_id));
+          OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
           if (local_ranks.size() != device_set.device_size()) {
             const std::string rpc_key = GetNcclUniqueIdRpcKey(request->op_desc().name(), stream_id);
             Global<CtrlClient>::Get()->PushKV(rpc_key, NcclUniqueIdToString(nccl_unique_id));
@@ -413,19 +442,19 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
             NcclUniqueIdFromString(val, &nccl_unique_id);
           });
         }
-        NcclCheck(ncclGroupStart());
+        OF_NCCL_CHECK(ncclGroupStart());
         for (const int64_t rank : local_ranks) {
           const int64_t device_id = device_set.device(rank).device_id();
-          CudaCheck(cudaSetDevice(device_id));
-          NcclCheck(ncclCommInitRank(&device_id2comm.at(device_id), device_set.device_size(),
-                                     nccl_unique_id, rank));
+          OF_CUDA_CHECK(cudaSetDevice(device_id));
+          OF_NCCL_CHECK(ncclCommInitRank(&device_id2comm.at(device_id), device_set.device_size(),
+                                         nccl_unique_id, rank));
         }
-        NcclCheck(ncclGroupEnd());
+        OF_NCCL_CHECK(ncclGroupEnd());
       }
     }
   }
   int cuda_stream_greatest_priority;
-  CudaCheck(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
+  OF_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(nullptr, &cuda_stream_greatest_priority));
   stream_id2device_id2device_ctx_.resize(num_streams_);
   for (int64_t stream_id = 0; stream_id < num_streams_; ++stream_id) {
     auto& device_id2device_ctx_ = stream_id2device_id2device_ctx_.at(stream_id);
@@ -434,21 +463,25 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
     }
     for (const int64_t device_id : local_device_ids) {
       auto& device_ctx = device_id2device_ctx_.at(device_id);
-      CudaCheck(cudaSetDevice(device_id));
-      CudaCheck(cudaStreamCreateWithPriority(&device_ctx->stream, cudaStreamNonBlocking,
-                                             cuda_stream_greatest_priority));
-      CudaCheck(cudaMalloc(&device_ctx->fusion_buffer, fusion_threshold_));
+      OF_CUDA_CHECK(cudaSetDevice(device_id));
+      OF_CUDA_CHECK(cudaStreamCreateWithPriority(&device_ctx->stream, cudaStreamNonBlocking,
+                                                 cuda_stream_greatest_priority));
+      OF_CUDA_CHECK(cudaMalloc(&device_ctx->fusion_buffer, fusion_threshold_));
     }
   }
 }
 
+#endif  // WITH_CUDA
+
 CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
     : collective_boxing_plan_(plan.collective_boxing_plan()) {
+#ifdef WITH_CUDA
   auto it =
       backends_
           .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
           .first;
   it->second->Init(collective_boxing_plan_);
+#endif
   Init();
   DumpSummary();
 }

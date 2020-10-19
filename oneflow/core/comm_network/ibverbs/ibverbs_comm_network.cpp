@@ -1,9 +1,24 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
 
@@ -51,7 +66,8 @@ void IBVerbsCommNet::RegisterMemoryDone() {
                 .second);
     }
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   Global<CtrlClient>::Get()->ClearKV(GenTokensMsgKey(this_machine_id));
 }
 
@@ -96,14 +112,17 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
     qp_vec_.at(peer_id)->Connect(conn_info);
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
@@ -149,4 +168,4 @@ COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_COMMON_STR_UTIL_H_
 #define ONEFLOW_CORE_COMMON_STR_UTIL_H_
 
@@ -37,6 +52,10 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
 
 // Return true if path is absolute.
 inline bool IsAbsolutePath(const std::string& path) { return !path.empty() && path[0] == '/'; }
+
+void GetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix, int32_t* index);
+
+bool TryGetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix, int32_t* index);
 
 namespace internal {
 

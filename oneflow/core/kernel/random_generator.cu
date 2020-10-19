@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/random_generator.h"
 
 namespace oneflow {
@@ -9,25 +24,25 @@ void RngUniformGpu(const curandGenerator_t& gen, int64_t n, T* ret);
 
 template<>
 void RngUniformGpu<float>(const curandGenerator_t& gen, int64_t n, float* ret) {
-  CudaCheck(curandGenerateUniform(gen, ret, n));
+  OF_CURAND_CHECK(curandGenerateUniform(gen, ret, n));
 }
 
 template<>
 void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret) {
-  CudaCheck(curandGenerateUniformDouble(gen, ret, n));
+  OF_CURAND_CHECK(curandGenerateUniformDouble(gen, ret, n));
 }
 
 }  // namespace
 
 RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, DeviceCtx* device_ctx) {
   CHECK_NOTNULL(device_ctx);
-  CudaCheck(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
-  CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
-  CudaCheck(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
+  OF_CURAND_CHECK(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
+  OF_CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
+  OF_CURAND_CHECK(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
 }
 
 RandomGenerator<DeviceType::kGPU>::~RandomGenerator() {
-  CudaCheck(curandDestroyGenerator(curand_generator_));
+  OF_CURAND_CHECK(curandDestroyGenerator(curand_generator_));
 }
 
 template<typename T>

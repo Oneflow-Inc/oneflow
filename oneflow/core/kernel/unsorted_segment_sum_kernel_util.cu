@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/kernel.h"
@@ -70,7 +85,6 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K> final {
   }
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template<typename K>
 struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
   static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const float16* data,
@@ -82,7 +96,6 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
         outer_dim_size, inner_dim_size, segment_id_offset, reinterpret_cast<half*>(out));
   }
 };
-#endif
 
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU(in_type_pair, index_type_pair)             \
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \

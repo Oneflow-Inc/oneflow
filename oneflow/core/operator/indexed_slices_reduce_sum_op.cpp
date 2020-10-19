@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/operator/indexed_slices_reduce_sum_op_util.h"
@@ -11,7 +26,6 @@ class IndexedSlicesReduceSumOp final : public Operator {
   ~IndexedSlicesReduceSumOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -31,10 +45,6 @@ void IndexedSlicesReduceSumOp::InitFromOpConf() {
   EnrollOutputBn("y_values");
   EnrollOutputBn("num_unique", false);
   EnrollTmpBn("workspace");
-}
-
-const PbMessage& IndexedSlicesReduceSumOp::GetCustomizedConf() const {
-  return op_conf().indexed_slices_reduce_sum_conf();
 }
 
 Maybe<void> IndexedSlicesReduceSumOp::InferBatchAxis(

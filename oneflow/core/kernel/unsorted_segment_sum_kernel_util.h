@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_KERNEL_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_H_
 
@@ -13,13 +28,8 @@ struct UnsortedSegmentSumKernelUtil final {
                                  int64_t segment_id_offset, T* out);
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 #define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) FLOAT16_DATA_TYPE_SEQ
-#else
-#define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-#endif
 
 }  // namespace oneflow
 

@@ -1,13 +1,28 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-
 namespace oneflow {
 
 class Blob;
+class BlobAccessChecker;
 
 namespace user_op {
 
@@ -22,7 +37,11 @@ class Tensor final {
   Tensor& operator=(Tensor&& rhs);
 
   const ShapeView& shape() const { return shape_; }
-  MutShapeView* mut_shape() { return mut_shape_.get(); }
+  MutShapeView* mut_shape() {
+    this->header_access_check();
+    return mut_shape_.get();
+  }
+
   DataType data_type() const { return data_type_; }
   const MemoryCase& mem_case() const { return *mem_case_; }
 
@@ -34,6 +53,7 @@ class Tensor final {
 
   template<typename T = void>
   T* mut_dptr() {
+    this->body_access_check();
     CheckDataType<T>();
     return static_cast<T*>(dptr_);
   }
@@ -43,15 +63,19 @@ class Tensor final {
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
                    && data_type_ != DataType::kChar && data_type_ != GetDataType<T>::value))
-        << "tensor data_type " << data_type_ << " must match template data_type "
-        << GetDataType<T>::value;
+        << "tensor data_type mismatched. value: " << DataType_Name(data_type_)
+        << ", template T:" << DataType_Name(GetDataType<T>::value);
   }
+
+  void header_access_check();
+  void body_access_check();
 
   void* dptr_;
   ShapeView shape_;
   std::unique_ptr<MutShapeView> mut_shape_;
   DataType data_type_;
   const MemoryCase* mem_case_;
+  const BlobAccessChecker* blob_access_checker_;
 };
 
 }  // namespace user_op

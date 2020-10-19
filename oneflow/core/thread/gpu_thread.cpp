@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 
@@ -8,19 +23,19 @@ namespace oneflow {
 GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   set_thrd_id(thrd_id);
   mut_actor_thread() = std::thread([this, dev_id]() {
-    CudaCheck(cudaSetDevice(dev_id));
+    OF_CUDA_CHECK(cudaSetDevice(dev_id));
     ThreadCtx ctx;
     ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });
   cb_event_poller_ = std::thread([this, dev_id]() {
-    CudaCheck(cudaSetDevice(dev_id));
+    OF_CUDA_CHECK(cudaSetDevice(dev_id));
     CudaCBEvent cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
-      CudaCheck(cudaEventSynchronize(cb_event.event));
+      OF_CUDA_CHECK(cudaEventSynchronize(cb_event.event));
       cb_event.callback();
-      CudaCheck(cudaEventDestroy(cb_event.event));
+      OF_CUDA_CHECK(cudaEventDestroy(cb_event.event));
     }
   });
 }

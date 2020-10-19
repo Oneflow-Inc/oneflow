@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/xrt/xla/ops/op_context.h"
 #include "oneflow/xrt/xla/ops/op_kernel.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
@@ -70,8 +85,8 @@ void LayerNormOp::Compile(XlaOpContext *ctx) {
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized")) {
-    ctx->SetOutput("normalized", Reshape(output, input_shape));
+  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized_0")) {
+    ctx->SetOutput("normalized_0", Reshape(output, input_shape));
   }
 
   Shape gamma_shape = Shape({norm_dims});

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/arg_where_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/fixed_vector.h"
@@ -66,12 +81,13 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, T, I, NDims> {
     CHECK_LE(tmp_bytes, tmp_max_bytes);
 
     if (NDims == 1) {
-      CudaCheck(SelectTrue<T, I, I*>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes,
-                                     in_ptr, out_ptr, out_size_ptr));
+      OF_CUDA_CHECK((SelectTrue<T, I, I*>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes,
+                                          in_ptr, out_ptr, out_size_ptr)));
     } else {
       StrideIterator<I, NDims> out_iter(out_ptr, in_shape.elem_cnt());
-      CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(
-          ctx->cuda_stream(), in_shape.elem_cnt(), tmp, tmp_bytes, in_ptr, out_iter, out_size_ptr));
+      OF_CUDA_CHECK(
+          (SelectTrue<T, I, StrideIterator<I, NDims>>(ctx->cuda_stream(), in_shape.elem_cnt(), tmp,
+                                                      tmp_bytes, in_ptr, out_iter, out_size_ptr)));
 
       fixed_vector<I, NDims> dims(NDims);
       std::transform(in_shape.ptr(), in_shape.ptr() + in_shape.NumAxes(), dims.begin(),
@@ -87,11 +103,12 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, T, I, NDims> {
     cudaStream_t stream = ctx ? ctx->cuda_stream() : 0;
     size_t tmp_bytes = 0;
     if (NDims == 1) {
-      CudaCheck(SelectTrue<T, I, I*>(stream, n, nullptr, tmp_bytes, nullptr, nullptr, nullptr));
+      OF_CUDA_CHECK(
+          (SelectTrue<T, I, I*>(stream, n, nullptr, tmp_bytes, nullptr, nullptr, nullptr)));
     } else {
       StrideIterator<I, NDims> out_iter(nullptr, n);
-      CudaCheck(SelectTrue<T, I, StrideIterator<I, NDims>>(stream, n, nullptr, tmp_bytes, nullptr,
-                                                           out_iter, nullptr));
+      OF_CUDA_CHECK((SelectTrue<T, I, StrideIterator<I, NDims>>(stream, n, nullptr, tmp_bytes,
+                                                                nullptr, out_iter, nullptr)));
     }
     return tmp_bytes;
   }

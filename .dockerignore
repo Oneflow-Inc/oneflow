@@ -1,13 +1,19 @@
 **/.git
 /build
-/third_party/
+/build-*
+/docs/build
+/cmake-build-*
+/third_party
 /examples/**/oneflow
 /benchmark/**/oneflow
-!/build/third_party
-.vscode
-.idea
-.clangd
-dist
+/.vscode
+/.idea
+/.clangd
+/dist
+/wheelhouse*
+/.DS_Store
+/tmp_wheel
+/manylinux*
 
 **/__pycache__
 **/*.pyc
@@ -23,5 +29,3 @@ dist
 **/core.7*
 **/core.8*
 **/core.9*
-
-build/third_party/re2/src/re2-*

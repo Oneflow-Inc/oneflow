@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_UTIL_H_
 
@@ -31,7 +46,6 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
                                       const NodeType* to_node) {

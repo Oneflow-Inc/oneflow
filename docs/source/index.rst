@@ -1,11 +1,10 @@
-OneFlow Documentation
+OneFlow API Reference
 ===================================
 .. toctree::
     :maxdepth: 1
 
-    models
     troubleshooting
-    mandarin
+
 
 
 .. toctree::
@@ -15,13 +14,26 @@ OneFlow Documentation
     oneflow
     env
     config
-    train
+    optimizer
     losses
     math
     nn
     layers
     data
     distribute
+    advanced 
+    tensorrt 
+    deprecated  
+    experimental 
+    scope 
+    placement 
+    sysconfig 
+    onnx   
+    random 
+    system 
+    regularizers  
+    image
+    train
 
 
 Indices and tables

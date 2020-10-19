@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import socket
@@ -5,14 +20,38 @@ from contextlib import closing
 
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.placement_context as placement_ctx
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import traceback
+
+
+@oneflow_export("enable_eager_execution")
+def api_enable_eager_execution(val: bool = True) -> None:
+    r"""If True, job will execute in eager mode, else use lazy mode(static graph).
+
+    Args:
+        val (bool, optional): Whether  eager execution or not.  Defaults to True.
+    """
+    return enable_if.unique([enable_eager_environment])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def enable_eager_environment(val=True):
+    return c_api_util.EnableEagerEnvironment(val)
 
 
 @oneflow_export("env.init")
 def api_env_init() -> bool:
+    r"""Init environment for job
+
+    Returns:
+        bool: [description]
+    """
     return enable_if.unique([env_init, do_nothing])()
 
 
@@ -22,13 +61,18 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    global env_proto_mutable
-    env_proto_mutable = False
+    scope_util.InitScopeStack()
     return True
 
 
 @oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource() -> resource_util.Resource:
+    r"""Get current resources, such as:machine nums, cpu/gpu device nums,
+            epoch network threed num, rdma params...
+
+    Returns:
+        resource_util.Resource: [description]
+    """
     return enable_if.unique([get_current_resource])()
 
 
@@ -39,6 +83,11 @@ def get_current_resource():
 
 @oneflow_export("current_machine_id")
 def api_get_current_machine_id():
+    r"""Get machine id of current machine/node
+
+    Returns:
+        [type]: [description]
+    """
     return enable_if.unique([get_current_machine_id])()
 
 
@@ -49,7 +98,9 @@ def get_current_machine_id() -> int:
 
 @oneflow_export("env.machine")
 def api_machine(*val: list) -> None:
-    r"""Set machines' hostnames.  For instance::
+    r"""Set machines' hostnames.
+
+    For instance::
 
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
@@ -102,20 +153,27 @@ def data_port(val):
 
 
 @oneflow_export("env.grpc_use_no_signal")
+@oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
-    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=val)
+    r"""Set rpc use signal or not (deprecate)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def grpc_use_no_signal(val=True):
-    assert type(val) is bool
-    default_env_proto.grpc_use_no_signal = val
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    print(
+        "WARNING:",
+        "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n",
+        traceback.format_stack()[-2],
+    )
+    return None
 
 
 @oneflow_export("env.log_dir")
 def api_log_dir(val: str) -> None:
     r"""Specify a dir to store OneFlow's logging files. If not specified, it is `./log` by default.
 
+    Args:
+        val (str): string , log file path
     """
     return enable_if.unique([log_dir, do_nothing])(val)
 
@@ -128,6 +186,11 @@ def log_dir(val):
 
 @oneflow_export("env.logtostderr")
 def api_logtostderr(val: int) -> None:
+    r"""Set whether log messages go to stderr instead of logfiles
+
+    Args:
+        val (int): [description]
+    """
     return enable_if.unique([logtostderr, do_nothing])(val)
 
 
@@ -139,6 +202,12 @@ def logtostderr(val):
 
 @oneflow_export("env.logbuflevel")
 def api_logbuflevel(val: int) -> None:
+    r"""Log messages at a level <= this flag are buffered.
+            Log messages at a higher level are flushed immediately.
+
+    Args:
+        val (int): int, number of level
+    """
     return enable_if.unique([logbuflevel, do_nothing])(val)
 
 
@@ -191,7 +260,6 @@ def _DefaultEnvProto():
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
-    env_proto.grpc_use_no_signal = True
     return env_proto
 
 
@@ -204,5 +272,15 @@ def _FindFreePort():
         return s.getsockname()[1]
 
 
+def GetEnvDefaultParallelConf(device_tag):
+    if device_tag not in device_tag2default_parallel_conf:
+        parallel_conf = placement_ctx.MakeParallelConf4Resource(
+            device_tag, c_api_util.EnvResource()
+        )
+        device_tag2default_parallel_conf[device_tag] = parallel_conf
+    return device_tag2default_parallel_conf[device_tag]
+
+
+device_tag2default_parallel_conf = {}
+
 default_env_proto = _DefaultEnvProto()
-env_proto_mutable = True

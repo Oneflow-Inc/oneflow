@@ -1,22 +1,44 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
-
-import operator
-import os
 from functools import reduce
+from typing import Iterable, List, Optional, Sequence, Union, Tuple
+from oneflow.python.oneflow_export import oneflow_export
 
+import numpy as np
+import operator
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.distribute as distribute_util
+import oneflow.python.framework.interpret_util as interpret_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("gather")
-def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name=None):
-    r"""Gather slices from params axis axis according to indices.
+def gather(
+    params: remote_blob_util.BlobDef,
+    indices: remote_blob_util.BlobDef,
+    validate_indices: Optional[remote_blob_util.BlobDef] = None,
+    axis: Optional[int] = None,
+    batch_dims: int = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator gathers slices from params `axis` according to indices.
 
     Analogous to `tf.gather <https://www.tensorflow.org/api_docs/python/tf/gather>`_
 
@@ -29,12 +51,68 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
         name: A name for the operation (optional).
     Returns:
         A blob. Has the same type as params.
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def gather_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+                    indice: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32)
+        ) -> tp.Numpy:
+            gather_blob = flow.gather(params=x, 
+                                    indices=indice, 
+                                    axis=1)
+            return gather_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        indice = np.array([0, 2]).astype(np.int32)
+        out = gather_Job(x, indice)
+
+        # out [[1. 3.]
+        #      [4. 6.]
+        #      [7. 9.]]
+
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def gather_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+                    indice: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32)
+        ) -> tp.Numpy:
+            gather_blob = flow.gather(params=x, 
+                                    indices=indice, 
+                                    axis=0)
+            return gather_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        indice = np.array([0, 2]).astype(np.int32)
+        out = gather_Job(x, indice)
+
+        # out [[1. 2. 3.]
+        #      [7. 8. 9.]]
+
     """
-    op_conf = op_conf_util.OperatorConf()
-    if name is None:
-        op_conf.name = id_util.UniqueStr("Gather_")
-    else:
-        op_conf.name = name
     params_ndims = len(params.shape)
     if axis is None:
         axis = batch_dims
@@ -48,87 +126,36 @@ def gather(params, indices, validate_indices=None, axis=None, batch_dims=0, name
 
     if batch_dims > 0:
         if axis == batch_dims:
-            if os.getenv("ENABLE_USER_OP") != "False":
-                return (
-                    flow.user_op_builder(
-                        name if name is not None else id_util.UniqueStr("BatchGather_")
-                    )
-                    .Op("batch_gather")
-                    .Input("in", [params])
-                    .Input("indices", [indices])
-                    .Output("out")
-                    .Build()
-                    .InferAndTryRun()
-                    .RemoteBlobList()[0]
-                )
-            else:
-                setattr(op_conf.batch_gather_conf, "in", params.unique_name)
-                op_conf.batch_gather_conf.indices = indices.unique_name
-                op_conf.batch_gather_conf.out = "out"
-        elif axis > batch_dims:
-            raise NotImplementedError
-        else:
-            raise AttributeError
-    elif (
-        params.has_batch_axis() == False
-        and params.distribute is distribute_util.split(0)
-        and os.getenv("ENABLE_USER_OP") == "False"
-    ):
-        assert axis == 0
-        assert batch_dims == 0
-        setattr(op_conf.gather_ms0_conf, "in", params.unique_name)
-        op_conf.gather_ms0_conf.indices = indices.unique_name
-        op_conf.gather_ms0_conf.out = "out"
-    else:
-        if os.getenv("ENABLE_USER_OP") != "False":
             return (
                 flow.user_op_builder(
-                    name if name is not None else id_util.UniqueStr("Gather_")
+                    name if name is not None else id_util.UniqueStr("BatchGather_")
                 )
-                .Op("gather")
+                .Op("batch_gather")
                 .Input("in", [params])
                 .Input("indices", [indices])
                 .Output("out")
-                .Attr("axis", int(axis), "AttrTypeInt64")
                 .Build()
                 .InferAndTryRun()
                 .RemoteBlobList()[0]
             )
+        elif axis > batch_dims:
+            raise NotImplementedError
         else:
-            setattr(op_conf.gather_conf, "in", params.unique_name)
-            op_conf.gather_conf.indices = indices.unique_name
-            op_conf.gather_conf.out = "out"
-            op_conf.gather_conf.axis = axis
-
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
-
-
-@oneflow_export("local_gather")
-def local_gather(params, indices, axis=0, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LocalGather_")
-    )
-    if axis < 0:
-        axis += len(params.shape)
-    setattr(op_conf.local_gather_conf, "in", params.unique_name)
-    setattr(op_conf.local_gather_conf, "indices", indices.unique_name)
-    setattr(op_conf.local_gather_conf, "axis", axis)
-    setattr(op_conf.local_gather_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
-
-    def gather_lambda(params, indices):
-        return gather(params, indices, axis=axis, name=name)
-
-    return flow.advanced.distribute_map((params, indices), gather_lambda)
+            raise AttributeError
+    else:
+        return (
+            flow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Gather_")
+            )
+            .Op("gather")
+            .Input("in", [params])
+            .Input("indices", [indices])
+            .Output("out")
+            .Attr("axis", int(axis))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
 
 
 def infer_shape(x, shape):
@@ -144,21 +171,53 @@ def infer_shape(x, shape):
 
 
 @oneflow_export("reshape")
-def reshape(x, shape, name=None):
-    r"""Reshapes a blob.
+def reshape(
+    x: remote_blob_util.BlobDef, shape: Sequence[int], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""This operator reshapes a Blob. 
+    If the Blob is dynamic, it will call `flow.dynamic_reshape` automatically
+    
+    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape. 
 
     Args:
         x: A `Blob`.
         shape: Shape of the output blob.
         name: A name for the operation (optional).
     Returns:
-        A `Blob`, has the same type as `x`.
+        A `Blob`, has the same type as `x`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reshape_Job(x: tp.Numpy.Placeholder(shape=(4, 4), dtype=flow.float32)
+        ) -> tp.Numpy:
+            reshape_blob = flow.reshape(x, 
+                                        shape=[2, 2, 2, -1])
+            return reshape_blob
+
+
+        x = np.array([[1, 2, 3, 4], 
+                    [5, 6, 7, 8], 
+                    [9, 10, 11, 12], 
+                    [13, 14, 15, 16]]).astype(np.float32)
+        out = reshape_Job(x)
+
+        # out.shape (2, 2, 2, 2)
+
     """
+    x = flow.cast_to_current_logical_view(x)
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     assert all(dim == -1 or dim > 0 for dim in shape)
     assert shape.count(-1) <= 1
-    if (not x.is_dynamic) and (os.getenv("ENABLE_USER_OP") != "False"):
+    if not x.is_dynamic:
         if name is None:
             name = id_util.UniqueStr("Reshape_")
         return (
@@ -166,28 +225,22 @@ def reshape(x, shape, name=None):
             .Op("reshape")
             .Input("in", [x])
             .Output("out")
-            .Attr("shape", infer_shape(x, shape), "AttrTypeShape")
+            .Attr("shape", infer_shape(x, shape))
             .Build()
             .InferAndTryRun()
             .RemoteBlobList()[0]
         )
     else:
         op_conf = op_conf_util.OperatorConf()
-        if x.is_dynamic:
-            setattr(
-                op_conf,
-                "name",
-                name if name is not None else id_util.UniqueStr("DynamicReshape_"),
-            )
-            setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
-            op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
-            setattr(op_conf.dynamic_reshape_conf, "out", "out")
-        else:
-            op_conf.name = id_util.UniqueStr("Reshape_" + x.op_name)
-            setattr(op_conf.reshape_conf, "in", x.unique_name)
-            op_conf.reshape_conf.shape.dim[:] = list(infer_shape(x, shape))
-            op_conf.reshape_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
+        setattr(
+            op_conf,
+            "name",
+            name if name is not None else id_util.UniqueStr("DynamicReshape_"),
+        )
+        setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
+        op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
+        setattr(op_conf.dynamic_reshape_conf, "out", "out")
+        interpret_util.Forward(op_conf)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = op_conf.name
         lbi.blob_name = "out"
@@ -195,35 +248,107 @@ def reshape(x, shape, name=None):
 
 
 @oneflow_export("reshape_like")
-def reshape_like(x, like, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        if name is None:
-            name = id_util.UniqueStr("ReshapeLike_")
-        return (
-            flow.user_op_builder(name)
-            .Op("reshape_like")
-            .Input("in", [x])
-            .Input("like", [like])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = id_util.UniqueStr("ReshapeLike_")
-        setattr(op_conf.reshape_like_conf, "x", x.unique_name)
-        setattr(op_conf.reshape_like_conf, "like", like.unique_name)
-        op_conf.reshape_like_conf.y = "y"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "y"
-        return remote_blob_util.RemoteBlob(lbi)
+def reshape_like(
+    x: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator reshapes the Blob x to be the same as Blob `like` . 
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        like (remote_blob_util.BlobDef): A Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reshape_like_Job(x: tp.Numpy.Placeholder(shape=(4, 4), dtype=flow.float32)
+        ) -> tp.Numpy:
+            like_blob = flow.constant(value=1, 
+                                    dtype=flow.int8,
+                                    shape=(2, 2, 4))
+            reshape_like_blob = flow.reshape_like(x, 
+                                                like=like_blob)
+            return reshape_like_blob
+
+
+        x = np.array([[1, 2, 3, 4], 
+                    [5, 6, 7, 8], 
+                    [9, 10, 11, 12], 
+                    [13, 14, 15, 16]]).astype(np.float32)
+        out = reshape_like_Job(x)
+
+        # out.shape (2, 2, 4)
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("ReshapeLike_")
+    return (
+        flow.user_op_builder(name)
+        .Op("reshape_like")
+        .Input("in", [x])
+        .Input("like", [like])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("dynamic_reshape")
-def dynamic_reshape(x, shape, name=None):
+def dynamic_reshape(
+    x: remote_blob_util.BlobDef, shape: Sequence[int], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """This operator reshapes a dynamic blob. 
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        shape (Sequence[int]): The output shape. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def dynamic_reshape_Job(x: tp.Numpy.Placeholder(shape=(1, 3, 64, 64), dtype=flow.float32)
+        ) -> tp.Numpy:
+            reshape_out1 = flow.dynamic_reshape(x, (-1, 64))
+            variable1 = flow.get_variable(
+                "var1",
+                shape=(64, 32),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                trainable=True,
+            )
+            matmul_tensor = flow.matmul(reshape_out1, variable1)
+            reshape_out2 = flow.dynamic_reshape(matmul_tensor, (-1, 8, 4))
+            return reshape_out2
+
+        x = np.random.rand(1, 3, 64, 64).astype(np.float32)
+        out = dynamic_reshape_Job(x)
+
+        # out.shape (192, 8, 4)
+
+    """
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
     op_conf = op_conf_util.OperatorConf()
@@ -235,7 +360,7 @@ def dynamic_reshape(x, shape, name=None):
     setattr(op_conf.dynamic_reshape_conf, "in", x.unique_name)
     op_conf.dynamic_reshape_conf.shape.dim.extend(list(shape))
     setattr(op_conf.dynamic_reshape_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -243,8 +368,13 @@ def dynamic_reshape(x, shape, name=None):
 
 
 @oneflow_export("transpose")
-def transpose(a, perm=None, conjugate=False, name=None):
-    r"""Transposes `a`.
+def transpose(
+    a: remote_blob_util.BlobDef,
+    perm: Sequence[int] = None,
+    conjugate: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator transposes a Blob `a`. 
 
     Analogous to `tf.transpose <https://www.tensorflow.org/api_docs/python/tf/transpose>`_
 
@@ -254,7 +384,29 @@ def transpose(a, perm=None, conjugate=False, name=None):
         conjugate: False. Not supported.
         name: A name for the operation (optional).
     Returns:
-        A transposed blob.
+        A transposed blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def transpose_Job(x: tp.Numpy.Placeholder(shape=(1, 2, 3), dtype=flow.float32)
+        ) -> tp.Numpy:
+            transpose_blob = flow.transpose(x, 
+                                            perm=[2, 0, 1])
+            return transpose_blob
+
+        x = np.random.randn(1, 2, 3).astype(np.float32)
+        out = transpose_Job(x)
+
+        # out.shape (3, 1, 2)
+
     """
     assert isinstance(perm, (tuple, list))
 
@@ -264,247 +416,538 @@ def transpose(a, perm=None, conjugate=False, name=None):
     if conjugate:
         raise NotImplementedError
 
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name)
-            .Op("transpose")
-            .Input("input", [a])
-            .Output("output")
-            .Attr("perm", perm, "AttrTypeListInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
-        setattr(op_conf.transpose_conf, "in", a.unique_name)
-        op_conf.transpose_conf.out = "out"
-        op_conf.transpose_conf.perm.extend(list(perm))
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name)
+        .Op("transpose")
+        .Input("input", [a])
+        .Output("output")
+        .Attr("perm", perm)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("slice")
-def slice(x, begin, size, name=None):
+def slice(
+    x: remote_blob_util.BlobDef,
+    begin: Sequence[int],
+    size: Sequence[int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""Extracts a slice from a tensor.
 
     Args:
         x: A `Blob`.
         begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal
-            to x's number of dimensions, the first element of beign must be set to None.
-            (because oneflow internal slice op do not support slice at dim0 at present)
+            to x's number of dimensions, the first element of begin must be set to None.
+            (Because the internal op of OneFlow does not support 0-dimension slice at present.)
         size: A list or a tuple, indicate each dimension slice size, whose length must be equal
             to x's number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
-    """
-    ndims = len(x.shape)
-    assert (
-        isinstance(begin, (list, tuple)) and len(begin) == ndims
-    ), "begin must be a list or tuple whose length is the same with x's number of dimensions."
-    assert (
-        isinstance(size, (list, tuple)) and len(size) == ndims
-    ), "size must be a list or tuple whose length is the same with x's number of dimensions."
-    # assert (
-    #     begin[0] is None
-    # ), "begin not support dim0 slice at present, the first element of begin must be set to None"
-    # assert (
-    #     size[0] is None
-    # ), "size not support dim0 slice at present, the first element of size must be set to None"
-    if os.getenv("ENABLE_USER_OP") != "False":
-        slice_tup_list = []
-        for b, s, d in list(zip(begin, size, x.shape)):
-            begin, end, stride = None, None, 1
-            if b is not None:
-                if b < -d or b > d - 1:
-                    raise ValueError(
-                        "'i'th element of begin must be greater than or equal to negative x's 'i'th dimension "
-                        "and less than x's 'i'th dimension."
-                    )
-                b = b + d if b < 0 else b
-                begin = b
-            if s is not None:
-                if s > 0:
-                    if b + s > d:
-                        raise ValueError(
-                            "the sum of 'i'th element of begin and 'i'th element of size must be "
-                            "less than or equal to x's 'i'th dimension."
-                        )
-                    end = b + s
-                elif s == -1:
-                    end = d
-                else:
-                    raise ValueError(
-                        "elements of size must be an int that greater then 0 or equal to -1"
-                    )
-            slice_tup_list.append((begin, end, stride))
-        return slice_v2(x, slice_tup_list, name=name)
-    slice_conf_list = []
-    for b, s, d in list(zip(begin, size, x.shape)):
-        slice_conf = op_conf_util.DimSliceConf()
-        if b is not None:
-            if b < -d or b > d - 1:
-                raise ValueError(
-                    "'i'th element of begin must be greater than or equal to negative x's 'i'th dimension "
-                    "and less than x's 'i'th dimension."
-                )
-            b = b + d if b < 0 else b
-            slice_conf.start = b
-        if s is not None:
-            if s > 0:
-                if b + s > d:
-                    raise ValueError(
-                        "the sum of 'i'th element of begin and 'i'th element of size must be "
-                        "less than or equal to x's 'i'th dimension."
-                    )
-                slice_conf.end = b + s
-            elif s == -1:
-                slice_conf.end = d
-            else:
-                raise ValueError(
-                    "elements of size must be an int that greater then 0 or equal to -1"
-                )
-            slice_conf.stride = 1
-        slice_conf_list.append(slice_conf)
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name if name is not None else id_util.UniqueStr("Slice_"))
-    setattr(op_conf.slice_conf, "in", x.unique_name)
-    setattr(op_conf.slice_conf, "out", "out")
-    op_conf.slice_conf.dim_slice_conf.extend(slice_conf_list)
+    For example: 
 
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
 
 
-@oneflow_export("slice_v2")
-def slice_v2(x, slice_tup_list, name=None):
-    r"""Extracts a slice from a tensor.
+        @flow.global_function()
+        def slice_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32)
+        ) -> tp.Numpy:
+            slice_blob = flow.slice(x, 
+                                    begin=[None, 0], 
+                                    size=[None, 2])
+            return slice_blob
 
-    Args:
-        x: A `Blob`.
-        slice_tup_list: A list of tuple, indicate each dimension slice (begin, end, stride). 
-            Note: The function don't support slice at dim0 for now , first element of slice_tup_list must be 
-            (None, None, None).
-        name: A name for the operation (optional).
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        out = slice_Job(x)
+
+        # out [[1. 2.]
+        #      [4. 5.]
+        #      [7. 8.]]
 
     """
-    name = name or id_util.UniqueStr("SliceV2_")
-    if not isinstance(name, str):
-        raise ValueError('param "name" must be a string')
-
-    ndims = len(x.shape)
-    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndims:
+    ndim = len(x.shape)
+    if not isinstance(begin, (list, tuple)) or len(begin) != ndim:
         raise ValueError(
-            'param "slice_tup_list" must be a list or tuple whose length should be '
-            "less than or equal to number of dimensions of x"
+            "begin must be a list/tuple with the same length as input tensor's number of dimensions"
+        )
+
+    if not all(isinstance(b, int) or b is None for b in begin):
+        raise ValueError("element of begin must be a int or None")
+
+    if not isinstance(size, (list, tuple)) or len(size) != ndim:
+        raise ValueError(
+            "size must be a list/tuple with the same length as input tensor's number of dimensions."
+        )
+
+    if not all(isinstance(s, int) or s is None for s in size):
+        raise ValueError("element of size must be a int or None")
+
+    slice_tup_list = []
+    for b, s, dim_size in zip(begin, size, x.shape):
+        start, stop, step = (None, None, 1)
+        if b is not None:
+            if b < -dim_size or b >= dim_size:
+                raise ValueError("element of begin is out of range")
+            start = b
+
+        if s is not None:
+            if s == -1:
+                stop = dim_size
+            else:
+                if s <= 0 or s > dim_size:
+                    raise ValueError("element of size is invalid")
+                if b + s < dim_size:
+                    stop = b + s
+
+        slice_tup_list.append((start, stop, step))
+
+    return slice_v2(x, slice_tup_list, name=name)
+
+
+def _check_slice_tup_list(slice_tup_list, shape):
+    ndim = len(shape)
+    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
+        raise ValueError(
+            "slice_tup_list must be a list or tuple with length "
+            "less than or equal to number of dimensions of input tensor"
         )
 
     # if length of slice_tup_list is less than number of dimensions of x, fill it to length of ndims reduce 1
-    if len(slice_tup_list) < ndims:
-        slice_tup_list += [(None, None, None)] * (ndims - len(slice_tup_list))
+    if len(slice_tup_list) < ndim:
+        slice_tup_list += type(slice_tup_list)(
+            [(None, None, None)] * (ndim - len(slice_tup_list))
+        )
 
-    begin_list = []
-    end_list = []
-    stride_list = []
-    has_begin_list = []
-    has_end_list = []
-    for slice_tup, dim in zip(slice_tup_list, x.shape):
-        if not isinstance(slice_tup, (tuple, list)):
+    start_list = []
+    stop_list = []
+    step_list = []
+
+    for slice_tup, dim_size in zip(slice_tup_list, shape):
+        if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
             raise ValueError(
-                "element of slice_tup_list must be a list or tuple with form (begin, end, stride)"
+                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
             )
-        (begin, end, stride) = slice_tup
-        has_begin = 1
-        has_end = 1
-        if begin is None:
-            begin = 0
-            has_begin = 0
-        if end is None:
-            end = 0
-            has_end = 0
-        if stride is None:
-            stride = 1
-        begin_list.append(begin)
-        end_list.append(end)
-        stride_list.append(stride)
-        has_begin_list.append(has_begin)
-        has_end_list.append(has_end)
+
+        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
+            raise ValueError("element of slice tuple must int or None")
+
+        (start, stop, step) = slice_tup
+        if step is None:
+            step = 1
+
+        if step == 0:
+            raise ValueError("slice step can't be 0")
+
+        if start is None:
+            start = 0 if step > 0 else np.iinfo(np.int64).max
+        elif start < -dim_size or start >= dim_size:
+            raise ValueError("slice start must be in range [-size, size)")
+
+        if stop is None:
+            stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
+        elif stop < -dim_size - 1 or stop > dim_size:
+            raise ValueError("slice start must be in range [-size-1, size]")
+
+        start_list.append(start)
+        stop_list.append(stop)
+        step_list.append(step)
+
+    return start_list, stop_list, step_list
+
+
+@oneflow_export("slice_v2")
+def slice_v2(
+    x: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Extracts a slice from a tensor.
+    The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step). 
+    The operator will slice the Blob according to the `slice_top_list`. 
+    
+    Args:
+        x: A `Blob`.
+        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
+        name: A name for the operation (optional).
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    
+    Note: Because the internal op of OneFlow does not support 0-dimension slice at present, we should 
+    set the zero element in `slice_tup_list` as `None`. 
+    
+    For example: 
+
+    .. code-block:: python 
+        
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        @flow.global_function()
+        def slicev2_Job(x: tp.Numpy.Placeholder(shape=(3, 6, 9), dtype=flow.float32)
+        ) -> tp.Numpy:
+            slicev2_blob = flow.slice_v2(x, 
+                                        slice_tup_list=[[None, None, None], 
+                                                        [0, 5, 2], # slice in dimension 1, extract [0, 2, 4]
+                                                        [0, 6, 3]]) # slice in dimension 2, extract [0, 3]
+            return slicev2_blob
+        x = np.random.randn(3, 6, 9).astype(np.float32)
+        out = slicev2_Job(x)
+        
+        # out.shape (3, 3, 2)
+    
+    """
+    name = name or id_util.UniqueStr("Slice_")
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
 
     op = (
         flow.user_op_builder(name)
-        .Op("slice_v2")
+        .Op("slice")
         .Input("x", [x])
         .Output("y")
-        .Attr("begin", begin_list, "AttrTypeListInt64")
-        .Attr("end", end_list, "AttrTypeListInt64")
-        .Attr("stride", stride_list, "AttrTypeListInt64")
-        .Attr("has_begin", has_begin_list, "AttrTypeListInt64")
-        .Attr("has_end", has_end_list, "AttrTypeListInt64")
+        .Attr("start", start)
+        .Attr("stop", stop)
+        .Attr("step", step)
         .Build()
     )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("slice_update")
+def api_slice_update(
+    x: remote_blob_util.BlobDef,
+    update: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Update a slice of tensor `x`.
+
+    Args:
+        x: A `Blob`, whose slice will be updated.
+        update: A `Blob`, indicate the update content.
+        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
+        name: A name for the operation (optional).
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("SliceUpdate_")
+
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("slice_update")
+        .Input("x", [x])
+        .Input("update", [update])
+        .Output("y")
+        .Attr("start", start)
+        .Attr("stop", stop)
+        .Attr("step", step)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("reverse")
+def reverse(
+    input: remote_blob_util.BlobDef,
+    axis: Union[int, Sequence[int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator reverses the elements on the assigned axis.
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        axis (Union[int, Sequence[int]]): The reverse axis. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        ValueError: The name must be a string. 
+        ValueError: The axis must be a int or a list/tuple of int. 
+        ValueError: The axis is out of range. 
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reverse_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32)) -> tp.Numpy:
+            reverse_blob = flow.reverse(x, 
+                                        axis=0)
+            return reverse_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        out = reverse_Job(x)
+
+        # out [[7. 8. 9.]
+        #      [4. 5. 6.]
+        #      [1. 2. 3.]]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Reverse_")
+
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    if isinstance(axis, int):
+        axis = [axis]
+
+    if not isinstance(axis, (tuple, list)) or not all(isinstance(a, int) for a in axis):
+        raise ValueError("axis must be a int or a list/tuple of int")
+
+    ndim = len(input.shape)
+    slice_tup_list = [(None, None, None)] * ndim
+    for i, a in enumerate(axis):
+        if a < 0:
+            a += ndim
+
+        if a < 0 or a >= ndim:
+            raise ValueError("axis is out of range")
+
+        slice_tup_list[a] = (None, None, -1)
+
+    return slice_v2(input, slice_tup_list, name)
 
 
 @oneflow_export("concat")
-def concat(values, axis, name=None):
-    r"""Concatenate two or more `Blob` s at specified axis. 
+def concat(
+    inputs: Optional[Sequence[remote_blob_util.BlobDef]] = None,
+    axis: int = 0,
+    max_dim_size: Optional[int] = None,
+    name: Optional[str] = None,
+    values: Optional[Sequence[remote_blob_util.BlobDef]] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Concatenate two or more `Blob` s at specified axis.
 
     Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
 
     Args:
-        values: a `list` of `Blob`
-        axis: a `int`
+        inputs: a `list` of `Blob`
+        axis: a `int`. `0` by default
+        max_dim_size: hint of max dimension size along the given axis
         name: name of this operator. `None` by default
-    
+        values: deprecated param, use inputs instead
+
     Returns:
         A `Blob`
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def concat_Job() -> tp.Numpy:
+            constant_blob_1 = flow.constant(value=1.5, 
+                                            shape=(1, 3, 3, 4), 
+                                            dtype=flow.float, 
+                                            name="blob1")
+            constant_blob_2 = flow.constant(value=2.5, 
+                                            shape=(1, 3, 3, 4), 
+                                            dtype=flow.float, 
+                                            name="blob2")
+            return flow.concat(inputs=[constant_blob_1, constant_blob_2], 
+                            axis=3)
+
+
+        out = concat_Job()
+
+        # out.shape (1, 3, 3, 8)
+
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        assert isinstance(values, (list, tuple))
-        assert len(values) >= 2
-        if axis < 0:
-            axis += len(values[0].shape)
-        assert axis >= 0 and axis < len(values[0].shape)
-        out = (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Concat_")
-            )
-            .Op("concat")
-            .Input("in", values)
-            .Output("out")
-            .Attr("axis", int(axis), "AttrTypeInt32")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-        return out
+    # backward compatible with values param name
+    if values is not None:
+        assert inputs is None
+        inputs = values
+
+    assert isinstance(inputs, (list, tuple))
+    if len(inputs) == 1:
+        return inputs[0]
+
+    assert len(inputs) >= 2
+    if axis < 0:
+        axis += len(inputs[0].shape)
+    assert axis >= 0 and axis < len(
+        inputs[0].shape
+    ), "axis must be in range [0, num_axes of inputs)"
+
+    first_input_shape = inputs[0].shape
+    static_dim_size = 0
+    dynamic_dim_size = 0
+    for input in inputs:
+        assert len(input.shape) == len(first_input_shape)
+        for i in range(len(input.shape)):
+            if i == axis:
+                if input.is_dynamic:
+                    dynamic_dim_size += input.shape[i]
+                else:
+                    static_dim_size += input.shape[i]
+            else:
+                assert input.shape[i] == first_input_shape[i]
+
+    if max_dim_size is None:
+        max_dim_size = static_dim_size + dynamic_dim_size
     else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Concat_")
+        assert (
+            max_dim_size >= static_dim_size
+        ), "max diemension size {} is too small to hold concatenated static dimension size {} along the given axis".format(
+            max_dim_size, static_dim_size
         )
-        op_conf.concat_conf.out = "out"
-        if not isinstance(values, (list, tuple)):
-            values = [values]
-        getattr(op_conf.concat_conf, "in").extend([v.unique_name for v in values])
-        op_conf.concat_conf.axis = axis
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+
+    if name is None:
+        name = id_util.UniqueStr("Concat_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("concat")
+        .Input("in", inputs)
+        .Output("out")
+        .Attr("axis", axis)
+        .Attr("max_dim_size", max_dim_size)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("gather_nd")
-def gather_nd(params, indices, name=None):
+def gather_nd(
+    params: remote_blob_util.BlobDef,
+    indices: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator is a high-dimensional extension of `gather`, `indices` is a K-dimensional 
+    tensor, which is regarded as a index of input Blob `params`. 
+    
+    Each element defines a slice of `params`:
+
+    .. math:: 
+
+        output[(i_0,i_1,...,i_{K-2})] = param[indices(i_{0},i_{1},...,i_{K-2})]
+
+
+    Args:
+        params (remote_blob_util.BlobDef): The input Blob. 
+        indices (remote_blob_util.BlobDef): The slice indices. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+                        indice: tp.Numpy.Placeholder(shape=(2, 1), dtype=flow.int32)
+        ) -> tp.Numpy:
+            gather_nd_blob = flow.gather_nd(params=x, 
+                                            indices=indice)
+            return gather_nd_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        indice = np.array([[0], [2]]).astype(np.int32)
+        out = gather_nd_Job(x, indice)
+
+        # out [[1. 2. 3.]
+        #      [7. 8. 9.]]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+                        indice: tp.Numpy.Placeholder(shape=(2, 2), dtype=flow.int32)
+        ) -> tp.Numpy:
+            gather_nd_blob = flow.gather_nd(params=x, 
+                                            indices=indice)
+            return gather_nd_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        indice = np.array([[0, 2], [2, 1]]).astype(np.int32)
+        out = gather_nd_Job(x, indice)
+
+        # out [3. 8.]
+
+    Example3: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+                        indice: tp.Numpy.Placeholder(shape=(3, 2), dtype=flow.int32)
+        ) -> tp.Numpy:
+            gather_nd_blob = flow.gather_nd(params=x, 
+                                            indices=indice)
+            return gather_nd_blob
+
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9]]).astype(np.float32)
+        indice = np.array([[0, 1], [1, 0], [2, 2]]).astype(np.int32)
+        out = gather_nd_Job(x, indice)
+
+        # out [2. 4. 9.]
+
+    """
     if name is None:
         name = id_util.UniqueStr("GatherNd_")
     op = (
@@ -519,7 +962,82 @@ def gather_nd(params, indices, name=None):
 
 
 @oneflow_export("scatter_nd")
-def scatter_nd(indices, updates, shape, name=None):
+def scatter_nd(
+    indices: remote_blob_util.BlobDef,
+    updates: remote_blob_util.BlobDef,
+    shape: Sequence[int],
+    name: Optional[str] = None,
+):
+    """This operator inserts the elements in `updates` according to the `indices` and create a new Blob.
+
+    Args:
+        indices (remote_blob_util.BlobDef): The indice of `updates`. Its type should be `flow.int`. 
+        updates (remote_blob_util.BlobDef): The update Blob. 
+        shape (Sequence[int]): The constant tensor shape, the constant tensor elements are all zero. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def scatter_nd_Job(indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32), 
+                        update: tp.Numpy.Placeholder(shape=(3, ), dtype=flow.float32), 
+        ) -> tp.Numpy:
+            scatter_blob = flow.scatter_nd(indices=indice, 
+                                        updates=update, 
+                                        shape=[8])
+            return scatter_blob
+
+
+        indice_array = np.array([[1], [6], [4]]).astype(np.int32)
+        update_array = np.array([10.2, 5.1, 12.7]).astype(np.float32)
+        out = scatter_nd_Job(indice_array, update_array)
+
+        # [ 0.  10.2  0.   0.  12.7  0.   5.1  0. ]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def scatter_nd_Job(indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32), 
+                        update: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+        ) -> tp.Numpy:
+            scatter_blob = flow.scatter_nd(indices=indice, 
+                                        updates=update, 
+                                        shape=[5, 3])
+            return scatter_blob
+
+
+        indice_array = np.array([[0], [4], [2]]).astype(np.int32)
+        update_array = np.array([[1, 1, 1], 
+                                [2, 2, 2], 
+                                [3, 3, 3]]).astype(np.float32)
+        out = scatter_nd_Job(indice_array, update_array)
+
+        # out [[1. 1. 1.]
+        #      [0. 0. 0.]
+        #      [3. 3. 3.]
+        #      [0. 0. 0.]
+        #      [2. 2. 2.]]
+
+    """
     if name is None:
         name = id_util.UniqueStr("ScatterNd_")
     op = (
@@ -527,7 +1045,7 @@ def scatter_nd(indices, updates, shape, name=None):
         .Op("scatter_nd")
         .Input("indices", [indices])
         .Input("updates", [updates])
-        .Attr("shape", shape, "AttrTypeShape")
+        .Attr("shape", shape)
         .Output("out")
         .Build()
     )
@@ -535,7 +1053,60 @@ def scatter_nd(indices, updates, shape, name=None):
 
 
 @oneflow_export("tensor_scatter_nd_update")
-def tensor_scatter_nd_update(params, indices, updates, name=None):
+def tensor_scatter_nd_update(
+    params: remote_blob_util.BlobDef,
+    indices: remote_blob_util.BlobDef,
+    updates: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator inserts the elements in `updates` according to the `indices` into the Blob `params`.
+
+    Args:
+        params (remote_blob_util.BlobDef): The input Blob. 
+        indices (remote_blob_util.BlobDef): The indice of `updates`. Its type should be `flow.int32`. 
+        updates (remote_blob_util.BlobDef): The update Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensor_scatter_nd_Job(x: tp.Numpy.Placeholder(shape=(5, 3), dtype=flow.float32),
+                                indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32), 
+                                update: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+        ) -> tp.Numpy:
+            scatter_blob = flow.tensor_scatter_nd_update(params=x, 
+                                                        indices=indice, 
+                                                        updates=update)
+            return scatter_blob
+
+        x = np.array([[1, 2, 3], 
+                    [1, 2, 3], 
+                    [1, 2, 3], 
+                    [1, 2, 3], 
+                    [1, 2, 3]]).astype(np.float32)
+        indice_array = np.array([[0], [4], [2]]).astype(np.int32)
+        update_array = np.array([[1, 1, 1], 
+                                [2, 2, 2], 
+                                [3, 3, 3]]).astype(np.float32)
+        out = tensor_scatter_nd_Job(x, indice_array, update_array)
+
+        # out [[1. 1. 1.]
+        #      [1. 2. 3.]
+        #      [3. 3. 3.]
+        #      [1. 2. 3.]
+        #      [2. 2. 2.]]
+
+    """
     if name is None:
         name = id_util.UniqueStr("TensorScatterNdUpdate_")
     op = (
@@ -551,7 +1122,60 @@ def tensor_scatter_nd_update(params, indices, updates, name=None):
 
 
 @oneflow_export("tensor_scatter_nd_add")
-def tensor_scatter_nd_add(params, indices, updates, name=None):
+def tensor_scatter_nd_add(
+    params: remote_blob_util.BlobDef,
+    indices: remote_blob_util.BlobDef,
+    updates: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator adds elements from 'updates' to Blob 'params' based on the `indices`.
+
+    Args:
+        params (remote_blob_util.BlobDef): The input Blob. 
+        indices (remote_blob_util.BlobDef): The indice of `updates`. Its type should be `flow.int32`. 
+        updates (remote_blob_util.BlobDef): The update Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example： 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensor_scatter_nd_add_Job(x: tp.Numpy.Placeholder(shape=(5, 3), dtype=flow.float32),
+                                    indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32), 
+                                    update: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32), 
+        ) -> tp.Numpy:
+            scatter_blob = flow.tensor_scatter_nd_add(params=x, 
+                                                    indices=indice, 
+                                                    updates=update)
+            return scatter_blob
+
+        x = np.array([[1, 2, 3], 
+                    [1, 2, 3], 
+                    [1, 2, 3], 
+                    [1, 2, 3], 
+                    [1, 2, 3]]).astype(np.float32)
+        indice_array = np.array([[0], [4], [2]]).astype(np.int32)
+        update_array = np.array([[1, 1, 1], 
+                                [2, 2, 2], 
+                                [3, 3, 3]]).astype(np.float32)
+        out = tensor_scatter_nd_add_Job(x, indice_array, update_array)
+
+        # out [[2. 3. 4.]
+        #      [1. 2. 3.]
+        #      [4. 5. 6.]
+        #      [1. 2. 3.]
+        #      [3. 4. 5.]]
+
+    """
     if name is None:
         name = id_util.UniqueStr("TensorScatterNdAdd_")
     op = (
@@ -567,7 +1191,46 @@ def tensor_scatter_nd_add(params, indices, updates, name=None):
 
 
 @oneflow_export("argwhere")
-def argwhere(condition, dtype=None, name=None):
+def argwhere(
+    condition: remote_blob_util.BlobDef,
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator finds the indices of input Blob `condition` elements that are non-zero. It returns a List. 
+    Each element in the output is a coordinate that points to a non-zero element in the condition. 
+
+    Args:
+        condition (remote_blob_util.BlobDef): The input Blob. 
+        dtype (Optional[dtype_util.dtype], optional): The data type of output. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. Its type is `ListNumpy`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def argwhere_Job(x: tp.Numpy.Placeholder(shape=(2, 3), dtype=flow.float32), 
+        ) -> tp.ListNumpy:
+            return flow.argwhere(x)
+
+
+        x = np.array([[0, 1, 0], 
+                    [2, 0, 2]]).astype(np.float32)
+        out = argwhere_Job(x)
+
+        # out [array([[0, 1],
+        #             [1, 0],
+        #             [1, 2]], dtype=int32)] 
+
+    """
     if name is None:
         name = id_util.UniqueStr("ArgWhere_")
 
@@ -577,8 +1240,8 @@ def argwhere(condition, dtype=None, name=None):
     setattr(op_conf.arg_where_conf, "out", "out")
     setattr(op_conf.arg_where_conf, "out_size", "out_size")
     if dtype is not None:
-        setattr(op_conf.arg_where_conf, "data_type", dtype)
-    compile_context.CurJobAddOp(op_conf)
+        setattr(op_conf.arg_where_conf, "data_type", dtype.oneflow_proto_dtype)
+    interpret_util.Forward(op_conf)
 
     arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(arg_where_out_lbi, "op_name", op_conf.name)
@@ -594,7 +1257,18 @@ def argwhere(condition, dtype=None, name=None):
 
 
 @oneflow_export("nonzero")
-def nonzero(a, name=None):
+def nonzero(
+    a: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """This operator finds the indices of input Blob `condition` elements that are non-zero.
+
+    Args:
+        a (remote_blob_util.BlobDef): The input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
     if name is None:
         argwhere_name = id_util.UniqueStr("Nonzero_ArgWhere_")
         tranpose_name = id_util.UniqueStr("Nonzero_Transpose_")
@@ -606,7 +1280,82 @@ def nonzero(a, name=None):
 
 
 @oneflow_export("where")
-def where(condition, x=None, y=None, name=None):
+def where(
+    condition: remote_blob_util.BlobDef,
+    x: Optional[remote_blob_util.BlobDef] = None,
+    y: Optional[remote_blob_util.BlobDef] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator returns the elements where condition is larger than 0. 
+
+    If `x` and `y` is None, this operator is equal to `oneflow.argwhere`. 
+
+    If `x` and `y` both are not None, If the element in condition is larger than 0, 
+    it will take the `x` element, else it will take the `y` element. 
+
+    Args:
+        condition (remote_blob_util.BlobDef): The input Blob. 
+        x (Optional[remote_blob_util.BlobDef], optional): A Blob. Defaults to None.
+        y (Optional[remote_blob_util.BlobDef], optional): A Blob. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        ValueError: It is not supported when exactly one of x or y is non-None
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. Its type is `ListNumpy`. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def where_Job(condition: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.int32),
+                    x: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.float32), 
+                    y: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.float32), 
+        ) -> tp.ListNumpy:
+            return flow.where(condition=condition, 
+                            x=x, 
+                            y=y)
+
+
+        condition = np.array([3, 0, 1, 0, 1]).astype(np.int32)
+        x = np.array([10, 20, 30, 40, 50]).astype(np.float32)
+        y = np.array([100, 200, 300, 400, 500]).astype(np.float32)
+        out = where_Job(condition, x, y)
+
+        # out [array([ 10., 200.,  30., 400.,  50.], dtype=float32)]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def where_Job(condition: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.int32),
+        ) -> tp.ListNumpy:
+            return flow.where(condition=condition)
+
+
+        condition = np.array([3, 0, 1, 0, 1]).astype(np.int32)
+        out = where_Job(condition)
+
+        # out [array([[0],
+        #             [2],
+        #             [4]], dtype=int32)]
+
+    """
     if x is None and y is None:
         return argwhere(condition, name=name)
     elif x is not None and y is not None:
@@ -637,7 +1386,41 @@ def where(condition, x=None, y=None, name=None):
 
 
 @oneflow_export("elem_cnt")
-def elem_cnt(inputs, dtype=None, name=None):
+def elem_cnt(
+    inputs: remote_blob_util.BlobDef,
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator returns the amount of elements in input Blob. 
+
+    Args:
+        inputs (remote_blob_util.BlobDef): The input Blob. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. Its type is `ListNumpy`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def elem_cnt_Job(x: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.float32), 
+        ) -> tp.ListNumpy:
+            return flow.elem_cnt(inputs=x, dtype=flow.int32)
+
+        x = np.array([10, 20, -30, 40, 50]).astype(np.float32)
+        out = elem_cnt_Job(x)
+
+        # [array([5], dtype=int32)]
+    
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("ElemCnt_")
@@ -646,9 +1429,9 @@ def elem_cnt(inputs, dtype=None, name=None):
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype
+        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
     op_conf.shape_elem_cnt_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "y")
@@ -656,7 +1439,49 @@ def elem_cnt(inputs, dtype=None, name=None):
 
 
 @oneflow_export("sync_dynamic_resize")
-def sync_dynamic_resize(inputs, size, name=None):
+def sync_dynamic_resize(
+    inputs: remote_blob_util.BlobDef,
+    size: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """
+
+    Args:
+        inputs (remote_blob_util.BlobDef): The input Blob. 
+        size (remote_blob_util.BlobDef): The size of new Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. Its type is `ListNumpy`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def sync_dynamic_resize_Job(x: tp.Numpy.Placeholder(shape=(4, 3), dtype=flow.float32),
+                                    size: tp.Numpy.Placeholder(shape=(1, ), dtype=flow.int32), 
+        ) -> tp.ListNumpy:
+            resize_Blob = flow.sync_dynamic_resize(inputs=x, 
+                                                size=size)
+            return resize_Blob
+
+        x = np.array([[1, 2, 3], 
+                    [4, 5, 6], 
+                    [7, 8, 9],
+                    [10, 11, 12]]).astype(np.float32)
+        size = np.array([2]).astype(np.int32)
+        out = sync_dynamic_resize_Job(x, size)
+
+        # out [array([[1., 2., 3.],
+        #             [4., 5., 6.]], dtype=float32)]
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -667,7 +1492,8 @@ def sync_dynamic_resize(inputs, size, name=None):
     setattr(op_conf.sync_dynamic_resize_conf, "size", size.unique_name)
     setattr(op_conf.sync_dynamic_resize_conf, "axis", 0)
     setattr(op_conf.sync_dynamic_resize_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    setattr(op_conf.sync_dynamic_resize_conf, "eager", flow.eager_execution_enabled())
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     setattr(out_lbi, "op_name", op_conf.name)
     setattr(out_lbi, "blob_name", "out")
@@ -675,7 +1501,22 @@ def sync_dynamic_resize(inputs, size, name=None):
 
 
 @oneflow_export("stack")
-def stack(inputs, axis, name=None):
+def stack(
+    inputs: Sequence[remote_blob_util.BlobDef], axis: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """This operator stacks the multiple Blobs on the specified axis. 
+
+    Still Unavailable. 
+
+    Args:
+        inputs (Sequence[remote_blob_util.BlobDef]): A list of input Blob. 
+        axis (int): The stack axis. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    """
     if not isinstance(inputs, (list, tuple)):
         inputs = [inputs]
 
@@ -689,7 +1530,7 @@ def stack(inputs, axis, name=None):
     getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
     setattr(op_conf.stack_conf, "axis", axis)
     setattr(op_conf.stack_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -697,7 +1538,44 @@ def stack(inputs, axis, name=None):
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
-def generate_random_batch_permutation_indices(value, seed=None, name=None):
+def generate_random_batch_permutation_indices(
+    value: remote_blob_util.BlobDef,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator generates a random permutation of indices in batch axis. 
+
+    Args:
+        value (remote_blob_util.BlobDef): The input Blob. 
+        seed (Optional[int], optional): The random seed. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. Its type is `ListNumpy`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def random_indice_Job(x: tp.Numpy.Placeholder(shape=(4, 3), dtype=flow.int32),
+        ) -> tp.ListNumpy:
+            return flow.random.generate_random_batch_permutation_indices(value=x)
+
+        x = np.array([[1, 1, 1], 
+                    [2, 2, 2], 
+                    [3, 3, 3], 
+                    [4, 4, 4]]).astype(np.int32)
+        out = random_indice_Job(x)
+
+        # out [array([3, 0, 2, 1], dtype=int32)]
+
+    """
     import random
 
     op = (
@@ -711,27 +1589,94 @@ def generate_random_batch_permutation_indices(value, seed=None, name=None):
         .Output("y")
     )
     if seed is not None:
-        op.Attr("seed", seed, "AttrTypeInt64")
+        op.Attr("seed", seed)
+        assert name is not None
     else:
-        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1), "AttrTypeInt64")
+        op.Attr("seed", random.randint(-(2 ** 63) + 1, 2 ** 63 - 1))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("random.shuffle")
-def shuffle(value, seed=None, name=None):
+def shuffle(
+    value: remote_blob_util.BlobDef,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator shuffle the elements in input Blob. 
+
+    Args:
+        value (remote_blob_util.BlobDef): The input Blob. 
+        seed (Optional[int], optional): The random seed. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def shuffle_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.int32),
+        ) -> tp.Numpy:
+            return flow.random.shuffle(x)
+
+        x = np.array([[1, 1, 1], 
+                    [2, 2, 2], 
+                    [3, 3, 3]]).astype(np.int32)
+        out = shuffle_Job(x)
+
+        # out [[3 3 3]
+        #      [1 1 1]
+        #      [2 2 2]]
+
+    """
     return flow.gather(value, generate_random_batch_permutation_indices(value, seed))
 
 
 @oneflow_export("identity")
-def identity(x, name=None):
-    r"""Return a `Blob` has identical content and data type to input `Blob`. Analogous to `tf.identity <https://www.tensorflow.org/api_docs/python/tf/identity>`_
+def identity(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""This operator returns a `Blob` that has identical content and data type to input `Blob`. 
+    
+    Analogous to `tf.identity <https://www.tensorflow.org/api_docs/python/tf/identity>`_
 
     Args:
-        input: a `Blob`
-        name: name of this operator. `None` by default
+        x (remote_blob_util.BlobDef): The input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
     
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def identity_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.int32),
+        ) -> tp.Numpy:
+            return flow.identity(x)
+
+        x = np.array([[1, 1, 1], 
+                    [2, 2, 2], 
+                    [3, 3, 3]]).astype(np.int32)
+        out = identity_Job(x)
+
+        # out [[1 1 1]
+        #      [2 2 2]
+        #      [3 3 3]]
+
     """
     if name is None:
         name = id_util.UniqueStr("Identity_")
@@ -739,7 +1684,7 @@ def identity(x, name=None):
     op_conf.name = name
     setattr(op_conf.identity_conf, "in", x.unique_name)
     op_conf.identity_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
@@ -747,7 +1692,47 @@ def identity(x, name=None):
 
 
 @oneflow_export("identity_n")
-def identity_n(inputs, name=None):
+def identity_n(
+    inputs: Iterable[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> List[remote_blob_util.BlobDef]:
+    """This operator is similar to `oneflow.identity`. The difference is that the input and output 
+    of `identity_n` is `List`. 
+
+    Args:
+        inputs (Iterable[remote_blob_util.BlobDef]): A List of input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        List[remote_blob_util.BlobDef]: A list of result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        from typing import List
+
+
+        @flow.global_function()
+        def identity_Job(x: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32),
+                        y: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32), 
+                        z: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32)
+        ) -> List[tp.Numpy]:
+            return flow.identity_n([x, y, z])
+
+
+        x = np.array([[1, 1, 1]]).astype(np.int32)
+        y = np.array([[2, 2, 2]]).astype(np.int32)
+        z = np.array([[3, 3, 3]]).astype(np.int32)
+        out = identity_Job(x, y, z)
+
+        # out[0] [[1, 1, 1]]
+        # out[1] [[2, 2, 2]]
+        # out[2] [[3, 3, 3]]
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf, "name", name if name is not None else id_util.UniqueStr("IdentityN_"),
@@ -759,7 +1744,7 @@ def identity_n(inputs, name=None):
         out_bn = "out_" + str(idx)
         getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
         out_bns.append(out_bn)
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     def bn_to_remote_blob(bn):
         lbi = logical_blob_id_util.LogicalBlobId()
@@ -771,7 +1756,67 @@ def identity_n(inputs, name=None):
 
 
 @oneflow_export("squeeze")
-def squeeze(input, axis=None, name=None):
+def squeeze(
+    input: remote_blob_util.BlobDef,
+    axis: Optional[Sequence[int]] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator removes the specified dimention which size is 1 of the input Blob. 
+    If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Blob. 
+    
+    The amount of element in return value is the same as Blob `input`. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        axis (Optional[Sequence[int]], optional): The axis. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def squeeze_Job(x: tp.Numpy.Placeholder(shape=(1, 1, 1, 3), dtype=flow.int32),
+        ) -> tp.Numpy:
+            return flow.squeeze(x)
+
+
+        x = np.array([[[[1, 1, 1]]]]).astype(np.int32)
+        out = squeeze_Job(x)
+
+        # out.shape (3,)
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def squeeze_Job(x: tp.Numpy.Placeholder(shape=(1, 1, 1, 3), dtype=flow.int32),
+        ) -> tp.Numpy:
+            return flow.squeeze(x, axis=[1, 2])
+
+
+        x = np.array([[[[1, 1, 1]]]]).astype(np.int32)
+        out = squeeze_Job(x)
+
+        # out.shape (1, 3)
+
+    """
     if axis is None:
         axis = [idx for idx, dim in enumerate(input.shape) if dim == 1]
     else:
@@ -786,7 +1831,7 @@ def squeeze(input, axis=None, name=None):
         .Op("squeeze")
         .Input("in", [input])
         .Output("out")
-        .Attr("axes", list(axis), "AttrTypeListInt32")
+        .Attr("axes", list(axis))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -794,7 +1839,44 @@ def squeeze(input, axis=None, name=None):
 
 
 @oneflow_export("expand_dims")
-def expand_dims(input, axis, name=None):
+def expand_dims(
+    input: remote_blob_util.BlobDef, axis: int, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """This operator inserts a dimention at the specified axis in the input Blob. 
+    The size of new dimension can only be 1, and the amount of element in return value is the same as Blob `input`. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        axis (int): The specified dimension index. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def expand_dim_Job(x: tp.Numpy.Placeholder(shape=(1, 3, 3), dtype=flow.int32),
+        ) -> tp.Numpy:
+            return flow.expand_dims(input=x, 
+                                    axis=2)
+
+
+        x = np.array([[[1, 1, 1], 
+                    [1, 1, 1], 
+                    [1, 1, 1]]]).astype(np.int32)
+        out = expand_dim_Job(x)
+
+        # out.shape (1, 3, 1, 3)
+
+    """
     in_num_axes = len(input.shape)
     assert axis >= -(in_num_axes + 1) and axis <= in_num_axes
     return (
@@ -804,7 +1886,7 @@ def expand_dims(input, axis, name=None):
         .Op("expand_dims")
         .Input("in", [input])
         .Output("out")
-        .Attr("axis", axis, "AttrTypeInt32")
+        .Attr("axis", axis)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -812,7 +1894,55 @@ def expand_dims(input, axis, name=None):
 
 
 @oneflow_export("broadcast_like")
-def broadcast_like(x, like, broadcast_axes=None, name=None):
+def broadcast_like(
+    x: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
+    broadcast_axes: Optional[Sequence[int]] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator broadcast the input Blob `x` on the specified axis with input Blob `like`.
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        like (remote_blob_util.BlobDef): A Blob. 
+        broadcast_axes (Optional[Sequence[int]], optional): The broadcast axis. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        ValueError: The length of broadcast_axes must be greater than 0 and less than or equal to number of axes of like shape. 
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def broadcast_like_Job(x: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32),
+                        y: tp.Numpy.Placeholder(shape=(1, 3, 3), dtype=flow.int32)
+        ) -> tp.Numpy:
+            return flow.broadcast_like(x=x, 
+                                    like=y, 
+                                    broadcast_axes=(1,))
+
+
+        x = np.array([[1, 1, 1]]).astype(np.int32)
+        y = np.array([[[1, 1, 1], 
+                    [1, 1, 1], 
+                    [1, 1, 1]]]).astype(np.int32)
+        out = broadcast_like_Job(x, y)
+
+        # out [[[1 1 1]
+        #       [1 1 1]
+        #       [1 1 1]]]
+
+    """
     if name is None:
         name = id_util.UniqueStr("BroadcastLike_")
 
@@ -831,8 +1961,73 @@ def broadcast_like(x, like, broadcast_axes=None, name=None):
         .Op("broadcast_like")
         .Input("x", [x])
         .Input("like", [like])
-        .Attr("broadcast_axes", broadcast_axes, "AttrTypeListInt32")
+        .Attr("broadcast_axes", broadcast_axes)
         .Output("y")
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("masked_fill")
+def masked_fill(
+    x: remote_blob_util.BlobDef,
+    mask: remote_blob_util.BlobDef,
+    value: Union[float, int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Fill a blob with a given value according to the given mask.
+
+    Args:
+        x (remote_blob_util.BlobDef): Input Blob.
+        mask (remote_blob_util.BlobDef): Composed with 0 and 1, the input blob 'x' will be 
+            filled with the given value where the mask is 1. 
+        value (Union[int, int]): The value to use for filling the input blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Attention:
+        x and mask must be broadcastable to each other.
+        mask must be int type (int8/int32/int64).
+
+    Returns:
+        remote_blob_util.BlobDef: The value-filled Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def masked_fill_Job(x: tp.Numpy.Placeholder((4, ), mask: tp.Numpy.Placeholder((4, ),
+                            dtype = flow.int8))->tp.Numpy:
+            return flow.masked_fill(x, mask, value=5)
+
+        x = np.array([1, 2, 3, 4], dtype=np.float32)
+        mask = np.array([1, 0, 0, 1], dtype=np.int8)
+
+        out = masked_fill_Job(x, mask)
+        
+        # output [5 2 3 5]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("MaskedFill_")
+    value_like_x = flow.constant_like(like=x, value=value, name=name + "_ConstantLike")
+    return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
+
+
+@oneflow_export("amp_white_identity")
+def amp_white_identity(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("AmpWhiteIdentity_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("amp_white_identity")
+        .Input("in", [x])
+        .Output("out")
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()

@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/case_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/graph/logical_node.h"
@@ -23,8 +38,6 @@ Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   return Maybe<void>::Ok();
 }
 
-const PbMessage& CaseOp::GetCustomizedConf() const { return op_conf().case_conf(); }
-
 Maybe<void> CaseOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
@@ -32,7 +45,7 @@ Maybe<void> CaseOp::InferBatchAxis(
 }
 
 Maybe<void> CaseOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }

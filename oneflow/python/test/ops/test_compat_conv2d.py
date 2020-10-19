@@ -1,3 +1,19 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import unittest
 import os
 import numpy as np
 import tensorflow as tf
@@ -45,12 +61,10 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ConvJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -79,7 +93,9 @@ def compare_with_tensorflow(
                 dilations=[1, 1],
                 groups=groups,
             )
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
@@ -124,7 +140,7 @@ def compare_with_tensorflow(
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
 
     assert np.allclose(
-        of_out.ndarray().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
+        of_out.numpy().transpose(0, 2, 3, 1), tf_out.numpy(), rtol=1e-5, atol=1e-5
     )
     assert np.allclose(
         test_global_storage.Get("x_diff").transpose(0, 2, 3, 1),
@@ -140,8 +156,9 @@ def compare_with_tensorflow(
     )
 
 
-def test_conv1(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+@flow.unittest.skip_unless_1n1d()
+class TestCompatConv2d(flow.unittest.TestCase):
+    def test_conv1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -151,9 +168,7 @@ def test_conv1(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv2(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -163,9 +178,7 @@ def test_conv2(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv3(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv3(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -175,9 +188,7 @@ def test_conv3(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv4(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv4(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -187,9 +198,7 @@ def test_conv4(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv5(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv5(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -199,9 +208,7 @@ def test_conv5(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv6(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv6(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
@@ -211,9 +218,7 @@ def test_conv6(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv7(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv7(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(2, 4, 8, 8)]
@@ -224,9 +229,7 @@ def test_conv7(test_case):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-
-def test_conv8(test_case):
-    if os.getenv("ENABLE_USER_OP") != "False":
+    def test_conv8(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(2, 4, 8, 8)]
@@ -237,3 +240,7 @@ def test_conv8(test_case):
         arg_dict["stride"] = [2]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,8 +1,24 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "oneflow/core/transport/transport.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
 
@@ -95,6 +111,11 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   SwitchToMsgHeadReadHandle();
 }
 
+void SocketReadHelper::SetStatusWhenTransportMsgHeadDone() {
+  Global<Transport>::Get()->EnqueueTransportMsg(cur_msg_.transport_msg);
+  SwitchToMsgHeadReadHandle();
+}
+
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

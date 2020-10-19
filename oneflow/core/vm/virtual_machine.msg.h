@@ -1,7 +1,23 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 #define ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 
 #include <mutex>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
@@ -22,16 +38,18 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
   using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
-  PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
-  PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
-  PUBLIC void Receive(InstructionMsgList* instr_list);
-  PUBLIC void Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
-  PUBLIC void Schedule();
-  PUBLIC bool Empty() const;
-  PUBLIC const std::shared_ptr<ParallelDesc>& GetInstructionParallelDesc(const InstructionMsg&);
-  PUBLIC MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
-  PUBLIC const MirroredObject* GetMirroredObject(int64_t logical_object_id,
+  OF_PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
+  OF_PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
+  OF_PUBLIC void Receive(InstructionMsgList* instr_list);
+  OF_PUBLIC void Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
+  OF_PUBLIC void Schedule();
+  OF_PUBLIC bool Empty() const;
+  OF_PUBLIC Maybe<ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
+  OF_PUBLIC MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
+  OF_PUBLIC const MirroredObject* GetMirroredObject(int64_t logical_object_id,
                                                  int64_t global_device_id);
+
+  OF_PUBLIC int64_t this_machine_id() const;
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);

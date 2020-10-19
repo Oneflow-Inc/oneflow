@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
@@ -6,6 +21,7 @@
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -15,22 +31,6 @@ void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
   CHECK(regst_desc.regst_desc_type().has_data_regst_desc());
   CHECK(regst_desc.regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled()
         == false);
-}
-
-void InitNonPODTypeBlobIfNeed(Blob* blob_ptr) {
-  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
-  if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
-    }
-  }
-  if (blob_desc.data_type() == kTensorBuffer) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
-    }
-  }
 }
 
 }  // namespace
@@ -62,10 +62,11 @@ RegstMgr::RegstMgr(const Plan& plan) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
-      CHECK(
-          regst_desc_id2rt_regst_desc_
-              .emplace(regst_desc.regst_desc_id(), std::make_unique<const RtRegstDesc>(regst_desc))
-              .second);
+      const int64_t regst_desc_id = regst_desc.regst_desc_id();
+      CHECK(regst_desc_id2rt_regst_desc_
+                .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
+                .second);
+      CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
 }
@@ -159,9 +160,18 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
           blob_ptr = std::move(std::make_unique<Blob>(regst->regst_desc()->mem_case(), blob_desc,
                                                       cur_header_pointer + header_offset,
                                                       cur_body_pointer + body_offset));
-          InitNonPODTypeBlobIfNeed(blob_ptr.get());
+          InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
         }
         CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
+        const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();
+        const auto& parallel_ctx = regst_desc_id2parallel_ctx_.at(regst_desc_id);
+        if (parallel_ctx.has_parallel_id()) {
+          const int64_t parallel_id = parallel_ctx.parallel_id();
+          {
+            std::lock_guard<std::mutex> lock(mutex_);
+            lbi2parallel_id2blob_[lbi.lbi()][parallel_id] = regst->GetBlobByLbi(lbi.lbi());
+          }
+        }
       });
 }
 
@@ -169,6 +179,10 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
   const auto& it = regst_desc_id2rt_regst_desc_.find(regst_desc_id);
   CHECK(it != regst_desc_id2rt_regst_desc_.end());
   return *it->second;
+}
+
+Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
+  return lbi2parallel_id2blob_.at(lbi).at(parallel_id);
 }
 
 }  // namespace oneflow

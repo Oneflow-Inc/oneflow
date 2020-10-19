@@ -1,127 +1,83 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import collections
 import re
 
-import oneflow.core.job.placement_pb2 as placement_proto_pb
+import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.device_util as device_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_symbol as scope_symbol
+import oneflow
 
 
 class PlacementScope(object):
+    pass
+
+
+class EmptyPlacementScope(PlacementScope):
     def __init__(self, device_tag, machine_device_ids):
-        self.device_tag_ = device_tag
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
+        self.device_tag_ = device_tag
         self.machine_device_ids_ = machine_device_ids
-        self.default_parallel_conf_ = _MakeParallelConf(
-            self.device_tag_, self.machine_device_ids_
-        )
-        self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(
-            self.default_parallel_conf_
-        )
-        self.parallel_size_ = GetParallelSize(self.machine_id2device_id_list_)
 
     @property
-    def default_device_tag(self):
+    def device_tag(self):
         return self.device_tag_
 
     @property
-    def default_parallel_conf(self):
-        return self.default_parallel_conf_
-
-    @property
-    def machine_id2device_id_list(self):
-        return self.machine_id2device_id_list_
-
-    @property
-    def parallel_size(self):
-        return self.parallel_size_
-
-    def ParallelConf4OpConf(self, op_conf):
-        return _MakeParallelConf(
-            self.GetDeviceTag4OpConf(op_conf), self.machine_device_ids_
-        )
-
-    def GetDeviceType4OpConf(self, op_conf):
-        return device_util.DeviceType4DeviceTag(self.GetDeviceTag4OpConf(op_conf))
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        raise NotImplementedError
+    def machine_device_ids(self):
+        return self.machine_device_ids_
 
     def __enter__(self):
-        PlacementScopeStackPush(self)
+        # do nothing
+        pass
 
     def __exit__(self, *args):
-        assert self == PlacementScopeStackPop()
+        # do nothing
+        pass
 
 
-class FixedPlacementScope(PlacementScope):
-    r"""Class for fixed placement scope.
+class GlobalModePlacementScope(PlacementScope):
+    def __init__(self, scope_ctx):
+        self.scope_ctx_ = scope_ctx
 
-    This class along with `device_prior_placement` allows to define PlacementScope
-    with fixed parallel configuration.
-    """
+    def __enter__(self):
+        self.scope_ctx_.__enter__()
 
-    def __init__(self, device_tag, machine_device_ids):
-        PlacementScope.__init__(self, device_tag, machine_device_ids)
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        return self.default_device_tag
+    def __exit__(self, *args):
+        self.scope_ctx_.__exit__(*args)
 
 
-class DevicePriorPlacementScope(PlacementScope):
-    r"""Class for device prior placement scope.
-
-    This class along with `device_prior_placement` allows to define PlacementScope
-    with device prior parallel configuration.
-    """
-
-    def __init__(self, device_tag, machine_device_ids):
-        PlacementScope.__init__(self, device_tag, machine_device_ids)
-
-    def GetDeviceTag4OpConf(self, op_conf):
-        if op_util.IsOpConfOnlyCpuSupported(op_conf):
-            return "cpu"
-        return self.default_device_tag
+def MakeParallelConf4Resource(device_tag, resource):
+    if device_tag == "gpu":
+        assert resource.HasField("gpu_device_num")
+        machine_device_ids = GetGpuMachineDeviceIds(resource)
+    elif device_tag == "cpu":
+        assert resource.HasField("cpu_device_num")
+        machine_device_ids = GetCpuMachineDeviceIds(resource)
+    else:
+        raise NotImplementedError
+    return MakeParallelConf(device_tag, machine_device_ids)
 
 
-def PlacementScopeStackPush(placement_policy):
-    session_ctx.GetDefaultSession().placement_scope_stack.insert(0, placement_policy)
-
-
-def PlacementScopeStackPop():
-    return session_ctx.GetDefaultSession().placement_scope_stack.pop(0)
-
-
-def PlacementScopeStackTop():
-    assert (
-        len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
-    ), "no placement scope found"
-    return session_ctx.GetDefaultSession().placement_scope_stack[0]
-
-
-def CurPlacementGroupGetDeviceType(op_conf):
-    assert len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
-    return (
-        session_ctx.GetDefaultSession()
-        .placement_scope_stack[0]
-        .GetDeviceType4OpConf(op_conf)
-    )
-
-
-def ParallelConf4OpConf(op_conf):
-    assert len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
-    return (
-        session_ctx.GetDefaultSession()
-        .placement_scope_stack[0]
-        .ParallelConf4OpConf(op_conf)
-    )
-
-
-def _MakeParallelConf(device_tag, machine_device_ids):
+def MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, collections.Sized)
     device_names = []
     for machine_device_id in machine_device_ids:
@@ -132,15 +88,17 @@ def _MakeParallelConf(device_tag, machine_device_ids):
             "machine_device_id: %s is not valid" % machine_device_id
         )
         pair = machine_device_id.split(":")
-        device_names.append("%s:%s:%s" % (pair[0], device_tag, pair[1]))
+        device_names.append("%s:%s" % (pair[0], pair[1]))
 
-    parallel_conf = placement_proto_pb.ParallelConf()
+    parallel_conf = placement_pb.ParallelConf()
+    parallel_conf.device_tag = device_tag
     parallel_conf.device_name.extend(device_names)
     return parallel_conf
 
 
 def MakeMachineId2DeviceIdList(parallel_conf):
-    parallel_conf_str = str(parallel_conf)
+    parallel_conf_str = parallel_conf.SerializeToString()
+    global _parallel_conf_str2ofrecord
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
             parallel_conf
@@ -156,6 +114,24 @@ def GetParallelSize(key2list):
     for k, v in key2list.items():
         size += len(v)
     return size
+
+
+def GetGpuMachineDeviceIds(resource):
+    assert resource.machine_num > 0
+    assert resource.HasField("gpu_device_num")
+    return [
+        "%s:0-%s" % (m_id, resource.gpu_device_num - 1)
+        for m_id in range(resource.machine_num)
+    ]
+
+
+def GetCpuMachineDeviceIds(resource):
+    assert resource.machine_num > 0
+    assert resource.HasField("cpu_device_num")
+    return [
+        "%s:0-%s" % (m_id, resource.cpu_device_num - 1)
+        for m_id in range(resource.machine_num)
+    ]
 
 
 _parallel_conf_str2ofrecord = {}

@@ -1,3 +1,19 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/boxing_identity_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
@@ -26,7 +42,7 @@ void BoxingIdentityCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
-  op_conf.set_device_type(this->device_type());
+  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   *op_conf.mutable_boxing_identity_conf()->mutable_lbi() = lbi_;
   std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
   node->mut_op() = sole_op;

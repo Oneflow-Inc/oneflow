@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/tensor_slice_view.h"
@@ -15,7 +30,7 @@ class SliceBoxingOp : public Operator {
                              const ParallelContext* parallel_ctx) const override;
 
  protected:
-  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const;
+  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const = 0;
   virtual void VirtualInferBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {}
@@ -33,7 +48,9 @@ class SliceBoxingCopyOp final : public SliceBoxingOp {
   ~SliceBoxingCopyOp() override = default;
 
  private:
-  const PbMessage& GetCustomizedConf() const override;
+  const SliceBoxingConf& GetCustomizedBoxingConf() const override {
+    return op_conf().slice_boxing_copy_conf().slice_boxing_conf();
+  }
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
@@ -44,7 +61,9 @@ class SliceBoxingAddOp final : public SliceBoxingOp {
   ~SliceBoxingAddOp() override = default;
 
  private:
-  const PbMessage& GetCustomizedConf() const override;
+  const SliceBoxingConf& GetCustomizedBoxingConf() const override {
+    return op_conf().slice_boxing_add_conf().slice_boxing_conf();
+  }
   void VirtualInitFromOpConf() override;
   void VirtualInferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
@@ -63,10 +82,6 @@ LogicalBlobId SliceBoxingOp::lbi4ibn(const std::string& input_bn) const {
 
 LogicalBlobId SliceBoxingOp::lbi4obn(const std::string& output_bn) const {
   return GetCustomizedBoxingConf().lbi();
-}
-
-const SliceBoxingConf& SliceBoxingOp::GetCustomizedBoxingConf() const {
-  return GetMsgFromCustomizedConf<SliceBoxingConf>("slice_boxing_conf");
 }
 
 Maybe<void> SliceBoxingOp::InferBlobDescs(
@@ -100,10 +115,6 @@ Maybe<void> SliceBoxingOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& SliceBoxingCopyOp::GetCustomizedConf() const {
-  return op_conf().slice_boxing_copy_conf();
-}
-
 Symbol<OperatorConf> SliceBoxingCopyOp::GetOpConfWithoutOpNameAndLbn() const {
   OperatorConf op_conf(this->op_conf());
   op_conf.set_name("undefined-op-name");
@@ -112,10 +123,6 @@ Symbol<OperatorConf> SliceBoxingCopyOp::GetOpConfWithoutOpNameAndLbn() const {
   LogicalBlobId empty_logical_blob_id{};
   *boxing_conf->mutable_slice_boxing_conf()->mutable_lbi() = empty_logical_blob_id;
   return SymbolOf(op_conf);
-}
-
-const PbMessage& SliceBoxingAddOp::GetCustomizedConf() const {
-  return op_conf().slice_boxing_add_conf();
 }
 
 void SliceBoxingAddOp::VirtualInitFromOpConf() { EnrollTmpBn("buf"); }

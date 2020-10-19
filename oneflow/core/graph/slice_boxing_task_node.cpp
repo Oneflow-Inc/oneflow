@@ -1,3 +1,19 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 
 namespace oneflow {
@@ -87,7 +103,7 @@ void SliceBoxingTaskNode::SetOutShape(const Shape& shape) { out_shape_ = shape; 
 
 OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   OperatorConf op_conf{};
-  op_conf.set_device_type(device_type());
+  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   SliceBoxingConf boxing_conf{};
   *boxing_conf.mutable_lbi() = lbi_;
   out_slice_.ToProto(boxing_conf.mutable_out_slice());

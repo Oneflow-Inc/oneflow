@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_XRT_TENSORRT_TRT_BUILDER_H_
 #define ONEFLOW_XRT_TENSORRT_TRT_BUILDER_H_
 
@@ -65,7 +80,7 @@ class TrtBuilder {
   std::string builder_name_;
 
   // The next new handle number.
-  int64_t next_handle_ = 0;
+  int64_t next_handle_ = -1;
 
   nv::unique_ptr<nvinfer1::IBuilder> builder_;
   nv::unique_ptr<nvinfer1::INetworkDefinition> network_;
@@ -78,7 +93,7 @@ class TrtBuilder {
   util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>> host_weights_;
 
  public:
-  explicit TrtBuilder(const std::string &name) : builder_name_(name), next_handle_(0) {
+  explicit TrtBuilder(const std::string &name) : builder_name_(name), next_handle_(-1) {
     static nv::Logger logger;
     builder_.reset(nvinfer1::createInferBuilder(logger));
     nvinfer1::NetworkDefinitionCreationFlags flags =
@@ -86,6 +101,8 @@ class TrtBuilder {
     // kEXPLICIT_PRECISION
     network_.reset(builder_->createNetworkV2(flags));
   }
+
+  const std::string &name() const { return builder_name_; }
 
   nvinfer1::ITensor *GetTensor(int64_t handle);
 
@@ -138,7 +155,7 @@ class TrtBuilder {
     CHECK_GT(params_.count(handle), 0) << "Parameter is not found for handle " << handle;
   }
 
-  int64_t IncreaseHandle() { return next_handle_++; }
+  int64_t IncreaseHandle() { return ++next_handle_; }
 };
 
 }  // namespace tensorrt

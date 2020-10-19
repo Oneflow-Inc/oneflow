@@ -1,9 +1,26 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import unittest
 import os
 import random
 
 import cv2
 import numpy as np
 import oneflow as flow
+import oneflow.typing as oft
 
 
 def _random_sample_images(anno_file, image_dir, batch_size):
@@ -51,6 +68,7 @@ def _get_images_bbox_list(coco, image_ids):
             [coco.anns[anno_id]["bbox"] for anno_id in anno_ids], dtype=np.single
         )
         bbox_list.append(bbox_array)
+
     return bbox_list
 
 
@@ -87,18 +105,20 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.mirrored_strategy())
+    func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(func_config)
+    @flow.global_function(function_config=func_config)
     def target_resize_bbox_scale_job(
-        image_def=flow.MirroredTensorListDef(
+        image_def: oft.ListListNumpy.Placeholder(
             shape=tuple(image_shape), dtype=flow.float
         ),
-        bbox_def=flow.MirroredTensorListDef(shape=tuple(bbox_shape), dtype=flow.float),
+        bbox_def: oft.ListListNumpy.Placeholder(
+            shape=tuple(bbox_shape), dtype=flow.float
+        ),
     ):
         images_buffer = flow.tensor_list_to_tensor_buffer(image_def)
         resized_images_buffer, new_size, scale = flow.image_target_resize(
-            images_buffer, target_size, max_size
+            images_buffer, target_size=target_size, max_size=max_size
         )
         bbox_buffer = flow.tensor_list_to_tensor_buffer(bbox_def)
         scaled_bbox = flow.object_bbox_scale(bbox_buffer, scale)
@@ -112,7 +132,7 @@ def _of_target_resize_bbox_scale(images, bbox_list, target_size, max_size):
     output_bbox_list, output_image_size = target_resize_bbox_scale_job(
         [input_image_list], [input_bbox_list]
     ).get()
-    return output_bbox_list.ndarray_lists()[0], output_image_size.ndarray_list()[0]
+    return output_bbox_list.numpy_lists()[0], output_image_size.numpy_list()[0]
 
 
 def _compare_bbox_scale(
@@ -132,7 +152,7 @@ def _compare_bbox_scale(
     for image, bbox, of_bbox, image_size in zip(
         images, bbox_list, of_bbox_list, image_size_list
     ):
-        h, w = image_size
+        w, h = image_size
         oh, ow = image.shape[0:2]
         scale_h = h / oh
         scale_w = w / ow
@@ -143,12 +163,18 @@ def _compare_bbox_scale(
         test_case.assertTrue(np.allclose(bbox, of_bbox))
 
 
-def test_object_bbox_scale(test_case):
-    _compare_bbox_scale(
-        test_case,
-        "/dataset/mscoco_2017/annotations/instances_val2017.json",
-        "/dataset/mscoco_2017/val2017",
-        4,
-        800,
-        1333,
-    )
+@flow.unittest.skip_unless_1n1d()
+class TestObjectBboxScale(flow.unittest.TestCase):
+    def test_object_bbox_scale(test_case):
+        _compare_bbox_scale(
+            test_case,
+            "/dataset/mscoco_2017/annotations/instances_val2017.json",
+            "/dataset/mscoco_2017/val2017",
+            4,
+            800,
+            1333,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

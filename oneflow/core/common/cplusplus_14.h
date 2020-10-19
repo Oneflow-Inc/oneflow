@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_COMMON_CPLUSPLUS_14_H_
 #define ONEFLOW_CORE_COMMON_CPLUSPLUS_14_H_
 
@@ -74,6 +89,12 @@ using remove_reference_t = typename remove_reference<T>::type;
 
 template<typename T>
 using decay_t = typename decay<T>::type;
+
+template<typename T>
+using make_unsigned_t = typename std::make_unsigned<T>::type;
+
+template<typename T>
+using remove_cv_t = typename remove_cv<T>::type;
 
 template<typename F, typename Tuple, size_t... Idx>
 auto apply_helper(F&& f, Tuple&& tp, std::index_sequence<Idx...>)

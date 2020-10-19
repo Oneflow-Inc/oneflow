@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
@@ -50,7 +65,7 @@ def conv2d_affine(input, name, filters, kernel_size, strides, activation=None):
     output = _conv2d(name, input, filters, kernel_size, strides, padding)
     output = _batch_norm(output, name + "_bn")
     if activation == "Relu":
-        output = flow.keras.activations.relu(output)
+        output = flow.math.relu(output)
 
     return output
 
@@ -81,7 +96,7 @@ def residual_block(input, block_name, filters, filters_inner, strides_init):
         input, block_name, filters, filters_inner, strides_init
     )
 
-    return flow.keras.activations.relu(bottleneck + shortcut)
+    return flow.math.relu(bottleneck + shortcut)
 
 
 def residual_stage(input, stage_name, counts, filters, filters_inner, stride_init=2):
@@ -111,7 +126,7 @@ def resnet_conv_x_body(input, on_stage_end=lambda x: x):
 
 def resnet_stem(input):
     conv1 = _conv2d("conv1", input, 64, 7, 2)
-    conv1_bn = flow.keras.activations.relu(_batch_norm(conv1, "conv1_bn"))
+    conv1_bn = flow.math.relu(_batch_norm(conv1, "conv1_bn"))
     pool1 = flow.nn.max_pool2d(
         conv1_bn, ksize=3, strides=2, padding="VALID", data_format="NCHW", name="pool1",
     )
@@ -120,9 +135,7 @@ def resnet_stem(input):
 
 def resnet50(images, trainable=True):
 
-    images = flow.transpose(images, name="transpose", perm=[0, 3, 1, 2])
-
-    with flow.deprecated.variable_scope("Resnet"):
+    with flow.scope.namespace("Resnet"):
         stem = resnet_stem(images)
         body = resnet_conv_x_body(stem, lambda x: x)
         pool5 = flow.nn.avg_pool2d(

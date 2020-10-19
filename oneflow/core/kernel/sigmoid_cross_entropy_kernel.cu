@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -71,17 +86,17 @@ class SigmoidCrossEntropyGradGpuKernel final : public KernelIf<DeviceType::kGPU>
 #define REGISTER_SIGMOID_CROSS_ENTROPY_GPU_KERNEL(dtype, ltype)                                    \
   NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyConf,                                      \
                       SigmoidCrossEntropyGpuKernel<dtype, ltype>)                                  \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                               \
-        return ((conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                  \
+      .SetIsMatchedPred([](const KernelConf& conf) -> bool {                                       \
+        return ((conf.op_attribute().op_conf().device_tag() == "gpu")                              \
                 && (conf.data_type() == GetDataType<dtype>::value)                                 \
                 && (GetDataType<ltype>::value                                                      \
                     == conf.op_attribute().op_conf().sigmoid_cross_entropy_conf().label_type()));  \
       });                                                                                          \
   NEW_REGISTER_KERNEL(OperatorConf::kSigmoidCrossEntropyGradConf,                                  \
                       SigmoidCrossEntropyGradGpuKernel<dtype, ltype>)                              \
-      .SetIsMatchedPred([](const KernelConf& conf) {                                               \
+      .SetIsMatchedPred([](const KernelConf& conf) -> bool {                                       \
         return (                                                                                   \
-            (conf.op_attribute().op_conf().device_type() == DeviceType::kGPU)                      \
+            (conf.op_attribute().op_conf().device_tag() == "gpu")                                  \
             && (conf.data_type() == GetDataType<dtype>::value)                                     \
             && (GetDataType<ltype>::value                                                          \
                 == conf.op_attribute().op_conf().sigmoid_cross_entropy_grad_conf().label_type())); \

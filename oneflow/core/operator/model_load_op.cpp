@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -6,8 +21,6 @@ class ModelLoadOp : public Operator {
  public:
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
 
@@ -15,7 +28,7 @@ class ModelLoadOp : public Operator {
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
-      const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
 
@@ -24,8 +37,6 @@ void ModelLoadOp::InitFromOpConf() {
   EnrollInputBn("path", false);
   EnrollRepeatedOutputBn("out", false);
 }
-
-const PbMessage& ModelLoadOp::GetCustomizedConf() const { return op_conf().model_load_conf(); }
 
 Maybe<void> ModelLoadOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -48,13 +59,13 @@ Maybe<void> ModelLoadOp::InferBatchAxis(
 }
 
 Maybe<void> ModelLoadOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)
       .MakeSplitSignatureListBuilder(
-          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0)))->shape().NumAxes())
+          JUST(LogicalBlobDesc4Ibn(output_bns().Get(0))).shape().NumAxes())
       .Build(sbp_sig_list);
   return Maybe<void>::Ok();
 }

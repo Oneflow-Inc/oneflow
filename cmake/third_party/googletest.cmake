@@ -9,7 +9,8 @@ set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
 set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
 
-set(googletest_URL ${THIRD_PARTY_SUBMODULE_DIR}/googletest/src/googletest)
+set(googletest_URL https://github.com/google/googletest/archive/release-1.8.0.tar.gz)
+use_mirror(VARIABLE googletest_URL URL ${googletest_URL})
 
 if(WIN32)
     set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
@@ -43,13 +44,18 @@ if(THIRD_PARTY)
 ExternalProject_Add(googletest
     PREFIX googletest
     URL ${googletest_URL}
+    URL_MD5 16877098823401d1bf2ed7891d7dce36
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+        -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
+        -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+        -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
+        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
         -DBUILD_GMOCK:BOOL=ON
-	-DBUILD_GTEST:BOOL=OFF  # gmock includes gtest
+	      -DBUILD_GTEST:BOOL=OFF  # gmock includes gtest
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         #-Dgtest_force_shared_crt:BOOL=ON  #default value is OFF
 )

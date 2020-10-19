@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/record/record.pb.h"
@@ -30,6 +45,12 @@ void CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf,
       .GetDataAndSerializedErrorProto(error_str);
 }
 
+void CurJobBuildAndInferCtx_SetTrainConf(const std::string& serialized_train_conf,
+                                         std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_SetTrainConf(serialized_train_conf)
+      .GetDataAndSerializedErrorProto(error_str);
+}
+
 void CurJobBuildAndInferCtx_Complete(std::string* error_str) {
   return oneflow::CurJobBuildAndInferCtx_Complete().GetDataAndSerializedErrorProto(error_str);
 }
@@ -39,19 +60,15 @@ bool CurJobBuildAndInferCtx_HasJobConf(std::string* error_str) {
                                                                                      false);
 }
 
-std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(
-    const std::string& serialized_op_conf, const std::string& serialized_parallel_conf,
-    std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf,
-                                                               serialized_parallel_conf)
+std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(const std::string& serialized_op_conf,
+                                                         std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferMirroredOp(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
-std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(
-    const std::string& serialized_op_conf, const std::string& serialized_parallel_conf,
-    std::string* error_str) {
-  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf,
-                                                                 serialized_parallel_conf)
+std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::string& serialized_op_conf,
+                                                           std::string* error_str) {
+  return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 

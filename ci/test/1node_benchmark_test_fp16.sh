@@ -1,7 +1,5 @@
 set -ex
 
-pip3 install --user ci_tmp/*.whl
-
 rm -rf /benchmarks
 cp -r oneflow/python/benchmarks /benchmarks
 cd /benchmarks

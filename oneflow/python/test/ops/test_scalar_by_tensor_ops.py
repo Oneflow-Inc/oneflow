@@ -1,3 +1,19 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import unittest
 import os
 from collections import OrderedDict
 
@@ -17,12 +33,10 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.train.primary_lr(1e-4)
-    func_config.train.model_update_conf(dict(naive_conf={}))
 
-    @flow.global_function(func_config)
+    @flow.global_function(type="train", function_config=func_config)
     def ScalarAddByTensorJob():
-        with flow.device_prior_placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
                 shape=x_shape,
@@ -45,7 +59,9 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
                 loss = flow.math.multiply(x, y)
             elif case == "div":
                 loss = flow.math.divide(x, y)
-            flow.losses.add_loss(loss)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch(y, test_global_storage.Setter("y"))
@@ -76,7 +92,7 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_y_diff = tape.gradient(tf_out, y, loss_diff)
 
-    assert np.allclose(of_out.ndarray(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
@@ -85,41 +101,44 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     )
 
 
-def test_add(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["add"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestScalarByTensorOps(flow.unittest.TestCase):
+    def test_add(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["add"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_sub(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["sub"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_mul(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["mul"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_div(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["div"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
-def test_sub(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["sub"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_mul(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["mul"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_div(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["div"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

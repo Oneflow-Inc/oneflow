@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env_desc.h"
@@ -85,6 +100,13 @@ void CtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> 
   call(GetResponsibleStub(k));
 }
 
+void CtrlClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  ClientCall<CtrlMethod::kPushKV> call;
+  call.mut_request()->set_key(k);
+  VSetter(call.mut_request()->mutable_val());
+  call(GetMasterStub());
+}
+
 void CtrlClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
 }
@@ -93,10 +115,20 @@ void CtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
   PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
+void CtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
+  PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
+}
+
 void CtrlClient::ClearKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
+}
+
+void CtrlClient::ClearMasterKV(const std::string& k) {
+  ClientCall<CtrlMethod::kClearKV> call;
+  call.mut_request()->set_key(k);
+  call(GetMasterStub());
 }
 
 void CtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
@@ -106,12 +138,24 @@ void CtrlClient::PullKV(const std::string& k, std::function<void(const std::stri
   VGetter(call.response().val());
 }
 
+void CtrlClient::PullMasterKV(const std::string& k,
+                              std::function<void(const std::string&)> VGetter) {
+  ClientCall<CtrlMethod::kPullKV> call;
+  call.mut_request()->set_key(k);
+  call(GetMasterStub());
+  VGetter(call.response().val());
+}
+
 void CtrlClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
 }
 
 void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+}
+
+void CtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
+  PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
 void CtrlClient::PushActEvent(const ActEvent& act_event) {

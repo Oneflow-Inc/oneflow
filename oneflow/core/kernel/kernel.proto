@@ -11,36 +11,12 @@ import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
 
-message LossKernelConf {
-  required DataType prediction_type = 1;
-  required DataType label_type = 2;
-  required float weight_scalar = 3;
-  required ScalarReductionType reduction = 4;
-}
-
-message ReduceSumKernelConf {
-  required ShapeProto kept_dims_shape = 1;
-}
-
-message TransposeKernelConf {
-  repeated int32 perm = 1;
-  repeated int32 invert_perm = 2;
-}
-
-message LocalResponseNormalizationKernelConf {
-  required ShapeProto batch = 1;
-}
-
 message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
 
 message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
-}
-
-message ReduceGatherKernelConf {
-  repeated int64 data_offset = 1;
 }
 
 message SliceKernelConf {
@@ -50,10 +26,6 @@ message SliceKernelConf {
 message ConstantKernelConf {
   required InitializerConf initializer = 1;
   required uint32 random_seed = 2;
-}
-
-message GatherKernelConf {
-  required int64 axis = 1;
 }
 
 message VariableKernelConf {
@@ -67,21 +39,8 @@ message RecordLoadKernelConf {
   required int64 parallel_num = 3;
 }
 
-message PReluAlphaGradKernelConf {
-  repeated int32 perm = 1;
-}
-
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
-}
-
-message GatherMs0KernelConf {
-  required int64 offset = 1;
-}
-
-message GatherMs0GradKernelConf {
-  required int64 offset = 1;
-  required DataType indices_data_type = 2;
 }
 
 message ModelIoV2KernelConf {
@@ -94,6 +53,7 @@ message UserKernelConf {
   required ParallelContext parallel_ctx = 2;
   required SbpSignature sbp_sig = 3;
   map<string, BlobDescProto> bn_in_op2logical_blob_desc = 4;
+  required ParallelConf parallel_conf = 5;
 }
 
 message XrtLaunchKernelConf {
@@ -106,29 +66,6 @@ message UniqueWithCountsKernelConf {
 
 message IndexedSlicesReduceSumKernelConf {
   required DataType indices_data_type = 1;
-}
-
-message UnsortedSegmentSumKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 axis = 2;
-}
-
-message IndexedSlicesNaiveModelUpdateKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 lower_bound = 2;
-  required int64 upper_bound = 3;
-}
-
-message IndexedSlicesMomentumModelUpdateKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 lower_bound = 2;
-  required int64 upper_bound = 3;
-}
-
-message IndexedSlicesLazyAdamModelUpdateKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 lower_bound = 2;
-  required int64 upper_bound = 3;
 }
 
 message SyncDynamicResizeKernelConf {
@@ -144,6 +81,11 @@ message BroadcastToCompatibleWithKernelConf {
   repeated int64 broadcast_axes = 1;
 }
 
+message ImageDecoderRandomCropResizeKernelConf {
+  required int64 seed = 1;
+  required int64 batch_size = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
@@ -156,30 +98,18 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
-    TransposeKernelConf transpose_conf = 117;
-    ReduceSumKernelConf reduce_sum_conf = 120;
-    LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
-    ReduceGatherKernelConf reduce_gather_conf = 350;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
-    UnsortedSegmentSumKernelConf unsorted_segment_sum_conf = 356;
-    IndexedSlicesNaiveModelUpdateKernelConf indexed_slices_naive_model_update_conf = 357;
-    IndexedSlicesMomentumModelUpdateKernelConf indexed_slices_momentum_model_update_conf = 358;
-    IndexedSlicesLazyAdamModelUpdateKernelConf indexed_slices_lazy_adam_model_update_conf = 359;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
     ArgWhereKernelConf arg_where_conf = 361;
 
     SliceKernelConf slice_conf = 402;
-    ConstantKernelConf constant_conf = 403;
-    GatherKernelConf gather_conf = 406;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
-    PReluAlphaGradKernelConf prelu_alpha_grad_conf = 409;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    GatherMs0KernelConf gather_ms0_conf = 414;
-    GatherMs0GradKernelConf gather_ms0_grad_conf = 415;
     ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
+    ImageDecoderRandomCropResizeKernelConf image_decoder_random_crop_resize_conf = 429;
   }
 }

@@ -1,19 +1,77 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import os
+from typing import Union, Optional, Sequence
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.compile_context as compile_context
+import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("math.add")
-def add(x, y, name=None):
+def add(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Compute :math:`X + Y` element-wise, math.add supports broadcasting. Analogous to `tf.math.add <https://www.tensorflow.org/api_docs/python/tf/math/add>`_
+
+    The equation is:
+
+    .. math::
+        out = X + Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob. 
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob is added by x and y, and has the same type of x.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def addJob(x: tp.Numpy.Placeholder((3, )), 
+                y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.add(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 1, 1]).astype(np.float32)
+        out = addJob(x, y) 
+        
+        # out [2., 3., 4.]
+
+    """
     if isinstance(x, (int, float)):
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
@@ -29,6 +87,7 @@ def add(x, y, name=None):
 
 
 def _recursive_build_add_n(inputs, name=None):
+    inputs = list(inputs)
     kernel_max_inputs = 8
     if len(inputs) == 1:
         return inputs[0]
@@ -52,26 +111,85 @@ def _recursive_build_add_n(inputs, name=None):
 
 
 @oneflow_export("math.add_n")
-def add_n(inputs, name=None):
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("AddN_"),
-        )
-        assert len(inputs) > 1
-        for blob in inputs:
-            getattr(op_conf.add_conf, "in").append(blob.unique_name)
-        op_conf.add_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+def add_n(
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """Add all the input tensors in element-wise, Analogous to `tf.math.add_n <https://www.tensorflow.org/api_docs/python/tf/math/add_n>`_
+
+    Args:
+        inputs (Sequence[remote_blob_util.BlobDef]): A list of Blob, each Blob has the same shape and type. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The sum of the inputs, has the same shape and type as the elements of inputs.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def add_n_Job(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.add_n([x, y])
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 1, 1]).astype(np.float32)
+        out = add_n_Job(x, y)
+        print(out)
+
+        # out [2., 3., 4.]
+
+    """
     return _recursive_build_add_n(inputs, name)
 
 
 @oneflow_export("math.subtract")
-def subtract(x, y, name=None):
+def subtract(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Compute x - y element-wise, Analogous to `tf.math.subtract <https://www.tensorflow.org/api_docs/python/tf/math/subtract>`_
+
+    The equation is:
+
+    .. math::
+        out = X - Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob after subtracting, has the same type as x.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def subtractJob(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.subtract(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([2, 4, 1]).astype(np.float32)
+        out = subtractJob(x, y)
+
+        # out [-1., -2., 2.]
+
+    """
     if isinstance(x, (int, float)):
         return scalar_add(-1 * y, x, name)
     elif isinstance(y, (int, float)):
@@ -88,7 +206,47 @@ def subtract(x, y, name=None):
 
 
 @oneflow_export("math.multiply")
-def multiply(x, y, name=None):
+def multiply(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Compute :math:`x \times y` element-wise, Analogous to `tf.math.multiply <https://www.tensorflow.org/api_docs/python/tf/math/multiply>`_
+
+    The equation is:
+
+    .. math::
+        out = X \times Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob after multiplying, has the same type as x.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def multiplyJob(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.multiply(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([2, 3, 3]).astype(np.float32)
+        out = multiplyJob(x, y)
+
+        # out [2., 6., 9.]
+
+    """
     if isinstance(x, (int, float)):
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
@@ -104,7 +262,47 @@ def multiply(x, y, name=None):
 
 
 @oneflow_export("math.divide")
-def divide(x, y, name=None):
+def divide(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Computes the division of x by y, Analogous to `tf.math.divide <https://www.tensorflow.org/api_docs/python/tf/math/divide>`_ 
+
+    The equation is:
+
+    .. math::
+        out = \frac{X}{Y}
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with same shape as input x.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def divideJob(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.divide(x, y)
+
+        x = np.array([25, 16, 9]).astype(np.float32)
+        y = np.array([10, 4, 2]).astype(np.float32)
+        out = divideJob(x, y)
+
+        # out [2.5, 4., 4.5]
+        
+    """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
     elif isinstance(y, (int, float)):
@@ -125,7 +323,51 @@ def divide(x, y, name=None):
 
 
 @oneflow_export("math.mod")
-def floor_mod(x, y, name=None):
+def floor_mod(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Mod two Blobs, Analogous to `tf.math.floormod <https://www.tensorflow.org/api_docs/python/tf/math/floormod>`_ 
+
+    The equation is:
+
+    .. math::
+        out = X \bmod Y
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob has the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        NotImplementedError: x must be an int or a float
+        NotImplementedError: y must be an int or a float
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with same type as input x.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def modJob(x: tp.Numpy.Placeholder((3, )), 
+                y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.mod(x, y)
+
+        x = np.array([16, 9, 5]).astype(np.float32)
+        y = np.array([6, 4, 3]).astype(np.float32)
+        out = modJob(x, y)
+        
+        # out [4., 1., 2.]
+
+    """
     if isinstance(x, (int, float)):
         raise NotImplementedError
     elif isinstance(y, (int, float)):
@@ -140,85 +382,39 @@ def floor_mod(x, y, name=None):
 def scalar_add(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarAdd_")
-    if os.getenv("ENABLE_USER_OP") != "False":
-        builder = (
-            flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
-        )
-        if isinstance(operand, int):
-            builder = (
-                builder.Attr("has_int_operand", True, "AttrTypeBool")
-                .Attr("has_float_operand", False, "AttrTypeBool")
-                .Attr("int_operand", operand, "AttrTypeInt64")
-                .Attr("float_operand", 0.0, "AttrTypeDouble")
-            )
-        elif isinstance(operand, float):
-            builder = (
-                builder.Attr("has_int_operand", False, "AttrTypeBool")
-                .Attr("has_float_operand", True, "AttrTypeBool")
-                .Attr("int_operand", 0, "AttrTypeInt64")
-                .Attr("float_operand", operand, "AttrTypeDouble")
-            )
-        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.scalar_add_conf, "in", x.unique_name)
+    builder = flow.user_op_builder(name).Op("scalar_add").Input("in", [x]).Output("out")
     if isinstance(operand, int):
-        op_conf.scalar_add_conf.int_operand = operand
+        builder = (
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
+        )
     elif isinstance(operand, float):
-        op_conf.scalar_add_conf.float_operand = operand
-    op_conf.scalar_add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+        builder = (
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
+        )
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 def scalar_add_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
-            .Op("scalar_add_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarAddByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarAddByTensor_"))
+        .Op("scalar_add_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_add_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_add_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_add_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def element_wise_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return flow.math.add_n([x, y], name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ElementWiseAdd_"),
-    )
-    getattr(op_conf.add_conf, "in").append(x.unique_name)
-    getattr(op_conf.add_conf, "in").append(y.unique_name)
-    op_conf.add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.math.add_n([x, y], name)
 
 
 def build_broadcast_binary_op(math_op, x, y, name=None):
@@ -237,272 +433,135 @@ def build_broadcast_binary_op(math_op, x, y, name=None):
 
 
 def broadcast_add(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_add", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastAdd_"),
-    )
-    op_conf.broadcast_add_conf.a = x.unique_name
-    op_conf.broadcast_add_conf.b = y.unique_name
-    op_conf.broadcast_add_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_add", x, y, name)
 
 
 def broadcast_sub(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_sub", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastSub_"),
-    )
-    op_conf.broadcast_sub_conf.a = x.unique_name
-    op_conf.broadcast_sub_conf.b = y.unique_name
-    op_conf.broadcast_sub_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_sub", x, y, name)
 
 
 def scalar_sub_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
-            .Op("scalar_sub_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarSubByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarSubByTensor_"))
+        .Op("scalar_sub_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_sub_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_sub_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_sub_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def element_wise_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
-            .Op("multiply")
-            .Input("x", [x])
-            .Input("y", [y])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf,
-            "name",
-            name if name is not None else id_util.UniqueStr("ElementWiseMul_"),
-        )
-        setattr(op_conf.multiply_conf, "in_0", x.unique_name)
-        setattr(op_conf.multiply_conf, "in_1", y.unique_name)
-        op_conf.multiply_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMul_"))
+        .Op("multiply")
+        .Input("x", [x])
+        .Input("y", [y])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 def broadcast_mul(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_mul", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMul_"),
-    )
-    op_conf.broadcast_mul_conf.a = x.unique_name
-    op_conf.broadcast_mul_conf.b = y.unique_name
-    op_conf.broadcast_mul_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_mul", x, y, name)
 
 
 def scalar_mul(x, operand, name=None):
     if name is None:
         name = id_util.UniqueStr("ScalarMul_")
-    if os.getenv("ENABLE_USER_OP") != "False":
+    builder = flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
+    if isinstance(operand, int):
         builder = (
-            flow.user_op_builder(name).Op("scalar_mul").Input("in", [x]).Output("out")
+            builder.Attr("has_int_operand", True)
+            .Attr("has_float_operand", False)
+            .Attr("int_operand", operand)
+            .Attr("float_operand", 0.0)
         )
-        if isinstance(operand, int):
-            builder = (
-                builder.Attr("has_int_operand", True, "AttrTypeBool")
-                .Attr("has_float_operand", False, "AttrTypeBool")
-                .Attr("int_operand", operand, "AttrTypeInt64")
-                .Attr("float_operand", 0.0, "AttrTypeDouble")
-            )
-        elif isinstance(operand, float):
-            builder = (
-                builder.Attr("has_int_operand", False, "AttrTypeBool")
-                .Attr("has_float_operand", True, "AttrTypeBool")
-                .Attr("int_operand", 0, "AttrTypeInt64")
-                .Attr("float_operand", operand, "AttrTypeDouble")
-            )
-        return builder.Build().InferAndTryRun().RemoteBlobList()[0]
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.scalar_mul_conf, "in", x.unique_name)
-        if isinstance(operand, int):
-            op_conf.scalar_mul_conf.int_operand = operand
-        elif isinstance(operand, float):
-            op_conf.scalar_mul_conf.float_operand = operand
-        op_conf.scalar_mul_conf.out = "out"
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    elif isinstance(operand, float):
+        builder = (
+            builder.Attr("has_int_operand", False)
+            .Attr("has_float_operand", True)
+            .Attr("int_operand", 0)
+            .Attr("float_operand", operand)
+        )
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 def scalar_mul_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
-            .Op("scalar_mul_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarMulByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarMulByTensor_"))
+        .Op("scalar_mul_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_mul_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_mul_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_mul_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def broadcast_div(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_div", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastDiv_"),
-    )
-    op_conf.broadcast_div_conf.a = x.unique_name
-    op_conf.broadcast_div_conf.b = y.unique_name
-    op_conf.broadcast_div_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_div", x, y, name)
 
 
 def scalar_div_by_tensor(x, scalar, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
-            .Op("scalar_div_by_tensor")
-            .Input("x", [x])
-            .Input("scalar", [scalar])
-            .Output("y")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("ScalarDivByTensor_"),
+    return (
+        flow.user_op_builder(name or id_util.UniqueStr("ScalarDivByTensor_"))
+        .Op("scalar_div_by_tensor")
+        .Input("x", [x])
+        .Input("scalar", [scalar])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.scalar_div_by_tensor_conf, "in", x.unique_name)
-    setattr(op_conf.scalar_div_by_tensor_conf, "scalar", scalar.unique_name)
-    op_conf.scalar_div_by_tensor_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 def broadcast_floor_mod(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMod_"),
-    )
-    op_conf.broadcast_floor_mod_conf.a = x.unique_name
-    op_conf.broadcast_floor_mod_conf.b = y.unique_name
-    op_conf.broadcast_floor_mod_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return build_broadcast_binary_op("broadcast_floor_mod", x, y, name)
 
 
-@oneflow_export("math.tanh", "keras.activations.tanh")
-def tanh(x, name=None):
-    r"""Computes hyperbolic tangent of `x` element-wise.
+@oneflow_export("math.tanh")
+def tanh(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Computes hyperbolic tangent of `x` element-wise, Analogous to `tf.math.tanh <https://www.tensorflow.org/api_docs/python/tf/math/tanh>`_ 
+
+    The equation is:
+
+    .. math::
+        out = \frac{e^x - e^{-x}}{e^x + e^{-x}}
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A Blob.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def tanhJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.tanh(x)
+
+        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        out = tanhJob(x)
+        
+        # out [-0.46211714, 0., 0.46211714]
+
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("TanH_")
-        )
-        setattr(op_conf.tanh_conf, "in", x.unique_name)
-        setattr(op_conf.tanh_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TanH_"))
@@ -515,62 +574,91 @@ def tanh(x, name=None):
     )
 
 
-@oneflow_export("math.gelu", "keras.activations.gelu")
-def gelu(x, name=None):
-    r"""Gaussian Error Linear Units.
+@oneflow_export("math.gelu")
+def gelu(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Gelu activation operator, Analogous to `tf.nn.gelu <https://www.tensorflow.org/api_docs/python/tf/nn/gelu>`_ 
+
+    The equation is:
+
+    .. math::
+        out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A Blob.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def geluJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.gelu(x)
+
+        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        out = geluJob(x)
+
+        # out [-0.15426877, 0., 0.34573123]
+
     """
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Gelu_")
-            )
-            .Op("gelu")
-            .Input("in", [x])
-            .Output("out")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Gelu_")
-        )
-        setattr(op_conf.gelu_conf, "in", x.unique_name)
-        setattr(op_conf.gelu_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Gelu_"))
+        .Op("gelu")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("math.relu", "nn.relu")
-def relu(x, name=None):
-    r"""ReLU activation
+def relu(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Relu activation
+
+    The equation is:
+
+    .. math::
+        out = max(X, 0)
 
     Args:
-        x: Input `Blob`.
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: An activated Blob.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def reluJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.relu(x)
+
+        x = np.array([-1, 0, 5]).astype(np.float32)
+        out = reluJob(x)
+
+        # out [0., 0., 5.]
+
     """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Relu_")
-        )
-        setattr(op_conf.relu_conf, "in", x.unique_name)
-        setattr(op_conf.relu_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
 
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu_"))
@@ -584,27 +672,42 @@ def relu(x, name=None):
 
 
 @oneflow_export("math.sigmoid")
-def sigmoid(x, name=None):
-    r"""Computes sigmoid of `x` element-wise.
+def sigmoid(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Sigmoid activation 
+
+    The equation is:
+
+    .. math::
+        out = \frac{1}{1 + e^{-x}}
 
     Args:
-        x: Input `Blob`.
-    Returns:
-        A `Blob`
-    """
-    if os.getenv("ENABLE_USER_OP") == "False":
-        op_conf = op_conf_util.OperatorConf()
-        setattr(
-            op_conf, "name", name if name is not None else id_util.UniqueStr("Sigmoid_")
-        )
-        setattr(op_conf.sigmoid_conf, "in", x.unique_name)
-        setattr(op_conf.sigmoid_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+        x (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
 
+    Returns:
+        remote_blob_util.BlobDef: An activated Blob.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def sigmoidJob(x: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.sigmoid(x)
+
+        x = np.array([-1, 0, 1]).astype(np.float32)
+        out = sigmoidJob(x)
+
+        # out [0.26894143, 0.5, 0.7310586]
+
+    """
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Sigmoid_")
@@ -619,348 +722,667 @@ def sigmoid(x, name=None):
 
 
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
-def unsorted_segment_sum(data, segment_ids, num_segments, axis=0, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
-            )
-            .Op("unsorted_segment_sum")
-            .Input("data", [data])
-            .Input("segment_ids", [segment_ids])
-            .Output("out")
-            .Attr("axis", int(axis), "AttrTypeInt64")
-            .Attr("num_segments", int(num_segments), "AttrTypeInt64")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = (
+def unsorted_segment_sum(
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
+    num_segments: int,
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Computes the sum along segments of a Blob, Analogous to `tf.math.unsorted_segment_sum <https://www.tensorflow.org/api_docs/python/tf/math/unsorted_segment_sum>`_
+
+    Args:
+        data (remote_blob_util.BlobDef): Input Blob
+        segment_ids (remote_blob_util.BlobDef): A Blob should be the size of the first dimension, with consecutive IDs in the range 0 to k (k < d0).
+        num_segments (int): num_segments should equal the number of distinct segment IDs.
+        axis (int, optional): The axis of data. Defaults to 0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with the same type of data.
+
+    For example:
+
+    .. code-block:: python 
+
+        # Example 1: 
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_segment_sumJob(data: tp.Numpy.Placeholder((3, 4)),
+                                    segment_ids: tp.Numpy.Placeholder((4, ), dtype=flow.int32)
+        )->tp.Numpy:
+            return flow.math.unsorted_segment_sum(data, segment_ids, num_segments=2, axis=1)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                               [5, 6, 7 ,8], 
+                               [9, 10, 11, 12]]).astype(np.float32)
+        segment_ids = np.array([0, 1, 0, 1]).astype(np.int32)
+        out = unsorted_segment_sumJob(input_blob, segment_ids)
+
+        # out [[ 4.  6.]
+        #      [12. 14.]
+        #      [20. 22.]]
+        
+        # Example 2
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_segment_sumJob(data: tp.Numpy.Placeholder((3, 4)),
+                                    segment_ids: tp.Numpy.Placeholder((3, ), dtype=flow.int32)
+        )->tp.Numpy:
+            return flow.math.unsorted_segment_sum(data, segment_ids, num_segments=2, axis=0)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                               [5, 6, 7 ,8], 
+                               [9, 10, 11, 12]]).astype(np.float32)
+        segment_ids = np.array([0, 1, 0]).astype(np.int32)
+        out = unsorted_segment_sumJob(input_blob, segment_ids)
+
+        #  out [[10. 12. 14. 16.]
+        #       [ 5.  6.  7.  8.]]
+        
+    """
+    return (
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedSegmentSum_")
         )
-        op_conf.unsorted_segment_sum_conf.data = data.unique_name
-        op_conf.unsorted_segment_sum_conf.segment_ids = segment_ids.unique_name
-        op_conf.unsorted_segment_sum_conf.num_segments = num_segments
-        op_conf.unsorted_segment_sum_conf.axis = axis
-        op_conf.unsorted_segment_sum_conf.out = "out"
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+        .Op("unsorted_segment_sum")
+        .Input("data", [data])
+        .Input("segment_ids", [segment_ids])
+        .Output("out")
+        .Attr("axis", int(axis))
+        .Attr("num_segments", int(num_segments))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("math.unsorted_segment_sum_like", "unsorted_segment_sum_like")
-def unsorted_segment_sum_like(data, segment_ids, like, axis=0, name=None):
-    if name is None:
-        name = id_util.UniqueStr("UnsortedSegmentSumLike_")
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("UnsortedSegmentSumLike__")
-            )
-            .Op("unsorted_segment_sum_like")
-            .Input("data", [data])
-            .Input("segment_ids", [segment_ids])
-            .Input("like", [like])
-            .Output("out")
-            .Attr("axis", int(axis), "AttrTypeInt64")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = name
-        op_conf.unsorted_segment_sum_like_conf.data = data.unique_name
-        op_conf.unsorted_segment_sum_like_conf.segment_ids = segment_ids.unique_name
-        op_conf.unsorted_segment_sum_like_conf.like = like.unique_name
-        op_conf.unsorted_segment_sum_like_conf.axis = axis
-        op_conf.unsorted_segment_sum_like_conf.out = "out"
+def unsorted_segment_sum_like(
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Computes the sum along segments of a Blob, the output shape is the same as the `like` Blob. 
 
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+    Args:
+        data (remote_blob_util.BlobDef): Input Blob
+        segment_ids (remote_blob_util.BlobDef): A Blob should be the size of the first dimension, with consecutive IDs in the range 0 to k (k < d0).
+        like (remote_blob_util.BlobDef): The input Blob which specifies shape
+        axis (int, optional): The axis of data. Defaults to 0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_segment_sum_like_Job(data: tp.Numpy.Placeholder((3, 4)),
+                                        segment_ids: tp.Numpy.Placeholder((3, ), dtype=flow.int32), 
+                                        like: tp.Numpy.Placeholder((2, 4), dtype=flow.float32)
+        )->tp.Numpy:
+            return flow.math.unsorted_segment_sum_like(data, segment_ids, like, axis=0)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                            [5, 6, 7 ,8], 
+                            [9, 10, 11, 12]]).astype(np.float32)
+        segment_ids = np.array([0, 1, 0]).astype(np.int32)
+        like = np.zeros(shape=(2, 4), dtype=np.float32)
+
+        out = unsorted_segment_sum_like_Job(input_blob, segment_ids, like)
+
+        # out [[10. 12. 14. 16.]
+        #      [ 5.  6.  7.  8.]]
+        
+    """
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("UnsortedSegmentSumLike_")
+        )
+        .Op("unsorted_segment_sum_like")
+        .Input("data", [data])
+        .Input("segment_ids", [segment_ids])
+        .Input("like", [like])
+        .Output("out")
+        .Attr("axis", int(axis))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("math.unsorted_batch_segment_sum", "unsorted_batch_segment_sum")
-def unsorted_batch_segment_sum(data, segment_ids, num_segments, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(
-                name
-                if name is not None
-                else id_util.UniqueStr("UnsortedBatchSegmentSum_")
-            )
-            .Op("unsorted_batch_segment_sum")
-            .Input("data", [data])
-            .Input("segment_ids", [segment_ids])
-            .Output("out")
-            .Attr("num_segments", int(num_segments), "AttrTypeInt64")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        op_conf.name = (
+def unsorted_batch_segment_sum(
+    data: remote_blob_util.BlobDef,
+    segment_ids: remote_blob_util.BlobDef,
+    num_segments: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data. 
+    
+    For example, the segment id is like:
+
+    .. code-block:: python
+    
+        [[0 0 0 1 2 2 3 3], 
+         [0 0 1 1 2 3 3 3]]
+
+    Args:
+        data (remote_blob_util.BlobDef): Input Blob
+        segment_ids (remote_blob_util.BlobDef): A Blob with shape (d0, d1). The d0, d1 are the first and second dimension of data. 
+        num_segments (int): num_segments should equal the number of distinct segment IDs.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob.
+    
+    For example:
+
+    .. code-block:: python
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def unsorted_batch_segment_sum_Job(data: tp.Numpy.Placeholder((3, 4)),
+                                        segment_ids: tp.Numpy.Placeholder((3, 4), dtype=flow.int32)
+        )->tp.Numpy:
+            return flow.math.unsorted_batch_segment_sum(data, segment_ids, 2)
+
+        input_blob = np.array([[1, 2, 3, 4], 
+                            [1, 2, 3 ,4], 
+                            [1, 2, 3, 4]]).astype(np.float32)
+        segment_ids = np.array([[0, 0, 0, 1], 
+                                [0, 0, 1, 0], 
+                                [0, 1, 0, 0]]).astype(np.int32)
+        out = unsorted_batch_segment_sum_Job(input_blob, segment_ids)
+
+        # out [[6. 4.]
+        #      [7. 3.]
+        #      [8. 2.]]
+
+    """
+    return (
+        flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UnsortedBatchSegmentSum_")
         )
-        op_conf.unsorted_batch_segment_sum_conf.data = data.unique_name
-        op_conf.unsorted_batch_segment_sum_conf.segment_ids = segment_ids.unique_name
-        op_conf.unsorted_batch_segment_sum_conf.num_segments = num_segments
-        op_conf.unsorted_batch_segment_sum_conf.out = "out"
-
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
+        .Op("unsorted_batch_segment_sum")
+        .Input("data", [data])
+        .Input("segment_ids", [segment_ids])
+        .Output("out")
+        .Attr("num_segments", int(num_segments))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 
 @oneflow_export("cast")
-def cast(x, dtype, name=None):
-    r"""Return a `Blob` of given data type `dtype` and indentical shape to `x`
+def cast(
+    x: remote_blob_util.BlobDef, dtype: dtype_util.dtype, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""The op takes input x and casts it to the output with `dtype`
 
     Args:
-        x: a `Blob`.
-        dtype: a OneFlow data type. For instance, `oneflow.float`.
+        x (remote_blob_util.BlobDef): Input Blob
+        dtype (dtype_util.dtype): Data type of the output
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`
+        remote_blob_util.BlobDef: A Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def cast_Job(x: tp.Numpy.Placeholder((3, ), dtype=flow.float32)
+        )->tp.Numpy:
+            return flow.cast(x, dtype=flow.int32)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        out = cast_Job(x)
+
+        # out.dtype = "int32"
+
     """
     if x.dtype == dtype:
         return x
     if name is None:
         name = id_util.UniqueStr("Cast_")
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return (
-            flow.user_op_builder(name)
-            .Op("cast")
-            .Input("in", [x])
-            .Output("out")
-            .Attr("dtype", dtype, "AttrTypeDataType")
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
-    else:
-        op_conf = op_conf_util.OperatorConf()
-        setattr(op_conf, "name", name)
-        setattr(op_conf.cast_conf, "in", x.unique_name)
-        setattr(op_conf.cast_conf, "data_type", dtype)
-        setattr(op_conf.cast_conf, "out", "out")
-        compile_context.CurJobAddOp(op_conf)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = "out"
-        return remote_blob_util.RemoteBlob(lbi)
 
-
-@oneflow_export("math.naive_logical_and")
-def naive_logical_and(lhs, rhs, name=None):
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("LogicalAnd_")
+    return (
+        flow.user_op_builder(name)
+        .Op("cast")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("dtype", dtype)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.logical_and_conf, "lhs", lhs.unique_name)
-    setattr(op_conf.logical_and_conf, "rhs", rhs.unique_name)
-    setattr(op_conf.logical_and_conf, "out", "out")
-    compile_context.CurJobAddOp(op_conf)
-    out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(out_lbi, "op_name", op_conf.name)
-    setattr(out_lbi, "blob_name", "out")
-    return remote_blob_util.RemoteBlob(out_lbi)
 
 
 @oneflow_export("math.equal")
-def equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastEqual_"),
-    )
-    op_conf.broadcast_equal_conf.a = x.unique_name
-    op_conf.broadcast_equal_conf.b = y.unique_name
-    op_conf.broadcast_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of :math:`{x}=={y}` element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.equal(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 2, 1]).astype(np.float32)
+        out = equal_Job(x, y)
+
+        # out [1 1 0]
+
+    """
+    return build_broadcast_binary_op("broadcast_equal", x, y, name)
 
 
 @oneflow_export("math.not_equal")
-def not_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastNotEqual_"),
-    )
-    op_conf.broadcast_not_equal_conf.a = x.unique_name
-    op_conf.broadcast_not_equal_conf.b = y.unique_name
-    op_conf.broadcast_not_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def not_equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of :math:`{x}!={y}` element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def not_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.not_equal(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 2, 1]).astype(np.float32)
+        out = not_equal_Job(x, y)
+
+        # out [0 0 1]
+
+    """
+    return build_broadcast_binary_op("broadcast_not_equal", x, y, name)
 
 
 @oneflow_export("math.less")
-def less(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_less", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessThan_"),
-    )
-    op_conf.broadcast_less_than_conf.a = x.unique_name
-    op_conf.broadcast_less_than_conf.b = y.unique_name
-    op_conf.broadcast_less_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def less(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of :math:`x < y` element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def less_Job(x: tp.Numpy.Placeholder((3, )), 
+                    y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.less(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 2, 4]).astype(np.float32)
+        out = less_Job(x, y)
+
+        # out [0 0 1]
+
+    """
+    return build_broadcast_binary_op("broadcast_less", x, y, name)
 
 
 @oneflow_export("math.less_equal")
-def less_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLessEqual_"),
-    )
-    op_conf.broadcast_less_equal_conf.a = x.unique_name
-    op_conf.broadcast_less_equal_conf.b = y.unique_name
-    op_conf.broadcast_less_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def less_equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of :math:`x <= y` element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def less_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.less_equal(x, y)
+
+        x = np.array([1, 2, 3]).astype(np.float32)
+        y = np.array([1, 1, 4]).astype(np.float32)
+        out = less_equal_Job(x, y)
+
+        # out [1 0 1]
+
+    """
+    return build_broadcast_binary_op("broadcast_less_equal", x, y, name)
 
 
 @oneflow_export("math.greater")
-def greater(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_greater", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterThan_"),
-    )
-    op_conf.broadcast_greater_than_conf.a = x.unique_name
-    op_conf.broadcast_greater_than_conf.b = y.unique_name
-    op_conf.broadcast_greater_than_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def greater(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of :math:`x > y` element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+
+    For example: 
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def greater_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.greater(x, y)
+
+        x = np.array([1, 1, 4]).astype(np.float32)
+        y = np.array([1, 2, 3]).astype(np.float32)
+        out = greater_Job(x, y)
+
+        # out [0 0 1]
+
+    """
+    return build_broadcast_binary_op("broadcast_greater", x, y, name)
 
 
 @oneflow_export("math.greater_equal")
-def greater_equal(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastGreaterEqual_"),
-    )
-    op_conf.broadcast_greater_equal_conf.a = x.unique_name
-    op_conf.broadcast_greater_equal_conf.b = y.unique_name
-    op_conf.broadcast_greater_equal_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def greater_equal(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the truth value of :math:`x >= y` element-wise.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def greater_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+                            y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.greater_equal(x, y)
+
+        x = np.array([1, 1, 4]).astype(np.float32)
+        y = np.array([1, 2, 3]).astype(np.float32)
+        out = greater_equal_Job(x, y)
+    
+        # out [1 0 1]
+
+    """
+    return build_broadcast_binary_op("broadcast_greater_equal", x, y, name)
 
 
 @oneflow_export("math.logical_and")
-def logical_and(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastLogicalAnd_"),
-    )
-    op_conf.broadcast_logical_and_conf.a = x.unique_name
-    op_conf.broadcast_logical_and_conf.b = y.unique_name
-    op_conf.broadcast_logical_and_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def logical_and(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Logical AND function.
+
+    Each element is calculated by:
+
+    .. math::
+        out = X \land Y
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob with int8 type.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def logical_and_Job(x: tp.Numpy.Placeholder((3, )), 
+                            y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.logical_and(x, y)
+
+        x = np.array([1, 0, 1]).astype(np.float32)
+        y = np.array([0, 0, 1]).astype(np.float32)
+        out = logical_and_Job(x, y)
+    
+        # out [0 0 1]
+    
+    """
+    return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
 
 @oneflow_export("math.minimum")
-def broadcast_min(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMin_"),
-    )
-    op_conf.broadcast_minimum_conf.a = x.unique_name
-    op_conf.broadcast_minimum_conf.b = y.unique_name
-    op_conf.broadcast_minimum_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def broadcast_min(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Returns the min of x and y element-wise, this op supports broadcasting.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob. Must have the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same type of x. 
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def minimum_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.minimum(x, y)
+
+        x = np.array([2, 3, 4]).astype(np.float32)
+        y = np.array([4, 2, 1]).astype(np.float32)
+        out = minimum_Job(x, y)
+    
+        # out [2. 2. 1.]
+
+    """
+    return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
 @oneflow_export("math.maximum")
-def broadcast_max(x, y, name=None):
-    if os.getenv("ENABLE_USER_OP") != "False":
-        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("BroadcastMax_"),
-    )
-    op_conf.broadcast_maximum_conf.a = x.unique_name
-    op_conf.broadcast_maximum_conf.b = y.unique_name
-    op_conf.broadcast_maximum_conf.out = "out"
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+def broadcast_max(
+    x: remote_blob_util.BlobDef, y: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """Returns the max of x and y element-wise, this op supports broadcasting.
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        y (remote_blob_util.BlobDef): A Blob. Must have the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same type of x. 
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def maximum_Job(x: tp.Numpy.Placeholder((3, )), 
+                        y: tp.Numpy.Placeholder((3, ))
+        )->tp.Numpy:
+            return flow.math.maximum(x, y)
+
+        x = np.array([2, 3, 4]).astype(np.float32)
+        y = np.array([4, 2, 1]).astype(np.float32)
+        out = maximum_Job(x, y)
+
+        # out [4. 3. 4.]
+
+    """
+    return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
 @oneflow_export("math.reduced_shape_elem_cnt")
-def elem_cnt(input_blob, axis=None, dtype=None, name=None):
+def elem_cnt(
+    input_blob: remote_blob_util.BlobDef,
+    axis: Optional[Sequence[int]] = None,
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed. 
+
+    Args:
+        input_blob (remote_blob_util.BlobDef): Input Blob
+        axis (Optional[Sequence[int]], optional): The dimensions along which the op is performed. Defaults to None.
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob
+
+    For example:
+
+    .. code-block:: python
+
+        # Example 1:
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def elem_cnt_Job(x: tp.Numpy.Placeholder((3, 4, 5))
+        )->tp.Numpy:
+            return flow.math.reduced_shape_elem_cnt(x, axis=[0, 1])
+
+        x = np.ones(shape=(3, 4, 5), dtype=np.float32)
+        out = elem_cnt_Job(x) # 3 x 4 = 12
+        
+        # out [12]
+
+        # Example 2:
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def elem_cnt_Job(x: tp.Numpy.Placeholder((3, 4, 5))
+        )->tp.Numpy:
+            return flow.math.reduced_shape_elem_cnt(x)
+
+        x = np.ones(shape=(3, 4, 5), dtype=np.float32)
+        out = elem_cnt_Job(x) # 3 x 4 x 5 = 60
+        
+        # out [60]
+
+    """
     op_conf = op_conf_util.OperatorConf()
     setattr(
         op_conf,
@@ -974,9 +1396,9 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
         assert isinstance(axis, (tuple, list))
         op_conf.shape_elem_cnt_conf.include_axis_conf.axis.extend(axis)
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype
+        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
     op_conf.shape_elem_cnt_conf.y = "y"
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
     out_lbi.op_name = op_conf.name
     out_lbi.blob_name = "y"
@@ -984,14 +1406,49 @@ def elem_cnt(input_blob, axis=None, dtype=None, name=None):
 
 
 @oneflow_export("math.top_k")
-def top_k(input, k=1, sorted=True, name=None):
+def top_k(
+    input: remote_blob_util.BlobDef,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Finds the indices of the k largest entries for the last dimension, the difference between other framework is that oneflow only return the indices. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob
+        k (int, optional): Number of top elements to look for along the last dimension. Defaults to 1.
+        sorted (bool, optional): If true the resulting k elements will be sorted by the values in descending order. Defaults to True.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob(dtype=int32) contains the indices of the k largest elements.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def topk_Job(x: tp.Numpy.Placeholder((5, ))
+        )->tp.Numpy:
+            return flow.math.top_k(x, 2)
+
+        x = np.array([1, 3, 8, 7, 2], dtype=np.float32)
+        out = topk_Job(x)
+
+        # out [2 3]
+
+    """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
         .Op("top_k")
         .Input("in", [input])
         .Output("out")
-        .Attr("k", k, "AttrTypeInt32",)
-        .Attr("sorted", sorted, "AttrTypeBool",)
+        .Attr("k", k)
+        .Attr("sorted", sorted)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -999,7 +1456,39 @@ def top_k(input, k=1, sorted=True, name=None):
 
 
 @oneflow_export("math.argmax")
-def argmax(input, name=None):
+def argmax(
+    input: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """The op computes the index with the largest value of a Blob.
+
+    Args:
+        input (remote_blob_util.BlobDef): Input Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob(dtype=int32) contains the index with the largest value of `input`
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def argmax_Job(x: tp.Numpy.Placeholder((2, 5))
+        )->tp.Numpy:
+            return flow.math.argmax(x)
+
+        x = np.array([[1, 3, 8, 7, 2], 
+                    [1, 9, 4, 3, 2]], dtype=np.float32)
+
+        out = argmax_Job(x)
+
+        # out [2 1]
+
+    """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
         .Op("argmax")
@@ -1012,7 +1501,44 @@ def argmax(input, name=None):
 
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
-def broadcast_to_compatible_with(x, compatible, name=None):
+def broadcast_to_compatible_with(
+    x: remote_blob_util.BlobDef,
+    compatible: Sequence[remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Returns a 'Blob' with the shape can be broadcasted by other shapes
+
+    Args:
+        x (remote_blob_util.BlobDef): a 'Blob'
+        compatible (Sequence[remote_blob_util.BlobDef]): Sequence of different shape
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A 'Blob' with the biggest shape
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def broadcast_to_compatible_with_Job(x: tp.Numpy.Placeholder((4, 1, 1))
+        )->tp.Numpy:
+            blob_a = flow.constant(value=1, dtype=flow.float32, shape=(1, 2, 1))
+            blob_b = flow.constant(value=1, dtype=flow.float32, shape=(1, 1, 3))
+
+            return flow.math.broadcast_to_compatible_with(x, [blob_a, blob_b])
+
+        x = np.ones(shape=(4, 1, 1), dtype=np.float32)
+
+        out = broadcast_to_compatible_with_Job(x)
+
+        # out.shape (4, 2, 3)
+
+    """
     assert isinstance(compatible, (list, tuple))
     if name is None:
         name = id_util.UniqueStr("BroadcastToCompatibleWith_")
@@ -1024,7 +1550,7 @@ def broadcast_to_compatible_with(x, compatible, name=None):
     op_conf.broadcast_to_compatible_with_conf.compatible.extend(
         [cp.unique_name for cp in compatible]
     )
-    compile_context.CurJobAddOp(op_conf)
+    interpret_util.Forward(op_conf)
 
     ret_lbi = logical_blob_id_util.LogicalBlobId()
     ret_lbi.op_name = op_conf.name
@@ -1035,7 +1561,51 @@ def broadcast_to_compatible_with(x, compatible, name=None):
 @oneflow_export(
     "math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp"
 )
-def clip_by_value(values, min_value=None, max_value=None, name=None):
+def clip_by_value(
+    values: remote_blob_util.BlobDef,
+    min_value: Optional[Union[int, float]] = None,
+    max_value: Optional[Union[int, float]] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This op clips Blob values to a specified min value and max value.
+    
+    The equation is:
+
+    .. math::
+        out = MIN(MAX(x, min), max)
+
+    Args:
+        values (remote_blob_util.BlobDef): Input Blob
+        min_value (Optional[Union[int, float]], optional): The minimum value to clip by. Defaults to None.
+        max_value (Optional[Union[int, float]], optional): The maximum value to clip by. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        ValueError: min_value and max_value `cannot be None at the same time`
+
+    Returns:
+        remote_blob_util.BlobDef: A clipped Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def clip_by_value_Job(x: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.math.clip_by_value(x, min_value=-1, max_value=5)
+
+        x = np.array([-2, 1, 4, 7], dtype=np.float32)
+
+        out = clip_by_value_Job(x)
+
+        # out [-1. 1. 4. 5.]
+
+    """
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
@@ -1043,24 +1613,24 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar")
-            .Attr("floating_min", float(min_value), "AttrTypeDouble")
-            .Attr("integral_min", int(min_value), "AttrTypeInt64")
-            .Attr("floating_max", float(max_value), "AttrTypeDouble")
-            .Attr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value))
+            .Attr("integral_min", int(min_value))
+            .Attr("floating_max", float(max_value))
+            .Attr("integral_max", int(max_value))
         )
     elif min_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_min")
-            .Attr("floating_min", float(min_value), "AttrTypeDouble")
-            .Attr("integral_min", int(min_value), "AttrTypeInt64")
+            .Attr("floating_min", float(min_value))
+            .Attr("integral_min", int(min_value))
         )
     elif max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_max")
-            .Attr("floating_max", float(max_value), "AttrTypeDouble")
-            .Attr("integral_max", int(max_value), "AttrTypeInt64")
+            .Attr("floating_max", float(max_value))
+            .Attr("integral_max", int(max_value))
         )
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")
@@ -1075,7 +1645,48 @@ def clip_by_value(values, min_value=None, max_value=None, name=None):
 
 
 @oneflow_export("math.l2_normalize")
-def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
+def l2_normalize(
+    input: remote_blob_util.BlobDef,
+    axis: Optional[int] = None,
+    epsilon: float = 1e-12,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Use L2 norm to normalizes along dimension `axis`
+
+    The equation is: 
+    
+    .. math::
+        out = \frac{x}{\sqrt{\Sigma{x^2}+\epsilon}}
+
+    Args:
+        input (remote_blob_util.BlobDef): Input Blob
+        axis (Optional[int], optional): The axis on which to apply L2 normalization. Defaults to None.
+        epsilon (float, optional): The epsilon value is used to avoid division by zero. Defaults to 1e-12.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The normalized Blob
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def l2_normalize_Job(x: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.math.l2_normalize(x, axis=0)
+
+        x = np.array([1, 2, 3, 4], dtype=np.float32)
+
+        out = l2_normalize_Job(x)
+        
+        # out [0.18257418 0.36514837 0.5477226  0.73029673]
+
+    """
     if axis < 0:
         axis += len(input.shape)
     assert axis >= 0 and axis < len(input.shape)
@@ -1087,8 +1698,8 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
         .Input("x", [input])
         .Output("y")
         .Output("square_x_sum")
-        .Attr("axis", int(axis), "AttrTypeInt32")
-        .Attr("epsilon", float(epsilon), "AttrTypeFloat")
+        .Attr("axis", int(axis))
+        .Attr("epsilon", float(epsilon))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -1097,9 +1708,136 @@ def l2_normalize(input, axis=None, epsilon=1e-12, name=None):
 
 
 @oneflow_export("math.squared_difference")
-def squared_difference(x, y, name=None):
+def squared_difference(
+    x: Union[int, float, remote_blob_util.BlobDef],
+    y: Union[int, float, remote_blob_util.BlobDef],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This op computes :math:`(x - y)^2` element-wise.
+
+    Args:
+        x (Union[int, float, remote_blob_util.BlobDef]): A Blob
+        y (Union[int, float, remote_blob_util.BlobDef]): A Blob with the same type of x
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def squared_difference_Job(x: tp.Numpy.Placeholder((4, )), 
+                                y: tp.Numpy.Placeholder((4, ))
+        )->tp.Numpy:
+            return flow.math.squared_difference(x, y)
+
+        x = np.array([1, 2, 3, 4], dtype=np.float32)
+        y = np.array([2, 4, 6, 8], dtype=np.float32)
+
+        out = squared_difference_Job(x, y)
+
+        # out [ 1.  4.  9. 16.]
+
+    """
     name_subtract, name_square = None, None
     if name is not None:
         name_subtract = name + "_subtract"
         name_square = name + "_square"
     return flow.math.square(flow.math.subtract(x, y, name_subtract), name_square)
+
+
+@oneflow_export("math.gelu_grad")
+def gelu_grad(
+    x: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("GeluGrad_")
+        )
+        .Op("gelu_grad")
+        .Input("x", [x])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.tanh_grad")
+def tanh_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("TanhGrad_")
+        )
+        .Op("tanh_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.tril", "nn.tril")
+def tril(
+    x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Compute lower triangle of an matrix.
+    
+    Args:
+        x (remote_blob_util.BlobDef): Input Blob.
+        diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
+                        otherwise, offset downward.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Attention:
+        The dimension of x must greater or equal to 2.
+    
+    Returns:
+        remote_blob_util.BlobDef: The lower triangle blob of input.
+    
+    For example:
+
+    .. code-block:: python
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        @flow.global_function()
+        def tril_Job(x: tp.Numpy.Placeholder((4, 4))
+        )->tp.Numpy:
+            return flow.math.tril(x, 0)
+        x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
+                      dtype=np.float32)
+        out = tril_Job(x).get()
+        
+        # output [[1, 0, 0, 0],
+                  [1, 2, 0, 0],
+                  [1, 2, 3, 0],
+                  [1, 2, 3, 4]]
+
+    """
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
+        .Op("tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

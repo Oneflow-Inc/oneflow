@@ -1,7 +1,22 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/comm_network/epoll/socket_write_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <sys/eventfd.h>
 
@@ -125,6 +140,10 @@ void SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
 }
 
+void SocketWriteHelper::SetStatusWhenTransportMsgHeadDone() {
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
+}
+
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

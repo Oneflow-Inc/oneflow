@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/graph/task_node.h"
@@ -6,6 +21,7 @@
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -556,7 +572,8 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
         const auto* id_mgr = Global<IDMgr>::Get();
         const char* device_tag = JUST(DeviceTag4DeviceType(
             id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
-        return Error::MemoryZoneOutOfMemory(machine_id, mem_zone_id, calc, available, device_tag)
+        return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
+                                                 device_tag)
                << "OOM detected at compile time. ";
       }
     }
@@ -599,7 +616,7 @@ Maybe<double> Improver::BinarySearchII(
 
     if (oom_status.IsOk()) {
       r = mid;
-    } else if (oom_status.error()->has_memory_zone_out_of_memory()) {
+    } else if (oom_status.error()->has_memory_zone_out_of_memory_error()) {
       l = mid;
     } else {
       return oom_status.error();

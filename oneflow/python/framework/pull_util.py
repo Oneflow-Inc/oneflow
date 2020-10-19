@@ -1,18 +1,50 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 
 import threading
-
-import numpy as np
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 
 class FutureRemoteBlobs(object):
+    def __init__(self):
+        self.inited_ = False
+
+    def get(self):
+        raise NotImplementedError
+
+    def async_get(self, callback):
+        raise NotImplementedError
+
+    def SetResult(self, remote_blobs):
+        raise NotImplementedError
+
+    def Inited(self):
+        assert self.inited_ is False
+        self.inited_ = True
+        return self
+
+
+class LazyFutureRemoteBlobs(FutureRemoteBlobs):
     def __init__(self, session):
+        super().__init__()
         self.session_ = session
         self.cond_var_ = threading.Condition()
         self.out_remote_blob_pullers_ = []
-        self.inited_ = False
         self.finished_cnt_ = 0
         self.data_delivered_ = False
         self.async_get_callback_ = lambda: None
@@ -56,11 +88,6 @@ class FutureRemoteBlobs(object):
         self.out_remote_blob_pullers_ = pullers
         for puller in self._FlatConsistentBlobPullers(pullers):
             puller.AsyncPull(self._FinishCallback)
-        return self
-
-    def Inited(self):
-        assert self.inited_ == False
-        self.inited_ = True
         return self
 
     def _FinishCallback(self):
@@ -188,3 +215,61 @@ class _MirroredBlobPuller(_BlobPuller):
     def FlatConsistentBlobPullers(self):
         for x in self.sub_pullers_:
             yield x
+
+
+class EagerFutureRemoteBlobs(FutureRemoteBlobs):
+    def __init__(self):
+        super().__init__()
+        self.blob_getters_ = None
+
+    def get(self):
+        return self._GetResultLocalBlob(self.blob_getters_)
+
+    def async_get(self, callback):
+        assert callable(callback)
+        callback(self._GetResultLocalBlob(self.blob_getters_))
+
+    def SetResult(self, remote_blobs):
+        assert self.inited_ is False
+        assert self.blob_getters_ is None
+        self.blob_getters_ = self._MakeRemoteBlobGetters(remote_blobs)
+        return self
+
+    def _MakeRemoteBlobGetters(self, remote_blobs):
+        if isinstance(remote_blobs, (list, tuple)):
+            return type(remote_blobs)(
+                self._MakeRemoteBlobGetters(blob) for blob in remote_blobs
+            )
+        elif isinstance(remote_blobs, dict):
+            return {k: self._MakeRemoteBlobGetters(v) for k, v in remote_blobs.items()}
+        elif isinstance(remote_blobs, remote_blob_util.EagerBlobTrait):
+            return _EagerBlobGetter(remote_blobs)
+        else:
+            raise NotImplementedError
+
+    def _GetResultLocalBlob(self, getter):
+        assert self.inited_
+        if isinstance(getter, _EagerBlobGetter):
+            return getter.result
+        elif isinstance(getter, (list, tuple)):
+            print
+            return type(getter)(self._GetResultLocalBlob(g) for g in getter)
+        elif isinstance(getter, dict):
+            return {k: self._GetResultLocalBlob(v) for k, v in getter.items()}
+        else:
+            raise NotImplementedError(type(getter))
+
+
+class _EagerBlobGetter(object):
+    def __init__(self, eager_blob):
+        assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
+        self.eager_blob_ = eager_blob
+        self.local_tensor_ = None
+
+    @property
+    def result(self):
+        if self.local_tensor_ is not None:
+            return self.local_tensor_
+
+        self.local_tensor_ = local_blob_util.MakeLocalBlob4EagerBlob(self.eager_blob_)
+        return self.local_tensor_

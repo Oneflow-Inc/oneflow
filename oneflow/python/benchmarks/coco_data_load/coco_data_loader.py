@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import math
 import pandas as pd
@@ -28,7 +43,7 @@ def roundup(x, align):
 
 
 def coco_data_load(cfg, machine_id, nrank):
-    with flow.device_prior_placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
+    with flow.scope.placement("cpu", "{}:0-{}".format(machine_id, nrank - 1)):
         (
             image,
             image_id,
@@ -50,7 +65,7 @@ def coco_data_load(cfg, machine_id, nrank):
         aligned_target_size = roundup(cfg.target_size, cfg.image_align_size)
         aligned_max_size = roundup(cfg.max_size, cfg.image_align_size)
         image, new_size, scale = flow.image.target_resize(
-            image, aligned_target_size, aligned_max_size
+            image, target_size=aligned_target_size, max_size=aligned_max_size
         )
         bbox = flow.detection.object_bbox_scale(bbox, scale)
         segm_poly = flow.detection.object_segmentation_polygon_scale(segm_poly, scale)
@@ -91,7 +106,7 @@ def _make_data_load_fn():
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.default_distribute_strategy(flow.distribute.consistent_strategy())
+    func_config.default_distribute_strategy(flow.scope.consistent_view())
 
     cfg = COCODataLoadConfig()
 
@@ -117,16 +132,15 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
         if verbose:
             print("==== iter {} ====".format(i))
             print(
-                "image: {}\n".format(image.ndarray_list()[0].shape),
-                image.ndarray_list()[0],
+                "image: {}\n".format(image.numpy_list()[0].shape),
+                image.numpy_list()[0],
             )
             print(
-                "image_size: {}\n".format(image_size.ndarray().shape),
-                image_size.ndarray(),
+                "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
             )
-            print("gt_bbox:\n", gt_bbox.ndarray_lists()[0])
-            print("gt_label:\n", gt_label.ndarray_lists()[0])
-            print("gt_mask:\n", gt_mask.ndarray_lists()[0])
+            print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
+            print("gt_label:\n", gt_label.numpy_lists()[0])
+            print("gt_mask:\n", gt_mask.numpy_lists()[0])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(

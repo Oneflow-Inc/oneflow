@@ -1,11 +1,13 @@
 include (ExternalProject)
 
 set(OPENCV_INCLUDE_DIR ${THIRD_PARTY_DIR}/opencv/include)
+set(LIBPNG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libpng/include)
 set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL ${THIRD_PARTY_SUBMODULE_DIR}/opencv/src/opencv)
+set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
+use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
@@ -35,6 +37,7 @@ ExternalProject_Add(opencv
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
+    URL_MD5 59870e55385f5202c1aa178fe37ed2de
     UPDATE_COMMAND ""
     PATCH_COMMAND cmake -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build
     BUILD_IN_SOURCE 0
@@ -108,6 +111,8 @@ ExternalProject_Add(opencv
 
 # put opencv includes in the 'THIRD_PARTY_DIR'
 add_copy_headers_target(NAME opencv SRC ${OPENCV_BUILD_INCLUDE_DIR} DST ${OPENCV_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/opencv_headers.txt")
+
+add_copy_headers_target(NAME libpng SRC ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng DST ${LIBPNG_INCLUDE_DIR} DEPS opencv INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/libpng_headers.txt")
 
 # put opencv librarys in the 'THIRD_PARTY_DIR'
 add_custom_target(opencv_create_library_dir

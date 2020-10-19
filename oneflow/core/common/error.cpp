@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
@@ -23,27 +38,117 @@ Error Error::ProtoParseFailedError() {
   return error;
 }
 
-Error Error::JobSetEmpty() {
+Error Error::JobSetEmptyError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_job_build_and_infer_error(JobBuildAndInferError::kJobSetEmpty);
+  error->mutable_job_set_empty_error();
   return error;
 }
 
-Error Error::DeviceTagNotFound() {
+Error Error::DeviceTagNotFoundError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_job_build_and_infer_error(JobBuildAndInferError::kDeviceTagNotFound);
+  error->mutable_device_tag_not_found_error();
   return error;
 }
 
-Error Error::JobTypeNotSet() {
+Error Error::JobNameExistError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_job_build_and_infer_error(JobBuildAndInferError::kJobTypeNotSet);
+  error->mutable_job_name_exist_error();
   return error;
 }
 
-Error Error::CheckFailed() {
+Error Error::JobNameEmptyError() {
   auto error = std::make_shared<ErrorProto>();
-  error->mutable_check_failed();
+  error->mutable_job_name_empty_error();
+  return error;
+}
+
+Error Error::JobNameNotEqualError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_name_not_equal_error();
+  return error;
+}
+
+Error Error::NoJobBuildAndInferCtxError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_no_job_build_and_infer_ctx_error();
+  return error;
+}
+
+Error Error::JobConfFrozenError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_conf_frozen_error();
+  return error;
+}
+
+Error Error::JobConfNotSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_conf_not_set_error();
+  return error;
+}
+
+Error Error::JobConfRepeatedSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_conf_repeated_set_error();
+  return error;
+}
+
+Error Error::JobTypeNotSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_type_not_set_error();
+  return error;
+}
+
+Error Error::LogicalBlobNameNotExistError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_logical_blob_name_not_exist_error();
+  return error;
+}
+
+Error Error::LogicalBlobNameExistError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_logical_blob_name_exist_error();
+  return error;
+}
+
+Error Error::LogicalBlobNameInvalidError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_logical_blob_name_invalid_error();
+  return error;
+}
+
+Error Error::OpNameExistError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_op_name_exist_error();
+  return error;
+}
+
+Error Error::OpConfDeviceTagNoSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_op_conf_device_tag_no_set_error();
+  return error;
+}
+
+Error Error::PlacementError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_placement_error();
+  return error;
+}
+
+Error Error::BlobSplitAxisInferError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_blob_split_axis_infer_error();
+  return error;
+}
+
+Error Error::UnknownJobBuildAndInferError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_unknown_job_build_and_infer_error();
+  return error;
+}
+
+Error Error::CheckFailedError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_check_failed_error();
   return error;
 }
 
@@ -59,9 +164,9 @@ Error Error::Unimplemented() {
   return error;
 }
 
-Error Error::BoxingNotSupported() {
+Error Error::BoxingNotSupportedError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_boxing_error(BoxingError::kNotSupported);
+  error->mutable_boxing_not_supported_error();
   return error;
 }
 
@@ -87,15 +192,15 @@ Error Error::MultipleOpKernelsMatchedError(const std::string& error_summary,
   return error;
 }
 
-Error Error::MemoryZoneOutOfMemory(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
-                                   uint64_t available, const std::string& device_tag) {
+Error Error::MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
+                                        uint64_t available, const std::string& device_tag) {
   auto error = std::make_shared<ErrorProto>();
-  auto* memory_zone_out_of_memory = error->mutable_memory_zone_out_of_memory();
-  memory_zone_out_of_memory->add_machine_id(std::to_string(machine_id));
-  memory_zone_out_of_memory->add_mem_zone_id(std::to_string(mem_zone_id));
-  memory_zone_out_of_memory->add_device_tag(device_tag);
-  memory_zone_out_of_memory->add_available(std::to_string(available) + " bytes");
-  memory_zone_out_of_memory->add_required(std::to_string(calc) + " bytes");
+  auto* memory_zone_out_of_memory_error = error->mutable_memory_zone_out_of_memory_error();
+  memory_zone_out_of_memory_error->add_machine_id(std::to_string(machine_id));
+  memory_zone_out_of_memory_error->add_mem_zone_id(std::to_string(mem_zone_id));
+  memory_zone_out_of_memory_error->add_device_tag(device_tag);
+  memory_zone_out_of_memory_error->add_available(std::to_string(available) + " bytes");
+  memory_zone_out_of_memory_error->add_required(std::to_string(calc) + " bytes");
   return error;
 }
 
@@ -103,6 +208,12 @@ Error Error::LossBlobNotFoundError(const std::string& error_summary) {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_loss_blob_not_found_error();
   error->set_error_summary(error_summary);
+  return error;
+}
+
+Error Error::RwMutexedObjectNotFoundError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_rw_mutexed_object_not_found_error();
   return error;
 }
 

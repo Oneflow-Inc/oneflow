@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/util/host_arithemetic_interface.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/operator/op_conf_util.h"
@@ -31,7 +46,7 @@ void IncreaseIndex(const int64_t* shape, DimVector& index) {
 
 template<typename T>
 void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const ShapeView& x_shape,
-                   const ShapeView& y_shape, const PbRf<int32_t>& permutation,
+                   const ShapeView& y_shape, const std::vector<int32_t>& permutation,
                    const int64_t elem_cnt, const T* x, T* y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
@@ -72,14 +87,14 @@ void ConstantInitializer(const T& value, Blob* blob) {
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const float* x, float* y) {
   TransposeImpl<float>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {
   TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
@@ -87,7 +102,7 @@ void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int8_t* x,
                                                 int8_t* y) {
   TransposeImpl<int8_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
@@ -95,7 +110,7 @@ void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int32_t* x,
                                                 int32_t* y) {
   TransposeImpl<int32_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
@@ -103,10 +118,59 @@ void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
                                                 const ShapeView& x_shape, const ShapeView& y_shape,
-                                                const PbRf<int32_t>& permutation,
+                                                const std::vector<int32_t>& permutation,
                                                 const int64_t elem_cnt, const int64_t* x,
                                                 int64_t* y) {
   TransposeImpl<int64_t>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const float* x, float* y) {
+  TransposeImpl<float>(ctx, num_axis, x_shape, y_shape,
+                       std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+                       x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const double* x,
+                                                double* y) {
+  TransposeImpl<double>(ctx, num_axis, x_shape, y_shape,
+                        std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+                        x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int8_t* x,
+                                                int8_t* y) {
+  TransposeImpl<int8_t>(ctx, num_axis, x_shape, y_shape,
+                        std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+                        x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int32_t* x,
+                                                int32_t* y) {
+  TransposeImpl<int32_t>(ctx, num_axis, x_shape, y_shape,
+                         std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+                         x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const ShapeView& x_shape, const ShapeView& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const int64_t* x,
+                                                int64_t* y) {
+  TransposeImpl<int64_t>(ctx, num_axis, x_shape, y_shape,
+                         std::vector<int32_t>({permutation.cbegin(), permutation.cend()}), elem_cnt,
+                         x, y);
 }
 
 void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(

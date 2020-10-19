@@ -1,6 +1,22 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
@@ -24,33 +40,6 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 }
 
 }  // namespace
-
-int64_t JobDesc::all_reduce_group_min_byte() const {
-  int64_t ret = job_conf_.all_reduce_group_min_mbyte() * 1024 * 1024;
-  CHECK_GT(ret, 0);
-  return ret;
-}
-
-float JobDesc::all_reduce_group_size_warmup() const {
-  float ret = job_conf_.all_reduce_group_size_warmup();
-  CHECK_GT(ret, 1);
-  return ret;
-}
-
-int64_t JobDesc::all_reduce_group_num() const {
-  int64_t ret = job_conf_.all_reduce_group_num();
-  CHECK_GT(ret, 0);
-  return ret;
-}
-
-float JobDesc::all_reduce_lazy_ratio() const {
-  float ratio = job_conf_.all_reduce_lazy_ratio();
-  CHECK_GE(ratio, 0.0);
-  CHECK_LE(ratio, 1.0);
-  return ratio;
-}
-
-bool JobDesc::all_reduce_fp16() const { return job_conf_.all_reduce_fp16(); }
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.exp_run_conf().piece_num_of_experiment_phase();
@@ -79,9 +68,6 @@ void JobDesc::Init() {
   CHECK_EQ((Global<ResourceDesc, ForSession>::Get()->use_rdma()), false)
       << "Please compile ONEFLOW with RDMA";
 #endif
-#ifndef WITH_CUDA
-  CHECK_EQ(job_conf_.enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
-#endif  // WITH_CUDA
   int64_t piece_exp = job_conf_.exp_run_conf().piece_num_of_experiment_phase();
   if (job_conf_.has_train_conf()) {
     if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
@@ -108,7 +94,7 @@ const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) 
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
+  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {

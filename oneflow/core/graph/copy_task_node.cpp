@@ -1,6 +1,22 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/thrd_id_generator.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -13,16 +29,6 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
     ForEachNodeOnOutDataEdge([&](TaskNode* node) {
       if (first_dst_node == nullptr) { first_dst_node = node; }
     });
-    TaskType dst_node_type = first_dst_node->GetTaskType();
-    if (copy_hd->copy_type() == CopyHdOpConf::H2D
-        && (dst_node_type == TaskType::kReduceAdd || dst_node_type == TaskType::kReduceGather)) {
-      out_regst = ProduceRegst(name, false, 1, 1);
-    }
-    TaskType src_node_type = SoleInDataEdge()->src_node()->GetTaskType();
-    if (copy_hd->copy_type() == CopyHdOpConf::D2H
-        && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
-      out_regst = ProduceRegst(name, false, 1, 1);
-    }
     if (out_regst == nullptr) {
       // normal copy hd task can reuse mem
       out_regst = ProduceRegst(name, true);
@@ -74,7 +80,7 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
-  conf.set_device_type(device_type());
+  conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
   auto in_regst = GetSoleConsumedRegst("copy_in");
   if (in_regst->NumOfLbi() == 1) {
@@ -136,7 +142,7 @@ void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_comm_net_" + NewUniqueId());
-  conf.set_device_type(device_type());
+  conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   conf.mutable_copy_comm_net_conf();
   return conf;
 }

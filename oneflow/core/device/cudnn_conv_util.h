@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_DEVICE_CUDNN_CONV_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDNN_CONV_UTIL_H_
 
@@ -20,10 +35,8 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
-                const PbMessage& conv_conf);
-  CudnnConvDesc(const DataType& data_type, const ShapeView& in_blob_shape,
-                const user_op::UserOpConfWrapper& conv_conf);
+  CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -65,11 +78,6 @@ struct CudnnConvArgs final {
   bool deterministic;
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
-  CudnnConvArgs(const PbMessage& conv_conf, DataType x_data_type, const ShapeView& x_shape,
-                DataType w_data_type, const ShapeView& w_shape, DataType y_data_type,
-                const ShapeView& y_shape, const std::string& data_format, size_t max_workspace_size,
-                bool heuristic_search, bool use_deterministic_algo_only, bool enable_pseudo_half);
-
   CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataType x_data_type,
                 const ShapeView& x_shape, DataType w_data_type, const ShapeView& w_shape,
                 DataType y_data_type, const ShapeView& y_shape, const std::string& data_format,
@@ -189,6 +197,34 @@ struct hash<oneflow::CudnnConvParams> final {
 };
 
 }  // namespace std
+
+namespace oneflow {
+
+class CudnnConvAlgoCache final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvAlgoCache);
+  CudnnConvAlgoCache() = default;
+  ~CudnnConvAlgoCache() = default;
+
+  template<typename perf_t>
+  using WorkspaceSizeAndPerfT = std::pair<size_t, perf_t>;
+  template<typename perf_t>
+  using Store = HashMap<CudnnConvParams, std::list<WorkspaceSizeAndPerfT<perf_t>>>;
+
+  template<typename perf_t>
+  perf_t Remember(const CudnnConvParams& params,
+                  const std::function<perf_t(const CudnnConvParams& param)>& InferFn);
+
+ private:
+  Store<cudnnConvolutionFwdAlgoPerf_t> fwd_algo_store_;
+  std::mutex fwd_algo_store_mutex_;
+  Store<cudnnConvolutionBwdDataAlgoPerf_t> bwd_data_algo_store_;
+  std::mutex bwd_data_algo_store_mutex_;
+  Store<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filter_algo_store_;
+  std::mutex bwd_filter_algo_cache_mutex_;
+};
+
+}  // namespace oneflow
 
 #endif  // WITH_CUDA
 

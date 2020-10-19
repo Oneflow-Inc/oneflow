@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/operator/shape_elem_cnt_op.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
@@ -39,10 +54,6 @@ void ShapeElemCntOp::InitFromOpConf() {
   EnrollOutputBn("y", false);
 }
 
-const PbMessage& ShapeElemCntOp::GetCustomizedConf() const {
-  return op_conf().shape_elem_cnt_conf();
-}
-
 Maybe<void> ShapeElemCntOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
@@ -68,9 +79,9 @@ Maybe<void> ShapeElemCntOp::InferBatchAxis(
 }
 
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(
-    const std::function<Maybe<const BlobDesc*>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x"))->shape().NumAxes();
+  int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x")).shape().NumAxes();
   const auto& inclusive_axes = GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(inclusive_axes, num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {

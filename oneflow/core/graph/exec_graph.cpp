@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 
@@ -39,8 +54,10 @@ void ExecNode::UnbindBnWithEmptyRegst() {
 }
 
 void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) const {
+  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op_->op_name());
+  const ParallelDesc* parallel_desc = op_node == nullptr ? nullptr : &op_node->parallel_desc();
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf(),
-                     op_context(), GetLogicalBlobDesc4BnInOpFunc());
+                     op_context(), GetLogicalBlobDesc4BnInOpFunc(), parallel_desc);
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;

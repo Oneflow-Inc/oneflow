@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
@@ -21,12 +36,6 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }
 
 }  // namespace
-
-bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kPackForward
-         || tt == TaskType::kUnpackForward || tt == TaskType::kRepeatForward;
-}
-bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
 TaskNode::TaskNode()
     : machine_id_(-1),
@@ -91,7 +100,7 @@ void TaskNode::set_order_in_graph(int64_t val) {
 
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
-    for (std::shared_ptr<RegstDesc> regst : pair.second) {
+    for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
       PinConsumedRegstMemCase(regst->mut_mem_case());
     }
   }
@@ -135,7 +144,7 @@ std::shared_ptr<Shape> TaskNode::GetFastestInputOutputTimeShape() const {
 }
 
 void TaskNode::ForEachConsumedDataRegst(
-    std::function<void(const std::string&, const RegstDesc*)> Handler) const {
+    const std::function<void(const std::string&, const RegstDesc*)>& Handler) const {
   for (const auto& pair : consumed_regsts_) {
     for (const auto& regst : pair.second) {
       if (!regst->regst_desc_type().has_data_regst_desc()) { continue; }
@@ -145,7 +154,7 @@ void TaskNode::ForEachConsumedDataRegst(
 }
 
 void TaskNode::ForEachProducedDataRegst(
-    std::function<void(const std::string&, RegstDesc*)> Handler) {
+    const std::function<void(const std::string&, RegstDesc*)>& Handler) {
   for (auto& pair : produced_regsts_) {
     if (!pair.second->regst_desc_type().has_data_regst_desc()) { continue; }
     Handler(pair.first, pair.second.get());
@@ -223,7 +232,7 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
-    for (std::shared_ptr<RegstDesc> regst : pair.second) {
+    for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
       regst_desc_ids.add_regst_desc_id(regst->regst_desc_id());
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
@@ -327,14 +336,14 @@ void TaskNode::ConsumeRegst(const std::string& name) {
   consumed_regsts_.emplace(name, std::list<std::shared_ptr<RegstDesc>>{});
 }
 
-void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
+void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>& regst) {
   regst->AddConsumer(this);
   consumed_regsts_[name].push_back(regst);
 }
 
 bool TaskNode::IsAllConsumedDataRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
-    for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
+    for (const std::shared_ptr<RegstDesc>& regst_desc : pair.second) {
       if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
         return false;
       }
@@ -346,8 +355,8 @@ bool TaskNode::IsAllConsumedDataRegstLocked() {
 void TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto consumed_regsts_it = consumed_regsts_.find(name);
   if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (std::shared_ptr<RegstDesc> wrd : consumed_regsts_it->second) {
-    std::shared_ptr<RegstDesc> srd = wrd;
+  for (const std::shared_ptr<RegstDesc>& wrd : consumed_regsts_it->second) {
+    const std::shared_ptr<RegstDesc>& srd = wrd;
     if (srd->IsLocked() == false) { srd->Lock(); }
   }
 }
@@ -417,7 +426,8 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
   return regst_descs;
 }
 
-void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
+void TaskEdge::AddRegst(const std::string& name_in_producer,
+                        const std::shared_ptr<RegstDesc>& regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 

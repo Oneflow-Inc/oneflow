@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/graph/task_node.h"
 
@@ -9,7 +24,7 @@ ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& mach
   HashMap<int64_t, std::set<TaskType>> machine2task_types;
   // machine_task_type = <machine_id, task_type>
   for (const auto& machine_task_type : machine_task_type_vec) {
-    if (IsClassRegistered<TickTockTaskType>(machine_task_type.second)) { continue; }
+    if (IsClassRegistered<int32_t, TickTockTaskType>(machine_task_type.second)) { continue; }
     if (TaskTypeThrdNumEqMax(machine_task_type.second,
                              machine_task_type2thrd_num_[machine_task_type])) {
       continue;
@@ -22,7 +37,7 @@ ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& mach
 }
 
 int64_t ThrdIdGenerator::GenerateThrdId(int64_t machine_id, int64_t task_type) {
-  if (IsClassRegistered<TickTockTaskType>(task_type)) {
+  if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
     return Global<IDMgr>::Get()->TickTockThrdId();
   }
   auto key = std::make_pair(machine_id, task_type);
@@ -40,9 +55,9 @@ int64_t ThrdIdGenerator::GetModThrdId(std::pair<int64_t, int64_t> machine_task_t
 }
 
 bool ThrdIdGenerator::TaskTypeThrdNumEqMax(int64_t task_type, int32_t thrd_num) {
-  if (IsClassRegistered<IndependentThreadNum4TaskType>(task_type)) {
+  if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
     std::unique_ptr<IndependentThreadNum4TaskType> thread_num;
-    thread_num.reset(NewObj<IndependentThreadNum4TaskType>(task_type));
+    thread_num.reset(NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
     return (thrd_num == *thread_num);
   } else {
     return false;
