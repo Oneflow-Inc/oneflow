@@ -97,10 +97,14 @@
       export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
       ```
 
-      If you don't want to build OneFlow with MKL, you could install OpenBLAS:
-
+      If you don't want to build OneFlow with MKL, you could install OpenBLAS.
+      On CentOS:
       ```
       sudo yum -y install openblas-devel
+      ```
+      On Ubuntu:
+      ```
+      sudo apt install -y libopenblas-dev
       ```
 
 2. #### Clone Source Code
