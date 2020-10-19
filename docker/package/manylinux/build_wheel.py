@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
 
 def build_arg_env(env_var_name):
@@ -52,16 +53,19 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd):
         subprocess.check_call(cmd, shell=True)
 
 
-def get_common_docker_args(oneflow_src_dir=None, cache_dir=None):
+def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=None):
+    root = Path(cache_dir)
+    child = Path(current_dir)
+    assert root in child.parents
     cwd = os.getcwd()
     pwd_arg = f"-v {cwd}:{cwd}"
     cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {cache_dir}"
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
 
 
 def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args):
-    third_party_cache_dir = os.path.join(cache_dir, "build-third-party")
+    third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -78,27 +82,63 @@ set -ex
 make -j`nproc` prepare_oneflow_third_party
 """
     common_docker_args = get_common_docker_args(
-        oneflow_src_dir=oneflow_src_dir, cache_dir=third_party_cache_dir
+        oneflow_src_dir=oneflow_src_dir,
+        cache_dir=cache_dir,
+        current_dir=third_party_build_dir,
     )
     docker_cmd = f"docker run --rm -it {common_docker_args}"
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
 
 
-def build_oneflow(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args):
+def get_python_bin(version):
+    assert version in ["3.5", "3.6", "3.7", "3.8"]
+    py_ver = "".join(version.split("."))
+    py_abi = f"cp{py_ver}-cp{py_ver}"
+    if py_ver != "38":
+        py_abi = f"{py_abi}m"
+    py_root = f"/opt/python/{py_abi}"
+    py_bin = f"{py_root}/bin/python"
+    return py_bin
+
+
+def build_oneflow(
+    img_tag,
+    oneflow_src_dir,
+    cache_dir,
+    extra_oneflow_cmake_args,
+    python_version,
+    skip_wheel,
+):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
+    python_bin = get_python_bin(python_version)
     cmake_cmd = " ".join(
         [
             "cmake",
             common_cmake_args(cache_dir),
             "-DTHIRD_PARTY=OFF, -DONEFLOW=ON",
             extra_oneflow_cmake_args,
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
+            f"-DPython3_EXECUTABLE={python_bin}",
             oneflow_src_dir,
         ]
     )
-
-
-def build_oneflow():
-    pass
+    common_docker_args = get_common_docker_args(
+        oneflow_src_dir=oneflow_src_dir, cache_dir=third_party_cache_dir
+    )
+    docker_cmd = f"docker run --rm -it {common_docker_args}"
+    bash_cmd = f"""
+set -ex
+{cmake_cmd}
+cmake --build . -j `nproc`
+make -j`nproc` prepare_oneflow_third_party
+"""
+    if skip_wheel == False:
+        bash_cmd += """
+rm -rf $ONEFLOW_BUILD_DIR/python_scripts/*.egg-info
+$PY_BIN setup.py bdist_wheel -d tmp_wheel --build_dir $ONEFLOW_BUILD_DIR --package_name $PACKAGE_NAME
+auditwheel repair tmp_wheel/*.whl --wheel-dir $HOUSE_DIR
+"""
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
 
 
 if __name__ == "__main__":
