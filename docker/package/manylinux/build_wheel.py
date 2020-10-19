@@ -72,10 +72,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--cache_dir",
-        type=str,
-        required=False,
-        default=os.path.join(os.getcwd(), "manylinux2014-build-cache"),
+        "--cache_dir", type=str, required=False, default=None,
     )
     parser.add_argument(
         "--wheel_house_dir", type=str, required=False, default="wheelhouse",
@@ -121,12 +118,29 @@ if __name__ == "__main__":
         args.skip_img,
     )
     extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
+
+    cuda_versions = []
     if args.aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
     if args.cpu:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=OFF"
+        cuda_versions = ["10.2"]
     else:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=ON"
-    build_third_party(
-        img_tag, args.oneflow_src_dir, args.cache_dir, extra_oneflow_cmake_args
-    )
+    cuda_versions = args.cuda_version.split(",")
+    for cuda_version in cuda_versions:
+        cuda_version = cuda_version.strip()
+        cache_dir = None
+        if args.cache_dir:
+            cache_dir = args.cache_dir
+        else:
+            cache_dir = os.path.join(os.getcwd(), "manylinux2014-build-cache")
+            sub_dir = cuda_version
+            if args.xla:
+                sub_dir += "-xla"
+            if args.cpu:
+                sub_dir = "cpu"
+            cache_dir = os.path.join(cache_dir, sub_dir)
+        build_third_party(
+            img_tag, args.oneflow_src_dir, cache_dir, extra_oneflow_cmake_args
+        )
