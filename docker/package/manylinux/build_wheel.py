@@ -203,14 +203,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
     parser.add_argument(
-        "--aliyun_mirror", default=False, action="store_true", required=False
+        "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     args = parser.parse_args()
     extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
 
     cuda_versions = []
-    if args.aliyun_mirror:
+    if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
     if args.cpu:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=OFF"
