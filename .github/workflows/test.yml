@@ -153,7 +153,6 @@ jobs:
     - name: Build OneFlow
       uses: ./.github/actions/yml
       with:
-        tmp_dir:
         extra_flags: --cpu
         tmp_dir: ci-tmp-cpu
     - name: Build docker image for testing
