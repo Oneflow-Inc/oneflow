@@ -415,8 +415,6 @@ Maybe<void> UserOp::InferBatchAxis(
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
-  cout << "Infer Batch Axis, the op type is: " << op_conf().user_conf().op_type_name() << std::endl;
-  cout << "Infer Batch Axis, the op name is: " << op_conf().user_conf().op_name() << std::endl;
   JUST(val_->batch_axis_infer_fn(&batch_axis_ctx));
   return Maybe<void>::Ok();
 }

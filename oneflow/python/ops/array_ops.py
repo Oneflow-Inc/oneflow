@@ -371,8 +371,8 @@ def dynamic_reshape(
 def transpose(
     a: remote_blob_util.BlobDef,
     perm: Sequence[int] = None,
-    conjugate: bool = False, 
-    batch_axis_non_change: bool = False, 
+    conjugate: bool = False,
+    batch_axis_non_change: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""This operator transposes the specified axis of input Blob. 
