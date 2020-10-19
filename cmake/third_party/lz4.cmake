@@ -3,7 +3,7 @@ include (ExternalProject)
 set(LZ4_INCLUDE_DIR ${THIRD_PARTY_DIR}/lz4/include)
 set(LZ4_LIBRARY_DIR ${THIRD_PARTY_DIR}/lz4/lib)
 
-set(LZ4_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/lz4/src/lz4)
+set(LZ4_URL https://github.com/lz4/lz4/archive/v1.9.2.tar.gz)
 set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/lz4/src/lz4/lib)
 
 set(LZ4_BUILD_LIBRARY_DIR ${LZ4_BUILD_DIR})
@@ -30,6 +30,7 @@ if(THIRD_PARTY)
 ExternalProject_Add(lz4
     PREFIX lz4
     URL ${LZ4_URL}
+    URL_MD5 3898c56c82fb3d9455aefd48db48eaad
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
