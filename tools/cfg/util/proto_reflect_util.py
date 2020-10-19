@@ -144,9 +144,18 @@ class ProtoReflectionUtil:
             return self.field_message_type_name(field)
         return self.field_scalar_type_name(field)
 
+    def field_type_name_const_with_cfg_namespace(self, field):
+        if self.field_is_message_type(field):
+            return self.field_message_type_const_name_with_cfg_namespace(field)
+        elif self.field_is_enum_type(field):
+            return self.field_enum_name_with_cfg_namespace(field)
+        return self.field_scalar_type_name(field)
+
     def field_type_name_with_cfg_namespace(self, field):
         if self.field_is_message_type(field):
             return self.field_message_type_name_with_cfg_namespace(field)
+        elif self.field_is_enum_type(field):
+            return self.field_enum_name_with_cfg_namespace(field)
         return self.field_scalar_type_name(field)
 
     def field_map_key_type_name(self, field):
@@ -200,6 +209,15 @@ class ProtoReflectionUtil:
             + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
         )
 
+    def field_message_type_const_name_with_cfg_namespace(self, field):
+        package = field.message_type.file.package
+        return (
+            "::"
+            + package.replace(".", "::")
+            + "::cfg::Const"
+            + (field.message_type.full_name)[len(package) + 1 :].replace(".", "_")
+        )
+
     def field_message_type_name_with_proto_namespace(self, field):
         package = field.message_type.file.package
         return (
@@ -230,6 +248,36 @@ class ProtoReflectionUtil:
 
     def field_enum_name(self, field):
         return field.enum_type.name
+
+    def field_enum_cfg_namespace(self, field):
+        if self.field_has_map_label(field):
+            package = field.message_type.fields_by_name["value"].enum_type.file.package
+        else:
+            package = field.enum_type.file.package
+        
+        if package:
+            return "::" + package.replace(".", "::") + "::cfg"
+        else:
+            return "::cfg"
+
+        if package:
+            return "::" + package.replace(".", "::") + "::cfg"
+        else:
+            return "::cfg"
+
+    def field_enum_name_with_cfg_namespace(self, field):
+        package = field.enum_type.file.package
+        if package:
+            return "::" + package.replace(".", "::") + "::cfg::" + field.enum_type.name
+        else:
+            return "::cfg::" + field.enum_type.name
+
+    def field_enum_name_with_proto_namespace(self, field):
+        package = field.enum_type.file.package
+        if package:
+            return "::" + package.replace(".", "::") + field.enum_type.name
+        else:
+            return "::" + field.enum_type.name
 
     def field_scalar_type_name(self, field):
         if field.cpp_type == field.CPPTYPE_BOOL:

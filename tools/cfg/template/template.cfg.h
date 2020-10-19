@@ -18,6 +18,15 @@ namespace {{ package }} {
 {% endfor %}
 namespace cfg {
 
+{% for cls in util.module_nested_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
+
+class {{ util.class_name(cls) }};
+class Const{{ util.class_name(cls) }};
+
+{% endif %}{# cls is not entry #}
+{% endfor %}{# cls #}
+
 {% for enm in util.module_enum_types(module) %}
 enum {{ util.enum_name(enm) }} {
 {% for value in util.enum_values(enm) %}
@@ -69,7 +78,7 @@ class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::c
     return ::std::make_shared<Const{{ util.field_repeated_container_name(field) }}>(__SharedPtr__());
   }
 {% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<Const{{ util.field_type_name(field) }}> __SharedConst__(::std::size_t index) const {
+  ::std::shared_ptr<{{ util.field_type_name_const_with_cfg_namespace(field) }}> __SharedConst__(::std::size_t index) const {
     return Get(index).__SharedConst__();
   }
 {% endif %}{# message_type #}
@@ -187,7 +196,6 @@ class {{ util.field_map_container_name(field) }} final : public Const{{ util.fie
 {% endfor %}{# field #}
 
 
-class {{ util.class_name(cls) }};
 class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
  public:
 {% for oneof in util.message_type_oneofs(cls) %}
@@ -214,7 +222,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   {% if util.field_is_message_type(field)%}
         *mutable_{{ util.field_name(field) }}() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());      
   {% elif util.field_is_enum_type(field) %}
-        set_{{ util.field_name(field) }}(Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
+        set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
   {% else %}
         set_{{ util.field_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
   {% endif %}{# message_type #}
@@ -244,7 +252,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   {% if util.field_map_value_type_is_message(field) %}
           mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_map_value_type_name_with_cfg_namespace(field) }}(pair.second);
   {% elif util.field_map_value_type_is_enum(field) %}
-          mut_{{ util.field_name(field) }}[pair.first] = Proto{{ util.field_map_value_type_enum_name(field) }}ToCfg{{ util.field_map_value_type_enum_name(field) }}(pair.second);
+          mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_enum_cfg_namespace(field) }}::Proto{{ util.field_map_value_type_enum_name(field) }}ToCfg{{ util.field_map_value_type_enum_name(field) }}(pair.second);
   {% else %}
           mut_{{ util.field_name(field) }}[pair.first] = pair.second;
   {% endif %}{# map_value_type #}
@@ -261,7 +269,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   {% if util.field_is_message_type(field) %}
           *mutable_{{ util.field_name(field) }}() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
   {% elif util.field_is_enum_type(field) %}
-          set_{{ util.field_name(field) }}(Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
+          set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
   {% else %}
           set_{{ util.field_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
   {% endif %}{# message_type #}
@@ -286,7 +294,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
         {{ util.field_name(field) }}().ToProto(&proto_{{ util.field_name(field).lower() }});
         proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(proto_{{ util.field_name(field).lower() }});
   {% elif util.field_is_enum_type(field) %}
-        proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}(Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
+        proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
   {% else %}
         proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_name(field) }}());
   {% endif %}{# message_type #}
@@ -320,7 +328,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
           pair.second.ToProto(&proto_{{ util.field_name(field).lower() }}_value);
           mut_{{ util.field_name(field) }}[pair.first] = proto_{{ util.field_name(field).lower() }}_value;
   {% elif util.field_map_value_type_is_enum(field) %}
-          mut_{{ util.field_name(field) }}[pair.first] = Cfg{{ util.field_map_value_type_enum_name(field) }}ToProto{{ util.field_map_value_type_enum_name(field) }}(pair.second);
+          mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_enum_cfg_namespace(field) }}::Cfg{{ util.field_map_value_type_enum_name(field) }}ToProto{{ util.field_map_value_type_enum_name(field) }}(pair.second);
   {% else %}
           mut_{{ util.field_name(field) }}[pair.first] = pair.second;
   {% endif %}{# map_value_type #}
@@ -340,7 +348,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
           {{ util.field_name(field) }}().ToProto(&of_proto_{{ util.field_name(field).lower() }});
           proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(of_proto_{{ util.field_name(field).lower() }});
   {% elif util.field_is_enum_type(field) %}
-          proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}(Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
+          proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
   {% else %}
           proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_name(field) }}());
   {% endif %}{# message_type #}
@@ -774,7 +782,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
           typeid({{ util.field_type_name(field) }}),
 {% if util.field_is_message_type(field) %}
           typeid(::oneflow::cfg::Message),
-          typeid(Const{{ util.field_type_name(field) }}),
+          typeid({{ util.field_type_name_const_with_cfg_namespace(field) }}),
 {% endif %}{# field message type #}
 {% endif %}{# field_label #}
         };
@@ -809,7 +817,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   }
   // used by pybind11 only
 {% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<Const{{ util.field_type_name(field) }}> shared_const_{{ util.field_name(field) }}() const {
+  ::std::shared_ptr<{{ util.field_type_name_const_with_cfg_namespace(field) }}> shared_const_{{ util.field_name(field) }}() const {
     return {{ util.field_name(field) }}().__SharedConst__();
   }
 {% endif %}
@@ -830,7 +838,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     return {{ util.field_name(field) }}().__SharedConst__();
   }
 {% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<Const{{ util.field_type_name(field) }}> shared_const_{{ util.field_name(field) }}(::std::size_t index) const {
+  ::std::shared_ptr<{{ util.field_type_name_const_with_cfg_namespace(field) }}> shared_const_{{ util.field_name(field) }}(::std::size_t index) const {
     return {{ util.field_name(field) }}(index).__SharedConst__();
   }
 {% else %}
@@ -846,7 +854,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   }
   // used by pybind11 only
 {% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<Const{{ util.field_type_name(field) }}> shared_const_{{ util.field_name(field) }}() const {
+  ::std::shared_ptr<{{ util.field_type_name_const_with_cfg_namespace(field) }}> shared_const_{{ util.field_name(field) }}() const {
     return {{ util.field_name(field) }}().__SharedConst__();
   }
 {% endif %}{# field message type #}
