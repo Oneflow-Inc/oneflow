@@ -139,8 +139,9 @@ cmake --build . -j `nproc`
     if skip_wheel == False:
         bash_cmd += f"""
 rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
-{python_bin} setup.py bdist_wheel -d tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
-auditwheel repair tmp_wheel/*.whl --wheel-dir {house_dir}
+cd {oneflow_src_dir}
+{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
 
@@ -229,15 +230,15 @@ if __name__ == "__main__":
         build_third_party(
             img_tag, args.oneflow_src_dir, cache_dir, extra_oneflow_cmake_args
         )
-        cuda_version_trim = "".join(cuda_version.split("."))
-        assert len(cuda_version_trim) == 3
+        cuda_version_literal = "".join(cuda_version.split("."))
+        assert len(cuda_version_literal) == 3
         python_versions = args.python_version.split(",")
         python_versions = [pv.strip() for pv in python_versions]
         package_name = None
         if args.cpu:
             package_name = "oneflow_cpu"
         else:
-            package_name = "oneflow_cu{cuda_version_trim}"
+            package_name = f"oneflow_cu{cuda_version_literal}"
             if args.xla:
                 package_name += "_xla"
         for python_version in python_versions:
