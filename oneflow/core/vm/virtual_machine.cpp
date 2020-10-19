@@ -377,7 +377,7 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocat
       for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_global_device_id) {
         StreamId stream_id;
         stream_id.__Init__(stream_desc->stream_type_id(),
-                           stream_desc->start_global_device_id() + rel_global_device_id);
+                           this_start_global_device_id() + rel_global_device_id);
         auto stream =
             ObjectMsgPtr<Stream>::NewFrom(mut_allocator(), thread_ctx.Mutable(), stream_id);
         CHECK(stream_rt_desc->mut_stream_id2stream()->Insert(stream.Mutable()).second);

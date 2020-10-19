@@ -63,7 +63,6 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   ret->set_num_streams_per_machine(device_num);
   // TODO(lixinqi): refactor to a num_threads_per_machine field
   ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(this_machine_id * device_num);
   return ret;
 }
 
