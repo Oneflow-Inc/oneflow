@@ -1693,7 +1693,7 @@ def identity(
 
 @oneflow_export("identity_n")
 def identity_n(
-    inputs: Iterable[remote_blob_util.BlobDef], name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> List[remote_blob_util.BlobDef]:
     """This operator is similar to `oneflow.identity`. The difference is that the input and output 
     of `identity_n` is `List`. 
@@ -1733,26 +1733,17 @@ def identity_n(
         # out[2] [[3, 3, 3]]
 
     """
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("IdentityN_"),
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("IdentityN_")
+        )
+        .Op("tuple_identity")
+        .Input("in", inputs)
+        .Output("out", len(inputs))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
     )
-    assert len(inputs) > 1
-    out_bns = []
-    for idx, blob in enumerate(inputs):
-        getattr(op_conf.tuple_identity_conf, "in").append(blob.unique_name)
-        out_bn = "out_" + str(idx)
-        getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
-        out_bns.append(out_bn)
-    interpret_util.Forward(op_conf)
-
-    def bn_to_remote_blob(bn):
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = bn
-        return remote_blob_util.RemoteBlob(lbi)
-
-    return list(map(bn_to_remote_blob, out_bns))
 
 
 @oneflow_export("squeeze")
