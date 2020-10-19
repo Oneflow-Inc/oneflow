@@ -50,14 +50,14 @@ def force_rm_dir(dir_to_clean):
     subprocess.check_call(clean_cmd, shell=True)
 
 
-def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, dir_to_clean=None):
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         f.write(bash_cmd)
         f.flush()
         print(bash_cmd)
         docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
         f_name = "/host" + f.name
-        cmd = f"{docker_cmd} bash {f_name}"
+        cmd = f"{docker_cmd} bash {bash_args} {f_name}"
         print(cmd)
         subprocess.check_call(cmd, shell=True)
 
@@ -74,7 +74,12 @@ def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=Non
 
 
 def build_third_party(
-    img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args, skip_third_party
+    img_tag,
+    oneflow_src_dir,
+    cache_dir,
+    extra_oneflow_cmake_args,
+    skip_third_party,
+    bash_args,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -101,7 +106,7 @@ make -j`nproc` prepare_oneflow_third_party
     if skip_third_party:
         return
     else:
-        create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
+        create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args)
 
 
 def get_python_bin(version):
@@ -124,6 +129,7 @@ def build_oneflow(
     skip_wheel,
     package_name,
     house_dir,
+    bash_args,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -160,7 +166,7 @@ rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
-        return create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, cache_dir)
+        return create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args)
 
 
 if __name__ == "__main__":
@@ -239,6 +245,9 @@ if __name__ == "__main__":
                 args.skip_img,
                 img_tag,
             )
+            bash_args = ""
+            if args.xla:
+                bash_args = "-l"
             if args.cache_dir:
                 cache_dir = args.cache_dir
             else:
@@ -255,6 +264,7 @@ if __name__ == "__main__":
                 cache_dir,
                 extra_oneflow_cmake_args,
                 args.skip_third_party,
+                bash_args,
             )
             cuda_version_literal = "".join(cuda_version.split("."))
             assert len(cuda_version_literal) == 3
@@ -277,6 +287,7 @@ if __name__ == "__main__":
                     args.skip_wheel,
                     package_name,
                     args.wheel_house_dir,
+                    bash_args,
                 )
 
         try:
