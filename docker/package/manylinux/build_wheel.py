@@ -70,7 +70,7 @@ def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_a
         [
             "cmake",
             common_cmake_args(cache_dir),
-            "-DTHIRD_PARTY=ON, -DONEFLOW=OFF",
+            "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
         ]
@@ -117,7 +117,7 @@ def build_oneflow(
         [
             "cmake",
             common_cmake_args(cache_dir),
-            "-DTHIRD_PARTY=OFF, -DONEFLOW=ON",
+            "-DTHIRD_PARTY=OFF -DONEFLOW=ON",
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
