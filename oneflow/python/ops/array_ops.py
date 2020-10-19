@@ -2040,6 +2040,7 @@ def gather_dim(
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("amp_white_identity")
 def amp_white_identity(
     x: remote_blob_util.BlobDef, name: Optional[str] = None

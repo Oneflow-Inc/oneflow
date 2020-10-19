@@ -45,13 +45,13 @@ REGISTER_USER_OP("gather_dim")
       int64_t split_axis = in_sbp.split_parallel().axis();
       auto parr_num = ctx->parallel_ctx().parallel_num();
       auto is_split = in_sbp.has_split_parallel();
-      if (parr_num != 1 && is_split){
+      if (parr_num != 1 && is_split) {
         CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
       }
 
       CHECK_OR_RETURN(!in->is_dynamic());
       CHECK_OR_RETURN(!index->is_dynamic());
-      
+
       FOR_RANGE(int64_t, i, 0, input_num_axes) {
         if (i == dim) { continue; }
         CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
@@ -141,7 +141,7 @@ REGISTER_USER_OP("scatter_dim_add_like")
 
       const SbpParallel& src_sbp = ctx->SbpParallel4ArgNameAndIndex("src", 0);
       int64_t split_axis = src_sbp.split_parallel().axis();
-      if (ctx->parallel_ctx().parallel_num() != 1 && src_sbp.has_split_parallel()){
+      if (ctx->parallel_ctx().parallel_num() != 1 && src_sbp.has_split_parallel()) {
         CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
       }
 
@@ -200,28 +200,27 @@ REGISTER_USER_OP("scatter_dim_add_like")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("gather_dim")
-  .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
 
-    const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
+  const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
-    ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-      return builder
-          .OpTypeName(
-              "scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
-          .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
-          .InputBind("src",
-                    ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
-          .InputBind("like", ctx->FwOp().input("input", 0))
-          .Output("output")
-          .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
-          .Build();
-    });
+  ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder
+        .OpTypeName(
+            "scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
+        .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
+        .InputBind("src",
+                   ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
+        .InputBind("like", ctx->FwOp().input("input", 0))
+        .Output("output")
+        .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
+        .Build();
+  });
 
-    ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
-                              [&ctx, &op_grad_name]() -> const std::string& {
-                                return ctx->GetOp(op_grad_name).output("output", 0);
-                              });
+  ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
+                            [&ctx, &op_grad_name]() -> const std::string& {
+                              return ctx->GetOp(op_grad_name).output("output", 0);
+                            });
 });
 
 }  // namespace user_op

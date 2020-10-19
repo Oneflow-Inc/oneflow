@@ -24,20 +24,19 @@ namespace user_op {
 
 template<typename IDX_T, typename IN_T>
 struct GatherDimFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> inputArg,
-                  NdIndexArg<IDX_T> indexArg, int64_t elem_cnt, int64_t dim,
-                  const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx) {
+  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output,
+                  DeviceCtx* ctx) {
     DoGatherDim<IN_T, IDX_T>(inputArg, indexArg, elem_cnt, dim, index, input, output);
   }
 };
 
 template<typename IN_T, typename IDX_T>
 struct ScatterDimAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> srcArg,
-                  NdIndexArg<IDX_T> outputArg, int64_t elem_cnt, int64_t dim,
-                  const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
+  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
     DoScatterDimAdd<DeviceType::kCPU, IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
-                                 output);
+                                                   output);
   }
 };
 

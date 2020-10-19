@@ -20,6 +20,7 @@ from test_util import GenArgList
 import oneflow.typing as oft
 import unittest
 
+
 def gen_gather_test_sample(input_shape, index_shape, dim):
     def _flatten_array(input_array):
         output_array = list()
@@ -30,11 +31,11 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
     def _offset2coordinate(offset, tensor_shape):
         coordinate = []
         tmp = offset
-        for i in range(len(tensor_shape)-1, -1, -1):
+        for i in range(len(tensor_shape) - 1, -1, -1):
             axis_size = tensor_shape[i]
             coor = tmp % axis_size
             coordinate.insert(0, int(coor))
-            tmp = (tmp - coor)/axis_size
+            tmp = (tmp - coor) / axis_size
 
         return coordinate
 
@@ -44,9 +45,9 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
         offset = 0
         for i, coor in enumerate(coordinate):
             size_at_axis = coor
-            for j in range(i+1, len(tensor_shape)):
+            for j in range(i + 1, len(tensor_shape)):
                 size_at_axis *= tensor_shape[j]
-            
+
             offset += size_at_axis
         return offset
 
@@ -73,7 +74,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
         for srcidx in range(0, src.size):
             outcoord = _offset2coordinate(srcidx, src.shape)
             outcoord[dim] = index1d[srcidx]
-            
+
             output_offset = _coordinate2offset(outcoord, outshape)
             output1d[output_offset] += src1d[srcidx]
 
@@ -85,11 +86,22 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
     output = _torch_gather(input, dim, index)
     grad = _torch_scatter_add(np.ones_like(output), dim, index, input_shape)
 
-    ret = {"input":input, "index":index, "dim":dim, "output":output, "grad":grad}
+    ret = {"input": input, "index": index, "dim": dim, "output": output, "grad": grad}
     return ret
-    
+
+
 def _make_gather_dim_fn(
-    test_case, input, index, dim, grad, device_type, value_type, index_type, machine_ids, device_counts, mirrored
+    test_case,
+    input,
+    index,
+    dim,
+    grad,
+    device_type,
+    value_type,
+    index_type,
+    machine_ids,
+    device_counts,
+    mirrored,
 ):
     flow.clear_default_session()
     if device_type == "cpu":
@@ -97,7 +109,7 @@ def _make_gather_dim_fn(
         machine_ids = "0:0"
     else:
         flow.config.gpu_device_num(device_counts)
-    
+
     func_config = flow.FunctionConfig()
     func_config.default_data_type(value_type)
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
@@ -110,10 +122,9 @@ def _make_gather_dim_fn(
     if mirrored:
         pass
     else:
+
         def _compare_diff(blob: oft.Numpy):
-            test_case.assertTrue(
-                np.array_equal(grad, blob)
-            )
+            test_case.assertTrue(np.array_equal(grad, blob))
 
     def do_gather(x_blob, i_blob):
         with flow.scope.placement(device_type, machine_ids):
@@ -146,6 +157,7 @@ def _make_gather_dim_fn(
 
     return gather_fn
 
+
 def _compare_gatherdim_with_samples(
     test_case,
     device_type,
@@ -164,7 +176,17 @@ def _compare_gatherdim_with_samples(
 
     params, indices = input, index
     gather_fn = _make_gather_dim_fn(
-        test_case, params, indices, dim, grad, device_type, value_type[1], index_type[1], machine_ids, device_counts, mirrored
+        test_case,
+        params,
+        indices,
+        dim,
+        grad,
+        device_type,
+        value_type[1],
+        index_type[1],
+        machine_ids,
+        device_counts,
+        mirrored,
     )
 
     if mirrored:
@@ -173,7 +195,8 @@ def _compare_gatherdim_with_samples(
         of_y = gather_fn(params, indices).get().numpy()
 
     test_case.assertTrue(np.allclose(out, of_y))
-    
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestGatherDim1n1d(flow.unittest.TestCase):
     def test_gather_dim_cpu(test_case):
@@ -181,32 +204,29 @@ class TestGatherDim1n1d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
         arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2,2), (2,2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((8,4,2), (4,4,2), 0))
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
+        arg_dict["samples"].append(gen_gather_test_sample((8, 4, 2), (4, 4, 2), 0))
         arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
         arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
         arg_dict["machine_ids"] = ["0:0-0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
-            _compare_gatherdim_with_samples(
-                test_case, *arg
-            )
+            _compare_gatherdim_with_samples(test_case, *arg)
 
     def test_gather_dim_gpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2,2), (2,2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((8,4,2), (4,4,2), 0))
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
+        arg_dict["samples"].append(gen_gather_test_sample((8, 4, 2), (4, 4, 2), 0))
         arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
         arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
         arg_dict["machine_ids"] = ["0:0-0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
-            _compare_gatherdim_with_samples(
-                test_case, *arg
-            )
+            _compare_gatherdim_with_samples(test_case, *arg)
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestGatherDim1n2dConsistent(flow.unittest.TestCase):
@@ -216,16 +236,15 @@ class TestGatherDim1n2dConsistent(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2,2), (2,2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((8,4,2), (4,4,2), 0))
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
+        arg_dict["samples"].append(gen_gather_test_sample((8, 4, 2), (4, 4, 2), 0))
         arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
         arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_count"] = [2]
         for arg in GenArgList(arg_dict):
-            _compare_gatherdim_with_samples(
-                test_case, *arg
-            )
+            _compare_gatherdim_with_samples(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

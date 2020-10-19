@@ -23,9 +23,8 @@ namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct GatherDimFunctor final {
-  void operator()(NdIndexArg<IDX_T> inputArg,
-                  NdIndexArg<IDX_T> indexArg, int64_t elem_cnt, int64_t dim,
-                  const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
+  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
@@ -58,9 +57,8 @@ class GatherDimKernel final : public user_op::OpKernel {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct ScatterDimAddFunctor final {
-  void operator()(NdIndexArg<IDX_T> srcArg,
-                  NdIndexArg<IDX_T> outputArg, int64_t elem_cnt, int64_t dim,
-                  const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
+  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
@@ -81,7 +79,8 @@ class ScatterDimKernel final : public user_op::OpKernel {
     const IN_T* src = src_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
-    size_t out_bytes_size = out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
+    size_t out_bytes_size =
+        out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
     NdIndexArg<IDX_T> srcArg(src_tensor->shape());
