@@ -211,7 +211,7 @@ class ProtoReflectionUtil:
                 (field.message_type.full_name)[len(package) + 1 :].replace(".", "_"),
             )
         else:
-            return "::cfg::%" % ((field.message_type.full_name).replace(".", "_"))
+            return "::cfg::%s" % ((field.message_type.full_name).replace(".", "_"))
 
     def field_message_type_name_with_proto_namespace(self, field):
         package = field.message_type.file.package
