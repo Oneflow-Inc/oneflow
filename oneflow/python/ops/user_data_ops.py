@@ -2338,4 +2338,3 @@ def OneRecDecoder(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
