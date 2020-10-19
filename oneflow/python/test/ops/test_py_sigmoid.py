@@ -15,6 +15,7 @@ limitations under the License.
 """
 import math
 import numpy as np
+import os
 import unittest
 from collections import OrderedDict
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
@@ -24,6 +25,8 @@ import oneflow.typing as oft
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
+
+print(os.path.dirname(os.path.abspath(__file__)))
 
 
 def numpy_sigmoid(x):
@@ -86,7 +89,8 @@ class TestPySigmoid(flow.unittest.TestCase):
         print("py_sig : ", py_sig)
         print("numpy_sig : ", numpy_sig)
         test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
-        test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
+        test_case.assertTrue(np.allclose(
+            py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
     def test_py_sigmoid_grad(test_case):
         py_sigmoid_lib = flow.util.op_lib("py_sigmoid")
@@ -123,7 +127,8 @@ class TestPySigmoid(flow.unittest.TestCase):
         print("sig_grad", sig_grad)
         print("py_sig_grad", py_sig_grad)
         print("numpy_sig_grad", numpy_sig_grad)
-        test_case.assertTrue(np.allclose(sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
+        test_case.assertTrue(np.allclose(
+            sig_grad, py_sig_grad, rtol=1e-03, atol=1e-05))
         test_case.assertTrue(
             np.allclose(py_sig_grad, numpy_sig_grad, rtol=1e-03, atol=1e-05)
         )
