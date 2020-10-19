@@ -387,8 +387,7 @@ def NaiveCpuSplitToSplit(builder, produced_blob_object, consumer_op_arg_parallel
 
 
 MatchNaiveCpuPartialSumToSplit = (
-    boxing_hob.MasterMachineOnly
-    & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
+    (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.producer_parallel_desc.parallel_num > 1)
     & boxing_hob.producer_sbp_parallel.HasField("partial_sum_parallel")
@@ -425,11 +424,6 @@ def NaiveCpuRefPhysicalBlobObjectsScope(
         builder,
         produced_blob_object.parallel_desc_symbol,
         max(len(physical_in_blob_objects), out_parallel_num),
-    )
-    physical_in_blob_objects = RefBlobObjectWithParallelDesc(
-        builder,
-        physical_in_blob_objects,
-        [boxing_parallel_desc_symbol] * len(physical_in_blob_objects),
     )
     physical_output_blob_objects = get_physical_out_blob_objects(
         builder=builder,
@@ -571,6 +565,7 @@ def GetConcatSplitBoxingParallelDescSymbol(
     parallel_conf.device_tag = "cpu"
     for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
         parallel_conf.device_name.append("%s:%s" % (machine_id, random_rank_id))
+        break
     return builder.GetParallelDescSymbol(parallel_conf)
 
 
