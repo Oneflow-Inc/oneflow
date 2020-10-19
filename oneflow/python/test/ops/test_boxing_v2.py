@@ -30,9 +30,11 @@ def _test_split_to_split(
     dst_device_num,
     src_axis,
     dst_axis,
+    enable_nccl_all2all,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
+    flow.config.collective_boxing.enable_nccl_all2all(enable_nccl_all2all)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
@@ -219,6 +221,7 @@ class TestBoxingV2(flow.unittest.TestCase):
         arg_dict["dst_device_num"] = [1, 2, 3]
         arg_dict["src_axis"] = [0, 1]
         arg_dict["dst_axis"] = [0, 1]
+        arg_dict["enable_nccl_all2all"] = [True, False]
         for arg in GenArgList(arg_dict):
             _test_split_to_split(test_case, *arg)
 

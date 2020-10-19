@@ -986,7 +986,6 @@ message OperatorConf {
     BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
     UserOpConf user_conf = 199;
 
-    
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
