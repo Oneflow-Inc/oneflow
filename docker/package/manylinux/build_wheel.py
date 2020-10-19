@@ -140,6 +140,7 @@ cmake --build . -j `nproc`
         bash_cmd += f"""
 rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 cd {oneflow_src_dir}
+rm -rf build
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
