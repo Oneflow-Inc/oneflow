@@ -256,7 +256,7 @@ if __name__ == "__main__":
                 if args.xla:
                     sub_dir += "-xla"
                 if args.cpu:
-                    assert len(cuda_versions == 1)
+                    assert len(cuda_versions) == 1
                     sub_dir = "cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             build_third_party(
