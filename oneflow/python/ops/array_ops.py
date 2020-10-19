@@ -371,20 +371,25 @@ def dynamic_reshape(
 def transpose(
     a: remote_blob_util.BlobDef,
     perm: Sequence[int] = None,
-    conjugate: bool = False,
+    conjugate: bool = False, 
+    batch_axis_non_change: bool = False, 
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator transposes a Blob `a`. 
-
-    Analogous to `tf.transpose <https://www.tensorflow.org/api_docs/python/tf/transpose>`_
+    r"""This operator transposes the specified axis of input Blob. 
 
     Args:
-        a: A `Blob`.
-        perm: A permutation of the dimensions of `a`.
-        conjugate: False. Not supported.
-        name: A name for the operation (optional).
+        a (remote_blob_util.BlobDef): The input Blob. 
+        perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
+        conjugate (bool, optional): Still Unavailable. Defaults to False.
+        batch_axis_non_change (bool, optional): Whether to change the batch axis， 
+        it is a temporary design for solving batch axis infer error in some situations. Defaults to False.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        NotImplementedError: The attribute `conjugate` still unavailable.
+
     Returns:
-        A transposed blob. 
+        remote_blob_util.BlobDef: A transposed blob.
 
     For example: 
 
@@ -422,6 +427,7 @@ def transpose(
         .Input("input", [a])
         .Output("output")
         .Attr("perm", perm)
+        .Attr("batch_axis_non_change", batch_axis_non_change)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

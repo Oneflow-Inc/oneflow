@@ -33,6 +33,7 @@ REGISTER_USER_OP("transpose")
     .Input("input")
     .Output("output")
     .Attr("perm", UserOpAttrType::kAtListInt32)
+    .Attr("batch_axis_non_change", UserOpAttrType::kAtBool)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
@@ -47,12 +48,14 @@ REGISTER_USER_OP("transpose")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
+      if (!ctx->Attr<bool>("batch_axis_non_change")){ // 根据 batch_axis_non_change 来确定是否推导 batch_axis, 后续需要删除掉
+        if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
         const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
         ctx->BatchAxis4ArgNameAndIndex("output", 0)
             ->set_value(perm.at(ctx->BatchAxis4ArgNameAndIndex("input", 0)->value()));
       } else {
         ctx->BatchAxis4ArgNameAndIndex("output", 0)->clear_value();
+        }
       }
       return Maybe<void>::Ok();
     })
@@ -77,6 +80,7 @@ REGISTER_USER_OP_GRAD("transpose")
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         const auto& tmp = op.attr<std::vector<int32_t>>("perm");
+        const auto& batch_axis_non_change = op.attr<bool>("batch_axis_non_change"); // 增加一个属性,后续需要删除
         std::vector<int32_t> perm;
         perm.resize(tmp.size());
         FOR_RANGE(int32_t, i, 0, tmp.size()) { perm.at(tmp.at(i)) = i; }
@@ -85,6 +89,7 @@ REGISTER_USER_OP_GRAD("transpose")
                 .Input("input", op.GetGradTensorWithOpOutput("output", 0))
                 .Output("output")
                 .Attr<std::vector<int32_t>>("perm", perm)
+                .Attr<bool>("batch_axis_non_change", batch_axis_non_change)
                 .Build();
         op.BindGradTensorWithOpInput(transpose_grad_op.output("output", 0), "input", 0);
         AddOp(transpose_grad_op);
