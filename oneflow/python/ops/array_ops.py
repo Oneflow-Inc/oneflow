@@ -382,14 +382,15 @@ def transpose(
         perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
         conjugate (bool, optional): Still Unavailable. Defaults to False.
         batch_axis_non_change (bool, optional): Whether to change the batch axis， 
-        it is a temporary design for solving batch axis infer error in some situations. Defaults to False.
+            it is a temporary design for solving batch axis infer error in some situations. 
+            It will be removed after `batch_axis` has been depreciated. Defaults to False. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
         NotImplementedError: The attribute `conjugate` still unavailable.
 
     Returns:
-        remote_blob_util.BlobDef: A transposed blob.
+        remote_blob_util.BlobDef: A transposed blob. 
 
     For example: 
 
@@ -427,7 +428,9 @@ def transpose(
         .Input("input", [a])
         .Output("output")
         .Attr("perm", perm)
-        .Attr("batch_axis_non_change", batch_axis_non_change)
+        .Attr(
+            "batch_axis_non_change", batch_axis_non_change
+        )  # To be removed after batch_axis has been depreciated
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
