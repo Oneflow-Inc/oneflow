@@ -449,7 +449,6 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
 
 void ChainGraph::SetChainId4ChainNode() {
   ForEachNode([&](ChainNode* chain_node) {
-    ordered_chain_nodes_.emplace_back(chain_node);
     int64_t stream_id = chain_node->TaskNodes().front()->GlobalWorkStreamId();
     int64_t chain_id = Global<IDMgr>::Get()->AllocateChainId(stream_id);
     chain_node->SetChainId(chain_id);

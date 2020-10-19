@@ -114,7 +114,6 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
   const TaskGraph& task_gph_;
   HashMap<TaskNode*, ChainNode*> task_node2chain_node_;
-  std::vector<ChainNode*> ordered_chain_nodes_;
 };
 
 }  // namespace oneflow
