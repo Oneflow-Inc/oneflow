@@ -80,7 +80,11 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
   ChainGraph(const TaskGraph& task_gph);
   const char* TypeName() const override { return "ChainGraph"; }
-  const std::vector<ChainNode*>& OrderdedChainNodes() const { return ordered_chain_nodes_; }
+  int64_t ChainId4TaskNode(TaskNode* task_node) const {
+    auto it = task_node2chain_node_.find(task_node);
+    CHECK(it != task_node2chain_node_.end());
+    return it->second->chain_id();
+  }
 
  private:
   bool HasChainEdge(ChainNode* src, ChainNode* dst) const;
