@@ -75,14 +75,33 @@ def read_images_by_cv(image_files, dtype, channels=3):
 
 
 def read_images_by_pil(image_files, dtype, channels=3):
-    images = [np.asarray(PIL.Image.open(image_file)) for image_file in image_files]
+    image_objs = [PIL.Image.open(image_file) for image_file in image_files]
+    images = []
+    np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+
+    for im in image_objs:
+        bands = im.getbands()
+        band = "".join(bands)
+        if band == "RGB":
+            # convert to BGR
+            images.append(np.asarray(im).astype(np_dtype)[:, :, ::-1])
+        elif band == "L":
+            gs_image = np.asarray(im).astype(np_dtype)
+            gs_image_shape = gs_image.shape
+            assert len(gs_image_shape) == 2
+            gs_image = gs_image.reshape(gs_image_shape + (1,))
+            gs_image = np.broadcast_to(gs_image, shape=gs_image_shape + (3,))
+            images.append(gs_image)
+        elif band == "BGR":
+            images.append(np.asarray(im).astype(np_dtype))
+        else:
+            raise NotImplementedError
+
     assert all(isinstance(image, np.ndarray) for image in images)
     assert all(image.ndim == 3 for image in images)
     assert all(image.shape[2] == channels for image in images)
-    # convert image to BGR
-    np_dtype = flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-    converted_images = [image.astype(np_dtype)[:, :, ::-1] for image in images]
-    return converted_images
+
+    return images
 
 
 def infer_images_static_shape(images, channels=3):
