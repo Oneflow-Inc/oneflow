@@ -48,6 +48,7 @@ REGISTER_USER_OP("transpose")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      // TODO：
       // Whether to infer the batch axis according to the param "batch_axis_non_change"
       // The param "batch_axis_non_change" will be deleted after batch_axis has been depreciated
       if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
@@ -87,7 +88,7 @@ REGISTER_USER_OP_GRAD("transpose")
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         const auto& tmp = op.attr<std::vector<int32_t>>("perm");
         bool batch_axis_non_change = op.attr<bool>(
-            "batch_axis_non_change");  // To be removed after batch_axis has been depreciated
+            "batch_axis_non_change");  // TODO: To be removed after batch_axis has been depreciated
         std::vector<int32_t> perm;
         perm.resize(tmp.size());
         FOR_RANGE(int32_t, i, 0, tmp.size()) { perm.at(tmp.at(i)) = i; }
@@ -96,9 +97,9 @@ REGISTER_USER_OP_GRAD("transpose")
                 .Input("input", op.GetGradTensorWithOpOutput("output", 0))
                 .Output("output")
                 .Attr<std::vector<int32_t>>("perm", perm)
-                .Attr<bool>(
-                    "batch_axis_non_change",
-                    batch_axis_non_change)  // To be removed after batch_axis has been depreciated
+                .Attr<bool>("batch_axis_non_change",
+                            batch_axis_non_change)  // TODO：To be removed after batch_axis has been
+                                                    // depreciated
                 .Build();
         op.BindGradTensorWithOpInput(transpose_grad_op.output("output", 0), "input", 0);
         AddOp(transpose_grad_op);

@@ -430,7 +430,7 @@ def transpose(
         .Attr("perm", perm)
         .Attr(
             "batch_axis_non_change", batch_axis_non_change
-        )  # To be removed after batch_axis has been depreciated
+        )  # TODO: To be removed after batch_axis has been depreciated
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
