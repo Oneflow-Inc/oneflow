@@ -40,6 +40,18 @@ def get_build_dir_arg(cache_dir, oneflow_src_dir):
     return f"-v {build_dir_real}:{build_dir_mount}"
 
 
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd):
+    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+        f.write(bash_cmd)
+        f.flush()
+        print(bash_cmd)
+        docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
+        f_name = "/host" + f.name
+        cmd = f"{docker_cmd} bash {f_name}"
+        print(cmd)
+        subprocess.check_call(cmd, shell=True)
+
+
 def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -56,20 +68,13 @@ def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_a
     cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
 
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
-        bash_cmd = f"""
+    bash_cmd = f"""
 set -ex
 {cmake_cmd}
 make -j`nproc` prepare_oneflow_third_party
 """
-        f.write(bash_cmd)
-        f.flush()
-        f_name = f.name
-        print(bash_cmd)
-        docker_cmd = f"docker run --rm -it -v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {third_party_build_dir} -v /tmp:/host/tmp {img_tag}"
-        cmd = f"{docker_cmd} bash /host{f_name}"
-        print(cmd)
-        subprocess.check_call(cmd, shell=True)
+    docker_cmd = f"docker run --rm -it -v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {third_party_build_dir}"
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
 
 
 def build_oneflow():
