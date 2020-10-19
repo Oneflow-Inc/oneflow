@@ -142,6 +142,8 @@ if __name__ == "__main__":
     else:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=ON"
     cuda_versions = args.cuda_version.split(",")
+    if args.xla == True && args.cpu == True:
+        raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
         cuda_version = cuda_version.strip()
         cache_dir = None
