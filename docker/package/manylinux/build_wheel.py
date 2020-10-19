@@ -152,8 +152,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cache_dir", type=str, required=False, default=None,
     )
+    default_wheel_house_dir = os.path.join(os.getcwd(), "wheelhouse")
     parser.add_argument(
-        "--wheel_house_dir", type=str, required=False, default="wheelhouse",
+        "--wheel_house_dir", type=str, required=False, default=default_wheel_house_dir,
     )
     parser.add_argument(
         "--python_version", type=str, required=False, default="3.5, 3.6, 3.7, 3.8",
