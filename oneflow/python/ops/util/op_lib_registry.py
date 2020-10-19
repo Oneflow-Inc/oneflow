@@ -65,7 +65,7 @@ cpp2py_path = os.path.join(oneflow_sysconfig.get_lib(), "python/ops/util/cpp2py.
 
 @oneflow_export("util.op_lib")
 class OpLib(object):
-    def __init__(self, op_type_name):
+    def __init__(self, op_type_name, lib_path=""):
         self.op_type_name = op_type_name
         self.objs = []
         self.has_def = False
@@ -73,14 +73,21 @@ class OpLib(object):
         self.has_cpu_kernel = False
         self.got_so = False
         self.api = None
-        self.src_prefix = (
-            os.getcwd() + "/" + self.op_type_name + "/" + self.op_type_name
-        )
 
-        out_path = os.getcwd() + "/" + self.op_type_name + "/out"
+        pwd_path = os.getcwd()
+        if lib_path is not "" and lib_path is not pwd_path:
+            lib_folder = os.path.join(lib_path, self.op_type_name)
+            pwd_folder = os.path.join(pwd_path, self.op_type_name)
+            if os.path.exists(pwd_folder):
+                shutil.rmtree(pwd_folder)
+            shutil.copytree(lib_folder, pwd_folder)
+
+        self.src_prefix = os.path.join(pwd_path, self.op_type_name, self.op_type_name)
+
+        out_path = os.path.join(pwd_path, self.op_type_name, "out")
         if not os.path.exists(out_path):
             os.makedirs(out_path)
-        self.out_prefix = out_path + "/" + self.op_type_name
+        self.out_prefix = os.path.join(out_path, self.op_type_name)
         self.so_path = ""
 
     def AddOpDef(self):
@@ -177,13 +184,13 @@ class OpLibLoader(object):
                 """
                 return full_reg_src
 
-            self.out_path = os.getcwd() + "/op_lib_loader_out"
+            self.out_path = os.path.join(os.getcwd(), "op_lib_loader_out")
             if os.path.exists(self.out_path):
                 shutil.rmtree(self.out_path)
             os.makedirs(self.out_path)
-            gen_src_path = self.out_path + "/cpp2py_gen.cpp"
-            gen_obj_path = self.out_path + "/cpp2py.o"
-            gen_so_path = self.out_path + "/cpp2py.so"
+            gen_src_path = os.path.join(self.out_path, "cpp2py_gen.cpp")
+            gen_obj_path = os.path.join(self.out_path, "cpp2py.o")
+            gen_so_path = os.path.join(self.out_path, "cpp2py.so")
             shutil.copy2(cpp2py_path, gen_src_path)
             with open(gen_src_path, "a") as f:
                 f.write(get_reg_src())

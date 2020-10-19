@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import numpy as np
 import math
+import numpy as np
+import os
 import unittest
 from test_util import Args, CompareOpWithTensorFlow, GenArgDict
 
@@ -24,11 +25,13 @@ import oneflow.typing as oft
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
+lib_path = os.path.dirname(os.path.abspath(__file__))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestPyOne2Two(flow.unittest.TestCase):
     def test_py_one2two(test_case):
-        py_one2two_lib = flow.util.op_lib("py_one2two")
+        py_one2two_lib = flow.util.op_lib("py_one2two", lib_path)
         py_one2two_lib.AddPythonAPI()
         py_one2two_lib.AddOpDef()
         py_one2two_lib.AddPythonKernel()
