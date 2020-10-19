@@ -52,8 +52,16 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd):
         subprocess.check_call(cmd, shell=True)
 
 
+def get_common_docker_args(oneflow_src_dir=None, cache_dir=None):
+    cwd = os.getcwd()
+    pwd_arg = f"-v {cwd}:{cwd}"
+    cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
+    build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {cache_dir}"
+
+
 def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args):
-    third_party_build_dir = os.path.join(cache_dir, "build-third-party")
+    third_party_cache_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -63,18 +71,30 @@ def build_third_party(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_a
             oneflow_src_dir,
         ]
     )
-    cwd = os.getcwd()
-    pwd_arg = f"-v {cwd}:{cwd}"
-    cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
-    build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
 
     bash_cmd = f"""
 set -ex
 {cmake_cmd}
 make -j`nproc` prepare_oneflow_third_party
 """
-    docker_cmd = f"docker run --rm -it -v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {third_party_build_dir}"
+    common_docker_args = get_common_docker_args(
+        oneflow_src_dir=oneflow_src_dir, cache_dir=third_party_cache_dir
+    )
+    docker_cmd = f"docker run --rm -it {common_docker_args}"
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd)
+
+
+def build_oneflow(img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args):
+    oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
+    cmake_cmd = " ".join(
+        [
+            "cmake",
+            common_cmake_args(cache_dir),
+            "-DTHIRD_PARTY=OFF, -DONEFLOW=ON",
+            extra_oneflow_cmake_args,
+            oneflow_src_dir,
+        ]
+    )
 
 
 def build_oneflow():
@@ -142,7 +162,7 @@ if __name__ == "__main__":
     else:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=ON"
     cuda_versions = args.cuda_version.split(",")
-    if args.xla == True && args.cpu == True:
+    if args.xla == True and args.cpu == True:
         raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
         cuda_version = cuda_version.strip()
