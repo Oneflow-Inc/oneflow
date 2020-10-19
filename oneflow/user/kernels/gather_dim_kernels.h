@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/gather_dim_kernel_util.h"
+#include <stdio.h>
 
 namespace oneflow {
 
@@ -85,6 +86,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
 
     NdIndexArg<IDX_T> srcArg(src_tensor->shape());
     NdIndexArg<IDX_T> outputArg(out_tensor->shape());
+
     ScatterDimAddFunctor<device_type, IN_T, IDX_T>()(srcArg, outputArg,
                                                      src_tensor->shape().elem_cnt(), dim, index,
                                                      src, output, ctx->device_ctx());

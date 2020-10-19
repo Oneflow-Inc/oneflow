@@ -43,7 +43,9 @@ REGISTER_USER_OP("gather_dim")
       // split_axs should NOT equals dim when in consistent view
       const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
       int64_t split_axis = in_sbp.split_parallel().axis();
-      if (ctx->parallel_ctx().parallel_num() != 1 && in_sbp.has_split_parallel()){
+      auto parr_num = ctx->parallel_ctx().parallel_num();
+      auto is_split = in_sbp.has_split_parallel();
+      if (parr_num != 1 && is_split){
         CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
       }
 
@@ -186,26 +188,12 @@ REGISTER_USER_OP("scatter_dim_add_like")
               .Split(user_op::OpArg("output", 0), i)
               .Split(user_op::OpArg("like", 0), i)
               .Build();
-        } else if (i == dim) {
-          ctx->NewBuilder()
-              .Broadcast(user_op::OpArg("src", 0))
-              .Split(user_op::OpArg("index", 0), i)
-              .Split(user_op::OpArg("output", 0), i)
-              .Split(user_op::OpArg("like", 0), i)
-              .Build();
         }
       }
 
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("src", 0))
           .Broadcast(user_op::OpArg("index", 0))
-          .Broadcast(user_op::OpArg("output", 0))
-          .Broadcast(user_op::OpArg("like", 0))
-          .Build();
-
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("src", 0))
-          .PartialSum(user_op::OpArg("index", 0))
           .PartialSum(user_op::OpArg("output", 0))
           .PartialSum(user_op::OpArg("like", 0))
           .Build();
