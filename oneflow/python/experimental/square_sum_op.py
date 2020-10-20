@@ -32,19 +32,17 @@ from typing import Optional
 
 @oneflow_export("experimental.square_sum")
 def square_sum(
-    x: input_blob_util.ArgBlobDef, name: Optional[str] = None
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    op_conf = op_conf_util.OperatorConf()
-    if name is None:
-        op_conf.name = id_util.UniqueStr("SquareSum_")
-    else:
-        op_conf.name = name
 
-    op_conf.square_sum_conf.x = x.unique_name
-    op_conf.square_sum_conf.y = "y"
-
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "y"
-    return remote_blob_util.RemoteBlob(lbi)
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SquareSum_")
+        )
+        .Op("square_sum")
+        .Input("x", [x])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

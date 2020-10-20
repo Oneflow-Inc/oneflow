@@ -828,11 +828,6 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-message SquareSumOpConf {
-  required string x = 1;
-  required string y = 2;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -1013,7 +1008,6 @@ message OperatorConf {
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
   }
