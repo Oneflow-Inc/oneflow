@@ -448,7 +448,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                                      .Op("square_sum")
                                                      .Input("x", GenLogicalBlobName(diff_lbi))
                                                      .Output("y")
-                                                     .ScopeSymbolId(scope_symbol_id)
+                                                     .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, pair.first))
                                                      .Build();
 
     job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op.op_conf()});
