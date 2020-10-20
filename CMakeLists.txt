@@ -33,6 +33,8 @@ if (NOT DEFINED USE_CXX11_ABI)
     set(USE_CXX11_ABI ON)
   endif()
 endif()
+message("-- USE_CXX11_ABI: " ${USE_CXX11_ABI})
+
 
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
