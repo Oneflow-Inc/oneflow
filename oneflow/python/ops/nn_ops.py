@@ -813,8 +813,9 @@ def batch_normalization(
     axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
-          are always 1D. Users need to specify "axis" to 1 for NCHW data format.
+    r"""This op does not fully align with tf.nn.batch_normalization. 
+    
+    The `mean`, `variable`, `offset` and `scale` are always 1D. Users need to specify `axis` to 1 for NCHW data format.
 
     Args:
         x (remote_blob_util.BlobDef): Input `Blob` of arbitrary dimensionality.
