@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/customized/data/onerec_data_reader.h"
+#include "oneflow/user/data/onerec_data_reader.h"
 
 namespace oneflow {
 

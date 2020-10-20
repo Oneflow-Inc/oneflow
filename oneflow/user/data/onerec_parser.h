@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CUSTOMIZED_DATA_ONEREC_PARSER_H_
 #define ONEFLOW_CUSTOMIZED_DATA_ONEREC_PARSER_H_
 
-#include "oneflow/customized/data/parser.h"
+#include "oneflow/user/data/parser.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/thread/thread_manager.h"

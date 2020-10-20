@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CUSTOMIZED_DATA_ONEREC_DATASET_H_
 
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/customized/data/dataset.h"
+#include "oneflow/user/data/dataset.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/op_kernel.h"

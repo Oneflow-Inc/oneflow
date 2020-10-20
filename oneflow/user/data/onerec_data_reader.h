@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CUSTOMIZED_DATA_ONEREC_DATA_READER_H_
 #define ONEFLOW_CUSTOMIZED_DATA_ONEREC_DATA_READER_H_
 
-#include "oneflow/customized/data/data_reader.h"
-#include "oneflow/customized/data/onerec_dataset.h"
-#include "oneflow/customized/data/onerec_parser.h"
-#include "oneflow/customized/data/random_shuffle_dataset.h"
-#include "oneflow/customized/data/batch_dataset.h"
+#include "oneflow/user/data/data_reader.h"
+#include "oneflow/user/data/onerec_dataset.h"
+#include "oneflow/user/data/onerec_parser.h"
+#include "oneflow/user/data/random_shuffle_dataset.h"
+#include "oneflow/user/data/batch_dataset.h"
 #include <iostream>
 
 namespace oneflow {
