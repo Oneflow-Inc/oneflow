@@ -26,7 +26,7 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
-from typing import Callable, List
+from typing import Callable, List, Tuple
 
 
 def GetBlobConf(job_func_name: str, logical_blob_name: str):
@@ -75,14 +75,6 @@ def GetBlobConf(job_func_name: str, logical_blob_name: str):
     )
 
     return blob_conf
-
-
-# example usage
-# saved_model_builder = SavedModelBuilder("./models", 1)
-# saved_model_builder
-#     .ModelName("alexnet")
-#     .AddJob(alexnet_train_job, input_blob_names, output_blob_names) # get from xxx.logical_blob_name
-#     .Save()
 
 
 @oneflow_export("saved_model.SavedModelBuilder")
@@ -157,6 +149,45 @@ class SavedModelBuilder(object):
 
         singature_def.method_name = method_name
         self.saved_model_proto_.singatures[job_func.__name__].CopyFrom(singature_def)
+        return self
+
+    def AddJobGraph(
+        self,
+        job_graph_name: str,
+        input_jobs: List[Callable],
+        output_jobs: List[Callable],
+        dependency_between_jobs: List[
+            Tuple[Tuple[Callable, Callable], Tuple[str, str]]
+        ],
+    ):
+        job_graph = model_pb.JobGraph()
+        job_graph.job_graph_name = job_graph_name
+
+        for in_job in input_jobs:
+            job_graph.input_job_names.append(in_job.__name__)
+
+        for out_job in output_jobs:
+            job_graph.output_job_names.append(out_job.__name__)
+
+        for dep in dependency_between_jobs:
+            producer_info = model_pb.JobGraph.ProducerInfo()
+            job_tuple, blob_name_tuple = dep[0], dep[1]
+            curr_job_name, producer_job_name = (
+                job_tuple[0].__name__,
+                job_tuple[1].__name__ if job_tuple[1] != None else None,
+            )
+            curr_job_in_bn, producer_job_out_bn = blob_name_tuple[0], blob_name_tuple[1]
+
+            if producer_job_name != None:
+                producer_info.producer_job_name = producer_job_name
+            if producer_job_out_bn != None:
+                producer_info.producer_job_output_blob_name = producer_job_out_bn
+            producer_info.current_job_input_blob_name = curr_job_in_bn
+
+            job_graph.dependency_between_jobs[curr_job_name].infos.append(producer_info)
+
+        self.saved_model_proto_.job_graphs.append(job_graph)
+
         return self
 
     def Save(self):
