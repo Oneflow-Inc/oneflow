@@ -15,6 +15,7 @@ runs:
   using: "composite"
   steps:
     - run: |
+        set -x
         tmp_dir="$HOME/${{ inputs.tmp_dir }}"
         docker run --rm \
             -v $tmp_dir:/p \
