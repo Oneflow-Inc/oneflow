@@ -249,7 +249,7 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t record_num = in_blob->shape().At(0);
     CHECK(record_num > 0);
-    TensorBuffer* records = in_blob->mut_dptr<TensorBuffer>();
+    const TensorBuffer* records = in_blob->dptr<TensorBuffer>();
 
     const std::string key = ctx->Attr<std::string>("key");
     const DataType data_type = ctx->Attr<DataType>("data_type");
