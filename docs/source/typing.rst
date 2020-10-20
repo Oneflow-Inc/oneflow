@@ -1,8 +1,8 @@
-oneflow.placement
+oneflow.typing
 ===================================
-Placement
+Typing system
 ----------------------------------
-.. currentmodule:: oneflow.placement
-.. automodule:: oneflow.placement
+.. currentmodule:: oneflow.typing
+.. automodule:: oneflow.typing
     :members:
     :imported-members:
