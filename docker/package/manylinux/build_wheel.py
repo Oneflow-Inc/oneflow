@@ -294,7 +294,7 @@ if __name__ == "__main__":
         try:
             build()
         except subprocess.CalledProcessError as e:
-            print("failed: ", cmd)
+            print("failed: ", e.cmd, e.args)
             print("clean: ", cache_dir)
             assert cache_dir != None
             force_rm_dir(cache_dir)
