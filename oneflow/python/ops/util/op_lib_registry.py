@@ -78,8 +78,6 @@ class OpLib(object):
 
         lib_path = os.path.normpath(lib_path)
         pwd_path = os.getcwd()
-        print("pwd ", pwd_path)
-        print("lib ", lib_path)
         if lib_path != "" and lib_path != pwd_path:
             lib_folder = os.path.join(lib_path, self.op_type_name)
             pwd_folder = os.path.join(pwd_path, self.op_type_name)
