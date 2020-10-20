@@ -23,33 +23,33 @@ namespace oneflow {
 namespace user_op {
 
 template<typename IDX_T, typename IN_T>
-struct GatherDimFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
+struct DimGatherFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output,
                   DeviceCtx* ctx) {
-    DoGatherDim<IN_T, IDX_T>(inputArg, indexArg, elem_cnt, dim, index, input, output);
+    DoDimGather<IN_T, IDX_T>(inputArg, indexArg, elem_cnt, dim, index, input, output);
   }
 };
 
 template<typename IN_T, typename IDX_T>
-struct ScatterDimAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
+struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
-    DoScatterDimAdd<DeviceType::kCPU, IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
+    DoDimScatterAdd<DeviceType::kCPU, IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
                                                    output);
   }
 };
 
-#define REGISTER_GATHER_DIM_KERNEL(device, in_type, indices_type)                               \
-  REGISTER_USER_KERNEL("gather_dim")                                                            \
+#define REGISTER_DIM_GATHER_KERNEL(device, in_type, indices_type)                               \
+  REGISTER_USER_KERNEL("dim_gather")                                                            \
       .SetCreateFn<                                                                             \
-          GatherDimKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+          DimGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))       \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-#define REGISTER_DIMSCATTER_KERNEL(device, in_type, indices_type)                                \
-  REGISTER_USER_KERNEL("scatter_dim_add_like")                                                   \
+#define REGISTER_DIM_SCATTER_KERNEL(device, in_type, indices_type)                               \
+  REGISTER_USER_KERNEL("dim_scatter_add_like")                                                   \
       .SetCreateFn<                                                                              \
           ScatterDimKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
@@ -58,10 +58,10 @@ struct ScatterDimAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
 
 #define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_DIM_KERNEL, (DeviceType::kCPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
                                  GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMSCATTER_KERNEL, (DeviceType::kCPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_KERNEL, (DeviceType::kCPU),
                                  GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op

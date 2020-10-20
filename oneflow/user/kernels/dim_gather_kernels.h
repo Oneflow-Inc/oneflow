@@ -22,16 +22,16 @@ namespace oneflow {
 
 namespace user_op {
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct GatherDimFunctor final {
+struct DimGatherFunctor final {
   void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class GatherDimKernel final : public user_op::OpKernel {
+class DimGatherKernel final : public user_op::OpKernel {
  public:
-  GatherDimKernel() = default;
-  ~GatherDimKernel() override = default;
+  DimGatherKernel() = default;
+  ~DimGatherKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -48,7 +48,7 @@ class GatherDimKernel final : public user_op::OpKernel {
 
     NdIndexArg<IDX_T> inputArg(input_tensor->shape());
     NdIndexArg<IDX_T> indexArg(index_tensor->shape());
-    GatherDimFunctor<device_type, IN_T, IDX_T>()(inputArg, indexArg,
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(inputArg, indexArg,
                                                  index_tensor->shape().elem_cnt(), dim, index,
                                                  input, output, ctx->device_ctx());
   }
@@ -56,7 +56,7 @@ class GatherDimKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct ScatterDimAddFunctor final {
+struct DimScatterAddFunctor final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
 };
@@ -86,7 +86,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
     NdIndexArg<IDX_T> srcArg(src_tensor->shape());
     NdIndexArg<IDX_T> outputArg(out_tensor->shape());
 
-    ScatterDimAddFunctor<device_type, IN_T, IDX_T>()(srcArg, outputArg,
+    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(srcArg, outputArg,
                                                      src_tensor->shape().elem_cnt(), dim, index,
                                                      src, output, ctx->device_ctx());
   }

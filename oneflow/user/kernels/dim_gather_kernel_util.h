@@ -24,7 +24,7 @@ namespace oneflow {
 #define MAX_DIM_COUNT 8
 
 template<typename T>
-using GatherDimIndexHelper = NdIndexOffsetHelper<T, MAX_DIM_COUNT>;
+using DimOpIndexNdHelper = NdIndexOffsetHelper<T, MAX_DIM_COUNT>;
 
 template<typename IDX_T>
 struct NdIndexArg {
@@ -46,12 +46,12 @@ struct NdIndexArg {
 
 namespace user_op {
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoGatherDim(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
+OF_DEVICE_FUNC void DoDimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
                                 int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                 const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
-    GatherDimIndexHelper<IDX_T> inputHelper(inputArg.shape, inputArg.num_axis);
-    GatherDimIndexHelper<IDX_T> indexHelper(indexArg.shape, indexArg.num_axis);
+    DimOpIndexNdHelper<IDX_T> inputHelper(inputArg.shape, inputArg.num_axis);
+    DimOpIndexNdHelper<IDX_T> indexHelper(indexArg.shape, indexArg.num_axis);
 
     // output[i][j][k] = input[i][x][k] # dim == 1, x = index[i][j][k]
     // output.shape == index.shape
@@ -70,15 +70,15 @@ struct DeviceAdd {
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoScatterDimAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg,
+OF_DEVICE_FUNC void DoDimScatterAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* src, IN_T* output) {
   XPU_1D_KERNEL_LOOP(src_offset, elem_cnt) {
     // output[x][j][k] = src[i][j][k]  # if dim == 0, x = index[i][j][k]
     // index.shape == src.shape
 
-    GatherDimIndexHelper<IDX_T> srcHelper(srcArg.shape, srcArg.num_axis);
-    GatherDimIndexHelper<IDX_T> outputHelper(outputArg.shape, outputArg.num_axis);
+    DimOpIndexNdHelper<IDX_T> srcHelper(srcArg.shape, srcArg.num_axis);
+    DimOpIndexNdHelper<IDX_T> outputHelper(outputArg.shape, outputArg.num_axis);
     srcHelper.OffsetToNdIndex(src_offset, outputArg.coordinate);
     outputArg.coordinate[dim] = index[src_offset];  // x == index[src_offset]
 

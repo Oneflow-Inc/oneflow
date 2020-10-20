@@ -2008,20 +2008,46 @@ def masked_fill(
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
 
 
-@oneflow_export("gather_dim")
-def gather_dim(
+@oneflow_export("dim_gather")
+def dim_gather(
     input: remote_blob_util.BlobDef,
     dim: int,
     index: remote_blob_util.BlobDef,
-    output: remote_blob_util.BlobDef = None,
-    sparse_grad: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r""" This operator gathers elements from `input` according to `index` along with the axis `dim`.
+
+    Take a 3-D blob as example, the output is specified by:
+
+    .. code-block:: python
+
+        output[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+        output[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+        output[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+
+
+    The shape of `input` and `index` should be the same except in the `dim` dimension. 
+    
+    That is, if `input` is a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, x_i, x_{i+1}, \dots, x_n)`,
+    and `dim = i`, then `index` must be a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, k, x_{i+1}, \dots, x_n)` 
+    where :math:`k \geq 1`.
+
+    The return Blob `output` will have the same shape with `index`.
+
+    Args:
+        input (remote_blob_util.BlobDef): The input blob
+        dim (int): The axis along which to index
+        index (remote_blob_util.BlobDef): The index blob of elements to gather
+        name (Optional[str], optional): The name of the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The elements gathered from `input` will be retnred as the output Blob.
+    """
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("GatherDim_")
+            name if name is not None else id_util.UniqueStr("DimGather_")
         )
-        .Op("gather_dim")
+        .Op("dim_gather")
         .Input("input", [input])
         .Input("index", [index])
         .Output("output")

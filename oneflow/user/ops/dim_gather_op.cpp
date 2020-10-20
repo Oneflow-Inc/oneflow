@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace user_op {
-REGISTER_USER_OP("gather_dim")
+REGISTER_USER_OP("dim_gather")
     .Input("input")
     .Input("index")
     .Output("output")
@@ -121,7 +121,7 @@ REGISTER_USER_OP("gather_dim")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("scatter_dim_add_like")
+REGISTER_USER_OP("dim_scatter_add_like")
     .Input("like")
     .Input("src")
     .Input("index")
@@ -200,14 +200,14 @@ REGISTER_USER_OP("scatter_dim_add_like")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("gather_dim").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
 
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder
         .OpTypeName(
-            "scatter_dim_add_like")  // scatter_dim_add_like(like, dim, index, src) -> output
+            "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, src) -> output
         .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
         .InputBind("src",
                    ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out

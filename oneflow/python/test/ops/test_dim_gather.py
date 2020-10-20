@@ -90,7 +90,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
     return ret
 
 
-def _make_gather_dim_fn(
+def _make_dim_gather_fn(
     test_case,
     input,
     index,
@@ -100,7 +100,7 @@ def _make_gather_dim_fn(
     value_type,
     index_type,
     machine_ids,
-    device_counts
+    device_counts,
 ):
     flow.clear_default_session()
     if device_type == "cpu":
@@ -131,7 +131,7 @@ def _make_gather_dim_fn(
                 x_blob = flow.cast_to_current_logical_view(x_blob)
                 x = x + x_blob
 
-            y = flow.gather_dim(x, dim, i_blob)
+            y = flow.dim_gather(x, dim, i_blob)
             flow.watch_diff(x, _compare_diff)
 
         with flow.scope.placement(device_type, "0:0-0"):
@@ -151,13 +151,7 @@ def _make_gather_dim_fn(
 
 
 def _compare_dim_gather_with_samples(
-    test_case,
-    device_type,
-    sample,
-    value_type,
-    index_type,
-    machine_ids,
-    device_counts
+    test_case, device_type, sample, value_type, index_type, machine_ids, device_counts
 ):
     input = sample["input"].astype(value_type[0])
     index = sample["index"].astype(index_type[0])
@@ -166,7 +160,7 @@ def _compare_dim_gather_with_samples(
     grad = sample["grad"].astype(value_type[0])
 
     params, indices = input, index
-    gather_fn = _make_gather_dim_fn(
+    gather_fn = _make_dim_gather_fn(
         test_case,
         params,
         indices,
@@ -176,7 +170,7 @@ def _compare_dim_gather_with_samples(
         value_type[1],
         index_type[1],
         machine_ids,
-        device_counts
+        device_counts,
     )
 
     of_y = gather_fn(params, indices).get().numpy()
