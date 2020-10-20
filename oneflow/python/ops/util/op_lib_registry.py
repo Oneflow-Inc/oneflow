@@ -32,8 +32,7 @@ import oneflow
 def run_cmd(cmd, cwd=None):
     print(cmd)
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True,
-                     stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -88,8 +87,7 @@ class OpLib(object):
                 shutil.rmtree(pwd_folder)
             shutil.copytree(lib_folder, pwd_folder)
 
-        self.src_prefix = os.path.join(
-            pwd_path, self.op_type_name, self.op_type_name)
+        self.src_prefix = os.path.join(pwd_path, self.op_type_name, self.op_type_name)
 
         out_path = os.path.join(pwd_path, self.op_type_name, "out")
         if not os.path.exists(out_path):
