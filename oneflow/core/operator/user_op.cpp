@@ -223,6 +223,63 @@ class UserOpSbpContext : public user_op::SbpContext {
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
+class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpInferSbpSignatureFnContext(
+      const OperatorConf& op_conf, SbpSignature* signature, const SbpSignature& sbp_signature_conf,
+      DeviceType device_type, int64_t parallel_num,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn)
+      : user_op::InferSbpSignatureFnContext(user_op::UserOpConfWrapper(op_conf), device_type,
+                                            parallel_num),
+        signature_(signature),
+        sbp_signature_conf_(sbp_signature_conf),
+        sbp_infer_hint4ibn_fn_(std::move(SbpInferHint4Ibn)) {
+    const auto& user_op_conf = op_conf.user_conf();
+    for (const auto& it : user_op_conf.input()) {
+      const std::string& arg_name = it.first;
+      for (int32_t i = 0; i < it.second.s_size(); ++i) {
+        auto hint = CHECK_JUST(sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 GenTensorDescFromBlobDesc(&hint->logical_blob_desc()));
+        arg2sbp_parallel_hint_.emplace(std::make_pair(arg_name, i), hint->sbp_parallel());
+        inputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+    for (const auto& it : user_op_conf.output()) {
+      const std::string& arg_name = it.first;
+      for (int32_t i = 0; i < it.second.s_size(); ++i) {
+        outputs_.emplace_back(std::make_pair(arg_name, i));
+      }
+    }
+  }
+  ~UserOpInferSbpSignatureFnContext() override = default;
+
+  const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) const override {
+    return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
+  }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
+  SbpSignature* mutable_sbp_signature() override { return signature_; }
+  const SbpSignature& sbp_signature_conf() const override { return sbp_signature_conf_; }
+
+  const SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
+                                                          int32_t index) const override {
+    return arg2sbp_parallel_hint_.at(std::make_pair(input_arg_name, index));
+  }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, SbpParallel> arg2sbp_parallel_hint_;
+  SbpSignature* signature_;
+  SbpSignature sbp_signature_conf_;
+  std::function<Maybe<const SbpInferHint*>(const std::string&)> sbp_infer_hint4ibn_fn_;
+};
+
 class UserOpBatchAxisContext : public user_op::BatchAxisContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
@@ -417,6 +474,22 @@ Maybe<void> UserOp::InferBatchAxis(
   UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
   JUST(val_->batch_axis_infer_fn(&batch_axis_ctx));
   return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  if (val_->infer_sbp_signature_fn) {
+    UserOpInferSbpSignatureFnContext ctx(op_conf(), sbp_signature, sbp_sig_conf,
+                                         parallel_desc.device_type(), parallel_desc.parallel_num(),
+                                         SbpInferHint4Ibn);
+    return val_->infer_sbp_signature_fn(&ctx);
+  } else {
+    return Operator::InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
+                                       SbpInferHint4Ibn, parallel_desc);
+  }
 }
 
 Maybe<void> UserOp::GetSbpSignatures(
