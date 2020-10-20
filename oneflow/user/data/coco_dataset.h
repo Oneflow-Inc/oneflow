@@ -38,7 +38,7 @@ class COCODataset final : public RandomAccessDataset<COCOImage> {
   using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
 
   COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta)
-      : meta_(meta) {}
+      : meta_(meta), session_id_(ctx->Attr<int64_t>("session_id")) {}
   ~COCODataset() = default;
 
   LoadTargetShdPtrVec At(int64_t index) const override;
@@ -46,6 +46,7 @@ class COCODataset final : public RandomAccessDataset<COCOImage> {
 
  private:
   std::shared_ptr<const COCOMeta> meta_;
+  int64_t session_id_;
 };
 
 }  // namespace data
