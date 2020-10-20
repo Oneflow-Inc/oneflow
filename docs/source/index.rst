@@ -22,11 +22,11 @@ OneFlow API Reference
     data
     distribute
     advanced 
+    typing
     tensorrt 
     deprecated  
     experimental 
     scope 
-    placement 
     sysconfig 
     onnx   
     random 
