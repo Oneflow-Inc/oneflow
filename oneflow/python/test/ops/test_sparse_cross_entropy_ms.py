@@ -36,7 +36,11 @@ def compare_with_tensorflow(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.gpu_device_num(4)
+    if device_type == "cpu":
+        flow.config.gpu_device_num(0)
+        flow.config.cpu_device_num(4)
+    else:
+        flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
