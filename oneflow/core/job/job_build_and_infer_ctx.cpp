@@ -941,7 +941,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
-    JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
     JUST(DoPass("NonDistributedOptimizerPass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
