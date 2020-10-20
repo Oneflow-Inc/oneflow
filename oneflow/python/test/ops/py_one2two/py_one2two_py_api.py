@@ -18,17 +18,15 @@ from __future__ import absolute_import
 import os
 
 import oneflow as flow
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
 def py_one2two(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None,
-) -> List[remote_blob_util.BlobDef]:
+    x: flow.typing.BlobDef, name: Optional[str] = None,
+) -> List[flow.typing.BlobDef]:
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("PyOne2Two_")
+            name if name is not None else flow.util.unique_str("PyOne2Two_")
         )
         .Op("py_one2two")
         .Input("in", [x])

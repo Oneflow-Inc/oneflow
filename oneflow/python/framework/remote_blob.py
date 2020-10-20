@@ -21,6 +21,7 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
+from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
@@ -63,6 +64,7 @@ def LazyRemoteBlob(lbi, **kw):
     return blob_type(lbi, **kw)
 
 
+@oneflow_export("typing.BlobDef")
 class BlobDef(
     blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
