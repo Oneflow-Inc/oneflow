@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/user/kernels/gather_dim_kernel_util.h"
+#include "oneflow/user/kernels/dim_gather_kernel_util.h"
 #include <stdio.h>
 
 namespace oneflow {

@@ -100,8 +100,7 @@ def _make_gather_dim_fn(
     value_type,
     index_type,
     machine_ids,
-    device_counts,
-    mirrored,
+    device_counts
 ):
     flow.clear_default_session()
     if device_type == "cpu":
@@ -114,17 +113,10 @@ def _make_gather_dim_fn(
     func_config.default_data_type(value_type)
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
-    if mirrored:
-        func_config.default_logical_view(flow.scope.mirrored_view())
-    else:
-        func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    if mirrored:
-        pass
-    else:
-
-        def _compare_diff(blob: oft.Numpy):
-            test_case.assertTrue(np.array_equal(grad, blob))
+    def _compare_diff(blob: oft.Numpy):
+        test_case.assertTrue(np.array_equal(grad, blob))
 
     def do_gather(x_blob, i_blob):
         with flow.scope.placement(device_type, machine_ids):
@@ -158,15 +150,14 @@ def _make_gather_dim_fn(
     return gather_fn
 
 
-def _compare_gatherdim_with_samples(
+def _compare_dim_gather_with_samples(
     test_case,
     device_type,
     sample,
     value_type,
     index_type,
     machine_ids,
-    device_counts,
-    mirrored=False,
+    device_counts
 ):
     input = sample["input"].astype(value_type[0])
     index = sample["index"].astype(index_type[0])
@@ -185,21 +176,17 @@ def _compare_gatherdim_with_samples(
         value_type[1],
         index_type[1],
         machine_ids,
-        device_counts,
-        mirrored,
+        device_counts
     )
 
-    if mirrored:
-        of_y = gather_fn([params], [indices]).get().numpy_list()[0]
-    else:
-        of_y = gather_fn(params, indices).get().numpy()
+    of_y = gather_fn(params, indices).get().numpy()
 
     test_case.assertTrue(np.allclose(out, of_y))
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestGatherDim1n1d(flow.unittest.TestCase):
-    def test_gather_dim_cpu(test_case):
+class TestDimGather1n1d(flow.unittest.TestCase):
+    def test_dim_gather_cpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
@@ -211,9 +198,9 @@ class TestGatherDim1n1d(flow.unittest.TestCase):
         arg_dict["machine_ids"] = ["0:0-0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
-            _compare_gatherdim_with_samples(test_case, *arg)
+            _compare_dim_gather_with_samples(test_case, *arg)
 
-    def test_gather_dim_gpu(test_case):
+    def test_dim_gather_gpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
@@ -225,12 +212,12 @@ class TestGatherDim1n1d(flow.unittest.TestCase):
         arg_dict["machine_ids"] = ["0:0-0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
-            _compare_gatherdim_with_samples(test_case, *arg)
+            _compare_dim_gather_with_samples(test_case, *arg)
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestGatherDim1n2dConsistent(flow.unittest.TestCase):
-    def test_gather_dim_2cards(test_case):
+class TestDimGather1n2dConsistent(flow.unittest.TestCase):
+    def test_dim_gather_2cards(test_case):
         flow.clear_default_session()
         global g_samples
         arg_dict = OrderedDict()
@@ -243,7 +230,7 @@ class TestGatherDim1n2dConsistent(flow.unittest.TestCase):
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_count"] = [2]
         for arg in GenArgList(arg_dict):
-            _compare_gatherdim_with_samples(test_case, *arg)
+            _compare_dim_gather_with_samples(test_case, *arg)
 
 
 if __name__ == "__main__":
