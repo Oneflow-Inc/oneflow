@@ -36,7 +36,7 @@ class COCODataReader final : public DataReader<COCOImage> {
 
 class COCOMeta final {
  public:
-  COCOMeta(const std::string& annotation_file, const std::string& image_dir,
+  COCOMeta(int64_t session_id, const std::string& annotation_file, const std::string& image_dir,
            bool remove_images_without_annotations);
   ~COCOMeta() = default;
 
