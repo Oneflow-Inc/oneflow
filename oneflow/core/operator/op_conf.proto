@@ -833,11 +833,6 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-message SquareSumOpConf {
-  required string x = 1;
-  required string y = 2;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
