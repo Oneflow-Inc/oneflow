@@ -70,10 +70,12 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
+  session_id_ = config_proto.session_id();
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
+  Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
@@ -109,6 +111,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
+  Global<const IOConf>::SessionDelete(session_id_);
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource());
 }
