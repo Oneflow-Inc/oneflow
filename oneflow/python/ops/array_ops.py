@@ -40,8 +40,6 @@ def gather(
 ) -> remote_blob_util.BlobDef:
     r"""This operator gathers slices from params `axis` according to indices.
 
-    Analogous to `tf.gather <https://www.tensorflow.org/api_docs/python/tf/gather>`_
-
     Args:
         params: A `Blob`. The blob from which to gather values. Must be at least rank `axis + 1`.
         indices: A `Blob`. Index blob. Must be in range [0, params.shape[axis]).
@@ -1916,6 +1914,8 @@ def broadcast_like(
 
     For example: 
 
+    Example 1: 
+
     .. code-block:: python 
 
         import oneflow as flow
@@ -1924,23 +1924,49 @@ def broadcast_like(
 
 
         @flow.global_function()
-        def broadcast_like_Job(x: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32),
-                        y: tp.Numpy.Placeholder(shape=(1, 3, 3), dtype=flow.int32)
+        def broadcast_like_Job(x: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.float32)
         ) -> tp.Numpy:
+            like_tensor = flow.constant(value=1.0, 
+                                        dtype=flow.float32, 
+                                        shape=(3, 3))
             return flow.broadcast_like(x=x, 
-                                    like=y, 
-                                    broadcast_axes=(1,))
+                                    like=like_tensor, 
+                                    broadcast_axes=(1, ))
 
 
-        x = np.array([[1, 1, 1]]).astype(np.int32)
-        y = np.array([[[1, 1, 1], 
-                    [1, 1, 1], 
-                    [1, 1, 1]]]).astype(np.int32)
-        out = broadcast_like_Job(x, y)
+        x = np.array([[1], [1], [1]]).astype(np.float32)
+        out = broadcast_like_Job(x)
 
         # out [[[1 1 1]
         #       [1 1 1]
         #       [1 1 1]]]
+
+        # out.shape (3, 3)
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def broadcast_like_Job(x: tp.Numpy.Placeholder(shape=(3, 1, 1), dtype=flow.float32)
+        ) -> tp.Numpy:
+            like_tensor = flow.constant(value=1.0, 
+                                        dtype=flow.float32, 
+                                        shape=(3, 3, 3))
+            return flow.broadcast_like(x=x, 
+                                    like=like_tensor, 
+                                    broadcast_axes=(1, 2))
+
+
+        x = np.random.randn(3, 1, 1).astype(np.float32)
+        out = broadcast_like_Job(x)
+
+        # out.shape (3, 3, 3)
 
     """
     if name is None:
