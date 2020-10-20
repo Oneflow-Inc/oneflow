@@ -60,7 +60,9 @@ lflags = (
     + " -Wl,-rpath "
     + oneflow_sysconfig.get_lib()
 )
-cpp2py_path = os.path.join(oneflow_sysconfig.get_lib(), "python/ops/util/cpp2py.hpp")
+cpp2py_path = os.path.join(
+    oneflow_sysconfig.get_include(), "oneflow/python/ops/util/cpp2py.hpp"
+)
 
 
 @oneflow_export("util.op_lib")
@@ -74,8 +76,11 @@ class OpLib(object):
         self.got_so = False
         self.api = None
 
+        lib_path = os.path.normpath(lib_path)
         pwd_path = os.getcwd()
-        if lib_path is not "" and lib_path is not pwd_path:
+        print("pwd ", pwd_path)
+        print("lib ", lib_path)
+        if lib_path != "" and lib_path != pwd_path:
             lib_folder = os.path.join(lib_path, self.op_type_name)
             pwd_folder = os.path.join(pwd_path, self.op_type_name)
             if os.path.exists(pwd_folder):
