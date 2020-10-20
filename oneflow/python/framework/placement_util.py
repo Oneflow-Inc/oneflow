@@ -52,9 +52,23 @@ def api_placement(
     Returns:
         placement_ctx.DevicePriorPlacementScope:  Placement scope
 
-    For instance::
+    For example:
 
-        with flow.fixed_placement("gpu", "0:0"):
+    If you run program on single machine, you can assign the specified device like this: 
+
+    .. code-block:: python 
+
+        with flow.scope.placement("gpu", "0:0"):
+            logits = lenet(images, train=False)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
+            flow.losses.add_loss(loss)
+
+    Or you run distributed program, you can assign the specified devices like this: 
+
+    .. code-block:: python 
+
+        # configure machines ids, ips, etc.
+        with flow.scope.placement("gpu", ['0:0-7', '1:0-7']):
             logits = lenet(images, train=False)
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
             flow.losses.add_loss(loss)
