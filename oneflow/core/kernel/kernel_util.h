@@ -31,9 +31,6 @@ class Blob;
 class InitializerConf;
 class MemoryCase;
 
-template<cudaMemcpyKind cpy_kind>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
-
 size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
