@@ -31,12 +31,14 @@ class UserOpDefWrapper;
 class UserOpConfWrapper;
 class InferContext;
 class SbpContext;
+class InferSbpSignatureFnContext;
 class BatchAxisContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
 using BatchAxisInferFn = std::function<Maybe<void>(BatchAxisContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
+using InferSbpSignatureFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
@@ -58,6 +60,7 @@ struct OpRegistryResult {
   TensorDescInferFn tensor_desc_infer_fn;
   BatchAxisInferFn batch_axis_infer_fn;
   GetSbpFn get_sbp_fn;
+  InferSbpSignatureFn infer_sbp_signature_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
@@ -92,6 +95,7 @@ class OpRegistry final {
   OpRegistry& SetTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetBatchAxisInferFn(BatchAxisInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
+  OpRegistry& SetInferSbpSignatureFn(InferSbpSignatureFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
