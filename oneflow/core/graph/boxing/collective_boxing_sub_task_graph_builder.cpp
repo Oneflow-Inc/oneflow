@@ -459,8 +459,7 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
     builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
 #else
-    LOG(WARNING)
-        << "nccl_enable_all_to_all is not available, because it requires NCCL_VERSION > 2700. ";
+    LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
 #endif
   }
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
