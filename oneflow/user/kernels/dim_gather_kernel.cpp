@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace user_op {
 
-template<typename IDX_T, typename IN_T>
+template<typename IN_T, typename IDX_T>
 struct DimGatherFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output,
@@ -56,13 +56,15 @@ struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
                        & (user_op::HobDataType("src", 0) == OF_PP_PAIR_SECOND(in_type))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+#define DIM_CPUGATHER_SCATTER_DATA_TYPE_SEQ \
+        ARITHMETIC_DATA_TYPE_SEQ                 \
+        FLOAT16_DATA_TYPE_SEQ
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
-                                 GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 DIM_CPUGATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_KERNEL, (DeviceType::kCPU),
-                                 GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 DIM_CPUGATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow

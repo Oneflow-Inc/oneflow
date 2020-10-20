@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 #include "oneflow/user/kernels/dim_gather_kernels.h"
+#include <stdio.h>
 
 namespace oneflow {
 
@@ -50,6 +51,19 @@ struct DimGatherFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   }
 };
 
+// float16 special case of DimGatherFunctor template
+template<typename IDX_T>
+struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
+  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const float16* input, float16* output,
+                  DeviceCtx* ctx) {
+    RUN_CUDA_KERNEL((DoCUDADimGather<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), inputArg,
+                    indexArg, elem_cnt, dim, index,
+                    reinterpret_cast<const half*>(input),
+                    reinterpret_cast<half*>(output));
+  }
+};
+
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDAScatterDimAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
@@ -62,8 +76,9 @@ template<typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
+    printf("gpu kernel, general\n");
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
-                    outputArg, elem_cnt, dim, index, src, output);
+    outputArg, elem_cnt, dim, index, src, output);
   }
 };
 
@@ -71,8 +86,8 @@ struct DimScatterAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
 template<typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const float16* src, float16* output,
-                  DeviceCtx* ctx) {
+                  int64_t dim, const IDX_T* index, const float16* src, float16* output, DeviceCtx* ctx) {
+    printf("gpu kernel, float16\n");
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
                     outputArg, elem_cnt, dim, index, reinterpret_cast<const half*>(src),
                     reinterpret_cast<half*>(output));
@@ -96,8 +111,9 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ                 \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+        FLOATING_DATA_TYPE_SEQ                 \
+        FLOAT16_DATA_TYPE_SEQ                  \
+        OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMGATHER_GPUKERNEL, (DeviceType::kGPU),
                                  DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
