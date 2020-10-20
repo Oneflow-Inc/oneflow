@@ -372,19 +372,25 @@ def transpose(
     a: remote_blob_util.BlobDef,
     perm: Sequence[int] = None,
     conjugate: bool = False,
+    batch_axis_non_change: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator transposes a Blob `a`. 
-
-    Analogous to `tf.transpose <https://www.tensorflow.org/api_docs/python/tf/transpose>`_
+    r"""This operator transposes the specified axis of input Blob. 
 
     Args:
-        a: A `Blob`.
-        perm: A permutation of the dimensions of `a`.
-        conjugate: False. Not supported.
-        name: A name for the operation (optional).
+        a (remote_blob_util.BlobDef): The input Blob. 
+        perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
+        conjugate (bool, optional): Still Unavailable. Defaults to False.
+        batch_axis_non_change (bool, optional): Whether to change the batch axis， 
+            it is a temporary design for solving batch axis infer error in some situations. 
+            It will be removed after `batch_axis` has been depreciated. Defaults to False. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Raises:
+        NotImplementedError: The attribute `conjugate` still unavailable.
+
     Returns:
-        A transposed blob. 
+        remote_blob_util.BlobDef: A transposed blob. 
 
     For example: 
 
@@ -422,6 +428,9 @@ def transpose(
         .Input("input", [a])
         .Output("output")
         .Attr("perm", perm)
+        .Attr(
+            "batch_axis_non_change", batch_axis_non_change
+        )  # TODO: To be removed after batch_axis has been depreciated
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -1693,7 +1702,7 @@ def identity(
 
 @oneflow_export("identity_n")
 def identity_n(
-    inputs: Iterable[remote_blob_util.BlobDef], name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> List[remote_blob_util.BlobDef]:
     """This operator is similar to `oneflow.identity`. The difference is that the input and output 
     of `identity_n` is `List`. 
@@ -1733,26 +1742,17 @@ def identity_n(
         # out[2] [[3, 3, 3]]
 
     """
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("IdentityN_"),
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("IdentityN_")
+        )
+        .Op("tuple_identity")
+        .Input("in", inputs)
+        .Output("out", len(inputs))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
     )
-    assert len(inputs) > 1
-    out_bns = []
-    for idx, blob in enumerate(inputs):
-        getattr(op_conf.tuple_identity_conf, "in").append(blob.unique_name)
-        out_bn = "out_" + str(idx)
-        getattr(op_conf.tuple_identity_conf, "out").append(out_bn)
-        out_bns.append(out_bn)
-    interpret_util.Forward(op_conf)
-
-    def bn_to_remote_blob(bn):
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_conf.name
-        lbi.blob_name = bn
-        return remote_blob_util.RemoteBlob(lbi)
-
-    return list(map(bn_to_remote_blob, out_bns))
 
 
 @oneflow_export("squeeze")
