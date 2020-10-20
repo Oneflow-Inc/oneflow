@@ -151,8 +151,6 @@ void GenMemChainTasksAndRegsts(
   auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
     const TaskProto* l_chain_sink_task_node = lhs->sorted_tasks.back();
     const TaskProto* r_chain_source_task_node = rhs->sorted_tasks.front();
-    CHECK_LT(l_chain_sink_task_node->task_set_info().order_in_graph(),
-             r_chain_source_task_node->task_set_info().order_in_graph());
     return plan_task_graph.IsReachable(l_chain_sink_task_node->task_id(),
                                        r_chain_source_task_node->task_id());
   };
