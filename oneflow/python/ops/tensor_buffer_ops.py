@@ -35,6 +35,10 @@ def tensor_buffer_to_tensor(
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
     to `Tensor`. 
 
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorBuffer. 
+
+
     Args:
         x (BlobDef): Input `Blob`.
         dtype (dtype_util.dtype): The data dtype.
@@ -88,6 +92,10 @@ def tensor_to_tensor_buffer(
     x: BlobDef, instance_dims: int, name: Optional[str] = None,
 ) -> BlobDef:
     r"""This operator converts the Blob's type from Tensor to TensorBuffer. 
+
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorBuffer. 
+
 
     Args:
         x (BlobDef): Input `Blob`.
