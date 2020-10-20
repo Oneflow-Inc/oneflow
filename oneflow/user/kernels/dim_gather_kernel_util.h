@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
-#define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
+#ifndef ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -90,4 +90,4 @@ OF_DEVICE_FUNC void DoDimScatterAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> 
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_

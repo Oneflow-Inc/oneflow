@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_USER_KERNELS_DIM_GATHER_KERNELS_H_
+#define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNELS_H_
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
@@ -95,3 +97,4 @@ class ScatterDimKernel final : public user_op::OpKernel {
 
 }  // namespace user_op
 }  // namespace oneflow
+#endif
