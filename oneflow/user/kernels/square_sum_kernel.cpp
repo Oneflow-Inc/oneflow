@@ -27,24 +27,22 @@ class SquareSumKernel final : public user_op::OpKernel {
   SquareSumKernel() = default;
   ~SquareSumKernel() override = default;
 
-
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-   
-    SquareSumKernelUtil<device_type, T>::SquareSum(
-        ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(), y->mut_dptr<T>());
+
+    SquareSumKernelUtil<device_type, T>::SquareSum(ctx->device_ctx(), x->shape().elem_cnt(),
+                                                   x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                                              \
-  REGISTER_USER_KERNEL("square_sum")                                                           \
-      .SetCreateFn<                                                                            \
-          SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));          \
+#define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                      \
+  REGISTER_USER_KERNEL("square_sum")                                   \
+      .SetCreateFn<SquareSumKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)             \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SQUARE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
