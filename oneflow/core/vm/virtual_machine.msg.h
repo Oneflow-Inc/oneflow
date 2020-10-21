@@ -50,6 +50,9 @@ OBJECT_MSG_BEGIN(VirtualMachine);
                                                  int64_t global_device_id);
 
   OF_PUBLIC int64_t this_machine_id() const;
+  OF_PUBLIC int64_t this_start_global_device_id() const {
+    return this_machine_id() * vm_resource_desc().max_device_num_per_machine();
+  }
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
