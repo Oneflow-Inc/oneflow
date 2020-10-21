@@ -24,11 +24,9 @@ runs:
         python3 docker/package/manylinux/build_wheel.py \
             --cuda_version=${{ inputs.cuda_version }} \
             --python_version=${{ inputs.python_version }} \
-            --use_tuna \
-            --use_system_proxy --use_aliyun_mirror \
+            --use_tuna --use_system_proxy --use_aliyun_mirror \
             --wheel_house_dir=${tmp_dir}/wheelhouse \
-            --oneflow_src_dir=${PWD} \
-            ${{ inputs.extra_flags }}
+            --oneflow_src_dir=${PWD} ${{ inputs.extra_flags }}
 
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
