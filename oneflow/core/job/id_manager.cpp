@@ -22,16 +22,16 @@ int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 2 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuD2DThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 3 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 5 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuD2DThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 6 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
