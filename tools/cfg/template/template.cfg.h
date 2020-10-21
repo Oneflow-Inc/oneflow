@@ -98,9 +98,9 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
    public:
     _{{ util.class_name(cls) }}_();
     explicit _{{ util.class_name(cls) }}_(const _{{ util.class_name(cls) }}_& other);
-    explicit _{{ util.class_name(cls) }}_(_{{ util.class_name(cls) }}_&& other) = default;
+    explicit _{{ util.class_name(cls) }}_(_{{ util.class_name(cls) }}_&& other);
     _{{ util.class_name(cls) }}_(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
-    ~_{{ util.class_name(cls) }}_() = default;
+    ~_{{ util.class_name(cls) }}_();
 
     void InitFromProto(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
@@ -209,11 +209,11 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   };
 
   Const{{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data);
-  Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&) = default;
-  Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept = default;
+  Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&);
+  Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept;
   Const{{ util.class_name(cls) }}();
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
-  ~Const{{ util.class_name(cls) }}() override = default;
+  ~Const{{ util.class_name(cls) }}() override;
 
   using PbMessage = ::google::protobuf::Message;
   void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override;
@@ -226,7 +226,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 
   bool FieldDefined4FieldNumber(int field_number) const override;
 
-  const ::std::set<::std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const;
+  const ::std::set<::std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const override;
 
   const void* FieldPtr4FieldNumber(int field_number) const override;
 
@@ -304,10 +304,10 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   {{ util.class_name(cls) }}(const {{ util.class_name(cls) }}& other);
   // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
-  {{ util.class_name(cls) }}() = default;
+  {{ util.class_name(cls) }}();
   {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
-  ~{{ util.class_name(cls) }}() = default;
+  ~{{ util.class_name(cls) }}();
 
   void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override;
   
@@ -392,8 +392,8 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
 class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}> {
  public:
   Const{{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name_with_cfg_namespace(field) }}>>& data);
-  Const{{ util.field_repeated_container_name(field) }}() = default;
-  ~Const{{ util.field_repeated_container_name(field) }}() = default;
+  Const{{ util.field_repeated_container_name(field) }}();
+  ~Const{{ util.field_repeated_container_name(field) }}();
 
   bool operator==(const Const{{ util.field_repeated_container_name(field) }}& other) const;
   bool operator<(const Const{{ util.field_repeated_container_name(field) }}& other) const;
@@ -406,8 +406,8 @@ class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::c
 class {{ util.field_repeated_container_name(field) }} final : public Const{{ util.field_repeated_container_name(field) }} {
  public:
   {{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name_with_cfg_namespace(field) }}>>& data);
-  {{ util.field_repeated_container_name(field) }}() = default;
-  ~{{ util.field_repeated_container_name(field) }}() = default;
+  {{ util.field_repeated_container_name(field) }}();
+  ~{{ util.field_repeated_container_name(field) }}();
   void CopyFrom(const Const{{ util.field_repeated_container_name(field) }}& other);
   void CopyFrom(const {{ util.field_repeated_container_name(field) }}& other);
   bool operator==(const {{ util.field_repeated_container_name(field) }}& other) const;
@@ -427,8 +427,8 @@ class {{ util.field_repeated_container_name(field) }} final : public Const{{ uti
 class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}> {
  public:
   Const{{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>>& data);
-  Const{{ util.field_map_container_name(field) }}() = default;
-  ~Const{{ util.field_map_container_name(field) }}() = default;
+  Const{{ util.field_map_container_name(field) }}();
+  ~Const{{ util.field_map_container_name(field) }}();
 
   bool operator==(const Const{{ util.field_map_container_name(field) }}& other) const;
   bool operator<(const Const{{ util.field_map_container_name(field) }}& other) const;
@@ -451,8 +451,8 @@ class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_
 class {{ util.field_map_container_name(field) }} final : public Const{{ util.field_map_container_name(field) }} {
  public:
   {{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>>& data);
-  {{ util.field_map_container_name(field) }}() = default;
-  ~{{ util.field_map_container_name(field) }}() = default;
+  {{ util.field_map_container_name(field) }}();
+  ~{{ util.field_map_container_name(field) }}();
   void CopyFrom(const Const{{ util.field_map_container_name(field) }}& other);
   void CopyFrom(const {{ util.field_map_container_name(field) }}& other);
   bool operator==(const {{ util.field_map_container_name(field) }}& other) const;

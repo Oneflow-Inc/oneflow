@@ -14,8 +14,6 @@ parser.add_argument(
     "-of_proto_python", "--of_proto_python_dir", type=str, required=True
 )
 args = parser.parse_args()
-print("os.path.dirname(args.proto_py_path): ", args.of_proto_python_dir)
-print("os.path.dirname(args.proto_py_path): ", args.proto_py_path)
 
 sys.path.append(args.of_proto_python_dir)
 sys.path.append(os.path.dirname(args.proto_py_path))
