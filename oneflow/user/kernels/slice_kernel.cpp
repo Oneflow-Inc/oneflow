@@ -319,7 +319,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_ctx, true);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
