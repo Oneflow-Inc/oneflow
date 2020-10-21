@@ -32,8 +32,7 @@ import oneflow
 def run_cmd(cmd, cwd=None):
     print(cmd)
     if cwd:
-        res = sp.run(cmd, cwd=cwd, shell=True,
-                     stdout=sp.PIPE, stderr=sp.STDOUT)
+        res = sp.run(cmd, cwd=cwd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     else:
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
@@ -78,7 +77,11 @@ class OpLib(object):
         self.got_so = False
         self.api = None
         print(run_cmd("g++ -v"))
-        print(run_cmd("nm /root/.local/lib/python3.6/site-packages/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so | grep CheckAndGetOpRegistry"))
+        print(
+            run_cmd(
+                "nm /root/.local/lib/python3.6/site-packages/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so | grep CheckAndGetOpRegistry"
+            )
+        )
 
         lib_path = os.path.normpath(lib_path)
         pwd_path = os.getcwd()
@@ -89,8 +92,7 @@ class OpLib(object):
                 shutil.rmtree(pwd_folder)
             shutil.copytree(lib_folder, pwd_folder)
 
-        self.src_prefix = os.path.join(
-            pwd_path, self.op_type_name, self.op_type_name)
+        self.src_prefix = os.path.join(pwd_path, self.op_type_name, self.op_type_name)
 
         out_path = os.path.join(pwd_path, self.op_type_name, "out")
         if not os.path.exists(out_path):
