@@ -36,8 +36,7 @@ def add(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Compute :math:`X + Y` element-wise, math.add supports broadcasting. Analogous to `tf.math.add <https://www.tensorflow.org/api_docs/python/tf/math/add>`_
-
+    """Compute :math:`X + Y` element-wise, math.add supports broadcasting. 
     The equation is:
 
     .. math::
@@ -114,7 +113,7 @@ def _recursive_build_add_n(inputs, name=None):
 def add_n(
     inputs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """Add all the input tensors in element-wise, Analogous to `tf.math.add_n <https://www.tensorflow.org/api_docs/python/tf/math/add_n>`_
+    """Add all the input tensors in element-wise. 
 
     Args:
         inputs (Sequence[remote_blob_util.BlobDef]): A list of Blob, each Blob has the same shape and type. 
@@ -154,7 +153,7 @@ def subtract(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Compute x - y element-wise, Analogous to `tf.math.subtract <https://www.tensorflow.org/api_docs/python/tf/math/subtract>`_
+    """Compute :math:`X - Y` element-wise. 
 
     The equation is:
 
@@ -211,7 +210,7 @@ def multiply(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Compute :math:`x \times y` element-wise, Analogous to `tf.math.multiply <https://www.tensorflow.org/api_docs/python/tf/math/multiply>`_
+    r"""Compute :math:`x \times y` element-wise. 
 
     The equation is:
 
@@ -267,7 +266,7 @@ def divide(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes the division of x by y, Analogous to `tf.math.divide <https://www.tensorflow.org/api_docs/python/tf/math/divide>`_ 
+    r"""Computes the division of x by y. 
 
     The equation is:
 
@@ -328,7 +327,7 @@ def floor_mod(
     y: Union[int, float, remote_blob_util.BlobDef],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Mod two Blobs, Analogous to `tf.math.floormod <https://www.tensorflow.org/api_docs/python/tf/math/floormod>`_ 
+    r"""This operator mods two Blobs. 
 
     The equation is:
 
@@ -529,7 +528,7 @@ def broadcast_floor_mod(x, y, name=None):
 def tanh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Computes hyperbolic tangent of `x` element-wise, Analogous to `tf.math.tanh <https://www.tensorflow.org/api_docs/python/tf/math/tanh>`_ 
+    r"""Computes hyperbolic tangent of `x` element-wise. 
 
     The equation is:
 
@@ -578,7 +577,7 @@ def tanh(
 def gelu(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Gelu activation operator, Analogous to `tf.nn.gelu <https://www.tensorflow.org/api_docs/python/tf/nn/gelu>`_ 
+    r"""Gelu activation operator. 
 
     The equation is:
 
@@ -729,8 +728,8 @@ def unsorted_segment_sum(
     axis: int = 0,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes the sum along segments of a Blob, Analogous to `tf.math.unsorted_segment_sum <https://www.tensorflow.org/api_docs/python/tf/math/unsorted_segment_sum>`_
-
+    r"""Computes the sum along segments of a Blob. 
+    
     Args:
         data (remote_blob_util.BlobDef): Input Blob
         segment_ids (remote_blob_util.BlobDef): A Blob should be the size of the first dimension, with consecutive IDs in the range 0 to k (k < d0).

@@ -35,11 +35,12 @@ OBJECT_MSG_BEGIN(VmResourceDesc);
   OF_PUBLIC void __Init__(
       int64_t machine_num, const DeviceTag2DeviceNum& device_tag2device_num);
   OF_PUBLIC void CopyFrom(const VmResourceDesc& vm_resource_desc);
-  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, const std::string& device_tag, int64_t device_id) const;
+  OF_PUBLIC int64_t GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const;
   OF_PUBLIC void GenerateParallelConf(const char* device_tag, ParallelConf* parallel_conf);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, machine_num);
+  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, max_device_num_per_machine);
   OBJECT_MSG_DEFINE_STRUCT(DeviceTag2DeviceNum, device_tag2device_num);
 OBJECT_MSG_END(VmResourceDesc);
 // clang-format on

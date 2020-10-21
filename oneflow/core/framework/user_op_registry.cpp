@@ -145,6 +145,11 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferSbpSignatureFn(InferSbpSignatureFn infer_sbp_signature_fn) {
+  result_.infer_sbp_signature_fn = std::move(infer_sbp_signature_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::SetInputArgModifyFn(InputArgModifyFn input_arg_modify_fn) {
   result_.input_arg_modify_fn = std::move(input_arg_modify_fn);
   return *this;

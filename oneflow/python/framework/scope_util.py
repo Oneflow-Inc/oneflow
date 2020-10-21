@@ -16,6 +16,7 @@ limitations under the License.
 import traceback
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.scope_symbol as scope_symbol
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.vm_util as vm_util
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
@@ -62,8 +63,9 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
 
     def BuildInitialScope(builder):
         nonlocal scope
+        session_id = session_ctx.GetDefaultSession().id
         scope = scope_symbol.BuildInitialScope(
-            builder, job_conf, device_tag, machine_device_ids, is_mirrored
+            builder, session_id, job_conf, device_tag, machine_device_ids, is_mirrored
         )
 
     vm_util.LogicalRun(BuildInitialScope)

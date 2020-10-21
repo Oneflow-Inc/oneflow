@@ -101,6 +101,9 @@ def _test_model_io(test_case, shape, dtype, lr, num_iters):
 @flow.unittest.skip_unless_1n1d()
 class TestModelIo(flow.unittest.TestCase):
     def test_model_io_case_0(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
         # _test_model_io(test_case, (10, 5, 7), flow.float32, 1e-2, 10)
         _test_model_io(test_case, (2, 2), flow.float32, 1e-2, 10)
 
