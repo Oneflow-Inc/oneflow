@@ -116,7 +116,7 @@ def _make_dim_gather_fn(
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: oft.Numpy):
-        test_case.assertTrue(np.array_equal(grad, blob))
+        test_case.assertTrue(np.allclose(grad, blob))
 
     def do_gather(x_blob, i_blob):
         with flow.scope.placement(device_type, machine_ids):

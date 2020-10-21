@@ -28,6 +28,11 @@ struct DeviceAdd<DeviceType::kGPU, half> {
   }
 };
 
+template<typename T>
+struct DeviceAdd<DeviceType::kGPU, T> {
+  __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
+};
+
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDADimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
                                 int64_t elem_cnt, int64_t dim, const IDX_T* index,
