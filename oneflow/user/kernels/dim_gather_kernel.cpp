@@ -35,7 +35,7 @@ template<typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
-    DoDimScatterAdd<DeviceType::kCPU, IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
+    DoDimScatterAdd<IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
                                                    output);
   }
 };
@@ -53,7 +53,7 @@ struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
       .SetCreateFn<                                                                              \
           ScatterDimKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("src", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 

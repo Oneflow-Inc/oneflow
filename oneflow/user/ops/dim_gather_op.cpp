@@ -28,12 +28,12 @@ REGISTER_USER_OP("dim_gather")
       const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       int64_t input_num_axes = in->shape().NumAxes();
       CHECK_GT_OR_RETURN(input_num_axes, 0);
-      CHECK_LE_OR_RETURN(input_num_axes, MAX_DIM_COUNT);
+      CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
 
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       int64_t index_num_axes = index->shape().NumAxes();
       CHECK_GT_OR_RETURN(index_num_axes, 0);
-      CHECK_LE_OR_RETURN(index_num_axes, MAX_DIM_COUNT);
+      CHECK_LE_OR_RETURN(index_num_axes, kDimGatherMaxDimCount);
       CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
 
       const int64_t dim = ctx->Attr<int64_t>("dim");
@@ -123,12 +123,12 @@ REGISTER_USER_OP("dim_gather")
 
 REGISTER_USER_OP("dim_scatter_add_like")
     .Input("like")
-    .Input("src")
+    .Input("input")
     .Input("index")
     .Output("output")
     .Attr("dim", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
+      const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
 
@@ -139,7 +139,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
       const Shape& params_shape = like->shape();
       int64_t dim = ctx->Attr<int64_t>("dim");
 
-      const SbpParallel& src_sbp = ctx->SbpParallel4ArgNameAndIndex("src", 0);
+      const SbpParallel& src_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
       int64_t split_axis = src_sbp.split_parallel().axis();
       if (ctx->parallel_ctx().parallel_num() != 1 && src_sbp.has_split_parallel()) {
         CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
@@ -147,7 +147,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
 
       int64_t src_num_axes = src->shape().NumAxes();
       CHECK_GT_OR_RETURN(src_num_axes, 0);
-      CHECK_LE_OR_RETURN(src_num_axes, MAX_DIM_COUNT);
+      CHECK_LE_OR_RETURN(src_num_axes, kDimGatherMaxDimCount);
 
       int64_t index_num_axes = index->shape().NumAxes();
       CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
@@ -185,7 +185,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
         if (i != dim) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("index", 0), i)
-              .Split(user_op::OpArg("src", 0), i)
+              .Split(user_op::OpArg("input", 0), i)
               .Split(user_op::OpArg("output", 0), i)
               .Split(user_op::OpArg("like", 0), i)
               .Build();
@@ -193,7 +193,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
       }
 
       ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("src", 0))
+          .PartialSum(user_op::OpArg("input", 0))
           .Broadcast(user_op::OpArg("index", 0))
           .PartialSum(user_op::OpArg("output", 0))
           .PartialSum(user_op::OpArg("like", 0))
@@ -208,10 +208,10 @@ REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardO
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder
         .OpTypeName(
-            "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, src) -> output
+            "dim_scatter_add_like")  // dim_scatter_add_like(like, dim, index, input) -> output
         .InputBind("index", ctx->FwOp().input("index", 0))  // scatter.index <- gather.index
-        .InputBind("src",
-                   ctx->FwOp().output_grad("output", 0))  // scatter.src <- grad of gather.out
+        .InputBind("input",
+                   ctx->FwOp().output_grad("output", 0))  // scatter.input <- grad of gather.out
         .InputBind("like", ctx->FwOp().input("input", 0))
         .Output("output")
         .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))

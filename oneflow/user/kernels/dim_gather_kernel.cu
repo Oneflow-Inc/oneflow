@@ -21,17 +21,17 @@ namespace oneflow {
 
 namespace user_op {
 
-template<>
-struct DeviceAdd<DeviceType::kGPU, half> {
-  __device__ __forceinline__ static void Invoke(const half* x, half* y) {
-    gpu_atomic_add(y, *x);
-  }
-};
+// template<>
+// struct DeviceAdd<half> {
+//   __device__ __forceinline__ static void Invoke(const half* x, half* y) {
+//     gpu_atomic_add(y, *x);
+//   }
+// };
 
-template<typename T>
-struct DeviceAdd<DeviceType::kGPU, T> {
-  __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
-};
+// template<typename T>
+// struct DeviceAdd<DeviceType::kGPU, T> {
+//   __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
+// };
 
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDADimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
@@ -67,7 +67,7 @@ template<typename IN_T, typename IDX_T>
 __global__ void DoCUDAScatterDimAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* src, IN_T* output) {
-  DoDimScatterAdd<DeviceType::kGPU, IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
+  DoDimScatterAdd<IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
                                                  output);
 }
 
@@ -105,7 +105,7 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
       .SetCreateFn<                                                                              \
           ScatterDimKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("src", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMGATHER_GPUKERNEL, (DeviceType::kGPU),

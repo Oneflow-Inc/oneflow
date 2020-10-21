@@ -71,25 +71,25 @@ class ScatterDimKernel final : public user_op::OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
+    const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
 
     if (index_tensor->shape().elem_cnt() == 0) { return; }
 
-    const IN_T* src = src_tensor->dptr<IN_T>();
+    const IN_T* src = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
-    NdIndexArg<IDX_T> srcArg(src_tensor->shape());
+    NdIndexArg<IDX_T> srcArg(input_tensor->shape());
     NdIndexArg<IDX_T> outputArg(out_tensor->shape());
 
     DimScatterAddFunctor<device_type, IN_T, IDX_T>()(srcArg, outputArg,
-                                                     src_tensor->shape().elem_cnt(), dim, index,
+                                                     input_tensor->shape().elem_cnt(), dim, index,
                                                      src, output, ctx->device_ctx());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

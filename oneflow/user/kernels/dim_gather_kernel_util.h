@@ -26,17 +26,16 @@ namespace oneflow {
         FLOAT16_DATA_TYPE_SEQ                  \
         OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define MAX_DIM_COUNT 8
+constexpr int kDimGatherMaxDimCount = 8;
 
 template<typename T>
-using DimOpIndexNdHelper = NdIndexOffsetHelper<T, MAX_DIM_COUNT>;
+using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
 template<typename IDX_T>
 struct NdIndexArg {
-  static const unsigned int MAX_AXIS = MAX_DIM_COUNT;
 
   NdIndexArg(const ShapeView& shape_view) : num_axis(shape_view.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, MAX_AXIS) {
+    FOR_RANGE(int64_t, i, 0, kDimGatherMaxDimCount) {
       shape[i] = 0;
       coordinate[i] = 0;
     }
@@ -44,8 +43,8 @@ struct NdIndexArg {
     FOR_RANGE(int64_t, i, 0, num_axis) { shape[i] = shape_view.At(i); }
   }
 
-  IDX_T shape[MAX_AXIS];
-  IDX_T coordinate[MAX_AXIS];
+  IDX_T shape[kDimGatherMaxDimCount];
+  IDX_T coordinate[kDimGatherMaxDimCount];
   int64_t num_axis;
 };
 
@@ -69,12 +68,18 @@ OF_DEVICE_FUNC void DoDimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> in
   }
 }
 
-template<DeviceType device_type, typename T>
+template<typename T>
 struct DeviceAdd {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { *y += *x; };
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { 
+#ifdef __CUDA_ARCH__
+    gpu_atomic_add(y, *x); // TODO:(yaochi), refine add using float16 -> half -> float -> half
+#else
+    *y += *x;
+#endif
+   };
 };
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
+template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimScatterAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* src, IN_T* output) {
@@ -88,7 +93,7 @@ OF_DEVICE_FUNC void DoDimScatterAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> 
     outputArg.coordinate[dim] = index[src_offset];  // x == index[src_offset]
 
     IDX_T output_offset = outputHelper.NdIndexToOffset(outputArg.coordinate, outputArg.num_axis);
-    DeviceAdd<device_type, IN_T>::Invoke(src + src_offset, output + output_offset);
+    DeviceAdd<IN_T>::Invoke(src + src_offset, output + output_offset);
   }
 }
 
