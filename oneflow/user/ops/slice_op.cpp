@@ -265,9 +265,14 @@ Maybe<void> GetLogicalSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("ref", 0), axis)
+        // TODO(jianhao): Support (S(n), S(n)) when axis n is not sliced
         .Broadcast(user_op::OpArg("value", 0))
         .Build();
   }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("ref", 0))
+      .PartialSum(user_op::OpArg("value", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -309,9 +314,11 @@ Maybe<void> GetLogicalSliceSbpSignatures(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, axis, 0, input_desc.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), axis)
+        // TODO(jianhao): Support S(n) -> S(n) when axis n is not sliced
         .PartialSum(user_op::OpArg("y", 0))
         .Build();
   }
+  ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).PartialSum(user_op::OpArg("y", 0)).Build();
   return Maybe<void>::Ok();
 }
 
