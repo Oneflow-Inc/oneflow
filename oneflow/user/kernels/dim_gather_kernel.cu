@@ -23,15 +23,12 @@ namespace oneflow {
 namespace user_op {
 
 template<>
-struct DeviceAdd<DeviceType::kGPU, float16> {
-  __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
-    gpu_atomic_add(reinterpret_cast<half*>(y), *(reinterpret_cast<const half*>(x)));
+struct DeviceAdd<DeviceType::kGPU, half> {
+  __device__ __forceinline__ static void Invoke(const half* x, half* y) {
+    printf("prepared to add: %p, %p\n", x, y);
+    gpu_atomic_add(y, *x); 
+    printf("gpu add ends\n");
   }
-};
-
-template<typename T>
-struct DeviceAdd<DeviceType::kGPU, T> {
-  __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
 };
 
 template<typename IN_T, typename IDX_T>
@@ -89,7 +86,8 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
                   int64_t dim, const IDX_T* index, const float16* src, float16* output, DeviceCtx* ctx) {
     printf("gpu kernel, float16\n");
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
-                    outputArg, elem_cnt, dim, index, reinterpret_cast<const half*>(src),
+                    outputArg, elem_cnt, dim, index, 
+                    reinterpret_cast<const half*>(src),
                     reinterpret_cast<half*>(output));
   }
 };
