@@ -272,22 +272,52 @@ class InstructionsBuilder(object):
                 AppendPhyParallelDescSymbol(machine_id, device_id)
         return phy_parallel_desc_symbols
 
+    def GetPhysicalOpArgBlobAttrs(self, logical_blob_object):
+        parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
+        logical_blob_attr = logical_blob_object.op_arg_blob_attr
+        sbp_parallel = logical_blob_object.op_arg_parallel_attr.sbp_parallel
+        if sbp_parallel.HasField("split_parallel"):
+            split_axis = sbp_parallel.split_parallel.axis
+
+            def GetSplittedBlobAttr(
+                logical_blob_attr, split_axis, parallel_num, parallel_id
+            ):
+                blob_desc = blob_desc_pb.BlobDescProto()
+                blob_desc.CopyFrom(logical_blob_attr.blob_desc)
+                physical_len = balanced_splitter.BalancedPartNums(
+                    logical_blob_attr.shape[split_axis], parallel_num
+                )[parallel_id]
+                blob_desc.body.shape.dim[split_axis] = physical_len
+                physical_blob_attr = op_arg_util.OpArgBlobAttribute(
+                    logical_blob_attr.batch_axis,
+                    blob_desc,
+                    logical_blob_attr.logical_blob_name,
+                )
+                return physical_blob_attr
+
+            return [
+                GetSplittedBlobAttr(logical_blob_attr, split_axis, parallel_num, i)
+                for i in range(parallel_num)
+            ]
+        else:
+            return [logical_blob_attr] * parallel_num
+
     def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
         phy_parallel_desc_symbols = self.GetPhysicalParallelDescSymbols(
             blob_object.parallel_desc_symbol
         )
+        phy_op_arg_blob_attrs = self.GetPhysicalOpArgBlobAttrs(blob_object)
 
-        def GetPhysicalBlob(parallel_desc_sym):
+        def GetPhysicalBlob(parallel_desc_sym, blob_attr):
             op_arg_parallel_attr = op_arg_util.MakeMirroredOpArgParallelAttribute(
                 parallel_desc_sym
             )
-            pyhsical_blob_object = self._NewBlobObject(
-                op_arg_parallel_attr, blob_object.op_arg_blob_attr
-            )
+            pyhsical_blob_object = self._NewBlobObject(op_arg_parallel_attr, blob_attr)
             return pyhsical_blob_object
 
         physical_blob_objects = [
-            GetPhysicalBlob(symbol) for symbol in phy_parallel_desc_symbols
+            GetPhysicalBlob(phy_parallel_desc_symbols[i], phy_op_arg_blob_attrs[i])
+            for i in range(len(phy_parallel_desc_symbols))
         ]
         self._ReplaceMirrored(
             blob_object.parallel_desc_symbol, physical_blob_objects, [blob_object]
