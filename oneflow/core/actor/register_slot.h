@@ -29,6 +29,7 @@ class RegstSlot final {
   bool is_inited() const { return is_inited_; }
   size_t total_regst_desc_cnt() const { return regst_desc_id2regsts_.size(); }
   size_t available_regst_desc_cnt() const { return available_regst_desc_cnt_; }
+  size_t QueueSize4RegstDescId(int64_t regst_desc_id) const;
 
   bool IsCurSlotReady() const { return available_regst_desc_cnt() == total_regst_desc_cnt(); }
   bool HasRegstDescId(int64_t regst_desc_id) const;

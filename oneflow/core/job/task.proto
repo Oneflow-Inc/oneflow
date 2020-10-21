@@ -36,6 +36,7 @@ enum TaskType {
   kCollectiveBoxingGeneric = 58;
   kBoxingIdentity = 59;
   kDecodeH2D = 60;
+  kDelayTick = 61;
 };
 
 enum AreaType {

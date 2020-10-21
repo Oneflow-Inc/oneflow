@@ -19,4 +19,21 @@ namespace oneflow {
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTickConf, TickKernel);
 
+template<DeviceType device_type>
+class DelayTickKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DelayTickKernel);
+  DelayTickKernel() = default;
+  ~DelayTickKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().delay_tick_conf();
+  }
+};
+
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDelayTickConf, DelayTickKernel);
+
 }  // namespace oneflow

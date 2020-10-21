@@ -55,5 +55,6 @@ void TickCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kTick);
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDelayTick);
 
 }  // namespace oneflow

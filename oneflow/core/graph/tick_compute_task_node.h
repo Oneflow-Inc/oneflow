@@ -20,11 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class TickCompTaskNode final : public CompTaskNode {
+class TickCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TickCompTaskNode);
   TickCompTaskNode() = default;
-  ~TickCompTaskNode() = default;
+  virtual ~TickCompTaskNode() = default;
 
   bool IsMeaningLess() override { return false; }
   TaskType GetTaskType() const override { return TaskType::kTick; }
@@ -35,6 +35,13 @@ class TickCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
   bool IsIndependent() const override { return true; }
+};
+
+class DelayTickCompTaskNode : public TickCompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DelayTickCompTaskNode);
+  DelayTickCompTaskNode() = default;
+  ~DelayTickCompTaskNode() override = default;
 };
 
 }  // namespace oneflow
