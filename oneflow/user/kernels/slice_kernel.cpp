@@ -247,6 +247,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
         i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
     const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
     const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
+    // TODO(jianhao): optimize the performance by dedicated kernels
     AutoMemcpy(ctx->device_ctx(), dst_ptr + dst_offset, src_ptr + src_offset,
                GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
   }
