@@ -13,21 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_TICK_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_TICK_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_DELAY_TICK_COMPUTE_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_DELAY_TICK_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
-class TickCompTaskNode : public CompTaskNode {
+class DelayTickCompTaskNode : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TickCompTaskNode);
-  TickCompTaskNode() = default;
-  virtual ~TickCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DelayTickCompTaskNode);
+  DelayTickCompTaskNode() = default;
+  virtual ~DelayTickCompTaskNode() = default;
 
   bool IsMeaningLess() override { return false; }
-  TaskType GetTaskType() const override { return TaskType::kTick; }
+  TaskType GetTaskType() const override { return TaskType::kDelayTick; }
 
  private:
   void ProduceAllRegstsAndBindEdges() override;
@@ -39,4 +39,4 @@ class TickCompTaskNode : public CompTaskNode {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_TICK_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_DELAY_TICK_COMPUTE_TASK_NODE_H_

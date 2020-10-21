@@ -34,7 +34,7 @@ class DelayTickCompActor final : public CompActor {
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override { return true; }
 
  private:
-  void Act() override {}
+  void Act() override;
   // consumed regst slot
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
@@ -48,7 +48,6 @@ class DelayTickCompActor final : public CompActor {
 
   void AsyncReturnCurCustomizedReadableRegst();
   void AsyncReturnAllCustomizedReadableRegst() override;
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
   void TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
 

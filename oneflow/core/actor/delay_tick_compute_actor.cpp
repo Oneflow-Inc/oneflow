@@ -18,6 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
+void DelayTickCompActor::Act() {
+  // do nothing
+}
+
 void DelayTickCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   eord_received_ = false;
   {
@@ -55,13 +59,6 @@ bool DelayTickCompActor::IsCustomizedReadReady() const {
 void DelayTickCompActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> Handler) const {
   Handler(consumed_rs_.Front(consumed_regst_desc_id_));
-}
-
-void DelayTickCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-    regst->set_piece_id(consumed_rs_.Front(consumed_regst_desc_id_)->piece_id());
-    return true;
-  });
 }
 
 void DelayTickCompActor::AsyncReturnCurCustomizedReadableRegst() {
@@ -112,6 +109,7 @@ void DelayTickCompActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
 
 void DelayTickCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   Regst* const regst = produced_rs_.Front(produced_regst_desc_id_);
+  regst->set_piece_id(consumed_rs_.Front(consumed_regst_desc_id_)->piece_id());
   CHECK_GT(HandleRegstToConsumer(regst, [](int64_t) { return true; }), 0);
   produced_rs_.PopFrontRegsts({produced_regst_desc_id_});
 }

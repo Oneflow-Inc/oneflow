@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/tick_compute_task_node.h"
+#include "oneflow/core/graph/delay_tick_compute_task_node.h"
 #include "oneflow/core/graph/device_tick_compute_task_node.h"
 #include "oneflow/core/graph/acc_tick_compute_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"

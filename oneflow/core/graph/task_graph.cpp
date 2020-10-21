@@ -476,6 +476,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByStrictOneToOne) {
+  CHECK(*src_logical->parallel_desc() == *dst_logical->parallel_desc());
+  FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+    CompTaskNode* src = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
+    BuildTaskPath(src, dst, MutBufTask, true);
+  }
+}
+
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {

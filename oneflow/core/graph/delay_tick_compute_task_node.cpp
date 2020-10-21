@@ -13,22 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/tick_compute_task_node.h"
+#include "oneflow/core/graph/delay_tick_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void TickCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void DelayTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
-void TickCompTaskNode::ConsumeAllRegsts() {
+void DelayTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void TickCompTaskNode::BuildExecGphAndRegst() {
+void DelayTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
@@ -44,7 +44,7 @@ void TickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void TickCompTaskNode::InferProducedDataRegstTimeShape() {
+void DelayTickCompTaskNode::InferProducedDataRegstTimeShape() {
   auto time_shape = (*in_edges().begin())->src_node()->GetFastestInputOutputTimeShape();
   for (TaskEdge* edge : in_edges()) {
     CHECK(time_shape->elem_cnt() == edge->src_node()->GetFastestInputOutputTimeShape()->elem_cnt());
@@ -54,6 +54,6 @@ void TickCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
-REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kTick);
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDelayTick);
 
 }  // namespace oneflow
