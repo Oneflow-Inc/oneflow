@@ -33,7 +33,6 @@ if (NOT DEFINED USE_CXX11_ABI)
     set(USE_CXX11_ABI ON)
   endif()
 endif()
-set(USE_CXX11_ABI OFF)
 message("-- USE_CXX11_ABI: " ${USE_CXX11_ABI})
 
 
