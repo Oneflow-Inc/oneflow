@@ -128,43 +128,43 @@ REGISTER_USER_OP("dim_scatter_add_like")
     .Output("output")
     .Attr("dim", UserOpAttrType::kAtInt64)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
 
-      CHECK_OR_RETURN(src != nullptr);
+      CHECK_OR_RETURN(input != nullptr);
       CHECK_OR_RETURN(index != nullptr);
       CHECK_OR_RETURN(like != nullptr);
 
       const Shape& params_shape = like->shape();
       int64_t dim = ctx->Attr<int64_t>("dim");
 
-      const SbpParallel& src_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-      int64_t split_axis = src_sbp.split_parallel().axis();
-      if (ctx->parallel_ctx().parallel_num() != 1 && src_sbp.has_split_parallel()) {
+      const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+      int64_t split_axis = input_sbp.split_parallel().axis();
+      if (ctx->parallel_ctx().parallel_num() != 1 && input_sbp.has_split_parallel()) {
         CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
       }
 
-      int64_t src_num_axes = src->shape().NumAxes();
-      CHECK_GT_OR_RETURN(src_num_axes, 0);
-      CHECK_LE_OR_RETURN(src_num_axes, kDimGatherMaxDimCount);
+      int64_t input_num_axes = input->shape().NumAxes();
+      CHECK_GT_OR_RETURN(input_num_axes, 0);
+      CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
 
       int64_t index_num_axes = index->shape().NumAxes();
-      CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
-      CHECK_LE_OR_RETURN(src_num_axes, params_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
+      CHECK_LE_OR_RETURN(input_num_axes, params_shape.NumAxes());
 
-      FOR_RANGE(int64_t, i, 0, src_num_axes) {
-        CHECK_LE_OR_RETURN(index->shape().At(i), src->shape().At(i));
+      FOR_RANGE(int64_t, i, 0, input_num_axes) {
+        CHECK_LE_OR_RETURN(index->shape().At(i), input->shape().At(i));
       }
 
-      FOR_RANGE(int64_t, i, 0, src_num_axes) {
+      FOR_RANGE(int64_t, i, 0, input_num_axes) {
         if (i == dim) { continue; }
         CHECK_LE_OR_RETURN(index->shape().At(i), params_shape.At(i));
       }
 
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_shape() = params_shape;
-      *out->mut_data_type() = src->data_type();
+      *out->mut_data_type() = input->data_type();
 
       return Maybe<void>::Ok();
     })

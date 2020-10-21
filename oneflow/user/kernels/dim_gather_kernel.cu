@@ -64,30 +64,30 @@ struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
 };
 
 template<typename IN_T, typename IDX_T>
-__global__ void DoCUDAScatterDimAdd(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg,
+__global__ void DoCUDAScatterDimAdd(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> outputArg,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
-                                    const IN_T* src, IN_T* output) {
-  DoDimScatterAdd<IN_T, IDX_T>(srcArg, outputArg, elem_cnt, dim, index, src,
+                                    const IN_T* input, IN_T* output) {
+  DoDimScatterAdd<IN_T, IDX_T>(inputArg, outputArg, elem_cnt, dim, index, input,
                                                  output);
 }
 
 template<typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
-    RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
-    outputArg, elem_cnt, dim, index, src, output);
+  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx) {
+    RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), inputArg,
+    outputArg, elem_cnt, dim, index, input, output);
   }
 };
 
 // float16 special case of DimScatterAddFunctor template
 template<typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const float16* src, float16* output, DeviceCtx* ctx) {
-    RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
+  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const float16* input, float16* output, DeviceCtx* ctx) {
+    RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), inputArg,
                     outputArg, elem_cnt, dim, index, 
-                    reinterpret_cast<const half*>(src),
+                    reinterpret_cast<const half*>(input),
                     reinterpret_cast<half*>(output));
   }
 };
