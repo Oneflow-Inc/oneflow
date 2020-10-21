@@ -273,7 +273,7 @@ endif()
 
 if (USE_CXX11_ABI)
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
+        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
         )
 else()
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
