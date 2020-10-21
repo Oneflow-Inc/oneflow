@@ -44,6 +44,10 @@ class ScopeSymbol(Symbol):
         return self.auto_increment_id_
 
     @property
+    def session_id(self):
+        return self.data.session_id
+
+    @property
     def job_desc_symbol(self):
         return self.job_desc_symbol_
 
@@ -94,8 +98,11 @@ class ScopeSymbol(Symbol):
         return scope_proto
 
 
-def BuildInitialScope(builder, job_conf, device_tag, machine_device_ids, is_mirrored):
+def BuildInitialScope(
+    builder, session_id, job_conf, device_tag, machine_device_ids, is_mirrored
+):
     scope_proto = scope_pb.ScopeProto()
+    scope_proto.session_id = session_id
     job_conf_sym = builder.GetJobConfSymbol(job_conf)
     scope_proto.job_desc_symbol_id = job_conf_sym.symbol_id
     parallel_conf = MakeParallelConf(device_tag, machine_device_ids)

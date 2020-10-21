@@ -834,11 +834,6 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-message SquareSumOpConf {
-  required string x = 1;
-  required string y = 2;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -899,6 +894,20 @@ message BoxingIdentityOpConf {
 message CastToStaticShapeOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message BoxingS2SAll2AllPackOpConf {
+  required LogicalBlobId lbi = 1;
+  required int64 dst_split_axis = 2;
+  required int64 num_ranks = 3;
+}
+
+message BoxingS2SAll2AllUnpackOpConf {
+  required LogicalBlobId lbi = 1;
+  required int64 src_split_axis = 2;
+  required int64 dst_split_axis = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
 }
 
 message ImageDecoderRandomCropResizeOpConf {
@@ -970,6 +979,8 @@ message OperatorConf {
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
+    BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
+    BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
     UserOpConf user_conf = 199;
 
     // domain op
@@ -1004,7 +1015,6 @@ message OperatorConf {
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
   }
