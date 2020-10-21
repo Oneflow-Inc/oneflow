@@ -13,10 +13,9 @@ set(PYBIND_REGISTRY_CC ${cfg_head_dir_and_convert_srcs})
 include_directories(${CFG_INCLUDE_DIR})
 
 
-function(GENERATE_CFG_AND_PYBIND11_CPP HDRS PYBIND_SRCS ROOT_DIR)
+function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
       oneflow/core/vm/instruction.proto
-
       oneflow/core/eager/eager_symbol.proto
       oneflow/core/job/job_conf.proto
       oneflow/core/job/placement.proto
@@ -41,9 +40,8 @@ function(GENERATE_CFG_AND_PYBIND11_CPP HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/operator/arg_modifier_signature.proto
       oneflow/core/job/blob_lifetime_signature.proto
       oneflow/core/job/parallel_signature.proto
-      
       oneflow/core/eager/eager_instruction.proto
-      oneflow/core/job/cluster_instruction.proto
+      oneflow/core/job/cluster_instruction.proto    
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
@@ -57,24 +55,29 @@ function(GENERATE_CFG_AND_PYBIND11_CPP HDRS PYBIND_SRCS ROOT_DIR)
     set(PY_REL_FIL ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
     set(PY_REL_MOD ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2)
     set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
+    set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
     set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
 
     add_custom_command(
       OUTPUT "${CFG_HPP_FIL}"
+             "${CFG_CPP_FIL}"
              "${CFG_PYBIND_FIL}"
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-      ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_pybind_path ${CFG_PYBIND_FIL}
-           --proto_py_path ${PY_REL_MOD} --of_proto_python_dir ${of_proto_python_dir}
+      ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
+           --dst_pybind_path ${CFG_PYBIND_FIL}
+           --proto_py_path ${PY_REL_MOD}  --of_proto_python_dir ${of_proto_python_dir}
 
       DEPENDS ${Python_EXECUTABLE} ${PY_REL_FIL} ${of_all_rel_pybinds}
       COMMENT "Running Pybind11 Compiler on ${FIL}"
       VERBATIM)
 
     list(APPEND ${HDRS} "${CFG_HPP_FIL}")
+    list(APPEND ${SRCS} "${CFG_CPP_FIL}")
     list(APPEND ${PYBIND_SRCS} "${CFG_PYBIND_FIL}")
   endforeach()
 
-  set_source_files_properties(${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
+  set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
+  set(${SRCS} ${${SRCS}} PARENT_SCOPE)
   set(${HDRS} ${${HDRS}} PARENT_SCOPE)
   set(${PYBIND_SRCS} ${${PYBIND_SRCS}} PARENT_SCOPE)
 endfunction()

@@ -20,11 +20,28 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# enum_values #}
   }
 {% endfor %}{# enum_types #}
+
+{% for cls in util.module_nested_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
+{% for enm in util.message_type_enums(cls) %}
+  {
+    pybind11::enum_<{{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}> enm(m, "{{ util.enum_name(enm) }}");
+{% for value in util.enum_values(enm) %}
+    enm.value("{{ util.enum_value_name(value) }}", {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_value_name(value) }});
+{% endfor %}{# enum_values #}
+{% for value in util.enum_values(enm) %}
+    m.attr("{{ util.enum_value_name(value) }}") = enm.attr("{{ util.enum_value_name(value) }}");
+{% endfor %}{# enum_values #}
+  }
+{% endfor %}{# enums #}
+{% endif %}{# cls is not entry #}
+{% endfor %}{# cls #}
+
 {% for cls in util.module_nested_message_types(module) %}
 {% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated python class registered for each repeated field type #}
-{% if util.field_has_repeated_label(field) and util.add_visited_repeated_field_type_name(field) %}
+{% if util.field_has_repeated_label(field) and util.add_declared_repeated_field_type_name(field) %}
   {
     pybind11::class_<Const{{ util.field_repeated_container_name(field) }}, std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}>> registry(m, "Const{{ util.field_repeated_container_name(field) }}");
     registry.def("__len__", &Const{{ util.field_repeated_container_name(field) }}::size);
@@ -64,7 +81,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
   }
 
 {# map begin #}
-{% elif util.field_has_map_label(field) and util.add_visited_map_field_type_name(field) %}
+{% elif util.field_has_map_label(field) and util.add_declared_map_field_type_name(field) %}
   {
     pybind11::class_<Const{{ util.field_map_container_name(field) }}, std::shared_ptr<Const{{ util.field_map_container_name(field) }}>> registry(m, "Const{{ util.field_map_container_name(field) }}");
     registry.def("__len__", &Const{{ util.field_map_container_name(field) }}::size);
