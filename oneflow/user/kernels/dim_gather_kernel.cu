@@ -16,16 +16,15 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 #include "oneflow/user/kernels/dim_gather_kernels.h"
-#include <stdio.h>
 
 namespace oneflow {
 
 namespace user_op {
 
 template<>
-struct DeviceAdd<DeviceType::kGPU, float16> {
-  __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
-    gpu_atomic_add(reinterpret_cast<half*>(y), *(reinterpret_cast<const half*>(x)));
+struct DeviceAdd<DeviceType::kGPU, half> {
+  __device__ __forceinline__ static void Invoke(const half* x, half* y) {
+    gpu_atomic_add(y, *x);
   }
 };
 
@@ -76,7 +75,6 @@ template<typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx) {
-    printf("gpu kernel, general\n");
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
     outputArg, elem_cnt, dim, index, src, output);
   }
@@ -87,7 +85,6 @@ template<typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
   void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const float16* src, float16* output, DeviceCtx* ctx) {
-    printf("gpu kernel, float16\n");
     RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), srcArg,
                     outputArg, elem_cnt, dim, index, reinterpret_cast<const half*>(src),
                     reinterpret_cast<half*>(output));
