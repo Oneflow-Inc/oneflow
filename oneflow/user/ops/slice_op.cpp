@@ -239,7 +239,7 @@ void GenSliceGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   }
 }
 
-Maybe<void> InferSliceAssignTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferLogicalSliceAssignTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
   user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
@@ -251,16 +251,16 @@ Maybe<void> InferSliceAssignTensorDesc(user_op::InferContext* ctx) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "slice_assign step must be greater than 0";
-    CHECK_GE_OR_RETURN(start, 0) << "slice_assign start must be greater or equal to 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "slice_assign stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "slice_assign start must be less than stop";
+    CHECK_GT_OR_RETURN(step, 0) << "logical_slice_assign step must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "logical_slice_assign start must be greater or equal to 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign start must be less than stop";
   }
   CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
+Maybe<void> GetLogicalSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0);
   FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -271,8 +271,8 @@ Maybe<void> GetSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
-                                      const user_op::UserOpConfWrapper& conf) {
+void InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+                                             const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK(ref_modifier != nullptr);
   ref_modifier->set_is_mutable(true);
@@ -375,15 +375,15 @@ REGISTER_USER_OP("slice_grad")
     .SetGetSbpFn(GetSliceGradOpSbpSignature)
     .SetInputArgModifyFn(InferSliceGradInputArgModifier);
 
-REGISTER_USER_OP("slice_assign")
+REGISTER_USER_OP("logical_slice_assign")
     .Input("ref")
     .Input("value")
     .Attr("start", UserOpAttrType::kAtListInt64)
     .Attr("stop", UserOpAttrType::kAtListInt64)
     .Attr("step", UserOpAttrType::kAtListInt64)
-    .SetTensorDescInferFn(InferSliceAssignTensorDesc)
-    .SetGetSbpFn(GetSliceAssignSbpSignatures)
-    .SetInputArgModifyFn(InferSliceAssignInputArgModifier);
+    .SetTensorDescInferFn(InferLogicalSliceAssignTensorDesc)
+    .SetGetSbpFn(GetLogicalSliceAssignSbpSignatures)
+    .SetInputArgModifyFn(InferLogicalSliceAssignInputArgModifier);
 
 REGISTER_USER_OP("logical_slice")
     .Input("x")

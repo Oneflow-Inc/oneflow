@@ -727,7 +727,7 @@ def _GetSliceAttrs(slice_tup_list, input_shape):
     return start_list, stop_list, step_list
 
 
-@oneflow_export("logical_slice")
+@oneflow_export("experimental.logical_slice")
 def logical_slice(
     x: remote_blob_util.BlobDef,
     slice_tup_list: Sequence[Tuple[int, int, int]],
@@ -752,22 +752,22 @@ def logical_slice(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("slice_assign")
-def slice_assign(
+@oneflow_export("experimental.logical_slice_assign")
+def logical_slice_assign(
     x: remote_blob_util.BlobDef,
     value: remote_blob_util.BlobDef,
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    name = id_util.UniqueStr("SliceAssign_") if name is None else name
+    name = id_util.UniqueStr("LogicalSliceAssign_") if name is None else name
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
     start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
     op = (
         flow.user_op_builder(name)
-        .Op("slice_assign")
+        .Op("logical_slice_assign")
         .Input("ref", [x])
         .Input("value", [value])
         .Attr("start", start_list)

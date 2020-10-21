@@ -54,7 +54,7 @@ def _test_slice_assign(
     def assign_fn(value_def: oft.Numpy.Placeholder(value.shape, dtype=flow_dtype)):
         with flow.scope.placement(dst_device_tag, "0:0-{}".format(device_num - 1)):
             var = get_var()
-            flow.slice_assign(var, value_def, slice_tuples)
+            flow.experimental.logical_slice_assign(var, value_def, slice_tuples)
 
     @flow.global_function()
     def identity_fn():

@@ -40,7 +40,7 @@ def _test_logical_slice(
                 distribute=flow.distribute.split(split_axis),
             )
             flow.watch(var, test_global_storage.Setter("var"))
-            ret = flow.logical_slice(var, slice_tuples)
+            ret = flow.experimental.logical_slice(var, slice_tuples)
             return ret
 
     checkpoint = flow.train.CheckPoint()

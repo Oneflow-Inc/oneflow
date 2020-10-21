@@ -323,10 +323,10 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class SliceAssignKernel final : public user_op::OpKernel {
+class LogicalSliceAssignKernel final : public user_op::OpKernel {
  public:
-  SliceAssignKernel() = default;
-  ~SliceAssignKernel() = default;
+  LogicalSliceAssignKernel() = default;
+  ~LogicalSliceAssignKernel() = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -399,22 +399,22 @@ REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_SLICE_KERNELS(DeviceType::kGPU, float16)
 #endif
 
-#define REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)                       \
-  REGISTER_USER_KERNEL("slice_assign")                                               \
-      .SetCreateFn<SliceAssignKernel<dtype>>()                                       \
+#define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \
+  REGISTER_USER_KERNEL("logical_slice_assign")                                       \
+      .SetCreateFn<LogicalSliceAssignKernel<dtype>>()                                \
       .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
   REGISTER_USER_KERNEL("logical_slice")                                              \
       .SetCreateFn<LogicalSliceKernel<dtype>>()                                      \
       .SetIsMatchedHob(user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float)
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(double)
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int32_t)
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int64_t)
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int8_t)
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(uint8_t)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(double)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int32_t)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int64_t)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int8_t)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(uint8_t)
 #ifdef WITH_CUDA
-REGISTER_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float16)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float16)
 #endif
 
 }  // namespace oneflow
