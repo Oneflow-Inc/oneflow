@@ -345,15 +345,6 @@ class SliceAssignKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_SLICE_KERNELS(device, dtype)                                              \
-  REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                  \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                      \
-  REGISTER_USER_KERNEL("slice_grad")                                                       \
-      .SetCreateFn<SliceGradKernel<device, dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                 \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
 template<DeviceType device_type, typename T>
 class SliceUpdateKernel final : public user_op::OpKernel {
  public:
