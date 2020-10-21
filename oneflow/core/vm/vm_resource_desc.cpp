@@ -29,16 +29,18 @@ void VmResourceDesc::__Init__(int64_t machine_num,
                               const DeviceTag2DeviceNum& device_tag2device_num) {
   set_machine_num(machine_num);
   *mutable_device_tag2device_num() = device_tag2device_num;
+  set_max_device_num_per_machine(0);
+  for (const auto& pair : device_tag2device_num) {
+    if (max_device_num_per_machine() < pair.second) { set_max_device_num_per_machine(pair.second); }
+  }
 }
 
 void VmResourceDesc::CopyFrom(const VmResourceDesc& vm_resource_desc) {
   __Init__(vm_resource_desc.machine_num(), vm_resource_desc.device_tag2device_num());
 }
 
-int64_t VmResourceDesc::GetGlobalDeviceId(int64_t machine_id, const std::string& device_tag,
-                                          int64_t device_id) const {
-  int64_t device_num = device_tag2device_num().at(device_tag);
-  return machine_id * device_num + device_id;
+int64_t VmResourceDesc::GetGlobalDeviceId(int64_t machine_id, int64_t device_id) const {
+  return machine_id * max_device_num_per_machine() + device_id;
 }
 
 void VmResourceDesc::GenerateParallelConf(const char* device_tag, ParallelConf* parallel_conf) {

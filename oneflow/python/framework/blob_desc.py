@@ -29,12 +29,6 @@ class BlobDesc(object):
         self.lbn_ = lbi.op_name + "/" + lbi.blob_name
         self.distribute_ = distribute
         self.disable_boxing_ = disable_boxing
-        self.stack_ = traceinfo.GetStackInfoExcludeOneflowPythonFile()
-        self.location_ = "".join(traceback.format_list(self.stack_))
-
-    @property
-    def location(self):
-        return self.location_
 
     @property
     def lbi(self):
