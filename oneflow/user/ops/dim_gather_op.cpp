@@ -173,6 +173,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_use_header_only(true);
+      like_arg_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =

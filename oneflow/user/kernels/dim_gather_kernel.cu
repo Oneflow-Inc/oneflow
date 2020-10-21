@@ -92,26 +92,21 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
   }
 };
 
-#define REGISTER_DIMGATHER_GPUKERNEL(device, in_type, indices_type)                             \
+#define REGISTER_DIMGATHER_GPUKERNEL(device, dtype_pair, itype_pair)                             \
   REGISTER_USER_KERNEL("dim_gather")                                                            \
       .SetCreateFn<                                                                             \
-          DimGatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+          DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(in_type))       \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
+                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
-#define REGISTER_DIMSCATTERADD_GPUKERNEL(device, in_type, indices_type)                          \
+#define REGISTER_DIMSCATTERADD_GPUKERNEL(device, dtype_pair, itype_pair)                          \
   REGISTER_USER_KERNEL("dim_scatter_add_like")                                                   \
       .SetCreateFn<                                                                              \
-          ScatterDimKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+          ScatterDimKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("src", 0) == OF_PP_PAIR_SECOND(in_type))          \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(indices_type)));
-
-#define DIM_GATHER_SCATTER_DATA_TYPE_SEQ \
-        FLOATING_DATA_TYPE_SEQ                 \
-        FLOAT16_DATA_TYPE_SEQ                  \
-        OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+                       & (user_op::HobDataType("src", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMGATHER_GPUKERNEL, (DeviceType::kGPU),
                                  DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);

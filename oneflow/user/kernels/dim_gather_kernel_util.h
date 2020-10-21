@@ -21,6 +21,11 @@ limitations under the License.
 
 namespace oneflow {
 
+#define DIM_GATHER_SCATTER_DATA_TYPE_SEQ \
+        FLOATING_DATA_TYPE_SEQ                 \
+        FLOAT16_DATA_TYPE_SEQ                  \
+        OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+
 #define MAX_DIM_COUNT 8
 
 template<typename T>
@@ -30,13 +35,13 @@ template<typename IDX_T>
 struct NdIndexArg {
   static const unsigned int MAX_AXIS = MAX_DIM_COUNT;
 
-  NdIndexArg(const ShapeView& tensorShape) : num_axis(tensorShape.NumAxes()) {
+  NdIndexArg(const ShapeView& shape_view) : num_axis(shape_view.NumAxes()) {
     FOR_RANGE(int64_t, i, 0, MAX_AXIS) {
       shape[i] = 0;
       coordinate[i] = 0;
     }
 
-    FOR_RANGE(int64_t, i, 0, num_axis) { shape[i] = tensorShape.At(i); }
+    FOR_RANGE(int64_t, i, 0, num_axis) { shape[i] = shape_view.At(i); }
   }
 
   IDX_T shape[MAX_AXIS];
