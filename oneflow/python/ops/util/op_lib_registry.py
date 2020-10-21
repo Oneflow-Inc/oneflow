@@ -79,7 +79,7 @@ class OpLib(object):
         print(run_cmd("g++ -v"))
         print(
             run_cmd(
-                "nm /root/.local/lib/python3.6/site-packages/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so | grep CheckAndGetOpRegistry"
+                "nm -D /root/.local/lib/python3.6/site-packages/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so | grep CheckAndGetOpRegistry"
             )
         )
 
