@@ -34,7 +34,7 @@ def _test_slice_assign(
     value_shape = [(s[1] - s[0] - 1) // s[2] + 1 for s in slice_tuples]
     flow_to_np_dtype_dict = {
         flow.int8: np.int8,
-        flow.float32: np.single,
+        flow.float: np.single,
     }
     np_dtype = flow_to_np_dtype_dict[flow_dtype]
     value = np.random.uniform(low=-10, high=10, size=value_shape).astype(np_dtype)
@@ -46,7 +46,7 @@ def _test_slice_assign(
             name="var",
             shape=var_shape,
             dtype=flow_dtype,
-            initializer=flow.constant_initializer(0),
+            initializer=flow.constant_initializer(0, dtype=flow_dtype),
             distribute=flow.distribute.split(split_axis),
         )
 
@@ -82,7 +82,7 @@ class TestSliceAssign(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["split_axis"] = list(range(4))
         arg_dict["dst_device_tag"] = ["cpu", "gpu"]
-        arg_dict["flow_dtype"] = [flow.float32, flow.int8]
+        arg_dict["flow_dtype"] = [flow.float, flow.int8]
         arg_dict["device_num"] = [4]
         for arg in GenArgDict(arg_dict):
             _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
@@ -93,7 +93,7 @@ class TestSliceAssign(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["split_axis"] = list(range(4))
         arg_dict["dst_device_tag"] = ["cpu", "gpu"]
-        arg_dict["flow_dtype"] = [flow.float32]
+        arg_dict["flow_dtype"] = [flow.float]
         arg_dict["device_num"] = [4]
         for arg in GenArgDict(arg_dict):
             _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
@@ -104,7 +104,7 @@ class TestSliceAssign(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["split_axis"] = list(range(2))
         arg_dict["dst_device_tag"] = ["cpu", "gpu"]
-        arg_dict["flow_dtype"] = [flow.float32]
+        arg_dict["flow_dtype"] = [flow.float]
         arg_dict["device_num"] = [3]
         for arg in GenArgDict(arg_dict):
             _test_slice_assign(test_case, var_shape, slice_tuples, **arg)
