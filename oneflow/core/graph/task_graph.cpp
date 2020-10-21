@@ -293,18 +293,13 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain
 
 void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
   ChainGraph chain_graph(*this);
-  const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
-  for (auto& chain_node : ordered_chain_nodes) {
-    auto& ordered_in_chain = chain_node->TaskNodes();
-    int64_t chain_id = chain_node->chain_id();
-    for (auto& task_node : ordered_in_chain) {
-      task_node->set_chain_id(chain_id);
-      task_node->set_order_in_graph(order_in_graph);
-      ordered_task_nodes_.emplace_back(task_node);
-      ++order_in_graph;
-    }
-  }
+  AcyclicTopoForEachNode([&](TaskNode* task_node) {
+    task_node->set_chain_id(chain_graph.ChainId4TaskNode(task_node));
+    task_node->set_order_in_graph(order_in_graph);
+    ordered_task_nodes_.emplace_back(task_node);
+    ++order_in_graph;
+  });
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {

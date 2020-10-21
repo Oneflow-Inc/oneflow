@@ -2181,6 +2181,7 @@ class COCOReader(module_util.Module):
             .Output("gt_label")
             .Output("gt_segm")
             .Output("gt_segm_index")
+            .Attr("session_id", flow.current_scope().session_id)
             .Attr("annotation_file", annotation_file)
             .Attr("image_dir", image_dir)
             .Attr("batch_size", batch_size)
