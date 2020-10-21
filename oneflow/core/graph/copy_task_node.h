@@ -49,7 +49,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
   int64_t MemZoneId121() const override {
-    if (copy_type_ == CopyHdOpConf::H2D) {
+    if (copy_type_ == CopyHdOpConf::H2D || copy_type_ == CopyHdOpConf::D2D) {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
       return Global<IDMgr>::Get()->CpuMemZoneId();

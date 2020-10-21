@@ -31,6 +31,15 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, int64_t src_mem_
     if (dst_machine_id == src_node->machine_id() && dst_mem_zone_id == src_mem_zone_id) {
       node2proxies_[src_node][key] = src_node;
       return src_node;
+    } else if (dst_machine_id == src_node->machine_id()
+               && Global<IDMgr>::Get()->IsGpuMemZone(dst_mem_zone_id)
+               && Global<IDMgr>::Get()->IsGpuMemZone(src_mem_zone_id)) {
+      CopyHdTaskNode* copy_task = task_graph()->NewNode<CopyHdTaskNode>();
+      copy_task->Init(CopyHdOpConf::D2D, src_node->machine_id(),
+                      Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id));
+      Connect<TaskNode>(src_node, task_graph()->NewEdge(), copy_task);
+      node2proxies_[src_node][key] = copy_task;
+      return copy_task;
     } else if (Global<IDMgr>::Get()->IsGpuMemZone(dst_mem_zone_id)) {
       TaskNode* proxy_on_dst_host = GetProxyNode(src_node, src_mem_zone_id, dst_machine_id,
                                                  Global<IDMgr>::Get()->CpuMemZoneId());

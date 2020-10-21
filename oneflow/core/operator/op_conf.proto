@@ -162,6 +162,7 @@ message CopyHdOpConf {
   enum Type {
     H2D = 0;
     D2H = 1;
+    D2D = 2;
   }
   required Type type = 1;
   optional LogicalBlobId lbi = 2;
