@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
-const int BROADCAST = -1;
+const int SPLIT_AXIS_FOR_BROADCAST = -1;
 
 namespace oneflow {
 
@@ -205,7 +205,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 const bool from_large_to_small) {
   const user_op::Tensor* large = from_large_to_small ? src : dst;
   const user_op::Tensor* small = from_large_to_small ? dst : src;
-  if (slice_ctx.split_axis != BROADCAST) {
+  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_BROADCAST) {
     CHECK_EQ(large->shape().At(slice_ctx.split_axis), slice_ctx.upper - slice_ctx.lower);
   }
 
@@ -273,8 +273,8 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
   } else if (in_sbp.has_broadcast_parallel() || ctx->parallel_ctx().parallel_num() == 1) {
-    // split_axis == BROADCAST means the sbp attribute is broadcast instead of split
-    return std::make_shared<OpKernelStateWrapper<SliceContext>>(BROADCAST, 0, 0, 0);
+    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
+    return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
   } else {
     // TODO(jianhao): support partialsum
     UNIMPLEMENTED();
