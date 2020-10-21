@@ -32,6 +32,9 @@ def tensor_list_to_tensor_buffer(
 ) -> remote_blob_util.BlobDef:
     """This operator converts `TensorList` to `TensorBuffer`. 
 
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorList. 
+
     Args:
         input (remote_blob_util.BlobDef): The input `TensorList`. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -88,6 +91,9 @@ def tensor_buffer_to_tensor_list(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator converts `TensorBuffer` to `TensorList`. 
+
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorList. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Tensor Buffer. 

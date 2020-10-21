@@ -69,7 +69,6 @@ OBJECT_MSG_BEGIN(StreamDesc);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_machines);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_machine);
   OBJECT_MSG_DEFINE_OPTIONAL(int32_t, num_streams_per_thread);
-  OBJECT_MSG_DEFINE_OPTIONAL(int32_t, start_global_device_id);
 
   // links
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(7, StreamTypeId, stream_type_id);

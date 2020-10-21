@@ -232,7 +232,9 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   for (auto& task_nodes : chains) { PrioritizeUntrainableTaskNode(&task_nodes); }
   InitChainNode(chains);
   InitChainEdge(chains);
-  CheckNoCycle();
+  // NOTE(chengcheng): Remove this check because:
+  //   Even if there is a cycle in chain graph, there is no problem.
+  // CheckNoCycle();
   SetChainId4ChainNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
@@ -446,8 +448,7 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
 }
 
 void ChainGraph::SetChainId4ChainNode() {
-  TopoForEachNode([&](ChainNode* chain_node) {
-    ordered_chain_nodes_.emplace_back(chain_node);
+  ForEachNode([&](ChainNode* chain_node) {
     int64_t stream_id = chain_node->TaskNodes().front()->GlobalWorkStreamId();
     int64_t chain_id = Global<IDMgr>::Get()->AllocateChainId(stream_id);
     chain_node->SetChainId(chain_id);
