@@ -443,14 +443,17 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
-    OperatorConf square_sum_op_conf{};
-    square_sum_op_conf.set_name("System-ClipGradient-GlobalNorm-SquareSum-" + NewUniqueId());
-    SquareSumOpConf* square_sum_conf = square_sum_op_conf.mutable_square_sum_conf();
-    square_sum_conf->set_x(GenLogicalBlobName(diff_lbi));
-    square_sum_conf->set_y("y");
-    square_sum_op_conf.set_scope_symbol_id(ScopeSymbolId4Lbi(op_graph, pair.first));
-    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(), {square_sum_op_conf});
-    lbns_to_add.push_back(GenLogicalBlobName(square_sum_op_conf.name(), square_sum_conf->y()));
+    auto square_sum_op = user_op::UserOpConfWrapperBuilder(
+                             "System-ClipGradient-GlobalNorm-SquareSum-" + NewUniqueId())
+                             .Op("square_sum")
+                             .Input("x", GenLogicalBlobName(diff_lbi))
+                             .Output("y")
+                             .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, pair.first))
+                             .Build();
+
+    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(),
+                        {square_sum_op.op_conf()});
+    lbns_to_add.push_back(square_sum_op.output("y", 0));
   }
   while (lbns_to_add.size() != 1) {
     const size_t add_n_op_max_input_num = 8;

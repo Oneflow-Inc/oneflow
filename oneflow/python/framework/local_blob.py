@@ -35,6 +35,10 @@ class LocalMirroredTensor(object):
                 # do nothing
                 pass
 
+    @property
+    def is_dynamic(self):
+        return self.is_dynamic_
+
     def ndarray_list(self):
         print(
             "WARNING:",
