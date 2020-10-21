@@ -32,13 +32,23 @@ int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t ste
 
 class SliceContext final {
  public:
-  SliceContext(int64_t split_axis, int64_t lower, int64_t upper, int64_t length)
-      : split_axis(split_axis), lower(lower), upper(upper), length(length) {}
+  SliceContext(int64_t split_axis, int64_t lower, int64_t upper, int64_t logical_length)
+      : split_axis(split_axis), lower(lower), upper(upper), logical_length(logical_length) {}
 
+  // These fields shows how the logical tensor is splited.
+  // The logical tensor is splited on the axis `split_axis`
+  // The physical tensor on current device is in the range [lower, upper)
+  // The length of the logical tensor on `split_axis` is `logical_length`
+  // Example:
+  // Variable shape = (8, 7, 6, 5), sbp = S(0), on 4 devices, then on the first card:
+  // split_axis = 0
+  // lower = 0
+  // upper = 2
+  // logical_length = 8
   const int64_t split_axis;
   const int64_t lower;
   const int64_t upper;
-  const int64_t length;
+  const int64_t logical_length;
 };
 
 SliceParams ConstructSliceParamsLarge(const SliceContext& ctx,
@@ -213,9 +223,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   for (int i = 0; i < ndim; i++) {
     const int64_t dim_size = large->shape().At(i);
     positive_start_vec.push_back(RegulateSliceStart(
-        start_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.length : dim_size));
+        start_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
     positive_stop_vec.push_back(RegulateSliceStop(
-        stop_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.length : dim_size));
+        stop_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.logical_length : dim_size));
   }
   const auto large_slice_param = ConstructSliceParamsLarge(
       slice_ctx, positive_start_vec, positive_stop_vec, step_attr, large->shape());
