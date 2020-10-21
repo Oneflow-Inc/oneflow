@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
 
@@ -29,98 +30,95 @@ int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t ste
   return (end - start - 1) / step + 1;
 }
 
-class SliceState final : public user_op::OpKernelState {
+class SliceContext final {
  public:
-  SliceState(int64_t split_axis, int64_t lower, int64_t upper, int64_t length)
-      : split_axis_(split_axis), lower_(lower), upper_(upper), length_(length) {}
-  ~SliceState() override = default;
+  SliceContext(int64_t split_axis, int64_t lower, int64_t upper, int64_t length)
+      : split_axis(split_axis), lower(lower), upper(upper), length(length) {}
 
-  int64_t split_axis() const { return split_axis_; }
-  int64_t lower() const { return lower_; }
-  int64_t upper() const { return upper_; }
-  int64_t length() const { return length_; }
-
- private:
-  const int64_t split_axis_;
-  const int64_t lower_;
-  const int64_t upper_;
-  const int64_t length_;
+  const int64_t split_axis;
+  const int64_t lower;
+  const int64_t upper;
+  const int64_t length;
 };
 
-std::pair<SliceParams, SliceParams> ConstructSliceParams(
-    user_op::KernelComputeContext* ctx, const user_op::Tensor* large, const user_op::Tensor* small,
-    const int64_t split_axis, const int64_t lower, const int64_t upper, const int64_t length) {
-  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
-  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
-  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  const int64_t ndim = large->shape().NumAxes();
+SliceParams ConstructSliceParamsLarge(const SliceContext& ctx,
+                                      const std::vector<int64_t>& start_vec,
+                                      const std::vector<int64_t>& stop_vec,
+                                      const std::vector<int64_t>& step_vec,
+                                      const ShapeView& shape) {
+  const int64_t ndim = shape.NumAxes();
   CHECK_LE(ndim, kSliceMaxDims);
-  CHECK_EQ(small->shape().NumAxes(), ndim);
   CHECK_EQ(start_vec.size(), ndim);
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  SliceParams large_slice_param, small_slice_param;
-  std::memset(&large_slice_param, 0, sizeof(SliceParams));
-  std::memset(&small_slice_param, 0, sizeof(SliceParams));
-  large_slice_param.ndim = ndim;
-  small_slice_param.ndim = ndim;
-  FOR_RANGE(int, i, 0, large_slice_param.ndim) {
-    const int64_t dim_size = large->shape().At(i);
-    int64_t small_size = small->shape().At(i);
+  SliceParams slice_param;
+  std::memset(&slice_param, 0, sizeof(SliceParams));
+  slice_param.ndim = ndim;
+  FOR_RANGE(int, i, 0, slice_param.ndim) {
+    const int64_t dim_size = shape.At(i);
+    const int64_t start_in_full_large = start_vec.at(i);
+    const int64_t stop_in_full_large = stop_vec.at(i);
     const int64_t step = step_vec.at(i);
     CHECK_GT(step, 0);
-    const int64_t slice_start_in_full_large =
-        RegulateSliceStart(start_vec.at(i), i == split_axis ? length : dim_size);
-    const int64_t slice_stop_in_full_large =
-        RegulateSliceStop(stop_vec.at(i), i == split_axis ? length : dim_size);
-    CHECK_LT(slice_start_in_full_large + step * (small_size - 1), slice_stop_in_full_large);
-    {
-      int64_t slice_start_in_splitted_large = slice_start_in_full_large;
-      int64_t slice_stop_in_splitted_large = slice_stop_in_full_large;
-      int64_t slice_size = small_size;
-      if (i == split_axis) {
-        if (slice_start_in_splitted_large < lower) {
-          slice_start_in_splitted_large =
-              lower + (step - (lower - slice_start_in_splitted_large) % step) % step;
-        }
-        // large tensor has split sbp attribute
-        slice_start_in_splitted_large =
-            std::min(std::max(slice_start_in_splitted_large, lower), upper);
-        slice_stop_in_splitted_large =
-            std::min(std::max(slice_stop_in_splitted_large, lower), upper);
-        slice_start_in_splitted_large -= lower;
-        slice_stop_in_splitted_large -= lower;
-        slice_size =
-            GetSizeInSlice(slice_start_in_splitted_large, slice_stop_in_splitted_large, step);
+    int64_t start_in_splitted_large = start_in_full_large;
+    int64_t stop_in_splitted_large = stop_in_full_large;
+    // large tensor has split sbp attribute
+    if (i == ctx.split_axis) {
+      if (start_in_splitted_large < ctx.lower) {
+        start_in_splitted_large =
+            ctx.lower + (step - (ctx.lower - start_in_splitted_large) % step) % step;
       }
-      large_slice_param.dims[i] = dim_size;
-      large_slice_param.start[i] = slice_start_in_splitted_large;
-      large_slice_param.step[i] = step;
-      large_slice_param.size[i] = slice_size;
+      start_in_splitted_large = std::min(std::max(start_in_splitted_large, ctx.lower), ctx.upper);
+      stop_in_splitted_large = std::min(std::max(stop_in_splitted_large, ctx.lower), ctx.upper);
+      start_in_splitted_large -= ctx.lower;
+      stop_in_splitted_large -= ctx.lower;
     }
-    {
-      // small tensor has broadcast/partialsum sbp attribute
-      const int64_t dim_size = small->shape().At(i);
-      int64_t slice_start_in_full_small = 0;
-      int64_t slice_stop_in_full_small = dim_size;
-      if (i == split_axis) {
-        slice_start_in_full_small = GetSizeInSlice(slice_start_in_full_large, lower, step);
-        slice_stop_in_full_small = GetSizeInSlice(slice_start_in_full_large, upper, step);
-        slice_start_in_full_small =
-            std::min(std::max<int64_t>(slice_start_in_full_small, 0), dim_size);
-        slice_stop_in_full_small =
-            std::min(std::max<int64_t>(slice_stop_in_full_small, 0), dim_size);
-      }
-      int64_t slice_size = slice_stop_in_full_small - slice_start_in_full_small;
-      small_slice_param.dims[i] = dim_size;
-      small_slice_param.start[i] = slice_start_in_full_small;
-      small_slice_param.step[i] = 1;
-      small_slice_param.size[i] = slice_size;
-    }
+    const int64_t slice_size =
+        GetSizeInSlice(start_in_splitted_large, stop_in_splitted_large, step);
+    slice_param.dims[i] = dim_size;
+    slice_param.start[i] = start_in_splitted_large;
+    slice_param.step[i] = step;
+    slice_param.size[i] = slice_size;
   }
-  CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
-  return {large_slice_param, small_slice_param};
+  return slice_param;
+}
+
+SliceParams ConstructSliceParamsSmall(const SliceContext& ctx,
+                                      const std::vector<int64_t>& start_vec,
+                                      const std::vector<int64_t>& stop_vec,
+                                      const std::vector<int64_t>& step_vec,
+                                      const ShapeView& shape) {
+  const int64_t ndim = shape.NumAxes();
+  CHECK_LE(ndim, kSliceMaxDims);
+  CHECK_EQ(start_vec.size(), ndim);
+  CHECK_EQ(stop_vec.size(), ndim);
+  CHECK_EQ(step_vec.size(), ndim);
+
+  SliceParams slice_param;
+  std::memset(&slice_param, 0, sizeof(SliceParams));
+  slice_param.ndim = ndim;
+  FOR_RANGE(int, i, 0, slice_param.ndim) {
+    const int64_t start_in_full_large = start_vec.at(i);
+    const int64_t step = step_vec.at(i);
+    CHECK_GT(step, 0);
+    // small tensor has broadcast/partialsum sbp attribute
+    const int64_t dim_size = shape.At(i);
+    int64_t start_in_full_small = 0;
+    int64_t stop_in_full_small = dim_size;
+    if (i == ctx.split_axis) {
+      start_in_full_small = GetSizeInSlice(start_in_full_large, ctx.lower, step);
+      stop_in_full_small = GetSizeInSlice(start_in_full_large, ctx.upper, step);
+      start_in_full_small = std::min(std::max<int64_t>(start_in_full_small, 0), dim_size);
+      stop_in_full_small = std::min(std::max<int64_t>(stop_in_full_small, 0), dim_size);
+    }
+    const int64_t slice_size = stop_in_full_small - start_in_full_small;
+    slice_param.dims[i] = dim_size;
+    slice_param.start[i] = start_in_full_small;
+    slice_param.step[i] = 1;
+    slice_param.size[i] = slice_size;
+  }
+  return slice_param;
 }
 
 SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_op::Tensor* entire,
@@ -198,22 +196,32 @@ class SliceGradKernel final : public user_op::OpKernel {
 
 template<int NDIM, typename T>
 void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
-                user_op::Tensor* dst, const SliceState* slice_state,
+                user_op::Tensor* dst, const SliceContext& slice_ctx,
                 const bool from_large_to_small) {
   const user_op::Tensor* large = from_large_to_small ? src : dst;
   const user_op::Tensor* small = from_large_to_small ? dst : src;
-  CHECK_NOTNULL(slice_state);
-  if (slice_state->split_axis() != -1) {
-    CHECK_EQ(large->shape().At(slice_state->split_axis()),
-             slice_state->upper() - slice_state->lower());
+  if (slice_ctx.split_axis != -1) {
+    CHECK_EQ(large->shape().At(slice_ctx.split_axis), slice_ctx.upper - slice_ctx.lower);
   }
 
-  const auto params_pair =
-      ConstructSliceParams(ctx, large, small, slice_state->split_axis(), slice_state->lower(),
-                           slice_state->upper(), slice_state->length());
-
-  const auto large_slice_param = params_pair.first;
-  const auto small_slice_param = params_pair.second;
+  std::vector<int64_t> positive_start_vec;
+  std::vector<int64_t> positive_stop_vec;
+  const std::vector<int64_t> start_attr = ctx->Attr<std::vector<int64_t>>("start");
+  const std::vector<int64_t> stop_attr = ctx->Attr<std::vector<int64_t>>("stop");
+  const std::vector<int64_t> step_attr = ctx->Attr<std::vector<int64_t>>("step");
+  const int64_t ndim = start_attr.size();
+  for (int i = 0; i < ndim; i++) {
+    const int64_t dim_size = large->shape().At(i);
+    positive_start_vec.push_back(RegulateSliceStart(
+        start_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.length : dim_size));
+    positive_stop_vec.push_back(RegulateSliceStop(
+        stop_attr.at(i), i == slice_ctx.split_axis ? slice_ctx.length : dim_size));
+  }
+  const auto large_slice_param = ConstructSliceParamsLarge(
+      slice_ctx, positive_start_vec, positive_stop_vec, step_attr, large->shape());
+  const auto small_slice_param = ConstructSliceParamsSmall(
+      slice_ctx, positive_start_vec, positive_stop_vec, step_attr, small->shape());
+  CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
 
   const int64_t elem_cnt = large_slice_param.elem_cnt();
   SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr(large_slice_param.dims);
@@ -253,11 +261,11 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     const auto split_axis = in_sbp.split_parallel().axis();
     const int64_t split_dim_size = in_logical_desc->shape().At(split_axis);
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<SliceState>(
+    return std::make_shared<OpKernelStateWrapper<SliceContext>>(
         split_axis, bs.At(ctx->parallel_ctx().parallel_id()).begin(),
         bs.At(ctx->parallel_ctx().parallel_id()).end(), split_dim_size);
   } else {
-    return std::make_shared<SliceState>(-1, 0, 0, 0);
+    return std::make_shared<OpKernelStateWrapper<SliceContext>>(-1, 0, 0, 0);
   }
 }
 
@@ -285,7 +293,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    auto* slice_state = dynamic_cast<SliceState*>(state);
+    const SliceContext& slice_ctx = dynamic_cast<OpKernelStateWrapper<SliceContext>*>(state)->Get();
 #if defined(WITH_CUDA)
     if (y_tensor->mem_case().has_host_mem()) {
 #endif
@@ -298,7 +306,7 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     }
 #endif
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
-                     y_tensor, slice_state, true);
+                     y_tensor, slice_ctx, true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -320,9 +328,9 @@ class SliceAssignKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    auto* slice_state = dynamic_cast<SliceState*>(state);
+    const SliceContext& slice_ctx = dynamic_cast<OpKernelStateWrapper<SliceContext>*>(state)->Get();
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
-                     value_tensor, ref_tensor, slice_state, false);
+                     value_tensor, ref_tensor, slice_ctx, false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
