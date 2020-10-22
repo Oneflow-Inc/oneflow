@@ -197,7 +197,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   {% endif %}{# field message type #}
   {% endfor %}{# oneof_fields #}
     } {{ util.oneof_name(oneof) }}_;
-    {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case_;
+    {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case_ = {{ util.oneof_name(oneof).upper() }}_NOT_SET;
   {% endfor %}{# message_oneof #}
    
    public:

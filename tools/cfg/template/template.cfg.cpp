@@ -226,10 +226,10 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::clear_{{ uti
   has_{{ util.field_name(field) }}_ = false;
 }
 {{ util.field_type_name_with_cfg_namespace(field) }}* Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::mutable_{{ util.field_name(field) }}() {
-  has_{{ util.field_name(field) }}_ = true;
   if (!{{ util.field_name(field) }}_) {
     {{ util.field_name(field) }}_ = ::std::make_shared<{{ util.field_type_name_with_cfg_namespace(field) }}>();
   }
+  has_{{ util.field_name(field) }}_ = true;
   return {{ util.field_name(field) }}_.get();
 }
 {% else %}
