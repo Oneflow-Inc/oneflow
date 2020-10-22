@@ -20,11 +20,11 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
-const int SPLIT_AXIS_FOR_BROADCAST = -1;
-
 namespace oneflow {
 
 namespace {
+
+const int SPLIT_AXIS_FOR_BROADCAST = -1;
 
 // [start, end)
 int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t step) {
