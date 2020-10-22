@@ -160,6 +160,12 @@ OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
+    InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn) {
+  result_.infer_output_blob_time_shape_fn = std::move(infer_output_blob_time_shape_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;

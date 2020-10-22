@@ -13,10 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/acc_compute_task_node.h"
-#include "oneflow/core/operator/acc_op.h"
+#include "oneflow/core/graph/accumulate_compute_task_node.h"
+#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
+
+class AccCompTaskNode final : public AccumulateCompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AccCompTaskNode);
+  AccCompTaskNode() = default;
+  ~AccCompTaskNode() = default;
+  TaskType GetTaskType() const override { return TaskType::kAcc; }
+  void BuildExecGphAndRegst() override;
+
+ private:
+  void InferProducedDataRegstTimeShape() override;
+};
 
 void AccCompTaskNode::InferProducedDataRegstTimeShape() {
   auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
@@ -46,5 +59,8 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
     CHECK_EQ(blob_desc->is_tensor_list(), false);
   });
 }
+
+REGISTER_USER_OP_COMP_TASK_NODE_TYPE("acc", AccCompTaskNode);
+REGISTER_USER_OP_INDEPENDENT_AREA_ID("acc")
 
 }  // namespace oneflow
