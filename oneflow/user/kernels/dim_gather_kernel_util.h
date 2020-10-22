@@ -64,7 +64,8 @@ struct DimGatherFunctor final {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor final {
-  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                  DimOpIndexNdHelper<IDX_T> output_nd_helper, int output_ndim, int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
 };
 
@@ -98,19 +99,25 @@ struct DeviceAdd {
 };
 
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimScatterAdd(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> outputArg,
+OF_DEVICE_FUNC void DoDimScatterAdd(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                                    DimOpIndexNdHelper<IDX_T> output_nd_helper, int output_ndim,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
     // output[x][j][k] = input[i][j][k]  # if dim == 0, x = index[i][j][k]
     // index.shape == input.shape
 
-    DimOpIndexNdHelper<IDX_T> inputHelper(inputArg.shape, inputArg.num_axis);
-    DimOpIndexNdHelper<IDX_T> outputHelper(outputArg.shape, outputArg.num_axis);
-    inputHelper.OffsetToNdIndex(input_offset, outputArg.coordinate);
-    outputArg.coordinate[dim] = index[input_offset];  // x == index[input_offset]
+    // DimOpIndexNdHelper<IDX_T> inputHelper(inputArg.shape, inputArg.num_axis);
+    // DimOpIndexNdHelper<IDX_T> outputHelper(outputArg.shape, outputArg.num_axis);
+    IDX_T coordinate[kDimGatherMaxDimCount] = {0};
+    input_nd_helper.OffsetToNdIndex(input_offset, coordinate, input_ndim);
+    coordinate[dim] = index[input_offset]; // x == index[input_offset]
 
-    IDX_T output_offset = outputHelper.NdIndexToOffset(outputArg.coordinate, outputArg.num_axis);
+    // inputHelper.OffsetToNdIndex(input_offset, outputArg.coordinate);
+    // outputArg.coordinate[dim] = index[input_offset];  // x == index[input_offset]
+
+    IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, output_ndim);
+    //IDX_T output_offset = outputHelper.NdIndexToOffset(outputArg.coordinate, outputArg.num_axis);
     DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
   }
 }

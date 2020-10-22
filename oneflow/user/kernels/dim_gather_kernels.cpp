@@ -91,10 +91,20 @@ class ScatterDimKernel final : public user_op::OpKernel {
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
-    NdIndexArg<IDX_T> srcArg(input_tensor->shape());
-    NdIndexArg<IDX_T> outputArg(out_tensor->shape());
+    IDX_T shape_buffer[kDimGatherMaxDimCount] = {0};
+    int input_ndim = input_tensor->shape().NumAxes();
+    ConvertShape2Array(input_tensor->shape(), shape_buffer, input_ndim);
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, input_ndim);
 
-    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(srcArg, outputArg,
+    int output_ndim = out_tensor->shape().NumAxes();
+    ConvertShape2Array(out_tensor->shape(), shape_buffer, output_ndim);
+    DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer, output_ndim);
+
+    // NdIndexArg<IDX_T> srcArg(input_tensor->shape());
+    // NdIndexArg<IDX_T> outputArg(out_tensor->shape());
+
+    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, input_ndim,
+                                                    output_nd_helpr, output_ndim,
                                                      input_tensor->shape().elem_cnt(), dim, index,
                                                      src, output, ctx->device_ctx());
   }

@@ -33,9 +33,12 @@ struct DimGatherFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
 
 template<typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                  DimOpIndexNdHelper<IDX_T> output_nd_helper, int output_ndim,
+                  int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx) {
-    DoDimScatterAdd<IN_T, IDX_T>(inputArg, outputArg, elem_cnt, dim, index, input,
+    DoDimScatterAdd<IN_T, IDX_T>(input_nd_helper, input_ndim,
+                                  output_nd_helper, output_ndim, elem_cnt, dim, index, input,
                                                    output);
   }
 };
