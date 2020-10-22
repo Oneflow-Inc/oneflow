@@ -13,6 +13,8 @@ on:
       placeholder:
         description: 'placeholder, no effect'
         required: false
+env:
+  CI_USER_HOME: /home/ci-user
 jobs:
 
   check_license_and_format:
@@ -45,7 +47,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: ${{ env.HOME }}/ci-tmp
+      ci_tmp_dir: ${{ env.CI_USER_HOME }}/ci-tmp
     steps:
     - name: Fix permissions
       run: |
@@ -109,7 +111,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: ${{ env.HOME }}/ci-tmp-xla
+      ci_tmp_dir: ${{ env.CI_USER_HOME }}/ci-tmp-xla
     steps:
     - name: Fix permissions
       run: |
@@ -137,7 +139,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: ${{ env.HOME }}/ci-tmp-cpu
+      ci_tmp_dir: ${{ env.CI_USER_HOME }}/ci-tmp-cpu
     steps:
     - name: Fix permissions
       run: |
