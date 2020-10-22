@@ -672,6 +672,119 @@ def api_slice_update(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
+# Get slice attrs for slice_assign and logical_slice
+# Note the step in slice_tup_list must be greater than 0
+# as slice_assign and logical_slice only support step > 0
+def _GetSliceAttrs(slice_tup_list, input_shape):
+    ndim = len(input_shape)
+    if not (isinstance(slice_tup_list, (list, tuple)) and len(slice_tup_list) <= ndim):
+        raise ValueError(
+            "slice_tup_list must be a list or tuple with length "
+            "less than or equal to number of dimensions of input tensor"
+        )
+
+    # Right extends slice_tup_list with [None, None, None] if len(slice_tup_list) < len(input_shape)
+    if len(slice_tup_list) < ndim:
+        slice_tup_list += type(slice_tup_list)(
+            [(None, None, None)] * (ndim - len(slice_tup_list))
+        )
+
+    start_list = []
+    stop_list = []
+    step_list = []
+
+    for slice_tup, dim_size in zip(slice_tup_list, input_shape):
+        if not (isinstance(slice_tup, (tuple, list)) and len(slice_tup) == 3):
+            raise ValueError(
+                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
+            )
+
+        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
+            raise ValueError("element of slice tuple must int or None")
+
+        (start, stop, step) = slice_tup
+        if step is None:
+            step = 1
+
+        if step <= 0:
+            raise ValueError("slice_assign/logical_slice step must be greater than 0")
+
+        if start is None:
+            start = 0
+        elif start < -dim_size or start >= dim_size:
+            raise ValueError(
+                "slice_assign/logical_slice start must be in range [-size, size)"
+            )
+        elif start < 0:
+            start += dim_size
+
+        if stop is None:
+            stop = dim_size
+        elif stop < -dim_size or stop > dim_size:
+            raise ValueError(
+                "slice_assign/logical_slice start must be in range [-size, size]"
+            )
+        elif stop < 0:
+            stop += dim_size
+
+        start_list.append(start)
+        stop_list.append(stop)
+        step_list.append(step)
+
+    return start_list, stop_list, step_list
+
+
+@oneflow_export("experimental.logical_slice")
+def logical_slice(
+    x: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    name = id_util.UniqueStr("LogicalSlice_") if name is None else name
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
+    op = (
+        flow.user_op_builder(name)
+        .Op("logical_slice")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("start", start_list)
+        .Attr("stop", stop_list)
+        .Attr("step", step_list)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("experimental.logical_slice_assign")
+def logical_slice_assign(
+    x: remote_blob_util.BlobDef,
+    value: remote_blob_util.BlobDef,
+    slice_tup_list: Sequence[Tuple[int, int, int]],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    name = id_util.UniqueStr("LogicalSliceAssign_") if name is None else name
+    if not isinstance(name, str):
+        raise ValueError("name must be a string")
+
+    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
+    op = (
+        flow.user_op_builder(name)
+        .Op("logical_slice_assign")
+        .Input("ref", [x])
+        .Input("value", [value])
+        .Attr("start", start_list)
+        .Attr("stop", stop_list)
+        .Attr("step", step_list)
+        .Build()
+    )
+    return op.InferAndTryRun()
+
+
 @oneflow_export("reverse")
 def reverse(
     input: remote_blob_util.BlobDef,
