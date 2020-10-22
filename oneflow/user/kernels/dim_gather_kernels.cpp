@@ -18,17 +18,10 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
-#include <stdio.h>
 
 namespace oneflow {
-
-namespace user_op {
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimGatherFunctor final {
-  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
-};
-
+namespace user_op{
+  
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 class DimGatherKernel final : public user_op::OpKernel {
  public:
@@ -55,12 +48,6 @@ class DimGatherKernel final : public user_op::OpKernel {
                                                  input, output, ctx->device_ctx());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimScatterAddFunctor final {
-  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
@@ -94,6 +81,35 @@ class ScatterDimKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+#define REGISTER_DIM_GATHER_KERNEL(device, dtype_pair, itype_pair)                               \
+  REGISTER_USER_KERNEL("dim_gather")                                                            \
+      .SetCreateFn<                                                                             \
+          DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
+                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+
+#define REGISTER_DIM_SCATTER_KERNEL(device, dtype_pair, itype_pair)                               \
+  REGISTER_USER_KERNEL("dim_scatter_add_like")                                                   \
+      .SetCreateFn<                                                                              \
+          ScatterDimKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+
+// register cpu/gpu kernels
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
+                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_KERNEL, (DeviceType::kCPU),
+                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kGPU),
+                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_SCATTER_KERNEL, (DeviceType::kGPU),
+                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op
 }  // namespace oneflow

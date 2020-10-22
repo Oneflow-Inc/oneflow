@@ -15,23 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
-#include "oneflow/user/kernels/dim_gather_kernels.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
 namespace user_op {
-
-// template<>
-// struct DeviceAdd<half> {
-//   __device__ __forceinline__ static void Invoke(const half* x, half* y) {
-//     gpu_atomic_add(y, *x);
-//   }
-// };
-
-// template<typename T>
-// struct DeviceAdd<DeviceType::kGPU, T> {
-//   __device__ __forceinline__ static void Invoke(const T* x, T* y) { gpu_atomic_add(y, *x); }
-// };
 
 template<typename IN_T, typename IDX_T>
 __global__ void DoCUDADimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
@@ -92,27 +81,11 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
   }
 };
 
-#define REGISTER_DIMGATHER_GPUKERNEL(device, dtype_pair, itype_pair)                             \
-  REGISTER_USER_KERNEL("dim_gather")                                                            \
-      .SetCreateFn<                                                                             \
-          DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_GATHER_FUNCTOR, (DeviceType::kGPU),
+                                DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR, (DeviceType::kGPU),
+                                DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
-#define REGISTER_DIMSCATTERADD_GPUKERNEL(device, dtype_pair, itype_pair)                          \
-  REGISTER_USER_KERNEL("dim_scatter_add_like")                                                   \
-      .SetCreateFn<                                                                              \
-          ScatterDimKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
-                       & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMGATHER_GPUKERNEL, (DeviceType::kGPU),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIMSCATTERADD_GPUKERNEL, (DeviceType::kGPU),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

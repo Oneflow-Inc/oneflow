@@ -49,6 +49,19 @@ struct NdIndexArg {
 };
 
 namespace user_op {
+
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+struct DimGatherFunctor final {
+  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
+};
+
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+struct DimScatterAddFunctor final {
+  void operator()(NdIndexArg<IDX_T> srcArg, NdIndexArg<IDX_T> outputArg, int64_t elem_cnt,
+                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
+};
+
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
                                 int64_t elem_cnt, int64_t dim, const IDX_T* index,
@@ -96,6 +109,15 @@ OF_DEVICE_FUNC void DoDimScatterAdd(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T
     DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
   }
 }
+
+// macros for functors instantiate(used by dim_gather_kernel_util.cu and dim_gather_kernel_uti.cpp)
+#define INSTANTIATE_DIM_GATHER_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \
+  template struct DimGatherFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                  OF_PP_PAIR_FIRST(itype_pair)>;
+
+#define INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \
+  template struct DimScatterAddFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+                                  OF_PP_PAIR_FIRST(itype_pair)>;
 
 }  // namespace user_op
 }  // namespace oneflow
