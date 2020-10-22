@@ -2,9 +2,6 @@ inputs:
     tmp_dir:
       description: 'tmp dir'
       required: true
-    src_dir:
-      description: 'source dir'
-      required: true
     cuda_version:
       description: 'cuda_version'
       default: '10.2'
@@ -19,13 +16,14 @@ runs:
   steps:
     - run: |
         set -x
+        src_dir=${PWD}
         tmp_dir="${{ inputs.tmp_dir }}"
         docker run --rm -v $PWD:/p -w $PWD:/p busybox rm -rf /p/wheelhouse
         cd ${tmp_dir}
-        python3 ${{ inputs.src_dir }}/docker/package/manylinux/build_wheel.py \
+        python3 ${src_dir}/docker/package/manylinux/build_wheel.py \
             --cuda_version=${{ inputs.cuda_version }} \
             --python_version=${{ inputs.python_version }} \
             --use_tuna --use_system_proxy --use_aliyun_mirror \
             --wheel_house_dir=${tmp_dir}/wheelhouse \
-            --oneflow_src_dir=${{ inputs.src_dir }} ${{ inputs.extra_flags }}
+            --oneflow_src_dir=${src_dir} ${{ inputs.extra_flags }}
       shell: bash
