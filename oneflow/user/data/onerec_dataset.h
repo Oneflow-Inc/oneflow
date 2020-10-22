@@ -76,7 +76,7 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
   using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
   using LoadTargetPtrList = std::vector<LoadTargetPtr>;
   OF_DISALLOW_COPY_AND_MOVE(OneRecDataset);
-  OneRecDataset(user_op::KernelInitContext* ctx) {
+  OneRecDataset(user_op::KernelInitContext* ctx, int32_t batch_size) : batch_size_(batch_size) {
     current_epoch_ = 0;
     shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");
     data_file_paths_ = ctx->Attr<std::vector<std::string>>("files");
@@ -85,15 +85,18 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     BalancedSplitter bs(data_file_paths_.size(), parallel_num_);
     range_ = bs.At(parallel_id_);
     ResetInstream();
+    hash_state_ = LZ4_XXH64_createState();
   }
 
-  ~OneRecDataset() = default;
+  ~OneRecDataset() { CHECK_NE(LZ4_XXH64_freeState(hash_state_), XXH_ERROR); }
 
   LoadTargetPtrList Next() override {
     LoadTargetPtrList ret;
-    LoadTargetPtr sample_ptr(new TensorBuffer());
-    ReadSample(*sample_ptr);
-    ret.push_back(std::move(sample_ptr));
+    ret.resize(batch_size_);
+    for (int32_t i = 0; i < batch_size_; ++i) {
+      ret.at(i).reset(new TensorBuffer());
+      ReadSample(*ret.at(i).get());
+    }
     return ret;
   }
 
@@ -115,12 +118,10 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     const int32_t payload_size = header_view.header.payload_size;
     CHECK_GE(payload_size, 0);
     CHECK_LE(payload_size, kMaxPayloadSize);
-    XXH64_state_t* const state = LZ4_XXH64_createState();
-    CHECK_NOTNULL(state);
     XXH64_hash_t const seed = 0;
-    CHECK_NE(LZ4_XXH64_reset(state, seed), XXH_ERROR);
-    CHECK_NE(XXH64_update(state, header_view.raw, kHeaderSizeWithoutDigest), XXH_ERROR);
-    CHECK_EQ(ByteSwap(header_view.header.digest), LZ4_XXH64_digest(state));
+    CHECK_NE(LZ4_XXH64_reset(hash_state_, seed), XXH_ERROR);
+    CHECK_NE(XXH64_update(hash_state_, header_view.raw, kHeaderSizeWithoutDigest), XXH_ERROR);
+    CHECK_EQ(ByteSwap(header_view.header.digest), LZ4_XXH64_digest(hash_state_));
     const int32_t padded_size = RoundUp(payload_size, kPayloadAlignmentSize) - payload_size;
     tensor.Resize(Shape({payload_size}), DataType::kChar);
     char* body = tensor.mut_data<char>();
@@ -130,10 +131,9 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
     static_assert(sizeof(OneRecFrameFooterView) == kDigestFieldSize, "");
     OneRecFrameFooterView footer_view{};
     CHECK_EQ(in_stream_->ReadFully(footer_view.raw, kDigestFieldSize), 0);  // read footer
-    CHECK_NE(XXH64_reset(state, seed), XXH_ERROR);
-    CHECK_NE(LZ4_XXH64_update(state, body, payload_size), XXH_ERROR);
-    CHECK_EQ(ByteSwap(footer_view.digest), LZ4_XXH64_digest(state));
-    CHECK_NE(LZ4_XXH64_freeState(state), XXH_ERROR);
+    CHECK_NE(XXH64_reset(hash_state_, seed), XXH_ERROR);
+    CHECK_NE(LZ4_XXH64_update(hash_state_, body, payload_size), XXH_ERROR);
+    CHECK_EQ(ByteSwap(footer_view.digest), LZ4_XXH64_digest(hash_state_));
   }
 
   void ResetInstream() {
@@ -159,6 +159,8 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
   Range range_;
   std::vector<std::string> data_file_paths_;
   std::unique_ptr<PersistentInStream> in_stream_;
+  XXH64_state_t* hash_state_;
+  int32_t batch_size_;
 };
 
 }  // namespace data
