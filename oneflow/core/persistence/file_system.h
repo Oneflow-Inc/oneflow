@@ -172,6 +172,7 @@ fs::FileSystem* LocalFS();
 
 fs::FileSystem* GetFS(const FileSystemConf& file_system_conf);
 fs::FileSystem* DataFS();
+fs::FileSystem* DataFS(int64_t session_id);
 fs::FileSystem* SnapshotFS();
 }  // namespace oneflow
 

@@ -13,23 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/autograd.h"
+#ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
+#define ONEFLOW_CORE_COMMON_CONSTANT_H_
 
 namespace oneflow {
 
-namespace {
-
-void GenerateBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  FOR_RANGE(int32_t, i, 0, op.input_bns().size()) {
-    LogicalBlobId* in_diff_lbi = DiffLbi4BnInOp(op.input_bns().Get(i));
-    if (in_diff_lbi != nullptr) { *in_diff_lbi = *DiffLbi4BnInOp(op.output_bns().Get(i)); }
-  }
+static const int64_t kInvalidSessionId = -1;
 }
 
-}  // namespace
-
-REGISTER_OP_GRAD(OperatorConf::kTupleIdentityConf, &GenerateBackwardOpConf);
-
-}  // namespace oneflow
+#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_
