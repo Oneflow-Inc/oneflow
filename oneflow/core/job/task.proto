@@ -17,7 +17,7 @@ enum TaskType {
   kDecodeRandom = 29;
   kPackForward = 30;
   kUnpackForward = 32;
-  kRepeatForward = 34;
+  kRepeat = 34;
   kAcc = 37;
   kOptimizer = 38;
   kSourceTick = 40;
