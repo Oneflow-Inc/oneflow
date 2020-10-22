@@ -18,6 +18,7 @@ message CollectiveBoxingConf {
   optional bool nccl_fusion_broadcast = 107 [default = true];
   optional bool nccl_fusion_all_reduce_use_buffer = 108 [default = false];
   optional int64 nccl_fusion_max_ops = 109 [default = 64];
+  optional bool nccl_enable_all_to_all = 110 [default = false];
 }
 
 message Resource {

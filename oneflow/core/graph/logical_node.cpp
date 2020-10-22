@@ -61,11 +61,6 @@ static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
   return *predicators.begin();
 }
 
-bool HasSoleIdentityOp(const LogicalNode* logical_node) {
-  const auto& op_conf = logical_node->SoleOp()->op_conf();
-  return logical_node->op_vec().size() == 1 && op_conf.has_tuple_identity_conf();
-}
-
 std::string ConcatTypeName(const LogicalNode* lhs, const LogicalNode* rhs) {
   return lhs->TypeName() + rhs->TypeName();
 }

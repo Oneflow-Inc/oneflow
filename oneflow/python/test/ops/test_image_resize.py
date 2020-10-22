@@ -249,7 +249,7 @@ def _test_image_resize_with_cv(
     if origin_dtype is None:
         origin_dtype = dtype
 
-    image_list = image_test_util.read_images_by_pil(image_files, origin_dtype)
+    image_list = image_test_util.read_images_by_cv(image_files, origin_dtype)
     if print_debug_info:
         print("origin images shapes: {}".format([image.shape for image in image_list]))
         print(
