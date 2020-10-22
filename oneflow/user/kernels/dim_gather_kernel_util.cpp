@@ -22,10 +22,12 @@ namespace user_op {
 
 template<typename IN_T, typename IDX_T>
 struct DimGatherFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                  DimOpIndexNdHelper<IDX_T> index_nd_helper, int index_ndim,
+                  int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output,
                   DeviceCtx* ctx) {
-    DoDimGather<IN_T, IDX_T>(inputArg, indexArg, elem_cnt, dim, index, input, output);
+    DoDimGather<IN_T, IDX_T>(input_nd_helper, input_ndim, index_nd_helper, index_ndim, elem_cnt, dim, index, input, output);
   }
 };
 

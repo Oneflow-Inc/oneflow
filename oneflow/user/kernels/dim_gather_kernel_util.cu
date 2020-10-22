@@ -21,30 +21,36 @@ namespace oneflow {
 namespace user_op {
 
 template<typename IN_T, typename IDX_T>
-__global__ void DoCUDADimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
+__global__ void DoCUDADimGather(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                                DimOpIndexNdHelper<IDX_T> index_nd_helper, int index_ndim,
                                 int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                 const IN_T* input, IN_T* output) {
-  DoDimGather<IN_T, IDX_T>(inputArg, indexArg, elem_cnt, dim, index, input, output);
+  DoDimGather<IN_T, IDX_T>(input_nd_helper,
+    input_ndim, index_nd_helper, index_ndim, elem_cnt, dim, index, input, output);
 }
 
 template<typename IDX_T, typename IN_T>
 struct DimGatherFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                  DimOpIndexNdHelper<IDX_T> index_nd_helper, int index_ndim,
+                  int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output,
                   DeviceCtx* ctx) {
-    RUN_CUDA_KERNEL((DoCUDADimGather<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), inputArg,
-                    indexArg, elem_cnt, dim, index, input, output);
+    RUN_CUDA_KERNEL((DoCUDADimGather<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), input_nd_helper,
+                    input_ndim, index_nd_helper, index_ndim, elem_cnt, dim, index, input, output);
   }
 };
 
 // float16 special case of DimGatherFunctor template
 template<typename IDX_T>
 struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
-  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
+  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                  DimOpIndexNdHelper<IDX_T> index_nd_helper, int index_ndim,
+                  int64_t elem_cnt,
                   int64_t dim, const IDX_T* index, const float16* input, float16* output,
                   DeviceCtx* ctx) {
-    RUN_CUDA_KERNEL((DoCUDADimGather<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), inputArg,
-                    indexArg, elem_cnt, dim, index,
+    RUN_CUDA_KERNEL((DoCUDADimGather<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), input_nd_helper,
+                    input_ndim, index_nd_helper, index_ndim, elem_cnt, dim, index,
                     reinterpret_cast<const half*>(input),
                     reinterpret_cast<half*>(output));
   }

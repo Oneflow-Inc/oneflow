@@ -52,8 +52,14 @@ namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
-  void operator()(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
+  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                  DimOpIndexNdHelper<IDX_T> index_nd_helper, int index_ndim, 
+                  int64_t elem_cnt,
+                  int64_t dim, 
+                  const IDX_T* index, 
+                  const IN_T* input, 
+                  IN_T* output, 
+                  DeviceCtx* ctx);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
@@ -63,20 +69,19 @@ struct DimScatterAddFunctor final {
 };
 
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimGather(NdIndexArg<IDX_T> inputArg, NdIndexArg<IDX_T> indexArg,
+OF_DEVICE_FUNC void DoDimGather(DimOpIndexNdHelper<IDX_T> input_nd_helper, int input_ndim,
+                                DimOpIndexNdHelper<IDX_T> index_nd_helper, int index_ndim,
                                 int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                 const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
-    DimOpIndexNdHelper<IDX_T> inputHelper(inputArg.shape, inputArg.num_axis);
-    DimOpIndexNdHelper<IDX_T> indexHelper(indexArg.shape, indexArg.num_axis);
-
+    IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     // output[i][j][k] = input[i][x][k] # dim == 1, x = index[i][j][k]
     // output.shape == index.shape
     const IDX_T x = index[index_offset];
-    indexHelper.OffsetToNdIndex(index_offset, inputArg.coordinate);
-    inputArg.coordinate[dim] = x;
+    index_nd_helper.OffsetToNdIndex(index_offset, coordinate, index_ndim);
+    coordinate[dim] = x;
 
-    IDX_T input_offset = inputHelper.NdIndexToOffset(inputArg.coordinate, inputArg.num_axis);
+    IDX_T input_offset = input_nd_helper.NdIndexToOffset(coordinate, input_ndim);
     output[index_offset] = input[input_offset];
   }
 }
@@ -85,7 +90,7 @@ template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) { 
 #ifdef __CUDA_ARCH__
-    gpu_atomic_add(y, *x); // TODO:(yaochi), refine add using float16 -> half -> float -> half
+    gpu_atomic_add(y, *x); // TODO:(YaoChi), refine add using float16 -> half -> float -> half
 #else
     *y += *x;
 #endif

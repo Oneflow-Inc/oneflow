@@ -18,8 +18,20 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 
+
+
 namespace oneflow {
 namespace user_op{
+
+namespace{
+template<typename IDX_T> 
+void ConvertShape2Array(const ShapeView& shape_view, IDX_T* array, int64_t num_axis){
+    FOR_RANGE(int64_t, i, 0, num_axis) { 
+      array[i] = shape_view.At(i); 
+    }
+  }
+
+} //namespace
   
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 class DimGatherKernel final : public user_op::OpKernel {
@@ -40,9 +52,17 @@ class DimGatherKernel final : public user_op::OpKernel {
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
-    NdIndexArg<IDX_T> inputArg(input_tensor->shape());
-    NdIndexArg<IDX_T> indexArg(index_tensor->shape());
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(inputArg, indexArg,
+    IDX_T shape_buffer[kDimGatherMaxDimCount] = {0};
+    int input_ndim = input_tensor->shape().NumAxes();
+    ConvertShape2Array(input_tensor->shape(), shape_buffer, input_ndim);
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, input_ndim);
+
+    int index_ndim = index_tensor->shape().NumAxes();
+    ConvertShape2Array(index_tensor->shape(), shape_buffer, index_ndim);
+    DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer, index_ndim);
+
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, input_ndim, 
+                                                 index_nd_helpr, index_ndim,
                                                  index_tensor->shape().elem_cnt(), dim, index,
                                                  input, output, ctx->device_ctx());
   }
