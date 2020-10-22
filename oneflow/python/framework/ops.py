@@ -40,18 +40,18 @@ def api_repeat(
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def repeat(input, repeat_num, name=None):
     assert not oneflow.eager_execution_enabled()
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Repeat_"),
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Repeat_")
+        )
+        .Op("repeat")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("repeat_num", repeat_num)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.repeat_conf, "in", input.unique_name)
-    op_conf.repeat_conf.out = "out"
-    op_conf.repeat_conf.repeat_num = repeat_num
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("acc")
@@ -65,18 +65,16 @@ def api_acc(
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def acc(one, max_acc_num, name=None):
     assert not oneflow.eager_execution_enabled()
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Acc_"),
+    return (
+        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
+        .Op("acc")
+        .Input("in", [one])
+        .Output("out")
+        .Attr("max_acc_num", max_acc_num)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    op_conf.acc_conf.one = one.unique_name
-    op_conf.acc_conf.acc = "acc"
-    op_conf.acc_conf.max_acc_num = max_acc_num
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "acc"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("unpack")
