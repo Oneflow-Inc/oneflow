@@ -22,6 +22,7 @@ import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.placement_pb2 as placement_pb_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
@@ -29,6 +30,7 @@ import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.id_util as id_util
