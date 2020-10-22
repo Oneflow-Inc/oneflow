@@ -283,7 +283,6 @@ else()
 endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
-add_dependencies(of_pyscript_copy of_cfgobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
   COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
@@ -320,7 +319,6 @@ if(BUILD_TESTING)
       target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
       set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
       add_test(NAME oneflow_test COMMAND oneflow_testexe)
-      add_dependencies(oneflow_testexe of_ccobj)
       #  foreach(cc ${of_all_test_cc})
       #    get_filename_component(test_name ${cc} NAME_WE)
       #    string(CONCAT test_exe_name ${test_name} exe)
