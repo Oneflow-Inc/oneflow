@@ -44,6 +44,8 @@ jobs:
     name: CUDA
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    env:
+      ci_tmp_dir: $HOME/ci-tmp
     steps:
     - name: Fix permissions
       run: |
@@ -51,6 +53,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build OneFlow
       uses: ./.github/actions/whl
+      with:
+        tmp_dir: ${ci_tmp_dir}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
@@ -58,65 +62,44 @@ jobs:
       run: |
         docker run --shm-size=8g --rm \
           -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          -v $HOME/ci-tmp:/ci-tmp \
+          -v ${ci_tmp_dir}:${ci_tmp_dir} \
           -w /ci-tmp/manylinux2014-build-cache/build-oneflow/bin \
           oneflow-test \
           ./oneflow_testexe
     - name: Op test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
     - name: Op test (eager)
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           --env ONEFLOW_TEST_ENABLE_EAGER=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
     - name: Model test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
     - name: Benchmark
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
     - name: Benchmark FP16
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
     - name: ONNX export test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
     - name: Build documentation
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
@@ -125,6 +108,8 @@ jobs:
     name: XLA
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    env:
+      ci_tmp_dir: $HOME/ci-tmp-xla
     steps:
     - name: Fix permissions
       run: |
@@ -135,16 +120,13 @@ jobs:
       with:
         cuda_version: 10.1
         extra_flags: --xla
-        tmp_dir: ci-tmp-xla
+        tmp_dir: ${ci_tmp_dir}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
     - name: Test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp-xla:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
@@ -154,6 +136,8 @@ jobs:
     name: CPU-only
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    env:
+      ci_tmp_dir: $HOME/ci-tmp-cpu
     steps:
     - name: Fix permissions
       run: |
@@ -169,29 +153,20 @@ jobs:
         bash docker/ci/test/build.sh
     - name: Op test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp-cpu:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
     - name: Op test (eager)
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp-cpu:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           --env ONEFLOW_TEST_ENABLE_EAGER=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
     - name: Model test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp-cpu:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -v ${ci_tmp_dir}:${ci_tmp_dir} -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --env ONEFLOW_WHEEL_PATH=${ci_tmp_dir}/wheelhouse \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"

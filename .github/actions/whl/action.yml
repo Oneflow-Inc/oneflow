@@ -1,7 +1,7 @@
 inputs:
     tmp_dir:
       description: 'tmp dir in home'
-      default: 'ci-tmp'
+      required: true
     cuda_version:
       description: 'cuda_version'
       default: '10.2'
@@ -16,11 +16,9 @@ runs:
   steps:
     - run: |
         set -x
-        tmp_dir="$HOME/${{ inputs.tmp_dir }}"
-        docker run --rm \
-            -v $tmp_dir:/p \
-            -w $tmp_dir:/p busybox rm -rf /p/wheelhouse
-
+        tmp_dir="${{ inputs.tmp_dir }}"
+        docker run --rm -v $PWD:/p -w $PWD:/p busybox rm -rf /p/wheelhouse
+        cd ${tmp_dir}
         python3 docker/package/manylinux/build_wheel.py \
             --cuda_version=${{ inputs.cuda_version }} \
             --python_version=${{ inputs.python_version }} \
