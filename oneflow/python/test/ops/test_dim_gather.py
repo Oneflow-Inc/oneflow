@@ -1,25 +1,10 @@
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-from collections import OrderedDict
-import numpy as np
 import oneflow as flow
+import numpy as np
+import oneflow.typing as oft
 from test_util import GenArgList
 import oneflow.typing as oft
 import unittest
-
+from collections import OrderedDict
 
 def gen_gather_test_sample(input_shape, index_shape, dim):
     def _flatten_array(input_array):
@@ -89,7 +74,6 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
     ret = {"input": input, "index": index, "dim": dim, "output": output, "grad": grad}
     return ret
 
-
 def _make_dim_gather_fn(
     test_case,
     input,
@@ -103,129 +87,131 @@ def _make_dim_gather_fn(
     device_counts,
 ):
     flow.clear_default_session()
+    flow.env.init()
     if device_type == "cpu":
-        flow.config.cpu_device_num(1)
-        machine_ids = "0:0"
+        flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(value_type)
+
+    #global function needs float32 as type of argument and return value
+    if value_type == flow.float16:
+        func_config.default_data_type(flow.float32)
+    else:
+        func_config.default_data_type(value_type)
+
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: oft.Numpy):
-        test_case.assertTrue(np.allclose(grad, blob))
+        if (np.allclose(grad, blob)) == False:
+            print("torch grad:", grad)
+            print("oenflow grad:", blob)
 
-    def do_gather(x_blob, i_blob):
-        with flow.scope.placement(device_type, machine_ids):
-            with flow.scope.placement(device_type, "0:0-0"):
-                x = flow.get_variable(
+    if value_type == flow.float16:
+        @flow.global_function(type="train", function_config=func_config)
+        def gather_fn(
+            params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float32),
+            indices_def: oft.Numpy.Placeholder(index.shape, dtype=index_type),
+        ) -> oft.Numpy:
+            with flow.scope.placement(device_type, machine_ids):
+                x_var = flow.get_variable(
+                    "input",
+                    shape=input.shape,
+                    dtype=flow.float32,
+                    initializer=flow.constant_initializer(0),
+                )
+                x = x_var + params_def
+                x_f16 = flow.cast(x, flow.float16)
+                y_f16 = flow.dim_gather(x_f16, dim, indices_def)
+                x_f32 = flow.cast(x, flow.float32)
+                y_f32 = flow.cast(y_f16, flow.float32)
+            flow.watch_diff(x_f32, _compare_diff)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y_f32)
+            return y_f32
+        return gather_fn
+    else:
+        @flow.global_function(type="train", function_config=func_config)
+        def gather_fn(
+            params_def: oft.Numpy.Placeholder(input.shape, dtype=value_type),
+            indices_def: oft.Numpy.Placeholder(index.shape, dtype=index_type),
+        ) -> oft.Numpy:
+            with flow.scope.placement(device_type, "0:0"):
+                x_var = flow.get_variable(
                     "input",
                     shape=input.shape,
                     dtype=value_type,
                     initializer=flow.constant_initializer(0),
                 )
-                x = flow.cast_to_current_logical_view(x)
-                x_blob = flow.cast_to_current_logical_view(x_blob)
-                x = x + x_blob
 
-            y = flow.dim_gather(x, dim, i_blob)
+                x = x_var + params_def
+                y = flow.dim_gather(x, dim, indices_def)
+
             flow.watch_diff(x, _compare_diff)
-
-        with flow.scope.placement(device_type, "0:0-0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(y)
-        return y
+            return y
 
-    @flow.global_function(type="train", function_config=func_config)
-    def gather_fn(
-        params_def: oft.Numpy.Placeholder(input.shape, dtype=value_type),
-        indices_def: oft.Numpy.Placeholder(index.shape, dtype=index_type),
-    ):
-        return do_gather(params_def, indices_def)
+        return gather_fn
 
-    return gather_fn
+def _compare_dim_gather_with_samples(test_case, device_type, sample, value_type, index_type, machine_ids, device_count):
+    gather_fn = _make_dim_gather_fn(test_case, 
+                    sample["input"].astype(value_type[0]),
+                    sample["index"].astype(index_type[0]),
+                    sample["dim"],
+                    sample["grad"].astype(value_type[0]),
+                    device_type,
+                    value_type[1],
+                    index_type[1],
+                    "0:0",
+                    1
+                    )
+    y = gather_fn(sample["input"].astype(value_type[0]), sample["index"].astype(index_type[0]))
+    y.astype(value_type[0])
 
-
-def _compare_dim_gather_with_samples(
-    test_case, device_type, sample, value_type, index_type, machine_ids, device_counts
-):
-    input = sample["input"].astype(value_type[0])
-    index = sample["index"].astype(index_type[0])
-    out = sample["output"].astype(np.float32)
-    dim = sample["dim"]
-    grad = sample["grad"].astype(value_type[0])
-
-    params, indices = input, index
-    gather_fn = _make_dim_gather_fn(
-        test_case,
-        params,
-        indices,
-        dim,
-        grad,
-        device_type,
-        value_type[1],
-        index_type[1],
-        machine_ids,
-        device_counts,
-    )
-
-    of_y = gather_fn(params, indices).get().numpy()
-
-    test_case.assertTrue(np.allclose(out, of_y))
-
+    if value_type == flow.float16:
+        test_case.assertTrue(np.allclose(y, sample["output"].astype(np.float32), 1e-3, 1e-3))
+    else:
+        test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0]), 1e-3, 1e-3))
 
 @flow.unittest.skip_unless_1n1d()
 class TestDimGather1n1d(flow.unittest.TestCase):
-    def test_dim_gather_cpu(test_case):
+    def test_dim_gather(test_case):
         global g_samples
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["samples"] = []
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((8, 4, 2), (4, 4, 2), 0))
-        arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
-        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-        arg_dict["machine_ids"] = ["0:0-0"]
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
+        arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
+        arg_dict["value_type"] = [(np.float32, flow.float16), (np.float32, flow.float32), (np.float64, flow.float64)]
+        arg_dict["index_type"] = [(np.int32, flow.int32)]
+        arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
-
-    def test_dim_gather_gpu(test_case):
-        global g_samples
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((8, 4, 2), (4, 4, 2), 0))
-        arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
-        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-        arg_dict["machine_ids"] = ["0:0-0"]
-        arg_dict["device_count"] = [1]
-        for arg in GenArgList(arg_dict):
-            _compare_dim_gather_with_samples(test_case, *arg)
-
 
 @flow.unittest.skip_unless_1n2d()
-class TestDimGather1n2dConsistent(flow.unittest.TestCase):
-    def test_dim_gather_2cards(test_case):
-        flow.clear_default_session()
+class TestDimGather1n2d(flow.unittest.TestCase):
+    def test_dim_gather(test_case):
         global g_samples
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["samples"] = []
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((8, 4, 2), (4, 4, 2), 0))
-        arg_dict["value_type"] = [(np.float32, flow.float32), (np.double, flow.double)]
-        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-        arg_dict["machine_ids"] = ["0:0-1"]
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
+        arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
+        arg_dict["value_type"] = [(np.float32, flow.float16), (np.float32, flow.float32), (np.float64, flow.float64)]
+        arg_dict["index_type"] = [(np.int32, flow.int32)]
+        arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_count"] = [2]
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
-
 
 if __name__ == "__main__":
     unittest.main()
