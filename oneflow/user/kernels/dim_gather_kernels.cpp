@@ -18,21 +18,17 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 
-
-
 namespace oneflow {
-namespace user_op{
+namespace user_op {
 
-namespace{
-template<typename IDX_T> 
-void ConvertShape2Array(const ShapeView& shape_view, IDX_T* array, int64_t num_axis){
-    FOR_RANGE(int64_t, i, 0, num_axis) { 
-      array[i] = shape_view.At(i); 
-    }
-  }
+namespace {
+template<typename IDX_T>
+void ConvertShape2Array(const ShapeView& shape_view, IDX_T* array, int64_t num_axis) {
+  FOR_RANGE(int64_t, i, 0, num_axis) { array[i] = shape_view.At(i); }
+}
 
-} //namespace
-  
+}  // namespace
+
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 class DimGatherKernel final : public user_op::OpKernel {
  public:
@@ -53,16 +49,14 @@ class DimGatherKernel final : public user_op::OpKernel {
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
     IDX_T shape_buffer[kDimGatherMaxDimCount] = {0};
-    int input_ndim = input_tensor->shape().NumAxes();
-    ConvertShape2Array(input_tensor->shape(), shape_buffer, input_ndim);
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, input_ndim);
+    int ndim = input_tensor->shape().NumAxes();
+    ConvertShape2Array(input_tensor->shape(), shape_buffer, ndim);
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, ndim);
 
-    int index_ndim = index_tensor->shape().NumAxes();
-    ConvertShape2Array(index_tensor->shape(), shape_buffer, index_ndim);
-    DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer, index_ndim);
+    ConvertShape2Array(index_tensor->shape(), shape_buffer, ndim);
+    DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer, ndim);
 
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, input_ndim, 
-                                                 index_nd_helpr, index_ndim,
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, index_nd_helpr, ndim,
                                                  index_tensor->shape().elem_cnt(), dim, index,
                                                  input, output, ctx->device_ctx());
   }
@@ -92,19 +86,14 @@ class ScatterDimKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
     IDX_T shape_buffer[kDimGatherMaxDimCount] = {0};
-    int input_ndim = input_tensor->shape().NumAxes();
-    ConvertShape2Array(input_tensor->shape(), shape_buffer, input_ndim);
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, input_ndim);
+    int ndim = input_tensor->shape().NumAxes();
+    ConvertShape2Array(input_tensor->shape(), shape_buffer, ndim);
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, ndim);
 
-    int output_ndim = out_tensor->shape().NumAxes();
-    ConvertShape2Array(out_tensor->shape(), shape_buffer, output_ndim);
-    DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer, output_ndim);
+    ConvertShape2Array(out_tensor->shape(), shape_buffer, ndim);
+    DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer, ndim);
 
-    // NdIndexArg<IDX_T> srcArg(input_tensor->shape());
-    // NdIndexArg<IDX_T> outputArg(out_tensor->shape());
-
-    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, input_ndim,
-                                                    output_nd_helpr, output_ndim,
+    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, output_nd_helpr, ndim,
                                                      input_tensor->shape().elem_cnt(), dim, index,
                                                      src, output, ctx->device_ctx());
   }
@@ -112,19 +101,19 @@ class ScatterDimKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_DIM_GATHER_KERNEL(device, dtype_pair, itype_pair)                               \
-  REGISTER_USER_KERNEL("dim_gather")                                                            \
-      .SetCreateFn<                                                                             \
+  REGISTER_USER_KERNEL("dim_gather")                                                             \
+      .SetCreateFn<                                                                              \
           DimGatherKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 #define REGISTER_DIM_SCATTER_KERNEL(device, dtype_pair, itype_pair)                               \
-  REGISTER_USER_KERNEL("dim_scatter_add_like")                                                   \
-      .SetCreateFn<                                                                              \
+  REGISTER_USER_KERNEL("dim_scatter_add_like")                                                    \
+      .SetCreateFn<                                                                               \
           ScatterDimKernel<device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                        \
+                       & (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))      \
                        & (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
 // register cpu/gpu kernels

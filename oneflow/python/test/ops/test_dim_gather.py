@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import numpy as np
 import oneflow.typing as oft
@@ -5,6 +20,7 @@ from test_util import GenArgList
 import oneflow.typing as oft
 import unittest
 from collections import OrderedDict
+
 
 def gen_gather_test_sample(input_shape, index_shape, dim):
     def _flatten_array(input_array):
@@ -74,6 +90,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
     ret = {"input": input, "index": index, "dim": dim, "output": output, "grad": grad}
     return ret
 
+
 def _make_dim_gather_fn(
     test_case,
     input,
@@ -95,7 +112,7 @@ def _make_dim_gather_fn(
 
     func_config = flow.FunctionConfig()
 
-    #global function needs float32 as type of argument and return value
+    # global function needs float32 as type of argument and return value
     if value_type == flow.float16:
         func_config.default_data_type(flow.float32)
     else:
@@ -111,6 +128,7 @@ def _make_dim_gather_fn(
             print("oenflow grad:", blob)
 
     if value_type == flow.float16:
+
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
             params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float32),
@@ -133,8 +151,10 @@ def _make_dim_gather_fn(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(y_f32)
             return y_f32
+
         return gather_fn
     else:
+
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
             params_def: oft.Numpy.Placeholder(input.shape, dtype=value_type),
@@ -159,25 +179,36 @@ def _make_dim_gather_fn(
 
         return gather_fn
 
-def _compare_dim_gather_with_samples(test_case, device_type, sample, value_type, index_type, machine_ids, device_count):
-    gather_fn = _make_dim_gather_fn(test_case, 
-                    sample["input"].astype(value_type[0]),
-                    sample["index"].astype(index_type[0]),
-                    sample["dim"],
-                    sample["grad"].astype(value_type[0]),
-                    device_type,
-                    value_type[1],
-                    index_type[1],
-                    "0:0",
-                    1
-                    )
-    y = gather_fn(sample["input"].astype(value_type[0]), sample["index"].astype(index_type[0]))
+
+def _compare_dim_gather_with_samples(
+    test_case, device_type, sample, value_type, index_type, machine_ids, device_count
+):
+    gather_fn = _make_dim_gather_fn(
+        test_case,
+        sample["input"].astype(value_type[0]),
+        sample["index"].astype(index_type[0]),
+        sample["dim"],
+        sample["grad"].astype(value_type[0]),
+        device_type,
+        value_type[1],
+        index_type[1],
+        "0:0",
+        1,
+    )
+    y = gather_fn(
+        sample["input"].astype(value_type[0]), sample["index"].astype(index_type[0])
+    )
     y.astype(value_type[0])
 
     if value_type == flow.float16:
-        test_case.assertTrue(np.allclose(y, sample["output"].astype(np.float32), 1e-3, 1e-3))
+        test_case.assertTrue(
+            np.allclose(y, sample["output"].astype(np.float32), 1e-3, 1e-3)
+        )
     else:
-        test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0]), 1e-3, 1e-3))
+        test_case.assertTrue(
+            np.allclose(y, sample["output"].astype(value_type[0]), 1e-3, 1e-3)
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestDimGather1n1d(flow.unittest.TestCase):
@@ -189,12 +220,17 @@ class TestDimGather1n1d(flow.unittest.TestCase):
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
         arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
-        arg_dict["value_type"] = [(np.float32, flow.float16), (np.float32, flow.float32), (np.float64, flow.float64)]
+        arg_dict["value_type"] = [
+            (np.float32, flow.float16),
+            (np.float32, flow.float32),
+            (np.float64, flow.float64),
+        ]
         arg_dict["index_type"] = [(np.int32, flow.int32)]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestDimGather1n2d(flow.unittest.TestCase):
@@ -206,12 +242,17 @@ class TestDimGather1n2d(flow.unittest.TestCase):
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
         arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
-        arg_dict["value_type"] = [(np.float32, flow.float16), (np.float32, flow.float32), (np.float64, flow.float64)]
+        arg_dict["value_type"] = [
+            (np.float32, flow.float16),
+            (np.float32, flow.float32),
+            (np.float64, flow.float64),
+        ]
         arg_dict["index_type"] = [(np.int32, flow.int32)]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_count"] = [2]
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()
