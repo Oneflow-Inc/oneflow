@@ -28,6 +28,10 @@ func_config.default_data_type(flow.float)
 lib_path = os.path.dirname(os.path.abspath(__file__))
 
 
+@unittest.skipIf(
+    flow.unittest.env.eager_execution_enabled(),
+    "eager mode has not support op load yet",
+)
 @flow.unittest.skip_unless_1n1d()
 class TestPyOne2Two(flow.unittest.TestCase):
     def test_py_one2two(test_case):

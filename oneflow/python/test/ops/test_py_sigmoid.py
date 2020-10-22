@@ -56,6 +56,10 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
     return sigmoid_grad_job
 
 
+@unittest.skipIf(
+    flow.unittest.env.eager_execution_enabled(),
+    "eager mode has not support op load yet",
+)
 @flow.unittest.skip_unless_1n1d()
 class TestPySigmoid(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
