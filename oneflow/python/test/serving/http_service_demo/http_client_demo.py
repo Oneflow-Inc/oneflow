@@ -9,11 +9,14 @@ def get_parser():
     parser = argparse.ArgumentParser("flags for http client demo")
     parser.add_argument("--server_address", type = str, default = "localhost", help = "")
     parser.add_argument("--server_port", type = int, default = 8000, help = "")
-    parser.add_argument("--test_images_path", type = str, default = "./client_images", help = "")
+    parser.add_argument("--test_images_path", type = str, default = "/dataset/http_service_demo_client_images/", help = "")
     return parser
 
 parser = get_parser()
 args = parser.parse_args()
+
+if not os.path.exists(args.test_images_path):
+    raise Exception('Images path does not existed.')
 
 conn = http.client.HTTPConnection(args.server_address, args.server_port)
 conn.request("GET", "/")
@@ -40,6 +43,3 @@ while True:
         time.sleep(2)
 
 # conn.close()
-
-
-
