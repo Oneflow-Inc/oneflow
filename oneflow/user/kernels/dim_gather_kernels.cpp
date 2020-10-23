@@ -22,7 +22,7 @@ namespace oneflow {
 namespace user_op {
 
 namespace {
-  
+
 template<typename IDX_T>
 void ConvertShape2Array(const ShapeView& shape_view, IDX_T* array, int64_t num_axis) {
   FOR_RANGE(int64_t, i, 0, num_axis) { array[i] = shape_view.At(i); }
@@ -101,51 +101,46 @@ class ScatterDimKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype)                               \
-  REGISTER_USER_KERNEL("dim_gather")                                                             \
-      .SetCreateFn<                                                                              \
-          DimGatherKernel<device, dtype, itype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)     \
+#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype)                                 \
+  REGISTER_USER_KERNEL("dim_gather")                                                     \
+      .SetCreateFn<DimGatherKernel<device, dtype, itype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-#define REGISTER_DIM_SCATTER_KERNEL(device, dtype, itype)                               \
-  REGISTER_USER_KERNEL("dim_scatter_add_like")                                                    \
-      .SetCreateFn<                                                                               \
-          ScatterDimKernel<device, dtype, itype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                        \
-                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)      \
+#define REGISTER_DIM_SCATTER_KERNEL(device, dtype, itype)                                \
+  REGISTER_USER_KERNEL("dim_scatter_add_like")                                           \
+      .SetCreateFn<ScatterDimKernel<device, dtype, itype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
 #define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(device) \
-REGISTER_DIM_GATHER_KERNEL(device, float16, int32_t) \
-REGISTER_DIM_GATHER_KERNEL(device, float, int32_t) \
-REGISTER_DIM_GATHER_KERNEL(device, double, int32_t) \
-REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t) \
-REGISTER_DIM_GATHER_KERNEL(device, float16, int64_t) \
-REGISTER_DIM_GATHER_KERNEL(device, float, int64_t) \
-REGISTER_DIM_GATHER_KERNEL(device, double, int64_t) \
-REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t) 
+  REGISTER_DIM_GATHER_KERNEL(device, float16, int32_t)  \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t)    \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t)   \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t)  \
+  REGISTER_DIM_GATHER_KERNEL(device, float16, int64_t)  \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t)    \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t)   \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t)
 
-#define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE_INDEX64(device) \
-
+#define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE_INDEX64(device)
 
 #define REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(device) \
-REGISTER_DIM_SCATTER_KERNEL(device, float16, int32_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, float16, int64_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, float, int64_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, double, int64_t) \
-REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int64_t)
- 
+  REGISTER_DIM_SCATTER_KERNEL(device, float16, int32_t)           \
+  REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t)             \
+  REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t)            \
+  REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t)           \
+  REGISTER_DIM_SCATTER_KERNEL(device, float16, int64_t)           \
+  REGISTER_DIM_SCATTER_KERNEL(device, float, int64_t)             \
+  REGISTER_DIM_SCATTER_KERNEL(device, double, int64_t)            \
+  REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int64_t)
 
 REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
-
 
 }  // namespace user_op
 }  // namespace oneflow
