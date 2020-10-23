@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/user/kernels/example_generated.h"
 
 namespace oneflow {
 namespace data {
@@ -34,9 +35,15 @@ class OneRecParser final : public Parser<TensorBuffer> {
   void Parse(std::shared_ptr<LoadTargetPtrList> batch_data,
              user_op::KernelComputeContext* ctx) override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const bool verify_example = ctx->Attr<bool>("verify_example");
     FOR_RANGE(int32_t, i, 0, batch_data->size()) {
-      TensorBuffer* out = out_tensor->mut_dptr<TensorBuffer>() + i;
       TensorBuffer* tensor = batch_data->at(i).get();
+      if (verify_example) {
+        flatbuffers::Verifier verifier(reinterpret_cast<const uint8_t*>(tensor->data()),
+                                       static_cast<size_t>(tensor->elem_cnt()));
+        CHECK(onerec::example::VerifyExampleBuffer(verifier));
+      }
+      TensorBuffer* out = out_tensor->mut_dptr<TensorBuffer>() + i;
       out->Swap(tensor);
     }
   }

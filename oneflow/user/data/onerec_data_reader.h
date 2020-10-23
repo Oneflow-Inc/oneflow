@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/user/data/onerec_dataset.h"
 #include "oneflow/user/data/onerec_parser.h"
 #include "oneflow/user/data/random_shuffle_dataset.h"
+#include "oneflow/user/data/batch_random_shuffle_dataset.h"
 #include "oneflow/user/data/batch_dataset.h"
 #include <iostream>
 
@@ -30,11 +31,20 @@ class OneRecDataReader final : public DataReader<TensorBuffer> {
  public:
   OneRecDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
     const int32_t batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().elem_cnt();
+    const auto random_shuffle = ctx->Attr<bool>("random_shuffle");
     parser_.reset(new OneRecParser());
-    if (ctx->Attr<bool>("random_shuffle")) {
-      loader_.reset(new OneRecDataset(ctx, 1));
-      loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
-      loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+    if (random_shuffle) {
+      const auto mode = ctx->Attr<std::string>("shuffle_mode");
+      if (mode == "batch") {
+        loader_.reset(new OneRecDataset(ctx, batch_size));
+        loader_.reset(new BatchRandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
+      } else if (mode == "instance") {
+        loader_.reset(new OneRecDataset(ctx, 1));
+        loader_.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(loader_)));
+        loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(loader_)));
+      } else {
+        UNIMPLEMENTED();
+      }
     } else {
       loader_.reset(new OneRecDataset(ctx, batch_size));
     }

@@ -34,9 +34,6 @@ void GetTensorsFromRecords(const TensorBuffer* records, const int64_t record_num
     const TensorBuffer* cur_record = records + i;
     const auto buffer = reinterpret_cast<const uint8_t*>(cur_record->data());
 
-    flatbuffers::Verifier verifier(buffer, static_cast<size_t>(cur_record->shape().elem_cnt()));
-    CHECK(onerec::example::VerifyExampleBuffer(verifier));
-
     const onerec::example::Example* example = onerec::example::GetExample(buffer);
     const auto* features = example->features();
     CHECK_NOTNULL(features);

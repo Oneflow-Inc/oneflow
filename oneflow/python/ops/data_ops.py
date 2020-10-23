@@ -472,8 +472,10 @@ def onerec_reader(
     files,
     batch_size=1,
     random_shuffle=False,
+    shuffle_mode="batch",
     shuffle_buffer_size=1024,
     shuffle_after_epoch=False,
+    verify_example=True,
     name=None,
 ):
     assert isinstance(files, (list, tuple))
@@ -485,11 +487,13 @@ def onerec_reader(
         flow.user_op_builder(name)
         .Op("OneRecReader")
         .Output("out")
-        .Attr("files", files, "AttrTypeListString")
-        .Attr("batch_size", batch_size, "AttrTypeInt32")
-        .Attr("random_shuffle", random_shuffle, "AttrTypeBool")
-        .Attr("shuffle_buffer_size", shuffle_buffer_size, "AttrTypeInt32")
-        .Attr("shuffle_after_epoch", shuffle_after_epoch, "AttrTypeBool")
+        .Attr("files", files)
+        .Attr("batch_size", batch_size)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_mode", shuffle_mode)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("verify_example", verify_example)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
