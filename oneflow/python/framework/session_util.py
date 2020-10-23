@@ -51,11 +51,13 @@ from contextlib import contextmanager
 from typing import Callable
 import inspect
 import oneflow
+import oneflow_api
 import traceback
 
 
 class Session(object):
     def __init__(self):
+        self.id_ = oneflow_api.NewSessionId()
         self.job_name2function_desc_ = {}
         self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
@@ -80,6 +82,11 @@ class Session(object):
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
+        self.eager_config_proto_ctx_ = None
+
+    @property
+    def id(self):
+        return self.id_
 
     @property
     def status(self):
@@ -186,6 +193,10 @@ class Session(object):
                 for op_name, var_blob in check_point.get_all_variables().items():
                     op_conf = sess.OpConf4InterfaceOpName(op_name)
                     op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
+        else:
+            self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
+                str(self.config_proto)
+            )
         return self
 
     def TryClose(self):
@@ -204,6 +215,8 @@ class Session(object):
         c_api_util.DestroyLazyGlobalSession()
         self.status_ = SessionStatus.CLOSED
         self.resource_ = None
+        if self.eager_config_proto_ctx_:
+            del self.eager_config_proto_ctx_
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -441,6 +454,7 @@ def _GetDefaultConfigProto():
         config_proto.resource.gpu_device_num = 0
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
+    config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
 
 

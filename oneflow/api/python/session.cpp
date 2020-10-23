@@ -13,23 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_ACC_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_ACC_COMPUTE_ACTOR_H_
+#include <pybind11/pybind11.h>
+#include <string>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/job/session.h"
 
-#include "oneflow/core/actor/accumulate_compute_actor.h"
+namespace py = pybind11;
 
-namespace oneflow {
-
-class AccCompActor final : public AccumulateCompActor {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AccCompActor);
-  AccCompActor() = default;
-  ~AccCompActor() = default;
-
- private:
-  void VirtualCompActorInit(const TaskProto& proto) override;
-};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_ACTOR_ACC_COMPUTE_ACTOR_H_
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  using namespace oneflow;
+  m.def("NewSessionId", &NewSessionId);
+  py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
+      .def(py::init<const std::string&>());
+  ;
+}

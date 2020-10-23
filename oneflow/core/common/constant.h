@@ -13,18 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/repeat_kernel.h"
+#ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
+#define ONEFLOW_CORE_COMMON_CONSTANT_H_
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void RepeatKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  Blob* out_blob = BnInOp2Blob("out");
-  out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);
+static const int64_t kInvalidSessionId = -1;
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRepeatConf, RepeatKernel, ARITHMETIC_DATA_TYPE_SEQ);
-
-}  // namespace oneflow
+#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_

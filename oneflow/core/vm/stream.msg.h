@@ -28,7 +28,7 @@ class ThreadCtx;
 // clang-format off
 OBJECT_MSG_BEGIN(Stream);
   // methods
-  OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id);
+  OF_PUBLIC void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id, const int64_t max_device_num_per_machine);
   OF_PUBLIC ObjectMsgPtr<Instruction> NewInstruction(InstructionMsg* instr_msg, const std::shared_ptr<ParallelDesc>& parallel_desc);
   OF_PUBLIC void DeleteInstruction(ObjectMsgPtr<Instruction>&&);
   OF_PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
@@ -40,6 +40,7 @@ OBJECT_MSG_BEGIN(Stream);
   // fields
   OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 
   OBJECT_MSG_DEFINE_STRUCT(std::unique_ptr<DeviceCtx>, device_ctx);
+  OBJECT_MSG_DEFINE_OPTIONAL(int64_t, max_device_num_per_machine);
   
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);
