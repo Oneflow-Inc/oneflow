@@ -615,7 +615,7 @@ int Const{{ util.class_name(cls) }}::FieldNumber4FieldName(const ::std::string& 
   return 0;
 {% else %}
   return 0;
-{% endif %}
+{% endif %}{# has message type fields #}
 }
 
 bool Const{{ util.class_name(cls) }}::FieldDefined4FieldNumber(int field_number) const  {
@@ -630,7 +630,7 @@ bool Const{{ util.class_name(cls) }}::FieldDefined4FieldNumber(int field_number)
   }
 {% else %}
   return false;
-{% endif %}
+{% endif %}{# has message type fields #}
 }
 
 const ::std::set<::std::type_index>& Const{{ util.class_name(cls) }}::ValidTypeIndices4FieldNumber(int field_number) const {
