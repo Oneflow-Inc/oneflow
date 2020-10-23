@@ -19,6 +19,11 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+#include "oneflow/core/graph/boxing_s2s_all2all_pack_compute_task_node.h"
+#include "oneflow/core/graph/boxing_s2s_all2all_unpack_compute_task_node.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -376,9 +381,73 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
     }
   }
 };
+
+class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingAll2AllSubTskGphBuilder);
+  NcclCollectiveBoxingAll2AllSubTskGphBuilder() = default;
+  ~NcclCollectiveBoxingAll2AllSubTskGphBuilder() override = default;
+
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+                                      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+                                      const ParallelDesc& src_parallel_desc,
+                                      const ParallelDesc& dst_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const SbpParallel& src_sbp_parallel,
+                                      const SbpParallel& dst_sbp_parallel) const override {
+    if (dst_parallel_desc.EqualsIgnoringDeviceType(src_parallel_desc)
+        && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
+        && src_parallel_desc.device_type() == DeviceType::kGPU
+        && dst_parallel_desc.device_type() == DeviceType::kGPU
+        && dst_parallel_desc.parallel_num() > 1
+        && logical_blob_desc.shape().At(src_sbp_parallel.split_parallel().axis())
+                   % src_parallel_desc.parallel_num()
+               == 0
+        && logical_blob_desc.shape().At(dst_sbp_parallel.split_parallel().axis())
+                   % dst_parallel_desc.parallel_num()
+               == 0
+        && src_sbp_parallel.split_parallel().axis() != dst_sbp_parallel.split_parallel().axis()
+        && SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
+      const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
+      FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
+        CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
+        CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+
+        BoxingS2SAll2AllPackCompTaskNode* pack_node =
+            ctx->task_graph()->NewNode<BoxingS2SAll2AllPackCompTaskNode>();
+        pack_node->Init(src_node, lbi, dst_sbp_parallel.split_parallel().axis());
+        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), pack_node);
+
+        auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
+        NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
+                               logical_blob_desc, OpType::kOpTypeAll2All, -1);
+        Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
+
+        BoxingS2SAll2AllUnpackCompTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<BoxingS2SAll2AllUnpackCompTaskNode>();
+        unpack_node->Init(src_node, lbi, logical_blob_desc.shape(),
+                          src_sbp_parallel.split_parallel().axis(),
+                          dst_sbp_parallel.split_parallel().axis());
+
+        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
+        Connect<TaskNode>(unpack_node, ctx->task_graph()->NewEdge(), dst_node);
+      }
+      return TRY(BuildSubTskGphBuilderStatus(
+          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+          "NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
+    } else {
+      return Error::BoxingNotSupportedError();
+    }
+  }
+};
+
 }  // namespace
 
 CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
+  const CollectiveBoxingConf collective_boxing_conf =
+      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new NcclCollectiveBoxingAllReduceSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());
@@ -386,6 +455,13 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
+  if (collective_boxing_conf.nccl_enable_all_to_all()) {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+    builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
+#else
+    LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
+#endif
+  }
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
 }
 

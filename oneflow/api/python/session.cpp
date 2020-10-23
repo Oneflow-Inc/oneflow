@@ -16,11 +16,16 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/job/session.h"
 #include "oneflow/core/job/load_model.h"
 
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
+  m.def("NewSessionId", &NewSessionId);
+  py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
+      .def(py::init<const std::string&>());
+  ;
   m.def("LoadModel", &ApiLoadModel);
 }
