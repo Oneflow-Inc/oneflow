@@ -88,7 +88,6 @@ ObjectMsgPtr<StreamDesc> NopStreamType::MakeStreamDesc(const Resource& resource,
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(this_machine_id);
   return ret;
 }
 

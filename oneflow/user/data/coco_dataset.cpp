@@ -29,8 +29,8 @@ COCODataset::LoadTargetShdPtrVec COCODataset::At(int64_t index) const {
   sample->height = meta_->GetImageHeight(index);
   sample->width = meta_->GetImageWidth(index);
   const std::string& image_file_path = meta_->GetImageFilePath(index);
-  PersistentInStream in_stream(DataFS(), image_file_path);
-  int64_t file_size = DataFS()->GetFileSize(image_file_path);
+  PersistentInStream in_stream(session_id_, DataFS(session_id_), image_file_path);
+  int64_t file_size = DataFS(session_id_)->GetFileSize(image_file_path);
   sample->data.Resize(Shape({file_size}), DataType::kChar);
   CHECK_EQ(in_stream.ReadFully(sample->data.mut_data<char>(), sample->data.nbytes()), 0);
   ret.emplace_back(std::move(sample));

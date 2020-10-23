@@ -13,23 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/autograd.h"
+#ifndef ONEFLOW_CORE_JOB_SESSION_H_
+#define ONEFLOW_CORE_JOB_SESSION_H_
+
+#include <memory>
+#include <string>
 
 namespace oneflow {
 
-namespace {
+int64_t NewSessionId();
 
-void GenerateBackwardOpConf(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  FOR_RANGE(int32_t, i, 0, op.input_bns().size()) {
-    LogicalBlobId* in_diff_lbi = DiffLbi4BnInOp(op.input_bns().Get(i));
-    if (in_diff_lbi != nullptr) { *in_diff_lbi = *DiffLbi4BnInOp(op.output_bns().Get(i)); }
-  }
-}
+class ConfigProto;
+class ConfigProtoContext {
+ public:
+  ConfigProtoContext(const ConfigProto& config_proto);
+  ~ConfigProtoContext();
 
-}  // namespace
+  int64_t session_id() const { return session_id_; }
 
-REGISTER_OP_GRAD(OperatorConf::kTupleIdentityConf, &GenerateBackwardOpConf);
+ private:
+  int64_t session_id_;
+};
+
+class LogicalConfigProtoContext {
+ public:
+  LogicalConfigProtoContext(const std::string& config_proto_str);
+  ~LogicalConfigProtoContext();
+
+  std::unique_ptr<ConfigProtoContext> config_proto_ctx_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_SESSION_H_

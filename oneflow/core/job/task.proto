@@ -17,7 +17,7 @@ enum TaskType {
   kDecodeRandom = 29;
   kPackForward = 30;
   kUnpackForward = 32;
-  kRepeatForward = 34;
+  kRepeat = 34;
   kAcc = 37;
   kOptimizer = 38;
   kSourceTick = 40;
@@ -36,6 +36,8 @@ enum TaskType {
   kCollectiveBoxingGeneric = 58;
   kBoxingIdentity = 59;
   kDecodeH2D = 60;
+  kBoxingS2SAll2AllPack = 61;
+  kBoxingS2SAll2AllUnpack = 62;
 };
 
 enum AreaType {
