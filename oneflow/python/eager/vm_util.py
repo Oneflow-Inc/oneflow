@@ -30,6 +30,7 @@ import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.id_util as id_util
