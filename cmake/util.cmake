@@ -107,9 +107,12 @@ endfunction()
 function(check_cxx11_abi OUTPUT_VAR)
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E echo "#include <string>\n void test(std::string){}\n int main(){}" OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp)
-  try_compile(_ ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp
+  try_compile(COMPILE_SUCCESS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp
     COMPILE_DEFINITIONS -D_GLIBCXX_USE_CXX11_ABI=1
     COPY_FILE ${CMAKE_CURRENT_BINARY_DIR}/temp)
+  if (NOT COMPILE_SUCCESS)
+    message(FATAL_ERROR "Detecting cxx11 availability failed. Please report to OneFlow developers.")
+  endif()
   execute_process(
     COMMAND nm ${CMAKE_CURRENT_BINARY_DIR}/temp
     COMMAND grep -q cxx11
