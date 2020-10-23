@@ -20,13 +20,34 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/device_type.proto
   )
 
+  set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
+  add_custom_target(make_cfg_pyproto_dir ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${of_cfg_proto_python_dir}/oneflow/core
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_cfg_proto_python_dir}/oneflow/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_cfg_proto_python_dir}/oneflow/core/__init__.py"
+  )
+
   foreach(FIL ${ALL_CFG_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
-    set(PY_REL_FIL ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
-    set(PY_REL_MOD ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2)
+    set(SRC_PY_FIL ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
+    set(DST_PY_FIL ${of_cfg_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
+    add_custom_target(copy_${FIL_WE} ALL
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SRC_PY_FIL}" "${DST_PY_FIL}"
+      COMMAND ${CMAKE_COMMAND} -E touch "${of_cfg_proto_python_dir}/${REL_DIR}/__init__.py"
+      DEPENDS  ${SRC_PY_FIL} of_protoobj make_cfg_pyproto_dir
+    )
+  endforeach()
+
+  foreach(FIL ${ALL_CFG_CONVERT_PROTO})
+    set(ABS_FIL ${ROOT_DIR}/${FIL})
+    get_filename_component(FIL_WE ${FIL} NAME_WE)
+    get_filename_component(FIL_DIR ${ABS_FIL} PATH)
+    file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
+    set(PY_REL_FIL ${of_cfg_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
+    set(PY_REL_MOD ${of_cfg_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2)
     set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
     set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
@@ -38,9 +59,9 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
            --dst_pybind_path ${CFG_PYBIND_FIL}
-           --proto_py_path ${PY_REL_MOD}  --of_proto_python_dir ${of_proto_python_dir}
+           --proto_py_path ${PY_REL_MOD}  --of_cfg_proto_python_dir ${of_cfg_proto_python_dir}
 
-      DEPENDS ${Python_EXECUTABLE} ${PY_REL_FIL} ${of_all_rel_pybinds}
+      DEPENDS ${Python_EXECUTABLE} copy_${FIL_WE} ${PY_REL_FIL}
       COMMENT "Running Pybind11 Compiler on ${FIL}"
       VERBATIM)
 

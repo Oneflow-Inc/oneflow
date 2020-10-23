@@ -1,7 +1,6 @@
 import sys
 import os
 import argparse
-import importlib
 from jinja2 import Environment, FileSystemLoader
 import util.proto_reflect_util as proto_reflect_util
 
@@ -11,19 +10,20 @@ parser.add_argument("-dst_cpp", "--dst_cpp_path", type=str, required=True)
 parser.add_argument("-dst_pybind", "--dst_pybind_path", type=str, required=True)
 parser.add_argument("-proto_py", "--proto_py_path", type=str, required=True)
 parser.add_argument(
-    "-of_proto_python", "--of_proto_python_dir", type=str, required=True
+    "-of_proto_python", "--of_cfg_proto_python_dir", type=str, required=True
 )
 args = parser.parse_args()
 
-sys.path.append(args.of_proto_python_dir)
-sys.path.append(os.path.dirname(args.proto_py_path))
+sys.path.insert(0, args.of_cfg_proto_python_dir)
+sys.path.insert(0, os.path.dirname(args.proto_py_path))
 
-demo = importlib.import_module((args.proto_py_path).split("/")[-1])
-THIS_DIR = os.path.dirname(os.path.abspath(__file__)) + "/template"
+proto_py_file_name = args.proto_py_path.split("/")[-1]
+proto_py_module = __import__(proto_py_file_name)
+template_dir = os.path.dirname(os.path.abspath(__file__)) + "/template"
 
 
 def JinjaRender(module, filename, **kwargs):
-    j2_env = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True)
+    j2_env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True)
     return j2_env.get_template(filename).render(
         module=module.DESCRIPTOR,
         util=proto_reflect_util.ProtoReflectionUtil(),
@@ -36,7 +36,7 @@ def convert_hpp(dst_hpp_path):
         if os.path.dirname(dst_hpp_path):
             os.makedirs(os.path.dirname(dst_hpp_path))
     dst_file = open(dst_hpp_path, "w")
-    dst_file.write(JinjaRender(demo, "template.cfg.h"))
+    dst_file.write(JinjaRender(proto_py_module, "template.cfg.h"))
     dst_file.close()
 
 
@@ -45,7 +45,7 @@ def convert_cpp(dst_cpp_path):
         if os.path.dirname(dst_cpp_path):
             os.makedirs(os.path.dirname(dst_cpp_path))
     dst_file = open(dst_cpp_path, "w")
-    dst_file.write(JinjaRender(demo, "template.cfg.cpp"))
+    dst_file.write(JinjaRender(proto_py_module, "template.cfg.cpp"))
     dst_file.close()
 
 
@@ -54,7 +54,7 @@ def convert_pybind(dst_pybind_path):
         if os.path.dirname(dst_pybind_path):
             os.makedirs(os.path.dirname(dst_pybind_path))
     dst_file = open(dst_pybind_path, "w")
-    dst_file.write(JinjaRender(demo, "template.pybind.cpp"))
+    dst_file.write(JinjaRender(proto_py_module, "template.pybind.cpp"))
     dst_file.close()
 
 
