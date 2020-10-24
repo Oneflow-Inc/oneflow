@@ -10,7 +10,7 @@ parser.add_argument("-dst_cpp", "--dst_cpp_path", type=str, required=True)
 parser.add_argument("-dst_pybind", "--dst_pybind_path", type=str, required=True)
 parser.add_argument("-proto_py", "--proto_py_path", type=str, required=True)
 parser.add_argument(
-    "-of_proto_python", "--of_cfg_proto_python_dir", type=str, required=True
+    "-of_cfg_proto_python", "--of_cfg_proto_python_dir", type=str, required=True
 )
 args = parser.parse_args()
 
