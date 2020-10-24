@@ -72,6 +72,15 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     ExecNode* exec_node = mut_exec_gph().NewNode();
     exec_node->mut_op() = logical_node()->SoleOp();
     exec_node->BindBnWithOneOfTheRegsts("var", GetConsumedRegst("var"));
+    BindInplacebetweenVarAndRef();
+  }
+
+  void BindInplacebetweenVarAndRef() {
+    const auto& var_regst = GetSoleConsumedRegst("var");
+    CHECK_EQ(var_regst->NumOfLbi(), 1);
+    CHECK_EQ(var_regst->min_register_num(), 1);
+    CHECK_EQ(var_regst->max_register_num(), 1);
+    GetProducedRegst("ref")->set_hint_inplace_consumed_regst_desc_id(var_regst->regst_desc_id());
   }
 
   void BuildOutRegst() {
