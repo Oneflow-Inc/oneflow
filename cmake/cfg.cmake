@@ -14,7 +14,7 @@ set(PYBIND_REGISTRY_CC ${cfg_head_dir_and_convert_srcs})
 include_directories(${CFG_INCLUDE_DIR})
 
 
-function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
+function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSPACE_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
@@ -40,22 +40,26 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
     set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
 
+    add_custom_target(renser_${FIL_WE} ALL
+      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+        --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
+        --dst_pybind_path ${CFG_PYBIND_FIL} --proto_py_path ${PY_REL_MOD}
+        --of_cfg_proto_python_dir ${of_cfg_proto_python_dir}
+        --project_build_dir ${PROJECT_BINARY_DIR} --cfg_workspace_dir ${CFG_WORKSPACE_DIR}
+      DEPENDS ${Python_EXECUTABLE} copy_pyproto ${PY_REL_FIL}
+      )
+    
+    # rule to make target ${CFG_HPP_FIL}, ${CFG_CPP_FIL}, ${CFG_PYBIND_FIL} for of_cfgobj
     add_custom_command(
       OUTPUT "${CFG_HPP_FIL}"
              "${CFG_CPP_FIL}"
              "${CFG_PYBIND_FIL}"
-      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-      ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
-           --dst_pybind_path ${CFG_PYBIND_FIL}
-           --proto_py_path ${PY_REL_MOD}  --of_cfg_proto_python_dir ${of_cfg_proto_python_dir}
-
-      DEPENDS ${Python_EXECUTABLE} copy_pyproto ${PY_REL_FIL}
-      COMMENT "Running Pybind11 Compiler on ${FIL}"
+      DEPENDS renser_${FIL_WE}
       VERBATIM)
 
-    list(APPEND ${HDRS} "${CFG_HPP_FIL}")
-    list(APPEND ${SRCS} "${CFG_CPP_FIL}")
-    list(APPEND ${PYBIND_SRCS} "${CFG_PYBIND_FIL}")
+    list(APPEND ${HDRS} ${CFG_HPP_FIL})
+    list(APPEND ${SRCS} ${CFG_CPP_FIL})
+    list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
   endforeach()
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
