@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_USER_OP("leaky_relu")
     .Input("x")
     .Output("y")
-    .Attr("alpha", UserOpAttrType::kAtFloat)
+    .Attr<float>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
@@ -43,7 +43,7 @@ REGISTER_USER_OP("leaky_relu_grad")
     .Input("x")
     .Input("dy")
     .Output("dx")
-    .Attr("alpha", UserOpAttrType::kAtFloat)
+    .Attr<float>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);

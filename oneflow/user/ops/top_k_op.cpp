@@ -20,8 +20,8 @@ namespace oneflow {
 REGISTER_USER_OP("top_k")
     .Input("in")
     .Output("out")
-    .Attr("k", UserOpAttrType::kAtInt32)
-    .Attr("sorted", UserOpAttrType::kAtBool)
+    .Attr<int32_t>("k")
+    .Attr<bool>("sorted")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
