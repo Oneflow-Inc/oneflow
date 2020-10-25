@@ -249,12 +249,10 @@ MatchInterNodeOneToMany = (
 @boxing_condition(MatchInterNodeOneToMany)
 def InterNodeOneToMany(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     out_blobs = []
-    for (
-        machine_id,
-        device_ids,
-    ) in (
-        consumer_op_arg_parallel_attr.parallel_desc_symbol.machine_id2device_id_list.items()
-    ):
+    consumer_dev_ids = (
+        consumer_op_arg_parallel_attr.parallel_desc_symbol.machine_id2device_id_list
+    )
+    for machine_id, device_ids in consumer_dev_ids.items():
         for device_id in device_ids:
             parallel_conf = placement_pb.ParallelConf()
             parallel_conf.device_tag = "cpu"
