@@ -80,7 +80,6 @@ Maybe<void> Cluster::WorkerLoop() {
     }
   }
   ClusterInstruction::HaltBarrier();
-  Global<EnvGlobalObjectsScope>::Delete();
   exit(0);
 }
 
