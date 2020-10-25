@@ -421,7 +421,9 @@ def read_slice_from_blob(blob, scope_symbol_id):
             start = np.unravel_index(start_idx, blob.shape)
             stop = np.unravel_index(stop_idx - 1, blob.shape)
             stop = [x + 1 for x in stop]
-            yield logical_slice(blob.blob_object, start, stop, [1] * len(blob.shape), scope_symbol_id)
+            yield logical_slice(
+                blob.blob_object, start, stop, [1] * len(blob.shape), scope_symbol_id
+            )
             start_idx = stop_idx
 
 
@@ -467,7 +469,9 @@ def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
             attribute.at_list_int64.val[:] = step
             op_conf.user_conf.attr["step"].CopyFrom(attribute)
             bn_in_op2blob_object = dict(x_0=input_blob_object)
-            op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object, scope_symbol_id)
+            op_attribute = op_infer_util.Infer(
+                op_conf, bn_in_op2blob_object, scope_symbol_id
+            )
             builder.StatelessCall(
                 op_attribute,
                 parallel_conf=parallel_conf,
@@ -526,7 +530,9 @@ def get_variable_blob_from_numpy(np_array: np.ndarray):
     return var_blob
 
 
-def slice_assign(ref_blob_object, value_blob_object, start, stop, step, scope_symbol_id):
+def slice_assign(
+    ref_blob_object, value_blob_object, start, stop, step, scope_symbol_id
+):
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
@@ -547,7 +553,9 @@ def slice_assign(ref_blob_object, value_blob_object, start, stop, step, scope_sy
         attribute.at_list_int64.val[:] = step
         op_conf.user_conf.attr["step"].CopyFrom(attribute)
         bn_in_op2blob_object = dict(ref_0=ref_blob_object, value_0=value_blob_object)
-        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object, scope_symbol_id)
+        op_attribute = op_infer_util.Infer(
+            op_conf, bn_in_op2blob_object, scope_symbol_id
+        )
         builder.StatelessCall(
             op_attribute,
             parallel_conf=parallel_conf,
@@ -584,7 +592,7 @@ def _FeedValueToVariable(var_name, value_blob):
                 start_nd_idx,
                 stop_nd_idx,
                 [1] * len(value_blob.shape),
-                scope_symbol_id
+                scope_symbol_id,
             )
     else:
         raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
@@ -599,3 +607,46 @@ def load_variables(var_dict, ignore_mismatch=False):
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
+
+
+def init():
+    SLICE_LEN = 8192
+    sess = session_ctx.GetDefaultSession()
+    for op_name, var_blob in get_all_variables().items():
+        rng = np.random.default_rng()
+        var_op_conf = sess.OpConf4InterfaceOpName(op_name)
+        scope_symbol_id = var_op_conf.scope_symbol_id
+        start_idx = 0
+        size = np.prod(var_blob.shape).item()
+        while start_idx < size:
+            remainder = var_blob.shape[-1]
+            while remainder > 0:
+                length = SLICE_LEN if remainder >= SLICE_LEN else remainder
+                remainder -= length
+                stop_idx = start_idx + length
+                start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
+                stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
+                stop_nd_idx = [x + 1 for x in stop_nd_idx]
+                np_dtype = np.dtype(
+                    dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
+                )
+                vals = []
+                for _ in range(length):
+                    # TODO: dtype
+                    vals.append(rng.normal())
+                vals = (
+                    np.array(vals)
+                    .astype(np_dtype)
+                    .reshape([1] * (len(var_blob.shape) - 1) + [-1])
+                )
+
+                value_eager_blob = get_variable_blob_from_numpy(vals)
+                slice_assign(
+                    var_blob.blob_object,
+                    value_eager_blob.blob_object,
+                    start_nd_idx,
+                    stop_nd_idx,
+                    [1] * len(var_blob.shape),
+                    scope_symbol_id,
+                )
+                start_idx = stop_idx

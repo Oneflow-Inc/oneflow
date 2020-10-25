@@ -189,10 +189,7 @@ class Session(object):
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
             if not check_point.legacy_checkpoint_used():
-                sess = session_ctx.GetDefaultSession()
-                for op_name, var_blob in check_point.get_all_variables().items():
-                    op_conf = sess.OpConf4InterfaceOpName(op_name)
-                    op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
+                check_point.init()
         else:
             self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
                 str(self.config_proto)
