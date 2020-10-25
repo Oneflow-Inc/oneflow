@@ -32,6 +32,7 @@ RegstDesc::RegstDesc() {
   mem_block_id_ = -1;
   mem_block_offset_ = -1;
   hint_inplace_consumed_regst_desc_id_ = -1;
+  force_inplace_consumed_regst_desc_id_ = -1;
 }
 
 int64_t RegstDesc::mem_block_offset() const {
@@ -158,8 +159,14 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_reuse_mem(enable_reuse_mem_);
   ret->set_mem_block_id(mem_block_id_);
   ret->set_mem_block_offset(mem_block_offset_);
+  CHECK(hint_inplace_consumed_regst_desc_id_ == -1 || force_inplace_consumed_regst_desc_id_ == -1)
+      << "They are oneof fields";
   if (hint_inplace_consumed_regst_desc_id_ != -1) {
     ret->set_hint_inplace_consumed_regst_desc_id(hint_inplace_consumed_regst_desc_id_);
+  } else if (force_inplace_consumed_regst_desc_id_ != -1) {
+    ret->set_force_inplace_consumed_regst_desc_id(force_inplace_consumed_regst_desc_id_);
+  } else {
+    // do nothing
   }
 }
 

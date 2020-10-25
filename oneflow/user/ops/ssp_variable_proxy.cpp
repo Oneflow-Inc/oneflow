@@ -46,6 +46,12 @@ REGISTER_USER_OP("ssp_variable_proxy")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("ref", 0);
+      CHECK(out_modifier != nullptr);
+      out_modifier->set_is_mutable(true);
     });
 
 }  // namespace

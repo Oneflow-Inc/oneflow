@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -33,24 +34,36 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     CHECK_GT(buffer_size, 0);
     ProduceRegst("value", false, buffer_size, buffer_size);
     ProduceRegst("ref", false, 1, 1);
-    HashMap<std::string, TaskEdge*> out_regst_name2edge;
-    ForEachOutDataEdge([&](TaskEdge* edge) {
-      auto* dst_node = dynamic_cast<CompTaskNode*>(edge->dst_node());
-      CHECK(dst_node != nullptr) << "SspVariableProxyTaskNode consumed by non CompTaskNode";
-      const Operator& dst_op = *dst_node->logical_node()->SoleOp();
-      for (const std::string& ibn : dst_op.input_bns()) {
-        const LogicalBlobId& dst_in_lbi = dst_op.BnInOp2Lbi(ibn);
-        if (dst_in_lbi == op.BnInOp2Lbi("ref")) {
-          CHECK_EQ(out_regst_name2edge.emplace("ref", edge).first->second, edge);
-        } else if (dst_in_lbi == op.BnInOp2Lbi("value")) {
-          CHECK_EQ(out_regst_name2edge.emplace("value", edge).first->second, edge);
-        } else {
-          // do nothing
-        }
-      }
-    });
-    for (const auto& pair : out_regst_name2edge) {
-      BindEdgeWithProducedRegst(pair.second, pair.first);
+    HashMap<std::string, std::set<TaskEdge*>> out_regst_name2edges;
+    ForEachOutDataEdge(
+        [&](TaskEdge* edge) {
+          {
+            auto* copy_hd_node = dynamic_cast<CopyHdTaskNode*>(edge->dst_node());
+            if (copy_hd_node != nullptr) {
+              // The only possible regst_name is "value" because "ref" is always strictly one-to-one
+              // connected.
+              CHECK_EQ(*out_regst_name2edges["value"].insert(edge).first, edge);
+              return;
+            }
+          }
+          auto* dst_node = dynamic_cast<CompTaskNode*>(edge->dst_node());
+          CHECK(dst_node != nullptr)
+              << "SspVariableProxyTaskNode must be consumed by CompTaskNode. got "
+              << TaskType_Name(edge->dst_node()->GetTaskType());
+          const Operator& dst_op = *dst_node->logical_node()->SoleOp();
+          for (const std::string& ibn : dst_op.input_bns()) {
+            const LogicalBlobId& dst_in_lbi = dst_op.BnInOp2Lbi(ibn);
+            if (dst_in_lbi == op.BnInOp2Lbi("ref_0")) {
+              CHECK_EQ(*out_regst_name2edges["ref"].insert(edge).first, edge);
+            } else if (dst_in_lbi == op.BnInOp2Lbi("value_0")) {
+              CHECK_EQ(*out_regst_name2edges["value"].insert(edge).first, edge);
+            } else {
+              // do nothing
+            }
+          }
+        });
+    for (const auto& pair : out_regst_name2edges) {
+      for (TaskEdge* edge : pair.second) { BindEdgeWithProducedRegst(edge, pair.first); }
     }
   }
   void ConsumeAllRegsts() override {
@@ -71,7 +84,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
   void BuildExecGphStructAndBindInRegst() {
     ExecNode* exec_node = mut_exec_gph().NewNode();
     exec_node->mut_op() = logical_node()->SoleOp();
-    exec_node->BindBnWithOneOfTheRegsts("var", GetConsumedRegst("var"));
+    exec_node->BindBnWithOneOfTheRegsts("var_0", GetConsumedRegst("var"));
     BindInplacebetweenVarAndRef();
   }
 
@@ -80,15 +93,16 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     CHECK_EQ(var_regst->NumOfLbi(), 1);
     CHECK_EQ(var_regst->min_register_num(), 1);
     CHECK_EQ(var_regst->max_register_num(), 1);
-    GetProducedRegst("ref")->set_hint_inplace_consumed_regst_desc_id(var_regst->regst_desc_id());
+    const auto& ref_regst = GetProducedRegst("ref");
+    ref_regst->set_force_inplace_consumed_regst_desc_id(var_regst->regst_desc_id());
   }
 
   void BuildOutRegst() {
     ExecNode* exec_node = mut_exec_gph().SoleNode();
-    const auto& AddLbiAndBindBn = [&](const std::string& obn) {
-      // "ref" obn <-> "ref" regst_name
-      // "value" obn <-> "value" regst_name
-      const std::string& regst_name = obn;
+    const auto& AddLbiAndBindBn = [&](const std::string& regst_name) {
+      // "ref_0" obn <-> "ref" regst_name
+      // "value_0" obn <-> "value" regst_name
+      const std::string& obn = regst_name + "_0";
       const std::shared_ptr<RegstDesc>& regst = GetProducedRegst(regst_name);
       regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
       exec_node->BindBnWithRegst(obn, regst);

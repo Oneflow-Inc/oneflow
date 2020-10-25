@@ -406,6 +406,9 @@ void TaskGraph::SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
       auto* exec_node = TaskNode4SoleOpName(inplace_edge->op().op_name())->exec_gph().SoleNode();
       RegstDesc* in_regst = exec_node->RegstDesc4BnInOp(inplace_edge->ibn());
       RegstDesc* out_regst = exec_node->RegstDesc4BnInOp(inplace_edge->obn());
+      if (out_regst->has_force_inplace_consumed_regst_desc_id()) {
+        LOG(ERROR) << "inplace_graph regst_desc_id" << out_regst->regst_desc_id();
+      }
       out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
     }
   });
