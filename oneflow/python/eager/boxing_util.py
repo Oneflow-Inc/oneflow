@@ -237,7 +237,7 @@ OpArgIsBroadcast = boxing_hob.consumer_sbp_parallel.HasField("broadcast_parallel
 
 
 MatchInterNodeOneToMany = (
-    ~boxing_hob.MasterMachineOnly
+    ~boxing_hob.SingleMachine
     & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.producer_parallel_desc.parallel_num == 1)
@@ -352,7 +352,7 @@ def VerboseOptionalBoxing(boxing_method):
 
 
 MatchNcclAllReduce = (
-    boxing_hob.MasterMachineOnly
+    boxing_hob.SingleMachine
     & (boxing_hob.producer_parallel_desc.device_tag == "gpu")
     & (boxing_hob.producer_parallel_desc == boxing_hob.consumer_parallel_desc)
     & (boxing_hob.consumer_parallel_desc.parallel_num > 1)
@@ -610,7 +610,7 @@ def UnpackLogicalBoxingBlobObjectToPhysical(builder, produced_blob_object):
 
 
 MatchCpuBroadcastOneToMany = (
-    boxing_hob.MasterMachineOnly
+    boxing_hob.SingleMachine
     & (boxing_hob.producer_parallel_desc.device_tag == "cpu")
     & (boxing_hob.consumer_parallel_desc.device_tag == "cpu")
     & boxing_hob.ProducerDevicesContainedInConsumerDevices
