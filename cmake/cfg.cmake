@@ -49,12 +49,12 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSP
       DEPENDS ${Python_EXECUTABLE} copy_pyproto ${PY_REL_FIL}
       )
     
-    # rule to make target ${CFG_HPP_FIL}, ${CFG_CPP_FIL}, ${CFG_PYBIND_FIL} for of_cfgobj
+    # rule to make target ${CFG_HPP_FIL} for of_cfgobj
     add_custom_command(
-      OUTPUT "${CFG_HPP_FIL}"
+      OUTPUT 
              "${CFG_CPP_FIL}"
-             "${CFG_PYBIND_FIL}"
       DEPENDS renser_${FIL_WE}
+      COMMENT "Running PYBIND11 Compiler on ${FIL}"
       VERBATIM)
 
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
