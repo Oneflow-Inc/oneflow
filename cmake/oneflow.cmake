@@ -206,6 +206,7 @@ set(cfg_workspace_dir "${PROJECT_BINARY_DIR}/cfg_workspace")
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR} ${cfg_workspace_dir})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
+# target_sources(of_cfgobj PUBLIC ${CFG_HERDER_FILES})
 add_dependencies(of_cfgobj of_protoobj)
 
 # cc obj lib

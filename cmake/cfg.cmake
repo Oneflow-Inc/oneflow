@@ -8,9 +8,16 @@ string(REPLACE "\n" ";" cfg_head_dir_and_convert_srcs ${cfg_head_dir_and_convert
 list(GET cfg_head_dir_and_convert_srcs 0  CFG_INCLUDE_DIR)
 list(GET cfg_head_dir_and_convert_srcs 1  TEMPLATE_CONVERT_PYTHON_SCRIPT)
 list(GET cfg_head_dir_and_convert_srcs 2  COPY_PYPROTO_PYTHON_SCRIPT)
-list(REMOVE_AT cfg_head_dir_and_convert_srcs 0 1 2)
+list(GET cfg_head_dir_and_convert_srcs 3  CFG_HERDER_FILES)
+list(GET cfg_head_dir_and_convert_srcs 4  PYBIND_REGISTRY_CC)
 
-set(PYBIND_REGISTRY_CC ${cfg_head_dir_and_convert_srcs})
+# convert varible CFG_HERDER_FILES to list
+# string(REPLACE " " ";" CFG_HERDER_FILES ${CFG_HERDER_FILES})
+# set(CFG_HERDER_FILES ${CFG_HERDER_FILES})
+
+# convert varible PYBIND_REGISTRY_CC to list
+string(REPLACE " " ";" PYBIND_REGISTRY_CC ${PYBIND_REGISTRY_CC})
+set(PYBIND_REGISTRY_CC ${PYBIND_REGISTRY_CC})
 include_directories(${CFG_INCLUDE_DIR})
 
 
@@ -23,9 +30,14 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSP
 
   set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
 
-  add_custom_target(copy_pyproto ALL
+  add_custom_target(copy_and_render_pyproto ALL
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${of_cfg_proto_python_dir}"
     COMMAND ${Python_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
       --src_proto_files="${ALL_CFG_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
+    COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+      --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
+      --project_build_dir=${PROJECT_BINARY_DIR} --cfg_workspace_dir=${CFG_WORKSPACE_DIR}
+      --proto_file_list="${ALL_CFG_CONVERT_PROTO}"
     DEPENDS ${Python_EXECUTABLE} of_protoobj
   )
 
@@ -34,27 +46,15 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSP
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
-    set(PY_REL_FIL ${of_cfg_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
-    set(PY_REL_MOD ${of_cfg_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2)
     set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
     set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
-
-    add_custom_target(renser_${FIL_WE} ALL
-      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-        --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
-        --dst_pybind_path ${CFG_PYBIND_FIL} --proto_py_path ${PY_REL_MOD}
-        --of_cfg_proto_python_dir ${of_cfg_proto_python_dir}
-        --project_build_dir ${PROJECT_BINARY_DIR} --cfg_workspace_dir ${CFG_WORKSPACE_DIR}
-      DEPENDS ${Python_EXECUTABLE} copy_pyproto ${PY_REL_FIL}
-      )
     
     # rule to make target ${CFG_HPP_FIL} for of_cfgobj
     add_custom_command(
       OUTPUT 
-             "${CFG_CPP_FIL}"
-      DEPENDS renser_${FIL_WE}
-      COMMENT "Running PYBIND11 Compiler on ${FIL}"
+        "${CFG_CPP_FIL}"
+      DEPENDS copy_and_render_pyproto
       VERBATIM)
 
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
