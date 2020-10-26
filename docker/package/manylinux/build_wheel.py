@@ -60,7 +60,7 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap):
             f.flush()
             wrapper_f.write(
                 f"""{bash_wrap}
-bash {f_name}
+bash {bash_args} {f_name}
 """
             )
             wrapper_f.flush()
@@ -257,9 +257,9 @@ if __name__ == "__main__":
                 img_tag,
             )
             bash_args = ""
-            # if args.xla:
-            #     bash_args = "-l"
-            bash_wrap = "gcc --version"
+            if args.xla:
+                bash_args = "-l"
+            bash_wrap = ""
             if args.xla:
                 bash_wrap = """
 source scl_source enable devtoolset-7
