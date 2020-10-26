@@ -50,17 +50,25 @@ def force_rm_dir(dir_to_clean):
     subprocess.check_call(clean_cmd, shell=True)
 
 
-def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args):
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
-        bash_cmd = "PATH=/opt/python/cp37-cp37m/bin:$PATH\n" + bash_cmd
-        f.write(bash_cmd)
-        f.flush()
-        print(bash_cmd)
-        docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
-        f_name = "/host" + f.name
-        cmd = f"{docker_cmd} bash {bash_args} {f_name}"
-        print(cmd)
-        subprocess.check_call(cmd, shell=True)
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap):
+    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as wrapper_f:
+        with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+            w_name = "/host" + wrapper_f.name
+            f_name = "/host" + f.name
+            bash_cmd = "PATH=/opt/python/cp37-cp37m/bin:$PATH\n" + bash_cmd
+            f.write(bash_cmd)
+            f.flush()
+            wrapper_f.write(
+                f"""{bash_wrap}
+bash {f_name}
+"""
+            )
+            wrapper_f.flush()
+            print(bash_cmd)
+            docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
+            cmd = f"{docker_cmd} bash {bash_args} {w_name}"
+            print(cmd)
+            subprocess.check_call(cmd, shell=True)
 
 
 def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=None):
@@ -81,6 +89,7 @@ def build_third_party(
     extra_oneflow_cmake_args,
     skip_third_party,
     bash_args,
+    bash_wrap,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -93,8 +102,7 @@ def build_third_party(
         ]
     )
 
-    bash_cmd = f"""
-set -ex
+    bash_cmd = f"""set -ex
 {cmake_cmd}
 make -j`nproc` prepare_oneflow_third_party
 """
@@ -107,7 +115,7 @@ make -j`nproc` prepare_oneflow_third_party
     if skip_third_party:
         return
     else:
-        create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args)
+        create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap)
 
 
 def get_python_bin(version):
@@ -131,6 +139,7 @@ def build_oneflow(
     package_name,
     house_dir,
     bash_args,
+    bash_wrap,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -151,8 +160,7 @@ def build_oneflow(
         current_dir=oneflow_build_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
-    bash_cmd = f"""
-set -ex
+    bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 {cmake_cmd}
 cmake --build . -j `nproc`
@@ -167,7 +175,9 @@ rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
-        return create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args)
+        return create_tmp_bash_and_run(
+            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap
+        )
 
 
 if __name__ == "__main__":
@@ -247,8 +257,18 @@ if __name__ == "__main__":
                 img_tag,
             )
             bash_args = ""
+            # if args.xla:
+            #     bash_args = "-l"
+            bash_wrap = "gcc --version"
             if args.xla:
-                bash_args = "-l"
+                bash_wrap = """
+source scl_source enable devtoolset-7
+gcc --version
+"""
+            else:
+                bash_wrap = "gcc --version"
+
+            global cache_dir
             if args.cache_dir:
                 cache_dir = args.cache_dir
             else:
@@ -267,6 +287,7 @@ if __name__ == "__main__":
                 extra_oneflow_cmake_args,
                 args.skip_third_party,
                 bash_args,
+                bash_wrap,
             )
             cuda_version_literal = "".join(cuda_version.split("."))
             assert len(cuda_version_literal) == 3
@@ -290,6 +311,7 @@ if __name__ == "__main__":
                     package_name,
                     args.wheel_house_dir,
                     bash_args,
+                    bash_wrap,
                 )
 
         try:
