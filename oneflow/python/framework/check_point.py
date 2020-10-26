@@ -28,6 +28,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
@@ -328,8 +329,11 @@ class FileBackendVariableBlob:
                     np_dtype = np.dtype(
                         dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
                     )
+                    start_nd_idx = np.unravel_index(start_idx, self.shape)
+                    stop_nd_idx = np.unravel_index(stop_idx - 1, self.shape)
+                    stop_nd_idx = [x + 1 for x in stop_nd_idx]
                     slice = f.read(length * np_dtype.itemsize)
-                    yield start_idx, stop_idx, np.frombuffer(
+                    yield start_nd_idx, stop_nd_idx, np.frombuffer(
                         slice, dtype=np_dtype,
                     ).reshape([1] * (len(self.shape) - 1) + [-1])
                     start_idx = stop_idx
@@ -418,11 +422,15 @@ def read_slice_from_blob(blob, scope_symbol_id):
             length = SLICE_LEN if remainder >= SLICE_LEN else remainder
             remainder -= length
             stop_idx = start_idx + length
-            start = np.unravel_index(start_idx, blob.shape)
-            stop = np.unravel_index(stop_idx - 1, blob.shape)
-            stop = [x + 1 for x in stop]
-            yield logical_slice(
-                blob.blob_object, start, stop, [1] * len(blob.shape), scope_symbol_id
+            start_nd_idx = np.unravel_index(start_idx, blob.shape)
+            stop_nd_idx = np.unravel_index(stop_idx - 1, blob.shape)
+            stop_nd_idx = [x + 1 for x in stop_nd_idx]
+            yield start_nd_idx, stop_nd_idx, logical_slice(
+                blob.blob_object,
+                start_nd_idx,
+                stop_nd_idx,
+                [1] * len(blob.shape),
+                scope_symbol_id,
             )
             start_idx = stop_idx
 
@@ -441,7 +449,7 @@ def save(var_dict, path):
         sess = session_ctx.GetDefaultSession()
         var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
-            for slice in read_slice_from_blob(var, var_op_conf.scope_symbol_id):
+            for _, _, slice in read_slice_from_blob(var, var_op_conf.scope_symbol_id):
                 f.write(slice.tobytes())
     with open(os.path.join(path, META_INFO_FILENAME), "w") as f:
         f.write(text_format.MessageToString(meta_infos))
@@ -477,6 +485,10 @@ def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
                 parallel_conf=parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object,
             )
+            parallel_desc_symbol = oneflow.current_scope().device_parallel_desc_symbol
+            op_arg_parallel_attr = op_arg_util.MakeBroadcastOpArgParallelAttribute(
+                parallel_desc_symbol
+            )
             Yield(bn_in_op2blob_object["y_0"])
 
         vm_util.LogicalRun(build)
@@ -494,40 +506,41 @@ def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
 
 
 def get_variable_blob_from_numpy(np_array: np.ndarray):
-    flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
-    op_conf = get_variable.GenerateVariableOpConf(
-        name="system_checkpoint",
-        shape=np_array.shape,
-        dtype=flow_dtype,
-        initializer=initializer_util.zeros_initializer(dtype=flow_dtype),
-        trainable=False,
-        need_root_path=False,
-    )
-    device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
-    op_conf.device_tag = device_tag
-    bn_in_op2blob_object = {}
-    op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
-    bn_in_op2blob_object = {}
-
-    def BuildInstruction(builder):
-        parallel_conf = (
-            oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+    with oneflow.scope.placement("cpu", "0:0"):
+        flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
+        op_conf = get_variable.GenerateVariableOpConf(
+            name="system_checkpoint",
+            shape=np_array.shape,
+            dtype=flow_dtype,
+            initializer=initializer_util.zeros_initializer(dtype=flow_dtype),
+            trainable=False,
+            need_root_path=False,
         )
-        builder.StatelessCall(
-            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
-        )
+        device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
+        op_conf.device_tag = device_tag
+        bn_in_op2blob_object = {}
+        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
+        bn_in_op2blob_object = {}
 
-    vm_util.LogicalRun(BuildInstruction)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_attribute.op_conf.name
-    lbi.blob_name = op_attribute.op_conf.variable_conf.out
-    var_blob = remote_blob_util.EagerConsistentBlob(
-        lbi, job_name="system_checkpoint", blob_object=bn_in_op2blob_object["out"]
-    )
-    interface_op_read_and_write.FeedValueToInterfaceBlobObject(
-        var_blob.blob_object, np_array
-    )
-    return var_blob
+        def BuildInstruction(builder):
+            parallel_conf = (
+                oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
+            )
+            builder.StatelessCall(
+                op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+            )
+
+        vm_util.LogicalRun(BuildInstruction)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = op_attribute.op_conf.name
+        lbi.blob_name = op_attribute.op_conf.variable_conf.out
+        var_blob = remote_blob_util.EagerConsistentBlob(
+            lbi, job_name="system_checkpoint", blob_object=bn_in_op2blob_object["out"]
+        )
+        interface_op_read_and_write.FeedValueToInterfaceBlobObject(
+            var_blob.blob_object, np_array
+        )
+        return var_blob
 
 
 def slice_assign(
@@ -567,24 +580,33 @@ def slice_assign(
 
 
 def _FeedValueToVariable(var_name, value_blob):
+    sess = session_ctx.GetDefaultSession()
+    var_op_conf = sess.OpConf4InterfaceOpName(var_name)
+    var_scope_symbol_id = var_op_conf.scope_symbol_id
+    var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
     if isinstance(value_blob, EagerBlobTrait):
-        var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
-        interface_op_read_and_write.Assign(value_blob, var_blob)
+        value_name = value_blob.logical_blob_name.split("/")[0]
+        value_op_conf = sess.OpConf4InterfaceOpName(value_name)
+        value_scope_symbol_id = value_op_conf.scope_symbol_id
+        for start, stop, slice in read_slice_from_blob(
+            value_blob, value_scope_symbol_id
+        ):
+            slice_eager_blob = get_variable_blob_from_numpy(slice)
+            slice_assign(
+                var_blob.blob_object,
+                slice_eager_blob.blob_object,
+                start,
+                stop,
+                [1] * len(value_blob.shape),
+                var_scope_symbol_id,
+            )
     elif isinstance(value_blob, FileBackendVariableBlob):
-        var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
                 value_blob.name, value_blob.root_dir_, var_blob.dtype, var_blob.shape
             )
         assert var_blob.shape == value_blob.shape
-        sess = session_ctx.GetDefaultSession()
-        var_op_conf = sess.OpConf4InterfaceOpName(var_name)
-        scope_symbol_id = var_op_conf.scope_symbol_id
-        for start_idx, stop_idx, slice in value_blob.read_slice_as_numpy():
-            start_nd_idx = np.unravel_index(start_idx, value_blob.shape)
-            stop_idx -= 1
-            stop_nd_idx = np.unravel_index(stop_idx, value_blob.shape)
-            stop_nd_idx = [x + 1 for x in stop_nd_idx]
+        for start_nd_idx, stop_nd_idx, slice in value_blob.read_slice_as_numpy():
             value_eager_blob = get_variable_blob_from_numpy(slice)
             slice_assign(
                 var_blob.blob_object,
@@ -592,7 +614,7 @@ def _FeedValueToVariable(var_name, value_blob):
                 start_nd_idx,
                 stop_nd_idx,
                 [1] * len(value_blob.shape),
-                scope_symbol_id,
+                var_scope_symbol_id,
             )
     else:
         raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
