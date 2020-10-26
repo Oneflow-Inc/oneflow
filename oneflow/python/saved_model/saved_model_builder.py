@@ -26,7 +26,7 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 
 def GetBlobConf(job_func_name: str, logical_blob_name: str):
@@ -100,8 +100,8 @@ class SavedModelBuilder(object):
     def AddJobFunction(
         self,
         job_func: Callable,
-        input_blob_names: List[str],
-        output_blob_names: List[str],
+        input_blob_name_4_lbn: Dict[str, str],
+        output_blob_name_4_lbn: Dict[str, str],
         method_name: str = "serving",
     ):
         assert job_func.__name__ in compiler.job_map
@@ -113,32 +113,32 @@ class SavedModelBuilder(object):
         op_graph = compiler.job_map[job_func.__name__].net.op
         # fill the sinagures field
         singature_def = model_pb.SignatureDef()
-        for ibn in input_blob_names:
+        for ibn, lbn in input_blob_name_4_lbn.items():
             input_def = model_pb.InputDef()
 
             # find consumer op names
             for op in op_graph:
                 if op.HasField("user_conf"):
                     for key in op.user_conf.input:
-                        if op.user_conf.input[key].s[0] == ibn:
+                        if op.user_conf.input[key].s[0] == lbn:
                             input_def.consumer_op_names.append(op.name)
                             input_def.consumer_op_input_bns.append(key)
                             break
 
             # fill blob_conf
-            input_def.blob_conf.CopyFrom(GetBlobConf(job_func.__name__, ibn))
+            input_def.blob_conf.CopyFrom(GetBlobConf(job_func.__name__, lbn))
 
             # fill consumers and consumer_bns
             singature_def.inputs[ibn].CopyFrom(input_def)
 
-        for obn in output_blob_names:
+        for obn, lbn in output_blob_name_4_lbn.items():
             output_def = model_pb.OutputDef()
             found_producer = False
             # find producer op name
             for op in op_graph:
                 if op.HasField("user_conf"):
                     for key in op.user_conf.output:
-                        if op.user_conf.output[key].s[0] == obn:
+                        if op.user_conf.output[key].s[0] == lbn:
                             output_def.producer_op_name = op.name
                             found_producer = True
                             break
