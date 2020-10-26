@@ -61,6 +61,7 @@ jobs:
         bash docker/ci/test/build.sh
     - name: Exe test
       run: |
+        set -x
         docker run --shm-size=8g --rm \
           -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
           -v ${ci_tmp_dir}:${ci_tmp_dir} \
