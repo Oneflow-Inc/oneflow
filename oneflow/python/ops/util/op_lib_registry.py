@@ -54,15 +54,22 @@ def compile(compiler, flags, link, inputs, output):
     return True
 
 
-cflags = " ".join(oneflow_sysconfig.get_compile_flags())
-lflags = (
-    " ".join(oneflow_sysconfig.get_link_flags())
-    + " -Wl,-rpath "
-    + oneflow_sysconfig.get_lib()
-)
-cpp2py_path = os.path.join(
-    oneflow_sysconfig.get_include(), "oneflow/python/ops/util/cpp2py.hpp"
-)
+def get_cflags():
+    return " ".join(oneflow_sysconfig.get_compile_flags())
+
+
+def get_lflags():
+    return (
+        " ".join(oneflow_sysconfig.get_link_flags())
+        + " -Wl,-rpath "
+        + oneflow_sysconfig.get_lib()
+    )
+
+
+def get_cpp2py_path():
+    return os.path.join(
+        oneflow_sysconfig.get_include(), "oneflow/python/ops/util/cpp2py.hpp"
+    )
 
 
 @oneflow_export("util.op_lib")
@@ -94,11 +101,11 @@ class OpLib(object):
         self.so_path = ""
 
     def AddOpDef(self):
-        flags = "-std=c++11 -c -fPIC -O2 " + cflags
+        flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
         compile(
             "g++",
             flags,
-            lflags,
+            get_lflags(),
             f"{self.src_prefix}_op.cpp",
             f"{self.out_prefix}_op.o",
         )
@@ -118,7 +125,7 @@ class OpLib(object):
         self.has_py_kernel = True
 
     def AddCPUKernel(self):
-        flags = "-std=c++11 -c -fPIC -O2 " + cflags
+        flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
         compile(
             "g++",
             flags,
@@ -135,8 +142,8 @@ class OpLib(object):
 
     def Build(self):
         if len(self.objs) > 0:
-            flags = "-std=c++11 -shared -fPIC " + cflags
-            compile("g++", flags, lflags, self.objs, f"{self.out_prefix}.so")
+            flags = "-std=c++11 -shared -fPIC " + get_cflags()
+            compile("g++", flags, get_lflags(), self.objs, f"{self.out_prefix}.so")
             self.got_so = True
             self.so_path = self.out_prefix + ".so"
 
@@ -166,12 +173,12 @@ class OpLibLoader(object):
 
             def get_one_reg_src(op_type_name):
                 one_reg_src = f"""
-                #define REGISTER_{op_type_name}_KERNEL(cpp_type, dtype) REGISTER_USER_KERNEL("{op_type_name}").SetCreateFn<PyKernel<cpp_type>>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType() == dtype));
-            
+                # define REGISTER_{op_type_name}_KERNEL(cpp_type, dtype) REGISTER_USER_KERNEL("{op_type_name}").SetCreateFn<PyKernel<cpp_type>>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType() == dtype));
+
                 OF_PP_FOR_EACH_TUPLE(REGISTER_{op_type_name}_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
-            
-                #define REGISTER_{op_type_name}_GRAD_KERNEL(cpp_type, dtype) REGISTER_USER_KERNEL("{op_type_name}_grad").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType() == dtype));
-            
+
+                # define REGISTER_{op_type_name}_GRAD_KERNEL(cpp_type, dtype) REGISTER_USER_KERNEL("{op_type_name}_grad").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType() == dtype));
+
                 OF_PP_FOR_EACH_TUPLE(REGISTER_{op_type_name}_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
                 """
                 return one_reg_src
@@ -194,19 +201,19 @@ class OpLibLoader(object):
             gen_src_path = os.path.join(self.out_path, "cpp2py_gen.cpp")
             gen_obj_path = os.path.join(self.out_path, "cpp2py.o")
             gen_so_path = os.path.join(self.out_path, "cpp2py.so")
-            shutil.copy2(cpp2py_path, gen_src_path)
+            shutil.copy2(get_cpp2py_path(), gen_src_path)
             with open(gen_src_path, "a") as f:
                 f.write(get_reg_src())
             # compile obj
-            py_cflags = "-std=c++11 -c -fPIC -O2 " + cflags
+            py_cflags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
             py_cflags += " -I" + sysconfig.get_paths()["include"]
             py_cflags += " -I" + numpy.get_include()
             compile("g++", py_cflags, "", gen_src_path, gen_obj_path)
             # compile so
-            py_cflags = "-std=c++11 -shared -fPIC " + cflags
+            py_cflags = "-std=c++11 -shared -fPIC " + get_cflags()
             py_cflags += " -I" + sysconfig.get_paths()["include"]
             py_cflags += " -I" + numpy.get_include()
-            py_lflags = lflags
+            py_lflags = get_lflags()
             py_lflags += " -L" + sysconfig.get_paths()["stdlib"]
             compile("g++", py_cflags, py_lflags, gen_obj_path, gen_so_path)
             self.py_kernel_lib = gen_so_path
