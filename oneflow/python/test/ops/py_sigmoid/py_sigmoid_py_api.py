@@ -21,9 +21,7 @@ import oneflow as flow
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
-def py_sigmoid(
-    x: flow.typing.BlobDef, name: Optional[str] = None
-) -> flow.typing.BlobDef:
+def py_sigmoid(x, name: Optional[str] = None):
     return (
         flow.user_op_builder(
             name if name is not None else flow.util.unique_str("PySigmoid_")
@@ -38,8 +36,8 @@ def py_sigmoid(
 
 
 def py_sigmoid_grad(
-    y: flow.typing.BlobDef, dy: flow.typing.BlobDef, name: Optional[str] = None,
-) -> flow.typing.BlobDef:
+    y, dy, name: Optional[str] = None,
+):
     return (
         flow.user_op_builder(
             name if name is not None else flow.util.unique_str("PySigmoidGrad_")
