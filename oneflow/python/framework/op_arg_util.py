@@ -38,6 +38,10 @@ class OpArgBlobAttribute(object):
         )
 
     @property
+    def blob_desc(self):
+        return self.blob_desc_
+
+    @property
     def shape(self):
         return self.shape_
 
