@@ -52,6 +52,7 @@ def force_rm_dir(dir_to_clean):
 
 def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+        bash_cmd = "PATH=/opt/python/cp37-cp37m/bin:$PATH\n" + bash_cmd
         f.write(bash_cmd)
         f.flush()
         print(bash_cmd)
