@@ -109,23 +109,27 @@ check_point.init()
 
 saved_model_builder = flow.saved_model.SavedModelBuilder("./saved_job_graph", 1)
 saved_model_builder.ModelName("save_job_graphs_example").AddJobFunction(
-    jobA, ["Input_0/out"], ["broadcast_add_1/z_0"]
-).AddJobFunction(jobB, ["Input_3/out"], ["broadcast_mul_4/z_0"]).AddJobFunction(
-    jobC, ["Input_6/out"], ["broadcast_sub_7/z_0"]
+    jobA, {"input_A": "Input_0/out"}, {"output_A": "broadcast_add_1/z_0"}
 ).AddJobFunction(
-    jobD, ["Input_9/out"], ["broadcast_div_10/z_0"]
+    jobB, {"input_B": "Input_3/out"}, {"output_B": "broadcast_mul_4/z_0"}
 ).AddJobFunction(
-    jobE, ["Input_12/out", "Input_13/out"], ["broadcast_sub_15/z_0"]
+    jobC, {"input_C": "Input_6/out"}, {"output_C": "broadcast_sub_7/z_0"}
+).AddJobFunction(
+    jobD, {"input_D": "Input_9/out"}, {"output_D": "broadcast_div_10/z_0"}
+).AddJobFunction(
+    jobE,
+    {"input_E_1": "Input_12/out", "input_E_2": "Input_13/out"},
+    {"output_E": "broadcast_sub_15/z_0"},
 ).AddJobGraph(
     "Job_Graph_1",
     [jobA],
     [jobE],
     [
-        ((jobA, None), ("Input_0/out", None)),
-        ((jobB, jobA), ("Input_3/out", "broadcast_add_1/z_0")),
-        ((jobC, jobB), ("Input_6/out", "broadcast_mul_4/z_0")),
-        ((jobD, jobA), ("Input_9/out", "broadcast_add_1/z_0")),
-        ((jobE, jobC), ("Input_12/out", "broadcast_sub_7/z_0")),
-        ((jobE, jobD), ("Input_13/out", "broadcast_div_10/z_0")),
+        ((jobA, None), ("input_A", None)),
+        ((jobB, jobA), ("input_B", "output_A")),
+        ((jobC, jobB), ("input_C", "output_B")),
+        ((jobD, jobA), ("input_D", "output_A")),
+        ((jobE, jobC), ("input_E_1", "output_C")),
+        ((jobE, jobD), ("input_E_2", "output_D")),
     ],
 ).Save()
