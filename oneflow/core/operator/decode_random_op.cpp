@@ -42,7 +42,7 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
   int64_t batch_size = conf.batch_size();
   CHECK_GE_OR_RETURN(batch_size, parallel_ctx->parallel_num());
   CHECK_EQ_OR_RETURN(batch_size % parallel_ctx->parallel_num(), 0);
-  if (sbp_signature->bn_in_op2sbp_parallel().begin()->second.has_split_parallel()) {
+  if (sbp_signature->bn_in_op2sbp_parallel().at(output_bns()[0]).has_split_parallel()) {
     dim_vec[0] = batch_size / parallel_ctx->parallel_num();
   } else {
     dim_vec[0] = batch_size;
