@@ -45,7 +45,8 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: /home/ci-user/ci-tmp/10.2
+      ci_tmp_dir: /home/ci-user/ci-tmp
+      ci_tmp_bin_dir: /home/ci-user/ci-tmp/10.2/build-oneflow/bin
     steps:
     - name: Fix permissions
       run: |
@@ -63,7 +64,7 @@ jobs:
         docker run --shm-size=8g --rm \
           -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
           -v ${ci_tmp_dir}:${ci_tmp_dir} \
-          -w ${ci_tmp_dir}/build-oneflow/bin \
+          -w ${ci_tmp_bin_dir} \
           oneflow-test \
           ./oneflow_testexe
     - name: Op test
@@ -109,7 +110,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: /home/ci-user/ci-tmp-xla/10.1-xla
+      ci_tmp_dir: /home/ci-user/ci-tmp-xla
     steps:
     - name: Fix permissions
       run: |
@@ -137,7 +138,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: /home/ci-user/ci-tmp-cpu/cpu
+      ci_tmp_dir: /home/ci-user/ci-tmp-cpu
     steps:
     - name: Fix permissions
       run: |
