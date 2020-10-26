@@ -45,7 +45,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: /home/ci-user/ci-tmp
+      ci_tmp_dir: /home/ci-user/ci-tmp/10.2
     steps:
     - name: Fix permissions
       run: |
@@ -109,7 +109,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: /home/ci-user/ci-tmp-xla
+      ci_tmp_dir: /home/ci-user/ci-tmp-xla/10.1-xla
     steps:
     - name: Fix permissions
       run: |
@@ -137,7 +137,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     env:
-      ci_tmp_dir: /home/ci-user/ci-tmp-cpu
+      ci_tmp_dir: /home/ci-user/ci-tmp-cpu/cpu
     steps:
     - name: Fix permissions
       run: |
