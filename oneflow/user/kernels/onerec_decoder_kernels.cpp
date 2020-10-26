@@ -165,7 +165,7 @@ void DecodeField(const TensorBuffer* records, const int64_t record_num, const st
                  const Shape& batch_padding, user_op::Tensor* out_blob) {
   const int32_t batch_size = record_num;
   char* out_ptr = out_blob->mut_dptr<char>();
-  const int64_t out_bytes = out_blob->shape().elem_cnt() * sizeof(data_type);
+  const int64_t out_bytes = out_blob->shape().elem_cnt() * GetSizeOfDataType(data_type);
   std::vector<const onerec::example::Tensor*> tensors;
   GetTensorsFromRecords(records, record_num, key, &tensors);
   std::vector<std::vector<int32_t>> tensor_dims;
@@ -224,7 +224,7 @@ void DecodeField(const TensorBuffer* records, const int64_t record_num, const st
     }
   }
   const int64_t buffer_size = GetBatchSizeInBytes(batch_size, instance_shape, data_type);
-  // CHECK_LE(buffer_size, out_bytes);
+  CHECK_LE(buffer_size, out_bytes);
   if (has_batch_padding) {
     CopyTensorsToBuffer<true>(tensors, data_type, instance_shape, out_ptr);
   } else {
