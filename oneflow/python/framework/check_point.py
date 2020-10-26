@@ -316,27 +316,16 @@ class FileBackendVariableBlob:
 
     def read_slice_as_numpy(self):
         assert self.shape is not None
-        SLICE_LEN = 8192
-        start_idx = 0
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
+        )
         with open(self.file_path_, "rb") as f:
-            size = np.prod(self.shape).item()
-            while start_idx < size:
-                remainder = self.shape[-1]
-                while remainder > 0:
-                    length = SLICE_LEN if remainder >= SLICE_LEN else remainder
-                    remainder -= length
-                    stop_idx = start_idx + length
-                    np_dtype = np.dtype(
-                        dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
-                    )
-                    start_nd_idx = np.unravel_index(start_idx, self.shape)
-                    stop_nd_idx = np.unravel_index(stop_idx - 1, self.shape)
-                    stop_nd_idx = [x + 1 for x in stop_nd_idx]
-                    slice = f.read(length * np_dtype.itemsize)
-                    yield start_nd_idx, stop_nd_idx, np.frombuffer(
-                        slice, dtype=np_dtype,
-                    ).reshape([1] * (len(self.shape) - 1) + [-1])
-                    start_idx = stop_idx
+            def slice_f(blob, start_nd_idx, stop_nd_idx, length):
+                slice = f.read(length * np_dtype.itemsize)
+                return np.frombuffer(
+                    slice, dtype=np_dtype,
+                ).reshape([1] * (len(self.shape) - 1) + [-1])
+            yield from for_every_slice(self, slice_f)
 
     @property
     def file_path_(self):
@@ -412,27 +401,15 @@ def load(path):
 
 
 def read_slice_from_blob(blob, scope_symbol_id):
-    assert blob.shape is not None
-    SLICE_LEN = 8192
-    start_idx = 0
-    size = np.prod(blob.shape).item()
-    while start_idx < size:
-        remainder = blob.shape[-1]
-        while remainder > 0:
-            length = SLICE_LEN if remainder >= SLICE_LEN else remainder
-            remainder -= length
-            stop_idx = start_idx + length
-            start_nd_idx = np.unravel_index(start_idx, blob.shape)
-            stop_nd_idx = np.unravel_index(stop_idx - 1, blob.shape)
-            stop_nd_idx = [x + 1 for x in stop_nd_idx]
-            yield start_nd_idx, stop_nd_idx, logical_slice(
-                blob.blob_object,
-                start_nd_idx,
-                stop_nd_idx,
-                [1] * len(blob.shape),
-                scope_symbol_id,
-            )
-            start_idx = stop_idx
+    def slice_f(blob, start_nd_idx, stop_nd_idx, length):
+        return logical_slice(
+            blob.blob_object,
+            start_nd_idx,
+            stop_nd_idx,
+            [1] * len(blob.shape),
+            scope_symbol_id,
+        )
+    yield from for_every_slice(blob, slice_f)
 
 
 @oneflow_export("save")
@@ -550,8 +527,8 @@ def slice_assign(
         op_conf = op_conf_pb.OperatorConf()
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
-        op_conf.name = "slice_assign"
-        op_conf.user_conf.op_type_name = "slice_assign"
+        op_conf.name = "logical_slice_assign"
+        op_conf.user_conf.op_type_name = "logical_slice_assign"
         op_conf.user_conf.input["value"].s.append("slice_assign/value_0")
         op_conf.user_conf.input["ref"].s.append("slice_assign/ref_0")
         parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
@@ -631,44 +608,52 @@ def load_variables(var_dict, ignore_mismatch=False):
                 raise RuntimeError('"{}" is not a variable name'.format(name))
 
 
-def init():
+def for_every_slice(var_blob, f):
     SLICE_LEN = 8192
+    start_idx = 0
+    size = np.prod(var_blob.shape).item()
+    while start_idx < size:
+        remainder = var_blob.shape[-1]
+        while remainder > 0:
+            length = SLICE_LEN if remainder >= SLICE_LEN else remainder
+            remainder -= length
+            stop_idx = start_idx + length
+            start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
+            stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
+            stop_nd_idx = [x + 1 for x in stop_nd_idx]
+            yield start_nd_idx, stop_nd_idx, f(var_blob, start_nd_idx, stop_nd_idx, length)
+            start_idx = stop_idx
+    
+
+
+def init():
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in get_all_variables().items():
         rng = np.random.default_rng()
         var_op_conf = sess.OpConf4InterfaceOpName(op_name)
         scope_symbol_id = var_op_conf.scope_symbol_id
-        start_idx = 0
-        size = np.prod(var_blob.shape).item()
-        while start_idx < size:
-            remainder = var_blob.shape[-1]
-            while remainder > 0:
-                length = SLICE_LEN if remainder >= SLICE_LEN else remainder
-                remainder -= length
-                stop_idx = start_idx + length
-                start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
-                stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
-                stop_nd_idx = [x + 1 for x in stop_nd_idx]
-                np_dtype = np.dtype(
-                    dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
-                )
-                vals = []
-                for _ in range(length):
-                    # TODO: dtype
-                    vals.append(rng.normal())
-                vals = (
-                    np.array(vals)
-                    .astype(np_dtype)
-                    .reshape([1] * (len(var_blob.shape) - 1) + [-1])
-                )
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
+        )
+        def f(var_blob, start_nd_idx, stop_nd_idx, length):
+            vals = []
+            for _ in range(length):
+                # TODO: dtype
+                vals.append(rng.normal() + 10)
+            vals = (
+                np.array(vals)
+                .astype(np_dtype)
+                .reshape([1] * (len(var_blob.shape) - 1) + [-1])
+            )
 
-                value_eager_blob = get_variable_blob_from_numpy(vals)
-                slice_assign(
-                    var_blob.blob_object,
-                    value_eager_blob.blob_object,
-                    start_nd_idx,
-                    stop_nd_idx,
-                    [1] * len(var_blob.shape),
-                    scope_symbol_id,
-                )
-                start_idx = stop_idx
+            value_eager_blob = get_variable_blob_from_numpy(vals)
+            slice_assign(
+                var_blob.blob_object,
+                value_eager_blob.blob_object,
+                start_nd_idx,
+                stop_nd_idx,
+                [1] * len(var_blob.shape),
+                scope_symbol_id,
+            )
+        for _ in for_every_slice(var_blob, f):
+            pass
