@@ -268,7 +268,19 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 std::string NormalForwardLogicalNode::TypeName() const { return "NormalForward"; }
 
 CompTaskNode* NormalForwardLogicalNode::NewCompTaskNode() const {
-  return new NormalForwardCompTaskNode;
+  if (this->SoleOp()->op_conf().has_user_conf()) {
+    const OperatorConf& op_conf = this->SoleOp()->op_conf();
+    const std::string& op_type_name = op_conf.user_conf().op_type_name();
+    if (IsClassRegistered<std::string, UserOpCompTaskNodeCreator>(op_type_name)) {
+      return std::unique_ptr<UserOpCompTaskNodeCreator>(
+                 NewObj<std::string, UserOpCompTaskNodeCreator>(op_type_name))
+          ->NewCompTaskNode(op_conf);
+    } else {
+      return new NormalForwardCompTaskNode;
+    }
+  } else {
+    return new NormalForwardCompTaskNode;
+  }
 }
 
 int64_t NormalForwardLogicalNode::GetAreaId() const {

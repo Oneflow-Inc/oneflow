@@ -560,12 +560,6 @@ message UnpackOpConf {
   required int32 unpack_num = 3;
 }
 
-message RepeatOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 repeat_num = 3;
-}
-
 message TickOpConf {
   repeated string tick = 1;
   required string out = 2;
@@ -633,14 +627,6 @@ message ShapeElemCntOpConf {
     ShapeElemCntAxisConf include_axis_conf = 5;
     ShapeElemCntRangeAxisConf range_axis_conf = 6;
   }
-}
-
-message AccOpConf {
-  // in
-  required string one = 1;
-  // out
-  required string acc = 2;
-  optional int32 max_acc_num = 3 [default = 1];
 }
 
 message AccTickOpConf {
@@ -944,7 +930,6 @@ message OperatorConf {
     RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
     LARSModelUpdateOpConf lars_model_update_conf = 130;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
-    AccOpConf acc_conf = 133;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -981,7 +966,6 @@ message OperatorConf {
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
-    RepeatOpConf repeat_conf = 239;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;

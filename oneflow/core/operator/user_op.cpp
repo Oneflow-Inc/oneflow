@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
+#include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 
 namespace oneflow {
 
@@ -328,6 +329,38 @@ class UserOpBatchAxisContext : public user_op::BatchAxisContext {
   HashMap<std::pair<std::string, int32_t>, OptInt64*> arg2batch_axis_;
 };
 
+class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobTimeShapeFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+  UserOpInferOutputBlobTimeShapeFnContext(
+      const OperatorConf& op_conf,
+      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
+      Shape* output_blob_time_shape)
+      : user_op_conf_(op_conf), output_blob_time_shape_(output_blob_time_shape) {
+    for (const auto& it : op_conf.user_conf().input()) {
+      const std::string& arg_name = it.first;
+      for (int32_t i = 0; i < it.second.s_size(); ++i) {
+        std::string ibn = GenRepeatedBn(arg_name, i);
+        arg2time_shape_.emplace(std::make_pair(arg_name, i), *GetTimeShape4BnInOp(ibn));
+      }
+    }
+  }
+  ~UserOpInferOutputBlobTimeShapeFnContext() override = default;
+
+  const Shape& TimeShape4InputArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return arg2time_shape_.at(std::make_pair(arg_name, index));
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  Shape* mut_output_blob_time_shape() override { return output_blob_time_shape_; };
+
+ private:
+  HashMap<std::pair<std::string, int32_t>, Shape> arg2time_shape_;
+  user_op::UserOpConfWrapper user_op_conf_;
+  Shape* output_blob_time_shape_;
+};
+
 void UserOp::InitFromOpConf() {
   CHECK(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -535,6 +568,18 @@ Maybe<void> UserOp::GetSbpSignatures(
     }
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::InferOutputBlobTimeShape(
+    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+    const ParallelContext* parallel_ctx, Shape* time_shape) const {
+  if (val_->infer_output_blob_time_shape_fn) {
+    UserOpInferOutputBlobTimeShapeFnContext infer_output_blob_time_shape_fn_ctx(
+        this->op_conf(), GetTimeShape4BnInOp, time_shape);
+    return val_->infer_output_blob_time_shape_fn(&infer_output_blob_time_shape_fn_ctx);
+  } else {
+    return Operator::InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+  }
 }
 
 Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
