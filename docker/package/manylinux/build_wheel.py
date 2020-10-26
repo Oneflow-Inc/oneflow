@@ -9,28 +9,22 @@ def build_arg_env(env_var_name):
     return f"--build-arg {env_var_name}={val}"
 
 
-def build_img(
-    cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, skip_img, img_tag
-):
+def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, img_tag):
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
         cudnn_version = 8
     from_img = f"nvidia/cuda:{cuda_version}-cudnn{cudnn_version}-devel-centos7"
-
-    if skip_img:
-        return
-    else:
-        tuna_build_arg = ""
-        if use_tuna:
-            tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
-        proxy_build_args = []
-        if use_system_proxy:
-            for v in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
-                proxy_build_args.append(build_arg_env(v))
-        proxy_build_arg = " ".join(proxy_build_args)
-        cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
-        print(cmd)
-        subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
+    tuna_build_arg = ""
+    if use_tuna:
+        tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
+    proxy_build_args = []
+    if use_system_proxy:
+        for v in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
+            proxy_build_args.append(build_arg_env(v))
+    proxy_build_arg = " ".join(proxy_build_args)
+    cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
+    print(cmd)
+    subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
 
 
 def common_cmake_args(cache_dir):
@@ -185,6 +179,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--custom_img_tag", type=str, required=False, default=None,
+    )
+    parser.add_argument(
         "--cache_dir", type=str, required=False, default=None,
     )
     default_wheel_house_dir = os.path.join(os.getcwd(), "wheelhouse")
@@ -247,15 +244,21 @@ if __name__ == "__main__":
         cache_dir = None
 
         def build():
-            img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
-            build_img(
-                args.cuda_version,
-                args.oneflow_src_dir,
-                args.use_tuna,
-                args.use_system_proxy,
-                args.skip_img,
-                img_tag,
-            )
+            img_tag = None
+            skip_img = args.skip_img
+            if args.custom_img_tag:
+                img_tag = args.custom_img_tag
+                skip_img = True
+            else:
+                img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
+            if skip_img == False:
+                build_img(
+                    args.cuda_version,
+                    args.oneflow_src_dir,
+                    args.use_tuna,
+                    args.use_system_proxy,
+                    img_tag,
+                )
             bash_args = ""
             if args.xla:
                 bash_args = "-l"
