@@ -77,13 +77,7 @@ def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=Non
 
 
 def build_third_party(
-    img_tag,
-    oneflow_src_dir,
-    cache_dir,
-    extra_oneflow_cmake_args,
-    skip_third_party,
-    bash_args,
-    bash_wrap,
+    img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args, bash_args, bash_wrap,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -106,10 +100,7 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
-    if skip_third_party:
-        return
-    else:
-        create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap)
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap)
 
 
 def get_python_bin(version):
@@ -283,15 +274,15 @@ gcc --version
                     assert len(cuda_versions) == 1
                     sub_dir = "cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
-            build_third_party(
-                img_tag,
-                args.oneflow_src_dir,
-                cache_dir,
-                extra_oneflow_cmake_args,
-                args.skip_third_party,
-                bash_args,
-                bash_wrap,
-            )
+            if args.skip_third_party == False:
+                build_third_party(
+                    img_tag,
+                    args.oneflow_src_dir,
+                    cache_dir,
+                    extra_oneflow_cmake_args,
+                    bash_args,
+                    bash_wrap,
+                )
             cuda_version_literal = "".join(cuda_version.split("."))
             assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
