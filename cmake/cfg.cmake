@@ -8,12 +8,8 @@ string(REPLACE "\n" ";" cfg_head_dir_and_convert_srcs ${cfg_head_dir_and_convert
 list(GET cfg_head_dir_and_convert_srcs 0  CFG_INCLUDE_DIR)
 list(GET cfg_head_dir_and_convert_srcs 1  TEMPLATE_CONVERT_PYTHON_SCRIPT)
 list(GET cfg_head_dir_and_convert_srcs 2  COPY_PYPROTO_PYTHON_SCRIPT)
-list(GET cfg_head_dir_and_convert_srcs 3  CFG_HERDER_FILES)
-list(GET cfg_head_dir_and_convert_srcs 4  PYBIND_REGISTRY_CC)
+list(GET cfg_head_dir_and_convert_srcs 3  PYBIND_REGISTRY_CC)
 
-# convert varible CFG_HERDER_FILES to list
-# string(REPLACE " " ";" CFG_HERDER_FILES ${CFG_HERDER_FILES})
-# set(CFG_HERDER_FILES ${CFG_HERDER_FILES})
 
 # convert varible PYBIND_REGISTRY_CC to list
 string(REPLACE " " ";" PYBIND_REGISTRY_CC ${PYBIND_REGISTRY_CC})
@@ -21,7 +17,7 @@ set(PYBIND_REGISTRY_CC ${PYBIND_REGISTRY_CC})
 include_directories(${CFG_INCLUDE_DIR})
 
 
-function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSPACE_DIR)
+function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
@@ -29,6 +25,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSP
   )
 
   set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
+  set(cfg_workspace_dir "${PROJECT_BINARY_DIR}/cfg_workspace")
 
   add_custom_target(copy_and_render_pyproto ALL
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${of_cfg_proto_python_dir}"
@@ -36,7 +33,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSP
       --src_proto_files="${ALL_CFG_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
     COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
-      --project_build_dir=${PROJECT_BINARY_DIR} --cfg_workspace_dir=${CFG_WORKSPACE_DIR}
+      --project_build_dir=${PROJECT_BINARY_DIR} --cfg_workspace_dir=${cfg_workspace_dir}
       --proto_file_list="${ALL_CFG_CONVERT_PROTO}"
     DEPENDS ${Python_EXECUTABLE} of_protoobj
   )
@@ -52,7 +49,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR CFG_WORKSP
     
     # rule to make target ${CFG_HPP_FIL} for of_cfgobj
     add_custom_command(
-      OUTPUT 
+      OUTPUT
         "${CFG_CPP_FIL}"
       DEPENDS copy_and_render_pyproto
       VERBATIM)

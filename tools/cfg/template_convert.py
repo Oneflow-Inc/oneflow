@@ -3,7 +3,7 @@ import os
 import argparse
 import filecmp
 import glob
-from shutil import copyfile
+from shutil import copyfile, rmtree
 from jinja2 import Environment, FileSystemLoader
 import util.proto_reflect_util as proto_reflect_util
 
@@ -34,8 +34,7 @@ def JinjaRender(module, filename, **kwargs):
 def render_cfg_file(dst_file_path, template_file, module):
     if not os.path.exists(os.path.dirname(dst_file_path)):
         if os.path.dirname(dst_file_path):
-            # use parameter exist_ok to avoid misjudgment under multithreading
-            os.makedirs(os.path.dirname(dst_file_path), exist_ok=True)
+            os.makedirs(os.path.dirname(dst_file_path))
 
     tmp_dst_file = open(dst_file_path, "w")
     tmp_dst_file.write(JinjaRender(module, template_file))
@@ -55,15 +54,9 @@ def convert_hpp(
 
     if not os.path.exists(os.path.dirname(dst_hpp_path)):
         if os.path.dirname(dst_hpp_path):
-            # use parameter exist_ok to avoid misjudgment under multithreading
-            os.makedirs(os.path.dirname(dst_hpp_path), exist_ok=True)
+            os.makedirs(os.path.dirname(dst_hpp_path))
 
-    print(
-        "hpp_file is diff: ",
-        not os.path.exists(dst_hpp_path) or not filecmp.cmp(tmp_hpp_path, dst_hpp_path),
-    )
     if not os.path.exists(dst_hpp_path) or not filecmp.cmp(tmp_hpp_path, dst_hpp_path):
-        print("Copying:", dst_hpp_path)
         copyfile(tmp_hpp_path, dst_hpp_path)
 
 
@@ -80,15 +73,9 @@ def convert_cpp(
 
     if not os.path.exists(os.path.dirname(dst_cpp_path)):
         if os.path.dirname(dst_cpp_path):
-            # use parameter exist_ok to avoid misjudgment under multithreading
-            os.makedirs(os.path.dirname(dst_cpp_path), exist_ok=True)
+            os.makedirs(os.path.dirname(dst_cpp_path))
 
-    print(
-        "cpp_file is diff: ",
-        not os.path.exists(dst_cpp_path) or not filecmp.cmp(tmp_cpp_path, dst_cpp_path),
-    )
     if not os.path.exists(dst_cpp_path) or not filecmp.cmp(tmp_cpp_path, dst_cpp_path):
-        print("Copying:", dst_cpp_path)
         copyfile(tmp_cpp_path, dst_cpp_path)
 
 
@@ -105,17 +92,11 @@ def convert_pybind(
 
     if not os.path.exists(os.path.dirname(dst_pybind_path)):
         if os.path.dirname(dst_pybind_path):
-            # use parameter exist_ok to avoid misjudgment under multithreading
-            os.makedirs(os.path.dirname(dst_pybind_path), exist_ok=True)
-    print(
-        "pybind_file is diff: ",
-        not os.path.exists(dst_pybind_path)
-        or not filecmp.cmp(tmp_pybind_path, dst_pybind_path),
-    )
+            os.makedirs(os.path.dirname(dst_pybind_path))
+    
     if not os.path.exists(dst_pybind_path) or not filecmp.cmp(
         tmp_pybind_path, dst_pybind_path
     ):
-        print("Copying:", dst_pybind_path)
         copyfile(tmp_pybind_path, dst_pybind_path)
 
 
@@ -179,6 +160,8 @@ def main():
     for file_name in old_cfg_files_need_del:
         if os.path.exists(file_name):
             os.remove(file_name)
+    
+    rmtree(args.cfg_workspace_dir)
 
 
 if __name__ == "__main__":

@@ -202,11 +202,9 @@ target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 add_dependencies(of_protoobj make_pyproto_dir)
 
 include(cfg)
-set(cfg_workspace_dir "${PROJECT_BINARY_DIR}/cfg_workspace")
-GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR} ${cfg_workspace_dir})
+GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
-# target_sources(of_cfgobj PUBLIC ${CFG_HERDER_FILES})
 add_dependencies(of_cfgobj of_protoobj)
 
 # cc obj lib
@@ -249,10 +247,6 @@ set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-# remove tmp *.cfg.h, *.cfg.cpp, *.pybind.cpp in cfg_workspace_dir
-add_custom_target(remove_cfg_workspace_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E remove_directory "${cfg_workspace_dir}")
-add_dependencies(remove_cfg_workspace_dir oneflow_internal)
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_target(of_pyscript_copy ALL

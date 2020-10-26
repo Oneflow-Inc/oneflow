@@ -21,8 +21,7 @@ def copy_proto_files(src_proto_files, of_proto_python_dir, dst_proto_python_dir)
 
         if not os.path.exists(dst_file_dir):
             if dst_file_dir:
-                # use parameter exist_ok to avoid misjudgment under multithreading
-                os.makedirs(dst_file_dir, exist_ok=True)
+                os.makedirs(dst_file_dir)
         copyfile(src_file, dst_file)
 
 
