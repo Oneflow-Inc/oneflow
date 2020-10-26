@@ -472,7 +472,7 @@ def onerec_reader(
     files,
     batch_size=1,
     random_shuffle=False,
-    shuffle_mode="batch",
+    shuffle_mode="instance",
     shuffle_buffer_size=1024,
     shuffle_after_epoch=False,
     verify_example=True,

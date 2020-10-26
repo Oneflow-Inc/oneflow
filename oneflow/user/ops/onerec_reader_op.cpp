@@ -22,7 +22,7 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
     .Attr("files", UserOpAttrType::kAtListString)
     .Attr("batch_size", UserOpAttrType::kAtInt32)
     .Attr<bool>("random_shuffle", UserOpAttrType::kAtBool, false)
-    .Attr<std::string>("shuffle_mode", UserOpAttrType::kAtString, "batch")
+    .Attr<std::string>("shuffle_mode", UserOpAttrType::kAtString, "instance")
     .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
     .Attr<int32_t>("shuffle_buffer_size", UserOpAttrType::kAtInt32, 1024)
     .Attr<bool>("shuffle_after_epoch", UserOpAttrType::kAtBool, false)
@@ -32,10 +32,9 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
       const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      if (sbp.has_split_parallel() && parallel_num > 1) {
-        CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
-        local_batch_size /= parallel_num;
-      }
+      CHECK_OR_RETURN(sbp.has_split_parallel());
+      CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
+      local_batch_size /= parallel_num;
       *out_tensor->mut_shape() = Shape({local_batch_size});
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();

@@ -56,6 +56,9 @@ struct TensorBuilder;
 struct Feature;
 struct FeatureBuilder;
 
+struct Digest;
+struct DigestBuilder;
+
 struct Example;
 struct ExampleBuilder;
 
@@ -753,16 +756,56 @@ inline flatbuffers::Offset<Feature> CreateFeatureDirect(
   return onerec::example::CreateFeature(_fbb, name__, tensor);
 }
 
+struct Digest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef DigestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_VALUE = 4 };
+  int64_t value() const { return GetField<int64_t>(VT_VALUE, 0); }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) && VerifyField<int64_t>(verifier, VT_VALUE)
+           && verifier.EndTable();
+  }
+};
+
+struct DigestBuilder {
+  typedef Digest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_value(int64_t value) { fbb_.AddElement<int64_t>(Digest::VT_VALUE, value, 0); }
+  explicit DigestBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  DigestBuilder &operator=(const DigestBuilder &);
+  flatbuffers::Offset<Digest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Digest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Digest> CreateDigest(flatbuffers::FlatBufferBuilder &_fbb,
+                                                int64_t value = 0) {
+  DigestBuilder builder_(_fbb);
+  builder_.add_value(value);
+  return builder_.Finish();
+}
+
 struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef ExampleBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE { VT_FEATURES = 4 };
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_FEATURES = 4,
+    VT_METADIGEST = 6
+  };
   const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>> *features() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>> *>(
         VT_FEATURES);
   }
+  const onerec::example::Digest *metaDigest() const {
+    return GetPointer<const onerec::example::Digest *>(VT_METADIGEST);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) && VerifyOffset(verifier, VT_FEATURES)
            && verifier.VerifyVector(features()) && verifier.VerifyVectorOfTables(features())
+           && VerifyOffset(verifier, VT_METADIGEST) && verifier.VerifyTable(metaDigest())
            && verifier.EndTable();
   }
 };
@@ -775,6 +818,9 @@ struct ExampleBuilder {
       flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>>>
           features) {
     fbb_.AddOffset(Example::VT_FEATURES, features);
+  }
+  void add_metaDigest(flatbuffers::Offset<onerec::example::Digest> metaDigest) {
+    fbb_.AddOffset(Example::VT_METADIGEST, metaDigest);
   }
   explicit ExampleBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -790,18 +836,21 @@ struct ExampleBuilder {
 inline flatbuffers::Offset<Example> CreateExample(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<onerec::example::Feature>>>
-        features = 0) {
+        features = 0,
+    flatbuffers::Offset<onerec::example::Digest> metaDigest = 0) {
   ExampleBuilder builder_(_fbb);
+  builder_.add_metaDigest(metaDigest);
   builder_.add_features(features);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<Example> CreateExampleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    std::vector<flatbuffers::Offset<onerec::example::Feature>> *features = nullptr) {
+    std::vector<flatbuffers::Offset<onerec::example::Feature>> *features = nullptr,
+    flatbuffers::Offset<onerec::example::Digest> metaDigest = 0) {
   auto features__ =
       features ? _fbb.CreateVectorOfSortedTables<onerec::example::Feature>(features) : 0;
-  return onerec::example::CreateExample(_fbb, features__);
+  return onerec::example::CreateExample(_fbb, features__, metaDigest);
 }
 
 inline bool VerifyTensorData(flatbuffers::Verifier &verifier, const void *obj, TensorData type) {
