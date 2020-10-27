@@ -65,15 +65,18 @@ bash {bash_args} {f_name}
             subprocess.check_call(cmd, shell=True)
 
 
-def get_common_docker_args(oneflow_src_dir=None, cache_dir=None, current_dir=None):
+def get_common_docker_args(
+    oneflow_src_dir=None, cache_dir=None, current_dir=None, house_dir=None
+):
     root = Path(cache_dir)
     child = Path(current_dir)
     assert root in child.parents
     cwd = os.getcwd()
     pwd_arg = f"-v {cwd}:{cwd}"
     cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
+    house_dir_arg = f"-v {house_dir}:{house_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
 
 
 def build_third_party(
@@ -143,6 +146,7 @@ def build_oneflow(
         oneflow_src_dir=oneflow_src_dir,
         cache_dir=cache_dir,
         current_dir=oneflow_build_dir,
+        house_dir=house_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
     bash_cmd = f"""set -ex
