@@ -623,7 +623,39 @@ def for_every_slice(var_blob, f):
             stop_nd_idx = [x + 1 for x in stop_nd_idx]
             yield start_nd_idx, stop_nd_idx, f(var_blob, start_nd_idx, stop_nd_idx, length)
             start_idx = stop_idx
-    
+
+
+_init_map = {}
+
+def register_initializer(flow_initializer):
+    def deco(func):
+        _init_map[flow_initializer] = func
+        return func
+    return deco
+
+
+def get_initializer_generator(initializer_conf):
+    f = None
+    for m in _init_map:
+        if initializer_conf.HasField(m):
+            f = _init_map[m]
+            break
+    assert f is not None, initializer_conf
+    yield from f(getattr(initializer_conf, m))
+
+
+@register_initializer('constant_conf')
+@register_initializer('constant_int_conf')
+def constant_initializer(initializer_conf: Union[op_conf_pb.ConstantInitializerConf, op_conf_pb.ConstantIntInitializerConf]):
+    while True:
+        yield initializer_conf.value
+
+
+@register_initializer('random_normal_conf')
+def random_normal_initializer(initializer_conf: op_conf_pb.RandomNormalInitializerConf):
+    rng = np.random.default_rng()
+    while True:
+        yield rng.normal(loc=initializer_conf.mean, scale=initializer_conf.std)
 
 
 def init():
@@ -637,9 +669,9 @@ def init():
         )
         def f(var_blob, start_nd_idx, stop_nd_idx, length):
             vals = []
+            g = get_initializer_generator(var_op_conf.variable_conf.initializer)
             for _ in range(length):
-                # TODO: dtype
-                vals.append(rng.normal() + 10)
+                vals.append(next(g))
             vals = (
                 np.array(vals)
                 .astype(np_dtype)
@@ -655,5 +687,7 @@ def init():
                 [1] * len(var_blob.shape),
                 scope_symbol_id,
             )
+        # we don't care about the return value,
+        # only want to run f on every slice
         for _ in for_every_slice(var_blob, f):
             pass

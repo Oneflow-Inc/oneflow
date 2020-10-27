@@ -39,19 +39,19 @@ class TestCheckpoint(flow.unittest.TestCase):
                 x = flow.get_variable(
                     name="x",
                     shape=(2, 3),
-                    initializer=flow.random_normal_initializer(),
+                    initializer=flow.random_normal_initializer(mean=10, stddev=1),
                     distribute=flow.distribute.split(0),
                     # distribute=flow.distribute.broadcast(),
                 )
                 y = flow.get_variable(
                     name="y",
                     shape=(2, 3),
-                    initializer=flow.random_uniform_initializer(),
+                    initializer=flow.constant_initializer(5),
                 )
                 z = flow.get_variable(
                     name="z",
                     shape=(2, 3),
-                    initializer=flow.xavier_uniform_initializer(),
+                    initializer=flow.random_normal_initializer(),
                 )
                 return flow.math.add_n([x, y, z])
 
@@ -63,6 +63,7 @@ class TestCheckpoint(flow.unittest.TestCase):
             check_point.init()
 
         vars_in_mem = flow.get_all_variables()
+        print(vars_in_mem)
         flow.checkpoint.load_variables({"y": vars_in_mem["x"]})
         test_case.assertTrue(
             np.array_equal(vars_in_mem["y"].numpy(), vars_in_mem["x"].numpy())
