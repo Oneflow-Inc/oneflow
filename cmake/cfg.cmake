@@ -18,6 +18,7 @@ execute_process(
     --get_message_type=pybind_registry_cc
   OUTPUT_VARIABLE PYBIND_REGISTRY_CC)
 
+include_directories(${CFG_INCLUDE_DIR})
 
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
