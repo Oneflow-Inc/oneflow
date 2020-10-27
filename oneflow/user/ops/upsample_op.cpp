@@ -20,10 +20,10 @@ namespace oneflow {
 REGISTER_USER_OP("upsample")
     .Input("x")
     .Output("y")
-    .Attr("height_scale", UserOpAttrType::kAtFloat)
-    .Attr("width_scale", UserOpAttrType::kAtFloat)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("interpolation", UserOpAttrType::kAtString)
+    .Attr<float>("height_scale")
+    .Attr<float>("width_scale")
+    .Attr<std::string>("data_format")
+    .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -50,10 +50,10 @@ REGISTER_USER_OP("upsample")
 REGISTER_USER_OP("upsample_grad")
     .Input("dy")
     .Output("dx")
-    .Attr("height_scale", UserOpAttrType::kAtFloat)
-    .Attr("width_scale", UserOpAttrType::kAtFloat)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("interpolation", UserOpAttrType::kAtString)
+    .Attr<float>("height_scale")
+    .Attr<float>("width_scale")
+    .Attr<std::string>("data_format")
+    .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
