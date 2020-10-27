@@ -124,16 +124,16 @@ class OpLib(object):
         assert os.path.exists(f"{self.src_prefix}_py_kernel.py")
         self.has_py_kernel = True
 
-    def AddCPUKernel(self):
+    def AddCPPKernel(self):
         flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
         compile(
             "g++",
             flags,
             "",
-            f"{self.src_prefix}_cpu_kernel.cpp",
-            f"{self.out_prefix}_cpu_kernel.o",
+            f"{self.src_prefix}_cpp_kernel.cpp",
+            f"{self.out_prefix}_cpp_kernel.o",
         )
-        self.objs.append(f"{self.out_prefix}_cpu_kernel.o")
+        self.objs.append(f"{self.out_prefix}_cpp_kernel.o")
         self.has_cpu_kernel = True
         return True
 
@@ -173,13 +173,9 @@ class OpLibLoader(object):
 
             def get_one_reg_src(op_type_name):
                 one_reg_src = f"""
-                # define REGISTER_{op_type_name}_KERNEL(cpp_type, dtype) REGISTER_USER_KERNEL("{op_type_name}").SetCreateFn<PyKernel<cpp_type>>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType() == dtype));
+                REGISTER_USER_KERNEL("{op_type_name}").SetCreateFn<PyKernel>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
 
-                OF_PP_FOR_EACH_TUPLE(REGISTER_{op_type_name}_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
-
-                # define REGISTER_{op_type_name}_GRAD_KERNEL(cpp_type, dtype) REGISTER_USER_KERNEL("{op_type_name}_grad").SetCreateFn<PyGradKernel<cpp_type>>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") & (user_op::HobDataType() == dtype));
-
-                OF_PP_FOR_EACH_TUPLE(REGISTER_{op_type_name}_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ);
+                REGISTER_USER_KERNEL("{op_type_name}_grad").SetCreateFn<PyGradKernel>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
                 """
                 return one_reg_src
 

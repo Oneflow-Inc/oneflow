@@ -32,8 +32,6 @@ hob::BoolFunctorPtr<KernelRegContext> HobFalse();
 hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
                                                               int tensor_idx);
 
-hob::HobContextGetter<KernelRegContext, DataType> HobDataType();
-
 template<typename T>
 hob::HobContextGetter<user_op::KernelRegContext, T> HobCtxGetter(
     const std::string& debug_str,
@@ -89,6 +87,7 @@ class HobStringContextGetter final {
 };
 
 HobStringContextGetter<KernelRegContext> HobDeviceTag();
+HobStringContextGetter<KernelRegContext> HobDeviceSubTag();
 
 }  // namespace user_op
 

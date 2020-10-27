@@ -67,6 +67,7 @@ class TestPySigmoid(flow.unittest.TestCase):
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
+        py_sigmoid_lib.AddCPPKernel()
         py_sigmoid_lib.Build()
 
         op_lib_ld = flow.util.op_lib_loader()
@@ -79,7 +80,7 @@ class TestPySigmoid(flow.unittest.TestCase):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
                 with flow.scope.placement("cpu", "0:0"):
-                    return py_sigmoid_lib.api.py_sigmoid(x)
+                    return py_sigmoid_lib.api.py_sigmoid(x, "py")
 
             return sigmoid_py_job
 
@@ -100,6 +101,7 @@ class TestPySigmoid(flow.unittest.TestCase):
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
+        py_sigmoid_lib.AddCPPKernel()
         py_sigmoid_lib.Build()
 
         op_lib_ld = flow.util.op_lib_loader()
@@ -115,7 +117,7 @@ class TestPySigmoid(flow.unittest.TestCase):
                 dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype),
             ):
                 with flow.scope.placement("cpu", "0:0"):
-                    return py_sigmoid_lib.api.py_sigmoid_grad(y, dy)
+                    return py_sigmoid_lib.api.py_sigmoid_grad(y, dy, "py")
 
             return sigmoid_py_grad_job
 

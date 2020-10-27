@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/util.h"
 
 namespace oneflow {
+
 namespace {
 void OFDataTypeToNumpyType(DataType of_data_type, int* out_numpy_type) {
   switch (of_data_type) {
@@ -55,7 +56,6 @@ void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
   }
 }
 
-template<typename T>
 void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   if (tensor == nullptr) {
     Py_INCREF(Py_None);
@@ -69,7 +69,8 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   int dim_size = tensor->shape().NumAxes();
   npy_intp dims[dim_size];
   FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
-  void* data = static_cast<void*>(const_cast<T*>(tensor->dptr<T>()));
+  // TODO(strint): float to T
+  void* data = static_cast<void*>(const_cast<float*>(tensor->dptr<float>()));
   auto* np_array =
       reinterpret_cast<PyArrayObject*>(PyArray_SimpleNewFromData(dim_size, dims, type_num, data));
   // Numpy will not release the data
@@ -77,7 +78,6 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   *arg_ptr = reinterpret_cast<PyObject*>(np_array);
 }
 
-template<typename T>
 void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
   PyObject* ro_array = PyArray_FromAny(arg, nullptr, 0, 0, NPY_ARRAY_CARRAY_RO, nullptr);
   // PyArray_FromAny has increased the reference count
@@ -97,11 +97,11 @@ void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
       << " is not equal to OneFlow tensor element count " << tensor->shape().elem_cnt();
 
   void* array_data_void = PyArray_DATA(array);
-  T* array_data = static_cast<T*>(array_data_void);
-  FOR_RANGE(int64_t, i, 0, array_elem_cnt) { tensor->mut_dptr<T>()[i] = array_data[i]; }
+  // TODO(strint) float to T
+  float* array_data = static_cast<float*>(array_data_void);
+  FOR_RANGE(int64_t, i, 0, array_elem_cnt) { tensor->mut_dptr<float>()[i] = array_data[i]; }
 }
 
-template<typename T>
 void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
                   PyObject** py_inputs) {
   const size_t kernel_in_num = ctx->inputs().size();
@@ -117,7 +117,7 @@ void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
     LOG(INFO) << "input arg_name " << arg_name;
     // do not support multi input in one symbolic arg name
     int32_t index = 0;
-    TensorToNumpy<T>(ctx->Tensor4ArgNameAndIndex(arg_name, index), &arg);
+    TensorToNumpy(ctx->Tensor4ArgNameAndIndex(arg_name, index), &arg);
     arg = PyArray_Return(reinterpret_cast<PyArrayObject*>(arg));
     PyList_SetItem(py_list, i, arg);
   }
@@ -125,7 +125,6 @@ void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
   CHECK(*py_inputs);
 }
 
-template<typename T>
 void GetPyOutputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
                   PyObject* py_outputs) {
   const size_t kernel_out_num = ctx->outputs().size();
@@ -137,19 +136,18 @@ void GetPyOutputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
       const std::string& arg_name = op_def.output(i).name();
       LOG(INFO) << "output arg_name " << arg_name;
       int32_t index = 0;
-      NumpyToTensor<T>(PyList_GetItem(py_outputs, i), ctx->Tensor4ArgNameAndIndex(arg_name, index));
+      NumpyToTensor(PyList_GetItem(py_outputs, i), ctx->Tensor4ArgNameAndIndex(arg_name, index));
     }
   } else if (PyArray_Check(py_outputs)) {
     const std::string& arg_name = ctx->outputs().at(0).first;
     LOG(INFO) << "output arg_name " << arg_name;
     int32_t index = 0;
-    NumpyToTensor<T>(py_outputs, ctx->Tensor4ArgNameAndIndex(arg_name, index));
+    NumpyToTensor(py_outputs, ctx->Tensor4ArgNameAndIndex(arg_name, index));
   } else {
     LOG(FATAL) << "Unexpeted PyObject was returned: " << Py_TYPE(py_outputs)->tp_name;
   }
 }
 
-template<typename T>
 void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_name) {
   const std::string& op_type_name = ctx->user_op_conf().op_type_name();
   const user_op::OpRegistryResult* val =
@@ -189,14 +187,14 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   }
 
   // get numpy input
-  MakePyInputs<T>(op_def, ctx, &py_inputs);
+  MakePyInputs(op_def, ctx, &py_inputs);
 
   // call func
   py_outputs = PyEval_CallObject(py_func, py_inputs);
   Py_DECREF(py_inputs);
 
   // get numpy output
-  GetPyOutputs<T>(op_def, ctx, py_outputs);
+  GetPyOutputs(op_def, ctx, py_outputs);
 
   Py_XDECREF(py_func);
   Py_DECREF(py_module);
@@ -208,26 +206,23 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
 
 }  // namespace
 
-template<typename T>
 class PyKernel : public user_op::OpKernel {
  public:
   PyKernel() = default;
   ~PyKernel() = default;
 
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute<T>(ctx, "forward"); }
-};  // namespace oneflow
+  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute(ctx, "forward"); }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
 
-template<typename T>
 class PyGradKernel final : public user_op::OpKernel {
  public:
   PyGradKernel() = default;
   ~PyGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute<T>(ctx, "backward"); }
+  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute(ctx, "backward"); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 

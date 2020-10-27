@@ -51,25 +51,21 @@ hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string&
       });
 }
 
-hob::HobContextGetter<KernelRegContext, DataType> HobDataType() {
-  std::ostringstream string_stream;
-  string_stream << "data_type of first tensor ";
-  return hob::HobContextGetter<KernelRegContext, DataType>(
-      string_stream.str(), [](const KernelRegContext& ctx) {
-        CHECK_GE(ctx.inputs().size(), 0);
-        const auto& first_input = ctx.inputs().at(0);
-        const user_op::TensorDesc* desc =
-            ctx.TensorDesc4ArgNameAndIndex(first_input.first, first_input.second);
-        return desc->data_type();
-      });
-}
-
 HobStringContextGetter<KernelRegContext> HobDeviceTag() {
   std::ostringstream string_stream;
   string_stream << "device_tag";
   return HobStringContextGetter<KernelRegContext>(
       string_stream.str(),
       [](const KernelRegContext& ctx) -> const std::string& { return ctx.device_tag(); });
+}
+
+HobStringContextGetter<KernelRegContext> HobDeviceSubTag() {
+  std::ostringstream string_stream;
+  string_stream << "device_sub_tag";
+  return HobStringContextGetter<KernelRegContext>(
+      string_stream.str(), [](const KernelRegContext& ctx) -> const std::string& {
+        return ctx.Attr<std::string>("device_sub_tag");
+      });
 }
 
 }  // namespace user_op
