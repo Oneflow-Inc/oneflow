@@ -21,7 +21,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     .Input("data")
     .Input("segment_ids")
     .Output("out")
-    .Attr("num_segments", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("num_segments")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
       const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);

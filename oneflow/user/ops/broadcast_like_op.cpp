@@ -82,7 +82,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 REGISTER_USER_OP("broadcast_like")
     .Input("x")
     .Input("like")
-    .Attr("broadcast_axes", UserOpAttrType::kAtListInt32)
+    .Attr<std::vector<int32_t>>("broadcast_axes")
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
