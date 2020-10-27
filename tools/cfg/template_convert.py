@@ -93,7 +93,7 @@ def convert_pybind(
     if not os.path.exists(os.path.dirname(dst_pybind_path)):
         if os.path.dirname(dst_pybind_path):
             os.makedirs(os.path.dirname(dst_pybind_path))
-    
+
     if not os.path.exists(dst_pybind_path) or not filecmp.cmp(
         tmp_pybind_path, dst_pybind_path
     ):
@@ -160,7 +160,7 @@ def main():
     for file_name in old_cfg_files_need_del:
         if os.path.exists(file_name):
             os.remove(file_name)
-    
+
     rmtree(args.cfg_workspace_dir)
 
 
