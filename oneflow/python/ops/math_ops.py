@@ -1866,11 +1866,11 @@ def range(
     # Infer range shape
     # TODO: Is it possible to infer shape in c++ backend in later version?
 
-    def div_cell(a, b):
+    def div_ceil(a, b):
         # Compute the ceil of A / B
         return int((a + b - 1) / b)
 
-    _range_shape = div_cell((limit - start), delta)
+    _range_shape = div_ceil((limit - start), delta)
 
     # Build User OP
     return (
