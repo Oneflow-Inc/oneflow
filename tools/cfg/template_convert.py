@@ -1,7 +1,6 @@
 import sys
 import os
 import argparse
-import importlib
 from jinja2 import Environment, FileSystemLoader
 import util.proto_reflect_util as proto_reflect_util
 
@@ -15,10 +14,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-sys.path.append(args.of_proto_python_dir)
-sys.path.append(os.path.dirname(args.proto_py_path))
+sys.path.insert(0, args.of_proto_python_dir)
+sys.path.insert(0, os.path.dirname(args.proto_py_path))
 
-demo = importlib.import_module((args.proto_py_path).split("/")[-1])
+demo = __import__((args.proto_py_path).split("/")[-1])
 THIS_DIR = os.path.dirname(os.path.abspath(__file__)) + "/template"
 
 

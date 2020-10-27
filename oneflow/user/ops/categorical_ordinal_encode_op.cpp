@@ -22,7 +22,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Input("size")
     .Input("in")
     .Output("out")
-    .Attr("hash_precomputed", UserOpAttrType::kAtBool)
+    .Attr<bool>("hash_precomputed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(IsIndexDataType(data_type));
