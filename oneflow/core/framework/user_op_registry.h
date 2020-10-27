@@ -153,9 +153,14 @@ class OpRegistry final {
   OpRegistry& SupportCpuOnly();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
-  OpRegistry& Attr(const std::string& name, UserOpAttrType type);
+  __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, UserOpAttrType type);
   template<typename T>
-  OpRegistry& Attr(const std::string& name, UserOpAttrType type, T&& default_val);
+  __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, UserOpAttrType type,
+                                               const T& default_val);
+  template<typename T>
+  OpRegistry& Attr(const std::string& name, const T& default_val);
+  template<typename T>
+  OpRegistry& Attr(const std::string& name);
 
   /**
    * @brief Set the TensorDescInferFn which is mainly used to infer the shape or data type of
@@ -200,6 +205,8 @@ class OpRegistry final {
  private:
   OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                       bool num_as_min);
+  OpRegistry& DefaultedAttr(const std::string& name, UserOpAttrType type,
+                            const std::function<void(UserOpDef::AttrDef*)>& SetDefault);
 
  private:
   HashSet<std::string> unique_names_;

@@ -20,8 +20,8 @@ namespace oneflow {
 REGISTER_CPU_ONLY_USER_OP("image_decode")
     .Input("in")
     .Output("out")
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kUInt8)
+    .Attr<std::string>("color_space", "BGR")
+    .Attr<DataType>("data_type", DataType::kUInt8)
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
