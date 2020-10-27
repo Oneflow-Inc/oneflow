@@ -56,6 +56,23 @@ void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
   }
 }
 
+#define TENSOR_MEM_CAST(dtype) static_cast<void*>(const_cast<dtype*>(tensor->dptr<dtype>()))
+
+void* TensorToMem(user_op::Tensor* tensor) {
+  switch (tensor->data_type()) {
+    case DataType::kFloat: return TENSOR_MEM_CAST(float);
+    case DataType::kDouble: return TENSOR_MEM_CAST(double);
+    case DataType::kInt8: return TENSOR_MEM_CAST(int8_t);
+    case DataType::kInt32: return TENSOR_MEM_CAST(int32_t);
+    case DataType::kInt64: return TENSOR_MEM_CAST(int64_t);
+    case DataType::kUInt8: return TENSOR_MEM_CAST(uint8_t);
+    case DataType::kFloat16: return TENSOR_MEM_CAST(float16);
+    default:
+      LOG(FATAL) << "OneFlow data type " << DataType_Name(tensor->data_type())
+                 << " is not supported yet.";
+  }
+}
+
 void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   if (tensor == nullptr) {
     Py_INCREF(Py_None);
@@ -69,13 +86,34 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   int dim_size = tensor->shape().NumAxes();
   npy_intp dims[dim_size];
   FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
-  // TODO(strint): float to T
-  void* data = static_cast<void*>(const_cast<float*>(tensor->dptr<float>()));
+
+  void* data = TensorToMem(tensor);
   auto* np_array =
       reinterpret_cast<PyArrayObject*>(PyArray_SimpleNewFromData(dim_size, dims, type_num, data));
   // Numpy will not release the data
   PyArray_CLEARFLAGS(np_array, NPY_ARRAY_OWNDATA);
   *arg_ptr = reinterpret_cast<PyObject*>(np_array);
+}
+
+#define TENSOR_MEM_ASSIGN(dtype)                                                     \
+  do {                                                                               \
+    dtype* array_data = static_cast<dtype*>(array_data_ptr);                         \
+    FOR_RANGE(int64_t, i, 0, size) { tensor->mut_dptr<dtype>()[i] = array_data[i]; } \
+  } while (0)
+
+void MemToTensor(void* array_data_ptr, const size_t size, user_op::Tensor* tensor) {
+  switch (tensor->data_type()) {
+    case DataType::kFloat: TENSOR_MEM_ASSIGN(float) break;
+    case DataType::kDouble: TENSOR_MEM_ASSIGN(double) break;
+    case DataType::kInt8: TENSOR_MEM_ASSIGN(int8_t) break;
+    case DataType::kInt32: TENSOR_MEM_ASSIGN(int32_t) break;
+    case DataType::kInt64: TENSOR_MEM_ASSIGN(int64_t) break;
+    case DataType::kUInt8: TENSOR_MEM_ASSIGN(uint8_t) break;
+    case DataType::kFloat16: TENSOR_MEM_ASSIGN(float16) break;
+    default:
+      LOG(FATAL) << "OneFlow data type " << DataType_Name(tensor->data_type())
+                 << " is not supported yet.";
+  }
 }
 
 void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
@@ -96,10 +134,8 @@ void NumpyToTensor(PyObject* arg, user_op::Tensor* tensor) {
       << "Numpy array element count " << array_elem_cnt
       << " is not equal to OneFlow tensor element count " << tensor->shape().elem_cnt();
 
-  void* array_data_void = PyArray_DATA(array);
-  // TODO(strint) float to T
-  float* array_data = static_cast<float*>(array_data_void);
-  FOR_RANGE(int64_t, i, 0, array_elem_cnt) { tensor->mut_dptr<float>()[i] = array_data[i]; }
+  void* array_data_ptr = PyArray_DATA(array);
+  MemToTensor(array_data_ptr, array_elem_cnt, tensor);
 }
 
 void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
@@ -204,8 +240,6 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   PyGILState_Release(py_gil_st);
 }
 
-}  // namespace
-
 class PyKernel : public user_op::OpKernel {
  public:
   PyKernel() = default;
@@ -225,5 +259,7 @@ class PyGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute(ctx, "backward"); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+}  // namespace
 
 }  // namespace oneflow
