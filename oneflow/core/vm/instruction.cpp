@@ -73,7 +73,6 @@ void InstructionMsg::__Init__(const cfg::InstructionProto& cfg_proto) {
   }
 }
 
-
 void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
