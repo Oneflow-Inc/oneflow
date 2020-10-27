@@ -19,11 +19,11 @@ namespace oneflow {
 REGISTER_USER_OP("constant")
     .Output("out")
     .SetOutputBufferNum(1)
-    .Attr("floating_value", UserOpAttrType::kAtDouble)
-    .Attr("integer_value", UserOpAttrType::kAtInt64)
-    .Attr("is_floating_value", UserOpAttrType::kAtBool)
-    .Attr("dtype", UserOpAttrType::kAtDataType)
-    .Attr("shape", UserOpAttrType::kAtShape)
+    .Attr<double>("floating_value")
+    .Attr<int64_t>("integer_value")
+    .Attr<bool>("is_floating_value")
+    .Attr<DataType>("dtype")
+    .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
