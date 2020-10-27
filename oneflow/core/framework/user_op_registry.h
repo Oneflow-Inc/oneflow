@@ -143,13 +143,64 @@ class OpRegistry final {
    */
   OpRegistry& OptionalInputWithMinimum(const std::string& name, int32_t min_num);
 
+  /**
+   * @brief The usage is similar to Input(const std::string& name);
+   * 
+   * @param name 
+   * @return OpRegistry& 
+   */
   OpRegistry& Output(const std::string& name);
+
+  /**
+   * @brief The usage is similar to Input(const std::string& name, int32_t num);
+   * 
+   * @param name 
+   * @param num 
+   * @return OpRegistry& 
+   */
   OpRegistry& Output(const std::string& name, int32_t num);
+
+  /**
+   * @brief The usage is similar to InputWithMinimum(const std::string& name, int32_t min_num);
+   * 
+   * @param name 
+   * @param min_num 
+   * @return OpRegistry& 
+   */
   OpRegistry& OutputWithMinimum(const std::string& name, int32_t min_num);
+
+  /**
+   * @brief The usage is similar to OptionalInput(const std::string& name);
+   * 
+   * @param name 
+   * @return OpRegistry& 
+   */
   OpRegistry& OptionalOutput(const std::string& name);
+
+  /**
+   * @brief The usage is similar to OptionalInput(const std::string& name, int32_t num);
+   * 
+   * @param name 
+   * @param num 
+   * @return OpRegistry& 
+   */
   OpRegistry& OptionalOutput(const std::string& name, int32_t num);
+
+  /**
+   * @brief The usage is similar to OptionalInputWithMinimum(const std::string& name, int32_t min_num);
+   * 
+   * @param name 
+   * @param min_num 
+   * @return OpRegistry& 
+   */
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
+  /**
+   * @brief This method is called when you only want to register op on CPU. This method is 
+   * used by macro REGISTER_CPU_ONLY_USER_OP 
+   *
+   * @return OpRegistry& 
+   */
   OpRegistry& SupportCpuOnly();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
@@ -195,6 +246,15 @@ class OpRegistry final {
    * @return OpRegistry& 
    */
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
+
+  /**
+   * @brief Set the OutputArgModifyFn which is similar to InputArgModifyFn, used for setting modifier of output.
+   * Modifier of output includes "is_mutable", "use_header_only", "header_infered_before_compute" and "inplace_type"
+   * which defiend in oneflow\core\operator\arg_modifier_signature.proto.
+   *  
+   * @param fn 
+   * @return OpRegistry& 
+   */
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistry& SetInferOutputBlobTimeShapeFn(InferOutputBlobTimeShapeFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
