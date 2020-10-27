@@ -47,6 +47,19 @@ void Operand::__Init__(const OperandProto& proto) {
   }
 }
 
+void Operand::__Init__(const cfg::OperandProto& cfg_proto) {
+  set_logical_object_id(cfg_proto.logical_object_id());
+  if (cfg_proto.has_sole_mirrored_object()) {
+    mutable_sole_mirrored_object();
+  } else if (cfg_proto.has_current_global_device_id()) {
+    mutable_current_global_device_id();
+  } else if (cfg_proto.has_all_mirrored_object()) {
+    mutable_all_mirrored_object();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 int64_t Operand::GetGlobalDeviceId(int64_t current_global_device_id) const {
   if (has_sole_mirrored_object()) { return 0; }
   CHECK(has_current_global_device_id());
