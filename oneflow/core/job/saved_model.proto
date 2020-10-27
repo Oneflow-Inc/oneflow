@@ -11,7 +11,7 @@ message SavedModel {
   required int64 version = 2;
   repeated string checkpoint_dir = 3;
   map<string, DLNetConf> graphs = 4;
-  map<string, SignatureDef> singatures = 5;
+  map<string, JobSignatureDef> signatures = 5;
   repeated JobGraph job_graphs = 6;
 }
 
@@ -28,22 +28,6 @@ message JobGraph {
   repeated string input_job_names = 2;
   repeated string output_job_names = 3;
   map<string, ListProducerInfo> dependency_between_jobs = 4;
-}
-
-message SignatureDef {
-  map<string, InputDef> inputs = 1;
-  map<string, OutputDef> outputs = 2;
-  required string method_name = 3;
-}
-
-message InputDef {
-  repeated string consumer_op_names = 1;
-  repeated string consumer_op_input_bns = 2;
-  required InterfaceBlobConf blob_conf = 3;
-}
-
-message OutputDef {
-  required string producer_op_name = 1;
 }
 
 message ModelParallelDesc {
