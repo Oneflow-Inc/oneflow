@@ -32,7 +32,8 @@ def get_copy_python_file():
 
 
 def get_convert_src_file():
-    connector = " "
+    # use ';' to produce a list of cmake
+    connector = ";"
     src_files = [
         SCRIPT_DIR + "/pybind_module_registry.cpp",
     ]
