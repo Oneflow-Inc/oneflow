@@ -604,6 +604,7 @@ bool Const{{ util.class_name(cls) }}::__Empty__() const {
 }
 
 int Const{{ util.class_name(cls) }}::FieldNumber4FieldName(const ::std::string& field_name) const  {
+{% if util.has_message_type_fields(cls) %}
   static const ::std::map<::std::string, int> field_name2field_number{
 {% for field in util.message_type_fields(cls) %}
     {"{{ util.field_name(field) }}", {{ util.field_number(field) }}},
@@ -612,9 +613,13 @@ int Const{{ util.class_name(cls) }}::FieldNumber4FieldName(const ::std::string& 
   const auto& iter = field_name2field_number.find(field_name);
   if (iter != field_name2field_number.end()) { return iter->second; }
   return 0;
+{% else %}
+  return 0;
+{% endif %}{# has message type fields #}
 }
 
 bool Const{{ util.class_name(cls) }}::FieldDefined4FieldNumber(int field_number) const  {
+{% if util.has_message_type_fields(cls) %}
   switch (field_number) {
 {% for field in util.message_type_fields(cls) %}
     case {{ util.field_number(field) }}:
@@ -623,6 +628,9 @@ bool Const{{ util.class_name(cls) }}::FieldDefined4FieldNumber(int field_number)
     default:
       return false;
   }
+{% else %}
+  return false;
+{% endif %}{# has message type fields #}
 }
 
 const ::std::set<::std::type_index>& Const{{ util.class_name(cls) }}::ValidTypeIndices4FieldNumber(int field_number) const {
