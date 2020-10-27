@@ -18,11 +18,10 @@ limitations under the License.
 namespace oneflow {
 REGISTER_USER_OP("range")
     .Output("out")
-    .Attr("start", UserOpAttrType::kAtInt64)
-    .Attr("limit", UserOpAttrType::kAtInt64)
-    .Attr("delta", UserOpAttrType::kAtInt64)
-    .Attr("range_shape", UserOpAttrType::kAtInt64)
-    .Attr("dtype", UserOpAttrType::kAtDataType)
+    .Attr<int64_t>("start")
+    .Attr<int64_t>("delta")
+    .Attr<int64_t>("range_shape")
+    .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       auto dtype = ctx->Attr<DataType>("dtype");

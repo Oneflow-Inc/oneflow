@@ -1852,16 +1852,16 @@ def range(
     # Ensure the dtype is not None
     assert dtype is not None, "Please specified data type"
 
-    # Ensure start, limit, delta's dtype is int, We will Add dtype hierarchy in Later version.
-    assert type(start) == int, "Params `start`'s type should be int"
-    assert type(limit) == int, "Params `limit`'s type should be int"
-    assert type(delta) == int, "Params `delta`'s type should be int"
-
     if limit is None:
         # If limit is None, We start from zero.
         start, limit = 0, start
 
     assert limit > start, "Limit should be larger than start"
+
+    # Ensure start, limit, delta's dtype is int, We will Add dtype hierarchy in Later version.
+    assert type(start) == int, "Params `start`'s type should be int"
+    assert type(limit) == int, "Params `limit`'s type should be int"
+    assert type(delta) == int, "Params `delta`'s type should be int"
 
     # Infer range shape
     # TODO: Is it possible to infer shape in c++ backend in later version?
@@ -1877,7 +1877,6 @@ def range(
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Range_"))
         .Op("range")
         .Attr("start", start)
-        .Attr("limit", limit)
         .Attr("delta", delta)
         .Attr("dtype", dtype)
         .Attr("range_shape", _range_shape)

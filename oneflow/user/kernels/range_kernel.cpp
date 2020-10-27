@@ -27,7 +27,6 @@ class RangeKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t start = ctx->Attr<int64_t>("start");
-    const int64_t limit = ctx->Attr<int64_t>("limit");
     const int64_t delta = ctx->Attr<int64_t>("delta");
     const int64_t range_shape = ctx->Attr<int64_t>("range_shape");
     FOR_RANGE(int64_t, i, start, range_shape) {
