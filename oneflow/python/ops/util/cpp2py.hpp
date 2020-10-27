@@ -58,7 +58,7 @@ void NumpyTypeToOFDataType(PyArrayObject* array, DataType* of_data_type) {
 
 #define TENSOR_MEM_CAST(dtype) static_cast<void*>(const_cast<dtype*>(tensor->dptr<dtype>()))
 
-void* TensorToMem(user_op::Tensor* tensor) {
+void* TensorToMem(const user_op::Tensor* tensor) {
   switch (tensor->data_type()) {
     case DataType::kFloat: return TENSOR_MEM_CAST(float);
     case DataType::kDouble: return TENSOR_MEM_CAST(double);
@@ -103,13 +103,13 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
 
 void MemToTensor(void* array_data_ptr, const size_t size, user_op::Tensor* tensor) {
   switch (tensor->data_type()) {
-    case DataType::kFloat: TENSOR_MEM_ASSIGN(float) break;
-    case DataType::kDouble: TENSOR_MEM_ASSIGN(double) break;
-    case DataType::kInt8: TENSOR_MEM_ASSIGN(int8_t) break;
-    case DataType::kInt32: TENSOR_MEM_ASSIGN(int32_t) break;
-    case DataType::kInt64: TENSOR_MEM_ASSIGN(int64_t) break;
-    case DataType::kUInt8: TENSOR_MEM_ASSIGN(uint8_t) break;
-    case DataType::kFloat16: TENSOR_MEM_ASSIGN(float16) break;
+    case DataType::kFloat: TENSOR_MEM_ASSIGN(float); break;
+    case DataType::kDouble: TENSOR_MEM_ASSIGN(double); break;
+    case DataType::kInt8: TENSOR_MEM_ASSIGN(int8_t); break;
+    case DataType::kInt32: TENSOR_MEM_ASSIGN(int32_t); break;
+    case DataType::kInt64: TENSOR_MEM_ASSIGN(int64_t); break;
+    case DataType::kUInt8: TENSOR_MEM_ASSIGN(uint8_t); break;
+    case DataType::kFloat16: TENSOR_MEM_ASSIGN(float16); break;
     default:
       LOG(FATAL) << "OneFlow data type " << DataType_Name(tensor->data_type())
                  << " is not supported yet.";
