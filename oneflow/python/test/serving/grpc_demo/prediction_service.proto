@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package oneflow.serving;
+
+service PredictionService {
+    rpc Predict(PredictRequest) returns (PredictResponse) {}
+}
+
+message PredictRequest {
+    required bytes np_array_content = 2;
+    repeated int32 np_array_shapes = 3;
+}
+
+message PredictResponse {
+    required string predicted_class = 3;
+    required float predicted_score = 4;
+}
