@@ -29,9 +29,10 @@ class RangeKernel final : public OpKernel {
     const int64_t start = ctx->Attr<int64_t>("start");
     const int64_t delta = ctx->Attr<int64_t>("delta");
     const int64_t range_shape = ctx->Attr<int64_t>("range_shape");
-    FOR_RANGE(int64_t, i, start, range_shape) {
+
+    FOR_RANGE(int64_t, i, 0, range_shape) {
       // In Python, range_shape = int((limit-start)/delta)
-      out_tensor->mut_dptr<T>()[i] = i * delta;
+      out_tensor->mut_dptr<T>()[i] = start + i * delta;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
