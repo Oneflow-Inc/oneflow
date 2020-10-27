@@ -2,7 +2,6 @@ import sys
 import os
 import argparse
 import filecmp
-import glob
 from shutil import copyfile, rmtree
 from jinja2 import Environment, FileSystemLoader
 import util.proto_reflect_util as proto_reflect_util
