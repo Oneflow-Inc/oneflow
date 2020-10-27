@@ -210,9 +210,8 @@ class ProtoReflectionUtil:
         )
 
     def field_repeated_container_name(self, field):
-        module_prefix = self.module_header_macro_lock(field.containing_type.file)
         type_name = self.field_type_name(field)
-        return _ToValidVarName("_%s_RepeatedField_%s_" % (module_prefix, type_name))
+        return _ToValidVarName("_RepeatedField_%s_" % (type_name))
 
     def field_map_pair_type_name_with_underline(self, field):
         return "%s_%s" % (
@@ -221,9 +220,8 @@ class ProtoReflectionUtil:
         )
 
     def field_map_container_name(self, field):
-        module_prefix = self.module_header_macro_lock(field.containing_type.file)
         type_name = self.field_map_pair_type_name_with_underline(field)
-        return _ToValidVarName("_%s_MapField_%s_" % (module_prefix, type_name))
+        return _ToValidVarName("_MapField_%s_" % (type_name))
 
     def field_is_enum_type(self, field):
         return field.enum_type is not None

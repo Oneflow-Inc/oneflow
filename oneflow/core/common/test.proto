@@ -1,0 +1,25 @@
+syntax="proto2";
+package oneflow;
+
+message TestBar {
+  required string name = 1 [default = "undefined-name"];
+  optional string nickname = 2 [default = "undefined-nickname"];
+  repeated int32 grade = 3;
+  map<int32, int32> map_int32 = 6;
+  map<int64, int64> map_int64 = 7;
+  oneof of_bar {
+    int64 of_int_value = 4;
+    float of_float_value = 5;
+  }
+}
+
+message TestFoo {
+  required string name = 1 [default="unnamed"];
+  optional int64 opt_int_value = 2;
+  repeated TestBar bar = 3;
+  map<int32, TestBar> map_bar = 6;
+  oneof oneof_type {
+    TestBar of_bar = 4;
+    int64 of_int_value = 5;
+  }
+}
