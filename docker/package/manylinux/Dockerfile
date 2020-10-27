@@ -47,5 +47,3 @@ RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.
 RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
     && chmod +x /usr/local/bin/bazel \
     && bazel
-
-# RUN echo "source scl_source enable devtoolset-7" >> ~/.bashrc
