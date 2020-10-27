@@ -74,7 +74,9 @@ def get_common_docker_args(
     cwd = os.getcwd()
     pwd_arg = f"-v {cwd}:{cwd}"
     cache_dir_arg = f"-v {cache_dir}:{cache_dir}"
-    house_dir_arg = f"-v {house_dir}:{house_dir}"
+    house_dir_arg = ""
+    if house_dir:
+        house_dir_arg = f"-v {house_dir}:{house_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
     return f"-v {oneflow_src_dir}:{oneflow_src_dir} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
 
