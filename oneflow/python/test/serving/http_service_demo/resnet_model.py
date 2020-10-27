@@ -195,6 +195,7 @@ def resnet50(
         )
     return fc1001
 
+
 # def main():
 #     import oneflow.typing as tp
 #     @flow.global_function("predict", flow.function_config())

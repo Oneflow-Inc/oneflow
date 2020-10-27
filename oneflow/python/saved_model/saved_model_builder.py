@@ -19,6 +19,7 @@ import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.shape_pb2 as shape_pb2
 import oneflow.core.job.dlnet_conf_pb2 as op_list_pb
 import oneflow.core.job.saved_model_pb2 as model_pb
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
@@ -112,9 +113,9 @@ class SavedModelBuilder(object):
 
         op_graph = compiler.job_map[job_func.__name__].net.op
         # fill the sinagures field
-        singature_def = model_pb.SignatureDef()
+        singature_def = job_conf_pb.JobSignatureDef()
         for ibn in input_blob_names:
-            input_def = model_pb.InputDef()
+            input_def = job_conf_pb.JobInputDef()
 
             # find consumer op names
             for op in op_graph:
@@ -132,7 +133,7 @@ class SavedModelBuilder(object):
             singature_def.inputs[ibn].CopyFrom(input_def)
 
         for obn in output_blob_names:
-            output_def = model_pb.OutputDef()
+            output_def = job_conf_pb.JobOutputDef()
             found_producer = False
             # find producer op name
             for op in op_graph:
@@ -148,7 +149,7 @@ class SavedModelBuilder(object):
             singature_def.outputs[obn].CopyFrom(output_def)
 
         singature_def.method_name = method_name
-        self.saved_model_proto_.singatures[job_func.__name__].CopyFrom(singature_def)
+        self.saved_model_proto_.signatures[job_func.__name__].CopyFrom(singature_def)
         return self
 
     def AddJobGraph(
