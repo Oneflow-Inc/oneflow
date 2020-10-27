@@ -204,7 +204,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Output("out")                                            \
       .Output("mask")                                           \
       .Output("count")                                          \
-      .Attr("axis", UserOpAttrType::kAtListInt32)               \
+      .Attr<std::vector<int32_t>>("axis")                       \
       .SetTensorDescInferFn(InferReduceDeviceStageTensorDescFn) \
       .SetBatchAxisInferFn(InferReduceDeviceStageBatchAxisFn)   \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
@@ -218,7 +218,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
       .Input("mask")                                                \
       .Input("count")                                               \
       .Output("in_diff")                                            \
-      .Attr("axis", UserOpAttrType::kAtListInt32)                   \
+      .Attr<std::vector<int32_t>>("axis")                           \
       .SetTensorDescInferFn(InferReduceDeviceStageGradTensorDescFn) \
       .SetBatchAxisInferFn(InferReduceDeviceStageGradBatchAxisFn)   \
       .SetGetSbpFn(GetReduceDeviceStageGradSbpFn);
@@ -257,8 +257,8 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .Input("device_count")                                                      \
       .Output("out")                                                              \
       .Output("mask")                                                             \
-      .Attr("axis", UserOpAttrType::kAtListInt32)                                 \
-      .Attr("keepdims", UserOpAttrType::kAtBool)                                  \
+      .Attr<std::vector<int32_t>>("axis")                                         \
+      .Attr<bool>("keepdims")                                                     \
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
       .SetBatchAxisInferFn(InferReduceGlobalStageBatchAxisFn)                     \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
@@ -278,8 +278,8 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
       .Input("mask")                                                \
       .Input("device_count")                                        \
       .Output("in_diff")                                            \
-      .Attr("axis", UserOpAttrType::kAtListInt32)                   \
-      .Attr("keepdims", UserOpAttrType::kAtBool)                    \
+      .Attr<std::vector<int32_t>>("axis")                           \
+      .Attr<bool>("keepdims")                                       \
       .SetTensorDescInferFn(InferReduceGlobalStageGradTensorDescFn) \
       .SetBatchAxisInferFn(InferReduceDeviceStageGradBatchAxisFn)   \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
