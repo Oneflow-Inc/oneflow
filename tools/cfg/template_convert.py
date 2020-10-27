@@ -87,7 +87,7 @@ def convert_pybind(
     rel_dst_pybind_path = os.path.relpath(dst_pybind_path, start=args.project_build_dir)
     tmp_pybind_path = workspace_dir + "/" + rel_dst_pybind_path
 
-    render_cfg_file(tmp_pybind_path, "template.pybind.cpp", module)
+    render_cfg_file(tmp_pybind_path, "template.cfg.pybind.cpp", module)
 
     if not os.path.exists(os.path.dirname(dst_pybind_path)):
         if os.path.dirname(dst_pybind_path):
@@ -121,7 +121,7 @@ def render_template(proto_file_list, generated_file_list):
             proto_file_name[:-6],
         )
 
-        dst_pybind_path = "%s/%s/%s.pybind.cpp" % (
+        dst_pybind_path = "%s/%s/%s.cfg.pybind.cpp" % (
             args.project_build_dir,
             rel_proto_file_path,
             proto_file_name[:-6],
@@ -143,7 +143,7 @@ def main():
     for dirpath, dirnames, filenames in os.walk(args.project_build_dir + "/oneflow"):
         for filename in filenames:
             abs_file_path = os.path.join(dirpath, filename)
-            if abs_file_path.endswith((".cfg.cpp", ".cfg.h", ".pybind.cpp")):
+            if abs_file_path.endswith((".cfg.cpp", ".cfg.h", ".cfg.pybind.cpp")):
                 old_cfg_files.append(abs_file_path)
 
     # use generated_file_list save generated cfg files this time
