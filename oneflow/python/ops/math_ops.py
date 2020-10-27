@@ -1840,3 +1840,49 @@ def tril(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("range")
+def range(
+    start, limit=None, delta=1, dtype=None, name="range"
+) -> remote_blob_util.BlobDef:
+    r"""
+        Still in Build
+    """
+    # Ensure the dtype is not None
+    assert dtype is not None, "Please specified data type"
+
+    # Ensure start, limit, delta's dtype is int, We will Add dtype hierarchy in Later version.
+    assert type(start) == int, "Params `start`'s type should be int"
+    assert type(limit) == int, "Params `limit`'s type should be int"
+    assert type(delta) == int, "Params `delta`'s type should be int"
+
+    if limit is None:
+        # If limit is None, We start from zero.
+        start, limit = 0, start
+
+    assert limit > start, "Limit should be larger than start"
+
+    # Infer range shape
+    # TODO: Is it possible to infer shape in c++ backend in later version?
+
+    def div_cell(a, b):
+        # Compute the ceil of A / B
+        return int((a + b - 1) / b)
+
+    _range_shape = div_cell((limit - start), delta)
+
+    # Build User OP
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Range_"))
+        .Op("range")
+        .Attr("start", start)
+        .Attr("limit", limit)
+        .Attr("delta", delta)
+        .Attr("dtype", dtype)
+        .Attr("range_shape", _range_shape)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
