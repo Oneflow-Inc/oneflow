@@ -21,10 +21,10 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type>
-class SspVariableProxy final : public user_op::OpKernel {
+class SspVariableProxyKernel final : public user_op::OpKernel {
  public:
-  SspVariableProxy() = default;
-  ~SspVariableProxy() override = default;
+  SspVariableProxyKernel() = default;
+  ~SspVariableProxyKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -44,7 +44,7 @@ class SspVariableProxy final : public user_op::OpKernel {
 
 #define REGISTER_SSP_VARIABLE_PROXY_KERNEL(device)                                              \
   REGISTER_USER_KERNEL("ssp_variable_proxy")                                                    \
-      .SetCreateFn<SspVariableProxy<device>>()                                                  \
+      .SetCreateFn<SspVariableProxyKernel<device>>()                                            \
       .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
