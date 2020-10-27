@@ -238,9 +238,13 @@ def main(args):
     # keypoint: save alexnet
     saved_model_builder = flow.saved_model.SavedModelBuilder("./saved_models", 1)
     saved_model_builder.ModelName("alexnet").AddJobFunction(
-        alexnet_train_job, ["CropMirrorNormalize_3/out_0"], ["softmax_loss/out_0"]
+        alexnet_train_job,
+        {"image": "CropMirrorNormalize_3/out_0"},
+        {"score": "softmax_loss/out_0"},
     ).AddJobFunction(
-        alexnet_eval_job, ["CropMirrorNormalize_14/out_0"], ["softmax_loss/out_0"]
+        alexnet_eval_job,
+        {"image": "CropMirrorNormalize_14/out_0"},
+        {"score": "softmax_loss/out_0"},
     ).Save()
 
 
