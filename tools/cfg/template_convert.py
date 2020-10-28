@@ -147,7 +147,7 @@ def main():
     proto_file_list = args.proto_file_list.split(" ")
     # get old generated cfg files
     old_cfg_files = []
-    for dirpath, _, filenames in os.walk(args.project_build_dir + "/oneflow"):
+    for dirpath, _, filenames in os.walk(args.project_build_dir):
         for filename in filenames:
             abs_file_path = os.path.join(dirpath, filename)
             if abs_file_path.endswith((".cfg.cpp", ".cfg.h", ".cfg.pybind.cpp")):
