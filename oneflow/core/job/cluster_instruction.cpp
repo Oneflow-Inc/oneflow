@@ -144,7 +144,8 @@ void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* clust
   PullClusterInstruction(cluster_instruction);
 }
 
-void ClusterInstruction::WorkerReceiveInstruction(cfg::ClusterInstructionProto* cfg_cluster_instruction) {
+void ClusterInstruction::WorkerReceiveInstruction(
+    cfg::ClusterInstructionProto* cfg_cluster_instruction) {
   PullClusterInstruction(cfg_cluster_instruction);
 }
 

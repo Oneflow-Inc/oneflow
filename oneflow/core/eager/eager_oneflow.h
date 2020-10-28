@@ -27,7 +27,7 @@ class EagerOneflow final {
  public:
   Maybe<void> RunLogicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
-  
+
   Maybe<void> RunLogicalInstruction(
       const std::shared_ptr<const cfg::ClusterInstructionProto>& cfg_cluster_instruction);
 
@@ -38,6 +38,7 @@ class EagerOneflow final {
                                      const std::string& eager_symbol_list_str);
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
+
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const cfg::ClusterInstructionProto>& cfg_cluster_instruction);
 };

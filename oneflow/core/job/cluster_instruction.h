@@ -25,7 +25,8 @@ struct ClusterInstruction final {
   static void MasterSendSessionStart();
   static void MasterSendHalt();
   static void MasterSendEagerInstruction(const ClusterInstructionProto& cluster_instruction);
-  static void MasterSendEagerInstruction(const cfg::ClusterInstructionProto& cfg_cluster_instruction);
+  static void MasterSendEagerInstruction(
+      const cfg::ClusterInstructionProto& cfg_cluster_instruction);
   static void WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction);
   static void WorkerReceiveInstruction(cfg::ClusterInstructionProto* cfg_cluster_instruction);
   static void NewSessionBarrier();
