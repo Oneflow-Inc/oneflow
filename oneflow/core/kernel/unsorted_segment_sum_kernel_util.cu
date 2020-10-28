@@ -23,24 +23,6 @@ namespace oneflow {
 
 namespace {
 
-template<typename K, typename IDX>
-__device__ IDX GetOutOffset(const IDX data_offset, const K* segment_ids, const IDX num_segment_ids,
-                            const IDX num_segments, const IDX inner_dim_size,
-                            const IDX segment_id_offset) {
-  const IDX outer_dim_elem_cnt = num_segment_ids * inner_dim_size;
-  const IDX outer_idx = data_offset / outer_dim_elem_cnt;
-  const IDX segment_id_idx = data_offset % outer_dim_elem_cnt / inner_dim_size;
-  const IDX inner_idx = data_offset % inner_dim_size;
-  const K origin_idx = segment_ids[segment_id_idx];
-  assert(origin_idx >= 0);
-  const IDX idx = origin_idx - segment_id_offset;
-  if (idx >= 0 && idx < num_segments) {
-    return outer_idx * num_segments * inner_dim_size + idx * inner_dim_size + inner_idx;
-  } else {
-    return -1;
-  }
-}
-
 template<typename T, typename K, typename IDX, typename U>
 __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt,
                                       const NdIndexOffsetHelper<IDX, 3> in_helper,
@@ -61,13 +43,6 @@ __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt,
       }
     }
   }
-}
-
-bool IsSafeUseIndex32(const int64_t num_segment_ids, const int64_t num_segments,
-                      const int64_t outer_dim_size, const int64_t inner_dim_size) {
-  const int64_t data_elem_cnt = outer_dim_size * num_segment_ids * inner_dim_size;
-  const int64_t out_elem_cnt = outer_dim_size * num_segments * inner_dim_size;
-  return std::max(out_elem_cnt, data_elem_cnt) < GetMaxVal<int32_t>() / 2;
 }
 
 }  // namespace
