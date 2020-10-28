@@ -1,8 +1,4 @@
 name: Build and Test CI
-
-env:
-  OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-  OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
 on:
   pull_request:
     types: [synchronize, opened, reopened, ready_for_review]
@@ -65,8 +61,8 @@ jobs:
       with:
         src_path: ${wheelhouse_dir}
         oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cuda
-        oss_access_key_id: ${OSS_ACCESS_KEY_ID}
-        oss_access_key_secret: ${OSS_ACCESS_KEY_SECRET}
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
@@ -140,8 +136,8 @@ jobs:
       with:
         src_path: ${wheelhouse_dir}
         oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-xla
-        oss_access_key_id: ${OSS_ACCESS_KEY_ID}
-        oss_access_key_secret: ${OSS_ACCESS_KEY_SECRET}
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
@@ -175,8 +171,8 @@ jobs:
       with:
         src_path: ${wheelhouse_dir}
         oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cpu
-        oss_access_key_id: ${OSS_ACCESS_KEY_ID}
-        oss_access_key_secret: ${OSS_ACCESS_KEY_SECRET}
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
