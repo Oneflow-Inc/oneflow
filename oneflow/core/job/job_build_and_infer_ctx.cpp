@@ -955,6 +955,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
+    JUST(DoPass("QuantAwareTraining"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
   return Maybe<void>::Ok();
