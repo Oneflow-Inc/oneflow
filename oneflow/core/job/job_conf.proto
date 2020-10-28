@@ -18,6 +18,8 @@ message TrainConf {
 
   optional float primary_lr = 101;
   optional float secondary_lr = 102;
+
+  optional int64 num_gradient_accumulation_steps = 201;
 }
 
 message PredictConf {

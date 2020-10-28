@@ -29,21 +29,37 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
-  static AMPList gray_list = {"add_n",         "avg_pool_1d",   "avg_pool_2d",
-                              "avg_pool_3d",   "bias_add",      "multiply",
-                              "sigmoid",       "tanh",          "sqrt",
-                              "scalar_mul",    "scalar_add",    "broadcast_add",
-                              "broadcast_sub", "broadcast_mul", "broadcast_div",
-                              "layer_norm",    "dropout",       "softmax",
-                              "gelu",          "normalization", "normalization_add_relu"};
+  static AMPList gray_list = {"add_n",
+                              "avg_pool_1d",
+                              "avg_pool_2d",
+                              "avg_pool_3d",
+                              "bias_add",
+                              "multiply",
+                              "sigmoid",
+                              "tanh",
+                              "sqrt",
+                              "scalar_mul",
+                              "scalar_add",
+                              "broadcast_add",
+                              "broadcast_sub",
+                              "broadcast_mul",
+                              "broadcast_div",
+                              "layer_norm",
+                              "dropout",
+                              "softmax",
+                              "gelu",
+                              "normalization",
+                              "normalization_add_relu",
+                              "acc"};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): identity, tuple_identity, keep_header_only?
-  static AMPList clear_list = {"gather",  "max_pool_1d", "max_pool_2d", "max_pool_3d",
-                               "reshape", "relu",        "transpose",   "random_mask_like",
-                               "concat",  "pad",         "same_padding"};
+  static AMPList clear_list = {"gather",  "max_pool_1d", "max_pool_2d",  "max_pool_3d",
+                               "reshape", "relu",        "transpose",    "random_mask_like",
+                               "concat",  "pad",         "same_padding", "repeat",
+                               "unpack",  "pack"};
 
   return clear_list;
 }
