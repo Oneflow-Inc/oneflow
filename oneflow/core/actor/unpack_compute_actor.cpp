@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/unpack_compute_actor.h"
+#include "oneflow/core/kernel/user_kernel.h"
+#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
 
@@ -29,8 +31,14 @@ void UnpackCompActor::VirtualCompActorInit(const TaskProto& proto) {
 
 void UnpackCompActor::Act() {
   KernelCtx ctx = GenDefaultKernelCtx();
-  std::pair<size_t, size_t> other_val = std::make_pair(act_num_cnt_, total_unpack_num_);
-  ctx.other = static_cast<void*>(&other_val);
+  CHECK_GE(exec_kernel_vec().size(), 1);
+  auto user_kernel = dynamic_cast<const UserKernel*>(exec_kernel_vec().at(0).kernel.get());
+  CHECK_NOTNULL(user_kernel);
+  auto state = dynamic_cast<OpKernelStateWrapper<std::pair<size_t, size_t>>*>(
+      user_kernel->GetOpKernelState().get());
+  CHECK_NOTNULL(state);
+  state->Mutable()->first = act_num_cnt_;
+  state->Mutable()->second = total_unpack_num_;
   AsyncLaunchKernel(ctx);
   act_num_cnt_ += 1;
 }
@@ -54,6 +62,6 @@ bool UnpackCompActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {
   return act_num_cnt_ == 0;
 }
 
-REGISTER_ACTOR(TaskType::kUnpackForward, UnpackCompActor);
+REGISTER_ACTOR(TaskType::kUnpack, UnpackCompActor);
 
 }  // namespace oneflow
