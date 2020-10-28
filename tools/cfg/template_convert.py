@@ -107,7 +107,15 @@ def render_template(proto_file_list, generated_file_list):
         proto_py_file_name = proto_file_name[:-6] + "_pb2"
 
         sys.path.insert(0, proto_py_file_path)
-        proto_module = __import__(proto_py_file_name)
+
+        proto_module = ""
+        for key in sys.modules.keys():
+            if key.endswith(proto_py_file_name):
+                proto_module = sys.modules[key]
+                break
+
+        if not proto_module:
+            proto_module = __import__(proto_py_file_name)
 
         dst_hpp_path = "%s/%s/%s.cfg.h" % (
             args.project_build_dir,
@@ -140,7 +148,7 @@ def main():
     proto_file_list = args.proto_file_list.split(" ")
     # get old generated cfg files
     old_cfg_files = []
-    for dirpath, dirnames, filenames in os.walk(args.project_build_dir + "/oneflow"):
+    for dirpath, _, filenames in os.walk(args.project_build_dir):
         for filename in filenames:
             abs_file_path = os.path.join(dirpath, filename)
             if abs_file_path.endswith((".cfg.cpp", ".cfg.h", ".cfg.pybind.cpp")):
