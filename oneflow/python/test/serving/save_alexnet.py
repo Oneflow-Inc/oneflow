@@ -208,9 +208,22 @@ def main(args):
     def alexnet_eval_job():
         with flow.scope.consistent_view():
             (labels, images) = _data_load_layer(args, args.eval_dir)
+            print(
+                "images logical_blob_name: {}, lbi:\n{}".format(
+                    images.logical_blob_name, images.lbi
+                )
+            )
+            print(
+                "labels logical_blob_name: {}, lbi:\n{}".format(
+                    labels.logical_blob_name, labels.lbi
+                )
+            )
             output = alexnet(args, images, labels, False)
-            print(images.logical_blob_name)
-            print(output.logical_blob_name)
+            print(
+                "output logical_blob_name: {}, lbi:\n{}".format(
+                    output.logical_blob_name, output.lbi
+                )
+            )
             return output
 
     check_point = flow.train.CheckPoint()
@@ -246,6 +259,13 @@ def main(args):
         {"image": "CropMirrorNormalize_14/out_0"},
         {"score": "softmax_loss/out_0"},
     ).Save()
+    # V2
+    saved_model_builder_v2 = flow.SavedModelBuilderV2("./saved_models_v2")
+    saved_model_builder_v2.ModelName("alexnet").Version(1).Job(alexnet_eval_job).Input(
+        "image", "CropMirrorNormalize_14/out_0"
+    ).Input("label", "Squeeze_12/out_0").Output(
+        "score", "softmax_loss/out_0"
+    ).Complete().Save()
 
 
 if __name__ == "__main__":

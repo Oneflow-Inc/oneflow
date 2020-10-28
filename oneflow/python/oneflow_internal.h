@@ -84,6 +84,11 @@ void StopLazyGlobalSession(std::string* error_str) {
   return oneflow::StopLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
+std::string GetSerializedCurrentJob(std::string* error_str) {
+  return oneflow::GetSerializedCurrentJob().GetDataAndSerializedErrorProto(error_str,
+                                                                           std::string(""));
+}
+
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str,
                                                                                  std::string(""));

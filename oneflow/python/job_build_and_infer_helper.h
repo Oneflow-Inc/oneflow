@@ -224,6 +224,13 @@ Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFrom
       JUST(ctx->MirroredBlobGetParallelDescFromProducerView(lbn))->parallel_conf());
 }
 
+Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
+                                                      const std::string& lbn) {
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  JUST(ctx->CheckLbnValidAndExist(lbn));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_

@@ -17,16 +17,18 @@ limitations under the License.
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.shape_pb2 as shape_pb2
-import oneflow.core.job.dlnet_conf_pb2 as op_list_pb
 import oneflow.core.job.saved_model_pb2 as model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
+import itertools
+import google.protobuf.text_format as pb_text_format
 from typing import Callable, Dict, List, Tuple
 
 
@@ -78,6 +80,16 @@ def GetBlobConf(job_func_name: str, logical_blob_name: str):
     return blob_conf
 
 
+def Lbn2Lbi(lbn):
+    assert isinstance(lbn, str)
+    assert "/" in lbn, 'invalid lbn "{}"'.format(lbn)
+    [op_name, blob_name] = lbn.split("/")
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_name
+    lbi.blob_name = blob_name
+    return lbi
+
+
 @oneflow_export("saved_model.SavedModelBuilder")
 class SavedModelBuilder(object):
     def __init__(self, path: str, version: int = 1):
@@ -113,9 +125,9 @@ class SavedModelBuilder(object):
 
         op_graph = compiler.job_map[job_func.__name__].net.op
         # fill the sinagures field
-        singature_def = job_conf_pb.JobSignatureDef()
+        singature_def = model_pb.SignatureDef()
         for ibn, lbn in input_blob_name_4_lbn.items():
-            input_def = job_conf_pb.JobInputDef()
+            input_def = model_pb.InputDef()
 
             # find consumer op names
             for op in op_graph:
@@ -133,7 +145,7 @@ class SavedModelBuilder(object):
             singature_def.inputs[ibn].CopyFrom(input_def)
 
         for obn, lbn in output_blob_name_4_lbn.items():
-            output_def = job_conf_pb.JobOutputDef()
+            output_def = model_pb.OutputDef()
             found_producer = False
             # find producer op name
             for op in op_graph:
@@ -213,3 +225,123 @@ class SavedModelBuilder(object):
             os.path.join(self.model_path_, self.version, "saved_model.prototxt"), "w"
         ) as f:
             f.write("%s\n" % self.saved_model_proto_)
+
+
+@oneflow_export("SavedModelBuilder")
+class SavedModelBuilderV2(object):
+    """
+    """
+
+    class JobBuilder(object):
+        def __init__(self, job_name, model_builder):
+            self.job_name_ = job_name
+            self.model_builder_ = model_builder
+            self.input_name2lbn_ = {}
+            self.output_name2lbn_ = {}
+
+        def Input(self, input_name, lbn):
+            if input_name in self.input_name2lbn_:
+                raise ValueError('input_name "{}" already exist'.format(input_name))
+
+            self.input_name2lbn_[input_name] = lbn
+            return self
+
+        def Output(self, output_name, lbn):
+            if output_name in self.output_name2lbn_:
+                raise ValueError('output_name "{}" already exist'.format(output_name))
+
+            self.output_name2lbn_[output_name] = lbn
+            return self
+
+        def Complete(self):
+            return self.model_builder_
+
+        def GetSignature(self):
+            for lbn in itertools.chain(
+                self.input_name2lbn_.values(), self.output_name2lbn_.values()
+            ):
+                c_api_util.JobBuildAndInferCtx_CheckLbnValidAndExist(
+                    self.job_name_, lbn
+                )
+
+            signature = job_conf_pb.JobSignatureDef()
+            for name, lbn in self.input_name2lbn_.items():
+                input_def = signature.inputs[name]
+                input_def.lbi.CopyFrom(Lbn2Lbi(lbn))
+                input_def.blob_conf.CopyFrom(GetBlobConf(self.job_name_, lbn))
+            for name, lbn in self.output_name2lbn_.items():
+                output_def = signature.outputs[name]
+                output_def.lbi.CopyFrom(Lbn2Lbi(lbn))
+
+            return signature
+
+    def __init__(self, save_path: str):
+        assert isinstance(save_path, str)
+
+        self.saved_model_dir_ = save_path
+        self.version_ = None
+        self.checkpoint_dir_ = "variables"
+        self.saved_model_pb_filename_ = "saved_model.pb"
+        self.saved_model_pbtxt_filename_ = "saved_model.prototxt"
+        self.saved_model_proto_ = model_pb.SavedModel()
+        self.job_name2job_builder_ = {}
+
+    def ModelName(self, model_name: str):
+        assert isinstance(model_name, str)
+
+        self.saved_model_proto_.name = model_name
+        return self
+
+    def Version(self, version: int):
+        self.version_ = version
+        return self
+
+    def Job(self, job_func: Callable):
+        job_name = job_func.__name__
+        if job_name not in self.job_name2job_builder_:
+            self.job_name2job_builder_[job_name] = self.JobBuilder(job_name, self)
+
+        return self.job_name2job_builder_[job_name]
+
+    # TODO: JobGraph
+
+    @session_ctx.try_init_default_session
+    def Save(self):
+        sess = session_ctx.GetDefaultSession()
+        for job_name, job_builder in self.job_name2job_builder_.items():
+            job = sess.Job(job_name)
+            self.saved_model_proto_.graphs[job_name].CopyFrom(job.net)
+            self.saved_model_proto_.signatures_v2[job_name].CopyFrom(
+                job_builder.GetSignature()
+            )
+
+        if not os.path.exists(self.saved_model_dir_):
+            os.makedirs(self.saved_model_dir_)
+
+        if self.version_ is None:
+            raise ValueError("model version not set")
+
+        version_dir = os.path.join(self.saved_model_dir_, str(self.version_))
+        if os.path.exists(version_dir):
+            raise ValueError(
+                'Directory of model "{}" version "{}" already exist.'.format(
+                    self.saved_model_dir_, self.version_
+                )
+            )
+        os.makedirs(version_dir)
+        self.saved_model_proto_.version = self.version_
+
+        checkpoint_dir = os.path.join(version_dir, self.checkpoint_dir_)
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.save(checkpoint_dir)
+        self.saved_model_proto_.checkpoint_dir.append(self.checkpoint_dir_)
+
+        saved_model_pb_path = os.path.join(version_dir, self.saved_model_pb_filename_)
+        with open(saved_model_pb_path, "wb") as writer:
+            writer.write(self.saved_model_proto_.SerializeToString())
+
+        saved_model_pbtxt_path = os.path.join(
+            version_dir, self.saved_model_pbtxt_filename_
+        )
+        with open(saved_model_pbtxt_path, "wt") as writer:
+            writer.write(pb_text_format.MessageToString(self.saved_model_proto_))

@@ -173,6 +173,14 @@ Maybe<void> StopLazyGlobalSession() {
   return Maybe<void>::Ok();
 }
 
+Maybe<std::string> GetSerializedCurrentJob() {
+  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  auto* job_ctx =
+      JUST(job_ctx_mgr->FindJobBuildAndInferCtx(*JUST(job_ctx_mgr->GetCurrentJobName())));
+  return PbMessage2TxtString(job_ctx->job());
+}
+
 Maybe<std::string> GetSerializedInterUserJobInfo() {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
