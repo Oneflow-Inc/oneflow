@@ -133,12 +133,13 @@ def render_template(proto_file_list, generated_file_list):
         generated_file_list.append(dst_hpp_path)
         generated_file_list.append(dst_cpp_path)
         generated_file_list.append(dst_pybind_path)
+        del sys.modules[proto_py_file_name]
+
 
 
 def main():
     proto_file_list = args.proto_file_list.split(" ")
     # get old generated cfg files
-    files = os.walk(args.project_build_dir + "/oneflow")
     old_cfg_files = []
     for dirpath, dirnames, filenames in os.walk(args.project_build_dir + "/oneflow"):
         for filename in filenames:
