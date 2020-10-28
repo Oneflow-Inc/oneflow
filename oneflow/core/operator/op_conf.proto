@@ -547,18 +547,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message PackOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 pack_num = 3;
-}
-
-message UnpackOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 unpack_num = 3;
-}
-
 message TickOpConf {
   repeated string tick = 1;
   required string out = 2;
@@ -963,8 +951,6 @@ message OperatorConf {
 
     // domain op
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    PackOpConf pack_conf = 237;
-    UnpackOpConf unpack_conf = 238;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;

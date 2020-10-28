@@ -32,8 +32,8 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
 REGISTER_USER_OP("transpose")
     .Input("input")
     .Output("output")
-    .Attr("perm", UserOpAttrType::kAtListInt32)
-    .Attr("batch_axis_non_change", UserOpAttrType::kAtBool)
+    .Attr<std::vector<int32_t>>("perm")
+    .Attr<bool>("batch_axis_non_change")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
