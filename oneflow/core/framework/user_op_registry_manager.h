@@ -65,6 +65,11 @@ struct UserOpRegisterTrigger final {
 
 }  // namespace oneflow
 
+/**
+ * @brief We use macro REGISTER_USER_OP to register a user op. The argument "name" is the
+ *  op_type_name which is used by OneFlow as a global unique id to pick up the specified op.
+ *
+ */
 #define REGISTER_USER_OP(name)                                                                \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpRegistry> OF_PP_CAT( \
       g_register_trigger, __COUNTER__) =                                                      \

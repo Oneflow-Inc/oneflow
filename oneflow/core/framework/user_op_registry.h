@@ -208,8 +208,46 @@ class OpRegistry final {
   template<typename T>
   __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, UserOpAttrType type,
                                                const T& default_val);
+
+  /**
+   * @brief Add an attribute specified by "name" of type T for Op. 
+   * eg: Attr<int32_t>("axis") add a attribute named "axis" whose type is int32_t, and 
+   * Attr<std::string>("part_name_prefix", "part-") add a string attribute whose name is "part_name_prefix" 
+   * and default value is "part-".
+   * The optional types of T and their correspond 
+   * enumeration (defiend in oneflow/core/framework/user_op_attr.proto) are:
+   * | UserOpAttrType | T                    |
+   * | -------------- | -------------------- |
+   * | kAtInt32       | int32_t              |
+   * | kAtInt64       | int64_t              |
+   * | kAtBool        | bool                 |
+   * | kAtFloat       | float                |
+   * | kAtDouble      | double               |
+   * | kAtString      | std::string          |
+   * | kAtShape       | oneflow::Shape       |
+   * | kAtDataType    |                      |
+   * | kAtListInt32   | std::vector<int32_t> |
+   * | kAtListInt64   | std::vector<int64_t> |
+   * | kAtListFloat   | std::vector<float>   |
+   * | kAtListDataType|                      |
+   * | kAtListShape   | std::vector<oneflow::Shape> |
+   * | kAtListString  | std::vector<std::string>    |
+   *
+   * @tparam T 
+   * @param name 
+   * @param default_val default value of this attribute
+   * @return OpRegistry& 
+   */
   template<typename T>
   OpRegistry& Attr(const std::string& name, const T& default_val);
+
+  /**
+   * @brief Add an attribute use default constructor of T, same as Attr<T>(name, T()).
+   * 
+   * @tparam T 
+   * @param name 
+   * @return OpRegistry& 
+   */
   template<typename T>
   OpRegistry& Attr(const std::string& name);
 
@@ -229,14 +267,15 @@ class OpRegistry final {
    * @return OpRegistry& 
    */
   OpRegistry& SetBatchAxisInferFn(BatchAxisInferFn fn);
-  OpRegistry& SetGetSbpFn(GetSbpFn fn);
 
   /**
-   * @brief Set the InferSbpSignatureFn which is mainly used to set SBP Signatures of op.
+   * @brief Set the GetSbpFn which is used to set SBP Signatures of op.
    * 
-   * @param fn InferSbpSignatureFn
+   * @param fn 
    * @return OpRegistry& 
    */
+  OpRegistry& SetGetSbpFn(GetSbpFn fn);
+
   OpRegistry& SetInferSbpSignatureFn(InferSbpSignatureFn fn);
 
   /**
