@@ -34,7 +34,7 @@ from collections import OrderedDict
 
 
 def compare_range_with_np(device_type, start, limit, delta):
-    assert device_type in ["cpu"]  # GPU version still in process.
+    assert device_type in ["cpu", "gpu"]  # GPU version still in process.
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
