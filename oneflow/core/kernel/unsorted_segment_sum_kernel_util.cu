@@ -40,17 +40,17 @@ __device__ IDX GetOutOffset(const IDX data_offset, const K* segment_ids, const I
   }
 }
 
-template<typename T, typename K, typename IDX>
+template<typename T, typename K, typename IDX, typename U>
 __global__ void UnsortedSegmentSumGpu(const IDX data_elem_cnt, const K* segment_ids,
                                       const IDX num_segment_ids, const T* data,
-                                      const IDX num_segments, const IDX inner_dim_size, T* out,
+                                      const IDX num_segments, const IDX inner_dim_size, U* out,
                                       const IDX segment_id_offset) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const T val = data[i];
     if (val != static_cast<T>(0)) {
       const int64_t out_offset = GetOutOffset<K, IDX>(i, segment_ids, num_segment_ids, num_segments,
                                                       inner_dim_size, segment_id_offset);
-      if (out_offset >= 0) { gpu_atomic_add(out + out_offset, val); }
+      if (out_offset >= 0) { gpu_atomic_add(out + out_offset, static_cast<U>(val)); }
     }
   }
 }
@@ -64,20 +64,20 @@ bool IsSafeUseIndex32(const int64_t num_segment_ids, const int64_t num_segments,
 
 }  // namespace
 
-template<typename T, typename K>
-struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K> final {
+template<typename T, typename K, typename U>
+struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K, U> final {
   static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const T* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
-                                 int64_t segment_id_offset, T* out) {
+                                 int64_t segment_id_offset, U* out) {
     const int64_t data_elem_cnt = outer_dim_size * num_segment_ids * inner_dim_size;
     if (IsSafeUseIndex32(num_segment_ids, num_segments, outer_dim_size, inner_dim_size)) {
-      UnsortedSegmentSumGpu<T, K, int32_t>
+      UnsortedSegmentSumGpu<T, K, int32_t, U>
           <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
               data_elem_cnt, segment_ids, num_segment_ids, data, num_segments, inner_dim_size, out,
               segment_id_offset);
     } else {
-      UnsortedSegmentSumGpu<T, K, int64_t>
+      UnsortedSegmentSumGpu<T, K, int64_t, U>
           <<<BlocksNum4ThreadsNum(data_elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
               data_elem_cnt, segment_ids, num_segment_ids, data, num_segments, inner_dim_size, out,
               segment_id_offset);
@@ -86,12 +86,12 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K> final {
 };
 
 template<typename K>
-struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
+struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K, float16> final {
   static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const float16* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
                                  int64_t segment_id_offset, float16* out) {
-    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, half, K>::UnsortedSegmentSum(
+    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, half, K, half>::UnsortedSegmentSum(
         ctx, segment_ids, reinterpret_cast<const half*>(data), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, segment_id_offset, reinterpret_cast<half*>(out));
   }
@@ -99,7 +99,8 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K> final {
 
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU(in_type_pair, index_type_pair)             \
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
-                                               OF_PP_PAIR_FIRST(index_type_pair)>;
+                                               OF_PP_PAIR_FIRST(index_type_pair),                \
+                                               OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU

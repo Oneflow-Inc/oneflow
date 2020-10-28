@@ -83,7 +83,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
       offset = sum_state->lower();
     }
 
-    UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(
+    UnsortedSegmentSumKernelUtil<device_type, T, K, T>::UnsortedSegmentSum(
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, offset, out->mut_dptr<T>());
   }
