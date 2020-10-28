@@ -19,7 +19,7 @@ def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, img_tag
         tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
     proxy_build_args = []
     if use_system_proxy:
-        for v in ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
+        for v in ["HTTP_PROXY", "HTTPS_PROXY"]:
             proxy_build_args.append(build_arg_env(v))
     proxy_build_arg = " ".join(proxy_build_args)
     cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
