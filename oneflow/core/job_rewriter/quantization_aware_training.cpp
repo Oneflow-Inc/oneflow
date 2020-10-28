@@ -148,7 +148,7 @@ class QuantAwareTraining final : public OpGraphPass {
         transparent_list_(TransparentList()) {}
   ~QuantAwareTraining() = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
+  bool IsEnabled() const override { return true; }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 
@@ -173,9 +173,9 @@ Maybe<void> QuantAwareTraining::Apply(const OpGraph& op_graph, JobBuilder* job_b
   };
   HashSet<OpNode*> downstream_white;
   DfsTopoGraphTraversal(
-      op_graph, true, [](OpNode* node) { return false; },
+      op_graph, false, [](OpNode* node) { return false; },
       [&](OpNode* node) {
-        return !IsNodeInList(fp32_list_, node) && IsNodeInList(transparent_list_, node);
+        return IsNodeInList(int8_list_, node) || IsNodeInList(transparent_list_, node);
       },
       [&](OpNode* node) {
         return IsNodeInList(int8_list_, node) || IsKeyFound(downstream_white, node);
@@ -189,8 +189,8 @@ Maybe<void> QuantAwareTraining::Apply(const OpGraph& op_graph, JobBuilder* job_b
   // downstream_white if node in int8_list_, insert fake quant op on its `GetInferenceOutputNode`'s
   // output
 
-  VLOG(1) << "downstream_white include: "
-          << Container2Str<HashSet<OpNode*>, OpNode*>(downstream_white, OpName4Node);
+  VLOG(3) << "downstream_white include: "
+            << Container2Str<HashSet<OpNode*>, OpNode*>(downstream_white, OpName4Node);
 
   InsertFakeQuantOp(op_graph, int8_list_, downstream_white, job_builder);
   return Maybe<void>::Ok();
@@ -210,23 +210,28 @@ void QuantAwareTraining::InsertFakeQuantOp(const OpGraph& op_graph, const QATLis
                                            HashSet<OpNode*> downstream_white,
                                            JobBuilder* job_builder) const {
   HashSet<OpEdge*> white_set_edges;
+  auto EdgeName4Edge = [](OpEdge* const& edge) {
+    return std::string("edge of\t") + edge->src_node()->op().op_name() + "\tto\t"
+           + edge->dst_node()->op().op_name();
+  };
   {
     op_graph.ForEachNode([&](OpNode* node) {
       if (IsNodeInList(int8_list, node)) {
         for (OpEdge* edge : node->in_edges()) {
           if (!IsKeyFound(downstream_white, edge->src_node())) {
+            VLOG(3) << "insert " << EdgeName4Edge(edge);
             INSERT_CHECK(white_set_edges.insert(edge));
           }
         }
-        for (OpEdge* edge : node->out_edges()) { INSERT_CHECK(white_set_edges.insert(edge)); }
+        OpNode* inference_node = GetInferenceOutputNode(op_graph, *node);
+        for (OpEdge* edge : inference_node->out_edges()) {
+          VLOG(3) << "insert " << EdgeName4Edge(edge);
+          INSERT_CHECK(white_set_edges.insert(edge));
+        }
       }
     });
-    auto EdgeName4Edge = [](OpEdge* const& edge) {
-      return std::string("edge of\t") + edge->src_node()->op().op_name() + "\tto\t"
-             + edge->dst_node()->op().op_name();
-    };
     VLOG(3) << "white_set_edges: "
-            << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
+              << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
   }
 
   HashMap<std::string, std::vector<OpEdge*>> edges_group_by_lbn;
@@ -279,7 +284,7 @@ void QuantAwareTraining::InsertFakeQuantOp(const OpGraph& op_graph, const QATLis
     if (cast_is_consumed) {
       job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
                           std::vector<OperatorConf>{cast_op.op_conf()});
-      LOG(INFO) << "Insert CastOp: " << cast_op.op_name() << " between " << lbn;
+      VLOG(3) << "Insert fake quant op: " << cast_op.op_name() << " between " << lbn;
     }
   }
 
