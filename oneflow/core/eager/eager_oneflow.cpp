@@ -66,6 +66,14 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
   return vm::Run(instruction_list_proto);
 }
 
+Maybe<void> EagerOneflow::RunPhysicalInstruction(
+    const std::shared_ptr<const cfg::ClusterInstructionProto>& cfg_cluster_instruction) {
+  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
+  cfg_cluster_instruction->ToProto(cluster_instruction.get());
+  return RunLogicalInstruction(
+      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
+}
+
 Maybe<void> EagerOneflow::RunPhysicalInstruction(const std::string& instruction_list_proto_str,
                                                  const std::string& eager_symbol_list_str) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
@@ -87,6 +95,14 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
   return RunPhysicalInstruction(cluster_instruction);
+}
+
+Maybe<void> EagerOneflow::RunLogicalInstruction(
+    const std::shared_ptr<const cfg::ClusterInstructionProto>& cfg_cluster_instruction) {
+  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
+  cfg_cluster_instruction->ToProto(cluster_instruction.get());
+  return RunLogicalInstruction(
+      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_list_proto_str,

@@ -86,11 +86,24 @@ void PushClusterInstruction(const ClusterInstructionProto& cluster_instruction) 
   OccasionallyClearCtrlKV(key);
 }
 
+void PushClusterInstruction(const cfg::ClusterInstructionProto& cfg_cluster_instruction) {
+  ClusterInstructionProto cluster_instruction;
+  cfg_cluster_instruction.ToProto(&cluster_instruction);
+  PushClusterInstruction(cluster_instruction);
+}
+
 void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
   const std::string& key = GetClusterInstructionKey();
   LOG(INFO) << key;
   Global<CtrlClient>::Get()->PullMasterKV(key, cluster_instruction);
   OccasionallyClearCtrlKV(key);
+}
+
+void PullClusterInstruction(cfg::ClusterInstructionProto* cfg_cluster_instruction) {
+  ClusterInstructionProto cluster_instruction;
+  cfg_cluster_instruction->ToProto(&cluster_instruction);
+  PullClusterInstruction(&cluster_instruction);
+  cfg_cluster_instruction->InitFromProto(cluster_instruction);
 }
 
 }  // namespace
@@ -122,8 +135,17 @@ void ClusterInstruction::MasterSendEagerInstruction(
   PushClusterInstruction(cluster_instruction);
 }
 
+void ClusterInstruction::MasterSendEagerInstruction(
+    const cfg::ClusterInstructionProto& cfg_cluster_instruction) {
+  PushClusterInstruction(cfg_cluster_instruction);
+}
+
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
   PullClusterInstruction(cluster_instruction);
+}
+
+void ClusterInstruction::WorkerReceiveInstruction(cfg::ClusterInstructionProto* cfg_cluster_instruction) {
+  PullClusterInstruction(cfg_cluster_instruction);
 }
 
 void ClusterInstruction::HaltBarrier() { OF_ENV_BARRIER(); }
