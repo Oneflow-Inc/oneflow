@@ -27,7 +27,6 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.core.job.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
-import oneflow.core.common.error_pb2 as error_util
 
 from google.protobuf import text_format
 from contextlib import contextmanager
@@ -142,18 +141,7 @@ def load_saved_model(model_meta_file_path):
 
 
 def load_model():
-    flow.env.init()
-
-    load_model_proto = saved_model_pb.LoadModelProto()
-    load_model_proto.model_path = "saved_models"
-    load_model_proto.version = 1
-
-    load_model_proto.job_conf.job_name = "alexnet_eval_job"
-    load_model_proto.job_conf.predict_conf.SetInParent()
-    load_model_proto.parallel_conf.device_name.append("0:0")
-    load_model_proto.parallel_conf.device_tag = "gpu"
-
-    saved_model_path = "saved_models"
+    saved_model_path = "saved_models_v2"
     version = 1
     model_meta_file_path = os.path.join(
         saved_model_path, str(version), "saved_model.prototxt"
@@ -162,7 +150,7 @@ def load_model():
 
     sess = InferenceSession()
 
-    for job_name, signature in saved_model_proto.signatures.items():
+    for job_name, signature in saved_model_proto.signatures_v2.items():
         sess.setup_job_conf(job_name, signature)
 
     for job_name, net in saved_model_proto.graphs.items():
