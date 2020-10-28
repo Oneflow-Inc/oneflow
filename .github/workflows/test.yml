@@ -1,6 +1,6 @@
 name: Build and Test CI
 on:
-  pull_request:
+  pull_request_target:
     types: [synchronize, opened, reopened, ready_for_review]
     branches:
       - '*'
