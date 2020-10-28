@@ -16,7 +16,11 @@ inputs:
           fi
           chmod 755 $HOME/ossutil64
           $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${{ inputs.oss_access_key_id }} -k ${{ inputs.oss_access_key_secret }}  -L EN -c $HOME/.ossutilconfig
-          $HOME/ossutil64 cp --update ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
+          dir_arg=""
+          if [ -d "${{ inputs.src_path }}" ]; then
+            dir_arg="--recursive"
+          fi
+          $HOME/ossutil64 cp --update ${dir_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
         shell: bash
         env:
           OSS_ACCESS_KEY_ID: ${{ inputs.oss_access_key_id }}
