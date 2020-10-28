@@ -22,11 +22,11 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
     .Input("in")
     .Output("out")
     .Output("scale")
-    .Attr<int64_t>("target_width", UserOpAttrType::kAtInt64, 0)
-    .Attr<int64_t>("target_height", UserOpAttrType::kAtInt64, 0)
-    .Attr<int64_t>("channels", UserOpAttrType::kAtInt64, 3)
-    .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kUInt8)
-    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString, "bilinear")
+    .Attr<int64_t>("target_width", 0)
+    .Attr<int64_t>("target_height", 0)
+    .Attr<int64_t>("channels", 3)
+    .Attr<DataType>("data_type", DataType::kUInt8)
+    .Attr<std::string>("interpolation_type", "bilinear")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
@@ -90,11 +90,11 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     .Output("out")
     .Output("size")
     .Output("scale")
-    .Attr("target_size", UserOpAttrType::kAtInt32)
-    .Attr<int32_t>("min_size", UserOpAttrType::kAtInt32, 0)
-    .Attr<int32_t>("max_size", UserOpAttrType::kAtInt32, 0)
-    .Attr<bool>("resize_longer", UserOpAttrType::kAtBool, false)
-    .Attr<std::string>("interpolation_type", UserOpAttrType::kAtString, "bilinear")
+    .Attr<int32_t>("target_size")
+    .Attr<int32_t>("min_size", 0)
+    .Attr<int32_t>("max_size", 0)
+    .Attr<bool>("resize_longer", false)
+    .Attr<std::string>("interpolation_type", "bilinear")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;

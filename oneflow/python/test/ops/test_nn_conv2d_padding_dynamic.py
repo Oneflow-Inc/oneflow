@@ -133,7 +133,7 @@ def compare_with_tensorflow(
 
     idx = np.where(np.abs(of_out.transpose(xy_data_transpose) - tf_out.numpy()) > 5e-4)
     assert np.allclose(
-        of_out.transpose(xy_data_transpose), tf_out.numpy(), rtol=1e-5, atol=1e-5,
+        of_out.transpose(xy_data_transpose), tf_out.numpy(), rtol=1e-3, atol=1e-3,
     )
 
     loss_diff = global_storage["loss_diff"].numpy_list()[0].transpose(xy_data_transpose)
