@@ -22,6 +22,12 @@ bool RegstSlot::HasRegstDescId(int64_t regst_desc_id) const {
   return regst_desc_id2regsts_.find(regst_desc_id) != regst_desc_id2regsts_.end();
 }
 
+size_t RegstSlot::QueueSize4RegstDescId(int64_t regst_desc_id) const {
+  const auto& iter = regst_desc_id2regsts_.find(regst_desc_id);
+  CHECK(iter != regst_desc_id2regsts_.end());
+  return iter->second.size();
+}
+
 const std::deque<Regst*>& RegstSlot::RegstDeq4RegstDescId(int64_t regst_desc_id) const {
   CHECK(is_inited_);
   return regst_desc_id2regsts_.at(regst_desc_id);

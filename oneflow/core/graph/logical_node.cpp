@@ -231,6 +231,10 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 
+REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
+                              "DelayTick",
+                              &TaskGraph::BldSubTskGphByStrictOneToOne);
+
 REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
                               "Decode",
                               &TaskGraph::BldSubTskGphByOneToOne);
