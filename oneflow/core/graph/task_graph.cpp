@@ -456,10 +456,6 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
   for (const LogicalBlobId& lbi : lbis) {
-    // test debug
-    LOG(ERROR) << "lbn: " << GenLogicalBlobName(lbi);
-    LOG(ERROR) << sorted_src_comp_tasks.at(0)->logical_node()->SoleOp()->op_conf().name();
-    LOG(ERROR) << sorted_dst_comp_tasks.at(0)->logical_node()->SoleOp()->op_conf().name();
     std::vector<CompTaskNode*> src_nodes;
     if (lbis.size() == 1) {
       src_nodes = sorted_src_comp_tasks;
