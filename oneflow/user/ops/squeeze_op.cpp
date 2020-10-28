@@ -43,7 +43,7 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
 REGISTER_USER_OP("squeeze")
     .Input("in")
     .Output("out")
-    .Attr("axes", UserOpAttrType::kAtListInt32)
+    .Attr<std::vector<int32_t>>("axes")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);

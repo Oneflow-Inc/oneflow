@@ -21,8 +21,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
     .Input("data")
     .Input("segment_ids")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt64)
-    .Attr("num_segments", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("axis")
+    .Attr<int64_t>("num_segments")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* data_shape = ctx->Shape4ArgNameAndIndex("data", 0);
       const int64_t axis = ctx->Attr<int64_t>("axis");
@@ -121,7 +121,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
     .Input("segment_ids")
     .Input("like")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
       const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);

@@ -48,6 +48,7 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
+  FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
 }
