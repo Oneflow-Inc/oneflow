@@ -136,7 +136,6 @@ def render_template(proto_file_list, generated_file_list):
         del sys.modules[proto_py_file_name]
 
 
-
 def main():
     proto_file_list = args.proto_file_list.split(" ")
     # get old generated cfg files
