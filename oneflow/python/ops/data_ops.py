@@ -465,3 +465,36 @@ def image_decoder_random_crop_resize(
     lbi.op_name = op_conf.name
     lbi.blob_name = "out"
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("data.onerec_reader")
+def onerec_reader(
+    files,
+    batch_size=1,
+    random_shuffle=False,
+    shuffle_mode="instance",
+    shuffle_buffer_size=1024,
+    shuffle_after_epoch=False,
+    verify_example=True,
+    name=None,
+):
+    assert isinstance(files, (list, tuple))
+
+    if name is None:
+        name = id_util.UniqueStr("OneRecReader_")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("OneRecReader")
+        .Output("out")
+        .Attr("files", files)
+        .Attr("batch_size", batch_size)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_mode", shuffle_mode)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("verify_example", verify_example)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

@@ -88,6 +88,9 @@ class ProtoReflectionUtil:
     def message_type_fields(self, cls):
         return cls.fields
 
+    def has_message_type_fields(self, cls):
+        return len(self.message_type_fields(cls)) > 0
+
     def message_type_oneofs(self, cls):
         return cls.oneofs
 

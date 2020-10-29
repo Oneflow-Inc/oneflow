@@ -57,7 +57,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
 REGISTER_USER_OP("reshape")
     .Input("in")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
+    .Attr<Shape>("shape")
     .SetTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn);
 

@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_USER_OP("tril")
     .Input("in")
     .Output("out")
-    .Attr("diagonal", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("diagonal")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);

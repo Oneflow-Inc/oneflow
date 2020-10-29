@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
-    .Attr("parallel_conf", UserOpAttrType::kAtString)
+    .Attr<std::string>("parallel_conf")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
