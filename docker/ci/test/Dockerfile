@@ -10,3 +10,5 @@ RUN wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/${MOFED_DIR}.tg
     cd .. && \
     rm -rf ${MOFED_DIR} && \
     rm -rf *.tgz
+
+RUN apt update && apt install -y --no-install-recommends gdb openssh-server openssh-client
