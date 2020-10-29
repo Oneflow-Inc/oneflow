@@ -165,7 +165,7 @@ def load_model():
 
     sess.launch()
     sess.run("alexnet_eval_job")
-    # time.sleep(10)
+    time.sleep(5)
 
 
 if __name__ == "__main__":

@@ -69,14 +69,13 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   // Control edge and mutable input need to be considered when supporting side-effect subgraph.
   std::function<Maybe<void>(const LogicalBlobId&)> SearchConstSrcAndTrace;
   SearchConstSrcAndTrace = [&](const LogicalBlobId& lbi) -> Maybe<void> {
-    if (IsInputLbi(lbi)) { return Maybe<void>::Ok(); }
+    keep_op_names.insert(lbi.op_name());
     const auto* op_node = op_graph.OpNode4OpName(lbi.op_name());
     if (op_node->in_edges().empty()) { return Maybe<void>::Ok(); }
-    keep_op_names.insert(lbi.op_name());
     for (const auto& ibn : op_node->op().input_bns()) {
       CHECK_OR_RETURN(!op_node->op().InputBlobModifier4Ibn(ibn).is_mutable());
       const auto& src_lbi = op_node->op().BnInOp2Lbi(ibn);
-      SearchConstSrcAndTrace(src_lbi);
+      if (!IsInputLbi(src_lbi)) { SearchConstSrcAndTrace(src_lbi); }
     }
     return Maybe<void>::Ok();
   };
