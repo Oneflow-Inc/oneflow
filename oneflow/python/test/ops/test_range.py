@@ -54,7 +54,7 @@ def compare_range_with_np(device_type, start, limit, delta):
 class TestBroadcastLike(flow.unittest.TestCase):
     def test_range(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["start"] = [0]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [1]
@@ -64,7 +64,7 @@ class TestBroadcastLike(flow.unittest.TestCase):
 
     def test_range2(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["start"] = [10]
         arg_dict["limit"] = [None]
         arg_dict["delta"] = [1]
@@ -74,7 +74,7 @@ class TestBroadcastLike(flow.unittest.TestCase):
 
     def test_range3(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["start"] = [0]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [2]
@@ -84,7 +84,7 @@ class TestBroadcastLike(flow.unittest.TestCase):
 
     def test_range4(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["start"] = [1]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [3]
