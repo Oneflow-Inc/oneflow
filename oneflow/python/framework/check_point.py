@@ -282,29 +282,26 @@ class FileBackendVariableBlob:
     def __init__(
         self,
         name: str,
-        root_dir: str,
+        var_dir: str,
         dtype: Optional[dtype_util.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
         self.name_ = name
-        self.root_dir_ = root_dir
-        meta_info_path = os.path.join(self.root_dir_, META_INFO_FILENAME)
+        self.var_dir_ = var_dir
+        meta_info_path = os.path.join(self.var_dir_, META_INFO_FILENAME)
         if os.path.exists(meta_info_path):
-            meta_infos = variable_meta_info_pb.VariableMetaInfos()
+            meta_info = variable_meta_info_pb.VariableMetaInfo()
             with open(meta_info_path) as f:
-                text_format.Parse(f.read(), meta_infos)
-            if name in meta_infos.name2meta_info:
-                self.has_meta_info_ = True
-            else:
-                self.has_meta_info_ = False
+                text_format.Parse(f.read(), meta_info)
+            self.has_meta_info_ = True
         else:
             self.has_meta_info_ = False
 
         if self.has_meta_info_:
             assert dtype is None and shape is None
-            self.shape_ = tuple(meta_infos.name2meta_info[name].shape.dim)
+            self.shape_ = tuple(meta_info.shape.dim)
             self.dtype_ = dtype_util.convert_proto_dtype_to_oneflow_dtype(
-                meta_infos.name2meta_info[name].data_type
+                meta_info.data_type
             )
         else:
             if shape is not None and dtype is not None:
@@ -316,20 +313,19 @@ class FileBackendVariableBlob:
 
     def read_slice_as_numpy(self):
         assert self.shape is not None
-        np_dtype = np.dtype(
-            dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
-        )
+        np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
         with open(self.file_path_, "rb") as f:
             def slice_f(blob, start_nd_idx, stop_nd_idx, length):
                 slice = f.read(length * np_dtype.itemsize)
-                return np.frombuffer(
-                    slice, dtype=np_dtype,
-                ).reshape([1] * (len(self.shape) - 1) + [-1])
+                return np.frombuffer(slice, dtype=np_dtype,).reshape(
+                    [1] * (len(self.shape) - 1) + [-1]
+                )
+
             yield from for_every_slice(self, slice_f)
 
     @property
     def file_path_(self):
-        return os.path.join(self.root_dir_, self.name, "out")
+        return os.path.join(self.var_dir_, "out")
 
     def _NumpyFriendlyToRepr(self):
         return self.numpy()
@@ -393,10 +389,11 @@ def get_all_variables() -> Dict[str, FileBackendVariableBlob]:
 def load(path):
     var_dict = {}
     for f in os.listdir(path):
-        if os.path.isdir(os.path.join(path, f)):
-            var_path = os.path.join(path, f, "out")
+        var_dir = os.path.join(path, f)
+        if os.path.isdir(var_dir):
+            var_path = os.path.join(var_dir, "out")
             if os.path.isfile(var_path):
-                var_dict[f] = FileBackendVariableBlob(f, path)
+                var_dict[f] = FileBackendVariableBlob(f, var_dir)
     return var_dict
 
 
@@ -409,6 +406,7 @@ def read_slice_from_blob(blob, scope_symbol_id):
             [1] * len(blob.shape),
             scope_symbol_id,
         )
+
     yield from for_every_slice(blob, slice_f)
 
 
@@ -416,20 +414,20 @@ def read_slice_from_blob(blob, scope_symbol_id):
 @session_ctx.try_init_default_session
 def save(var_dict, path):
     os.makedirs(path, exist_ok=True)
-    meta_infos = variable_meta_info_pb.VariableMetaInfos()
     for name, var in var_dict.items():
-        meta_info = meta_infos.name2meta_info[name]
+        meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
         meta_info.data_type = var.dtype.oneflow_proto_dtype
-        param_path = os.path.join(path, name, "out")
+        var_dir = os.path.join(path, name)
+        param_path =  os.path.join(var_dir, "out")
         os.makedirs(os.path.dirname(param_path), exist_ok=True)
         sess = session_ctx.GetDefaultSession()
         var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
             for _, _, slice in read_slice_from_blob(var, var_op_conf.scope_symbol_id):
                 f.write(slice.tobytes())
-    with open(os.path.join(path, META_INFO_FILENAME), "w") as f:
-        f.write(text_format.MessageToString(meta_infos))
+        with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
+            f.write(text_format.MessageToString(meta_info))
 
 
 def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
@@ -580,7 +578,7 @@ def _FeedValueToVariable(var_name, value_blob):
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
-                value_blob.name, value_blob.root_dir_, var_blob.dtype, var_blob.shape
+                value_blob.name, value_blob.var_dir_, var_blob.dtype, var_blob.shape
             )
         assert var_blob.shape == value_blob.shape
         for start_nd_idx, stop_nd_idx, slice in value_blob.read_slice_as_numpy():
@@ -621,16 +619,20 @@ def for_every_slice(var_blob, f):
             start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
             stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
             stop_nd_idx = [x + 1 for x in stop_nd_idx]
-            yield start_nd_idx, stop_nd_idx, f(var_blob, start_nd_idx, stop_nd_idx, length)
+            yield start_nd_idx, stop_nd_idx, f(
+                var_blob, start_nd_idx, stop_nd_idx, length
+            )
             start_idx = stop_idx
 
 
 _init_map = {}
 
+
 def register_initializer(flow_initializer):
     def deco(func):
         _init_map[flow_initializer] = func
         return func
+
     return deco
 
 
@@ -644,14 +646,18 @@ def get_initializer_generator(initializer_conf):
     yield from f(getattr(initializer_conf, m))
 
 
-@register_initializer('constant_conf')
-@register_initializer('constant_int_conf')
-def constant_initializer(initializer_conf: Union[op_conf_pb.ConstantInitializerConf, op_conf_pb.ConstantIntInitializerConf]):
+@register_initializer("constant_conf")
+@register_initializer("constant_int_conf")
+def constant_initializer(
+    initializer_conf: Union[
+        op_conf_pb.ConstantInitializerConf, op_conf_pb.ConstantIntInitializerConf
+    ]
+):
     while True:
         yield initializer_conf.value
 
 
-@register_initializer('random_normal_conf')
+@register_initializer("random_normal_conf")
 def random_normal_initializer(initializer_conf: op_conf_pb.RandomNormalInitializerConf):
     rng = np.random.default_rng()
     while True:
@@ -667,6 +673,7 @@ def init():
         np_dtype = np.dtype(
             dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
         )
+
         def f(var_blob, start_nd_idx, stop_nd_idx, length):
             vals = []
             g = get_initializer_generator(var_op_conf.variable_conf.initializer)
@@ -687,6 +694,7 @@ def init():
                 [1] * len(var_blob.shape),
                 scope_symbol_id,
             )
+
         # we don't care about the return value,
         # only want to run f on every slice
         for _ in for_every_slice(var_blob, f):
