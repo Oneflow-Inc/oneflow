@@ -116,8 +116,8 @@ const Shape& RtRegstDesc::data_regst_time_shape() const {
 }
 
 void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
-    const std::function<void(int64_t, const LogicalBlobId&, const RtBlobDesc*, int64_t, int64_t)>&
-        Handler) const {
+    const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const RtBlobDesc* desc,
+                             int64_t body_offset, int64_t header_offset)>& Handler) const {
   int64_t cur_body_offset = 0;
   int64_t cur_header_offset = 0;
   for (int64_t i = 0; i < sorted_blob_desc_vec_.size(); ++i) {
