@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -49,16 +50,33 @@ def _test_split_to_split(
     test_case.assertTrue(np.array_equal(x, y))
 
 
-def test_split_to_split(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [1, 2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-    arg_dict["src_axis"] = [0, 1]
-    arg_dict["dst_axis"] = [0, 1]
-    for arg in GenArgList(arg_dict):
-        _test_split_to_split(test_case, *arg)
+def _test_split_to_split_enable_all_to_all(
+    test_case,
+    src_device_type,
+    dst_device_type,
+    src_device_num,
+    dst_device_num,
+    src_axis,
+    dst_axis,
+):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+    flow.config.collective_boxing.nccl_enable_all_to_all(True)
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+    func_config.default_logical_view(flow.scope.consistent_view())
+
+    @flow.global_function(function_config=func_config)
+    def split_to_split_job(x: oft.Numpy.Placeholder((32, 16, 64, 48))):
+        with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
+            src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
+        with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
+            dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
+        return dst
+
+    x = np.random.rand(32, 16, 64, 48).astype(np.float32)
+    y = split_to_split_job(x).get().numpy()
+    test_case.assertTrue(np.array_equal(x, y))
 
 
 def _test_split_to_broadcast(
@@ -88,17 +106,6 @@ def _test_split_to_broadcast(
     test_case.assertTrue(np.array_equal(x, y))
 
 
-def test_split_to_broadcast(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [1, 2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-    arg_dict["src_axis"] = [0, 1]
-    for arg in GenArgList(arg_dict):
-        _test_split_to_broadcast(test_case, *arg)
-
-
 def _test_broadcast_to_split(
     test_case,
     src_device_type,
@@ -124,17 +131,6 @@ def _test_broadcast_to_split(
     x = np.random.rand(96, 96).astype(np.float32)
     y = broadcast_to_split_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-
-
-def test_broadcast_to_split(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [1, 2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-    arg_dict["dst_axis"] = [0, 1]
-    for arg in GenArgList(arg_dict):
-        _test_broadcast_to_split(test_case, *arg)
 
 
 def _test_partial_sum_to_split(
@@ -165,17 +161,6 @@ def _test_partial_sum_to_split(
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
-def test_partial_sum_to_split(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-    arg_dict["dst_axis"] = [0, 1]
-    for arg in GenArgList(arg_dict):
-        _test_partial_sum_to_split(test_case, *arg)
-
-
 def _test_partial_sum_to_broadcast(
     test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
@@ -199,16 +184,6 @@ def _test_partial_sum_to_broadcast(
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
-def test_partial_sum_to_broadcast(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-    for arg in GenArgList(arg_dict):
-        _test_partial_sum_to_broadcast(test_case, *arg)
-
-
 def _test_broadcast_to_broadcast(
     test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
 ):
@@ -229,17 +204,6 @@ def _test_broadcast_to_broadcast(
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
     y = broadcast_to_broadcast_job(x).get().numpy()
     test_case.assertTrue(np.array_equal(x, y))
-
-
-def test_broadcast_to_broadcast(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [1, 2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-
-    for arg in GenArgList(arg_dict):
-        _test_broadcast_to_broadcast(test_case, *arg)
 
 
 def _test_multi_lbi(
@@ -274,11 +238,91 @@ def _test_multi_lbi(
     test_case.assertTrue(np.array_equal(x, r2))
 
 
-def test_multi_lbi(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["src_device_type"] = ["cpu", "gpu"]
-    arg_dict["dst_device_type"] = ["cpu", "gpu"]
-    arg_dict["src_device_num"] = [1, 2, 3]
-    arg_dict["dst_device_num"] = [1, 2, 3]
-    for arg in GenArgList(arg_dict):
-        _test_multi_lbi(test_case, *arg)
+@flow.unittest.skip_unless_1n4d()
+class TestBoxingV2(flow.unittest.TestCase):
+    def test_split_to_split(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [1, 2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+        arg_dict["src_axis"] = [0, 1]
+        arg_dict["dst_axis"] = [0, 1]
+        for arg in GenArgList(arg_dict):
+            _test_split_to_split(test_case, *arg)
+
+    def test_split_to_split_all_to_all(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["gpu"]
+        arg_dict["dst_device_type"] = ["gpu"]
+        arg_dict["src_device_num"] = [4]
+        arg_dict["dst_device_num"] = [4]
+        arg_dict["src_axis"] = [0, 1, 2, 3]
+        arg_dict["dst_axis"] = [0, 1, 2, 3]
+        for arg in GenArgList(arg_dict):
+            (_, _, _, _, src_axis, dst_axis) = arg
+            if src_axis == dst_axis:
+                continue
+            _test_split_to_split_enable_all_to_all(test_case, *arg)
+
+    def test_split_to_broadcast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [1, 2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+        arg_dict["src_axis"] = [0, 1]
+        for arg in GenArgList(arg_dict):
+            _test_split_to_broadcast(test_case, *arg)
+
+    def test_broadcast_to_split(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [1, 2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+        arg_dict["dst_axis"] = [0, 1]
+        for arg in GenArgList(arg_dict):
+            _test_broadcast_to_split(test_case, *arg)
+
+    def test_partial_sum_to_split(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+        arg_dict["dst_axis"] = [0, 1]
+        for arg in GenArgList(arg_dict):
+            _test_partial_sum_to_split(test_case, *arg)
+
+    def test_partial_sum_to_broadcast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+        for arg in GenArgList(arg_dict):
+            _test_partial_sum_to_broadcast(test_case, *arg)
+
+    def test_broadcast_to_broadcast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [1, 2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+
+        for arg in GenArgList(arg_dict):
+            _test_broadcast_to_broadcast(test_case, *arg)
+
+    def test_multi_lbi(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_device_type"] = ["cpu", "gpu"]
+        arg_dict["dst_device_type"] = ["cpu", "gpu"]
+        arg_dict["src_device_num"] = [1, 2, 3]
+        arg_dict["dst_device_num"] = [1, 2, 3]
+        for arg in GenArgList(arg_dict):
+            _test_multi_lbi(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

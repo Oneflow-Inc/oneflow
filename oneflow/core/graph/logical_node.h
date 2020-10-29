@@ -18,8 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/pack_forward_task_node.h"
-#include "oneflow/core/graph/unpack_forward_task_node.h"
 #include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
 #include "oneflow/core/graph/foreign_input_compute_task_node.h"
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
@@ -29,10 +27,9 @@ limitations under the License.
 #include "oneflow/core/graph/tick_compute_task_node.h"
 #include "oneflow/core/graph/device_tick_compute_task_node.h"
 #include "oneflow/core/graph/acc_tick_compute_task_node.h"
-#include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
 #include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 
 namespace oneflow {
 
@@ -179,9 +176,6 @@ int64_t NewAreaId();
    private:                                                         \
   }
 
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackForward);
-
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \
    public:                                \
@@ -204,11 +198,76 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SourceTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(AccTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DeviceTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DecodeH2D);
 
+class UserOpAreaIdCreator {
+ public:
+  virtual ~UserOpAreaIdCreator() = default;
+  virtual int64_t GetAreaId() = 0;
+};
+
+class FixedUserOpAreaIdCreator : public UserOpAreaIdCreator {
+ public:
+  explicit FixedUserOpAreaIdCreator(int64_t area_id) : area_id_(area_id) {}
+  ~FixedUserOpAreaIdCreator() override = default;
+
+  int64_t GetAreaId() override { return area_id_; }
+
+ private:
+  int64_t area_id_;
+};
+
+class IndependentUserOpAreaIdCreator : public UserOpAreaIdCreator {
+ public:
+  IndependentUserOpAreaIdCreator() = default;
+  ~IndependentUserOpAreaIdCreator() override = default;
+
+  int64_t GetAreaId() override { return NewAreaId(); }
+};
+
+#define REGISTER_USER_OP_AREA_ID(op_type_name, area_id)                  \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, UserOpAreaIdCreator, \
+                         ([] { return new FixedUserOpAreaIdCreator(area_id); }));
+
+#define REGISTER_USER_OP_INDEPENDENT_AREA_ID(op_type_name)               \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, UserOpAreaIdCreator, \
+                         ([] { return new IndependentUserOpAreaIdCreator(); }));
+
+class UserOpCompTaskNodeCreator {
+ public:
+  virtual ~UserOpCompTaskNodeCreator() = default;
+  virtual CompTaskNode* NewCompTaskNode(const OperatorConf& op_conf) = 0;
+};
+
+template<typename CompTaskNodeType>
+class StaticUserOpCompTaskNodeCreator : public UserOpCompTaskNodeCreator {
+ public:
+  StaticUserOpCompTaskNodeCreator() = default;
+  ~StaticUserOpCompTaskNodeCreator() override = default;
+
+ private:
+  CompTaskNode* NewCompTaskNode(const OperatorConf& op_conf) override {
+    return new CompTaskNodeType();
+  }
+};
+
+class FnUserOpCompTaskNodeCreator : public UserOpCompTaskNodeCreator {
+ public:
+  using CreateFn = std::function<CompTaskNode*(const OperatorConf& op_conf)>;
+  explicit FnUserOpCompTaskNodeCreator(CreateFn fn) : fn_(std::move(fn)) {}
+  ~FnUserOpCompTaskNodeCreator() override = default;
+
+ private:
+  CompTaskNode* NewCompTaskNode(const OperatorConf& op_conf) override { return fn_(op_conf); }
+  CreateFn fn_;
+};
+
+#define REGISTER_USER_OP_COMP_TASK_NODE_TYPE(op_type_name, comp_task_node_type)               \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, UserOpCompTaskNodeCreator, ([] {          \
+                           return new StaticUserOpCompTaskNodeCreator<comp_task_node_type>(); \
+                         }));
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

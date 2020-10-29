@@ -21,14 +21,14 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-// Initialize CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr
+// Initializes CudaCopyD2HDeviceCtx which contains CudaStreamHandle object and CallbackMsgListPtr
 // object, The related istructions will be handled with CudaCopyD2HDeviceCtx
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
   device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list()));
 }
 
-// Reinterpret status_buffer as CudaInstrStatusQuerier
+// Reinterprets status_buffer as CudaInstrStatusQuerier
 void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
@@ -40,13 +40,13 @@ void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
   // do nothing
 }
 
-// Return true if the instruction launched and the cuda event completed.
+// Returns true if the instruction launched and the cuda event completed.
 bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-// Launch a cuda kernel
+// Launches a cuda kernel
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
@@ -61,7 +61,7 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-// Specify copy_d2h stream description of the virtual machine to be used.
+// Specifies copy_d2h stream description of the virtual machine to be used.
 ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& resource,
                                                                int64_t this_machine_id) const {
   if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
@@ -71,7 +71,6 @@ ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& r
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(this_machine_id * device_num);
   return ret;
 }
 

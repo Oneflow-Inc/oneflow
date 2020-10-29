@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/common/gdb.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 
@@ -57,9 +56,7 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
   Forward(ctx, BnInOp2Blob);
-  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
@@ -138,7 +135,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                               DeviceCtx* device_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   Kernel* rptr = kernel_registration::CreateKernel(conf);
-  if (rptr == nullptr) { rptr = NewObj<Kernel>(op_type, conf); }
+  if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);

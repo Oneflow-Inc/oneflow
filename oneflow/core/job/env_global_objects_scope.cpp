@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/device/cudnn_conv_util.h"
 
 namespace oneflow {
 
@@ -47,6 +48,7 @@ void InitLogging(const CppLoggingConf& logging_conf) {
   FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
+  FLAGS_stderrthreshold = 1;  // 1=WARNING
   google::InitGoogleLogging("oneflow");
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
 }
@@ -91,12 +93,14 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerJobBuildAndInferCtxMgr>::New();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
+  Global<CudnnConvAlgoCache>::New();
 #endif
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
+  Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<EagerJobBuildAndInferCtxMgr>::Delete();

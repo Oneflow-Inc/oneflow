@@ -75,6 +75,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"broadcast_add", "BcastAdd"},
     {"broadcast_mul", "BcastMul"},
     {"broadcast_div", "BcastDiv"},
+    {"broadcast_min", "BcastMin"},
     {"cast", "Cast"},
     {"concat", "Concat"},
     {"conv2d", "Conv2D"},
@@ -100,6 +101,8 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"scalar_mul", "ScalarMul"},
     {"leaky_relu", "LeakyRelu"},
     {"adam_update", "AdamOptimizer"},
+    {"rsqrt", "Rsqrt"},
+    {"square_sum", "SquareSum"},
 };
 
 std::string ExtractOpTypeAsString(const OperatorConf &conf) {

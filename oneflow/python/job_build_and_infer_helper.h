@@ -101,11 +101,11 @@ Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::str
 
 Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
     const std::string& lbi_uuid_pair_str) {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  auto* ctx = JUST(GetCurInferCtx());
   LbiAndDiffWatcherUuidPair lbi_uuid_pair;
   CHECK_OR_RETURN(TxtString2PbMessage(lbi_uuid_pair_str, &lbi_uuid_pair))
       << "LbiAndDiffWatcherUuidPair parse failed";
-  return mgr->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
+  return ctx->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
 }
 
 Maybe<std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,

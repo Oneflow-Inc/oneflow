@@ -34,10 +34,6 @@ class CollectiveBoxingGenericOp : public Operator {
     if (GenericOpHasOutput(rank_desc)) { EnrollOutputBn("out", false); }
   }
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().collective_boxing_generic_conf();
-  }
-
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override {
     return this->op_conf().collective_boxing_generic_conf().lbi();
   }

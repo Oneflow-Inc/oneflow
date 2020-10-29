@@ -31,9 +31,9 @@ int64_t GetSoleOutBlobSize(const OpNode* node) {
 ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
                                                    const int64_t parallel_id) {
   std::string device_name;
-  device_name += std::to_string(pd.MachineIdForParallelId(parallel_id));
+  device_name += std::to_string(CHECK_JUST(pd.MachineId4ParallelId(parallel_id)));
   device_name += ":";
-  device_name += std::to_string(pd.DeviceIdForParallelId(parallel_id));
+  device_name += std::to_string(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
   if (pd.device_type() == DeviceType::kGPU) {

@@ -101,14 +101,40 @@ class ComposeHob(BoolFunctor):
         return ctx.composer2middle_op_arg_parallel_attr[self]
 
 
-@bool_functor("MasterMachineOnly")
-def MasterMachineOnly(ctx):
+@bool_functor("SingleMachine")
+def SingleMachine(ctx):
     blob_device_ids = (
         ctx.produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     )
     arg_parallel_desc_symbol = ctx.consumer_op_arg_parallel_attr.parallel_desc_symbol
     op_arg_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
     return list(blob_device_ids.keys()) == [0] and list(op_arg_device_ids.keys()) == [0]
+
+
+@bool_functor("MatchDeviceOneToOnePerMachine")
+def MatchDeviceOneToOnePerMachine(ctx):
+    blob_device_ids = (
+        ctx.produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
+    )
+    arg_parallel_desc_symbol = ctx.consumer_op_arg_parallel_attr.parallel_desc_symbol
+    op_arg_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
+    if blob_device_ids.keys() != op_arg_device_ids.keys():
+        return False
+    for key in blob_device_ids.keys():
+        if len(blob_device_ids[key]) != len(op_arg_device_ids[key]):
+            return False
+    return True
+
+
+@bool_functor("Verbose")
+def Verbose(ctx):
+    print("============[producer]============")
+    print(ctx.produced_blob_object.op_arg_parallel_attr.parallel_desc_symbol)
+    print(ctx.produced_blob_object.op_arg_parallel_attr.sbp_parallel)
+    print("============[consumer]============")
+    print(ctx.consumer_op_arg_parallel_attr.parallel_desc_symbol)
+    print(ctx.consumer_op_arg_parallel_attr.sbp_parallel)
+    return True
 
 
 @bool_functor("producer's devices contained in consumer's devices")

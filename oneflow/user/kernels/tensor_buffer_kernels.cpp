@@ -38,7 +38,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
     CHECK_EQ(out_shape.NumAxes(), in_shape.NumAxes() + instance_shape.NumAxes());
     FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) { CHECK_EQ(out_shape.At(i), in_shape.At(i)); }
     FOR_RANGE(int64_t, i, 0, instance_shape.NumAxes()) {
-      CHECK_EQ(out_shape.At(i + instance_shape.NumAxes()), instance_shape.At(i));
+      CHECK_EQ(out_shape.At(i + in_shape.NumAxes()), instance_shape.At(i));
     }
     const auto data_type = ctx->Attr<DataType>("dtype");
     CHECK_EQ(out->data_type(), data_type);

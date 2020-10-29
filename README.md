@@ -97,48 +97,47 @@
       export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
       ```
 
-      If you don't want to build OneFlow with MKL, you could install OpenBLAS:
-
+      If you don't want to build OneFlow with MKL, you could install OpenBLAS.
+      On CentOS:
       ```
       sudo yum -y install openblas-devel
+      ```
+      On Ubuntu:
+      ```
+      sudo apt install -y libopenblas-dev
       ```
 
 2. #### Clone Source Code
 
-    - #### Option 1: Download from Aliyun
+    - #### Option 1: Clone source code from github
 
-      If you are in China, please download OneFlow source code and all submodules from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
+      ```bash
+      git clone https://github.com/Oneflow-Inc/oneflow
+      ```
+
+    - #### Option 2: Download from Aliyun
+
+      If you are in China, please download OneFlow source code from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
 
       ```bash
       curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
       unzip oneflow-src.zip
       ```
 
-    - #### Option 2: Clone source code and submodules
-
-      ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow
-      cd oneflow
-      git submodule update --init --recursive
-      ```
-
-    - #### Option 3: Clone the repo with `--recursive` flag to clone third_party submodules together
-
-      ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow --recursive
-      ```
-
 3. #### Build and Install OneFlow
 
-    ```
-    cd build
-    cmake ..
-    make -j$(nproc)
-    make pip_install
-    ```
+    - In the root directory of OneFlow source code, run:
 
+      ```
+      mkdir build
+      cd build
+      cmake ..
+      make -j$(nproc)
+      make pip_install
+      ```
+
+    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
     - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
-    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files. 
 
 ### Troubleshooting
 
@@ -177,7 +176,7 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 #### Usage & Design Docs
 * [link](http://docs.oneflow.org/)
 #### API Reference
-* [link](https://oneflow-api.readthedocs.io/en/latest/)
+* [link](https://oneflow.readthedocs.io/en/master/)
 #### OneFlow System Design
 For those who would like to understand the OneFlow internals, please read the document below:
 * [link](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)
