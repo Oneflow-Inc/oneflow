@@ -19,14 +19,14 @@ namespace oneflow {
 
 REGISTER_CPU_ONLY_USER_OP("OneRecReader")
     .Output("out")
-    .Attr("files", UserOpAttrType::kAtListString)
-    .Attr("batch_size", UserOpAttrType::kAtInt32)
-    .Attr<bool>("random_shuffle", UserOpAttrType::kAtBool, false)
-    .Attr<std::string>("shuffle_mode", UserOpAttrType::kAtString, "instance")
-    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
-    .Attr<int32_t>("shuffle_buffer_size", UserOpAttrType::kAtInt32, 1024)
-    .Attr<bool>("shuffle_after_epoch", UserOpAttrType::kAtBool, false)
-    .Attr<bool>("verify_example", UserOpAttrType::kAtBool, true)
+    .Attr<std::vector<std::string>>("files")
+    .Attr<int32_t>("batch_size")
+    .Attr<bool>("random_shuffle", false)
+    .Attr<std::string>("shuffle_mode", "instance")
+    .Attr<int64_t>("seed", -1)
+    .Attr<int32_t>("shuffle_buffer_size", 1024)
+    .Attr<bool>("shuffle_after_epoch", false)
+    .Attr<bool>("verify_example", true)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
