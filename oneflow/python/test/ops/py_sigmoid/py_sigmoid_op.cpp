@@ -22,7 +22,7 @@ namespace {
 REGISTER_USER_OP("py_sigmoid")
     .Input("in")
     .Output("out")
-    .Attr<std::string>("device_sub_tag", UserOpAttrType::kAtString, "py")
+    .Attr<std::string>("device_sub_tag", "py")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -48,7 +48,7 @@ REGISTER_USER_OP("py_sigmoid_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
-    .Attr<std::string>("device_sub_tag", UserOpAttrType::kAtString, "py")
+    .Attr<std::string>("device_sub_tag", "py")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
