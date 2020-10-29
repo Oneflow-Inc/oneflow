@@ -43,7 +43,9 @@ class RangeKernel final : public OpKernel {
       (user_op::HobDeviceTag() == device)                                                  \
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
+REGISTER_RANGE_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_RANGE_KERNEL(DeviceType::kCPU, int64_t)
+REGISTER_RANGE_KERNEL(DeviceType::kCPU, float)
 
 }  // namespace user_op
 

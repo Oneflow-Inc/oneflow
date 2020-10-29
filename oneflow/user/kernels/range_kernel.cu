@@ -47,11 +47,13 @@ class RangeGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_RANGE_KERNEL(dtype)                                              \
+#define REGISTER_GPU_RANGE_KERNEL(device, dtype)                                              \
   REGISTER_USER_KERNEL("range").SetCreateFn<RangeGpuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                              \
+      (user_op::HobDeviceTag() == device)                                              \
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
-REGISTER_GPU_RANGE_KERNEL(int64_t)
+REGISTER_GPU_RANGE_KERNEL(DeviceType::kGPU, int32_t)
+REGISTER_GPU_RANGE_KERNEL(DeviceType::kGPU, int64_t)
+REGISTER_GPU_RANGE_KERNEL(DeviceType::kGPU, float)
 
 }  // namespace oneflow

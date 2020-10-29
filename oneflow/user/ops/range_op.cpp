@@ -25,10 +25,8 @@ REGISTER_USER_OP("range")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       auto dtype = ctx->Attr<DataType>("dtype");
-      DimVector dim_vec;
-      dim_vec.push_back(ctx->Attr<int64_t>("range_shape"));  // Push range shape to DimVector
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
-      *out_shape = Shape(dim_vec);
+      *out_shape = Shape({ctx->Attr<int64_t>("range_shape")});
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
