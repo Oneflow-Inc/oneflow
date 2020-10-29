@@ -22,30 +22,6 @@ import unittest
 
 @flow.unittest.skip_unless_1n1d()
 class Test1dSspVariableProxy(flow.unittest.TestCase):
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_naive(test_case):
-        if flow.eager_execution_enabled():
-            return
-        device_name = "0:0"
-
-        flow.config.gpu_device_num(2)
-        flow.config.enable_debug_mode(True)
-
-        @flow.global_function()
-        def Foo() -> tp.Numpy:
-            with flow.scope.placement("gpu", device_name):
-                w = flow.get_variable(
-                    "w",
-                    shape=(10,),
-                    dtype=flow.float,
-                    initializer=flow.constant_initializer(0),
-                )
-                ref, value = flow.experimental.ssp_variable_proxy(w, buffer_size=1)
-                return value
-
-        x = Foo()
-        test_case.assertTrue(x.shape == (10,))
-
     def test_1d_ring_buffer_Wm_assign_Wc_plus_1(test_case):
         if flow.eager_execution_enabled():
             return
