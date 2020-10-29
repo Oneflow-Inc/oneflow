@@ -43,6 +43,7 @@ def _GetInterfaceBlobObject(builder, op_name):
 def ReleaseLazyRefBlob():
     for blob in lazy_blob_cache.values():
         blob.__del__()
+    lazy_blob_cache.clear()
 
 
 def GetEagerInterfaceBlob(op_name):

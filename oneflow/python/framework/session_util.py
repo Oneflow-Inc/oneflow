@@ -188,7 +188,7 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
-            if not check_point.legacy_checkpoint_used():
+            if not config_util.api_legacy_model_io_enabled():
                 check_point.Init()
         else:
             self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(

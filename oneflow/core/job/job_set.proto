@@ -11,6 +11,7 @@ message IOConf {
   optional bool save_downloaded_file_to_local_fs = 3 [default = false];
   optional uint64 persistence_buf_byte = 4;
   optional bool enable_model_io_v2 = 5 [default = false];
+  optional bool enable_legacy_model_io = 6 [default = false];
 }
 
 message ProfilerConf {

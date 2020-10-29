@@ -22,6 +22,7 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
+import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.hob as hob
@@ -46,25 +47,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Dict, List, Union, Sequence, Optional
 
 
-_lazy_checkpoint = False
-
-
-@oneflow_export("use_legacy_checkpoint")
-def api_use_legacy_checkpoint(val: bool = True) -> None:
-    return enable_if.unique([use_legacy_checkpoint])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def use_legacy_checkpoint(val=True):
-    global _lazy_checkpoint
-    _lazy_checkpoint = val
-
-
-@oneflow_export("legacy_checkpoint_used")
-def legacy_checkpoint_used():
-    return _lazy_checkpoint
-
-
 @oneflow_export("train.CheckPoint")
 class CheckPoint(object):
     """Create a `CheckPoint` object to manage checkpoint manually.
@@ -81,10 +63,12 @@ class CheckPoint(object):
         Args:
             path: A `string` of path to save checkpoint. 
         """
-        if not legacy_checkpoint_used():
+        if not config_util.api_legacy_model_io_enabled():
             print(
                 "'checkpoint.save()' is deprecated. Please use the new checkpoint API"
             )
+            Save(GetAllVariables(), path)
+            return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
 
@@ -92,10 +76,11 @@ class CheckPoint(object):
     def init(self) -> None:
         r"""Initialize models by default initializer of op or Job.
         """
-        if not legacy_checkpoint_used():
+        if not config_util.api_legacy_model_io_enabled():
             print(
                 "'checkpoint.init()' is deprecated. It has no effect and will be removed in the future"
             )
+            return
         enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
@@ -105,10 +90,12 @@ class CheckPoint(object):
         Args:
             path: A `string` of path to load checkpoint.
         """
-        if not legacy_checkpoint_used():
+        if not config_util.api_legacy_model_io_enabled():
             print(
                 "'checkpoint.load()' is deprecated. Please use the new checkpoint API"
             )
+            LoadVariables(Load(path))
+            return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
 
@@ -373,7 +360,7 @@ class FileBackendVariableBlob:
 
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
-def get_all_variables() -> Dict[str, FileBackendVariableBlob]:
+def GetAllVariables() -> Dict[str, FileBackendVariableBlob]:
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
     variables = {}
@@ -387,7 +374,7 @@ def get_all_variables() -> Dict[str, FileBackendVariableBlob]:
 
 @oneflow_export("load")
 @session_ctx.try_init_default_session
-def load(path):
+def Load(path):
     var_dict = {}
     for f in os.listdir(path):
         var_dir = os.path.join(path, f)
@@ -415,7 +402,7 @@ def _ReadSliceFromEagerBlob(blob):
 
 @oneflow_export("save")
 @session_ctx.try_init_default_session
-def save(var_dict, path):
+def Save(var_dict, path):
     os.makedirs(path, exist_ok=True)
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
@@ -592,9 +579,9 @@ def _FeedValueToVariable(var_name, value_blob):
 
 @oneflow_export("load_variables")
 @session_ctx.try_init_default_session
-def load_variables(var_dict, ignore_mismatch=False):
+def LoadVariables(var_dict, ignore_mismatch=False):
     for name, var in var_dict.items():
-        if name in get_all_variables():
+        if name in GetAllVariables():
             _FeedValueToVariable(name, var)
         else:
             if not ignore_mismatch:
@@ -661,7 +648,7 @@ def random_normal_initializer(initializer_conf: op_conf_pb.RandomNormalInitializ
 
 def Init():
     sess = session_ctx.GetDefaultSession()
-    for op_name, var_blob in get_all_variables().items():
+    for op_name, var_blob in GetAllVariables().items():
         rng = np.random.default_rng()
         var_op_conf = sess.OpConf4InterfaceOpName(op_name)
         np_dtype = np.dtype(

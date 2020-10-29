@@ -32,11 +32,7 @@ def get_placement():
         raise RuntimeError("Invalid node size {}".format(node_size))
 
 
-def _Test(test_case):
-    flow.clear_default_session()
-    flow.config.gpu_device_num(2)
-    flow.use_legacy_checkpoint(False)
-
+def def_network():
     @flow.global_function()
     def add() -> tp.Numpy:
         with get_placement():
@@ -55,11 +51,51 @@ def _Test(test_case):
             )
             return flow.math.add_n([x, y, z])
 
+    return add
+
+
+def _TestLegacyAPI(test_case):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(2)
+
+    add = def_network()
     if flow.eager_execution_enabled():
         add()
 
     check_point = flow.train.CheckPoint()
-    if flow.legacy_checkpoint_used():
+    check_point.init()
+    save_dir = "/tmp/legacy_cp"
+    shutil.rmtree(save_dir, ignore_errors=True)
+    check_point.save(save_dir)
+    flow.sync_default_session()
+    res1 = add()
+
+    flow.clear_default_session()
+    flow.config.gpu_device_num(2)
+
+    add = def_network()
+    if flow.eager_execution_enabled():
+        add()
+
+    check_point.load(save_dir)
+    flow.sync_default_session()
+    res2 = add()
+
+    test_case.assertTrue(np.array_equal(res1, res2))
+
+
+def _Test(test_case):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(2)
+    flow.config.enable_legacy_model_io(False)
+
+    add = def_network()
+
+    if flow.eager_execution_enabled():
+        add()
+
+    check_point = flow.train.CheckPoint()
+    if flow.config.legacy_model_io_enabled():
         check_point.init()
 
     vars_in_mem = flow.get_all_variables()
@@ -69,7 +105,7 @@ def _Test(test_case):
         np.array_equal(vars_in_mem["y"].numpy(), vars_in_mem["x"].numpy())
     )
 
-    if flow.legacy_checkpoint_used():
+    if flow.config.legacy_model_io_enabled():
         save_dir = "/tmp/legacy_cp"
         shutil.rmtree(save_dir, ignore_errors=True)
         check_point.save(save_dir)
@@ -109,6 +145,10 @@ class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_1node(test_case):
         _Test(test_case)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_legacy_api_1node(test_case):
+        _TestLegacyAPI(test_case)
 
 
 if __name__ == "__main__":
