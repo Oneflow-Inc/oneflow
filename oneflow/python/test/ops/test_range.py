@@ -34,12 +34,13 @@ from collections import OrderedDict
 
 # TODO: 增加多类型测试
 
+
 def compare_range_with_np(device_type, datatype, start, limit, delta):
     assert device_type in ["cpu", "gpu"]  # GPU version still in process.
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(datatype[0])  
+    func_config.default_data_type(datatype[0])
 
     @flow.global_function(function_config=func_config)
     def oneflow_range() -> tp.Numpy:
@@ -56,9 +57,11 @@ class TestBroadcastLike(flow.unittest.TestCase):
     def test_range(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.int32, np.int32], 
-                                [flow.int64, np.int64], 
-                                [flow.float32, np.float32]]
+        arg_dict["datatype"] = [
+            [flow.int32, np.int32],
+            [flow.int64, np.int64],
+            [flow.float32, np.float32],
+        ]
         arg_dict["start"] = [0]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [1]

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/range_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -25,15 +26,13 @@ class RangeKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t start = ctx->Attr<int64_t>("start");
     const int64_t delta = ctx->Attr<int64_t>("delta");
     const int64_t range_shape = ctx->Attr<int64_t>("range_shape");
 
-    FOR_RANGE(int64_t, i, 0, range_shape) {
-      // In Python, range_shape = int((limit-start)/delta)
-      out_tensor->mut_dptr<T>()[i] = start + i * delta;
-    }
+    RangeKernelUtil<device_type, T>::Range(ctx->device_ctx(), start, delta, range_shape,
+                                           out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -43,9 +42,13 @@ class RangeKernel final : public OpKernel {
       (user_op::HobDeviceTag() == device)                                                  \
       & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
-REGISTER_RANGE_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_RANGE_KERNEL(DeviceType::kCPU, int64_t)
-REGISTER_RANGE_KERNEL(DeviceType::kCPU, float)
+#define REGISTER_RANGE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_RANGE_KERNEL(device, int32_t)           \
+  REGISTER_RANGE_KERNEL(device, int64_t)           \
+  REGISTER_RANGE_KERNEL(device, float)
+
+REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
+REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 
 }  // namespace user_op
 
