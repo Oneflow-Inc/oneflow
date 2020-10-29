@@ -45,7 +45,8 @@ class RangeKernel final : public OpKernel {
 #define REGISTER_RANGE_KERNELS_WITH_DEVICE(device) \
   REGISTER_RANGE_KERNEL(device, int32_t)           \
   REGISTER_RANGE_KERNEL(device, int64_t)           \
-  REGISTER_RANGE_KERNEL(device, float)
+  REGISTER_RANGE_KERNEL(device, float)             \
+  REGISTER_RANGE_KERNEL(device, double)
 
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);

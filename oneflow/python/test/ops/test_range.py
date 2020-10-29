@@ -102,6 +102,17 @@ class TestBroadcastLike(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_range_with_np(*arg)
 
+    def test_range5(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["datatype"] = [[flow.float64, np.float64]]
+        arg_dict["start"] = [2]
+        arg_dict["limit"] = [10]
+        arg_dict["delta"] = [3]
+        # test like flow.range(2, 10, 3) -> [2, 5, 8]
+        for arg in GenArgList(arg_dict):
+            compare_range_with_np(*arg)
+
 
 if __name__ == "__main__":
     unittest.main()
