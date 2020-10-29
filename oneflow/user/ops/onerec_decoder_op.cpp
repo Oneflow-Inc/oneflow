@@ -20,14 +20,14 @@ namespace oneflow {
 REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
     .Input("in")
     .Output("out")
-    .Attr("key", UserOpAttrType::kAtString)
-    .Attr("data_type", UserOpAttrType::kAtDataType)
-    .Attr("static_shape", UserOpAttrType::kAtShape)
-    .Attr<bool>("is_dynamic", UserOpAttrType::kAtBool, false)
-    .Attr<bool>("has_reshape", UserOpAttrType::kAtBool, false)
-    .Attr("reshape", UserOpAttrType::kAtShape)
-    .Attr<bool>("has_batch_padding", UserOpAttrType::kAtBool, false)
-    .Attr("batch_padding", UserOpAttrType::kAtShape)
+    .Attr<std::string>("key")
+    .Attr<DataType>("data_type")
+    .Attr<Shape>("static_shape")
+    .Attr<bool>("is_dynamic", false)
+    .Attr<bool>("has_reshape", false)
+    .Attr<Shape>("reshape")
+    .Attr<bool>("has_batch_padding", false)
+    .Attr<Shape>("batch_padding")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
