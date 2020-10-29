@@ -35,7 +35,7 @@ def pad(
 
     Args:
         x (remote_blob_util.BlobDef): The input Blob
-        paddings (Sequence[int]): A list of integers to specify the padding width, its length must equal with the length of `x.shape`. 
+        paddings (Sequence[int]): A list of tuple to specify the padding width, its length must equal with the length of `x.shape`. 
         constant_value (Union[int, float], optional): The constant value to pad. Defaults to 0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
@@ -58,7 +58,7 @@ def pad(
         def pad_Job(x: tp.Numpy.Placeholder((3, 3))
         ) -> tp.Numpy:
             return flow.pad(x, 
-                            paddings=((2, 2), (1, 1)), 
+                            paddings=((1, 2), (3, 4)), 
                             constant_value=5)
 
 
@@ -67,13 +67,12 @@ def pad(
                     [1, 1, 1]]).astype(np.float32)
         out = pad_Job(x)
 
-        # out [[5. 5. 5. 5. 5.]
-        #      [5. 5. 5. 5. 5.]
-        #      [5. 1. 1. 1. 5.]
-        #      [5. 1. 1. 1. 5.]
-        #      [5. 1. 1. 1. 5.]
-        #      [5. 5. 5. 5. 5.]
-        #      [5. 5. 5. 5. 5.]]
+        # out [[5. 5. 5. 5. 5. 5. 5. 5. 5. 5.]
+                [5. 5. 5. 1. 1. 1. 5. 5. 5. 5.]
+                [5. 5. 5. 1. 1. 1. 5. 5. 5. 5.]
+                [5. 5. 5. 1. 1. 1. 5. 5. 5. 5.]
+                [5. 5. 5. 5. 5. 5. 5. 5. 5. 5.]
+                [5. 5. 5. 5. 5. 5. 5. 5. 5. 5.]]
 
     """
     padding_before = []
