@@ -147,8 +147,3 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
         vm_util.LogicalRun(build)
 
     async_util.Await(1, AsyncFeedValueToInterfaceBlob)
-
-
-def Assign(src_blob, dst_blob):
-    # TODO: remove _ here
-    op_executor._Assign(dst_blob.blob_object, src_blob.blob_object)

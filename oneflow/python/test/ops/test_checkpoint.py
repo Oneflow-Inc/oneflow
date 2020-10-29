@@ -51,9 +51,7 @@ def _Test(test_case):
                 name="y", shape=(4, 3), initializer=flow.constant_initializer(5),
             )
             z = flow.get_variable(
-                name="z",
-                shape=(4, 3),
-                initializer=flow.random_normal_initializer(),
+                name="z", shape=(4, 3), initializer=flow.random_normal_initializer(),
             )
             return flow.math.add_n([x, y, z])
 
@@ -66,7 +64,7 @@ def _Test(test_case):
 
     vars_in_mem = flow.get_all_variables()
     print(vars_in_mem)
-    flow.checkpoint.load_variables({"y": vars_in_mem["x"]})
+    flow.load_variables({"y": vars_in_mem["x"]})
     test_case.assertTrue(
         np.array_equal(vars_in_mem["y"].numpy(), vars_in_mem["x"].numpy())
     )
@@ -91,16 +89,14 @@ def _Test(test_case):
     test_case.assertTrue(
         np.array_equal(vars_in_mem["z"].numpy(), vars_in_file["z"].numpy())
     )
-    flow.checkpoint.load_variables({"y": vars_in_file["z"]})
+    flow.load_variables({"y": vars_in_file["z"]})
     test_case.assertTrue(
         np.array_equal(vars_in_mem["y"].numpy(), vars_in_file["z"].numpy())
     )
 
     net_result = add()
     np_result = (
-        vars_in_mem["x"].numpy()
-        + vars_in_mem["y"].numpy()
-        + vars_in_mem["z"].numpy()
+        vars_in_mem["x"].numpy() + vars_in_mem["y"].numpy() + vars_in_mem["z"].numpy()
     )
     test_case.assertTrue(np.array_equal(net_result, np_result))
 
@@ -110,10 +106,10 @@ class TestCheckpoint(flow.unittest.TestCase):
     def test_2nodes(test_case):
         _Test(test_case)
 
-
     @flow.unittest.skip_unless_1n2d()
     def test_1node(test_case):
         _Test(test_case)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -311,17 +311,18 @@ class FileBackendVariableBlob:
             elif shape is not None or dtype is not None:
                 raise RuntimeError("both or neither of shape and dtype should be None")
 
-    def read_slice_as_numpy(self):
+    def GetSlicesAsNumpy(self):
         assert self.shape is not None
         np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
         with open(self.file_path_, "rb") as f:
-            def slice_f(blob, start_nd_idx, stop_nd_idx, length):
+
+            def ReadFromFile(blob, start_nd_idx, stop_nd_idx, length):
                 slice = f.read(length * np_dtype.itemsize)
                 return np.frombuffer(slice, dtype=np_dtype,).reshape(
                     [1] * (len(self.shape) - 1) + [-1]
                 )
 
-            yield from for_every_slice(self, slice_f)
+            yield from _ForEverySlice(self, ReadFromFile)
 
     @property
     def file_path_(self):
@@ -397,17 +398,19 @@ def load(path):
     return var_dict
 
 
-def read_slice_from_blob(blob, scope_symbol_id):
-    def slice_f(blob, start_nd_idx, stop_nd_idx, length):
-        return logical_slice(
-            blob.blob_object,
-            start_nd_idx,
-            stop_nd_idx,
-            [1] * len(blob.shape),
-            scope_symbol_id,
-        )
+def _GetScopeSymbolIdFromEagerBlob(blob):
+    name = blob.logical_blob_name.split("/")[0]
+    sess = session_ctx.GetDefaultSession()
+    op_conf = sess.OpConf4InterfaceOpName(name)
+    scope_symbol_id = op_conf.scope_symbol_id
+    return scope_symbol_id
 
-    yield from for_every_slice(blob, slice_f)
+
+def _ReadSliceFromEagerBlob(blob):
+    def ReadSlice(blob, start_nd_idx, stop_nd_idx, length):
+        return _LogicalSlice(blob, start_nd_idx, stop_nd_idx,)
+
+    yield from _ForEverySlice(blob, ReadSlice)
 
 
 @oneflow_export("save")
@@ -419,18 +422,18 @@ def save(var_dict, path):
         meta_info.shape.dim[:] = var.shape
         meta_info.data_type = var.dtype.oneflow_proto_dtype
         var_dir = os.path.join(path, name)
-        param_path =  os.path.join(var_dir, "out")
+        param_path = os.path.join(var_dir, "out")
         os.makedirs(os.path.dirname(param_path), exist_ok=True)
         sess = session_ctx.GetDefaultSession()
         var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
-            for _, _, slice in read_slice_from_blob(var, var_op_conf.scope_symbol_id):
+            for _, _, slice in _ReadSliceFromEagerBlob(var):
                 f.write(slice.tobytes())
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
 
 
-def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
+def _LogicalSlice(input_blob, start, stop):
     def AsyncSlice(Yield):
         def build(builder):
             op_conf = op_conf_pb.OperatorConf()
@@ -440,6 +443,7 @@ def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
             op_conf.user_conf.op_type_name = "logical_slice"
             op_conf.user_conf.input["x"].s.append("logical_slice/x_0")
             op_conf.user_conf.output["y"].s.append("logical_slice/y_0")
+            input_blob_object = input_blob.blob_object
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
             attribute = user_op_attr_util.UserOpAttrVal()
@@ -449,9 +453,11 @@ def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
             attribute.at_list_int64.val[:] = stop
             op_conf.user_conf.attr["stop"].CopyFrom(attribute)
             attribute = user_op_attr_util.UserOpAttrVal()
+            step = [1] * len(start)
             attribute.at_list_int64.val[:] = step
             op_conf.user_conf.attr["step"].CopyFrom(attribute)
             bn_in_op2blob_object = dict(x_0=input_blob_object)
+            scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(input_blob)
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
             )
@@ -480,7 +486,7 @@ def logical_slice(input_blob_object, start, stop, step, scope_symbol_id):
     return blob.numpy()
 
 
-def get_variable_blob_from_numpy(np_array: np.ndarray):
+def _GetVariableBlobFromNumpy(np_array: np.ndarray):
     with oneflow.scope.placement("cpu", "0:0"):
         flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
         op_conf = get_variable.GenerateVariableOpConf(
@@ -518,9 +524,10 @@ def get_variable_blob_from_numpy(np_array: np.ndarray):
         return var_blob
 
 
-def slice_assign(
-    ref_blob_object, value_blob_object, start, stop, step, scope_symbol_id
-):
+def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
+    ref_blob_object = ref_blob.blob_object
+    value_blob_object = value_blob.blob_object
+
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
@@ -538,9 +545,11 @@ def slice_assign(
         attribute.at_list_int64.val[:] = stop
         op_conf.user_conf.attr["stop"].CopyFrom(attribute)
         attribute = user_op_attr_util.UserOpAttrVal()
+        step = [1] * len(start)
         attribute.at_list_int64.val[:] = step
         op_conf.user_conf.attr["step"].CopyFrom(attribute)
         bn_in_op2blob_object = dict(ref_0=ref_blob_object, value_0=value_blob_object)
+        scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(ref_blob)
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
         )
@@ -557,23 +566,14 @@ def slice_assign(
 def _FeedValueToVariable(var_name, value_blob):
     sess = session_ctx.GetDefaultSession()
     var_op_conf = sess.OpConf4InterfaceOpName(var_name)
-    var_scope_symbol_id = var_op_conf.scope_symbol_id
     var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
     if isinstance(value_blob, EagerBlobTrait):
         value_name = value_blob.logical_blob_name.split("/")[0]
         value_op_conf = sess.OpConf4InterfaceOpName(value_name)
-        value_scope_symbol_id = value_op_conf.scope_symbol_id
-        for start, stop, slice in read_slice_from_blob(
-            value_blob, value_scope_symbol_id
-        ):
-            slice_eager_blob = get_variable_blob_from_numpy(slice)
-            slice_assign(
-                var_blob.blob_object,
-                slice_eager_blob.blob_object,
-                start,
-                stop,
-                [1] * len(value_blob.shape),
-                var_scope_symbol_id,
+        for start, stop, slice in _ReadSliceFromEagerBlob(value_blob):
+            slice_value_blob = _GetVariableBlobFromNumpy(slice)
+            _LogicalSliceAssign(
+                var_blob, slice_value_blob, start, stop,
             )
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
@@ -581,21 +581,16 @@ def _FeedValueToVariable(var_name, value_blob):
                 value_blob.name, value_blob.var_dir_, var_blob.dtype, var_blob.shape
             )
         assert var_blob.shape == value_blob.shape
-        for start_nd_idx, stop_nd_idx, slice in value_blob.read_slice_as_numpy():
-            value_eager_blob = get_variable_blob_from_numpy(slice)
-            slice_assign(
-                var_blob.blob_object,
-                value_eager_blob.blob_object,
-                start_nd_idx,
-                stop_nd_idx,
-                [1] * len(value_blob.shape),
-                var_scope_symbol_id,
+        for start, stop, slice in value_blob.GetSlicesAsNumpy():
+            slice_value_blob = _GetVariableBlobFromNumpy(slice)
+            _LogicalSliceAssign(
+                var_blob, slice_value_blob, start, stop,
             )
     else:
         raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
 
 
-@oneflow_export("checkpoint.load_variables")
+@oneflow_export("load_variables")
 @session_ctx.try_init_default_session
 def load_variables(var_dict, ignore_mismatch=False):
     for name, var in var_dict.items():
@@ -606,7 +601,7 @@ def load_variables(var_dict, ignore_mismatch=False):
                 raise RuntimeError('"{}" is not a variable name'.format(name))
 
 
-def for_every_slice(var_blob, f):
+def _ForEverySlice(var_blob, f):
     SLICE_LEN = 8192
     start_idx = 0
     size = np.prod(var_blob.shape).item()
@@ -636,7 +631,7 @@ def register_initializer(flow_initializer):
     return deco
 
 
-def get_initializer_generator(initializer_conf):
+def _GetInitializerGenerator(initializer_conf):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
@@ -664,19 +659,19 @@ def random_normal_initializer(initializer_conf: op_conf_pb.RandomNormalInitializ
         yield rng.normal(loc=initializer_conf.mean, scale=initializer_conf.std)
 
 
-def init():
+def Init():
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in get_all_variables().items():
         rng = np.random.default_rng()
         var_op_conf = sess.OpConf4InterfaceOpName(op_name)
-        scope_symbol_id = var_op_conf.scope_symbol_id
         np_dtype = np.dtype(
             dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
         )
 
-        def f(var_blob, start_nd_idx, stop_nd_idx, length):
+        g = _GetInitializerGenerator(var_op_conf.variable_conf.initializer)
+
+        def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
             vals = []
-            g = get_initializer_generator(var_op_conf.variable_conf.initializer)
             for _ in range(length):
                 vals.append(next(g))
             vals = (
@@ -685,17 +680,12 @@ def init():
                 .reshape([1] * (len(var_blob.shape) - 1) + [-1])
             )
 
-            value_eager_blob = get_variable_blob_from_numpy(vals)
-            slice_assign(
-                var_blob.blob_object,
-                value_eager_blob.blob_object,
-                start_nd_idx,
-                stop_nd_idx,
-                [1] * len(var_blob.shape),
-                scope_symbol_id,
+            slice_value_blob = _GetVariableBlobFromNumpy(vals)
+            _LogicalSliceAssign(
+                var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
             )
 
         # we don't care about the return value,
         # only want to run f on every slice
-        for _ in for_every_slice(var_blob, f):
+        for _ in _ForEverySlice(var_blob, GenerateValueAndAssign):
             pass
