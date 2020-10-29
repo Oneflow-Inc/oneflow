@@ -27,7 +27,8 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 lib_path = os.path.dirname(os.path.abspath(__file__))
-print("lip_path:", lib_path)
+print("lib_path:", lib_path)
+print("pwd_path:", os.getcwd())
 
 
 def numpy_sigmoid(x):
