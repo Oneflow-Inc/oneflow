@@ -12,7 +12,6 @@ namespace cfg {
 template<typename T>
 class _ConstRepeatedField_ {
   public:
-
   static_assert(std::is_nothrow_move_constructible<T>::value, "");
   using value_type = typename std::vector<T>::value_type;
   using size_type = typename std::vector<T>::size_type;
@@ -26,7 +25,7 @@ class _ConstRepeatedField_ {
   _ConstRepeatedField_(const std::shared_ptr<std::vector<T>>& data): data_(data) {}
   template<typename InputIt>
   _ConstRepeatedField_(InputIt begin, InputIt end): data_(std::make_shared<std::vector<T>>(begin, end)) {}
-  ~_ConstRepeatedField_() = default;
+  virtual ~_ConstRepeatedField_() = default;
 
   const_iterator begin() const noexcept { return data_->begin(); }
   const_iterator cbegin() const noexcept { return data_->cbegin(); }
@@ -47,7 +46,6 @@ class _ConstRepeatedField_ {
   const_reference Get(size_type pos) const { return data_->at(pos); }
 
   const std::shared_ptr<std::vector<T>>& __SharedPtr__() const { return data_; }
-  const std::shared_ptr<std::vector<T>>& __SharedPtr__() { return data_; }
 
   std::shared_ptr<_ConstRepeatedField_> __SharedConst__() const {
     return std::make_shared<_ConstRepeatedField_>(__SharedPtr__());
@@ -56,8 +54,7 @@ class _ConstRepeatedField_ {
   bool operator==(const _ConstRepeatedField_& other) const {return *__SharedPtr__() == *other.__SharedPtr__();}
   bool operator<(const _ConstRepeatedField_& other) const {return *__SharedPtr__() < *other.__SharedPtr__();}
 
-
-  private:
+  protected:
   std::shared_ptr<std::vector<T>> data_;
 
 };
@@ -82,20 +79,21 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
   using _ConstRepeatedField_<T>::begin;
   using _ConstRepeatedField_<T>::end;
   using _ConstRepeatedField_<T>::at;
+  using _ConstRepeatedField_<T>::data_;
+  using _ConstRepeatedField_<T>::__SharedPtr__;
 
-  _RepeatedField_(): data_(std::make_shared<std::vector<T>>()) {}
-  _RepeatedField_(const std::shared_ptr<std::vector<T>>& data): data_(data) {}
-  _RepeatedField_(const _RepeatedField_& other): data_(std::make_shared<std::vector<T>>()) {
+  _RepeatedField_() = default;
+  _RepeatedField_(const std::shared_ptr<std::vector<T>>& data): _ConstRepeatedField_<T>(data) {}
+  _RepeatedField_(const _RepeatedField_& other) {
     CopyFrom(other);
   }
-
-  _RepeatedField_(const _ConstRepeatedField_<T>& other): data_(std::make_shared<std::vector<T>>()) {
+  _RepeatedField_(const _ConstRepeatedField_<T>& other) {
     CopyFrom(other);
   }
 
   _RepeatedField_(_RepeatedField_&&) = default;
   template<typename InputIt>
-  _RepeatedField_(InputIt begin, InputIt end): data_(std::make_shared<std::vector<T>>(begin, end)) {}
+  _RepeatedField_(InputIt begin, InputIt end): _ConstRepeatedField_<T>(begin, end) {}
   ~_RepeatedField_() = default;
 
   iterator begin() noexcept { return data_->begin(); }
@@ -107,9 +105,7 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
   reference at(size_type pos) { return data_->at(pos); }
   reference operator[](size_type pos) { return data_[pos]; }
 
-  const std::shared_ptr<std::vector<T>>& __SharedPtr__() const { return data_; }
   const std::shared_ptr<std::vector<T>>& __SharedPtr__() { return data_; }
-
 
   std::shared_ptr<_RepeatedField_> __SharedMutable__() {
     return std::make_shared<_RepeatedField_>(__SharedPtr__());
@@ -154,16 +150,15 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
   void Set(size_type pos, const T& elem) {
     data_->at(pos) = elem;
   }
+
   void Add(const T& elem) {
     data_->push_back(std::move(elem));
   }
+
   pointer Add() {
     data_->push_back(T());
     return &data_->at(data_->size() - 1);
   }
-
- private:
-  std::shared_ptr<std::vector<T>> data_;
 };
 
 }

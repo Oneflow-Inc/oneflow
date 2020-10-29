@@ -21,27 +21,19 @@ class _ConstMapField_ {
   using difference_type = typename std::map<Key, T>::difference_type;
   using const_reference = typename std::map<Key, T>::const_reference;
   using const_pointer = typename std::map<Key, T>::const_pointer;
-  using const_iterator = typename std::map<Key, T>::const_iterator;
+  using iterator = typename std::map<Key, T>::const_iterator;
   using const_reverse_iterator = typename std::map<Key, T>::const_reverse_iterator;
-
-  using reference = typename std::map<Key, T>::reference;
-  using pointer = typename std::map<Key, T>::pointer;
-  using iterator = typename std::map<Key, T>::iterator;
-  using reverse_iterator = typename std::map<Key, T>::reverse_iterator;
 
   _ConstMapField_(): data_(std::make_shared<std::map<Key, T>>()) {}
   _ConstMapField_(const std::shared_ptr<std::map<Key, T>>& data): data_(data) {}
   template<typename InputIt>
   _ConstMapField_(InputIt begin, InputIt end): data_(std::make_shared<std::map<Key, T>>(begin, end)) {}
-  ~_ConstMapField_() = default;
+  virtual ~_ConstMapField_() = default;
 
-  iterator begin() noexcept { return data_->begin(); }
-  iterator end() noexcept { return data_->end(); }
-
-  const_iterator begin() const noexcept { return data_->begin(); }
-  const_iterator cbegin() const noexcept { return data_->cbegin(); }
-  const_iterator end() const noexcept { return data_->end(); }
-  const_iterator cend() const noexcept { return data_->cend(); }
+  iterator begin() const noexcept { return data_->begin(); }
+  iterator cbegin() const noexcept { return data_->cbegin(); }
+  iterator end() const noexcept { return data_->end(); }
+  iterator cend() const noexcept { return data_->cend(); }
   const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
   const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(cend()); }
   const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
@@ -51,7 +43,7 @@ class _ConstMapField_ {
   size_type size() const { return data_->size(); }
   const T& at(const Key& key) const { return data_->at(key); }
   const T& operator[](const Key& key) const { return (*data_)[key]; }
-  const_iterator find(const Key& key) const { return data_->find(key); }
+  iterator find(const Key& key) const { return data_->find(key); }
   int count(const Key& key) const { return data_->count(key); }
 
   bool operator==(const _ConstMapField_& other) const {
@@ -63,14 +55,13 @@ class _ConstMapField_ {
 
   const T& Get(const Key& key) const {return at(key);}
   const std::shared_ptr<std::map<Key, T>>& __SharedPtr__() const { return data_; }
-  const std::shared_ptr<std::map<Key, T>>& __SharedPtr__() { return data_; }
 
   std::shared_ptr<_ConstMapField_> __SharedConst__() const { return std::make_shared<_ConstMapField_>(__SharedPtr__());}
   // std::shared_ptr<T> __SharedConst__(const Key& key) const {
   //   return at(key).__SharedConst__();
   // }
 
-  private:
+  protected:
   std::shared_ptr<std::map<Key, T>> data_;
 
 };
@@ -97,24 +88,26 @@ class _MapField_: public _ConstMapField_<Key, T>{
   using _ConstMapField_<Key, T>::begin;
   using _ConstMapField_<Key, T>::end;
   using _ConstMapField_<Key, T>::at;
+  using _ConstMapField_<Key, T>::__SharedPtr__;
+  using _ConstMapField_<Key, T>::data_;
 
-  _MapField_(): data_(std::make_shared<std::map<Key, T>>()) {}
-  _MapField_(const std::shared_ptr<std::map<Key, T>>& data): data_(data) {}
-  _MapField_(const _MapField_& other): data_(std::make_shared<std::map<Key, T>>()) {
+  _MapField_() = default;
+  _MapField_(const std::shared_ptr<std::map<Key, T>>& data): _ConstMapField_<Key, T>(data){}
+  _MapField_(const _MapField_& other) {
     CopyFrom(other);
   }
 
-  _MapField_(const _ConstMapField_<Key, T>& other): data_(std::make_shared<std::map<Key, T>>()) {
+  _MapField_(const _ConstMapField_<Key, T>& other) {
     CopyFrom(other);
   }
 
   _MapField_(_MapField_&&) = default;
   template<typename InputIt>
-  _MapField_(InputIt begin, InputIt end): data_(std::make_shared<std::map<Key, T>>(begin, end)) {}
+  _MapField_(InputIt begin, InputIt end): _ConstMapField_<Key, T>(begin, end) {}
   ~_MapField_() = default;
 
-  //iterator begin() noexcept { return data_->begin(); }
-  //iterator end() noexcept { return data_->end(); }
+  iterator begin() noexcept { return data_->begin(); }
+  iterator end() noexcept { return data_->end(); }
   reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
   reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
 
@@ -154,7 +147,6 @@ class _MapField_: public _ConstMapField_<Key, T>{
     (*this)[key] = value;
   }
 
-  const std::shared_ptr<std::map<Key, T>>& __SharedPtr__() const { return data_; }
   const std::shared_ptr<std::map<Key, T>>& __SharedPtr__() { return data_; }
 
   std::shared_ptr<_MapField_> __SharedMutable__() {
@@ -166,9 +158,6 @@ class _MapField_: public _ConstMapField_<Key, T>{
 
   shared_mut_iterator shared_mut_begin() { return begin(); }
   shared_mut_iterator shared_mut_end() { return end(); }
-
- private:
-  std::shared_ptr<std::map<Key, T>> data_;
 };
 
 }
