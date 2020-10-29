@@ -32,21 +32,22 @@ from test_util import GenArgList
 import unittest
 from collections import OrderedDict
 
+# TODO: 增加多类型测试
 
-def compare_range_with_np(device_type, start, limit, delta):
+def compare_range_with_np(device_type, datatype, start, limit, delta):
     assert device_type in ["cpu", "gpu"]  # GPU version still in process.
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.int64)  # Only support int64_t
+    func_config.default_data_type(datatype[0])  
 
     @flow.global_function(function_config=func_config)
     def oneflow_range() -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
-            return flow.range(start, limit, delta, dtype=flow.int64)
+            return flow.range(start, limit, delta, dtype=datatype[0])
 
     of_out = oneflow_range()
-    np_out = np.arange(start, limit, delta, dtype=np.int64)
+    np_out = np.arange(start, limit, delta, dtype=datatype[1])
     assert np.array_equal(of_out, np_out)
 
 
@@ -55,6 +56,9 @@ class TestBroadcastLike(flow.unittest.TestCase):
     def test_range(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["datatype"] = [[flow.int32, np.int32], 
+                                [flow.int64, np.int64], 
+                                [flow.float32, np.float32]]
         arg_dict["start"] = [0]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [1]
@@ -65,6 +69,7 @@ class TestBroadcastLike(flow.unittest.TestCase):
     def test_range2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["datatype"] = [[flow.int32, np.int32]]
         arg_dict["start"] = [10]
         arg_dict["limit"] = [None]
         arg_dict["delta"] = [1]
@@ -75,6 +80,7 @@ class TestBroadcastLike(flow.unittest.TestCase):
     def test_range3(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["datatype"] = [[flow.int64, np.int64]]
         arg_dict["start"] = [0]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [2]
@@ -85,6 +91,7 @@ class TestBroadcastLike(flow.unittest.TestCase):
     def test_range4(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["datatype"] = [[flow.float32, np.float32]]
         arg_dict["start"] = [1]
         arg_dict["limit"] = [10]
         arg_dict["delta"] = [3]
