@@ -27,6 +27,7 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 lib_path = os.path.dirname(os.path.abspath(__file__))
+print("lip_path:", lib_path)
 
 
 def numpy_sigmoid(x):
@@ -67,7 +68,6 @@ class TestPySigmoid(flow.unittest.TestCase):
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
-        py_sigmoid_lib.AddCPPKernel()
         py_sigmoid_lib.Build()
 
         op_lib_ld = flow.util.op_lib_loader()
@@ -101,7 +101,6 @@ class TestPySigmoid(flow.unittest.TestCase):
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
-        py_sigmoid_lib.AddCPPKernel()
         py_sigmoid_lib.Build()
 
         op_lib_ld = flow.util.op_lib_loader()
