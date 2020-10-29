@@ -1908,19 +1908,12 @@ def range(
         start, limit = 0, start
 
     assert limit > start, "Limit should be larger than start"
-    assert delta < limit - start, "Delta is ilegal"
+    assert delta <= limit - start, "Delta is ilegal"
+
     # Ensure start, limit, delta's dtype is int, We will Add dtype hierarchy in Later version.
     assert type(start) == int, "Params `start`'s type should be int"
     assert type(limit) == int, "Params `limit`'s type should be int"
     assert type(delta) == int, "Params `delta`'s type should be int"
-
-    def div_ceil(a, b):
-        # Compute the ceil of A / B
-        return int((a + b - 1) / b)
-
-    # Infer range shape
-    # TODO: Is it possible to infer shape in c++ backend in later version?
-    _range_shape = div_ceil((limit - start), delta)
 
     # Build User OP
     return (
@@ -1928,8 +1921,8 @@ def range(
         .Op("range")
         .Attr("start", start)
         .Attr("delta", delta)
+        .Attr("limit", limit)
         .Attr("dtype", dtype)
-        .Attr("range_shape", _range_shape)
         .Output("out")
         .Build()
         .InferAndTryRun()

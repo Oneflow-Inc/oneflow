@@ -29,8 +29,9 @@ class RangeKernel final : public OpKernel {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t start = ctx->Attr<int64_t>("start");
     const int64_t delta = ctx->Attr<int64_t>("delta");
-    const int64_t range_shape = ctx->Attr<int64_t>("range_shape");
-
+    const int64_t limit = ctx->Attr<int64_t>("limit");
+    const int64_t range_shape =
+        (((limit - start) + delta - 1) / delta);  // Do the ceil division, ceil((limit-start)/delta)
     RangeKernelUtil<device_type, T>::Range(ctx->device_ctx(), start, delta, range_shape,
                                            out->mut_dptr<T>());
   }
@@ -47,7 +48,7 @@ class RangeKernel final : public OpKernel {
   REGISTER_RANGE_KERNEL(device, int64_t)           \
   REGISTER_RANGE_KERNEL(device, float)             \
   REGISTER_RANGE_KERNEL(device, double)
-
+// TODO: Add float16 version
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 
