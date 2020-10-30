@@ -13,20 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import math
-import numpy as np
-import os
+print("start test py_sigmoid 0")
 import unittest
+import os
+import numpy as np
+import math
+
+print("start test py_sigmoid 1")
 
 import oneflow as flow
 import oneflow.typing as oft
 
+
+print("start test py_sigmoid 2")
+
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
+
+print("start test py_sigmoid 3")
 
 lib_path = os.path.dirname(os.path.abspath(__file__))
 print("lib_path:", lib_path)
 print("pwd_path:", os.getcwd())
+
+print("start test py_sigmoid 4")
 
 
 def numpy_sigmoid(x):
@@ -35,6 +45,9 @@ def numpy_sigmoid(x):
 
 def numpy_sigmoid_grad(y, dy):
     return y * (1 - y) * dy
+
+
+print("start test py_sigmoid 5")
 
 
 def make_job(input_shape, dtype=flow.float32):
@@ -56,6 +69,9 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
     return sigmoid_grad_job
 
 
+print("start test py_sigmoid 6")
+
+
 @unittest.skipIf(
     flow.unittest.env.eager_execution_enabled(),
     "eager mode has not support op load yet",
@@ -63,6 +79,7 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
 @flow.unittest.skip_unless_1n1d()
 class TestPySigmoid(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
+        print("start test py_sigmoid forward")
         py_sigmoid_lib = flow.util.op_lib("py_sigmoid", lib_path)
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
@@ -96,6 +113,7 @@ class TestPySigmoid(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
     def test_py_sigmoid_grad(test_case):
+        print("start test py_sigmoid backward")
         py_sigmoid_lib = flow.util.op_lib("py_sigmoid", lib_path)
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
@@ -137,4 +155,5 @@ class TestPySigmoid(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
+    print("start test py_sigmoid 7")
     unittest.main()
