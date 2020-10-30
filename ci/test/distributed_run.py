@@ -34,8 +34,7 @@ cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
 /etc/init.d/ssh start && \
     ssh-keyscan -H localhost >> /root/.ssh/known_hosts
 
-rm -rf {dotssh_dir}
-cp -r /root/.ssh/ {dotssh_dir}
+cp -r /root/.ssh/* {dotssh_dir}
 chmod 777 {dotssh_dir}
 chmod 777 {dotssh_dir}/*
 """
@@ -44,7 +43,7 @@ chmod 777 {dotssh_dir}/*
         f.write(bash_cmd)
         f.flush()
         subprocess.check_call(
-            f"docker run -v /tmp:/host/tmp -v $PWD:$PWD -w $PWD oneflow-test:$USER bash /host/{f_name}",
+            f"docker run -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
             shell=True,
         )
     config_content = """Host *
@@ -93,7 +92,9 @@ sleep {survival_time}
             f"remote container launched, host: {hostname}, ssh port:{docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
         )
 
+
 def run_bash_script(bash_script):
+    pass
 
 
 if __name__ == "__main__":
@@ -107,7 +108,10 @@ if __name__ == "__main__":
     parser.add_argument("--run", action="store_true", required=False, default=False)
     parser.add_argument("--bash_script", type=str, required=False)
     parser.add_argument("--remote_host", type=str, required=False, default="oneflow-15")
-    parser.add_argument("--dotssh_dir", type=str, required=False, default="dotssh")
+    default_dotssh_dir = os.path.expanduser("~/distributed_run_dotssh")
+    parser.add_argument(
+        "--dotssh_dir", type=str, required=False, default=default_dotssh_dir
+    )
     parser.add_argument("--ssh_port", type=int, required=False, default=None)
     args = parser.parse_args()
 
