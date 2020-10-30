@@ -26,6 +26,12 @@ class BlobAccessChecker;
 
 namespace user_op {
 
+/**
+ * @brief A Tensor object contains the data needed for caculation and maintains the pointer
+ * to the buffer inside it. We can use the method shape to get tenosr's shape, use the 
+ * dptr or mut_dptr to get the pointer to the buffer. 
+ *
+ */
 class Tensor final {
  public:
   Tensor(Blob*);
@@ -36,21 +42,50 @@ class Tensor final {
   void CopyWithoutData(const Tensor& rhs);
   Tensor& operator=(Tensor&& rhs);
 
+  /**
+   * @brief Get the shape of current tensor.
+   * 
+   * @return const ShapeView& 
+   */
   const ShapeView& shape() const { return shape_; }
+  
+  /**
+   * @brief Get the mutable shape of current tensor.
+   * 
+   * @return MutShapeView* 
+   */
   MutShapeView* mut_shape() {
     this->header_access_check();
     return mut_shape_.get();
   }
 
   DataType data_type() const { return data_type_; }
+
+  /**
+   * @brief Return the memory case (host or device memory)
+   * 
+   * @return const MemoryCase& 
+   */
   const MemoryCase& mem_case() const { return *mem_case_; }
 
+  /**
+   * @brief Return the pointer to the data buffer.
+   * 
+   * @tparam T What type the pointer should converted to
+   * @return const T* 
+   */
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();
     return static_cast<const T*>(dptr_);
   }
 
+  /**
+   * @brief Similar to dptr(), except that it returns a pointer to mutable buffer.
+   * 
+   * @tparam T 
+   * @return T* 
+   */
   template<typename T = void>
   T* mut_dptr() {
     this->body_access_check();
