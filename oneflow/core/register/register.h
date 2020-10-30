@@ -48,11 +48,11 @@ class Regst final {
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
+  Blob* GetBlobByOrdinal(int64_t ordinal);
   Blob* GetBlobByLbi(const LogicalBlobId& lbi);
   const Blob* GetSoleBlob() const;
   Blob* GetMutSoleBlob();
-  int64_t GetBlobSize() const { return lbi2blob_.size(); }
-  const HashMap<LogicalBlobId, std::unique_ptr<Blob>>& lbi2blob() const { return lbi2blob_; }
+  int64_t GetBlobSize() const { return sorted_blob_vec_.size(); }
   Blob* packed_blob() { return packed_blob_.get(); }
   bool IsMaxCol() const { return col_id() == max_col_id(); }
   void* comm_net_token() const { return comm_net_token_; }
@@ -68,12 +68,13 @@ class Regst final {
   Regst();
 
   void set_regst_desc(const RtRegstDesc* regst_desc);
+  void SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob);
 
   void* comm_net_token_;
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
-  HashMap<LogicalBlobId, std::unique_ptr<Blob>> lbi2blob_;
   std::unique_ptr<Blob> packed_blob_;
+  std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
 };
 
 }  // namespace oneflow

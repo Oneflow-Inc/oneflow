@@ -185,34 +185,6 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
   return true;
 }
 
-int64_t RegstDesc::ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) const {
-  RegstDescProto regst_desc_proto;
-  ToProto(&regst_desc_proto);
-  RtRegstDesc rt_regst_desc(regst_desc_proto);
-  std::vector<LbiBlobDescPair> lbi_blob_desc_pairs;
-  for (const auto& pair : lbi2blob_desc_) {
-    LbiBlobDescPair lbi_blob_desc_pair;
-    *lbi_blob_desc_pair.mutable_lbi() = pair.first;
-    pair.second->ToProto(lbi_blob_desc_pair.mutable_blob_desc());
-    lbi_blob_desc_pairs.push_back(lbi_blob_desc_pair);
-  }
-  std::sort(lbi_blob_desc_pairs.begin(), lbi_blob_desc_pairs.end(), CompareLbiBlobDescPair);
-
-  bool found = false;
-  int64_t offset = 0;
-  rt_regst_desc.ForEachBlobDescOffsetInOnRegst(
-      lbi_blob_desc_pairs,
-      [&](const LbiBlobDescPair& lbi_blob_desc_pair, int64_t body_offset, int64_t header_offset) {
-        if (found) { return; }
-        if (lbi_blob_desc_pair.lbi() == lbi) {
-          offset = body_offset;
-          found = true;
-        }
-      });
-  CHECK(found);
-  return offset;
-}
-
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
   CHECK_NOTNULL(ctrl_regst_proto);
   ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
