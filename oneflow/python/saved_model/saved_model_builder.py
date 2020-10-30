@@ -304,7 +304,7 @@ class SavedModelBuilderV2(object):
         return self.job_name2job_builder_[job_name]
 
     # TODO: JobGraph
-
+    # TODO: check multi user job input/output name conflict
     @session_ctx.try_init_default_session
     def Save(self):
         sess = session_ctx.GetDefaultSession()
