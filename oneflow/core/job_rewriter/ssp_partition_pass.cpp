@@ -41,20 +41,25 @@ REGISTER_FUNCTION_PASS("SspPartition", SspPartitionPass);
 
 Maybe<void> GetSequantialTrainableFwOps(
     const OpGraph&, std::list<std::unique_ptr<std::vector<OpNode*>>>* sequantial_trainable_fw_ops);
-Maybe<void> MakeGetterSspParallelConf4Depth(
+Maybe<void> GetSspDepth2Stage(
     const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
-    std::function<Maybe<const ParallelConf&>(int64_t)>* SspParallelConf4Depth);
+    std::function<Maybe<int64_t>(int64_t)>* Stage4Depth);
+Maybe<void> MakeGetterSspParallelConf4Stage(
+    std::function<Maybe<const ParallelConf&>(int64_t stage)>* SspParallelConf4Stage);
 
 Maybe<void> ForEachSspParallelConf4TrainableFwOp(
     const OpGraph& op_graph,
     const std::function<void(const OpNode*, const ParallelConf&)>& Handler) {
   std::list<std::unique_ptr<std::vector<OpNode*>>> sequantial_trainable_fw_ops;
   JUST(GetSequantialTrainableFwOps(op_graph, &sequantial_trainable_fw_ops));
-  std::function<Maybe<const ParallelConf&>(int64_t)> SspParallelConf4Depth;
-  JUST(MakeGetterSspParallelConf4Depth(sequantial_trainable_fw_ops, &SspParallelConf4Depth));
+  std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
+  JUST(GetSspDepth2Stage(sequantial_trainable_fw_ops, &Stage4Depth));
+  std::function<Maybe<const ParallelConf&>(int64_t)> SspParallelConf4Stage;
+  JUST(MakeGetterSspParallelConf4Stage(&SspParallelConf4Stage));
   int64_t depth = 0;
   for (const auto& fused_vec : sequantial_trainable_fw_ops) {
-    const auto& parallel_conf = JUST(SspParallelConf4Depth(depth));
+    int64_t stage = JUST(Stage4Depth(depth));
+    const auto& parallel_conf = JUST(SspParallelConf4Stage(stage));
     for (OpNode* op_node : *fused_vec) { Handler(op_node, parallel_conf); }
     ++depth;
   }
@@ -99,6 +104,13 @@ Maybe<void> GetSequantialTrainableFwOps(
     CHECK(iter != backbone_op2fused_ops.end());
     sequantial_trainable_fw_ops->emplace_front(std::move(iter->second));
   });
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetSspDepth2Stage(
+    const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
+    std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) {
+  TODO();
   return Maybe<void>::Ok();
 }
 
@@ -225,9 +237,8 @@ Maybe<void> BfsForEachBackboneOp(const OpGraph& op_graph, const HashSet<OpNode*>
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MakeGetterSspParallelConf4Depth(
-    const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
-    std::function<Maybe<const ParallelConf&>(int64_t)>* SspParallelConf4Depth) {
+Maybe<void> MakeGetterSspParallelConf4Stage(
+    std::function<Maybe<const ParallelConf&>(int64_t stage)>* SspParallelConf4Stage) {
   TODO();
   return Maybe<void>::Ok();
 }
