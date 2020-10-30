@@ -18,6 +18,7 @@ import threading
 import struct
 import cv2
 import numpy as np
+import inspect
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_ctx
@@ -62,9 +63,13 @@ class OutputFuture(object):
 
 
 class InferenceSession(object):
-    # TODO: add status
     # TODO: support multi user job
     # TODO: check multi user job input/ouput name conflict
+
+    class SessionStatus:
+        OPEN = "OPEN"
+        RUNNING = "RUNNING"
+        CLOSED = "CLOSED"
 
     def __init__(self, config_proto=None):
         self.cond_var_ = threading.Condition()
@@ -90,20 +95,47 @@ class InferenceSession(object):
 
         session_util._TryCompleteConfigProto(self.config_proto_)
         c_api_util.InitLazyGlobalSession(self.config_proto_)
+        self.status_ = self.SessionStatus.OPEN
 
     def __del__(self):
         self.close()
 
     def close(self):
         self._sync()
-        c_api_util.StopLazyGlobalSession()
-        c_api_util.DestroyLazyGlobalSession()
-        c_api_util.DestroyEnv()
+        if self.status_ == self.SessionStatus.RUNNING:
+            c_api_util.StopLazyGlobalSession()
+            c_api_util.DestroyLazyGlobalSession()
+            c_api_util.DestroyEnv()
+        elif self.status_ == self.SessionStatus.OPEN:
+            c_api_util.DestroyLazyGlobalSession()
+            c_api_util.DestroyEnv()
+        else:
+            pass
+
+        self.status_ = self.SessionStatus.CLOSED
+
+    def _check_status(self, *status):
+        check_sucess = False
+        for stat in status:
+            if self.status_ == stat:
+                check_sucess = True
+                break
+
+        if check_sucess is False:
+            caller_func_name = inspect.stack()[1].function
+            allowed_status = ",".join(status)
+            raise ValueError(
+                "The calling to {} is only allowed when status is {}, current status is {}".format(
+                    caller_func_name, allowed_status, self.status_
+                )
+            )
 
     def set_checkpoint_path(self, checkpoint_path):
+        self._check_status(self.SessionStatus.OPEN)
         self.checkpoint_path_ = checkpoint_path
 
     def setup_job_signature(self, job_name, signature):
+        self._check_status(self.SessionStatus.OPEN)
         if job_name in self.job_name2job_conf_:
             job_conf = self.job_name2job_conf_[job_name]
             assert job_conf.job_name == job_name
@@ -126,7 +158,7 @@ class InferenceSession(object):
                 output_def.lbi.op_name, output_def.lbi.blob_name
             )
 
-    def get_job_conf(self, job_name):
+    def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
             return self.job_name2job_conf_[job_name]
         else:
@@ -137,8 +169,9 @@ class InferenceSession(object):
 
     @contextmanager
     def open(self, job_name):
+        self._check_status(self.SessionStatus.OPEN)
         c_api_util.JobBuildAndInferCtx_Open(job_name)
-        job_conf = self.get_job_conf(job_name)
+        job_conf = self._get_job_conf(job_name)
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
@@ -155,17 +188,23 @@ class InferenceSession(object):
         c_api_util.JobBuildAndInferCtx_Close()
 
     def compile(self, op_list):
+        self._check_status(self.SessionStatus.OPEN)
         for op_conf in op_list:
             compile_ctx.CurJobAddOp(op_conf)
 
         c_api_util.CurJobBuildAndInferCtx_Complete()
 
     def launch(self):
+        self._check_status(self.SessionStatus.OPEN)
         c_api_util.StartLazyGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self._run_load_checkpoint_job()
+        self.status_ = self.SessionStatus.RUNNING
+
+    # TODO: list jobs
 
     def list_inputs(self):
+        self._check_status(self.SessionStatus.RUNNING)
         input_names = []
         for (
             input_name,
@@ -175,6 +214,7 @@ class InferenceSession(object):
         return tuple(input_names)
 
     def list_outputs(self):
+        self._check_status(self.SessionStatus.RUNNING)
         output_names = []
         for (
             output_name,
@@ -204,6 +244,7 @@ class InferenceSession(object):
         return output_lbn, output_job_name
 
     def input_info(self, input_name):
+        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
         input_lbn, input_job_name = self._query_input_lbn(input_name)
         if input_job_name is None or input_lbn is None:
             raise ValueError('can not find input "{}"'.format(input_name))
@@ -221,10 +262,11 @@ class InferenceSession(object):
 
     def run(self, job_name, **kwargs):
         # TODO: check args and warn unexpected args
+        self._check_status(self.SessionStatus.RUNNING)
         self._run_push_jobs(**kwargs)
-        # TODO: run all user jobs
-        job_inst = job_instance_util.MakeUserJobInstance(job_name)
-        self._run_job(job_inst)
+        for job_name in self.job_name2job_conf_.keys():
+            job_inst = job_instance_util.MakeUserJobInstance(job_name)
+            self._run_job(job_inst)
         self._run_pull_jobs()
 
         # process result
@@ -323,11 +365,10 @@ class InferenceSession(object):
 
 
 def load_saved_model(model_meta_file_path):
-    saved_model = saved_model_pb.SavedModel()
+    saved_model_proto = saved_model_pb.SavedModel()
     with open(model_meta_file_path, "rb") as f:
-        text_format.Merge(f.read(), saved_model)
-    # print("saved model proto:", "\n", saved_model)
-    return saved_model
+        text_format.Merge(f.read(), saved_model_proto)
+    return saved_model_proto
 
 
 def load_data_from_ofrecord(
