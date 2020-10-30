@@ -12,3 +12,6 @@ RUN wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/${MOFED_DIR}.tg
     rm -rf *.tgz
 
 RUN apt update && apt install -y --no-install-recommends gdb openssh-server openssh-client
+
+RUN echo 'ALL ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
