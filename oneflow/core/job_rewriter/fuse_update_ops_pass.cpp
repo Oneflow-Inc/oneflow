@@ -60,7 +60,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
     if (user_op_conf.op_type_name() != "sgd_update"
         && user_op_conf.op_type_name() != "momentum_update"
-        && user_op_conf.op_type_name() != "adam_update") {
+        && user_op_conf.op_type_name() != "adam_update"
+        && user_op_conf.op_type_name() != "rmsprop_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -166,6 +167,15 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         fused_op_builder.Input("beta1_t", user_op_conf.input("beta1_t", 0))
             .Input("beta2_t", user_op_conf.input("beta2_t", 0));
       }
+    } else if (user_op_conf.op_type_name() == "rmsprop_update") {
+        const bool centered = user_op_conf.attr<bool>("centered");
+        fused_op_builder.Input("mean_square", user_op_conf.input("mean_square", 0.f))
+        .Attr<bool>("centered", user_op_conf.attr<bool>("centered"))
+        .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+        .Attr<float>("decay_rate", user_op_conf.attr<float>("decay_rate"));
+        if (centered) {
+          fused_op_builder.Input("mean_gradient", user_op_conf.input("mean_gradient", 0.f));
+        }
     } else {
       UNIMPLEMENTED();
     }

@@ -185,6 +185,30 @@ void AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifie
   }
 }
 
+Maybe<void> InferRmsPropUpdateTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const DataType data_type = model->data_type();
+  const Shape& shape = model->shape();
+  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
+  const user_op::TensorDesc* mean_square = ctx->TensorDesc4ArgNameAndIndex("mean_square", 0);
+  JUST(CheckTensorDescLike(mean_square, model));
+  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+  JUST(CheckLearningRateTenserDesc(learning_rate));
+  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
+    JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
+  }
+  if (ctx->Attr<bool>("centered")) {
+    CHECK_OR_RETURN(ctx->user_op_conf().has_input("mean_gradient", 0));
+    const user_op::TensorDesc* mean_gradient = ctx->TensorDesc4ArgNameAndIndex("mean_gradient", 0);
+    JUST(CheckScalarTensorDesc(mean_gradient, data_type));
+  } else {
+    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("mean_gradient", 0));
+  }
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("sgd_update")
     .Input("model")
     .Input("model_diff")
@@ -391,6 +415,41 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn(AdamInputArgModifyFn);
+
+REGISTER_USER_OP("rmsprop_update")
+    .Input("model")
+    .Input("model_diff")
+    .Input("learning_rate")
+    .OptionalInput("scale_by_tensor")
+    .Input("mean_square")
+    .OptionalInput("mean_gradient")
+    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
+    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<bool>("centered", UserOpAttrType::kAtBool, false)
+    .Attr<float>("epsilon", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("decay_rate", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
+    .SetTensorDescInferFn(InferRmsPropUpdateTensorDesc)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+      FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), axis)
+            .Broadcast(user_op::OpArg("learning_rate", 0))
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper& conf) -> void {
+      SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+      SetInputArgModifierMutable(GetInputArgModifierFn, "mean_square", 0);
+      if (conf.attr<bool>("centered")) {
+        SetInputArgModifierMutable(GetInputArgModifierFn, "mean_gradient", 0);
+      }
+    });
 
 }  // namespace
 

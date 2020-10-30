@@ -458,6 +458,60 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_ADAM_UPDATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+template<DeviceType device_type, typename T, typename G>
+class RmsPropUpdateKernel final : public user_op::OpKernel {
+ public:
+  RmsPropUpdateKernel() = default;
+  ~RmsPropUpdateKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
+    user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    user_op::Tensor* mean_square = ctx->Tensor4ArgNameAndIndex("mean_square", 0);
+    const auto scale = ctx->Attr<double>("scale");
+    const auto l1 = ctx->Attr<float>("l1");
+    const auto l2 = ctx->Attr<float>("l2");
+    const auto decay_rate = ctx->Attr<float>("decay_rate");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+    const auto centered = ctx->Attr<bool>("centered");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    T* mean_gradient_ptr = nullptr;
+    if (centered) {
+      user_op::Tensor* mean_gradient = ctx->Tensor4ArgNameAndIndex("mean_gradient", 0);
+      mean_gradient_ptr = mean_gradient->mut_dptr<T>();
+    }
+    RmsPropUpdateKernelUtil<device_type, T, G>::Update(
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, mean_square->mut_dptr<float>(),
+        mean_gradient_ptr, centered, epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(),
+        scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                                \
+  REGISTER_USER_KERNEL("rmsprop_update")                                                    \
+      .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                  \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)    \
+                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
+
 }  // namespace
 
 }  // namespace oneflow

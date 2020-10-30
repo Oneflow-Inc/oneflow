@@ -121,6 +121,37 @@ struct IndexedSlicesAdamMdUpdateKernelUtil {
                      T* v, T* beta1_t, T* beta2_t);
 };
 
+template<typename T, typename G>
+struct RmsPropUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const G* model_diff, T* model, int64_t n, T scale, float l1, float l2, float* mean_square,
+                  T* mean_gradient, bool centered, float epsilon, float weight_decay,  float decay_rate,
+                  float learning_rate) const {
+    T model_diff_t = CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, *model, scale, l1, l2);
+    T mean_square_val = *mean_square;
+    mean_square_val = (1 - decay_rate) * model_diff_t * model_diff_t + decay_rate * mean_square_val;
+    *mean_square = mean_square_val;
+    T denom_t;
+    if (centered) {
+      T mean_gradient_val = *mean_gradient;
+      mean_gradient_val = (1 - decay_rate) * model_diff_t + decay_rate * mean_gradient_val;
+      *mean_gradient = mean_gradient_val;
+      denom_t = mean_square_val - mean_gradient_val * mean_gradient_val;
+    } else {
+      denom_t = *mean_square;
+    }
+    *model = *model - learning_rate * model_diff_t / std::sqrt(denom_t + epsilon);
+  }
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct RmsPropUpdateKernelUtil {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float* mean_square,
+                     T* mean_gradient, bool centered, float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model);
+};
+
 #endif
 
 }  // namespace oneflow
