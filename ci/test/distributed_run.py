@@ -54,9 +54,7 @@ chmod 777 {dotssh_dir}/*
         f.write(config_content)
 
 
-def launch_remote_container(
-    hostname, docker_ssh_port, survival_time, dotssh_dir, timeout=2
-):
+def launch_remote_container(hostname, docker_ssh_port, survival_time, dotssh_dir):
     workspace_name = "distributed_run_workspace"
     subprocess.check_call(
         f"ssh {hostname} docker run --rm -v $HOME:$HOME -w $HOME busybox rm -rf {workspace_name}",
@@ -85,16 +83,15 @@ sleep {survival_time}
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
     print(ssh_cmd)
     proc = subprocess.Popen(ssh_cmd, shell=True,)
-    while True:
-        try:
-            proc.wait(timeout=timeout)
-            if proc.returncode == 0:
-                print("exit with returncode 0")
-                break
-            else:
-                raise ValueError("non-zero returncode found", proc.args)
-        except TimeoutExpired:
-            pass
+    try:
+        proc.wait(timeout=15)
+        raise ValueError("sshd quit early, returncode:", proc.returncode)
+    except TimeoutExpired:
+        survival_time_min = survival_time / 60
+        survival_time_min = int(survival_time_min)
+        print(
+            f"remote container launched, host: {hostname}, ssh port:{docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
+        )
 
 
 if __name__ == "__main__":
@@ -105,14 +102,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--make_dotssh", action="store_true", required=False, default=False
     )
+    parser.add_argument("--run", action="store_true", required=False, default=False)
+    parser.add_argument("--bash_script", type=str, required=False)
+    parser.add_argument("--remote_host", type=str, required=False, default="oneflow-15")
     parser.add_argument("--dotssh_dir", type=str, required=False, default="dotssh")
     args = parser.parse_args()
+
+    ssh_port = find_free_port()
     if args.launch_remote_container:
-        launch_remote_container(
-            "oneflow-15", find_free_port(), 10 * 60, args.dotssh_dir
-        )
+        launch_remote_container(args.remote_host, ssh_port, 10 * 60, args.dotssh_dir)
         exit(0)
 
     if args.make_dotssh:
         make_dotssh(args.dotssh_dir)
+        exit(0)
+
+    if args.run:
+        assert args.bash_script
+        run_bash_script(args.run_bash_script)
         exit(0)
