@@ -54,9 +54,10 @@ def def_network():
     return add
 
 
-def _TestLegacyAPI(test_case):
+def _TestLegacyAPI(test_case, legacy_model_io_enabled):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
+    flow.config.enable_legacy_model_io(legacy_model_io_enabled)
 
     add = def_network()
     if flow.eager_execution_enabled():
@@ -87,7 +88,6 @@ def _TestLegacyAPI(test_case):
 def _Test(test_case):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
-    flow.config.enable_legacy_model_io(False)
 
     add = def_network()
 
@@ -148,7 +148,12 @@ class TestCheckpoint(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n2d()
     def test_legacy_api_1node(test_case):
-        _TestLegacyAPI(test_case)
+        _TestLegacyAPI(test_case, False)
+
+    @flow.unittest.skip_unless_1n2d()
+    @unittest.skipIf(flow.unittest.env.eager_execution_enabled(), "legacy model io seems not work in eager mode")
+    def test_legacy_model_io_1node(test_case):
+        _TestLegacyAPI(test_case, True)
 
 
 if __name__ == "__main__":
