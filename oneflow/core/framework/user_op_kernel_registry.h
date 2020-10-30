@@ -76,17 +76,59 @@ struct OpKernelRegistryResult {
   IsMatchedHob is_matched_hob;
 };
 
+/**
+ * @brief When we use macro REGISTER_USER_KERNEL to register a kernel, we indeed get a
+ * OpKernelRegistry object and call its methods to setup the kernel. To setup of a kernel
+ * is often about telling OneFlow what kind of device the kernel is running on 
+ * and what kind of data to process.
+ */
 class OpKernelRegistry final {
  public:
   OpKernelRegistry& Name(const std::string& op_type_name);
 
+  /**
+   * @brief Set the Create Function of Kernel. Template argument T should be the class type
+   * of kernel which derived from user_op::OpKernel
+   * 
+   * @tparam T 
+   * @return OpKernelRegistry& 
+   */
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
     //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
     //    OpKernel");
     return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
+
+  /**
+   * @brief Set the kernel matched condition.
+   * take a example, when we call:
+   *    SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
+   *                  & (user_op::HobDataType("out", 0) == DataType::kOFRecord));
+   * It means the kernel run on CPU and the type of it's "out" blob should be DataType::kOFRecord.
+   * 
+   * @param hob an expression, when hob is true, the registered kernel will be executed
+   * @return OpKernelRegistry& 
+   */
   OpKernelRegistry& SetIsMatchedHob(IsMatchedHob hob);
+
+  /**
+   * @brief Set InferTmpSizeFn function that whose return value specify the size of temp buffer.
+   * When we set the InferTmpSizeFn, InferTmpSizeFn should return a value of type size_t,
+   * so that OneFlow will create a buffer with that size. Then, we can get the buffer using   
+   * UserKernelComputeContext::Tensor4ArgNameAndIndex in Compute method of kernel.
+   * Take a example, we call SetInferTmpSizeFn when we register kernel:
+   *      SetInferTmpSizeFn(
+   *        [](const oneflow::user_op::InferContext*) {
+   *          return 1024; 
+   *        });
+   * Then we can get buffer in kernel's Compute method by Tensor4ArgNameAndIndex:
+   *      oneflow::user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+   *      char* pBuff = tmp->mut_dptr<char>();
+   *
+   * @param fn 
+   * @return OpKernelRegistry& 
+   */
   OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);
   OpKernelRegistry& SetInplaceProposalFn(InplaceProposalFn fn);
 
