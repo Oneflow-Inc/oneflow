@@ -44,7 +44,7 @@ def Watch(
     blob_watched: remote_blob_util.BlobDef,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
-    r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob. 
+    r"""Register callback for a blob. The callback function will be called when the blob is calculated.
 
     Args:
         blob_watched: a `Blob`
