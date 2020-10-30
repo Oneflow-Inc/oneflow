@@ -93,6 +93,8 @@ sleep {survival_time}
             f"remote container launched, host: {hostname}, ssh port:{docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
         )
 
+def run_bash_script(bash_script):
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -106,16 +108,20 @@ if __name__ == "__main__":
     parser.add_argument("--bash_script", type=str, required=False)
     parser.add_argument("--remote_host", type=str, required=False, default="oneflow-15")
     parser.add_argument("--dotssh_dir", type=str, required=False, default="dotssh")
+    parser.add_argument("--ssh_port", type=int, required=False, default=None)
     args = parser.parse_args()
 
-    ssh_port = find_free_port()
-    if args.launch_remote_container:
-        launch_remote_container(args.remote_host, ssh_port, 10 * 60, args.dotssh_dir)
-        exit(0)
-
+    ssh_port = None
+    if args.ssh_port:
+        ssh_port = args.ssh_port
+    else:
+        ssh_port = find_free_port()
+    assert ssh_port
     if args.make_dotssh:
         make_dotssh(args.dotssh_dir)
-        exit(0)
+
+    if args.launch_remote_container:
+        launch_remote_container(args.remote_host, ssh_port, 10 * 60, args.dotssh_dir)
 
     if args.run:
         assert args.bash_script

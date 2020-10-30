@@ -144,11 +144,14 @@ class TestCase(unittest.TestCase):
                 oneflow.env.ctrl_port(int(ctrl_port))
 
                 data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
                 if data_port:
                     oneflow.env.data_port(int(data_port))
 
-                oneflow.deprecated.init_worker(scp_binary=True, use_uuid=True)
-                atexit.register(oneflow.deprecated.delete_worker)
+                oneflow.deprecated.init_worker(
+                    scp_binary=True, use_uuid=True, ssh_port=ssh_port
+                )
+                atexit.register(oneflow.deprecated.delete_worker, ssh_port=ssh_port)
                 _unittest_worker_initilized = True
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")

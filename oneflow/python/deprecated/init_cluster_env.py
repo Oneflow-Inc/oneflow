@@ -28,7 +28,7 @@ from oneflow.python.oneflow_export import oneflow_export
 
 
 @oneflow_export("deprecated.init_worker")
-def init_worker(scp_binary: bool = True, use_uuid: bool = True) -> None:
+def init_worker(scp_binary: bool = True, use_uuid: bool = True, ssh_port=22) -> None:
     assert type(env_util.default_env_proto) is EnvProto
     env_util.defautl_env_proto_mutable = False
     env_proto = env_util.default_env_proto
@@ -61,14 +61,15 @@ def init_worker(scp_binary: bool = True, use_uuid: bool = True) -> None:
         if machine.id == 0:
             continue
         _SendBinaryAndConfig2Worker(
-            machine, oneflow_worker_path, env_file.name, run_dir, scp_binary
+            machine, oneflow_worker_path, env_file.name, run_dir, scp_binary, ssh_port
         )
 
     os.remove(env_file.name)
 
 
 @oneflow_export("deprecated.delete_worker")
-def delete_worker() -> None:
+def delete_worker(ssh_port=22) -> None:
+    ssh_port_arg = f" -p {ssh_port} "
     # assert env_util.env_proto_mutable == False
     env_proto = env_util.default_env_proto
     assert isinstance(env_proto, EnvProto)
@@ -77,27 +78,37 @@ def delete_worker() -> None:
     for machine in env_proto.machine:
         if machine.id == 0:
             continue
-        ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "
+        ssh_prefix = "ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
         _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
 
 
 def _SendBinaryAndConfig2Worker(
-    machine, oneflow_worker_path, env_proto_path, run_dir, scp_binary
+    machine, oneflow_worker_path, env_proto_path, run_dir, scp_binary, ssh_port
 ):
-    _SystemCall("ssh-copy-id -f " + getpass.getuser() + "@" + machine.addr)
-    ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "
+    ssh_port_arg = f" -p {ssh_port} "
+    scp_port_arg = f" -P {ssh_port} "
+    _SystemCall(
+        "ssh-copy-id {ssh_port_arg} -f " + getpass.getuser() + "@" + machine.addr
+    )
+    ssh_prefix = "ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
     remote_file_prefix = " " + getpass.getuser() + "@" + machine.addr + ":"
     assert run_dir != ""
     _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
     if scp_binary:
         _SystemCall(
-            "scp "
+            f"scp {scp_port_arg}"
             + oneflow_worker_path
             + remote_file_prefix
             + run_dir
             + "/oneflow_worker"
         )
-    _SystemCall("scp " + env_proto_path + remote_file_prefix + run_dir + "/env.proto")
+    _SystemCall(
+        f"scp {scp_port_arg}"
+        + env_proto_path
+        + remote_file_prefix
+        + run_dir
+        + "/env.proto"
+    )
     oneflow_cmd = (
         '"cd '
         + run_dir
