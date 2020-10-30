@@ -43,14 +43,18 @@ chmod 777 {dotssh_dir}/*
         )
 
 
-def launch_remote_container(hostname, docker_ssh_port, survival_time, timeout=2):
+def launch_remote_container(
+    hostname, docker_ssh_port, survival_time, dotssh_dir, timeout=2
+):
     workspace_name = "distributed_run_workspace"
     subprocess.check_call(
         f"ssh {hostname} docker run --rm -v $HOME:$HOME -w $HOME busybox rm -rf {workspace_name}",
         shell=True,
     )
     subprocess.check_call(f"ssh {hostname} mkdir ~/{workspace_name}/", shell=True)
-    subprocess.check_call(f"scp -r dotssh {hostname}:~/{workspace_name}", shell=True)
+    subprocess.check_call(
+        f"scp -r {dotssh_dir} {hostname}:~/{workspace_name}/dotssh", shell=True
+    )
     bash_cmd = f"""set -ex
 mkdir -p /run/sshd
 chown root ~/.ssh
@@ -97,11 +101,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--make_dotssh", action="store_true", required=False, default=False
     )
+    parser.add_argument("--dotssh_dir", type=str, required=True, default="dotssh")
     args = parser.parse_args()
     if args.launch_remote_container:
-        launch_remote_container("oneflow-15", find_free_port(), 10 * 60)
+        launch_remote_container(
+            "oneflow-15", find_free_port(), 10 * 60, args.dotssh_dir
+        )
         exit(0)
 
     if args.make_dotssh:
-        make_dotssh("dotssh")
+        make_dotssh(args.dotssh_dir)
         exit(0)
