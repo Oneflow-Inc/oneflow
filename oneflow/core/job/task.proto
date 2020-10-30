@@ -38,6 +38,7 @@ enum TaskType {
   kDecodeH2D = 60;
   kBoxingS2SAll2AllPack = 61;
   kBoxingS2SAll2AllUnpack = 62;
+  kSspVariableProxy = 63;
 };
 
 enum AreaType {
