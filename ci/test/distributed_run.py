@@ -5,6 +5,7 @@ import tempfile
 from contextlib import closing
 from subprocess import TimeoutExpired
 import argparse
+import uuid
 
 FIX_SSH_PERMISSION = """
 mkdir -p /run/sshd
@@ -93,8 +94,28 @@ sleep {survival_time}
         )
 
 
-def run_bash_script(bash_script):
-    pass
+def run_bash_script(bash_script, timeout, ssh_port, dotssh_dir, remote_host):
+    assert os.path.exists(bash_script)
+    log_dir = "./unittest-log-" + str(uuid.uuid4())
+    ctrl_port = find_free_port()
+    this_host = os.getenv("HOSTNAME")
+    bash_cmd = f"""set -ex
+export ONEFLOW_TEST_CTRL_PORT={ctrl_port}
+export ONEFLOW_TEST_SSH_PORT={ssh_port}
+export ONEFLOW_TEST_LOG_DIR={log_dir}
+export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+rm -rf ~/.ssh
+cp -r /dotssh ~/.ssh
+{FIX_SSH_PERMISSION}
+bash {bash_script}
+"""
+    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+        f_name = f.name
+        f.write(bash_cmd)
+        f.flush()
+        docker_cmd = f"docker run --privileged --network=host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+        print(docker_cmd)
+        subprocess.check_call(docker_cmd, shell=True, timeout=timeout)
 
 
 if __name__ == "__main__":
@@ -113,6 +134,7 @@ if __name__ == "__main__":
         "--dotssh_dir", type=str, required=False, default=default_dotssh_dir
     )
     parser.add_argument("--ssh_port", type=int, required=False, default=None)
+    parser.add_argument("--timeout", type=int, required=False, default=10 * 60)
     args = parser.parse_args()
 
     ssh_port = None
@@ -125,9 +147,13 @@ if __name__ == "__main__":
         make_dotssh(args.dotssh_dir)
 
     if args.launch_remote_container:
-        launch_remote_container(args.remote_host, ssh_port, 10 * 60, args.dotssh_dir)
+        launch_remote_container(
+            args.remote_host, ssh_port, args.timeout, args.dotssh_dir
+        )
 
     if args.run:
         assert args.bash_script
-        run_bash_script(args.run_bash_script)
+        run_bash_script(
+            args.bash_script, args.timeout, ssh_port, args.dotssh_dir, args.remote_host
+        )
         exit(0)
