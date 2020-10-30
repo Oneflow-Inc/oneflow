@@ -386,7 +386,9 @@ def load_model():
 
     sess = InferenceSession()
     sess.set_checkpoint_path(
-        os.path.join(saved_model_path, str(version), saved_model_proto.checkpoint_dir[0])
+        os.path.join(
+            saved_model_path, str(version), saved_model_proto.checkpoint_dir[0]
+        )
     )
     for job_name, signature in saved_model_proto.signatures_v2.items():
         sess.setup_job_signature(job_name, signature)
