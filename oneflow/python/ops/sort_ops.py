@@ -33,7 +33,7 @@ def sort(
 
     Args:
         input (remote_blob_util.BlobDef): A Blob
-        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
+        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING". The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
