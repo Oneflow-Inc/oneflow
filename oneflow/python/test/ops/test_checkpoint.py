@@ -24,15 +24,14 @@ import oneflow.typing as tp
 
 def get_placement():
     node_size = flow.unittest.env.node_size()
-    if node_size == 1:
-        return flow.scope.placement("gpu", "0:0-1")
-    elif node_size == 2:
-        return flow.scope.placement("gpu", ["0:0-1", "1:0-1"])
-    else:
-        raise RuntimeError("Invalid node size {}".format(node_size))
+    device_ids = "0-{}".format(flow.unittest.env.device_num() - 1)
+    machine_device_ids = [
+        "{}:{}".format(node_id, device_ids) for node_id in range(node_size)
+    ]
+    return flow.scope.placement("gpu", machine_device_ids)
 
 
-def def_network():
+def get_simple_model():
     @flow.global_function()
     def add() -> tp.Numpy:
         with get_placement():
@@ -54,14 +53,34 @@ def def_network():
     return add
 
 
+def get_large_model():
+    @flow.global_function()
+    def large() -> tp.Numpy:
+        with get_placement():
+            x = flow.get_variable(
+                name='x',
+                shape=(28901, 8203, 4),
+                initializer=flow.random_normal_initializer(mean=10, stddev=1),
+                distribute=flow.distribute.split(0),
+            )
+            return flow.math.reduce_mean(x)
+
+    return large
+
+
+def get_checkpoint_ready_model(model_getter):
+    model = model_getter()
+    if flow.eager_execution_enabled():
+        model()
+    return model
+
+
 def _TestLegacyAPI(test_case, legacy_model_io_enabled):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
     flow.config.enable_legacy_model_io(legacy_model_io_enabled)
 
-    add = def_network()
-    if flow.eager_execution_enabled():
-        add()
+    add1 = get_checkpoint_ready_model(get_simple_model)
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -69,19 +88,50 @@ def _TestLegacyAPI(test_case, legacy_model_io_enabled):
     shutil.rmtree(save_dir, ignore_errors=True)
     check_point.save(save_dir)
     flow.sync_default_session()
-    res1 = add()
+    res1 = add1()
 
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
 
-    add = def_network()
-    if flow.eager_execution_enabled():
-        add()
+    add2 = get_checkpoint_ready_model(get_simple_model)
 
     check_point.load(save_dir)
     flow.sync_default_session()
-    res2 = add()
+    res2 = add2()
 
+    test_case.assertTrue(np.array_equal(res1, res2))
+
+
+def _TestCorrectness(test_case, model_getter):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+    flow.config.enable_legacy_model_io(False)
+
+    large1 = get_checkpoint_ready_model(model_getter)
+
+    if flow.config.legacy_model_io_enabled():
+        check_point = flow.train.CheckPoint()
+        check_point.init()
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+
+    vars_in_mem = flow.get_all_variables()
+    save_dir = "/tmp/cp"
+    shutil.rmtree(save_dir, ignore_errors=True)
+    flow.save(vars_in_mem, save_dir)
+    res1 = large1()
+
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+
+    large2 = get_checkpoint_ready_model(model_getter)
+
+    vars_in_file = flow.load(save_dir)
+    flow.load_variables(vars_in_file)
+
+    res2 = large2()
+    print(res1)
+    print(res2)
     test_case.assertTrue(np.array_equal(res1, res2))
 
 
@@ -89,10 +139,7 @@ def _Test(test_case):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
 
-    add = def_network()
-
-    if flow.eager_execution_enabled():
-        add()
+    add = get_checkpoint_ready_model(get_simple_model)
 
     check_point = flow.train.CheckPoint()
     if flow.config.legacy_model_io_enabled():
@@ -150,10 +197,13 @@ class TestCheckpoint(flow.unittest.TestCase):
     def test_legacy_api_1node(test_case):
         _TestLegacyAPI(test_case, False)
 
-    @flow.unittest.skip_unless_1n2d()
-    @unittest.skipIf(flow.unittest.env.eager_execution_enabled(), "legacy model io seems not work in eager mode")
-    def test_legacy_model_io_1node(test_case):
-        _TestLegacyAPI(test_case, True)
+    @flow.unittest.skip_unless_1n4d()
+    def test_correctness_1node(test_case):
+        _TestCorrectness(test_case, get_large_model)
+
+    @flow.unittest.skip_unless_2n4d()
+    def test_correctness_2node(test_case):
+        _TestCorrectness(test_case, get_large_model)
 
 
 if __name__ == "__main__":
