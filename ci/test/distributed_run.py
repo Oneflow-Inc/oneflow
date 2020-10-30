@@ -152,6 +152,9 @@ if __name__ == "__main__":
         )
 
     if args.run:
+        launch_remote_container(
+            args.remote_host, ssh_port, args.timeout, args.dotssh_dir
+        )
         assert args.bash_script
         run_bash_script(
             args.bash_script, args.timeout, ssh_port, args.dotssh_dir, args.remote_host
