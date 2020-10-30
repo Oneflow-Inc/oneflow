@@ -306,7 +306,7 @@ class FileBackendVariableBlob:
             def ReadFromFile(blob, start_nd_idx, stop_nd_idx, length):
                 slice = f.read(length * np_dtype.itemsize)
                 return np.frombuffer(slice, dtype=np_dtype,).reshape(
-                    [1] * (len(self.shape) - 1) + [-1]
+                    np.array(stop_nd_idx) - np.array(start_nd_idx)
                 )
 
             yield from _ForEverySlice(self, ReadFromFile)
@@ -395,7 +395,7 @@ def _GetScopeSymbolIdFromEagerBlob(blob):
 
 def _ReadSliceFromEagerBlob(blob):
     def ReadSlice(blob, start_nd_idx, stop_nd_idx, length):
-        return _LogicalSlice(blob, start_nd_idx, stop_nd_idx,)
+        return _LogicalSlice(blob, start_nd_idx, stop_nd_idx)
 
     yield from _ForEverySlice(blob, ReadSlice)
 
@@ -562,17 +562,21 @@ def _FeedValueToVariable(var_name, value_blob):
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
+            del slice_value_blob
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
                 value_blob.name, value_blob.var_dir_, var_blob.dtype, var_blob.shape
             )
-        assert var_blob.shape == value_blob.shape
+        assert var_blob.shape == value_blob.shape, "{} vs {}".format(
+            var_blob.shape, value_blob.shape
+        )
         for start, stop, slice in value_blob.GetSlicesAsNumpy():
             slice_value_blob = _GetVariableBlobFromNumpy(slice)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
+            del slice_value_blob
     else:
         raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
 
@@ -589,18 +593,35 @@ def LoadVariables(var_dict, ignore_mismatch=False):
 
 
 def _ForEverySlice(var_blob, f):
-    SLICE_LEN = 8192
+    # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
+    SLICE_BYTES = 50 * 1024 * 1024
+    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
+    SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
     size = np.prod(var_blob.shape).item()
+    print("total: ")
+    print(size / SLICE_LEN)
+    cnt = 1
+    for axis in reversed(range(len(var_blob.shape))):
+        cnt *= var_blob.shape[axis]
+        if cnt > SLICE_LEN:
+            break
+    small_size = np.prod(var_blob.shape[axis + 1 :]).item()
+    max_unit_len_on_axis = SLICE_LEN // small_size
+    print(small_size)
+    print(max_unit_len_on_axis)
     while start_idx < size:
-        remainder = var_blob.shape[-1]
+        remainder = var_blob.shape[axis]
         while remainder > 0:
-            length = SLICE_LEN if remainder >= SLICE_LEN else remainder
-            remainder -= length
+            unit_length = (
+                max_unit_len_on_axis if remainder >= max_unit_len_on_axis else remainder
+            )
+            length = unit_length * small_size
+            remainder -= unit_length
             stop_idx = start_idx + length
             start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
             stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
-            stop_nd_idx = [x + 1 for x in stop_nd_idx]
+            stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
             yield start_nd_idx, stop_nd_idx, f(
                 var_blob, start_nd_idx, stop_nd_idx, length
             )
@@ -625,7 +646,7 @@ def _GetInitializerGenerator(initializer_conf):
             f = _init_map[m]
             break
     assert f is not None, initializer_conf
-    yield from f(getattr(initializer_conf, m))
+    return f(getattr(initializer_conf, m))
 
 
 @register_initializer("constant_conf")
@@ -635,15 +656,15 @@ def constant_initializer(
         op_conf_pb.ConstantInitializerConf, op_conf_pb.ConstantIntInitializerConf
     ]
 ):
-    while True:
-        yield initializer_conf.value
+    return lambda length: [initializer_conf.value] * length
 
 
 @register_initializer("random_normal_conf")
 def random_normal_initializer(initializer_conf: op_conf_pb.RandomNormalInitializerConf):
     rng = np.random.default_rng()
-    while True:
-        yield rng.normal(loc=initializer_conf.mean, scale=initializer_conf.std)
+    return lambda length: rng.normal(
+        loc=initializer_conf.mean, scale=initializer_conf.std, size=length
+    )
 
 
 def Init():
@@ -658,21 +679,24 @@ def Init():
         g = _GetInitializerGenerator(var_op_conf.variable_conf.initializer)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
-            vals = []
-            for _ in range(length):
-                vals.append(next(g))
+            vals = g(length)
             vals = (
                 np.array(vals)
                 .astype(np_dtype)
-                .reshape([1] * (len(var_blob.shape) - 1) + [-1])
+                .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
             )
 
             slice_value_blob = _GetVariableBlobFromNumpy(vals)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
             )
+            del slice_value_blob
 
         # we don't care about the return value,
         # only want to run f on every slice
+        i = 0
         for _ in _ForEverySlice(var_blob, GenerateValueAndAssign):
+            if i % 1 == 0:
+                print(i)
+            i += 1
             pass
