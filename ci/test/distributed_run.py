@@ -6,6 +6,17 @@ from contextlib import closing
 from subprocess import TimeoutExpired
 import argparse
 
+FIX_SSH_PERMISSION = """
+mkdir -p /run/sshd
+chown root ~/.ssh
+chmod 700 ~/.ssh
+chown root ~/.ssh/*
+chmod 600 ~/.ssh/*
+chmod 400 ~/.ssh/id_rsa
+chmod 400 ~/.ssh/id_rsa.pub
+chmod 600 ~/.ssh/config
+"""
+
 
 def find_free_port():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
@@ -28,11 +39,6 @@ cp -r /root/.ssh/ {dotssh_dir}
 chmod 777 {dotssh_dir}
 chmod 777 {dotssh_dir}/*
 """
-    config_content = """Host *
-	StrictHostKeyChecking no
-"""
-    with open(os.path.join(dotssh_dir, "config"), "w") as f:
-        f.write(config_content)
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         f_name = f.name
         f.write(bash_cmd)
@@ -41,6 +47,11 @@ chmod 777 {dotssh_dir}/*
             f"docker run -v /tmp:/host/tmp -v $PWD:$PWD -w $PWD oneflow-test:$USER bash /host/{f_name}",
             shell=True,
         )
+    config_content = """Host *
+	StrictHostKeyChecking no
+"""
+    with open(os.path.join(dotssh_dir, "config"), "w") as f:
+        f.write(config_content)
 
 
 def launch_remote_container(
@@ -56,14 +67,7 @@ def launch_remote_container(
         f"scp -r {dotssh_dir} {hostname}:~/{workspace_name}/dotssh", shell=True
     )
     bash_cmd = f"""set -ex
-mkdir -p /run/sshd
-chown root ~/.ssh
-chmod 700 ~/.ssh
-chown root ~/.ssh/*
-chmod 600 ~/.ssh/*
-chmod 400 ~/.ssh/id_rsa
-chmod 400 ~/.ssh/id_rsa.pub
-chmod 600 ~/.ssh/config
+{FIX_SSH_PERMISSION}
 /usr/sbin/sshd -p {docker_ssh_port}
 sleep {survival_time}
 """
@@ -101,7 +105,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--make_dotssh", action="store_true", required=False, default=False
     )
-    parser.add_argument("--dotssh_dir", type=str, required=True, default="dotssh")
+    parser.add_argument("--dotssh_dir", type=str, required=False, default="dotssh")
     args = parser.parse_args()
     if args.launch_remote_container:
         launch_remote_container(
