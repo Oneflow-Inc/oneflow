@@ -32,11 +32,11 @@ bool IsFusedBnAddReluSupported() {
 
 class CudnnFusedNormalizationAddReluPass final : public OpGraphPass {
  public:
-  CudnnFusedNormalizationAddReluPass() = default;
+  explicit CudnnFusedNormalizationAddReluPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~CudnnFusedNormalizationAddReluPass() override = default;
   bool IsEnabled() const override {
-    if (GlobalJobDesc().job_conf().has_enable_cudnn_fused_normalization_add_relu()) {
-      bool enabled = GlobalJobDesc().job_conf().enable_cudnn_fused_normalization_add_relu();
+    if (job_desc().job_conf().has_enable_cudnn_fused_normalization_add_relu()) {
+      bool enabled = job_desc().job_conf().enable_cudnn_fused_normalization_add_relu();
       CHECK(!enabled || IsFusedBnAddReluSupported())
           << "Option 'enable_cudnn_fused_normalization_add_relu' is only supported when cuDNN "
              "version >= 7.4.1";

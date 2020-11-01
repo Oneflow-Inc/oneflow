@@ -17,44 +17,96 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job_rewriter/ssp_parallel_conf.pb.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<void> ForEachSspParallelConf4TrainableFwOp(
-    const OpGraph&, const std::function<void(const OpNode*, const ParallelConf&)>&);
+class SspPartitionStragety {
+ public:
+  SspPartitionStragety() = default;
+  ~SspPartitionStragety() = default;
+  virtual Maybe<void> Apply(const JobDesc& job_desc, Job* job) const = 0;
+};
 
 class SspPartitionPass final : public OpGraphPass {
-  bool IsEnabled() const override { return true; }
+ public:
+  explicit SspPartitionPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
+  bool IsEnabled() const override { return job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override {
+  Maybe<void> Apply(Job* job) const override {
+    const std::string& partition_strategy = job_desc().String("ssp_partition_strategy");
+    std::unique_ptr<const SspPartitionStragety> strategy;
+    strategy.reset(NewObj<std::string, SspPartitionStragety>(partition_strategy));
+    strategy->Apply(job_desc(), job);
+    return Maybe<void>::Ok();
+  }
+};
+REGISTER_FUNCTION_PASS("SspPartition", SspPartitionPass);
+REGISTER_FUNCTION_CONFIG_DEF().String("ssp_partition_strategy", "disable_ssp_partition_strategy",
+                                      "ssp partition strategy");
+
+#define REGISTER_SSP_PARTITION_STRATEGY(strategy_name, strategy_type)      \
+  REGISTER_CLASS_CREATOR(std::string, strategy_name, SspPartitionStragety, \
+                         ([] { return new strategy_type(); }));
+
+class DisableSspPartitionStrategy : public SspPartitionStragety {
+ public:
+  DisableSspPartitionStrategy() = default;
+  ~DisableSspPartitionStrategy() = default;
+
+  Maybe<void> Apply(const JobDesc& job_desc, Job* job) const override { return Maybe<void>::Ok(); }
+};
+REGISTER_SSP_PARTITION_STRATEGY("disable_ssp_partition_strategy", DisableSspPartitionStrategy);
+
+Maybe<void> ForEachSspParallelConf4TrainableFwOp(
+    const OpGraph&, const JobDesc&, const std::function<void(const OpNode*, const ParallelConf&)>&);
+
+class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
+ public:
+  NaiveSequantialSspPartitionStrategy() = default;
+  ~NaiveSequantialSspPartitionStrategy() = default;
+
+  Maybe<void> Apply(const JobDesc& job_desc, Job* job) const override {
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
     JUST(ForEachSspParallelConf4TrainableFwOp(
-        op_graph, [&](const OpNode* op_node, const ParallelConf& parallel_conf) {
-          job_builder->MutParallelConfOnlyOnce(op_node->op().op_name(), parallel_conf);
+        op_graph, job_desc, [&](const OpNode* op_node, const ParallelConf& parallel_conf) {
+          job_builder.MutParallelConfOnlyOnce(op_node->op().op_name(), parallel_conf);
         }));
     return Maybe<void>::Ok();
   }
 };
+REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial_ssp_partition_strategy",
+                                NaiveSequantialSspPartitionStrategy);
 
-REGISTER_FUNCTION_PASS("SspPartition", SspPartitionPass);
-
+Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspParallelConf* ssp_parallel_conf);
 Maybe<void> GetSequantialTrainableFwOps(
     const OpGraph&, std::list<std::unique_ptr<std::vector<OpNode*>>>* sequantial_trainable_fw_ops);
 Maybe<void> GetSspDepth2Stage(
     const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
-    std::function<Maybe<int64_t>(int64_t)>* Stage4Depth);
+    int64_t num_stages, std::function<Maybe<int64_t>(int64_t)>* Stage4Depth);
 Maybe<void> MakeGetterSspParallelConf4Stage(
     std::function<Maybe<const ParallelConf&>(int64_t stage)>* SspParallelConf4Stage);
 
 Maybe<void> ForEachSspParallelConf4TrainableFwOp(
-    const OpGraph& op_graph,
+    const OpGraph& op_graph, const JobDesc& job_desc,
     const std::function<void(const OpNode*, const ParallelConf&)>& Handler) {
+  // Sequantialize trainable forward ops
   std::list<std::unique_ptr<std::vector<OpNode*>>> sequantial_trainable_fw_ops;
   JUST(GetSequantialTrainableFwOps(op_graph, &sequantial_trainable_fw_ops));
+  // Gets ssp partition config
+  SspParallelConf ssp_parallel_conf;
+  JUST(GetSspPartitionConf(job_desc, &ssp_parallel_conf));
+  // Partition to stages
   std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
-  JUST(GetSspDepth2Stage(sequantial_trainable_fw_ops, &Stage4Depth));
+  int64_t num_stages = ssp_parallel_conf.stage_parallel_conf_size();
+  JUST(GetSspDepth2Stage(sequantial_trainable_fw_ops, num_stages, &Stage4Depth));
   std::function<Maybe<const ParallelConf&>(int64_t)> SspParallelConf4Stage;
+  // Provides parallel conf for each stage
   JUST(MakeGetterSspParallelConf4Stage(&SspParallelConf4Stage));
   int64_t depth = 0;
   for (const auto& fused_vec : sequantial_trainable_fw_ops) {
@@ -71,6 +123,17 @@ Maybe<void> GetTrainableFwOps(const OpGraph& op_graph, HashSet<OpNode*>* trainab
 Maybe<void> GetBackboneOp2FusedOps(
     const OpGraph& op_graph,
     HashMap<OpNode*, std::unique_ptr<std::vector<OpNode*>>>* backbone_op2fused_ops);
+
+Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspParallelConf* ssp_parallel_conf) {
+  const std::string& ssp_parallel_conf_str = job_desc.String("ssp_parallel_conf");
+  CHECK_OR_RETURN(TxtString2PbMessage(ssp_parallel_conf_str, ssp_parallel_conf))
+      << "SspParallelConf parsing failed. ssp_parallel_conf_str:\n"
+      << ssp_parallel_conf_str;
+  CHECK_GT_OR_RETURN(ssp_parallel_conf->stage_parallel_conf_size(), 0);
+  return Maybe<void>::Ok();
+}
+REGISTER_FUNCTION_CONFIG_DEF().String("ssp_parallel_conf", SspParallelConf().DebugString(),
+                                      "type: serialized SspParallelConf. ssp parallel config");
 
 Maybe<void> GetSequantialTrainableFwOps(
     const OpGraph& op_graph,
@@ -109,8 +172,34 @@ Maybe<void> GetSequantialTrainableFwOps(
 
 Maybe<void> GetSspDepth2Stage(
     const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
-    std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) {
-  TODO();
+    int64_t num_stages, std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) {
+  int64_t num_ops = 0;
+  for (const auto& vec : sequantial_trainable_fw_ops) { num_ops += vec->size(); }
+  BalancedSplitter bs(num_ops, num_stages);
+  std::vector<int64_t> stage2expected_num_ops_from_start(num_stages);
+  for (int64_t i = 0; i < num_stages; ++i) {
+    int64_t last = (i == 0 ? 0 : stage2expected_num_ops_from_start.at(i - 1));
+    stage2expected_num_ops_from_start.at(i) = bs.At(i).size() + last;
+  }
+  auto depth2stage = std::make_shared<HashMap<int64_t, int64_t>>();
+  {
+    int64_t stage = 0;
+    int64_t depth = 0;
+    int64_t num_ops_from_start = 0;
+    for (const auto& vec : sequantial_trainable_fw_ops) {
+      if (num_ops_from_start > stage2expected_num_ops_from_start.at(stage)) { ++stage; }
+      (*depth2stage)[depth] = stage;
+      ++depth;
+      num_ops_from_start += vec->size();
+    }
+    CHECK_EQ(stage, num_stages - 1);
+    CHECK_EQ(depth, sequantial_trainable_fw_ops.size());
+  }
+  *Stage4Depth = [depth2stage](int64_t depth) -> Maybe<int64_t> {
+    const auto& iter = depth2stage->find(depth);
+    CHECK_OR_RETURN(iter != depth2stage->end());
+    return iter->second;
+  };
   return Maybe<void>::Ok();
 }
 

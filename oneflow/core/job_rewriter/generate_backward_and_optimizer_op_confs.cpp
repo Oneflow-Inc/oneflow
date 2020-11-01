@@ -86,9 +86,9 @@ void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) 
 
 class GenerateBackwardAndOptimizerOpConfs final : public OpGraphPass {
  public:
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  bool IsEnabled() const override { return job_desc().IsTrain(); }
   OF_DISALLOW_COPY_AND_MOVE(GenerateBackwardAndOptimizerOpConfs);
-  GenerateBackwardAndOptimizerOpConfs() = default;
+  explicit GenerateBackwardAndOptimizerOpConfs(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~GenerateBackwardAndOptimizerOpConfs() override = default;
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;

@@ -19,25 +19,30 @@ namespace oneflow {
 
 namespace {
 
-HashMap<std::string, const OpGraphPass*>* PassName2FunctionPass() {
-  static HashMap<std::string, const OpGraphPass*> pass_name2job_pass;
-  return &pass_name2job_pass;
+using PassName2Creator = HashMap<std::string, std::function<OpGraphPass*(const JobDesc&)>>;
+
+PassName2Creator* GetPassName2Creator() {
+  static PassName2Creator pass_name2creator;
+  return &pass_name2creator;
 }
 
 }  // namespace
 
-void RegisterFunctionPass(const std::string& pass_name, const OpGraphPass* pass) {
-  CHECK(PassName2FunctionPass()->emplace(pass_name, pass).second);
+void RegisterFunctionPass(const std::string& pass_name,
+                          const std::function<OpGraphPass*(const JobDesc&)>& pass_creator) {
+  CHECK(GetPassName2Creator()->emplace(pass_name, pass_creator).second);
 }
 
 bool HasFunctionPass(const std::string& pass_name) {
-  return PassName2FunctionPass()->find(pass_name) != PassName2FunctionPass()->end();
+  return GetPassName2Creator()->find(pass_name) != GetPassName2Creator()->end();
 }
 
-const OpGraphPass& FunctionPass(const std::string& pass_name) {
-  const auto& iter = PassName2FunctionPass()->find(pass_name);
-  CHECK(iter != PassName2FunctionPass()->end());
-  return *iter->second;
+std::unique_ptr<const OpGraphPass> FunctionPass(const std::string& pass_name,
+                                                const JobDesc& job_desc) {
+  const auto& iter = GetPassName2Creator()->find(pass_name);
+  CHECK(iter != GetPassName2Creator()->end());
+  const auto& Creator = iter->second;
+  return std::unique_ptr<const OpGraphPass>(Creator(job_desc));
 }
 
 }  // namespace oneflow

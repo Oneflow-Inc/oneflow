@@ -221,14 +221,16 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
 class AutoMixedPrecision final : public OpGraphPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoMixedPrecision);
-  AutoMixedPrecision()
-      : white_list_(AutoMixedPrecisionLists::WhiteList()),
+
+  AutoMixedPrecision(const JobDesc& job_desc)
+      : OpGraphPass(job_desc),
+        white_list_(AutoMixedPrecisionLists::WhiteList()),
         black_list_(AutoMixedPrecisionLists::BlackList()),
         gray_list_(AutoMixedPrecisionLists::GrayList()),
         clear_list_(AutoMixedPrecisionLists::ClearList()) {}
   ~AutoMixedPrecision() = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
+  bool IsEnabled() const override { return job_desc().enable_auto_mixed_precision(); }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 
@@ -251,7 +253,7 @@ class AutoMixedPrecision final : public OpGraphPass {
 
 Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
-  CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
+  CHECK(job_desc().DefaultDataType() == DataType::kFloat);
 
   VerifyAMPList(white_list_);
   VerifyAMPList(black_list_);

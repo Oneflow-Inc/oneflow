@@ -25,10 +25,10 @@ namespace {
 class AutoLearningRate final : public OpGraphPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoLearningRate);
-  AutoLearningRate() = default;
+  explicit AutoLearningRate(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~AutoLearningRate() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  bool IsEnabled() const override { return job_desc().IsTrain(); }
 
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
 };

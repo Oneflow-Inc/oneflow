@@ -20,11 +20,11 @@ namespace oneflow {
 
 class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
  public:
-  IndexedSlicesOptimizerRewritePass() = default;
+  explicit IndexedSlicesOptimizerRewritePass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~IndexedSlicesOptimizerRewritePass() override = default;
   bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().has_indexed_slices_optimizer_conf()
-           && GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().enable();
+    return job_desc().job_conf().has_indexed_slices_optimizer_conf()
+           && job_desc().job_conf().indexed_slices_optimizer_conf().enable();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
@@ -32,7 +32,7 @@ class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
 Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
                                                      JobBuilder* job_builder) const {
   const PbRpf<std::string>& include_op_names =
-      GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().include_op_names().op_name();
+      job_desc().job_conf().indexed_slices_optimizer_conf().include_op_names().op_name();
   const std::set<std::string> include_op_name_set(
       {include_op_names.cbegin(), include_op_names.cend()});
   op_graph.ForEachNode([&](const OpNode* src_node) {

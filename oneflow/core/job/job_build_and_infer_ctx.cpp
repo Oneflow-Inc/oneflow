@@ -932,8 +932,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     CHECK_OR_RETURN(job().job_conf().train_conf().has_primary_lr());
   }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return FunctionPass(pass_name)(mut_job());
+  const auto& DoPass = [&](const std::string& pass_name) -> Maybe<void> {
+    return (*FunctionPass(pass_name, GlobalJobDesc()))(mut_job());
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
@@ -965,8 +965,8 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return FunctionPass(pass_name)(mut_job());
+  const auto& DoPass = [&](const std::string& pass_name) -> Maybe<void> {
+    return (*FunctionPass(pass_name, GlobalJobDesc()))(mut_job());
   };
   JUST(DoPass("AutoTrainStep"));
   JUST(DoPass("AutoLearningRate"));

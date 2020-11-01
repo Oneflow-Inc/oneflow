@@ -22,10 +22,10 @@ namespace {
 
 class PruneCastToStaticShapeOpsPass final : public OpGraphPass {
  public:
-  PruneCastToStaticShapeOpsPass() = default;
+  explicit PruneCastToStaticShapeOpsPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~PruneCastToStaticShapeOpsPass() override = default;
   bool IsEnabled() const override {
-    return GlobalJobDesc().IsTrain() && GlobalJobDesc().prune_cast_to_static_shape_ops();
+    return job_desc().IsTrain() && job_desc().prune_cast_to_static_shape_ops();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };

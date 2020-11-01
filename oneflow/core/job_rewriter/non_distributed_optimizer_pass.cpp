@@ -49,7 +49,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
 class NonDistributedOptimizerPass final : public OpGraphPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NonDistributedOptimizerPass);
-  NonDistributedOptimizerPass() = default;
+  explicit NonDistributedOptimizerPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~NonDistributedOptimizerPass() = default;
   bool IsEnabled() const override {
     return GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer();

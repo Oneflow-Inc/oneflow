@@ -94,7 +94,10 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
+  const auto& DoPass = [](const std::string& pass_name, Job* job) {
+    CHECK_JUST((*FunctionPass(pass_name, GlobalJobDesc()))(job));
+  };
+  DoPass("DumpTimeShapeAndBlobParallelConfPass", job);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   if (GlobalJobDesc().enable_keep_header_only()) {
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
@@ -107,7 +110,7 @@ void JobCompleter::Complete(Job* job) const {
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
-  FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
+  DoPass("DumpTimeShapeAndBlobParallelConfPass", job);
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);

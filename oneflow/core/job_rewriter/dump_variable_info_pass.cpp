@@ -23,7 +23,7 @@ namespace {
 
 class DumpVariableInfoPass final : public OpGraphPass {
  public:
-  DumpVariableInfoPass() = default;
+  explicit DumpVariableInfoPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~DumpVariableInfoPass() override = default;
   bool IsEnabled() const override {
     return Global<ResourceDesc, ForSession>::Get()->enable_debug_mode();
@@ -35,7 +35,7 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
   int64_t cnt = 0;
   const std::string sep = "\t";
   auto log_stream =
-      TeePersistentLogStream::Create("variable_table_" + std::to_string(GlobalJobDesc().job_id()));
+      TeePersistentLogStream::Create("variable_table_" + std::to_string(job_desc().job_id()));
   (*log_stream) << "id" << sep << "name" << sep << "device_tag" << sep << "parallel_num" << sep
                 << "distribute" << sep << "data_type" << sep << "shape" << sep << "elem_cnt" << sep
                 << "size"

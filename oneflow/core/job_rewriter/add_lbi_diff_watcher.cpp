@@ -23,14 +23,16 @@ namespace {
 
 class AddLbiDiffWatcherOpConfs final : public OpGraphPass {
  public:
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  explicit AddLbiDiffWatcherOpConfs(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
+
+  bool IsEnabled() const override { return job_desc().IsTrain(); }
   Maybe<void> Apply(Job* job) const override;
 };
 
 Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   JobBuilder job_builder(job);
   const auto& map = job->helper().lbi_diff_watcher_info().job_name2lbi_and_watcher_uuids();
-  if (map.find(GlobalJobDesc().job_name()) == map.end()) { return Maybe<void>::Ok(); }
+  if (map.find(job_desc().job_name()) == map.end()) { return Maybe<void>::Ok(); }
   const auto& tag2lbi_relations = job->helper().tag2lbi_relations();
   const auto& conf_iter = tag2lbi_relations.find(kProducedLbi2ConsumedDiffLbi);
   if (conf_iter == tag2lbi_relations.end()) { return Maybe<void>::Ok(); }
@@ -38,7 +40,7 @@ Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   for (const auto& pair : conf_iter->second.pair()) {
     CHECK(lbi2diff_lbi.emplace(pair.first(), pair.second()).second);
   }
-  const auto& pair_list = map.at(GlobalJobDesc().job_name()).lbi_and_uuid_pair();
+  const auto& pair_list = map.at(job_desc().job_name()).lbi_and_uuid_pair();
   for (const LbiAndDiffWatcherUuidPair& pair : pair_list) {
     if (lbi2diff_lbi.find(pair.lbi()) == lbi2diff_lbi.end()) { continue; }
     const auto& diff_lbi = lbi2diff_lbi.at(pair.lbi());

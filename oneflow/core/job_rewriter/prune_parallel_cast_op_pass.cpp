@@ -22,9 +22,9 @@ namespace {
 
 class PruneParallelCastOpsPass final : public OpGraphPass {
  public:
-  PruneParallelCastOpsPass() = default;
+  explicit PruneParallelCastOpsPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~PruneParallelCastOpsPass() override = default;
-  bool IsEnabled() const override { return GlobalJobDesc().prune_parallel_cast_ops(); }
+  bool IsEnabled() const override { return job_desc().prune_parallel_cast_ops(); }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 

@@ -44,12 +44,10 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
 
 class FuseUpdateOpsPass final : public OpGraphPass {
  public:
-  FuseUpdateOpsPass() = default;
+  explicit FuseUpdateOpsPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~FuseUpdateOpsPass() override = default;
 
-  bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().enable_fuse_model_update_ops();
-  }
+  bool IsEnabled() const override { return job_desc().job_conf().enable_fuse_model_update_ops(); }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 

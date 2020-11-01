@@ -23,10 +23,10 @@ namespace {
 
 class FuseAddToOutputPass final : public OpGraphPass {
  public:
-  FuseAddToOutputPass() = default;
+  explicit FuseAddToOutputPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~FuseAddToOutputPass() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().job_conf().enable_fuse_add_to_output(); }
+  bool IsEnabled() const override { return job_desc().job_conf().enable_fuse_add_to_output(); }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
 };
 

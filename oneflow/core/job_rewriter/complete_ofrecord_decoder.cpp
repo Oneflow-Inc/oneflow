@@ -149,6 +149,7 @@ void AddRecordLoadOps(Job* job) {
 
 class CompleteOfrecordDecoder final : public OpGraphPass {
  public:
+  explicit CompleteOfrecordDecoder(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   bool IsEnabled() const override { return true; }
   Maybe<void> Apply(Job* job) const override {
     SplitDecodeOps(job);

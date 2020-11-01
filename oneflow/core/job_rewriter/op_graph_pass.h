@@ -24,7 +24,7 @@ namespace oneflow {
 
 class OpGraphPass {
  public:
-  OpGraphPass() = default;
+  explicit OpGraphPass(const JobDesc& job_desc) : job_desc_(&job_desc) {}
   virtual ~OpGraphPass() = default;
 
   Maybe<void> operator()(Job* job) const {
@@ -45,14 +45,22 @@ class OpGraphPass {
     UNIMPLEMENTED();
     return Maybe<void>::Ok();
   }
+
+ protected:
+  const JobDesc& job_desc() const { return *job_desc_; }
+
+ private:
+  const JobDesc* job_desc_;
 };
 
 #define REGISTER_FUNCTION_PASS(pass_name, pass_type) \
-  COMMAND(RegisterFunctionPass(pass_name, new pass_type))
+  COMMAND(RegisterFunctionPass(                      \
+      pass_name, [](const JobDesc& job_desc) -> OpGraphPass* { return new pass_type(job_desc); }))
 
-void RegisterFunctionPass(const std::string& pass_name, const OpGraphPass* pass);
+void RegisterFunctionPass(const std::string& pass_name,
+                          const std::function<OpGraphPass*(const JobDesc&)>& pass_creator);
 bool HasFunctionPass(const std::string& pass_name);
-const OpGraphPass& FunctionPass(const std::string& pass_name);
+std::unique_ptr<const OpGraphPass> FunctionPass(const std::string& pass_name, const JobDesc&);
 
 }  // namespace oneflow
 

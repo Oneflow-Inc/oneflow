@@ -25,10 +25,10 @@ namespace {
 class AutoTrainStep final : public OpGraphPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoTrainStep);
-  AutoTrainStep() = default;
+  explicit AutoTrainStep(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~AutoTrainStep() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  bool IsEnabled() const override { return job_desc().IsTrain(); }
 
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
 };

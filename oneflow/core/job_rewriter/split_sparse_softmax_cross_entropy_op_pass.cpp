@@ -36,7 +36,7 @@ void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_
 
 class SplitSparseSoftmaxCrossEntropyOpPass final : public OpGraphPass {
  public:
-  SplitSparseSoftmaxCrossEntropyOpPass() = default;
+  explicit SplitSparseSoftmaxCrossEntropyOpPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~SplitSparseSoftmaxCrossEntropyOpPass() override = default;
   bool IsEnabled() const override { return true; }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;

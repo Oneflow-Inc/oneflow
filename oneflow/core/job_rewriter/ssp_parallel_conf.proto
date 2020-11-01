@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/placement.proto";
+
+message SspParallelConf {
+  repeated ParallelConf stage_parallel_conf = 1;
+}

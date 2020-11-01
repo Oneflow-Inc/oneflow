@@ -22,6 +22,8 @@ namespace oneflow {
 namespace {
 
 class SetDefaultVariableConf final : public OpGraphPass {
+ public:
+  explicit SetDefaultVariableConf(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   bool IsEnabled() const override { return true; }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override {

@@ -24,7 +24,7 @@ namespace {
 class DumpTimeShapeAndBlobParallelConfPass final : public OpGraphPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DumpTimeShapeAndBlobParallelConfPass);
-  DumpTimeShapeAndBlobParallelConfPass() = default;
+  explicit DumpTimeShapeAndBlobParallelConfPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~DumpTimeShapeAndBlobParallelConfPass() override = default;
 
   bool IsEnabled() const override { return true; }
