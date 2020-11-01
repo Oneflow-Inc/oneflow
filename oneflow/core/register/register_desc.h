@@ -104,7 +104,6 @@ class RegstDesc final {
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
-  int64_t ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) const;
 
  private:
   int64_t regst_desc_id_;

@@ -48,7 +48,7 @@ class SspPartitionPass final : public OpGraphPass {
   }
 };
 REGISTER_FUNCTION_PASS("SspPartition", SspPartitionPass);
-REGISTER_FUNCTION_CONFIG_DEF().String("ssp_partition_strategy", "disable_ssp_partition_strategy",
+REGISTER_FUNCTION_CONFIG_DEF().String("ssp_partition_strategy", "disable",
                                       "ssp partition strategy");
 
 #define REGISTER_SSP_PARTITION_STRATEGY(strategy_name, strategy_type)      \
@@ -62,7 +62,7 @@ class DisableSspPartitionStrategy : public SspPartitionStragety {
 
   Maybe<void> Apply(const JobDesc& job_desc, Job* job) const override { return Maybe<void>::Ok(); }
 };
-REGISTER_SSP_PARTITION_STRATEGY("disable_ssp_partition_strategy", DisableSspPartitionStrategy);
+REGISTER_SSP_PARTITION_STRATEGY("disable", DisableSspPartitionStrategy);
 
 Maybe<void> ForEachSspScope4TrainableFwOp(
     const OpGraph&, const JobDesc&, const std::function<Maybe<void>(const OpNode*, const Scope&)>&);
@@ -92,8 +92,7 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
     return Maybe<void>::Ok();
   }
 };
-REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial_ssp_partition_strategy",
-                                NaiveSequantialSspPartitionStrategy);
+REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial", NaiveSequantialSspPartitionStrategy);
 
 Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspPartitionConf* ssp_partition_conf);
 Maybe<void> GetSequantialTrainableFwOps(
