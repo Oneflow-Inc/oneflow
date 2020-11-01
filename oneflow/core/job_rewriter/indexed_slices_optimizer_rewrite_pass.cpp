@@ -26,11 +26,13 @@ class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
     return job_desc().job_conf().has_indexed_slices_optimizer_conf()
            && job_desc().job_conf().indexed_slices_optimizer_conf().enable();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
-                                                     JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> IndexedSlicesOptimizerRewritePass::Apply(const OpGraphPassState& state,
+                                                                 const OpGraph& op_graph,
+                                                                 JobBuilder* job_builder) const {
   const PbRpf<std::string>& include_op_names =
       job_desc().job_conf().indexed_slices_optimizer_conf().include_op_names().op_name();
   const std::set<std::string> include_op_name_set(
@@ -142,7 +144,7 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     job_builder->AddOps(dst_node->parallel_desc().parallel_conf(),
                         {indexed_slices_op_builder.Build().op_conf()});
   });
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 REGISTER_FUNCTION_PASS("IndexedSlicesOptimizerRewritePass", IndexedSlicesOptimizerRewritePass);

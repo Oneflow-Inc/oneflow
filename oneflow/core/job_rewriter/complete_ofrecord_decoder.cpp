@@ -151,10 +151,10 @@ class CompleteOfrecordDecoder final : public OpGraphPass {
  public:
   explicit CompleteOfrecordDecoder(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   bool IsEnabled() const override { return true; }
-  Maybe<void> Apply(Job* job) const override {
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, Job* job) const override {
     SplitDecodeOps(job);
     AddRecordLoadOps(job);
-    return Maybe<void>::Ok();
+    return std::make_shared<OpGraphPassState>();
   }
 };
 

@@ -31,7 +31,8 @@ class SspPartitionStragety {
  public:
   SspPartitionStragety() = default;
   ~SspPartitionStragety() = default;
-  virtual Maybe<void> Apply(const JobDesc& job_desc, Job* job) const = 0;
+  virtual Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const JobDesc& job_desc,
+                                        Job* job) const = 0;
 };
 
 class SspPartitionPass final : public OpGraphPass {
@@ -39,12 +40,11 @@ class SspPartitionPass final : public OpGraphPass {
   explicit SspPartitionPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   bool IsEnabled() const override { return job_desc().IsTrain(); }
 
-  Maybe<void> Apply(Job* job) const override {
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, Job* job) const override {
     const std::string& partition_strategy = job_desc().String("ssp_partition_strategy");
     std::unique_ptr<const SspPartitionStragety> strategy;
     strategy.reset(NewObj<std::string, SspPartitionStragety>(partition_strategy));
-    strategy->Apply(job_desc(), job);
-    return Maybe<void>::Ok();
+    return strategy->Apply(state, job_desc(), job);
   }
 };
 REGISTER_FUNCTION_PASS("SspPartition", SspPartitionPass);
@@ -60,7 +60,10 @@ class DisableSspPartitionStrategy : public SspPartitionStragety {
   DisableSspPartitionStrategy() = default;
   ~DisableSspPartitionStrategy() = default;
 
-  Maybe<void> Apply(const JobDesc& job_desc, Job* job) const override { return Maybe<void>::Ok(); }
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const JobDesc& job_desc,
+                                Job* job) const override {
+    return std::make_shared<OpGraphPassState>();
+  }
 };
 REGISTER_SSP_PARTITION_STRATEGY("disable", DisableSspPartitionStrategy);
 
@@ -72,7 +75,8 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
   NaiveSequantialSspPartitionStrategy() = default;
   ~NaiveSequantialSspPartitionStrategy() = default;
 
-  Maybe<void> Apply(const JobDesc& job_desc, Job* job) const override {
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const JobDesc& job_desc,
+                                Job* job) const override {
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     JUST(ForEachSspScope4TrainableFwOp(
@@ -89,7 +93,7 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
           job_builder.MutParallelConfOnlyOnce(op_name, parallel_desc->parallel_conf());
           return Maybe<void>::Ok();
         }));
-    return Maybe<void>::Ok();
+    return std::make_shared<OpGraphPassState>();
   }
 };
 REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial", NaiveSequantialSspPartitionStrategy);

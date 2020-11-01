@@ -39,11 +39,13 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public OpGraphPass {
   explicit SplitSparseSoftmaxCrossEntropyOpPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~SplitSparseSoftmaxCrossEntropyOpPass() override = default;
   bool IsEnabled() const override { return true; }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
-                                                        JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraphPassState& state,
+                                                                    const OpGraph& op_graph,
+                                                                    JobBuilder* job_builder) const {
   op_graph.ForEachNode([&](const OpNode* node) {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -148,7 +150,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     job_builder->MutOpsOnlyOnce({sparse_cross_entropy_ms_op.op_conf()});
   });
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 REGISTER_FUNCTION_PASS("SplitSparseSoftmaxCrossEntropyOpPass",

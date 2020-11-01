@@ -95,7 +95,7 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 
 void JobCompleter::Complete(Job* job) const {
   const auto& DoPass = [](const std::string& pass_name, Job* job) {
-    CHECK_JUST((*FunctionPass(pass_name, GlobalJobDesc()))(job));
+    CHECK_JUST((*FunctionPass(pass_name, GlobalJobDesc()))(OpGraphPassState(), job));
   };
   DoPass("DumpTimeShapeAndBlobParallelConfPass", job);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);

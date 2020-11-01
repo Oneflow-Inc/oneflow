@@ -30,10 +30,12 @@ class AutoLearningRate final : public OpGraphPass {
 
   bool IsEnabled() const override { return job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                Job* job) const override;
 };
 
-Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
+Maybe<OpGraphPassState> AutoLearningRate::Apply(const OpGraphPassState& state,
+                                                const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
@@ -90,7 +92,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
           train_conf.primary_lr_lbn());
     }
   }
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 REGISTER_FUNCTION_PASS("AutoLearningRate", AutoLearningRate);

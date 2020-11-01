@@ -27,11 +27,13 @@ class PruneCastToStaticShapeOpsPass final : public OpGraphPass {
   bool IsEnabled() const override {
     return job_desc().IsTrain() && job_desc().prune_cast_to_static_shape_ops();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
-                                                 JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> PruneCastToStaticShapeOpsPass::Apply(const OpGraphPassState& state,
+                                                             const OpGraph& op_graph,
+                                                             JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -68,7 +70,7 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
     job_builder->DelOps({op_conf});
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 }  // namespace

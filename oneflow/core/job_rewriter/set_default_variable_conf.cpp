@@ -26,7 +26,8 @@ class SetDefaultVariableConf final : public OpGraphPass {
   explicit SetDefaultVariableConf(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   bool IsEnabled() const override { return true; }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override {
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override {
     auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
     op_graph.ForEachNode([&](OpNode* op_node) {
       if (op_node->op().op_conf().has_variable_conf()) {
@@ -66,7 +67,7 @@ class SetDefaultVariableConf final : public OpGraphPass {
                                          {variable_op_conf});
       }
     });
-    return Maybe<void>::Ok();
+    return std::make_shared<OpGraphPassState>();
   }
 };
 

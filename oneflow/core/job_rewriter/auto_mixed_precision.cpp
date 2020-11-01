@@ -232,7 +232,8 @@ class AutoMixedPrecision final : public OpGraphPass {
 
   bool IsEnabled() const override { return job_desc().enable_auto_mixed_precision(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 
  private:
   void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
@@ -251,7 +252,9 @@ class AutoMixedPrecision final : public OpGraphPass {
   const AMPList& clear_list_;
 };
 
-Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> AutoMixedPrecision::Apply(const OpGraphPassState& state,
+                                                  const OpGraph& op_graph,
+                                                  JobBuilder* job_builder) const {
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(job_desc().DefaultDataType() == DataType::kFloat);
 
@@ -279,7 +282,7 @@ Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_b
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
   InsertCastOp(op_graph, white_set, job_builder);
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const {

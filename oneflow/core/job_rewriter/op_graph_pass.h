@@ -22,28 +22,38 @@ limitations under the License.
 
 namespace oneflow {
 
+class OpGraphPassState {
+ public:
+  OpGraphPassState(const OpGraphPassState&) = delete;
+  OpGraphPassState(OpGraphPassState&&) = delete;
+  OpGraphPassState() = default;
+  ~OpGraphPassState() = default;
+};
+
 class OpGraphPass {
  public:
   explicit OpGraphPass(const JobDesc& job_desc) : job_desc_(&job_desc) {}
   virtual ~OpGraphPass() = default;
 
-  Maybe<void> operator()(Job* job) const {
-    if (IsEnabled() == false) { return Maybe<void>::Ok(); }
-    return Apply(job);
+  Maybe<OpGraphPassState> operator()(const OpGraphPassState& state, Job* job) const {
+    if (IsEnabled() == false) { return std::make_shared<OpGraphPassState>(); }
+    return Apply(state, job);
   }
   virtual bool IsEnabled() const { return true; }
-  virtual Maybe<void> Apply(Job* job) const {
+  virtual Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, Job* job) const {
     OpGraph op_graph;
     JUST(op_graph.Init(*job));
-    return Apply(op_graph, job);
+    return Apply(state, op_graph, job);
   }
-  virtual Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
+  virtual Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                        Job* job) const {
     JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
+    return Apply(state, op_graph, &job_builder);
   }
-  virtual Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  virtual Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                        JobBuilder* job_builder) const {
     UNIMPLEMENTED();
-    return Maybe<void>::Ok();
+    return std::make_shared<OpGraphPassState>();
   }
 
  protected:

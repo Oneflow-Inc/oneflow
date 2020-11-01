@@ -25,11 +25,13 @@ class PruneParallelCastOpsPass final : public OpGraphPass {
   explicit PruneParallelCastOpsPass(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~PruneParallelCastOpsPass() override = default;
   bool IsEnabled() const override { return job_desc().prune_parallel_cast_ops(); }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
-                                            JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> PruneParallelCastOpsPass::Apply(const OpGraphPassState& state,
+                                                        const OpGraph& op_graph,
+                                                        JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashMap<std::string, SbpSignature> op_name2sbp_signature;
   HashSet<std::string> ctrl_in_op_names;
@@ -84,7 +86,7 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
   for (const auto& pair : op_name2sbp_signature) {
     job_builder->AddSbpSignature4OpName(pair.first, pair.second);
   }
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 }  // namespace

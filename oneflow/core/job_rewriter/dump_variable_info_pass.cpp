@@ -28,10 +28,13 @@ class DumpVariableInfoPass final : public OpGraphPass {
   bool IsEnabled() const override {
     return Global<ResourceDesc, ForSession>::Get()->enable_debug_mode();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> DumpVariableInfoPass::Apply(const OpGraphPassState& state,
+                                                    const OpGraph& op_graph,
+                                                    JobBuilder* job_builder) const {
   int64_t cnt = 0;
   const std::string sep = "\t";
   auto log_stream =
@@ -70,7 +73,7 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
     cnt += 1;
     return Maybe<void>::Ok();
   }));
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 }  // namespace

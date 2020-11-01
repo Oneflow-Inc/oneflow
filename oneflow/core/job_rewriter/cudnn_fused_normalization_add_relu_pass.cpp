@@ -45,11 +45,13 @@ class CudnnFusedNormalizationAddReluPass final : public OpGraphPass {
       return IsFusedBnAddReluSupported();
     }
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(const OpGraph& op_graph,
-                                                      JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> CudnnFusedNormalizationAddReluPass::Apply(const OpGraphPassState& state,
+                                                                  const OpGraph& op_graph,
+                                                                  JobBuilder* job_builder) const {
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -69,7 +71,7 @@ Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(const OpGraph& op_graph,
     new_op_conf.mutable_user_conf()->set_op_type_name("cudnn_fused_" + op_type_name);
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 REGISTER_FUNCTION_PASS("CudnnFusedNormalizationAddReluPass", CudnnFusedNormalizationAddReluPass);

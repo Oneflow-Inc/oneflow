@@ -932,32 +932,34 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     CHECK_OR_RETURN(job().job_conf().train_conf().has_primary_lr());
   }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  const auto& DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return (*FunctionPass(pass_name, GlobalJobDesc()))(mut_job());
+  std::shared_ptr<OpGraphPassState> state;
+  const auto& DoPass = [&](const OpGraphPassState& state,
+                           const std::string& pass_name) -> Maybe<OpGraphPassState> {
+    return (*FunctionPass(pass_name, GlobalJobDesc()))(state, mut_job());
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("CompleteOfrecordDecoder"));
-    JUST(DoPass("SetDefaultVariableConf"));
+    state = JUST(DoPass(*state, "CompleteOfrecordDecoder"));
+    state = JUST(DoPass(*state, "SetDefaultVariableConf"));
 #ifdef WITH_CUDA
-    JUST(DoPass("AutoMixedPrecision"));
+    state = JUST(DoPass(*state, "AutoMixedPrecision"));
 #endif
-    JUST(DoPass("NonDistributedOptimizerPass"));
-    JUST(DoPass("AutoTrainStep"));
-    JUST(DoPass("AutoLearningRate"));
-    JUST(DoPass("SspPartition"));
-    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
-    JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
-    JUST(DoPass("PruneCastToStaticShapeOpsPass"));
-    JUST(DoPass("FuseAddToOutputPass"));
-    JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
-    JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
-    JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
-    JUST(DoPass("AddLbiDiffWatcherOpConfs"));
-    JUST(DoPass("PruneParallelCastOpsPass"));
-    JUST(DoPass("FuseUpdateOpsPass"));
-    JUST(DoPass("DumpVariableInfoPass"));
+    state = JUST(DoPass(*state, "NonDistributedOptimizerPass"));
+    state = JUST(DoPass(*state, "AutoTrainStep"));
+    state = JUST(DoPass(*state, "AutoLearningRate"));
+    state = JUST(DoPass(*state, "SspPartition"));
+    state = JUST(DoPass(*state, "GenerateBackwardAndOptimizerOpConfs"));
+    state = JUST(DoPass(*state, "CudnnFusedNormalizationAddReluPass"));
+    state = JUST(DoPass(*state, "PruneCastToStaticShapeOpsPass"));
+    state = JUST(DoPass(*state, "FuseAddToOutputPass"));
+    state = JUST(DoPass(*state, "IndexedSlicesOptimizerRewritePass"));
+    state = JUST(DoPass(*state, "SplitSparseSoftmaxCrossEntropyOpPass"));
+    state = JUST(DoPass(*state, "DoParallelCastBeforeWideningTypeCast"));
+    state = JUST(DoPass(*state, "AddLbiDiffWatcherOpConfs"));
+    state = JUST(DoPass(*state, "PruneParallelCastOpsPass"));
+    state = JUST(DoPass(*state, "FuseUpdateOpsPass"));
+    state = JUST(DoPass(*state, "DumpVariableInfoPass"));
   }
-  JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
+  state = JUST(DoPass(*state, "DumpTimeShapeAndBlobParallelConfPass"));
   return Maybe<void>::Ok();
 }
 
@@ -966,13 +968,15 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  const auto& DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return (*FunctionPass(pass_name, GlobalJobDesc()))(mut_job());
+  std::shared_ptr<OpGraphPassState> state;
+  const auto& DoPass = [&](const OpGraphPassState& state,
+                           const std::string& pass_name) -> Maybe<OpGraphPassState> {
+    return (*FunctionPass(pass_name, GlobalJobDesc()))(state, mut_job());
   };
-  JUST(DoPass("AutoTrainStep"));
-  JUST(DoPass("AutoLearningRate"));
-  JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
-  JUST(DoPass("AddLbiDiffWatcherOpConfs"));
+  state = JUST(DoPass(*state, "AutoTrainStep"));
+  state = JUST(DoPass(*state, "AutoLearningRate"));
+  state = JUST(DoPass(*state, "GenerateBackwardAndOptimizerOpConfs"));
+  state = JUST(DoPass(*state, "AddLbiDiffWatcherOpConfs"));
   JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerInterpretCompletedOp));
   return Maybe<void>::Ok();
 }

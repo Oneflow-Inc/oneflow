@@ -46,11 +46,13 @@ class DoParallelCastBeforeWideningTypeCast final : public OpGraphPass {
   bool IsEnabled() const override {
     return job_desc().do_parallel_cast_before_widening_type_cast();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
-                                                        JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraphPassState& state,
+                                                                    const OpGraph& op_graph,
+                                                                    JobBuilder* job_builder) const {
   OpConfCache op_conf_cache;
   op_graph.ForEachNode([&op_conf_cache](OpNode* parallel_cast_node) {
     // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
@@ -111,7 +113,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     }
   });
   job_builder->MutOpsOnlyOnce(op_conf_cache.op_confs());
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 }  // namespace

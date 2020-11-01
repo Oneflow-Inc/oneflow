@@ -91,7 +91,8 @@ class GenerateBackwardAndOptimizerOpConfs final : public OpGraphPass {
   explicit GenerateBackwardAndOptimizerOpConfs(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
   ~GenerateBackwardAndOptimizerOpConfs() override = default;
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
 void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
@@ -107,8 +108,9 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
-Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
-                                                       JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraphPassState& state,
+                                                                   const OpGraph& op_graph,
+                                                                   JobBuilder* job_builder) const {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   JUST(AutoGrad(op_graph, job_builder, &lbi2diff_lbi));
@@ -127,7 +129,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);
   UpdateOpSbpSignatureHint(op_graph, job_builder);
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 REGISTER_FUNCTION_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);

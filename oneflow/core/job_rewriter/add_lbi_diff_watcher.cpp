@@ -26,16 +26,17 @@ class AddLbiDiffWatcherOpConfs final : public OpGraphPass {
   explicit AddLbiDiffWatcherOpConfs(const JobDesc& job_desc) : OpGraphPass(job_desc) {}
 
   bool IsEnabled() const override { return job_desc().IsTrain(); }
-  Maybe<void> Apply(Job* job) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, Job* job) const override;
 };
 
-Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
+Maybe<OpGraphPassState> AddLbiDiffWatcherOpConfs::Apply(const OpGraphPassState& state,
+                                                        Job* job) const {
   JobBuilder job_builder(job);
   const auto& map = job->helper().lbi_diff_watcher_info().job_name2lbi_and_watcher_uuids();
-  if (map.find(job_desc().job_name()) == map.end()) { return Maybe<void>::Ok(); }
+  if (map.find(job_desc().job_name()) == map.end()) { return std::make_shared<OpGraphPassState>(); }
   const auto& tag2lbi_relations = job->helper().tag2lbi_relations();
   const auto& conf_iter = tag2lbi_relations.find(kProducedLbi2ConsumedDiffLbi);
-  if (conf_iter == tag2lbi_relations.end()) { return Maybe<void>::Ok(); }
+  if (conf_iter == tag2lbi_relations.end()) { return std::make_shared<OpGraphPassState>(); }
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   for (const auto& pair : conf_iter->second.pair()) {
     CHECK(lbi2diff_lbi.emplace(pair.first(), pair.second()).second);
@@ -53,7 +54,7 @@ Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
     foreign_watcher_conf->set_handler_uuid(pair.watcher_uuid());
     job_builder.AddOps(job_builder.ParallelConf4Lbi(pair.lbi()), {foreign_watcher_op});
   }
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 REGISTER_FUNCTION_PASS("AddLbiDiffWatcherOpConfs", AddLbiDiffWatcherOpConfs);

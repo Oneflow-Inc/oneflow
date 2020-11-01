@@ -30,11 +30,15 @@ class AutoTrainStep final : public OpGraphPass {
 
   bool IsEnabled() const override { return job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                Job* job) const override;
 };
 
-Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
-  if (job->job_conf().train_conf().has_train_step_lbn()) { return Maybe<void>::Ok(); }
+Maybe<OpGraphPassState> AutoTrainStep::Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                             Job* job) const {
+  if (job->job_conf().train_conf().has_train_step_lbn()) {
+    return std::make_shared<OpGraphPassState>();
+  }
   OperatorConf variable_op_conf{};
   const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
   variable_op_conf.set_name(train_step_name);
@@ -82,7 +86,8 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf(),
                                      assign_op.op_conf()});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
+  ;
 }
 
 REGISTER_FUNCTION_PASS("AutoTrainStep", AutoTrainStep);

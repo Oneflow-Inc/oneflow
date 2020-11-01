@@ -27,10 +27,13 @@ class FuseAddToOutputPass final : public OpGraphPass {
   ~FuseAddToOutputPass() override = default;
 
   bool IsEnabled() const override { return job_desc().job_conf().enable_fuse_add_to_output(); }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> FuseAddToOutputPass::Apply(const OpGraphPassState& state,
+                                                   const OpGraph& op_graph,
+                                                   JobBuilder* job_builder) const {
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
       {{"conv_data_grad", user_op::OpArg("dx", 0)},
        {"normalization", user_op::OpArg("y", 0)},
@@ -123,7 +126,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     job_builder->DelOps({op_conf});
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 }  // namespace

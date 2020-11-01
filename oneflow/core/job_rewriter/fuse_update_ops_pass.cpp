@@ -48,10 +48,13 @@ class FuseUpdateOpsPass final : public OpGraphPass {
   ~FuseUpdateOpsPass() override = default;
 
   bool IsEnabled() const override { return job_desc().job_conf().enable_fuse_model_update_ops(); }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<OpGraphPassState> Apply(const OpGraphPassState& state, const OpGraph& op_graph,
+                                JobBuilder* job_builder) const override;
 };
 
-Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<OpGraphPassState> FuseUpdateOpsPass::Apply(const OpGraphPassState& state,
+                                                 const OpGraph& op_graph,
+                                                 JobBuilder* job_builder) const {
   const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
   op_graph.ForEachNode([&](const OpNode* op_node) {
     if (!op_node->op().op_conf().has_user_conf()) { return; }
@@ -171,7 +174,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });
-  return Maybe<void>::Ok();
+  return std::make_shared<OpGraphPassState>();
 }
 
 }  // namespace
