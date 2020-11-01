@@ -16,10 +16,12 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/op_graph_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/job_rewriter/ssp_parallel_conf.pb.h"
+#include "oneflow/core/job_rewriter/ssp_partition_conf.pb.h"
 
 namespace oneflow {
 
@@ -62,8 +64,8 @@ class DisableSspPartitionStrategy : public SspPartitionStragety {
 };
 REGISTER_SSP_PARTITION_STRATEGY("disable_ssp_partition_strategy", DisableSspPartitionStrategy);
 
-Maybe<void> ForEachSspParallelConf4TrainableFwOp(
-    const OpGraph&, const JobDesc&, const std::function<void(const OpNode*, const ParallelConf&)>&);
+Maybe<void> ForEachSspScope4TrainableFwOp(
+    const OpGraph&, const JobDesc&, const std::function<Maybe<void>(const OpNode*, const Scope&)>&);
 
 class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
  public:
@@ -73,9 +75,19 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
   Maybe<void> Apply(const JobDesc& job_desc, Job* job) const override {
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
-    JUST(ForEachSspParallelConf4TrainableFwOp(
-        op_graph, job_desc, [&](const OpNode* op_node, const ParallelConf& parallel_conf) {
-          job_builder.MutParallelConfOnlyOnce(op_node->op().op_name(), parallel_conf);
+    JUST(ForEachSspScope4TrainableFwOp(
+        op_graph, job_desc, [&](const OpNode* op_node, const Scope& scope) -> Maybe<void> {
+          // Sets scope_symbol_id
+          std::vector<OperatorConf> op_confs(1);
+          auto* op_conf = &op_confs.at(0);
+          op_conf->CopyFrom(op_node->op().op_conf());
+          op_conf->set_scope_symbol_id(scope.scope_proto().symbol_id());
+          job_builder.MutOpsOnlyOnce(op_confs);
+          // Sets parallel_conf
+          const auto* parallel_desc = JUST(scope.GetParallelDesc(*op_conf));
+          const auto& op_name = op_node->op().op_name();
+          job_builder.MutParallelConfOnlyOnce(op_name, parallel_desc->parallel_conf());
+          return Maybe<void>::Ok();
         }));
     return Maybe<void>::Ok();
   }
@@ -83,36 +95,37 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
 REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial_ssp_partition_strategy",
                                 NaiveSequantialSspPartitionStrategy);
 
-Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspParallelConf* ssp_parallel_conf);
+Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspPartitionConf* ssp_partition_conf);
 Maybe<void> GetSequantialTrainableFwOps(
     const OpGraph&, std::list<std::unique_ptr<std::vector<OpNode*>>>* sequantial_trainable_fw_ops);
 Maybe<void> GetSspDepth2Stage(
     const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
     int64_t num_stages, std::function<Maybe<int64_t>(int64_t)>* Stage4Depth);
-Maybe<void> MakeGetterSspParallelConf4Stage(
-    std::function<Maybe<const ParallelConf&>(int64_t stage)>* SspParallelConf4Stage);
+Maybe<void> MakeGetterSspScope4Stage(
+    const SspPartitionConf& ssp_partition_conf,
+    std::function<Maybe<const Scope&>(int64_t stage)>* SspScope4Stage);
 
-Maybe<void> ForEachSspParallelConf4TrainableFwOp(
+Maybe<void> ForEachSspScope4TrainableFwOp(
     const OpGraph& op_graph, const JobDesc& job_desc,
-    const std::function<void(const OpNode*, const ParallelConf&)>& Handler) {
+    const std::function<Maybe<void>(const OpNode*, const Scope&)>& Handler) {
   // Sequantialize trainable forward ops
   std::list<std::unique_ptr<std::vector<OpNode*>>> sequantial_trainable_fw_ops;
   JUST(GetSequantialTrainableFwOps(op_graph, &sequantial_trainable_fw_ops));
   // Gets ssp partition config
-  SspParallelConf ssp_parallel_conf;
-  JUST(GetSspPartitionConf(job_desc, &ssp_parallel_conf));
+  SspPartitionConf ssp_partition_conf;
+  JUST(GetSspPartitionConf(job_desc, &ssp_partition_conf));
   // Partition to stages
   std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
-  int64_t num_stages = ssp_parallel_conf.stage_parallel_conf_size();
+  int64_t num_stages = ssp_partition_conf.stage_scope_id_size();
   JUST(GetSspDepth2Stage(sequantial_trainable_fw_ops, num_stages, &Stage4Depth));
-  std::function<Maybe<const ParallelConf&>(int64_t)> SspParallelConf4Stage;
-  // Provides parallel conf for each stage
-  JUST(MakeGetterSspParallelConf4Stage(&SspParallelConf4Stage));
+  std::function<Maybe<const Scope&>(int64_t)> SspScope4Stage;
+  // Provides scope for each stage
+  JUST(MakeGetterSspScope4Stage(ssp_partition_conf, &SspScope4Stage));
   int64_t depth = 0;
   for (const auto& fused_vec : sequantial_trainable_fw_ops) {
     int64_t stage = JUST(Stage4Depth(depth));
-    const auto& parallel_conf = JUST(SspParallelConf4Stage(stage));
-    for (OpNode* op_node : *fused_vec) { Handler(op_node, parallel_conf); }
+    const auto& scope = JUST(SspScope4Stage(stage));
+    for (OpNode* op_node : *fused_vec) { JUST(Handler(op_node, scope)); }
     ++depth;
   }
   return Maybe<void>::Ok();
@@ -124,16 +137,16 @@ Maybe<void> GetBackboneOp2FusedOps(
     const OpGraph& op_graph,
     HashMap<OpNode*, std::unique_ptr<std::vector<OpNode*>>>* backbone_op2fused_ops);
 
-Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspParallelConf* ssp_parallel_conf) {
-  const std::string& ssp_parallel_conf_str = job_desc.String("ssp_parallel_conf");
-  CHECK_OR_RETURN(TxtString2PbMessage(ssp_parallel_conf_str, ssp_parallel_conf))
-      << "SspParallelConf parsing failed. ssp_parallel_conf_str:\n"
-      << ssp_parallel_conf_str;
-  CHECK_GT_OR_RETURN(ssp_parallel_conf->stage_parallel_conf_size(), 0);
+Maybe<void> GetSspPartitionConf(const JobDesc& job_desc, SspPartitionConf* ssp_partition_conf) {
+  const std::string& ssp_partition_conf_str = job_desc.String("ssp_partition_conf");
+  CHECK_OR_RETURN(TxtString2PbMessage(ssp_partition_conf_str, ssp_partition_conf))
+      << "SspPartitionConf parsing failed. ssp_partition_conf_str:\n"
+      << ssp_partition_conf_str;
+  CHECK_GT_OR_RETURN(ssp_partition_conf->stage_scope_id_size(), 0);
   return Maybe<void>::Ok();
 }
-REGISTER_FUNCTION_CONFIG_DEF().String("ssp_parallel_conf", SspParallelConf().DebugString(),
-                                      "type: serialized SspParallelConf. ssp parallel config");
+REGISTER_FUNCTION_CONFIG_DEF().String("ssp_partition_conf", SspPartitionConf().DebugString(),
+                                      "type: serialized SspPartitionConf. ssp parallel config");
 
 Maybe<void> GetSequantialTrainableFwOps(
     const OpGraph& op_graph,
@@ -326,9 +339,17 @@ Maybe<void> BfsForEachBackboneOp(const OpGraph& op_graph, const HashSet<OpNode*>
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MakeGetterSspParallelConf4Stage(
-    std::function<Maybe<const ParallelConf&>(int64_t stage)>* SspParallelConf4Stage) {
-  TODO();
+Maybe<void> MakeGetterSspScope4Stage(
+    const SspPartitionConf& ssp_partition_conf,
+    std::function<Maybe<const Scope&>(int64_t stage)>* SspScope4Stage) {
+  const auto& scope_id_conf = ssp_partition_conf.stage_scope_id();
+  std::vector<int64_t> stage2scope_id(scope_id_conf.begin(), scope_id_conf.end());
+  *SspScope4Stage = [stage2scope_id](int64_t stage) -> Maybe<const Scope&> {
+    CHECK_GE_OR_RETURN(stage, 0);
+    CHECK_LT_OR_RETURN(stage, stage2scope_id.size());
+    int64_t scope_id = stage2scope_id.at(stage);
+    return Global<vm::SymbolStorage<Scope>>::Get()->Get(scope_id);
+  };
   return Maybe<void>::Ok();
 }
 
