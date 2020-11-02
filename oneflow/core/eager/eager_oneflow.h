@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
+#include "oneflow/core/vm/instruction.cfg.h"
 
 namespace oneflow {
 namespace eager {
@@ -27,9 +28,17 @@ class EagerOneflow final {
   Maybe<void> RunLogicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
 
+  Maybe<void> RunLogicalInstruction(const vm::cfg::InstructionListProto& instruction_list_proto_cfg,
+                                    const std::string& eager_symbol_list_str);
+  std::string CFGRunLogicalInstruction(const vm::cfg::InstructionListProto& instruction_list_proto_cfg,
+                                    const std::string& eager_symbol_list_str);
   Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
                                     const std::string& eager_symbol_list_str);
 
+  Maybe<void> RunPhysicalInstruction(const vm::cfg::InstructionListProto& instruction_list_proto_cfg,
+                                     const std::string& eager_symbol_list_str);
+  std::string CFGRunPhysicalInstruction(const vm::cfg::InstructionListProto& instruction_list_proto_cfg,
+                                     const std::string& eager_symbol_list_str);
   Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
                                      const std::string& eager_symbol_list_str);
   Maybe<void> RunPhysicalInstruction(

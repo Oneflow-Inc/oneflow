@@ -32,6 +32,7 @@ from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 import oneflow
+import oneflow_api as oneflow_cfg_api
 
 oneflow_api = oneflow.oneflow_api
 
@@ -574,18 +575,16 @@ def GetFunctionConfigDef():
 
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
-    instructions = str(text_format.MessageToString(vm_instruction_list))
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunLogicalInstruction(instructions, symbols)
+    error_str = oneflow_cfg_api.EagerOneflow().CFGRunLogicalInstruction(vm_instruction_list, symbols)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
 
 
 def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
-    instructions = str(text_format.MessageToString(vm_instruction_list))
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunPhysicalInstruction(instructions, symbols)
+    error_str = oneflow_cfg_api.EagerOneflow().CFGRunPhysicalInstruction(vm_instruction_list, symbols)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
