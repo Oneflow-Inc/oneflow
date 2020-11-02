@@ -166,7 +166,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     UnsortedSegmentSumKernelUtil<device_type, float16, K, float>::UnsortedSegmentSum(
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
         num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
-    CopyElem<float, float16>(tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
+    CopyElemOnGpu<float, float16>(ctx->device_ctx(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
                              out->shape().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
