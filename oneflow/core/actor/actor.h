@@ -145,7 +145,7 @@ class Actor {
   void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
   int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
- private:
+ protected:
   int64_t GetGlobalWorkStreamId() const;
   int64_t GetLocalWorkStreamId() const;
   virtual bool NeedCollectActEvent() const {
@@ -178,7 +178,8 @@ class Actor {
   bool IsWriteReady() const;
 
   // Naive, Inplace Or Customized
-  void TakeOverInplaceConsumedAndProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
+  virtual void TakeOverInplaceConsumedAndProduced(
+      const PbMap<std::string, RegstDescProto>& produced_ids);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
 
