@@ -51,39 +51,48 @@ class JobPassCtx {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   template<typename T>
-  Maybe<const T&> Get(const std::string& name) const {
-    const auto& iter = name2state_.find(name);
-    CHECK_OR_RETURN(iter != name2state_.end());
+  Maybe<const T&> GetState(const std::string& key) const {
+    const auto& iter = key2state_.find(key);
+    CHECK_OR_RETURN(iter != key2state_.end());
     const T* ptr = dynamic_cast<T*>(iter->second.get());
     CHECK_NOTNULL_OR_RETURN(ptr) << typeid(*iter->second).name();
     return *ptr;
   }
 
   template<typename T>
-  Maybe<T*> Mutable(const std::string& name) {
-    const auto& iter = name2state_.find(name);
-    CHECK_OR_RETURN(iter != name2state_.end());
+  Maybe<T*> MutableState(const std::string& key) {
+    const auto& iter = key2state_.find(key);
+    CHECK_OR_RETURN(iter != key2state_.end());
     T* ptr = dynamic_cast<T*>(iter->second.get());
     CHECK_NOTNULL_OR_RETURN(ptr) << typeid(*iter->second).name();
     return ptr;
   }
 
   template<typename T>
-  Maybe<const T&> Has(const std::string& name) const {
-    const auto& iter = name2state_.find(name);
-    CHECK_OR_RETURN(iter != name2state_.end());
+  Maybe<const T&> HasState(const std::string& key) const {
+    const auto& iter = key2state_.find(key);
+    CHECK_OR_RETURN(iter != key2state_.end());
     const T* ptr = dynamic_cast<T*>(iter->second.get());
     return ptr != nullptr;
   }
 
-  Maybe<void> Add(const std::string& name, std::unique_ptr<JobPassState>&& state) {
-    CHECK_OR_RETURN(name2state_.emplace(name, std::move(state)).second);
+  Maybe<void> ResetState(const std::string& key, std::unique_ptr<JobPassState>&& state) {
+    if (!state) {
+      key2state_.erase(key);
+    } else {
+      key2state_.emplace(key, std::move(state));
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> ResetState(const std::string& key) {
+    key2state_.erase(key);
     return Maybe<void>::Ok();
   }
 
  private:
   const JobDesc* job_desc_;
-  HashMap<std::string, std::unique_ptr<JobPassState>> name2state_;
+  HashMap<std::string, std::unique_ptr<JobPassState>> key2state_;
 };
 
 #define REGISTER_JOB_PASS(pass_name, pass_type) COMMAND(RegisterJobPass(pass_name, new pass_type))
