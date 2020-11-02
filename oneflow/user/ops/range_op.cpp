@@ -31,7 +31,7 @@ REGISTER_USER_OP("range")
                              / delta);  // Do the ceil division, ceil((limit-start)/delta)
       auto dtype = ctx->Attr<DataType>("dtype");
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
-      *out_shape = Shape({range_shape});  // may have problems
+      *out_shape = Shape({range_shape});
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

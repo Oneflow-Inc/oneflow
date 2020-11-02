@@ -23,7 +23,7 @@ template<typename T>
 __global__ void RangeForwardGpuKernel(const int start, const int delta, const int range_shape,
                                       T* out) {
   // Use Loop to set the value
-  CUDA_1D_KERNEL_LOOP(i, range_shape) { out[i] = start + i * delta; }
+  DoRange(start, delta, range_shape, out);
 }
 
 }  // namespace

@@ -21,10 +21,7 @@ template<typename T>
 struct RangeKernelUtil<DeviceType::kCPU, T> {
   static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out) {
-    FOR_RANGE(int64_t, i, 0, range_shape) {
-      // In Python, range_shape = int((limit-start)/delta)
-      out[i] = start + i * delta;
-    }
+    DoRange(start, delta, range_shape, out);
   }
 };
 

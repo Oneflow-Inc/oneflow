@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_RANGE_KERNEL_UTIL_H_
 
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 
@@ -25,6 +26,11 @@ struct RangeKernelUtil {
   static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out);
 };
+
+template<typename T>
+OF_DEVICE_FUNC void DoRange(const int start, const int delta, const int range_shape, T* out) {
+  XPU_1D_KERNEL_LOOP(i, range_shape) { out[i] = start + i * delta; }
+}
 
 #define INSTANTIATE_RANGE_FUNCTOR(device_type_v, dtype_pair) \
   template struct RangeKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
