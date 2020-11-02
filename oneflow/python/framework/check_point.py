@@ -25,6 +25,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
@@ -421,15 +422,17 @@ def Save(var_dict, path):
 
 
 def _LogicalSlice(input_blob, start, stop):
+    op_name = id_util.UniqueStr("system_checkpoint")
+
     def AsyncSlice(Yield):
         def build(builder):
             op_conf = op_conf_pb.OperatorConf()
             device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
             op_conf.device_tag = device_tag
-            op_conf.name = "logical_slice"
+            op_conf.name = op_name
             op_conf.user_conf.op_type_name = "logical_slice"
-            op_conf.user_conf.input["x"].s.append("logical_slice/x_0")
-            op_conf.user_conf.output["y"].s.append("logical_slice/y_0")
+            op_conf.user_conf.input["x"].s.append("{}/x_0".format(op_name))
+            op_conf.user_conf.output["y"].s.append("{}/y_0".format(op_name))
             input_blob_object = input_blob.blob_object
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
@@ -462,8 +465,8 @@ def _LogicalSlice(input_blob, start, stop):
         vm_util.LogicalRun(build)
 
     lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = "system_checkpoint"
-    lbi.blob_name = "system_checkpoint"
+    lbi.op_name = op_name
+    lbi.blob_name = op_name
 
     blob_object = async_util.Await(1, AsyncSlice)[0]
 
@@ -476,8 +479,9 @@ def _LogicalSlice(input_blob, start, stop):
 def _GetVariableBlobFromNumpy(np_array: np.ndarray):
     with oneflow.scope.placement("cpu", "0:0"):
         flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
+        op_name = id_util.UniqueStr("system_checkpoint")
         op_conf = get_variable.GenerateVariableOpConf(
-            name="system_checkpoint",
+            name=op_name,
             shape=np_array.shape,
             dtype=flow_dtype,
             initializer=initializer_util.zeros_initializer(dtype=flow_dtype),
@@ -517,12 +521,14 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
 
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
+        # TODO:
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
-        op_conf.name = "logical_slice_assign"
+        op_name = id_util.UniqueStr("system_checkpoint")
+        op_conf.name = op_name
         op_conf.user_conf.op_type_name = "logical_slice_assign"
-        op_conf.user_conf.input["value"].s.append("slice_assign/value_0")
-        op_conf.user_conf.input["ref"].s.append("slice_assign/ref_0")
+        op_conf.user_conf.input["value"].s.append("{}/value_0".format(op_name))
+        op_conf.user_conf.input["ref"].s.append("{}/ref_0".format(op_name))
         parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
         op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
         attribute = user_op_attr_util.UserOpAttrVal()
@@ -562,7 +568,6 @@ def _FeedValueToVariable(var_name, value_blob):
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
-            del slice_value_blob
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
@@ -576,7 +581,6 @@ def _FeedValueToVariable(var_name, value_blob):
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
-            del slice_value_blob
     else:
         raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
 
@@ -594,8 +598,8 @@ def LoadVariables(var_dict, ignore_mismatch=False):
 
 def _ForEverySlice(var_blob, f):
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
-    SLICE_BYTES = 50 * 1024 * 1024
-    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
+    SLICE_BYTES = 20 * 1024 * 1024
+    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype))
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
     size = np.prod(var_blob.shape).item()
@@ -690,7 +694,6 @@ def Init():
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
             )
-            del slice_value_blob
 
         # we don't care about the return value,
         # only want to run f on every slice

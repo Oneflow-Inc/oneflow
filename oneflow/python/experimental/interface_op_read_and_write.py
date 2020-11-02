@@ -34,19 +34,19 @@ lazy_blob_cache = {}
 def _GetInterfaceBlobObject(builder, op_name):
     if c_api_util.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().var_name2var_blob[op_name].blob_object
-    if op_name not in lazy_blob_cache:
-        lazy_blob_cache[op_name] = builder.MakeLazyRefBlobObject(op_name)
-    blob_cache_util.TryDisableBlobCache(lazy_blob_cache[op_name])
-    return lazy_blob_cache[op_name]
+    blob_object = builder.MakeLazyRefBlobObject(op_name)
+    blob_cache_util.TryDisableBlobCache(blob_object)
+    return blob_object
 
 
 def ReleaseLazyRefBlob():
-    for blob in lazy_blob_cache.values():
-        blob.__del__()
     lazy_blob_cache.clear()
 
 
 def GetEagerInterfaceBlob(op_name):
+    if op_name in lazy_blob_cache:
+        return lazy_blob_cache[op_name]
+
     flow.sync_default_session()
 
     sess = session_ctx.GetDefaultSession()
@@ -73,7 +73,9 @@ def GetEagerInterfaceBlob(op_name):
 
         vm_util.LogicalRun(build)
 
-    return async_util.Await(1, AsyncGetInterfaceBlob)[0]
+    blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
+    lazy_blob_cache[op_name] = blob
+    return blob
 
 
 @oneflow_export("experimental.get_interface_blob_value")
@@ -85,7 +87,7 @@ def GetInterfaceBlobValue(op_name):
 
     def AsyncGetInterfaceBlobValue(Yield):
         def build(builder):
-            blob_object = _GetInterfaceBlobObject(builder, op_name)
+            blob_object = GetEagerInterfaceBlob(op_name).blob_object
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_name
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
@@ -103,7 +105,6 @@ def GetInterfaceBlobValue(op_name):
                 value = remote_blob.numpy_list()
             else:
                 value = remote_blob.numpy()
-
             Yield(value)
 
         vm_util.LogicalRun(build)
@@ -141,7 +142,7 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
 
     def AsyncFeedValueToInterfaceBlob(Yield):
         def build(builder):
-            blob_object = _GetInterfaceBlobObject(builder, op_name)
+            blob_object = GetEagerInterfaceBlob(op_name).blob_object
             FeedValueToInterfaceBlobObject(blob_object, ndarray)
             Yield()
 
