@@ -23,6 +23,7 @@ limitations under the License.
 #ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
+#include <netdb.h>
 
 namespace oneflow {
 
@@ -32,7 +33,20 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
+  struct hostent* he = gethostbyname(addr.c_str());
+
+  std::vector<in_addr> addrs;
+
+  struct in_addr** addr_list = (struct in_addr**)(he->h_addr_list);
+  for (int i = 0; addr_list[i] != NULL; ++i) { addrs.push_back(*(addr_list[i])); }
+  CHECK(addrs.size() > 0);
+  if (addrs.size() > 1) {
+    LOG(ERROR) << "multiple IP address found for hostname: " << addr
+               << ", using: " << addrs.at(0).s_addr;
+  }
+
+  PCHECK(inet_pton(AF_INET, inet_ntoa(addrs.at(0)), &(sa.sin_addr)) == 1)
+      << "addr: " << addr << ", port: " << port;
   return sa;
 }
 
