@@ -84,7 +84,7 @@ sleep {survival_time}
     print(ssh_cmd)
     proc = subprocess.Popen(ssh_cmd, shell=True,)
     try:
-        proc.wait(timeout=15)
+        proc.wait(timeout=10)
         raise ValueError("sshd quit early, returncode:", proc.returncode)
     except TimeoutExpired:
         survival_time_min = survival_time / 60
@@ -94,16 +94,31 @@ sleep {survival_time}
         )
 
 
-def run_bash_script(bash_script, timeout, ssh_port, dotssh_dir, remote_host):
+def run_bash_script(
+    bash_script,
+    timeout,
+    ssh_port,
+    dotssh_dir,
+    remote_host,
+    oneflow_worker_bin,
+    oneflow_wheel_path,
+):
     assert os.path.exists(bash_script)
     log_dir = "./unittest-log-" + str(uuid.uuid4())
     ctrl_port = find_free_port()
     this_host = os.getenv("HOSTNAME")
-    bash_cmd = f"""set -ex
+    exports = f"""
 export ONEFLOW_TEST_CTRL_PORT={ctrl_port}
 export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+"""
+    if oneflow_worker_bin:
+        exports += f"export ONEFLOW_WORKER_BIN={oneflow_worker_bin}\n"
+    if oneflow_wheel_path:
+        exports += f"export ONEFLOW_WHEEL_PATH={oneflow_wheel_path}\n"
+    bash_cmd = f"""set -ex
+{exports}
 rm -rf ~/.ssh
 cp -r /dotssh ~/.ssh
 {FIX_SSH_PERMISSION}
@@ -113,7 +128,7 @@ bash {bash_script}
         f_name = f.name
         f.write(bash_cmd)
         f.flush()
-        docker_cmd = f"docker run --privileged --network=host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+        docker_cmd = f"docker run --privileged --network=host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
         print(docker_cmd)
         subprocess.check_call(docker_cmd, shell=True, timeout=timeout)
 
@@ -133,6 +148,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dotssh_dir", type=str, required=False, default=default_dotssh_dir
     )
+    parser.add_argument("--oneflow_worker_bin", type=str, required=False, default=None)
+    parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--ssh_port", type=int, required=False, default=None)
     parser.add_argument("--timeout", type=int, required=False, default=10 * 60)
     args = parser.parse_args()
@@ -157,6 +174,12 @@ if __name__ == "__main__":
         )
         assert args.bash_script
         run_bash_script(
-            args.bash_script, args.timeout, ssh_port, args.dotssh_dir, args.remote_host
+            args.bash_script,
+            args.timeout,
+            ssh_port,
+            args.dotssh_dir,
+            args.remote_host,
+            args.oneflow_worker_bin,
+            args.oneflow_wheel_path,
         )
         exit(0)
