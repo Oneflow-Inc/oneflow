@@ -34,6 +34,8 @@ class EagerOneflow final {
                                      const std::string& eager_symbol_list_str);
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
+
+  void Barrier();
 };
 
 }  // namespace eager

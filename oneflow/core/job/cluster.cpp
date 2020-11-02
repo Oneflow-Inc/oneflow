@@ -74,6 +74,7 @@ Maybe<void> Cluster::WorkerLoop() {
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
+        Global<eager::EagerOneflow>::Get()->Barrier();
       } else {
         OF_UNIMPLEMENTED();
       }
