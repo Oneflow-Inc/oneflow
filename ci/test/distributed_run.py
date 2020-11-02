@@ -55,14 +55,13 @@ chmod 777 {dotssh_dir}/*
 
 
 def launch_remote_container(hostname, docker_ssh_port, survival_time, dotssh_dir):
-    workspace_name = "distributed_run_workspace"
-    subprocess.check_call(
-        f"ssh {hostname} docker run --rm -v $HOME:$HOME -w $HOME busybox rm -rf {workspace_name}",
-        shell=True,
+    workspace_dir = os.path.join(
+        os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
     )
-    subprocess.check_call(f"ssh {hostname} mkdir ~/{workspace_name}/", shell=True)
+
+    subprocess.check_call(f"ssh {hostname} mkdir -p {workspace_dir}", shell=True)
     subprocess.check_call(
-        f"scp -r {dotssh_dir} {hostname}:~/{workspace_name}/dotssh", shell=True
+        f"scp -r {dotssh_dir} {hostname}:{workspace_dir}/dotssh", shell=True
     )
     bash_cmd = f"""set -ex
 {FIX_SSH_PERMISSION}
@@ -74,11 +73,9 @@ sleep {survival_time}
         f.write(bash_cmd)
         f.flush()
         subprocess.check_call(
-            f"scp {f_name} {hostname}:~/{workspace_name}/launch_ssh_server.sh",
-            shell=True,
+            f"scp {f_name} {hostname}:{workspace_dir}/launch_ssh_server.sh", shell=True,
         )
-        home_dir = os.path.expanduser("~")
-    docker_cmd = f"""docker run --privileged --network=host --shm-size=8g --rm -v {home_dir}/{workspace_name}/dotssh:/root/.ssh -v {home_dir}/{workspace_name}:/{workspace_name} -w /{workspace_name} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
+    docker_cmd = f"""docker run --privileged --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
     print(ssh_cmd)
@@ -106,12 +103,15 @@ def run_bash_script(
     assert os.path.exists(bash_script)
     log_dir = "./unittest-log-" + str(uuid.uuid4())
     ctrl_port = find_free_port()
+    data_port = find_free_port()
     this_host = os.getenv("HOSTNAME")
     exports = f"""
 export ONEFLOW_TEST_CTRL_PORT={ctrl_port}
+export ONEFLOW_TEST_DATA_PORT={data_port}
 export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+export NCCL_DEBUG=INFO
 """
     if oneflow_worker_bin:
         exports += f"export ONEFLOW_WORKER_BIN={oneflow_worker_bin}\n"
@@ -128,7 +128,7 @@ bash {bash_script}
         f_name = f.name
         f.write(bash_cmd)
         f.flush()
-        docker_cmd = f"docker run --privileged --network=host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+        docker_cmd = f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
         print(docker_cmd)
         subprocess.check_call(docker_cmd, shell=True, timeout=timeout)
 
