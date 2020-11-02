@@ -12,7 +12,7 @@ enum ConfigDefType {
 message ConfigFlagDef {
   required string name = 1;
   required string description = 2;
-  required UserOpAttrVal default_val = 3;
+  required AttrValue default_val = 3;
 }
 
 message ConfigDef {
