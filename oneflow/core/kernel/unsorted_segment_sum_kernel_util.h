@@ -29,7 +29,7 @@ struct UnsortedSegmentSumKernelUtil final {
 };
 
 #define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) FLOAT16_DATA_TYPE_SEQ
+  FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 }  // namespace oneflow
 

@@ -75,14 +75,14 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, T, K, U> final {
 };
 
 template<typename K>
-struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K, float16> final {
+struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K, float> final {
   static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const float16* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
-                                 int64_t segment_id_offset, float16* out) {
-    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, half, K, half>::UnsortedSegmentSum(
+                                 int64_t segment_id_offset, float* out) {
+    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, half, K, float>::UnsortedSegmentSum(
         ctx, segment_ids, reinterpret_cast<const half*>(data), num_segment_ids, num_segments,
-        outer_dim_size, inner_dim_size, segment_id_offset, reinterpret_cast<half*>(out));
+        outer_dim_size, inner_dim_size, segment_id_offset, out);
   }
 };
 
@@ -90,8 +90,20 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K, float16> final
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                                OF_PP_PAIR_FIRST(index_type_pair),                \
                                                OF_PP_PAIR_FIRST(in_type_pair)>;
+
+#define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_GPU(in_type_pair, index_type_pair,             \
+                                                      out_type_pair)                             \
+  template struct UnsortedSegmentSumKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+                                               OF_PP_PAIR_FIRST(index_type_pair),                \
+                                               OF_PP_PAIR_FIRST(out_type_pair)>;
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_GPU,
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,
+                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat));
+
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_GPU
 
 }  // namespace oneflow
