@@ -122,10 +122,22 @@ void ClusterInstruction::MasterSendEagerInstruction(
   PushClusterInstruction(cluster_instruction);
 }
 
+void ClusterInstruction::MasterSendEagerSyncBarrier() {
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_eager_sync();
+  PushClusterInstruction(cluster_instruction);
+  EagerSyncBarrier();
+}
+
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
   PullClusterInstruction(cluster_instruction);
 }
 
 void ClusterInstruction::HaltBarrier() { OF_ENV_BARRIER(); }
+
+void ClusterInstruction::EagerSyncBarrier() {
+  // TODO(jianhao): update here after eager instructions are run asynchronously
+  OF_ENV_BARRIER();
+}
 
 }  // namespace oneflow
