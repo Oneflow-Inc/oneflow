@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/optimizer.h"
 
@@ -84,14 +84,22 @@ void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) 
   SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
 }
 
-class GenerateBackwardAndOptimizerOpConfs final : public OpGraphPass {
+class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
  public:
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
   OF_DISALLOW_COPY_AND_MOVE(GenerateBackwardAndOptimizerOpConfs);
   GenerateBackwardAndOptimizerOpConfs() = default;
   ~GenerateBackwardAndOptimizerOpConfs() override = default;
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
+
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
@@ -130,7 +138,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);
+REGISTER_JOB_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);
 
 }  // namespace
 
