@@ -25,6 +25,7 @@ import google.protobuf.text_format as pbtxt
 import oneflow.python.framework.env_util as env_util
 from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
+import subprocess
 
 
 @oneflow_export("deprecated.init_worker")
@@ -78,7 +79,9 @@ def delete_worker(ssh_port=22) -> None:
     for machine in env_proto.machine:
         if machine.id == 0:
             continue
-        ssh_prefix = "ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
+        ssh_prefix = (
+            f"ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
+        )
         _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
 
 
@@ -88,9 +91,9 @@ def _SendBinaryAndConfig2Worker(
     ssh_port_arg = f" -p {ssh_port} "
     scp_port_arg = f" -P {ssh_port} "
     _SystemCall(
-        "ssh-copy-id {ssh_port_arg} -f " + getpass.getuser() + "@" + machine.addr
+        f"ssh-copy-id {ssh_port_arg} -f " + getpass.getuser() + "@" + machine.addr
     )
-    ssh_prefix = "ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
+    ssh_prefix = f"ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
     remote_file_prefix = " " + getpass.getuser() + "@" + machine.addr + ":"
     assert run_dir != ""
     _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
@@ -122,7 +125,7 @@ def _SendBinaryAndConfig2Worker(
 
 def _SystemCall(cmd):
     print(cmd)
-    os.system(cmd)
+    subprocess.check_call(cmd, shell=True)
 
 
 _temp_run_dir = ""
