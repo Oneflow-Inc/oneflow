@@ -1,0 +1,9 @@
+syntax = "proto2";
+package oneflow;
+
+// There are deep learning models that could be divided into sequantial consecutive stages.
+// Each stage is a set of ops
+message StageContext {
+  required int64 num_stages = 1;
+  required int64 stage_id = 2;
+}
