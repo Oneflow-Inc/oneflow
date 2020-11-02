@@ -6,5 +6,4 @@ package oneflow;
 message StageContext {
   required int64 num_stages = 1;
   required int64 stage_id = 2;
-  optional bool vertical_sync = 3 [default = false]; 
 }
