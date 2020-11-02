@@ -13,30 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 
 namespace oneflow {
 
 namespace {
 
-HashMap<std::string, const OpGraphPass*>* PassName2FunctionPass() {
-  static HashMap<std::string, const OpGraphPass*> pass_name2job_pass;
+HashMap<std::string, const JobPass*>* PassName2JobPass() {
+  static HashMap<std::string, const JobPass*> pass_name2job_pass;
   return &pass_name2job_pass;
 }
 
 }  // namespace
 
-void RegisterFunctionPass(const std::string& pass_name, const OpGraphPass* pass) {
-  CHECK(PassName2FunctionPass()->emplace(pass_name, pass).second);
+void RegisterJobPass(const std::string& pass_name, const JobPass* pass) {
+  CHECK(PassName2JobPass()->emplace(pass_name, pass).second);
 }
 
-bool HasFunctionPass(const std::string& pass_name) {
-  return PassName2FunctionPass()->find(pass_name) != PassName2FunctionPass()->end();
+bool HasJobPass(const std::string& pass_name) {
+  return PassName2JobPass()->find(pass_name) != PassName2JobPass()->end();
 }
 
-const OpGraphPass& FunctionPass(const std::string& pass_name) {
-  const auto& iter = PassName2FunctionPass()->find(pass_name);
-  CHECK(iter != PassName2FunctionPass()->end());
+const JobPass& JobPass4Name(const std::string& pass_name) {
+  const auto& iter = PassName2JobPass()->find(pass_name);
+  CHECK(iter != PassName2JobPass()->end());
   return *iter->second;
 }
 
