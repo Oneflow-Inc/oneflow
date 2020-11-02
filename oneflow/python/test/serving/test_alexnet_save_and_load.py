@@ -204,12 +204,12 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         print("load saved alexnet and inference result:")
         cmp_outputs = []
         for i, (image, label) in enumerate(zip(image_list, label_list)):
-            print("image shape: {}, dtype: {}".format(image.shape, image.dtype))
-            print(
-                "label shape: {}, dtype: {}, data: {}".format(
-                    label.shape, label.dtype, label
-                )
-            )
+            # print("image shape: {}, dtype: {}".format(image.shape, image.dtype))
+            # print(
+            #     "label shape: {}, dtype: {}, data: {}".format(
+            #         label.shape, label.dtype, label
+            #     )
+            # )
             # if i > 1:
             #     print((image - image_list[i - 1]).mean())
             outputs = sess.run(alexnet_infer.__name__, image=image, label=label)
