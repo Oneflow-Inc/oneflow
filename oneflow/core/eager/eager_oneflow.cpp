@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -86,7 +87,9 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
   CHECK(cluster_instruction->has_eager_instruction());
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
-  return RunPhysicalInstruction(cluster_instruction);
+  const Maybe<void> ret = RunPhysicalInstruction(cluster_instruction);
+  Barrier();
+  return ret;
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_list_proto_str,
@@ -103,6 +106,8 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_l
   return RunLogicalInstruction(
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
+
+void EagerOneflow::Barrier() { OF_ENV_BARRIER(); }
 
 COMMAND(Global<EagerOneflow>::SetAllocated(new EagerOneflow()));
 
