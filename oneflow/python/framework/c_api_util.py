@@ -74,6 +74,10 @@ def CurrentResource():
     return text_format.Parse(resource, resource_util.Resource())
 
 
+def EagerSync():
+    oneflow_internal.EagerSync()
+
+
 def EnvResource():
     resource, error_str = oneflow_internal.EnvResource()
     error = text_format.Parse(error_str, error_util.ErrorProto())

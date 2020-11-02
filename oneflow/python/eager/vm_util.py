@@ -45,6 +45,10 @@ import oneflow
 oneflow_api = oneflow.oneflow_api
 
 
+def Sync():
+    c_api_util.EagerSync()
+
+
 def PhysicalRun(build):
     return _Run(
         build,
