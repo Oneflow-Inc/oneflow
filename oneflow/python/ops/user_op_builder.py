@@ -84,6 +84,28 @@ class UserOp(object):
 
         return tuple(remote_blob_list)
 
+    def RemoteBlobDict(self):
+        remote_blob_dict = {}
+        for k in self.op_conf_.user_conf.output:
+            if k not in self.output_arg_key_list_:
+                raise ValueError(
+                    "output_arg_name {} of {} op is not set in python op builder".format(
+                        k, self.op_conf_.name
+                    )
+                )
+
+        for output_arg_name in self.output_arg_key_list_:
+            assert output_arg_name in self.op_conf_.user_conf.output
+            if output_arg_name not in remote_blob_dict:
+                remote_blob_dict[output_arg_name] = []
+            for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
+                lbi = logical_blob_id_util.LogicalBlobId()
+                lbi.op_name = self.op_conf_.name
+                lbi.blob_name = "{}_{}".format(output_arg_name, i)
+                remote_blob_dict[output_arg_name].append(self.MakeRemoteBlob(lbi))
+
+        return remote_blob_dict
+
     def SoleOutputBlob(self):
         blobs = self.RemoteBlobList()
         assert len(blobs) == 1

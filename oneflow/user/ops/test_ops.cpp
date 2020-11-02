@@ -98,7 +98,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
 REGISTER_USER_OP("TestReshape")
     .Input("in")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
+    .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -111,7 +111,7 @@ REGISTER_USER_OP("TestReshape")
 REGISTER_USER_OP("TestReshape4KeepHeaderOnly")
     .Input("in")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
+    .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -194,7 +194,7 @@ REGISTER_USER_OP("TestMultiOutputOrder")
 
 REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Output("out")
-    .Attr("out_num", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("out_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
@@ -312,7 +312,7 @@ REGISTER_USER_OP("TestDynamicSource")
 
 REGISTER_USER_OP("TestRandomSource")
     .Output("out")
-    .Attr("seed", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_tensor->mut_shape() = Shape({5});
@@ -323,7 +323,7 @@ REGISTER_USER_OP("TestRandomSource")
 REGISTER_USER_OP("TestDataTypeAttr")
     .Input("in")
     .Output("out")
-    .Attr("output_type", UserOpAttrType::kAtDataType)
+    .Attr<DataType>("output_type")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -335,9 +335,9 @@ REGISTER_USER_OP("TestDataTypeAttr")
 REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .Input("in")
     .Output("out", 3)
-    .Attr("out_shapes", UserOpAttrType::kAtListShape)
-    .Attr("out_types", UserOpAttrType::kAtListDataType)
-    .Attr("string_list", UserOpAttrType::kAtListString)
+    .Attr<std::vector<Shape>>("out_shapes")
+    .Attr<std::vector<DataType>>("out_types")
+    .Attr<std::vector<std::string>>("string_list")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
       const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
@@ -353,8 +353,8 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
 REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Input("in")
     .Output("out")
-    .Attr("int1", UserOpAttrType::kAtInt32)
-    .Attr("int2", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("int1")
+    .Attr<int32_t>("int2")
     .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged);
 
 REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")

@@ -44,7 +44,7 @@ def _check(test_case, data, segment_ids, out_shape, axis, out):
     if axis != 0:
         ref_perm = list(range(1, axis + 1)) + [0] + list(range(axis + 1, ref.ndim))
         ref = np.transpose(ref, ref_perm)
-    test_case.assertTrue(np.allclose(ref, out))
+    test_case.assertTrue(np.allclose(ref, out, rtol=1e-3, atol=1e-3))
 
 
 def _gen_segment_ids(out_shape, axis, segment_ids_shape):

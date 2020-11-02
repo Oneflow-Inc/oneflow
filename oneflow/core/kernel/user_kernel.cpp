@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -24,6 +25,9 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+using Arg2Tensor = HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Tensor>>;
+using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 namespace {
 
@@ -40,9 +44,6 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
 }
 
 }  // namespace
-
-using Arg2Tensor = HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Tensor>>;
-using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 class UserKernelBaseContext {
  public:
@@ -92,6 +93,17 @@ class UserKernelBaseContext {
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
+};
+
+class KernelCreateContext final : public user_op::KernelCreateContext {
+ public:
+  explicit KernelCreateContext(const KernelConf& kernel_conf)
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
+
+  const user_op::UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
+ private:
+  user_op::UserOpConfWrapper user_op_conf_;
 };
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
@@ -393,92 +405,82 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   UserKernelBaseContext base_ctx_;
 };
 
-class UserKernel final : public Kernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(UserKernel);
-  UserKernel() = default;
-  ~UserKernel() = default;
+void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
+  ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
+  infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
+  infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), job_desc()));
+  {
+    const std::string& op_type_name =
+        kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
+    const user_op::OpKernelRegistryResult* kernel_reg_val =
+        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+            op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
+    CHECK_NOTNULL(kernel_reg_val);
+    KernelCreateContext create_ctx(kernel_conf());
+    kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+  }
+}
 
-  void InitUserKernel(DeviceCtx* device_ctx) {
-    ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
-    infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
-    infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), job_desc()));
-    {
-      const std::string& op_type_name =
-          kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
-      const user_op::OpKernelRegistryResult* kernel_reg_val =
-          CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-              op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
-      CHECK_NOTNULL(kernel_reg_val);
-      kernel_.reset(kernel_reg_val->create_fn());
+std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
+  UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+  return kernel_->CreateOpKernelState(&init_ctx);
+}
+
+const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() const {
+  return opkernel_state_;
+}
+
+void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                   user_op::OpKernelState* opkernel_state) const {
+  ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+  kernel_->Compute(ctx_.get(), opkernel_state);
+}
+
+void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
+  InitUserKernel(device_ctx);
+  CHECK(opkernel_state_.get() == nullptr);
+  opkernel_state_ = CreateOpKernelState(device_ctx);
+}
+
+void UserKernel::ForwardDataContent(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
+}
+
+void UserKernel::ForwardShape(const KernelCtx& ctx,
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
+  infer_cache_->UpdateCacheKey(infer_ctx_.get());
+  if (!infer_cache_->IsCacheHit()) {
+    auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->MutOpInferContext());
+    CHECK_NOTNULL(op_infer_ctx);
+    op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
+    kernel_->InferShape(infer_ctx_.get());
+    for (const auto& out_arg_pair : infer_ctx_->outputs()) {
+      const Shape& static_shape =
+          infer_ctx_->TensorDesc4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)->shape();
+      const ShapeView& shape_view =
+          infer_ctx_->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
+      CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt())
+          << "InferShape of OpKernel (op_type_name: " << op_conf().user_conf().op_type_name()
+          << ", op_name: " << op_conf().name()
+          << ") raise error, output arg's (name: " << out_arg_pair.first
+          << ", index: " << out_arg_pair.second << ") runtime shape " << shape_view.ToString()
+          << " surpass the limit of static shape " << static_shape.ToString();
+    }
+    infer_cache_->UpdateCacheValue(infer_ctx_.get());
+  } else {
+    std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
+    FOR_RANGE(int, i, 0, infer_ctx_->outputs().size()) {
+      const auto& out_arg_pair = infer_ctx_->outputs().at(i);
+      MutShapeView* mut_shape_view =
+          infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
+      mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
     }
   }
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx) {
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
-    return kernel_->CreateOpKernelState(&init_ctx);
-  }
-  void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         user_op::OpKernelState* opkernel_state) const {
-    ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->Compute(ctx_.get(), opkernel_state);
-  }
+}
 
- private:
-  void VirtualKernelInit(DeviceCtx* device_ctx) override {
-    InitUserKernel(device_ctx);
-    CHECK(opkernel_state_.get() == nullptr);
-    opkernel_state_ = CreateOpKernelState(device_ctx);
-  }
-
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
-  }
-
-  void ForwardShape(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
-    infer_cache_->UpdateCacheKey(infer_ctx_.get());
-    if (!infer_cache_->IsCacheHit()) {
-      UserKernelOpInferContext* op_infer_ctx =
-          dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->MutOpInferContext());
-      CHECK_NOTNULL(op_infer_ctx);
-      op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
-      kernel_->InferShape(infer_ctx_.get());
-      for (const auto& out_arg_pair : infer_ctx_->outputs()) {
-        const Shape& static_shape =
-            infer_ctx_->TensorDesc4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)
-                ->shape();
-        const ShapeView& shape_view =
-            infer_ctx_->ShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-        CHECK_LE(shape_view.elem_cnt(), static_shape.elem_cnt())
-            << "InferShape of OpKernel (op_type_name: " << op_conf().user_conf().op_type_name()
-            << ", op_name: " << op_conf().name()
-            << ") raise error, output arg's (name: " << out_arg_pair.first
-            << ", index: " << out_arg_pair.second << ") runtime shape " << shape_view.ToString()
-            << " surpass the limit of static shape " << static_shape.ToString();
-      }
-      infer_cache_->UpdateCacheValue(infer_ctx_.get());
-    } else {
-      std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
-      FOR_RANGE(int, i, 0, infer_ctx_->outputs().size()) {
-        const auto& out_arg_pair = infer_ctx_->outputs().at(i);
-        MutShapeView* mut_shape_view =
-            infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-        mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
-      }
-    }
-  }
-
-  bool IsStateless() const override { return !kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
-
-  std::shared_ptr<user_op::OpKernelState> opkernel_state_;
-  std::unique_ptr<const user_op::OpKernel> kernel_;
-  std::unique_ptr<UserKernelComputeContext> ctx_;
-  std::unique_ptr<UserKernelInferContext> infer_ctx_;
-  std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
-};
-
+bool UserKernel::IsStateless() const { return !kernel_->AlwaysComputeWhenAllOutputsEmpty(); }
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
   return true;
 });
@@ -493,7 +495,8 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
-  kernel_.reset(kernel_reg_val->create_fn());
+  KernelCreateContext create_ctx(kernel_conf);
+  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
