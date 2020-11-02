@@ -1,0 +1,6 @@
+syntax = "proto2";
+package oneflow;
+
+message SspPartitionConf {
+  repeated int64 stage_scope_id = 1;
+}
