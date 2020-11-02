@@ -61,9 +61,15 @@ def init_worker(scp_binary: bool = True, use_uuid: bool = True, ssh_port=22) -> 
     for machine in env_proto.machine:
         if machine.id == 0:
             continue
-        _SendBinaryAndConfig2Worker(
-            machine, oneflow_worker_path, env_file.name, run_dir, scp_binary, ssh_port
-        )
+        else:
+            _SendBinaryAndConfig2Worker(
+                machine,
+                oneflow_worker_path,
+                env_file.name,
+                run_dir,
+                scp_binary,
+                ssh_port,
+            )
 
     os.remove(env_file.name)
 
@@ -121,10 +127,12 @@ def _SendBinaryAndConfig2Worker(
         + ' 1>/dev/null 2>&1 </dev/null & "'
     )
     _SystemCall(ssh_prefix + oneflow_cmd)
+    _SystemCall(ssh_prefix + "ps aux")
+    print("oneflow worker initialized:", machine.addr)
 
 
 def _SystemCall(cmd):
-    print(cmd)
+    print(cmd, flush=True)
     subprocess.check_call(cmd, shell=True)
 
 
