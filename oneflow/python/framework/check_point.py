@@ -296,6 +296,7 @@ class FileBackendVariableBlob:
                 self.shape_ = shape
                 self.dtype_ = dtype
                 self.has_meta_info_ = True
+            # TODO:
             elif shape is not None or dtype is not None:
                 raise RuntimeError("both or neither of shape and dtype should be None")
 
@@ -594,6 +595,7 @@ def LoadVariables(var_dict, ignore_mismatch=False):
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
+    vm_util.Sync()
 
 
 def _ForEverySlice(var_blob, f):
@@ -700,9 +702,6 @@ def Init():
 
         # we don't care about the return value,
         # only want to run f on every slice
-        i = 0
         for _ in _ForEverySlice(var_blob, GenerateValueAndAssign):
-            if i % 1 == 0:
-                print(i)
-            i += 1
             pass
+    vm_util.Sync()
