@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -42,7 +43,7 @@ int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_nu
   int reuse = 1;
   int ret_setopt =
       setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&reuse, sizeof(int));
-  CHECK(ret_setopt);
+  CHECK_EQ(ret_setopt, 0);
   int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
