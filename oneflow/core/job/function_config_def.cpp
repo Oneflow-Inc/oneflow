@@ -15,4 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/config_def.h"
 
-namespace oneflow {}
+namespace oneflow {
+
+REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_ssp", false, "enable ssp");
+}
