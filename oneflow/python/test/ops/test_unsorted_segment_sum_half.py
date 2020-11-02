@@ -78,7 +78,7 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
                     num_segments=out_shape[axis],
                     axis=axis,
                 ),
-                flow.float16,
+                flow.float,
             )
 
     out = unsorted_segment_sum_job(data, segment_ids).get()
