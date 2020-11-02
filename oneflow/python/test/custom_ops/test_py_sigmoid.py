@@ -38,7 +38,6 @@ def numpy_sigmoid_grad(y, dy):
     return y * (1 - y) * dy
 
 
-
 def make_job(input_shape, dtype=flow.float32):
     @flow.global_function(function_config=func_config)
     def sigmoid_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
@@ -56,7 +55,6 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
         return flow.math.sigmoid_grad(y, dy)
 
     return sigmoid_grad_job
-
 
 
 @unittest.skipIf(
