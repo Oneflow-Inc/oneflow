@@ -35,6 +35,17 @@ class JobDesc;
 
 namespace user_op {
 
+class KernelCreateContext {
+ public:
+  virtual ~KernelCreateContext() = default;
+
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  template<typename T>
+  T Attr(const std::string& attr_name) const {
+    return user_op_conf().attr<T>(attr_name);
+  }
+};
+
 class KernelInitContext {
  public:
   virtual ~KernelInitContext() = default;
@@ -179,13 +190,27 @@ class OpKernel {
  private:
   template<typename T>
   friend OpKernel* NewOpKernel();
-
+  template<typename T>
+  friend OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx);
   OpKernelStatefulness statefullness_;
 };
 
 template<typename T>
 OpKernel* NewOpKernel() {
   OpKernel* opkernel = new T();
+  if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
+    opkernel->statefullness_ = kStatelessOpKernel;
+  } else {
+    opkernel->statefullness_ = kStatefulOpKernel;
+  }
+  return opkernel;
+}
+
+class KernelCreateContext;
+
+template<typename T>
+OpKernel* NewOpKernelWithCtx(KernelCreateContext* ctx) {
+  OpKernel* opkernel = new T(ctx);
   if (typeid(&OpKernel::CreateOpKernelState) == typeid(&T::CreateOpKernelState)) {
     opkernel->statefullness_ = kStatelessOpKernel;
   } else {

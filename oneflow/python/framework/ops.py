@@ -88,18 +88,18 @@ def api_unpack(
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def unpack(input, unpack_num, name=None):
     assert not oneflow.eager_execution_enabled()
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Unpack_"),
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Unpack_")
+        )
+        .Op("unpack")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("unpack_num", unpack_num)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.unpack_conf, "in", input.unique_name)
-    op_conf.unpack_conf.out = "out"
-    op_conf.unpack_conf.unpack_num = unpack_num
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("pack")
@@ -113,18 +113,18 @@ def api_pack(
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def pack(input, pack_num, name=None):
     assert not oneflow.eager_execution_enabled()
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf, "name", name if name is not None else id_util.UniqueStr("Pack_"),
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Pack_")
+        )
+        .Op("pack")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("pack_num", pack_num)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    setattr(op_conf.pack_conf, "in", input.unique_name)
-    op_conf.pack_conf.out = "out"
-    op_conf.pack_conf.pack_num = pack_num
-    compile_context.CurJobAddOp(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
 
 
 @oneflow_export("parallel_cast")

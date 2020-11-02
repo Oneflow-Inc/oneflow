@@ -18,10 +18,15 @@ message OperandSeparatorProto { }
 
 message InstructionOperandProto {
   oneof type {
+    // read only object
     OperandProto const_operand = 1;
+    // writeable object
     OperandProto mut_operand = 2;
+    // mut2 writeable object
     OperandProto mut2_operand = 3;
+    // read only symbol
     OperandProto symbol_operand = 4;
+    // initializable symbol
     OperandProto init_symbol_operand = 5;
 
     OperandSeparatorProto separator = 7;
