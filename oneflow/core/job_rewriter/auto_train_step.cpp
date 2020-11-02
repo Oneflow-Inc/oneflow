@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
@@ -22,15 +22,21 @@ namespace oneflow {
 
 namespace {
 
-class AutoTrainStep final : public OpGraphPass {
+class AutoTrainStep final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoTrainStep);
   AutoTrainStep() = default;
   ~AutoTrainStep() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    return Apply(op_graph, job);
+  }
 };
 
 Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
@@ -85,7 +91,7 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("AutoTrainStep", AutoTrainStep);
+REGISTER_JOB_PASS("AutoTrainStep", AutoTrainStep);
 
 }  // namespace
 
