@@ -643,14 +643,14 @@ def register_initializer(flow_initializer):
     return deco
 
 
-def _GetInitializerGenerator(initializer_conf):
+def _GetInitializerGenerator(initializer_conf, random_seed):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
             f = _init_map[m]
             break
     assert f is not None, initializer_conf
-    return f(getattr(initializer_conf, m))
+    return f(getattr(initializer_conf, m), random_seed)
 
 
 @register_initializer("constant_conf")
@@ -658,14 +658,17 @@ def _GetInitializerGenerator(initializer_conf):
 def constant_initializer(
     initializer_conf: Union[
         op_conf_pb.ConstantInitializerConf, op_conf_pb.ConstantIntInitializerConf
-    ]
+    ],
+    random_seed: int,
 ):
     return lambda length: [initializer_conf.value] * length
 
 
 @register_initializer("random_normal_conf")
-def random_normal_initializer(initializer_conf: op_conf_pb.RandomNormalInitializerConf):
-    rng = np.random.default_rng()
+def random_normal_initializer(
+    initializer_conf: op_conf_pb.RandomNormalInitializerConf, random_seed: int
+):
+    rng = np.random.default_rng(random_seed)
     return lambda length: rng.normal(
         loc=initializer_conf.mean, scale=initializer_conf.std, size=length
     )
@@ -675,12 +678,12 @@ def Init():
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
         rng = np.random.default_rng()
-        var_op_conf = sess.OpConf4InterfaceOpName(op_name)
+        var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
         np_dtype = np.dtype(
             dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
         )
 
-        g = _GetInitializerGenerator(var_op_conf.variable_conf.initializer)
+        g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
             vals = g(length)
