@@ -24,9 +24,11 @@ struct ClusterInstruction final {
   static void MasterSendSessionStart();
   static void MasterSendHalt();
   static void MasterSendEagerInstruction(const ClusterInstructionProto& cluster_instruction);
+  static void MasterSendEagerSyncBarrier();
   static void WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction);
   static void NewSessionBarrier();
   static void HaltBarrier();
+  static void EagerSyncBarrier();
 };
 
 }  // namespace oneflow

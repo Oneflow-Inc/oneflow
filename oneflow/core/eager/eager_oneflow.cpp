@@ -87,9 +87,7 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
   CHECK(cluster_instruction->has_eager_instruction());
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
-  const Maybe<void> ret = RunPhysicalInstruction(cluster_instruction);
-  Barrier();
-  return ret;
+  return RunPhysicalInstruction(cluster_instruction);
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_list_proto_str,
@@ -106,8 +104,6 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_l
   return RunLogicalInstruction(
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
-
-void EagerOneflow::Barrier() { OF_ENV_BARRIER(); }
 
 COMMAND(Global<EagerOneflow>::SetAllocated(new EagerOneflow()));
 
