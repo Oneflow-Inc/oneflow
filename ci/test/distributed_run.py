@@ -96,6 +96,7 @@ def run_bash_script(
     timeout,
     ssh_port,
     dotssh_dir,
+    this_host,
     remote_host,
     oneflow_worker_bin,
     oneflow_wheel_path,
@@ -104,7 +105,6 @@ def run_bash_script(
     log_dir = "./unittest-log-" + str(uuid.uuid4())
     ctrl_port = find_free_port()
     data_port = find_free_port()
-    this_host = os.getenv("HOSTNAME")
     exports = f"""
 export ONEFLOW_TEST_CTRL_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
@@ -143,7 +143,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("--run", action="store_true", required=False, default=False)
     parser.add_argument("--bash_script", type=str, required=False)
-    parser.add_argument("--remote_host", type=str, required=False, default="oneflow-15")
+    default_this_host = "192.168.1.16"
+    parser.add_argument(
+        "--this_host", type=str, required=False, default=default_this_host
+    )
+    default_remote_host = "192.168.1.15"
+    parser.add_argument(
+        "--remote_host", type=str, required=False, default=default_remote_host
+    )
     default_dotssh_dir = os.path.expanduser("~/distributed_run_dotssh")
     parser.add_argument(
         "--dotssh_dir", type=str, required=False, default=default_dotssh_dir
@@ -178,6 +185,7 @@ if __name__ == "__main__":
             args.timeout,
             ssh_port,
             args.dotssh_dir,
+            args.this_host,
             args.remote_host,
             args.oneflow_worker_bin,
             args.oneflow_wheel_path,
