@@ -7,6 +7,7 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 
 message TrainConf {
   optional NormalModelUpdateOpUserConf model_update_conf = 3;
@@ -59,6 +60,20 @@ message ParallelBlobConf {
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
   required OptInt64 batch_axis = 4;
+}
+
+message JobInputDef {
+  required LogicalBlobId lbi = 1;
+  required InterfaceBlobConf blob_conf = 2;
+}
+
+message JobOutputDef {
+  required LogicalBlobId lbi = 1;
+}
+
+message JobSignatureDef {
+  map<string, JobInputDef> inputs = 1;
+  map<string, JobOutputDef> outputs = 2;
 }
 
 message JobConfigProto {
@@ -115,4 +130,6 @@ message JobConfigProto {
   map<string, UserOpAttrVal> flag_name2flag_value = 2000;
 
   optional int64 logical_object_id = 3000;
+
+  optional JobSignatureDef signature = 4000;
 }

@@ -21,6 +21,7 @@ import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.job_set_pb2 as job_set_pb
+import oneflow.core.job.job_pb2 as job_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -645,3 +646,20 @@ def GetStructureGraph():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return structure_graph
+
+
+def GetCurrentJob():
+    serialized_job, error_str = oneflow_internal.GetSerializedCurrentJob()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(serialized_job, job_pb.Job())
+
+
+def JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn):
+    error_str = oneflow_internal.JobBuildAndInferCtx_CheckLbnValidAndExist(
+        job_name, lbn
+    )
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)

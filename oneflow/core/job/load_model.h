@@ -13,19 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include <string>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/job/session.h"
-#include "oneflow/core/job/load_model.h"
+#ifndef ONEFLOW_CORE_JOB_LOAD_MODEL_H_
+#define ONEFLOW_CORE_JOB_LOAD_MODEL_H_
 
-namespace py = pybind11;
+#include "oneflow/core/common/util.h"
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  using namespace oneflow;
-  m.def("NewSessionId", &NewSessionId);
-  py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
-      .def(py::init<const std::string&>());
-  ;
-  m.def("LoadModel", &ApiLoadModel);
-}
+namespace oneflow {
+
+std::string ApiLoadModel(const std::string& load_model_proto_str);
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_LOAD_MODEL_H_

@@ -1,0 +1,59 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/dlnet_conf.proto";
+import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/job/placement.proto";
+
+message SavedModel {
+  required string name = 1;
+  required int64 version = 2;
+  repeated string checkpoint_dir = 3;
+  map<string, DLNetConf> graphs = 4;
+  map<string, SignatureDef> signatures = 5;
+  map<string, JobSignatureDef> signatures_v2 = 6;
+  repeated JobGraph job_graphs = 7;
+}
+
+message JobGraph {
+  message ListProducerInfo {
+    repeated ProducerInfo infos = 1;
+  }
+  message ProducerInfo {
+    optional string producer_job_name = 1;
+    optional string producer_job_output_blob_name = 2;
+    required string current_job_input_blob_name = 3;
+  }
+  required string job_graph_name = 1;
+  repeated string input_job_names = 2;
+  repeated string output_job_names = 3;
+  map<string, ListProducerInfo> dependency_between_jobs = 4;
+}
+
+message SignatureDef {
+  map<string, InputDef> inputs = 1;
+  map<string, OutputDef> outputs = 2;
+  required string method_name = 3;
+}
+
+message InputDef {
+  repeated string consumer_op_names = 1;
+  repeated string consumer_op_input_bns = 2;
+  required InterfaceBlobConf blob_conf = 3;
+}
+
+message OutputDef {
+  required string producer_op_name = 1;
+}
+
+message ModelParallelDesc {
+
+}
+
+message LoadModelProto {
+  required string model_path = 1;
+  required int64 version = 2;
+  required JobConfigProto job_conf = 3;
+  required ParallelConf parallel_conf = 4;
+}

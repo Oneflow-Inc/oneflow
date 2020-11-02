@@ -196,3 +196,9 @@ std::string JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProduce
              job_name, lbn)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
+
+void JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name, const std::string& lbn,
+                                               std::string* error_str) {
+  return oneflow::JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn)
+      .GetDataAndSerializedErrorProto(error_str);
+}
