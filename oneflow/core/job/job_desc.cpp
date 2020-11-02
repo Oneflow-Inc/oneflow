@@ -84,7 +84,7 @@ void JobDesc::Init() {
   CheckFunctionConfig(job_conf_);
 }
 
-const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
+const AttrValue& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
   const auto& iter = job_conf_.flag_name2flag_value().find(field_name);
   if (iter != job_conf_.flag_name2flag_value().end()) { return iter->second; }
   const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
