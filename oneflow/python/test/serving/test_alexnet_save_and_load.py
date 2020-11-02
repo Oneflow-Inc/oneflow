@@ -75,10 +75,10 @@ def make_alexnet_infer_func(batch_size, image_size):
         image: flow.typing.Numpy.Placeholder(image_shape, dtype=flow.float32),
         label: flow.typing.Numpy.Placeholder(label_shape, dtype=flow.int32),
     ) -> flow.typing.Numpy:
-        image = flow.transpose(image, perm=(0, 3, 1, 2))
-        label = flow.identity(label)
         input_lbns["image"] = image.logical_blob_name
         input_lbns["label"] = label.logical_blob_name
+        image = flow.transpose(image, perm=(0, 3, 1, 2))
+        # label = flow.identity(label)
         loss = alexnet(image, label, trainable=False)
         output = flow.math.reduce_mean(loss)
         output_lbns["output"] = output.logical_blob_name
@@ -151,9 +151,12 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         checkpoint = flow.train.CheckPoint()
         checkpoint.load(DEFAULT_CHECKPOINT_DIR)
         print("alexnet inference result:")
+        origin_outputs = []
         for i, (image, label) in enumerate(zip(image_list, label_list)):
             output = alexnet_infer(image, label)
+            origin_outputs.append(output.item())
             print("iter#{:<6} output:".format(i), output.item())
+        origin_outputs = np.array(origin_outputs, dtype=np.float32)
 
         # save model
         saved_model_path = "alexnet_models"
@@ -199,13 +202,22 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             print('input "{}" info: {}'.format(input_name, sess.input_info(input_name)))
 
         print("load saved alexnet and inference result:")
+        cmp_outputs = []
         for i, (image, label) in enumerate(zip(image_list, label_list)):
-            # print("image shape: {}, dtype: {}".format(image.shape, image.dtype))
-            # print("label shape: {}, dtype: {}, data: {}".format(label.shape, label.dtype, label))
+            print("image shape: {}, dtype: {}".format(image.shape, image.dtype))
+            print(
+                "label shape: {}, dtype: {}, data: {}".format(
+                    label.shape, label.dtype, label
+                )
+            )
             # if i > 1:
             #     print((image - image_list[i - 1]).mean())
             outputs = sess.run(alexnet_infer.__name__, image=image, label=label)
+            cmp_outputs.append(outputs[0].item())
             print("iter#{:<6} output:".format(i), outputs[0].item())
+        cmp_outputs = np.array(cmp_outputs, dtype=np.float32)
+
+        test_case.assertTrue(np.allclose(origin_outputs, cmp_outputs))
 
 
 if __name__ == "__main__":
