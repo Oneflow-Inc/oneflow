@@ -32,7 +32,8 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
+  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1)
+      << "addr: " << addr << ", port: " << port;
   return sa;
 }
 
