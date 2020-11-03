@@ -46,9 +46,7 @@ def _check(test_case, data_type, data, segment_ids, out_shape, axis, out):
         ref = np.transpose(ref, ref_perm)
     if data_type == "float16":
         ref = ref.astype(np.float16).astype(np.float32)
-        tolerance = 1e-3
-    else:
-        tolerance = 1e-5
+    tolerance = 1e-3
     test_case.assertTrue(np.allclose(ref, out, rtol=tolerance, atol=tolerance))
 
 
@@ -67,8 +65,9 @@ def _gen_data(data_type, out_shape, axis, segment_ids_shape):
             .astype(np.float32)
         )
     else:
-        # return np.random.uniform(-1.0, 1.0, size=data_shape).astype(type_name_to_np_type[data_type])
-        return np.random.rand(*data_shape).astype(type_name_to_np_type[data_type])
+        return np.random.uniform(-1.0, 1.0, size=data_shape).astype(
+            type_name_to_np_type[data_type]
+        )
 
 
 def _run_test(test_case, device, data_type, out_shape, axis, segment_ids_shape):
