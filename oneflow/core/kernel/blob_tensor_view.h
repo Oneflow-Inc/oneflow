@@ -13,23 +13,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
+#define ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
+
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
+class Blob;
+
 namespace user_op {
 
-#ifdef WITH_CUDA
+class BlobTensorView final : public Tensor {
+ public:
+  explicit BlobTensorView(Blob* blob);
+  ~BlobTensorView() = default;
 
-template<>
-void Tensor::CheckDataType<half>() const {
-  LOG_IF(FATAL, data_type() != DataType::kFloat16)
-      << "tensor data_type mismatched. value: kFloat16, template T: half";
-}
+  const ShapeView& shape() const override;
+  MutShapeView* mut_shape() override;
+  DataType data_type() const override;
+  const MemoryCase& mem_case() const override;
+  const void* raw_dptr() const override;
+  void* mut_raw_dptr() override;
 
-#endif  // WITH_CUDA
+  void Reset(Blob* blob);
+
+ private:
+  Blob* blob_;
+};
 
 }  // namespace user_op
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_

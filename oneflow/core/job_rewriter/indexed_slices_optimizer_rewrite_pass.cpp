@@ -13,20 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-class IndexedSlicesOptimizerRewritePass final : public OpGraphPass {
+class IndexedSlicesOptimizerRewritePass final : public JobPass {
  public:
   IndexedSlicesOptimizerRewritePass() = default;
   ~IndexedSlicesOptimizerRewritePass() override = default;
-  bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().has_indexed_slices_optimizer_conf()
-           && GlobalJobDesc().job_conf().indexed_slices_optimizer_conf().enable();
+
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().job_conf().has_indexed_slices_optimizer_conf()
+           && ctx.job_desc().job_conf().indexed_slices_optimizer_conf().enable();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
@@ -145,6 +154,6 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("IndexedSlicesOptimizerRewritePass", IndexedSlicesOptimizerRewritePass);
+REGISTER_JOB_PASS("IndexedSlicesOptimizerRewritePass", IndexedSlicesOptimizerRewritePass);
 
 }  // namespace oneflow

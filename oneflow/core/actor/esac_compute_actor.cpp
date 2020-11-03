@@ -23,7 +23,7 @@ void EsacCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().input_bns_size();
   FOR_RANGE(int64_t, i, 0, input_bns_size) {
     const int64_t regst_desc_id =
-        exec_kernel_vec().at(0).bn_in_op2regst_desc_id.at(GenRepeatedBn("in", i));
+        exec_kernel_vec().at(0).bn_in_op2blob_info.at(GenRepeatedBn("in", i)).regst_desc_id;
     CHECK(regst_desc_id2in_bn_id_.emplace(regst_desc_id, i).second);
   }
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
