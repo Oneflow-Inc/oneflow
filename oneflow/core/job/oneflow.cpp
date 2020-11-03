@@ -949,6 +949,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
+    PlanUtil::SetForceInplaceMemBlock(plan);
     FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;
     std::vector<std::string> identity_tick_op_names;

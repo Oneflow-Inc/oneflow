@@ -30,9 +30,9 @@ bool PowerOfTwo(T x) {
 REGISTER_CPU_ONLY_USER_OP("image_batch_align")
     .Input("in")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
-    .Attr("data_type", UserOpAttrType::kAtDataType)
-    .Attr("alignment", UserOpAttrType::kAtInt32)
+    .Attr<Shape>("shape")
+    .Attr<DataType>("data_type")
+    .Attr<int32_t>("alignment")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;

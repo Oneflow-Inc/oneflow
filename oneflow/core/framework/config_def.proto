@@ -4,17 +4,12 @@ package oneflow;
 import "oneflow/core/framework/user_op_attr.proto";
 
 enum ConfigDefType {
-  kEnvConfigType = 1;
-  kSessionConfigType = 2;
-  kFunctionConfigType = 3;
-}
-
-message ConfigFlagDef {
-  required string name = 1;
-  required string description = 2;
-  required UserOpAttrVal default_val = 3;
+  kEnvConfigDefType = 1;
+  kSessionConfigDefType = 2;
+  kFunctionConfigDefType = 3;
+  kScopeConfigDefType = 4;
 }
 
 message ConfigDef {
-  map<string, ConfigFlagDef> flag_name2flag_def = 1;
+  map<string, AttrDef> attr_name2attr_def = 1;
 }

@@ -95,8 +95,11 @@ def collect_exports():
     exports = {}
     api_name2module = {}
     for api_name, symbol, module in exported_symbols():
+        has_another_symbol_exported = (
+            api_name in exports and exports[api_name] != symbol
+        )
         assert (
-            api_name not in exports
+            not has_another_symbol_exported
         ), "exported twice: {}, previous exported: {} in {}, current: {} in {}".format(
             api_name,
             exports[api_name],

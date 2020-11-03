@@ -46,8 +46,7 @@ def _check(test_case, data_type, data, segment_ids, out_shape, axis, out):
         ref = np.transpose(ref, ref_perm)
     if data_type == "float16":
         ref = ref.astype(np.float16).astype(np.float32)
-    tolerance = 1e-3
-    test_case.assertTrue(np.allclose(ref, out, rtol=tolerance, atol=tolerance))
+    test_case.assertTrue(np.allclose(ref, out, rtol=1e-3, atol=1e-3))
 
 
 def _gen_segment_ids(out_shape, axis, segment_ids_shape):

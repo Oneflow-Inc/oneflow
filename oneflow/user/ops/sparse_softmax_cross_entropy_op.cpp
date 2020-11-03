@@ -142,7 +142,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
       .Input("label")                                                                  \
       .Output("prob")                                                                  \
       .Output("out")                                                                   \
-      .Attr("depth", UserOpAttrType::kAtInt64)                                         \
+      .Attr<int64_t>("depth")                                                          \
       .SetTensorDescInferFn(InferTensorDescFn)                                         \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
                               const user_op::UserOpConfWrapper&) {                     \
@@ -159,7 +159,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
       .Input("dy")                                                           \
       .Input("prob")                                                         \
       .Output("prediction_diff")                                             \
-      .Attr("depth", UserOpAttrType::kAtInt64)                               \
+      .Attr<int64_t>("depth")                                                \
       .SetTensorDescInferFn(InferGradTensorDescFn)                           \
       .SetBatchAxisInferFn(InferGradBatchAxisFn)                             \
       .SetGetSbpFn(GetSbpFn<sbp_sig>);
