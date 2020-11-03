@@ -32,34 +32,42 @@ def get_placement():
     return flow.scope.placement("gpu", machine_device_ids)
 
 
-def get_simple_model():
+def get_simple_model(dtype):
     @flow.global_function()
     def add() -> tp.Numpy:
         with get_placement():
             x = flow.get_variable(
                 name="x",
                 shape=(9, 3),
+                dtype=dtype,
                 initializer=flow.random_normal_initializer(mean=10, stddev=1),
                 distribute=flow.distribute.split(0),
             )
             y = flow.get_variable(
-                name="y", shape=(9, 3), initializer=flow.constant_initializer(5),
+                name="y",
+                shape=(9, 3),
+                dtype=dtype,
+                initializer=flow.constant_initializer(5, dtype=dtype),
             )
             z = flow.get_variable(
-                name="z", shape=(9, 3), initializer=flow.random_normal_initializer(),
+                name="z",
+                shape=(9, 3),
+                dtype=dtype,
+                initializer=flow.random_normal_initializer(),
             )
             return flow.math.add_n([x, y, z])
 
     return add
 
 
-def get_large_model():
+def get_large_model(dtype):
     @flow.global_function()
     def large() -> tp.Numpy:
         with get_placement():
             x = flow.get_variable(
                 name="x",
                 shape=(8801, 8203, 4),
+                dtype=dtype,
                 initializer=flow.random_normal_initializer(mean=10, stddev=1),
                 distribute=flow.distribute.split(0),
             )
@@ -68,14 +76,14 @@ def get_large_model():
     return large
 
 
-def get_checkpoint_ready_model(model_getter):
-    model = model_getter()
+def get_checkpoint_ready_model(model_getter, dtype):
+    model = model_getter(dtype)
     if flow.eager_execution_enabled():
         model()
     return model
 
 
-def _TestSaveCorrectness(test_case, model_getter, legacy_api):
+def _TestSaveCorrectness(test_case, model_getter, dtype, legacy_api):
     """
     Save weights by new model io, load weights by legacy model io,
     and check the equality.
@@ -85,7 +93,7 @@ def _TestSaveCorrectness(test_case, model_getter, legacy_api):
         flow.config.gpu_device_num(4)
         flow.config.enable_legacy_model_io(False)
 
-        large1 = get_checkpoint_ready_model(model_getter)
+        large1 = get_checkpoint_ready_model(model_getter, dtype)
 
         if legacy_api:
             check_point = flow.train.CheckPoint()
@@ -98,16 +106,17 @@ def _TestSaveCorrectness(test_case, model_getter, legacy_api):
         flow.config.gpu_device_num(4)
         flow.config.enable_legacy_model_io(True)
 
-        large2 = get_checkpoint_ready_model(model_getter)
+        large2 = get_checkpoint_ready_model(model_getter, dtype)
 
         check_point = flow.train.CheckPoint()
         check_point.load(save_dir)
+        flow.sync_default_session()
 
         res2 = large2()
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
-def _TestLoadCorrectness(test_case, model_getter, legacy_api):
+def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
     """
     Save weights by legacy model io, load weights by new model io,
     and check the equality.
@@ -117,7 +126,7 @@ def _TestLoadCorrectness(test_case, model_getter, legacy_api):
         flow.config.gpu_device_num(4)
         flow.config.enable_legacy_model_io(True)
 
-        large1 = get_checkpoint_ready_model(model_getter)
+        large1 = get_checkpoint_ready_model(model_getter, dtype)
 
         check_point = flow.train.CheckPoint()
         check_point.init()
@@ -129,7 +138,7 @@ def _TestLoadCorrectness(test_case, model_getter, legacy_api):
         flow.config.gpu_device_num(4)
         flow.config.enable_legacy_model_io(False)
 
-        large2 = get_checkpoint_ready_model(model_getter)
+        large2 = get_checkpoint_ready_model(model_getter, dtype)
 
         if legacy_api:
             check_point = flow.train.CheckPoint()
@@ -146,27 +155,29 @@ def _TestLoadCorrectness(test_case, model_getter, legacy_api):
 class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_save_correctness_1node_legacy_api(test_case):
-        _TestSaveCorrectness(test_case, get_simple_model, True)
+        _TestSaveCorrectness(test_case, get_simple_model, flow.float, True)
 
     @flow.unittest.skip_unless_1n4d()
     def test_load_correctness_1node_legacy_api(test_case):
-        _TestLoadCorrectness(test_case, get_simple_model, True)
+        _TestLoadCorrectness(test_case, get_simple_model, flow.float, True)
 
     @flow.unittest.skip_unless_1n4d()
     def test_save_correctness_1node(test_case):
-        _TestSaveCorrectness(test_case, get_large_model, False)
+        for dtype in [flow.float, flow.double]:
+            _TestSaveCorrectness(test_case, get_large_model, dtype, False)
 
     @flow.unittest.skip_unless_2n4d()
     def test_save_correctness_2node(test_case):
-        _TestSaveCorrectness(test_case, get_large_model, False)
+        _TestSaveCorrectness(test_case, get_large_model, flow.float, False)
 
     @flow.unittest.skip_unless_1n4d()
     def test_load_correctness_1node(test_case):
-        _TestLoadCorrectness(test_case, get_large_model, False)
+        for dtype in [flow.float, flow.double]:
+            _TestLoadCorrectness(test_case, get_large_model, dtype, False)
 
     @flow.unittest.skip_unless_2n4d()
     def test_load_correctness_2node(test_case):
-        _TestLoadCorrectness(test_case, get_large_model, False)
+        _TestLoadCorrectness(test_case, get_simple_model, flow.float, False)
 
 
 if __name__ == "__main__":
