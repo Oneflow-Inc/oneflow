@@ -189,7 +189,7 @@ class Session(object):
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
             # Get latest op_conf after compiler.Compile
-            for job in c_api_util.GetJobSet()).job:
+            for job in c_api_util.GetJobSet().job:
                 for op_conf in job.net.op:
                     if c_api_util.IsInterfaceOpConf(op_conf):
                         self.interface_op_name2op_conf_[op_conf.name] = op_conf
