@@ -58,3 +58,9 @@ message AttrValue {
     ListString at_list_string = 14;
   }
 }
+
+message AttrDef {
+  required string name = 1;
+  required string description = 2;
+  required AttrValue default_val = 3;
+}
