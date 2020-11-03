@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class JobPassCtx;
+
 Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -29,12 +31,13 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
 void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
+                                            JobPassCtx* ctx,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
-void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf);
 Maybe<void> GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,

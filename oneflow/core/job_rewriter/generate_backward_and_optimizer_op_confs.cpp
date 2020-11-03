@@ -92,13 +92,13 @@ class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
 
   bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
+    return Apply(op_graph, &job_builder, ctx);
   }
 };
 
@@ -116,7 +116,8 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
 }
 
 Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
-                                                       JobBuilder* job_builder) const {
+                                                       JobBuilder* job_builder,
+                                                       JobPassCtx* ctx) const {
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   JUST(AutoGrad(op_graph, job_builder, &lbi2diff_lbi));
@@ -124,13 +125,14 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(const OpGraph& op_graph,
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   AddDiffStaticShapeCast(op_graph, job_builder, &model_lbi2model_diff_lbi);
   AddDiffParallelCast(op_graph, job_builder, &model_lbi2model_diff_lbi);
-  JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder, &model_lbi2model_diff_lbi));
+  JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder, ctx, &model_lbi2model_diff_lbi));
   ScaleModelDiffByLossScale(op_graph, job_builder, &model_lbi2model_diff_lbi);
   const NormalModelUpdateOpUserConf& model_update_conf =
       job_builder->job().job_conf().train_conf().model_update_conf();
   RegularizeGradient(op_graph, job_builder, &model_lbi2model_diff_lbi);
   if (model_update_conf.has_clip_conf()) {
-    ClipGradient(op_graph, job_builder, &model_lbi2model_diff_lbi, model_update_conf.clip_conf());
+    ClipGradient(op_graph, job_builder, ctx, &model_lbi2model_diff_lbi,
+                 model_update_conf.clip_conf());
   }
   AddOptimizerOpConf(op_graph, job_builder, model_lbi2model_diff_lbi);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder);

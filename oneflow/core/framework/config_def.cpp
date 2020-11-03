@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -27,6 +28,11 @@ ConfigDef* MutGlobalConfigDef() {
 }
 
 template<ConfigDefType config_def_type>
+const ConfigDef& GlobalConfigDef() {
+  return *MutGlobalConfigDef<config_def_type>();
+}
+
+template<ConfigDefType config_def_type>
 AttrValue* AddAttrDef(const std::string& name, const std::string& description) {
   auto* name2flag_def = MutGlobalConfigDef<config_def_type>()->mutable_attr_name2attr_def();
   CHECK(name2flag_def->find(name) == name2flag_def->end());
@@ -36,12 +42,43 @@ AttrValue* AddAttrDef(const std::string& name, const std::string& description) {
   return flag_def->mutable_default_val();
 }
 
+template<ConfigDefType config_def_type>
+const AttrValue& GetAttrDefault(const std::string& name) {
+  const auto& name2flag_def = GlobalConfigDef<config_def_type>().attr_name2attr_def();
+  CHECK(name2flag_def.find(name) != name2flag_def.end());
+  return name2flag_def.at(name).default_val();
+}
+
 }  // namespace
 
 const ConfigDef& GlobalEnvConfigDef() { return *MutGlobalConfigDef<kEnvConfigDefType>(); }
 const ConfigDef& GlobalSessionConfigDef() { return *MutGlobalConfigDef<kSessionConfigDefType>(); }
 const ConfigDef& GlobalFunctionConfigDef() { return *MutGlobalConfigDef<kFunctionConfigDefType>(); }
 const ConfigDef& GlobalScopeConfigDef() { return *MutGlobalConfigDef<kScopeConfigDefType>(); }
+
+bool ConfigConstant::Bool(const std::string& name) const {
+  const auto& default_val = GetAttrDefault<kScopeConfigDefType>(name);
+  CHECK(default_val.has_at_bool());
+  return default_val.at_bool();
+}
+
+int64_t ConfigConstant::Int64(const std::string& name) const {
+  const auto& default_val = GetAttrDefault<kScopeConfigDefType>(name);
+  CHECK(default_val.has_at_int64());
+  return default_val.at_int64();
+}
+
+double ConfigConstant::Double(const std::string& name) const {
+  const auto& default_val = GetAttrDefault<kScopeConfigDefType>(name);
+  CHECK(default_val.has_at_double());
+  return default_val.at_double();
+}
+
+const std::string& ConfigConstant::String(const std::string& name) const {
+  const auto& default_val = GetAttrDefault<kScopeConfigDefType>(name);
+  CHECK(default_val.has_at_string());
+  return default_val.at_string();
+}
 
 template<ConfigDefType config_def_type>
 const ConfigDefBuidler<config_def_type>& ConfigDefBuidler<config_def_type>::Bool(
@@ -71,8 +108,19 @@ const ConfigDefBuidler<config_def_type>& ConfigDefBuidler<config_def_type>::Stri
   return *this;
 }
 
+template<ConfigDefType config_def_type>
+const ConfigDefBuidler<config_def_type>& ConfigDefBuidler<config_def_type>::ListInt64(
+    const std::string& name, const std::vector<int64_t>& default_val,
+    const std::string& description) const {
+  auto* list = AddAttrDef<config_def_type>(name, description)->mutable_at_list_int64();
+  *list->mutable_val() = {default_val.begin(), default_val.end()};
+  return *this;
+}
+
 template class ConfigDefBuidler<kEnvConfigDefType>;
 template class ConfigDefBuidler<kSessionConfigDefType>;
 template class ConfigDefBuidler<kFunctionConfigDefType>;
+template class ConfigDefBuidler<kScopeConfigDefType>;
+template class ConfigDefBuidler<kConstantConfigDefType>;
 
 }  // namespace oneflow

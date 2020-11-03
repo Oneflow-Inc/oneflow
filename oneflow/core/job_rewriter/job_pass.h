@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_REWRITER_JOB_PASS_H_
 #define ONEFLOW_CORE_JOB_REWRITER_JOB_PASS_H_
 
+#include <typeindex>
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
@@ -41,6 +42,20 @@ class JobPassState {
   JobPassState() = default;
 };
 
+class JobPassMethod {
+ public:
+  virtual ~JobPassMethod() = default;
+
+ protected:
+  explicit JobPassMethod(JobPassCtx* ctx) : ctx_(ctx) {}
+
+  const JobPassCtx& ctx() const { return *ctx_; }
+  JobPassCtx* mut_ctx() const { return ctx_; }
+
+ private:
+  JobPassCtx* ctx_;
+};
+
 class JobPassCtx {
  public:
   JobPassCtx(const JobPassCtx&) = delete;
@@ -51,7 +66,7 @@ class JobPassCtx {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   template<typename T>
-  Maybe<const T&> GetState(const std::string& key) const {
+  Maybe<const T&> State(const std::string& key) const {
     const auto& iter = key2state_.find(key);
     CHECK_OR_RETURN(iter != key2state_.end());
     const T* ptr = dynamic_cast<T*>(iter->second.get());
@@ -90,9 +105,30 @@ class JobPassCtx {
     return Maybe<void>::Ok();
   }
 
+  template<typename T>
+  const T& Method() const {
+    const auto& iter = type_index2method_.find(typeid(T));
+    CHECK(iter != type_index2method_.end());
+    const JobPassMethod* base_ptr = iter->second.get();
+    const T* ptr = dynamic_cast<const T*>(base_ptr);
+    return *CHECK_NOTNULL(ptr);
+  }
+
+  template<typename T>
+  void DefineMethod() {
+    std::unique_ptr<const JobPassMethod> method(new T(this));
+    CHECK(type_index2method_.emplace(typeid(T), std::move(method)).second);
+  }
+
+  template<typename T>
+  void ClearMethod() {
+    type_index2method_.erase(typeid(T));
+  }
+
  private:
   const JobDesc* job_desc_;
   HashMap<std::string, std::unique_ptr<JobPassState>> key2state_;
+  HashMap<std::type_index, std::unique_ptr<const JobPassMethod>> type_index2method_;
 };
 
 #define REGISTER_JOB_PASS(pass_name, pass_type) COMMAND(RegisterJobPass(pass_name, new pass_type))

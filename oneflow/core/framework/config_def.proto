@@ -8,6 +8,7 @@ enum ConfigDefType {
   kSessionConfigDefType = 2;
   kFunctionConfigDefType = 3;
   kScopeConfigDefType = 4;
+  kConstantConfigDefType = 5;
 }
 
 message ConfigDef {

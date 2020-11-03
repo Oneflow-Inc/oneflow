@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/autograd.h"
+#include "oneflow/core/job_rewriter/scope_job_pass_method.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job_rewriter/clone_grad.h"
@@ -25,6 +26,16 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+class OpCollectionJobPassState : public JobPassState {
+ public:
+  explicit OpCollectionJobPassState(const std::string& op_collection)
+      : op_collection_(op_collection) {}
+
+ private:
+  HashMap<int64_t, int64_t> scope_id2current_op_collection_scope_id_;
+  std::string op_collection_;
+};
 
 const TrainConf& GetTrainConf() { return GlobalJobDesc().job_conf().train_conf(); }
 
@@ -182,7 +193,8 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
 }
 
 Maybe<void> TryMirroredCastTotalLossInstanceNum(
-    JobBuilder* job_builder, const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node,
+    JobPassCtx* ctx, JobBuilder* job_builder,
+    const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node,
     LogicalBlobId* total_loss_instance_num_lbi) {
   auto IsMirrored4Lbi = [](const LogicalBlobId& lbi, OpNode* op_node) -> Maybe<bool> {
     const auto& obn = *JUST(op_node->op().obn4lbi(lbi));
@@ -203,8 +215,8 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     cast_from_mirrored->set_out("out");
     cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
     const auto& parallel_conf = job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi);
-    int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), true);
+    int64_t scope_symbol_id = JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), true));
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
     total_loss_instance_num_lbi->set_op_name(op_conf.name());
@@ -214,7 +226,7 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
 }
 
 void ScaleModelDiffByDynamicLossInstanceNum(
-    const OpGraph& op_graph, JobBuilder* job_builder,
+    const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx,
     HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
     const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node) {
   auto BuildInstanceNumOpConf4LossOpNode = [&](const LogicalBlobId& loss_lbi, const OpNode* op_node,
@@ -252,8 +264,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name("0:0");
-    int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), false);
+    int64_t scope_symbol_id = CHECK_JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), false));
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
 
@@ -262,7 +274,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   } else {
     UNIMPLEMENTED();
   }
-  CHECK_JUST(TryMirroredCastTotalLossInstanceNum(job_builder, loss_lbi2loss_node,
+  CHECK_JUST(TryMirroredCastTotalLossInstanceNum(ctx, job_builder, loss_lbi2loss_node,
                                                  &total_loss_instance_num_lbi));
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
@@ -414,7 +426,7 @@ void CalcOutLbi2OutDiffLbi(const OpGraph& op_graph,
   });
 }
 
-void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                               const ClipByGlobalNormConf& conf) {
   if (lbi2diff_lbi->empty()) { return; }
@@ -438,8 +450,8 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   }
   ParallelConf global_norm_parallel_conf =
       all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job_builder->job().job_conf().DebugString(), global_norm_parallel_conf.DebugString(), false);
+  int64_t scope_symbol_id = CHECK_JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+      job_builder->job().job_conf().DebugString(), global_norm_parallel_conf.DebugString(), false));
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
@@ -631,6 +643,7 @@ Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
+                                            JobPassCtx* ctx,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   std::function<OpNode*(const std::string&)> LossOpNode4OpName;
   JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
@@ -660,7 +673,8 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
       blob_desc = cur_blob_desc;
     }
     if (blob_desc->is_dynamic()) {
-      ScaleModelDiffByDynamicLossInstanceNum(op_graph, job_builder, lbi2diff_lbi, loss_lbi2op_node);
+      ScaleModelDiffByDynamicLossInstanceNum(op_graph, job_builder, ctx, lbi2diff_lbi,
+                                             loss_lbi2op_node);
     } else {
       ScaleModelDiffByConstantLossInstanceNum(op_graph, job_builder, lbi2diff_lbi,
                                               blob_desc->shape().elem_cnt());
@@ -744,10 +758,11 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
   }
 }
 
-void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {
   if (clip_conf.has_clip_by_global_norm()) {
-    ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, clip_conf.clip_by_global_norm());
+    ClipGradientByGlobalNorm(op_graph, job_builder, ctx, lbi2diff_lbi,
+                             clip_conf.clip_by_global_norm());
   } else {
     UNIMPLEMENTED();
   }

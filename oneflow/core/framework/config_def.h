@@ -22,8 +22,28 @@ limitations under the License.
 
 namespace oneflow {
 
+struct ConfigConstant {
+  bool Bool(const std::string& name) const;
+  int64_t Int64(const std::string& name) const;
+  double Double(const std::string& name) const;
+  const std::string& String(const std::string& name) const;
+};
+
 template<ConfigDefType config_def_type>
 struct ConfigDefBuidler final {
+  const ConfigDefBuidler& Bool(const std::string& name, bool default_val) const {
+    return Bool(name, default_val, "");
+  }
+  const ConfigDefBuidler& Int64(const std::string& name, int64_t default_val) const {
+    return Int64(name, default_val, "");
+  }
+  const ConfigDefBuidler& Double(const std::string& name, double default_val) const {
+    return Double(name, default_val, "");
+  }
+  const ConfigDefBuidler& String(const std::string& name, const std::string& default_val) const {
+    return String(name, default_val, "");
+  }
+
   const ConfigDefBuidler& Bool(const std::string& name, bool default_val,
                                const std::string& description) const;
   const ConfigDefBuidler& Int64(const std::string& name, int64_t default_val,
@@ -32,12 +52,17 @@ struct ConfigDefBuidler final {
                                  const std::string& description) const;
   const ConfigDefBuidler& String(const std::string& name, const std::string& default_val,
                                  const std::string& description) const;
+
+  const ConfigDefBuidler& ListInt64(const std::string& name,
+                                    const std::vector<int64_t>& default_val,
+                                    const std::string& description) const;
 };
 
 #define REGISTER_ENV_CONFIG_DEF() REGISTER_CONFIG_DEF(kEnvConfigDefType)
 #define REGISTER_SESSION_CONFIG_DEF() REGISTER_CONFIG_DEF(kSessionConfigDefType)
 #define REGISTER_FUNCTION_CONFIG_DEF() REGISTER_CONFIG_DEF(kFunctionConfigDefType)
 #define REGISTER_SCOPE_CONFIG_DEF() REGISTER_CONFIG_DEF(kScopeConfigDefType)
+#define DEFINE_CONFIG_CONSTANT() REGISTER_CONFIG_DEF(kConstantConfigDefType)
 
 #define REGISTER_CONFIG_DEF(config_def_type)                                                    \
   static ConfigDefBuidler<config_def_type> OF_PP_CAT(g_##config_def_type##_def_, __COUNTER__) = \

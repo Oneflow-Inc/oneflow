@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/scope_job_pass_method.h"
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
@@ -933,6 +934,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
+  job_pass_ctx.DefineMethod<ScopeJobPassMethod>();
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
@@ -967,6 +969,7 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
+  job_pass_ctx.DefineMethod<ScopeJobPassMethod>();
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };

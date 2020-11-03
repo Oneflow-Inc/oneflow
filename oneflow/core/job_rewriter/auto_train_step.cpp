@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/scope_job_pass_method.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
@@ -30,16 +31,16 @@ class AutoTrainStep final : public JobPass {
 
   bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job, JobPassCtx* ctx) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
-    return Apply(op_graph, job);
+    return Apply(op_graph, job, ctx);
   }
 };
 
-Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
+Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job, JobPassCtx* ctx) const {
   if (job->job_conf().train_conf().has_train_step_lbn()) { return Maybe<void>::Ok(); }
   OperatorConf variable_op_conf{};
   const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
@@ -61,8 +62,8 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
 
   JobBuilder job_builder(job);
   const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
+  int64_t scope_symbol_id = JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+      job->job_conf().DebugString(), parallel_conf.DebugString(), false));
 
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
                            .Op("scalar_add")
