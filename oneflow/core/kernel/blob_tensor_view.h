@@ -13,25 +13,37 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_PACK_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_PACK_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
+#define ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class PackKernel final : public KernelIf<device_type> {
+class Blob;
+
+namespace user_op {
+
+class BlobTensorView final : public Tensor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PackKernel);
-  PackKernel() = default;
-  ~PackKernel() = default;
+  explicit BlobTensorView(Blob* blob);
+  ~BlobTensorView() = default;
+
+  const ShapeView& shape() const override;
+  MutShapeView* mut_shape() override;
+  DataType data_type() const override;
+  const MemoryCase& mem_case() const override;
+  const void* raw_dptr() const override;
+  void* mut_raw_dptr() override;
+
+  void Reset(Blob* blob);
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  Blob* blob_;
 };
+
+}  // namespace user_op
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_PACK_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
