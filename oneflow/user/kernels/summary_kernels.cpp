@@ -112,7 +112,7 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
     CHECK_NOTNULL(ctag);
     std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(static_cast<float>(istep[0]),
-                                                                 *value, tag_str);
+                                                                 value, tag_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -171,7 +171,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
     char* ctag = const_cast<char*>(tag->dptr<char>());
     CHECK_NOTNULL(ctag);
     std::string tag_str(ctag, tag->shape().elem_cnt());
-    EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), *value,
+    EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), value,
                                                              tag_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
