@@ -95,6 +95,17 @@ class UserKernelBaseContext {
   const JobDesc& job_desc_;
 };
 
+class KernelCreateContext final : public user_op::KernelCreateContext {
+ public:
+  explicit KernelCreateContext(const KernelConf& kernel_conf)
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
+
+  const user_op::UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
+ private:
+  user_op::UserOpConfWrapper user_op_conf_;
+};
+
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
@@ -405,7 +416,8 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
             op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
     CHECK_NOTNULL(kernel_reg_val);
-    kernel_.reset(kernel_reg_val->create_fn());
+    KernelCreateContext create_ctx(kernel_conf());
+    kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
   }
 }
 
@@ -483,7 +495,8 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
-  kernel_.reset(kernel_reg_val->create_fn());
+  KernelCreateContext create_ctx(kernel_conf);
+  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {

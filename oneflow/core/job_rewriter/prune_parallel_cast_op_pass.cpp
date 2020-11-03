@@ -13,19 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 namespace {
 
-class PruneParallelCastOpsPass final : public OpGraphPass {
+class PruneParallelCastOpsPass final : public JobPass {
  public:
   PruneParallelCastOpsPass() = default;
   ~PruneParallelCastOpsPass() override = default;
-  bool IsEnabled() const override { return GlobalJobDesc().prune_parallel_cast_ops(); }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().prune_parallel_cast_ops(); }
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
@@ -89,6 +97,6 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("PruneParallelCastOpsPass", PruneParallelCastOpsPass);
+REGISTER_JOB_PASS("PruneParallelCastOpsPass", PruneParallelCastOpsPass);
 
 }  // namespace oneflow

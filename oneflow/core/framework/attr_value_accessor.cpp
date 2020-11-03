@@ -23,15 +23,15 @@ namespace oneflow {
 namespace user_op {
 
 // Basic and Enum Attr
-#define BASIC_AND_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                          \
-  template<>                                                                               \
-  cpp_type AttrValAccessor<cpp_type>::Attr(const UserOpAttrVal& val) {                     \
-    CHECK(val.has_##field());                                                              \
-    return val.field();                                                                    \
-  }                                                                                        \
-  template<>                                                                               \
-  void AttrValAccessor<cpp_type>::Attr(const cpp_type& cpp_val, UserOpAttrVal* attr_val) { \
-    attr_val->set_##field(cpp_val);                                                        \
+#define BASIC_AND_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                        \
+  template<>                                                                             \
+  cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                     \
+    CHECK(val.has_##field());                                                            \
+    return val.field();                                                                  \
+  }                                                                                      \
+  template<>                                                                             \
+  void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) { \
+    attr_val->set_##field(cpp_val);                                                      \
   }
 
 #define BASIC_AND_ENUM_ATTR_SEQ \
@@ -45,22 +45,22 @@ OF_PP_FOR_EACH_TUPLE(BASIC_AND_ENUM_ATTR_SEQ_ENTRY, BASIC_AND_ENUM_ATTR_SEQ)
 
 // Customized Message Attr
 template<>
-Shape AttrValAccessor<Shape>::Attr(const UserOpAttrVal& val) {
+Shape AttrValueAccessor<Shape>::Attr(const AttrValue& val) {
   return Shape(val.at_shape());
 }
 template<>
-void AttrValAccessor<Shape>::Attr(const Shape& cpp_val, UserOpAttrVal* attr_val) {
+void AttrValueAccessor<Shape>::Attr(const Shape& cpp_val, AttrValue* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_shape());
 }
 
 // List of Basic Attr
 #define LIST_BASIC_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                   \
   template<>                                                                                    \
-  cpp_type AttrValAccessor<cpp_type>::Attr(const UserOpAttrVal& val) {                          \
+  cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                            \
     return PbRf2StdVec<cpp_type::value_type>(val.field().val());                                \
   }                                                                                             \
   template<>                                                                                    \
-  void AttrValAccessor<cpp_type>::Attr(const cpp_type& cpp_val, UserOpAttrVal* attr_val) {      \
+  void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) {        \
     *(attr_val->mutable_##field()->mutable_val()) = StdVec2PbRf<cpp_type::value_type>(cpp_val); \
   }
 
@@ -71,7 +71,7 @@ OF_PP_FOR_EACH_TUPLE(LIST_BASIC_ATTR_SEQ_ENTRY, LIST_BASIC_ATTR_SEQ)
 // List of Enum Attr
 #define LIST_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                   \
   template<>                                                                                   \
-  cpp_type AttrValAccessor<cpp_type>::Attr(const UserOpAttrVal& val) {                         \
+  cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                           \
     std::vector<cpp_type::value_type> ret;                                                     \
     ret.reserve(val.field().val_size());                                                       \
     for (const auto& value : val.field().val()) {                                              \
@@ -80,7 +80,7 @@ OF_PP_FOR_EACH_TUPLE(LIST_BASIC_ATTR_SEQ_ENTRY, LIST_BASIC_ATTR_SEQ)
     return ret;                                                                                \
   }                                                                                            \
   template<>                                                                                   \
-  void AttrValAccessor<cpp_type>::Attr(const cpp_type& cpp_val, UserOpAttrVal* attr_val) {     \
+  void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) {       \
     using proto_type = std::remove_reference_t<decltype(attr_val->field().val())>::value_type; \
     std::vector<proto_type> vec;                                                               \
     vec.reserve(cpp_val.size());                                                               \
@@ -94,15 +94,15 @@ OF_PP_FOR_EACH_TUPLE(LIST_ENUM_ATTR_SEQ_ENTRY, LIST_ENUM_ATTR_SEQ)
 
 // List of Customized Message Attr
 template<>
-std::vector<Shape> AttrValAccessor<std::vector<Shape>>::Attr(const UserOpAttrVal& val) {
+std::vector<Shape> AttrValueAccessor<std::vector<Shape>>::Attr(const AttrValue& val) {
   std::vector<Shape> ret;
   ret.reserve(val.at_list_shape().val_size());
   for (const auto& value : val.at_list_shape().val()) { ret.emplace_back(value); }
   return ret;
 }
 template<>
-void AttrValAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val,
-                                               UserOpAttrVal* attr_val) {
+void AttrValueAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val,
+                                                 AttrValue* attr_val) {
   if (attr_val->at_list_shape().val_size() > 0) { attr_val->mutable_at_list_shape()->clear_val(); }
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
@@ -111,12 +111,12 @@ void AttrValAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val
 
 // List of String Attr
 template<>
-std::vector<std::string> AttrValAccessor<std::vector<std::string>>::Attr(const UserOpAttrVal& val) {
+std::vector<std::string> AttrValueAccessor<std::vector<std::string>>::Attr(const AttrValue& val) {
   return PbRpf2StdVec<std::string>(val.at_list_string().val());
 }
 template<>
-void AttrValAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
-                                                     UserOpAttrVal* attr_val) {
+void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
+                                                       AttrValue* attr_val) {
   *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
 }
 
