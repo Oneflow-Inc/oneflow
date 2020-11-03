@@ -119,37 +119,40 @@ def _make_dim_gather_fn(
         func_config.default_data_type(value_type)
 
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
-
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: oft.Numpy):
-        if (np.allclose(grad, blob)) == False:
-            print("torch grad:", grad)
-            print("oenflow grad:", blob)
+        test_case.assertTrue(np.allclose(grad, blob) == True)
 
     if value_type == flow.float16:
-
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
             params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float32),
             indices_def: oft.Numpy.Placeholder(index.shape, dtype=index_type),
         ) -> oft.Numpy:
-            with flow.scope.placement(device_type, machine_ids):
+            with flow.scope.placement(device_type, "0:0"):
                 x_var = flow.get_variable(
                     "input",
                     shape=input.shape,
                     dtype=flow.float32,
                     initializer=flow.constant_initializer(0),
                 )
+                x_var = flow.cast_to_current_logical_view(x_var)
                 x = x_var + params_def
                 x_f16 = flow.cast(x, flow.float16)
-                y_f16 = flow.dim_gather(x_f16, dim, indices_def)
-                x_f32 = flow.cast(x, flow.float32)
-                y_f32 = flow.cast(y_f16, flow.float32)
+            
+            y_f16 = flow.dim_gather(x_f16, dim, indices_def)
+            x_f32 = flow.cast(x, flow.float32)
+            y_f32 = flow.cast(y_f16, flow.float32)
+            
+            y = flow.dim_gather(x, dim, indices_def)
+
+            with flow.scope.placement(device_type, "0:0"):
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+                ).minimize(y_f32)
+            
             flow.watch_diff(x_f32, _compare_diff)
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(y_f32)
             return y_f32
 
         return gather_fn
@@ -167,14 +170,17 @@ def _make_dim_gather_fn(
                     dtype=value_type,
                     initializer=flow.constant_initializer(0),
                 )
-
+                x_var = flow.cast_to_current_logical_view(x_var)
                 x = x_var + params_def
-                y = flow.dim_gather(x, dim, indices_def)
+            
+            y = flow.dim_gather(x, dim, indices_def)
 
+            with flow.scope.placement(device_type, "0:0"):
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+                ).minimize(y)
+            
             flow.watch_diff(x, _compare_diff)
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(y)
             return y
 
         return gather_fn
@@ -192,8 +198,8 @@ def _compare_dim_gather_with_samples(
         device_type,
         value_type[1],
         index_type[1],
-        "0:0",
-        1,
+        machine_ids,
+        device_count,
     )
     y = gather_fn(
         sample["input"].astype(value_type[0]), sample["index"].astype(index_type[0])
@@ -237,7 +243,7 @@ class TestDimGather1n2d(flow.unittest.TestCase):
     def test_dim_gather(test_case):
         global g_samples
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_type"] = ["gpu"]
         arg_dict["samples"] = []
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
@@ -248,7 +254,7 @@ class TestDimGather1n2d(flow.unittest.TestCase):
             (np.float64, flow.float64),
         ]
         arg_dict["index_type"] = [(np.int32, flow.int32)]
-        arg_dict["machine_ids"] = ["0:0"]
+        arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_count"] = [2]
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
