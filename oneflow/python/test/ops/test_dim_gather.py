@@ -249,7 +249,7 @@ class TestDimGather1n2d(flow.unittest.TestCase):
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
         arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
         arg_dict["value_type"] = [
-            (np.float32, flow.float16),
+            #(np.float32, flow.float16),
             (np.float32, flow.float32),
             (np.float64, flow.float64),
         ]
