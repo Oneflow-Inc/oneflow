@@ -101,8 +101,8 @@ class ComposeHob(BoolFunctor):
         return ctx.composer2middle_op_arg_parallel_attr[self]
 
 
-@bool_functor("MasterMachineOnly")
-def MasterMachineOnly(ctx):
+@bool_functor("SingleMachine")
+def SingleMachine(ctx):
     blob_device_ids = (
         ctx.produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     )

@@ -109,21 +109,37 @@ void AddAttrWithDefault(OpRegistryResult* result, const std::string& name, UserO
 
 }  // namespace
 
-#define ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                       \
-  template<>                                                                               \
-  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name, UserOpAttrType type,     \
-                                         cpp_type&& default_val) {                         \
-    CHECK(InsertIfNotExists(name, &unique_names_));                                        \
-    CHECK_EQ(type, attr_type);                                                             \
-    AddAttrWithDefault(&result_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      AttrValAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());       \
-    });                                                                                    \
-    return *this;                                                                          \
+#define ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                             \
+  template<>                                                                                     \
+  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name, UserOpAttrType type,           \
+                                         const cpp_type& default_val) {                          \
+    CHECK_EQ(type, attr_type);                                                                   \
+    return DefaultedAttr(name, type, [default_val](UserOpDef::AttrDef* attr_def) {               \
+      AttrValAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());             \
+    });                                                                                          \
+  }                                                                                              \
+  template<>                                                                                     \
+  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name, const cpp_type& default_val) { \
+    return DefaultedAttr(                                                                        \
+        name, GetAttrType<cpp_type>::value, [default_val](UserOpDef::AttrDef* attr_def) {        \
+          AttrValAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());         \
+        });                                                                                      \
+  }                                                                                              \
+  template<>                                                                                     \
+  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name) {                              \
+    return Attr<cpp_type>(name, cpp_type());                                                     \
   }
 
 OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef ATTR_MEMBER_FUNC
+
+OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, UserOpAttrType type,
+                                      const std::function<void(UserOpDef::AttrDef*)>& SetDefault) {
+  CHECK(InsertIfNotExists(name, &unique_names_));
+  AddAttrWithDefault(&result_, name, type, SetDefault);
+  return *this;
+}
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
   result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
@@ -145,6 +161,11 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferSbpSignatureFn(InferSbpSignatureFn infer_sbp_signature_fn) {
+  result_.infer_sbp_signature_fn = std::move(infer_sbp_signature_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::SetInputArgModifyFn(InputArgModifyFn input_arg_modify_fn) {
   result_.input_arg_modify_fn = std::move(input_arg_modify_fn);
   return *this;
@@ -152,6 +173,12 @@ OpRegistry& OpRegistry::SetInputArgModifyFn(InputArgModifyFn input_arg_modify_fn
 
 OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify_fn) {
   result_.output_arg_modify_fn = std::move(output_arg_modify_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
+    InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn) {
+  result_.infer_output_blob_time_shape_fn = std::move(infer_output_blob_time_shape_fn);
   return *this;
 }
 

@@ -47,14 +47,28 @@ def api_placement(
 
     Args:
         device_tag (str): Device tag, "cpu" or "gpu" only
-        machine_device_ids (str): String that specifies what device(s) to use in the format "<NODE INDEX (RANGE)>:<DEVICE INDEX (RANGE)>". For example, "0:0" means use the device 0 of machine 0, and "1:4-6" means use device 4, 5, 6 of machine 1.
+        machine_device_ids (str): List of string that specifies what machine & device(s) to use, the format is "List[<NODE INDEX>:<DEVICE START INDEX>-<DEVICE END INDEX>, <NODE INDEX>:<DEVICE START INDEX>-<DEVICE END INDEX>, ...]", For example, "0:0" means use the device 0 of machine 0, and "1:4-6" means use device 4, 5, 6 of machine 1.
 
     Returns:
         placement_ctx.DevicePriorPlacementScope:  Placement scope
 
-    For instance::
+    For example:
 
-        with flow.fixed_placement("gpu", "0:0"):
+    If you run program on single machine, you can assign the specified device like this: 
+
+    .. code-block:: python 
+
+        with flow.scope.placement("gpu", "0:0"):
+            logits = lenet(images, train=False)
+            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
+            flow.losses.add_loss(loss)
+
+    Or you run distributed program, you can assign the specified devices like this: 
+
+    .. code-block:: python 
+
+        # configure machines ids, ips, etc.
+        with flow.scope.placement("gpu", ['0:0-7', '1:0-7']):
             logits = lenet(images, train=False)
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
             flow.losses.add_loss(loss)

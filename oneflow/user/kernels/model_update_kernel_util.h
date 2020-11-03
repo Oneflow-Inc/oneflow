@@ -89,6 +89,47 @@ struct AdamUpdateFunctor {
   }
 };
 
+template<typename T, typename G>
+struct LambGradFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const T* beta1_t, const T* beta2_t, const G* model_diff, T* adam_diff, T* model,
+                  T* m, T* v, float scale, float l1, float l2, float beta1, float beta2,
+                  float epsilon) const {
+    const T model_val = *model;
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+    const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
+    const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
+    *adam_diff = (next_m / (1 - *beta1_t)) / std::sqrt(next_v / (1 - *beta2_t) + epsilon);
+    *m = next_m;
+    *v = next_v;
+  }
+};
+
+template<typename T>
+struct LambLRFunctor {
+  OF_DEVICE_FUNC
+  float operator()(const float learning_rate, const T* w_norm, const T* g_norm) const {
+    float lr = learning_rate;
+    const T w_norm_val = *w_norm;
+    const T g_norm_val = *g_norm;
+    T trust_ratio = 1;
+    if (w_norm_val > 0 && g_norm_val > 0) { trust_ratio = w_norm_val / g_norm_val; }
+    lr *= trust_ratio;
+    return lr;
+  }
+};
+
+template<typename T>
+struct LambUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(const float learning_rate, const float weight_decay, const T* adam_diff,
+                  T* model) const {
+    const T model_val = *model;
+    *model = model_val - learning_rate * (*adam_diff + weight_decay * model_val);
+  }
+};
+
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
@@ -124,9 +165,10 @@ struct IndexedSlicesAdamMdUpdateKernelUtil {
 template<typename T, typename G>
 struct RmsPropUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, int64_t n, T scale, float l1, float l2, float* mean_square,
+  void operator()(const G* model_diff, T* model, int64_t n, T scale, float l1, float l2, T* mean_square,
                   T* mean_gradient, bool centered, float epsilon, float weight_decay,  float decay_rate,
-                  float learning_rate) const {
+                  const float learning_rate) const {
+    const T model_val = *model;
     T model_diff_t = CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, *model, scale, l1, l2);
     T mean_square_val = *mean_square;
     mean_square_val = (1 - decay_rate) * model_diff_t * model_diff_t + decay_rate * mean_square_val;
@@ -140,16 +182,25 @@ struct RmsPropUpdateFunctor {
     } else {
       denom_t = *mean_square;
     }
-    *model = *model - learning_rate * model_diff_t / std::sqrt(denom_t + epsilon);
+    *model = model_val - learning_rate * model_diff_t / std::sqrt(denom_t + epsilon);
   }
 };
 
 template<DeviceType device_type, typename T, typename G>
 struct RmsPropUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float* mean_square,
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, T* mean_square,
                      T* mean_gradient, bool centered, float epsilon, float weight_decay, float decay_rate,
                      const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
                      T* model);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct LambUpdateKernelUtil {
+ public:
+  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
+                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+                     T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 #endif

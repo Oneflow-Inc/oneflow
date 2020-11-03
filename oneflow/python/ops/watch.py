@@ -240,6 +240,8 @@ def WatchDiff(
         import numpy as np 
 
 
+        BATCH_SIZE = 20
+
         def watch_diff_handler(blob: tp.Numpy):
             print("watch_diff_handler:", blob)
 

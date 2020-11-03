@@ -97,10 +97,14 @@
       export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
       ```
 
-      If you don't want to build OneFlow with MKL, you could install OpenBLAS:
-
+      If you don't want to build OneFlow with MKL, you could install OpenBLAS.
+      On CentOS:
       ```
       sudo yum -y install openblas-devel
+      ```
+      On Ubuntu:
+      ```
+      sudo apt install -y libopenblas-dev
       ```
 
 2. #### Clone Source Code
@@ -172,7 +176,7 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 #### Usage & Design Docs
 * [link](http://docs.oneflow.org/)
 #### API Reference
-* [link](https://oneflow-api.readthedocs.io/en/latest/)
+* [link](https://oneflow.readthedocs.io/en/master/)
 #### OneFlow System Design
 For those who would like to understand the OneFlow internals, please read the document below:
 * [link](https://github.com/Oneflow-Inc/oneflow-documentation/blob/master/en/docs/basics_topics/essentials_of_oneflow.md)

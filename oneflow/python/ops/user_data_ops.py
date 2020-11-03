@@ -1030,6 +1030,7 @@ def image_decode(
         import numpy as np
         from PIL import Image
 
+
         def _of_image_decode(images):
             image_files = [open(im, "rb") for im in images]
             images_bytes = [imf.read() for imf in image_files]
@@ -1044,7 +1045,7 @@ def image_decode(
             @flow.global_function(function_config=func_config)
             def image_decode_job(
                 images_def: tp.ListListNumpy.Placeholder(shape=static_shape, dtype=flow.int8)
-            ):
+            )->tp.ListListNumpy:
                 # convert to tensor buffer
                 images_buffer = flow.tensor_list_to_tensor_buffer(images_def)
                 decoded_images_buffer = flow.image_decode(images_buffer)
@@ -1057,8 +1058,9 @@ def image_decode(
             images_np_arr = [
                 np.frombuffer(bys, dtype=np.byte).reshape(1, -1) for bys in images_bytes
             ]
-            decoded_images = image_decode_job([images_np_arr]).get().numpy_lists()
+            decoded_images = image_decode_job([images_np_arr])
             return decoded_images[0]
+            
 
         if __name__ == "__main__": 
             img = _of_image_decode(['./img/1.jpg'])
@@ -2170,6 +2172,7 @@ class COCOReader(module_util.Module):
             .Output("gt_label")
             .Output("gt_segm")
             .Output("gt_segm_index")
+            .Attr("session_id", flow.current_scope().session_id)
             .Attr("annotation_file", annotation_file)
             .Attr("image_dir", image_dir)
             .Attr("batch_size", batch_size)
@@ -2294,3 +2297,45 @@ def ofrecord_image_classification_reader(
     label = flow.tensor_buffer_to_tensor(label, dtype=flow.int32, instance_shape=[1])
     label = flow.squeeze(label, axis=[-1])
     return image, label
+
+
+@oneflow_export("data.OneRecDecoder", "data.onerec_decoder")
+def OneRecDecoder(
+    input_blob,
+    key,
+    dtype,
+    shape,
+    is_dynamic=False,
+    reshape=None,
+    batch_padding=None,
+    name=None,
+):
+    if name is None:
+        name = id_util.UniqueStr("OneRecDecoder_")
+    if reshape is not None:
+        has_reshape = True
+    else:
+        has_reshape = False
+        reshape = shape
+    if batch_padding is not None:
+        has_batch_padding = True
+    else:
+        has_batch_padding = False
+        batch_padding = shape
+    return (
+        flow.user_op_builder(name)
+        .Op("onerec_decoder")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("key", key)
+        .Attr("data_type", dtype)
+        .Attr("static_shape", shape)
+        .Attr("is_dynamic", is_dynamic)
+        .Attr("has_reshape", has_reshape)
+        .Attr("reshape", reshape)
+        .Attr("has_batch_padding", has_batch_padding)
+        .Attr("batch_padding", batch_padding)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

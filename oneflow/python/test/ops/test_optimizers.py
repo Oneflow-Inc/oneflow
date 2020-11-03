@@ -88,7 +88,7 @@ def compare_with_tensorflow_rmsprop(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
 
-    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-3, atol=1e-3,), (
+    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=5e-3, atol=5e-3,), (
         x.flatten() - var.numpy().flatten()
     )
 
@@ -916,7 +916,6 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_flow_job_fused_adam_model_update(*arg)
-
 
 if __name__ == "__main__":
     unittest.main()

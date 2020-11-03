@@ -43,6 +43,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
 
   OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(op, "mean_square", 0.f));
+  job_builder->AddOps(parallel_conf, {mean_square_var});
 
   user_op::UserOpConfWrapperBuilder rmsprop_update_op_builder(op.op_name() + "_optimizer");
   bool centered;
@@ -61,6 +62,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
 
   if (centered) {
       OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
+      job_builder->AddOps(parallel_conf, {mean_gradient_var});
       rmsprop_update_op_builder.Input("mean_gradient", GenVariableOutputLbn(mean_gradient_var));
    }
    
