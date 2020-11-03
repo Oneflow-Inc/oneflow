@@ -13,22 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
 namespace user_op {
 
-#ifdef WITH_CUDA
+BlobTensorView::BlobTensorView(Blob* blob) : blob_(blob) {}
 
-template<>
-void Tensor::CheckDataType<half>() const {
-  LOG_IF(FATAL, data_type() != DataType::kFloat16)
-      << "tensor data_type mismatched. value: kFloat16, template T: half";
-}
+const ShapeView& BlobTensorView::shape() const { return blob_->shape(); }
 
-#endif  // WITH_CUDA
+MutShapeView* BlobTensorView::mut_shape() { return blob_->mut_shape_view(); }
+
+DataType BlobTensorView::data_type() const { return blob_->data_type(); }
+
+const MemoryCase& BlobTensorView::mem_case() const { return blob_->mem_case(); }
+
+const void* BlobTensorView::raw_dptr() const { return blob_->dptr(); }
+
+void* BlobTensorView::mut_raw_dptr() { return blob_->mut_dptr(); }
+
+void BlobTensorView::Reset(Blob* blob) { blob_ = blob; }
 
 }  // namespace user_op
 
