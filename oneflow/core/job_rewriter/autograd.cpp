@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/autograd.h"
-#include "oneflow/core/job_rewriter/scope_job_pass_method.h"
+#include "oneflow/core/job_rewriter/job_pass_scope_helper.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job_rewriter/clone_grad.h"
@@ -26,16 +26,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-class OpCollectionJobPassState : public JobPassState {
- public:
-  explicit OpCollectionJobPassState(const std::string& op_collection)
-      : op_collection_(op_collection) {}
-
- private:
-  HashMap<int64_t, int64_t> scope_id2current_op_collection_scope_id_;
-  std::string op_collection_;
-};
 
 const TrainConf& GetTrainConf() { return GlobalJobDesc().job_conf().train_conf(); }
 
@@ -215,7 +205,7 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     cast_from_mirrored->set_out("out");
     cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
     const auto& parallel_conf = job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi);
-    int64_t scope_symbol_id = JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+    int64_t scope_symbol_id = JUST(JobPassScopeHelper(ctx).MakeScopeSymbol(
         job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), true));
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -264,7 +254,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name("0:0");
-    int64_t scope_symbol_id = CHECK_JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+    int64_t scope_symbol_id = CHECK_JUST(JobPassScopeHelper(ctx).MakeScopeSymbol(
         job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), false));
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -450,7 +440,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder, 
   }
   ParallelConf global_norm_parallel_conf =
       all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = CHECK_JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+  int64_t scope_symbol_id = CHECK_JUST(JobPassScopeHelper(ctx).MakeScopeSymbol(
       job_builder->job().job_conf().DebugString(), global_norm_parallel_conf.DebugString(), false));
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {

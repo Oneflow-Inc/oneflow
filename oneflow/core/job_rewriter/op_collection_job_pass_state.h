@@ -13,15 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/scope_job_pass_method.h"
-#include "oneflow/core/job/foreign_callback.h"
+#ifndef ONEFLOW_CORE_JOB_REWRITER_OP_COLLECTION_JOB_PASS_STATE_H_
+#define ONEFLOW_CORE_JOB_REWRITER_OP_COLLECTION_JOB_PASS_STATE_H_
+
+#include "oneflow/core/job_rewriter/job_pass.h"
 
 namespace oneflow {
 
-Maybe<int64_t> ScopeJobPassMethod::MakeScopeSymbol(const std::string& job_conf,
-                                                   const std::string& parallel_conf,
-                                                   bool is_mirrored) const {
-  return Global<ForeignCallback>::Get()->MakeScopeSymbol(job_conf, parallel_conf, is_mirrored);
-}
+class OpCollectionJobPassState : public JobPassState {
+ public:
+  explicit OpCollectionJobPassState(const std::string& op_collection)
+      : op_collection_(op_collection) {}
+
+ private:
+  HashMap<int64_t, int64_t> scope_id2current_op_collection_scope_id_;
+  std::string op_collection_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_REWRITER_OP_COLLECTION_JOB_PASS_STATE_H_

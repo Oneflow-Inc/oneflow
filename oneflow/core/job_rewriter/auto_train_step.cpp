@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/job_rewriter/scope_job_pass_method.h"
+#include "oneflow/core/job_rewriter/job_pass_scope_helper.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
@@ -62,7 +62,7 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job, JobPassCtx* 
 
   JobBuilder job_builder(job);
   const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = JUST(ctx->Method<ScopeJobPassMethod>().MakeScopeSymbol(
+  int64_t scope_symbol_id = JUST(JobPassScopeHelper(ctx).MakeScopeSymbol(
       job->job_conf().DebugString(), parallel_conf.DebugString(), false));
 
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
