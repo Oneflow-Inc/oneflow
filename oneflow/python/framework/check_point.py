@@ -296,9 +296,10 @@ class FileBackendVariableBlob:
                 self.shape_ = shape
                 self.dtype_ = dtype
                 self.has_meta_info_ = True
-            # TODO:
             elif shape is not None or dtype is not None:
                 raise RuntimeError("both or neither of shape and dtype should be None")
+            else:
+                pass
 
     def GetSlicesAsNumpy(self):
         assert self.shape is not None
@@ -316,17 +317,6 @@ class FileBackendVariableBlob:
     @property
     def file_path_(self):
         return os.path.join(self.var_dir_, "out")
-
-    def _NumpyFriendlyToRepr(self):
-        return self.numpy()
-
-    def __repr__(self):
-        if self.has_meta_info_:
-            return '({}, name="{}", shape={}, dtype={})'.format(
-                self._NumpyFriendlyToRepr(), self.name, self.shape, self.dtype
-            )
-        else:
-            return '(variable without meta info, name="{}")'.format(self.name)
 
     @property
     def name(self):
@@ -348,8 +338,6 @@ class FileBackendVariableBlob:
         return False
 
     def numpy(self) -> np.ndarray:
-        if self._IsTooLarge():
-            raise RuntimeError('Blob "{}" is too large'.format(self.name))
         if not self.has_meta_info_:
             raise RuntimeError(
                 'The variable "{}" does not have meta info'.format(self.name)
@@ -362,7 +350,7 @@ class FileBackendVariableBlob:
 
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
-def GetAllVariables() -> Dict[str, FileBackendVariableBlob]:
+def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
     variables = {}
@@ -428,6 +416,7 @@ def _LogicalSlice(input_blob, start, stop):
     def AsyncSlice(Yield):
         def build(builder):
             op_conf = op_conf_pb.OperatorConf()
+            # device_tag doesn't matter for logical_slice op
             device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
             op_conf.device_tag = device_tag
             op_conf.name = op_name
@@ -522,7 +511,7 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
 
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
-        # TODO:
+        # device_tag doesn't matter for logical_slice_assign op
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
         op_name = id_util.UniqueStr("system_checkpoint")
@@ -685,6 +674,7 @@ def Init():
             dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
         )
 
+        # TODO:
         g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
