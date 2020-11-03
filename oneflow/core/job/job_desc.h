@@ -70,16 +70,27 @@ class JobDesc final {
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 
-#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name)     \
-  T func_name(const std::string& field_name) const {                \
-    const UserOpAttrVal& attr_val = GetFunctionFlagVal(field_name); \
-    CHECK(attr_val.has_##field_name());                             \
-    return attr_val.field_name();                                   \
+#define DEFINE_JOB_CONFIG_GETTER(T, func_name, field_name)   \
+  T func_name(const std::string& key) const {                \
+    const UserOpAttrVal& attr_val = GetFunctionFlagVal(key); \
+    CHECK(attr_val.has_##field_name());                      \
+    return attr_val.field_name();                            \
   }
-  DEFINE_FUNCTION_CONFIG_GETTER(bool, Bool, at_bool);
-  DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64, at_int64);
-  DEFINE_FUNCTION_CONFIG_GETTER(double, Double, at_double);
-  DEFINE_FUNCTION_CONFIG_GETTER(const std::string&, String, at_string);
+  DEFINE_JOB_CONFIG_GETTER(bool, Bool, at_bool);
+  DEFINE_JOB_CONFIG_GETTER(int64_t, Int64, at_int64);
+  DEFINE_JOB_CONFIG_GETTER(double, Double, at_double);
+  DEFINE_JOB_CONFIG_GETTER(const std::string&, String, at_string);
+#undef DEFINE_JOB_CONFIG_GETTER
+
+#define DEFINE_JOB_CONFIG_LIST_GETTER(T, func_name, field_name) \
+  const T& func_name(const std::string& key) const {            \
+    const UserOpAttrVal& attr_val = GetFunctionFlagVal(key);    \
+    CHECK(attr_val.has_##field_name());                         \
+    return attr_val.field_name().val();                         \
+  }
+  DEFINE_JOB_CONFIG_LIST_GETTER(PbRf<int64_t>, ListInt64, at_list_int64);
+  DEFINE_JOB_CONFIG_LIST_GETTER(PbRpf<std::string>, ListString, at_list_string);
+#undef DEFINE_JOB_CONFIG_GETTER
 
   // Train conf
   int64_t TotalBatchNum() const;
