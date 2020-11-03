@@ -22,7 +22,7 @@ void ReentrantLockCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   const auto& kernel_conf = task_proto.exec_sequence().exec_node().Get(0).kernel_conf();
   const auto& ibns = kernel_conf.op_attribute().input_bns();
   for (const auto& ibn : ibns) {
-    int64_t regst_desc_id = exec_kernel_vec().at(0).bn_in_op2regst_desc_id.at(ibn);
+    int64_t regst_desc_id = exec_kernel_vec().at(0).bn_in_op2blob_info.at(ibn).regst_desc_id;
     if (ibn == "start") { eord_regst_desc_id_ = regst_desc_id; }
     CHECK(regst_desc_id2ibn_.emplace(regst_desc_id, ibn).second);
   }
