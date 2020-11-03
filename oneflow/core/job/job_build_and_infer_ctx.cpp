@@ -453,7 +453,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto* job_desc = JUST(scope.job_desc());
-  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  const auto& parallel_desc = JUST(scope.GetParallelDesc(op_conf));
   auto op = ConstructOp(op_conf, parallel_desc.device_type(), job_desc);
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
   int32_t parallel_num = parallel_desc.parallel_num();
@@ -504,7 +504,7 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSubLbi(const LogicalBlobId& 
 Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
-  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  const auto& parallel_desc = JUST(scope.GetParallelDesc(op_conf));
   const auto* job_desc = JUST(scope.job_desc());
   return AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false);
 }
