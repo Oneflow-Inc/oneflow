@@ -64,7 +64,6 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
 @flow.unittest.skip_unless_1n1d()
 class TestPySigmoid(flow.unittest.TestCase):
     def test_py_sigmoid(test_case):
-        print("start test py_sigmoid forward")
         py_sigmoid_lib = flow.util.op_lib("py_sigmoid", lib_path)
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
@@ -98,7 +97,6 @@ class TestPySigmoid(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
     def test_py_sigmoid_grad(test_case):
-        print("start test py_sigmoid backward")
         py_sigmoid_lib = flow.util.op_lib("py_sigmoid", lib_path)
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
