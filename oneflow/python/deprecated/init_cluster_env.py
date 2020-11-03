@@ -60,7 +60,7 @@ def init_worker(scp_binary: bool = True, use_uuid: bool = True, ssh_port=22) -> 
 
     for machine in env_proto.machine:
         if machine.id == 0:
-            continue
+            pass
         else:
             _SendBinaryAndConfig2Worker(
                 machine,
@@ -84,12 +84,13 @@ def delete_worker(ssh_port=22) -> None:
     assert _temp_run_dir != ""
     for machine in env_proto.machine:
         if machine.id == 0:
-            continue
-        ssh_prefix = (
-            f"ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
-        )
-        _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
-        print("temporary workspace cleaned:", machine.addr, flush=True)
+            pass
+        else:
+            ssh_prefix = (
+                f"ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
+            )
+            _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
+            print("temporary workspace cleaned:", machine.addr, flush=True)
 
 
 def _SendBinaryAndConfig2Worker(
