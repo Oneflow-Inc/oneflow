@@ -70,11 +70,11 @@ class JobDesc final {
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 
-#define DEFINE_JOB_CONFIG_GETTER(T, func_name, field_name)   \
-  T func_name(const std::string& key) const {                \
-    const UserOpAttrVal& attr_val = GetFunctionFlagVal(key); \
-    CHECK(attr_val.has_##field_name());                      \
-    return attr_val.field_name();                            \
+#define DEFINE_JOB_CONFIG_GETTER(T, func_name, field_name) \
+  T func_name(const std::string& key) const {              \
+    const AttrValue& attr_val = GetFunctionFlagVal(key);   \
+    CHECK(attr_val.has_##field_name());                    \
+    return attr_val.field_name();                          \
   }
   DEFINE_JOB_CONFIG_GETTER(bool, Bool, at_bool);
   DEFINE_JOB_CONFIG_GETTER(int64_t, Int64, at_int64);
@@ -84,7 +84,7 @@ class JobDesc final {
 
 #define DEFINE_JOB_CONFIG_LIST_GETTER(T, func_name, field_name) \
   const T& func_name(const std::string& key) const {            \
-    const UserOpAttrVal& attr_val = GetFunctionFlagVal(key);    \
+    const AttrValue& attr_val = GetFunctionFlagVal(key);        \
     CHECK(attr_val.has_##field_name());                         \
     return attr_val.field_name().val();                         \
   }
@@ -99,7 +99,7 @@ class JobDesc final {
 
  private:
   void Init();
-  const UserOpAttrVal& GetFunctionFlagVal(const std::string& field_name) const;
+  const AttrValue& GetFunctionFlagVal(const std::string& field_name) const;
 
   JobConfigProto job_conf_;
   int64_t job_id_;

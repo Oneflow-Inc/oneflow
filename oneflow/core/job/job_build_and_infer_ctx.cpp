@@ -461,7 +461,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   auto GetSubOpName = [&](int index) { return GetMirroredOpName(op_conf.name(), index); };
   OperatorConf sub_op_conf(op_conf);
   int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
-  std::shared_ptr<OpAttribute> last_op_attribute;
+  auto last_op_attribute = std::make_shared<OpAttribute>();
   FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
     ResetOpConfName(&sub_op_conf, GetSubOpName(i));
     for (const auto& ibn : op->input_bns()) {

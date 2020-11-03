@@ -28,7 +28,7 @@ ConfigDef* MutGlobalConfigDef() {
 }
 
 template<ConfigDefType config_def_type>
-UserOpAttrVal* AddConfigFlagDef(const std::string& name, const std::string& description) {
+AttrValue* AddConfigFlagDef(const std::string& name, const std::string& description) {
   auto* name2flag_def = MutGlobalConfigDef<config_def_type>()->mutable_flag_name2flag_def();
   CHECK(name2flag_def->find(name) == name2flag_def->end());
   auto* flag_def = &(*name2flag_def)[name];
