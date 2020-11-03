@@ -593,13 +593,13 @@ def _ForEverySlice(var_blob, f):
     np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype))
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
-    size = np.prod(var_blob.shape).item()
+    size = np.prod(var_blob.shape).astype(np.int).item()
     cnt = 1
     for axis in reversed(range(len(var_blob.shape))):
         cnt *= var_blob.shape[axis]
         if cnt > SLICE_LEN:
             break
-    small_size = np.prod(var_blob.shape[axis + 1 :]).item()
+    small_size = np.prod(var_blob.shape[axis + 1 :]).astype(np.int).item()
     max_unit_len_on_axis = SLICE_LEN // small_size
     while start_idx < size:
         remainder = var_blob.shape[axis]
