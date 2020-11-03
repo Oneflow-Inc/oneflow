@@ -13,25 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-class GradientAccumulationRewritePass final : public OpGraphPass {
+class GradientAccumulationRewritePass final : public JobPass {
  public:
   GradientAccumulationRewritePass() = default;
   ~GradientAccumulationRewritePass() override = default;
-  bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().has_train_conf()
-           && GlobalJobDesc().job_conf().train_conf().has_num_gradient_accumulation_steps()
-           && GlobalJobDesc().job_conf().train_conf().num_gradient_accumulation_steps() > 1;
-  }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-Maybe<void> GradientAccumulationRewritePass::Apply(const OpGraph& op_graph,
-                                                   JobBuilder* job_builder) const {
+Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) const {
+  const JobConfigProto& job_conf = ctx->job_desc().job_conf();
+  if (!job_conf.has_train_conf()) { return Maybe<void>::Ok(); }
+  const TrainConf& train_conf = job_conf.train_conf();
+  if ((!train_conf.has_num_gradient_accumulation_steps())
+      || train_conf.num_gradient_accumulation_steps() <= 1) {
+    return Maybe<void>::Ok();
+  }
+  const OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> name2op_conf;
   auto GetOperatorConf4Modify = [&name2op_conf](const OperatorConf& op_conf) {
     const auto& it = name2op_conf.find(op_conf.name());
@@ -57,7 +61,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(const OpGraph& op_graph,
                                    .Output("out")
                                    .Attr<int32_t>("repeat_num", repeat_num)
                                    .Build();
-        job_builder->AddOps(node->parallel_desc().parallel_conf(), {repeat_op.op_conf()});
+        job_builder.AddOps(node->parallel_desc().parallel_conf(), {repeat_op.op_conf()});
         node->ForEachNodeOnInOutEdge([&](const OpNode* dst) {
           const auto& dst_op = dst->op();
           OperatorConf* new_dst_op_conf = GetOperatorConf4Modify(dst_op.op_conf());
@@ -83,8 +87,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(const OpGraph& op_graph,
                 .Output("out")
                 .Attr<int32_t>("repeat_num", repeat_num)
                 .Build();
-        job_builder->AddOps(node->parallel_desc().parallel_conf(),
-                            {tick_conf, repeat_op.op_conf()});
+        job_builder.AddOps(node->parallel_desc().parallel_conf(), {tick_conf, repeat_op.op_conf()});
         (*new_op_conf->mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
             .add_s(repeat_op.output("out", 0));
         return Maybe<void>::Ok();
@@ -101,7 +104,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(const OpGraph& op_graph,
                                       .Output("out")
                                       .Attr<int32_t>("pack_num", repeat_num)
                                       .Build();
-      job_builder->AddOps(node->parallel_desc().parallel_conf(), {return_pack_op.op_conf()});
+      job_builder.AddOps(node->parallel_desc().parallel_conf(), {return_pack_op.op_conf()});
       OperatorConf* new_return_op_conf = GetOperatorConf4Modify(op_conf);
       const auto& old_val = ReplaceInputLbnInOpCustomizedConf(new_return_op_conf, "in",
                                                               return_pack_op.output("out", 0));
@@ -111,10 +114,10 @@ Maybe<void> GradientAccumulationRewritePass::Apply(const OpGraph& op_graph,
       return Maybe<void>::Ok();
     }
   }));
-  for (const auto& pair : name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  for (const auto& pair : name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("GradientAccumulationRewritePass", GradientAccumulationRewritePass);
+REGISTER_JOB_PASS("GradientAccumulationRewritePass", GradientAccumulationRewritePass);
 
 }  // namespace oneflow

@@ -13,25 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
-class NormalizationExponentialAverageAutoTickPass final : public OpGraphPass {
+class NormalizationExponentialAverageAutoTickPass final : public JobPass {
  public:
   NormalizationExponentialAverageAutoTickPass() = default;
   ~NormalizationExponentialAverageAutoTickPass() override = default;
-  bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().has_train_conf()
-           && GlobalJobDesc().job_conf().train_conf().has_num_gradient_accumulation_steps()
-           && GlobalJobDesc().job_conf().train_conf().num_gradient_accumulation_steps() > 1;
-  }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-Maybe<void> NormalizationExponentialAverageAutoTickPass::Apply(const OpGraph& op_graph,
-                                                               JobBuilder* job_builder) const {
+Maybe<void> NormalizationExponentialAverageAutoTickPass::Apply(Job* job, JobPassCtx* ctx) const {
+  const JobConfigProto& job_conf = ctx->job_desc().job_conf();
+  if (!job_conf.has_train_conf()) { return Maybe<void>::Ok(); }
+  const TrainConf& train_conf = job_conf.train_conf();
+  if ((!train_conf.has_num_gradient_accumulation_steps())
+      || train_conf.num_gradient_accumulation_steps() <= 1) {
+    return Maybe<void>::Ok();
+  }
+  const OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
@@ -52,7 +56,7 @@ Maybe<void> NormalizationExponentialAverageAutoTickPass::Apply(const OpGraph& op
                                          .Input("in", x_lbn)
                                          .Output("out")
                                          .Build();
-        job_builder->AddOps(node->parallel_desc().parallel_conf(), {cast_to_tick_op.op_conf()});
+        job_builder.AddOps(node->parallel_desc().parallel_conf(), {cast_to_tick_op.op_conf()});
         x_tick_lbn = cast_to_tick_op.output("out", 0);
       }
       return x_tick_lbn;
@@ -63,7 +67,7 @@ Maybe<void> NormalizationExponentialAverageAutoTickPass::Apply(const OpGraph& op
       if (var_node->op().op_conf().variable_conf().has_tick()) { return; }
       OperatorConf new_var_op_conf = var_node->op().op_conf();
       new_var_op_conf.mutable_variable_conf()->set_tick(GetXTick());
-      job_builder->MutOpsOnlyOnce({new_var_op_conf});
+      job_builder.MutOpsOnlyOnce({new_var_op_conf});
     };
     TrySetTickForNode(op_graph.OpNode4OpName(GenLogicalBlobId(moving_mean_lbn).op_name()));
     TrySetTickForNode(op_graph.OpNode4OpName(GenLogicalBlobId(moving_variance_lbn).op_name()));
@@ -72,7 +76,7 @@ Maybe<void> NormalizationExponentialAverageAutoTickPass::Apply(const OpGraph& op
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("NormalizationExponentialAverageAutoTickPass",
-                       NormalizationExponentialAverageAutoTickPass);
+REGISTER_JOB_PASS("NormalizationExponentialAverageAutoTickPass",
+                  NormalizationExponentialAverageAutoTickPass);
 
 }  // namespace oneflow
