@@ -14,12 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.core.job.saved_model_pb2 as saved_model_pb
 import oneflow.typing as tp
 
 import argparse
 import cv2
+import google.protobuf.text_format as text_format
 import grpc
 import numpy as np
+import os
 import prediction_service_pb2_grpc as grpc_service_pb2
 import prediction_service_pb2 as predict_message_pb2
 import resnet_model
@@ -36,7 +39,10 @@ def get_parser():
     parser.add_argument("--server_address", type=str, default="localhost", help="")
     parser.add_argument("--server_port", type=int, default=8000, help="")
     parser.add_argument(
-        "--model_load_dir", type=str, default=None, help="model load directory if need"
+        "--saved_model_path", type=str, default="./resnet50_models", help=""
+    )
+    parser.add_argument(
+        "--model_version", type=int, default=1, help=""
     )
     parser.add_argument(
         "--rgb-mean",
@@ -57,8 +63,8 @@ parser = get_parser()
 args = parser.parse_args()
 
 
-def preprocess_image(im):
-    im = cv2.resize(im.astype("uint8"), (224, 224))
+def preprocess_image(im, height, width):
+    im = cv2.resize(im.astype("uint8"), (height, width))
     im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
     im = im.astype("float32")
     im = (im - args.rgb_mean) / args.rgb_std
@@ -67,24 +73,43 @@ def preprocess_image(im):
     return np.ascontiguousarray(im, "float32")
 
 
-@flow.global_function("predict", flow.function_config())
-def InferenceNet(
-    images: tp.Numpy.Placeholder((1, 3, 224, 224), dtype=flow.float)
-) -> tp.Numpy:
-    logits = resnet_model.resnet50(images, training=False)
-    predictions = flow.nn.softmax(logits)
-    return predictions
+def load_saved_model(model_meta_file_path):
+    saved_model_proto = saved_model_pb.SavedModel()
+    with open(model_meta_file_path, "rb") as f:
+        text_format.Merge(f.read(), saved_model_proto)
+    return saved_model_proto
 
 
-check_point = flow.train.CheckPoint()
-print("start load resnet50 model.")
-check_point.load(args.model_load_dir)
-print("load resnet50 model done.")
+print("load saved resnet 50 model.")
+flow.clear_default_session()
+model_meta_file_path = os.path.join(
+    args.saved_model_path, str(args.model_version), "saved_model.prototxt"
+)
+saved_model_proto = load_saved_model(model_meta_file_path)
+infer_session = flow.SimpleSession()
+checkpoint_path = os.path.join(
+    args.saved_model_path, str(args.model_version), saved_model_proto.checkpoint_dir[0]
+)
+infer_session.set_checkpoint_path(checkpoint_path)
+for job_name, signature in saved_model_proto.signatures_v2.items():
+    infer_session.setup_job_signature(job_name, signature)
 
+for job_name, net in saved_model_proto.graphs.items():
+    with infer_session.open(job_name) as infer_session:
+        infer_session.compile(net.op)
 
-class PredictionServiceServer(grpc_service_pb2.PredictionService):
+# sess.print_job_set()
+infer_session.launch()
+input_names = infer_session.list_inputs()
+print("input names:", input_names)
+for input_name in input_names:
+    print('input "{}" info: {}'.format(input_name, infer_session.input_info(input_name)))
+
+batch_size, channel, height, width = infer_session.input_info(input_names[0])["shape"]
+
+class PredictionServiceServicer(grpc_service_pb2.PredictionService):
     def __init__(self, *args, **kwargs):
-        pass
+        print("create servicer")
 
     def Predict(self, predict_request, context):
         message_from_client = f'Server received data_len: "{len(predict_request.np_array_content)}", data_shape: "{predict_request.np_array_shapes}"'
@@ -97,16 +122,22 @@ class PredictionServiceServer(grpc_service_pb2.PredictionService):
             deserialized_bytes, newshape=tuple(predict_request.np_array_shapes)
         )
 
-        predictions = InferenceNet(preprocess_image(image))
-        clsidx = predictions.argmax()
+        image = preprocess_image(image, height, width)
+        images = np.repeat(image, batch_size, axis = 0).astype(np.float32)
+
+        predictions = infer_session.run("resnet_inference", image = images)
+
+        clsidxs = np.argmax(predictions[0], axis=1)
+        probs = np.max(predictions[0], axis=1)
+
         print(
             "predicted class name: %s, prob: %f\n"
-            % (clsidx_2_labels[clsidx], predictions.max())
+            % (clsidx_2_labels[clsidxs[0]], probs[0])
         )
 
         result = {
-            "predicted_class": clsidx_2_labels[clsidx],
-            "predicted_score": predictions.max(),
+            "predicted_class": clsidx_2_labels[clsidxs[0]],
+            "predicted_score": probs[0],
         }
 
         return predict_message_pb2.PredictResponse(**result)
@@ -115,7 +146,7 @@ class PredictionServiceServer(grpc_service_pb2.PredictionService):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     grpc_service_pb2.add_PredictionServiceServicer_to_server(
-        PredictionServiceServer(), server
+        PredictionServiceServicer(), server
     )
     server.add_insecure_port("%s:%d" % (args.server_address, args.server_port))
     server.start()
