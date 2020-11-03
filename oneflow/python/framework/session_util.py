@@ -188,6 +188,11 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
+            # Get latest op_conf after compiler.Compile
+            for job in c_api_util.GetJobSet()).job:
+                for op_conf in job.net.op:
+                    if c_api_util.IsInterfaceOpConf(op_conf):
+                        self.interface_op_name2op_conf_[op_conf.name] = op_conf
             if not config_util.api_legacy_model_io_enabled():
                 check_point.Init()
         else:
@@ -297,7 +302,6 @@ class Session(object):
 
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute, op_conf):
         self.interface_op_name2op_attr_[interface_op_name] = op_attribute
-        self.interface_op_name2op_conf_[interface_op_name] = op_conf
         self.interface_op_name2job_name_[
             interface_op_name
         ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
