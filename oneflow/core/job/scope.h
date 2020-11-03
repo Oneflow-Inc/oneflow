@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -41,8 +42,21 @@ class Scope final {
   }
   const ScopeProto& scope_proto() const { return scope_proto_; }
 
+#define DEFINE_SCOPE_CONFIG_GETTER(T, func_name, field_name) \
+  T func_name(const std::string& field_name) const {         \
+    const AttrValue& attr_val = GetAttrValue(field_name);    \
+    CHECK(attr_val.has_##field_name());                      \
+    return attr_val.field_name();                            \
+  }
+  DEFINE_SCOPE_CONFIG_GETTER(bool, Bool, at_bool);
+  DEFINE_SCOPE_CONFIG_GETTER(int64_t, Int64, at_int64);
+  DEFINE_SCOPE_CONFIG_GETTER(double, Double, at_double);
+  DEFINE_SCOPE_CONFIG_GETTER(const std::string&, String, at_string);
+
  private:
   Maybe<void> Init();
+
+  const AttrValue& GetAttrValue(const std::string& attr_name) const;
 
   const ScopeProto scope_proto_;
   std::shared_ptr<JobDesc> job_desc_;
