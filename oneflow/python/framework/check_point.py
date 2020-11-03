@@ -668,13 +668,43 @@ def constant_initializer(
 
 @register_initializer("random_normal_conf")
 def random_normal_initializer(
-    initializer_conf: op_conf_pb.RandomNormalInitializerConf, random_seed: int
+    initializer_conf: op_conf_pb.RandomNormalInitializerConf, random_seed: int,
 ):
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.normal(
         loc=initializer_conf.mean, scale=initializer_conf.std, size=length
     )
 
+@register_initializer("random_uniform_conf")
+@register_initializer("random_int_uniform_conf")
+def random_uniform_initializer(
+    initializer_conf : Union[
+        op_conf_pb.RandomUniformInitializerConf, op_conf_pb.RandomUniformIntInitializerConf
+    ],
+    random_seed: int,
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.uniform(
+        min = initializer_conf.min, max = initializer_conf.max, size = length
+    )
+
+def RngTruncatedNormal(truncated_mean, truncated_std, truncated_size, truncated_random_seed):
+    truncated_value = 2 * truncated_std
+    rng = np.random.default_rng(truncated_random_seed)
+    generator = lambda truncated_mean, truncated_std, truncated_size:rng.normal(truncated_mean, truncated_std, truncated_size)
+    generator_data = []
+    generator_data = generator(truncated_mean, truncated_std, truncated_size)
+    res = []
+    res = filter(lambda value: abs(value - truncated_mean) < truncated_value, generator_data)
+    return res
+    
+@register_initializer("truncated_normal_conf")
+def truncated_normal_initializer(
+    initializer_conf:op_conf_pb.TruncatedNormalInitializerConf, random_seed: int,):
+    # rng = np.random.default_rng(random_seed)
+    return lambda length, random_seed:RngTruncatedNormal(
+        initializer_conf.mean, initializer_conf.std, length, random_seed,
+    )
 
 def Init():
     sess = session_ctx.GetDefaultSession()
