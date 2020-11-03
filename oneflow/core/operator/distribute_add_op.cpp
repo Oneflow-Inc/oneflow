@@ -60,7 +60,7 @@ Maybe<void> DistributeAddOp::InferParallelSignature() {
   mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
   auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
   (*map)["out"] = op_parallel_desc_symbol_id;
-  const auto& op_parallel_desc = *JUST(scope.GetParallelDesc(op_conf()));
+  const auto& op_parallel_desc = JUST(scope.GetParallelDesc(op_conf()));
   CHECK_EQ(op_parallel_desc.parallel_num(), input_bns().size());
   FOR_RANGE(int, i, 0, input_bns().size()) {
     const auto& in_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
