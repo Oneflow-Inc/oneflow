@@ -38,7 +38,7 @@ import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
-import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
+import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.python.framework.remote_blob import EagerBlobTrait
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -426,13 +426,13 @@ def _LogicalSlice(input_blob, start, stop):
             input_blob_object = input_blob.blob_object
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-            attribute = user_op_attr_util.UserOpAttrVal()
+            attribute = attr_value_pb.AttrValue()
             attribute.at_list_int64.val[:] = start
             op_conf.user_conf.attr["start"].CopyFrom(attribute)
-            attribute = user_op_attr_util.UserOpAttrVal()
+            attribute = attr_value_pb.AttrValue()
             attribute.at_list_int64.val[:] = stop
             op_conf.user_conf.attr["stop"].CopyFrom(attribute)
-            attribute = user_op_attr_util.UserOpAttrVal()
+            attribute = attr_value_pb.AttrValue()
             step = [1] * len(start)
             attribute.at_list_int64.val[:] = step
             op_conf.user_conf.attr["step"].CopyFrom(attribute)
@@ -521,13 +521,13 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
         op_conf.user_conf.input["ref"].s.append("{}/ref_0".format(op_name))
         parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
         op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         attribute.at_list_int64.val[:] = start
         op_conf.user_conf.attr["start"].CopyFrom(attribute)
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         attribute.at_list_int64.val[:] = stop
         op_conf.user_conf.attr["stop"].CopyFrom(attribute)
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         step = [1] * len(start)
         attribute.at_list_int64.val[:] = step
         op_conf.user_conf.attr["step"].CopyFrom(attribute)
@@ -594,8 +594,6 @@ def _ForEverySlice(var_blob, f):
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
     size = np.prod(var_blob.shape).item()
-    print("total: ")
-    print(size / SLICE_LEN)
     cnt = 1
     for axis in reversed(range(len(var_blob.shape))):
         cnt *= var_blob.shape[axis]
@@ -603,8 +601,6 @@ def _ForEverySlice(var_blob, f):
             break
     small_size = np.prod(var_blob.shape[axis + 1 :]).item()
     max_unit_len_on_axis = SLICE_LEN // small_size
-    print(small_size)
-    print(max_unit_len_on_axis)
     while start_idx < size:
         remainder = var_blob.shape[axis]
         while remainder > 0:
