@@ -31,6 +31,7 @@ namespace user_op {
 class OpKernel;
 class TensorDesc;
 class InferContext;
+class KernelCreateContext;
 
 class KernelRegContext {
  public:
@@ -59,7 +60,7 @@ class KernelRegContext {
   UserOpConfWrapper user_op_conf_;
 };
 
-using CreateFn = std::function<const OpKernel*()>;
+using OpKernelCreateFn = std::function<const OpKernel*(KernelCreateContext* ctx)>;
 using InferTmpSizeFn = std::function<size_t(InferContext*)>;
 using AddInplaceArgPair = std::function<Maybe<void>(
     const std::string& out_arg_name, int32_t out_arg_index, const std::string& in_arg_name,
@@ -70,7 +71,7 @@ using IsMatchedHob = hob::BoolFunctorPtr<user_op::KernelRegContext>;
 struct OpKernelRegistryResult {
   std::string op_type_name;
 
-  CreateFn create_fn;
+  OpKernelCreateFn create_fn;
   InferTmpSizeFn infer_tmp_size_fn;
   InplaceProposalFn inplace_proposal_fn;
   IsMatchedHob is_matched_hob;
@@ -82,9 +83,13 @@ class OpKernelRegistry final {
 
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
-    //    static_assert(sizeof(OpKernel) == sizeof(T), "no data member allowed in derived
-    //    OpKernel");
-    return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
+    return SetCreateFn(
+        [](KernelCreateContext* ctx) -> const OpKernel* { return NewOpKernel<T>(); });
+  }
+  template<typename T>
+  OpKernelRegistry& SetCreateWithCtxFn() {
+    return SetCreateFn(
+        [](KernelCreateContext* ctx) -> const OpKernel* { return NewOpKernelWithCtx<T>(ctx); });
   }
   OpKernelRegistry& SetIsMatchedHob(IsMatchedHob hob);
   OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);
@@ -94,7 +99,7 @@ class OpKernelRegistry final {
   OpKernelRegistryResult GetResult() { return result_; }
 
  private:
-  OpKernelRegistry& SetCreateFn(CreateFn fn);
+  OpKernelRegistry& SetCreateFn(OpKernelCreateFn fn);
 
  private:
   OpKernelRegistryResult result_;

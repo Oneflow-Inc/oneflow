@@ -58,4 +58,13 @@ Maybe<const ParallelDesc*> Scope::GetParallelDesc(const OperatorConf& op_conf) c
   }
 }
 
+const AttrValue& Scope::GetAttrValue(const std::string& attr_name) const {
+  const auto& iter = scope_proto_.attr_name2attr_value().find(attr_name);
+  if (iter != scope_proto_.attr_name2attr_value().end()) { return iter->second; }
+  const auto& attr_name2attr_def = GlobalScopeConfigDef().attr_name2attr_def();
+  const auto& def_iter = attr_name2attr_def.find(attr_name);
+  CHECK(def_iter != attr_name2attr_def.end());
+  return def_iter->second.default_val();
+}
+
 }  // namespace oneflow

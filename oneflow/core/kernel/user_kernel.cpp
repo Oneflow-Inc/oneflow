@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -26,7 +27,8 @@ limitations under the License.
 
 namespace oneflow {
 
-using Arg2Tensor = HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Tensor>>;
+using Arg2Tensor =
+    HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>>;
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 namespace {
@@ -93,6 +95,17 @@ class UserKernelBaseContext {
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
+};
+
+class KernelCreateContext final : public user_op::KernelCreateContext {
+ public:
+  explicit KernelCreateContext(const KernelConf& kernel_conf)
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+ private:
+  user_op::UserOpConfWrapper user_op_conf_;
 };
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
@@ -293,13 +306,13 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   void UpdateArg2Tensor(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_) {
       const auto& arg_pair = pair.first;
-      std::unique_ptr<user_op::Tensor>* arg_tensor_ptr = &pair.second;
+      std::unique_ptr<user_op::BlobTensorView>* arg_tensor_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       if (blob == nullptr) { continue; }
       if (*arg_tensor_ptr) {
-        *(arg_tensor_ptr->get()) = std::move(user_op::Tensor(blob));
+        arg_tensor_ptr->get()->Reset(blob);
       } else {
-        arg_tensor_ptr->reset(new user_op::Tensor(blob));
+        arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
       }
     }
   }
@@ -309,8 +322,31 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
-  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::Tensor>> arg2tensor_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>> arg2tensor_;
 };
+
+namespace {
+
+struct BnTensorPair {
+  std::string bn;
+  std::unique_ptr<user_op::BlobTensorView> tensor;
+};
+
+BnTensorPair MakeBnTensorPair(const std::string& bn) {
+  BnTensorPair pair;
+  pair.bn = bn;
+  return pair;
+}
+
+BnTensorPair MakeBnTensorPair(const std::string& bn,
+                              std::unique_ptr<user_op::BlobTensorView>&& tensor) {
+  BnTensorPair pair;
+  pair.bn = bn;
+  pair.tensor = std::move(tensor);
+  return pair;
+}
+
+}  // namespace
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
@@ -321,16 +357,18 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
-      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
-        const std::string& arg_name = it->first;
-        for (int32_t i = 0; i < it->second.s_size(); ++i) {
-          arg2tensor_.emplace(std::make_pair(arg_name, i), std::unique_ptr<user_op::Tensor>());
+      for (const auto& it : arg_map) {
+        const std::string& arg_name = it.first;
+        for (int32_t i = 0; i < it.second.s_size(); ++i) {
+          arg2bn_tensor_pair_.emplace(std::make_pair(arg_name, i),
+                                      MakeBnTensorPair(GenRepeatedBn(arg_name, i)));
         }
       }
     };
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input());
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output());
-    arg2tensor_.emplace(std::make_pair("tmp_buffer", 0), std::unique_ptr<user_op::Tensor>());
+    arg2bn_tensor_pair_.emplace(std::make_pair("tmp_buffer", 0),
+                                MakeBnTensorPair(GenRepeatedBn("tmp_buffer", 0)));
   }
   ~UserKernelComputeContext() = default;
 
@@ -340,22 +378,21 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    auto it = arg2tensor_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_.end()) { return nullptr; }
-    return it->second.get();
+    auto it = arg2bn_tensor_pair_.find(std::make_pair(arg_name, index));
+    if (it == arg2bn_tensor_pair_.end()) { return nullptr; }
+    return it->second.tensor.get();
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
-  void UpdateTensorWithCorrBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) {
-    for (auto& pair : arg2tensor_) {
-      const auto& arg_pair = pair.first;
-      std::unique_ptr<user_op::Tensor>* arg_tensor_ptr = &pair.second;
-      Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
+  void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    for (auto& pair : arg2bn_tensor_pair_) {
+      std::unique_ptr<user_op::BlobTensorView>* arg_tensor_ptr = &pair.second.tensor;
+      Blob* blob = BnInOp2Blob(pair.second.bn);
       if (blob == nullptr) { continue; }
       if (*arg_tensor_ptr) {
-        *(arg_tensor_ptr->get()) = std::move(user_op::Tensor(blob));
+        arg_tensor_ptr->get()->Reset(blob);
       } else {
-        arg_tensor_ptr->reset(new user_op::Tensor(blob));
+        arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
       }
     }
   }
@@ -369,7 +406,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
  private:
   DeviceCtx* device_ctx_;
-  Arg2Tensor arg2tensor_;
+  HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
 };
 
@@ -405,7 +442,8 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
             op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
     CHECK_NOTNULL(kernel_reg_val);
-    kernel_.reset(kernel_reg_val->create_fn());
+    KernelCreateContext create_ctx(kernel_conf());
+    kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
   }
 }
 
@@ -483,7 +521,8 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
   CHECK_NOTNULL(kernel_reg_val);
-  kernel_.reset(kernel_reg_val->create_fn());
+  KernelCreateContext create_ctx(kernel_conf);
+  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
