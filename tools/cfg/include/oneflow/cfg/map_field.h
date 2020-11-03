@@ -152,9 +152,9 @@ class _MapField_: public _ConstMapField_<Key, T>{
   std::shared_ptr<_MapField_> __SharedMutable__() {
     return std::make_shared<_MapField_>(__SharedPtr__());
   }
-  // std::shared_ptr<T> __SharedMutable__(const Key& key) {
-  //   return (*this)[key].__SharedMutable__();
-  // }
+  std::shared_ptr<T> __SharedMutable__(const Key& key) {
+    return (*this)[key].__SharedMutable__();
+  }
 
   shared_mut_iterator shared_mut_begin() { return begin(); }
   shared_mut_iterator shared_mut_end() { return end(); }
