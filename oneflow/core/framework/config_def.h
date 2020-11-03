@@ -34,9 +34,10 @@ struct ConfigDefBuidler final {
                                  const std::string& description) const;
 };
 
-#define REGISTER_ENV_CONFIG_DEF() REGISTER_CONFIG_DEF(kEnvConfigType)
-#define REGISTER_SESSION_CONFIG_DEF() REGISTER_CONFIG_DEF(kSessionConfigType)
-#define REGISTER_FUNCTION_CONFIG_DEF() REGISTER_CONFIG_DEF(kFunctionConfigType)
+#define REGISTER_ENV_CONFIG_DEF() REGISTER_CONFIG_DEF(kEnvConfigDefType)
+#define REGISTER_SESSION_CONFIG_DEF() REGISTER_CONFIG_DEF(kSessionConfigDefType)
+#define REGISTER_FUNCTION_CONFIG_DEF() REGISTER_CONFIG_DEF(kFunctionConfigDefType)
+#define REGISTER_SCOPE_CONFIG_DEF() REGISTER_CONFIG_DEF(kScopeConfigDefType)
 
 #define REGISTER_CONFIG_DEF(config_def_type)                                                    \
   static ConfigDefBuidler<config_def_type> OF_PP_CAT(g_##config_def_type##_def_, __COUNTER__) = \
@@ -45,6 +46,7 @@ struct ConfigDefBuidler final {
 const ConfigDef& GlobalEnvConfigDef();
 const ConfigDef& GlobalSessionConfigDef();
 const ConfigDef& GlobalFunctionConfigDef();
+const ConfigDef& GlobalScopeConfigDef();
 
 }  // namespace oneflow
 
