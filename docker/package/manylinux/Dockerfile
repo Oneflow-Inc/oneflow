@@ -1,7 +1,7 @@
 ARG from
+FROM ${from}
 ARG use_tuna_yum=0
 ARG pip_args=""
-FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
 # manylinux2014
