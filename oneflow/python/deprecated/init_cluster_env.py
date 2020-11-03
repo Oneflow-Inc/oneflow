@@ -89,6 +89,7 @@ def delete_worker(ssh_port=22) -> None:
             f"ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
         )
         _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
+        print("temporary workspace cleaned:", machine.addr, flush=True)
 
 
 def _SendBinaryAndConfig2Worker(
@@ -128,7 +129,7 @@ def _SendBinaryAndConfig2Worker(
     )
     _SystemCall(ssh_prefix + oneflow_cmd)
     _SystemCall(ssh_prefix + "ps aux")
-    print("oneflow worker initialized:", machine.addr)
+    print("oneflow worker initialized:", machine.addr, flush=True)
 
 
 def _SystemCall(cmd):
