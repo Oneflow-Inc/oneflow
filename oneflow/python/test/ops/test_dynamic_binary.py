@@ -20,7 +20,6 @@ import oneflow.typing as oft
 
 
 @flow.unittest.skip_unless_2n1d()
-@unittest.skipIf(True, "always failed")
 class TestDynamicBinary(flow.unittest.TestCase):
     def test_multi_node_dynamic_binary_split_concat_empty(test_case):
         func_config = flow.FunctionConfig()
