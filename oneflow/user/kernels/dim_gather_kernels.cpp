@@ -57,9 +57,9 @@ class DimGatherKernel final : public user_op::OpKernel {
     ConvertShape2Array(index_tensor->shape(), shape_buffer, ndim);
     DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer, ndim);
 
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, index_nd_helpr, ndim,
-                                                 index_tensor->shape().elem_cnt(), dim, index,
-                                                 input, output, ctx->device_ctx());
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->device_ctx(), input_nd_helper, index_nd_helpr,
+                                                 ndim, index_tensor->shape().elem_cnt(), dim, index,
+                                                 input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -94,9 +94,9 @@ class ScatterDimKernel final : public user_op::OpKernel {
     ConvertShape2Array(out_tensor->shape(), shape_buffer, ndim);
     DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer, ndim);
 
-    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(input_nd_helper, output_nd_helpr, ndim,
-                                                     input_tensor->shape().elem_cnt(), dim, index,
-                                                     src, output, ctx->device_ctx());
+    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
+        ctx->device_ctx(), input_nd_helper, output_nd_helpr, ndim, input_tensor->shape().elem_cnt(),
+        dim, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

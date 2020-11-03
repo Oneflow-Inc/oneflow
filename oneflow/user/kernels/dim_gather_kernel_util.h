@@ -31,36 +31,20 @@ constexpr int kDimGatherMaxDimCount = 8;
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
-template<typename IDX_T>
-struct NdIndexArg {
-  NdIndexArg(const ShapeView& shape_view) : num_axis(shape_view.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, kDimGatherMaxDimCount) {
-      shape[i] = 0;
-      coordinate[i] = 0;
-    }
-
-    FOR_RANGE(int64_t, i, 0, num_axis) { shape[i] = shape_view.At(i); }
-  }
-
-  IDX_T shape[kDimGatherMaxDimCount];
-  IDX_T coordinate[kDimGatherMaxDimCount];
-  int64_t num_axis;
-};
-
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
-  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper,
+  void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
                   DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output, DeviceCtx* ctx);
+                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor final {
-  void operator()(DimOpIndexNdHelper<IDX_T> input_nd_helper,
+  void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
                   DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output, DeviceCtx* ctx);
+                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
 };
 
 template<typename IN_T, typename IDX_T>
@@ -70,8 +54,6 @@ OF_DEVICE_FUNC void DoDimGather(DimOpIndexNdHelper<IDX_T> input_nd_helper,
                                 const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
-    // output[i][j][k] = input[i][x][k] # dim == 1, x = index[i][j][k]
-    // output.shape == index.shape
     const IDX_T x = index[index_offset];
     index_nd_helper.OffsetToNdIndex(index_offset, coordinate, ndim);
     coordinate[dim] = x;
@@ -98,12 +80,9 @@ OF_DEVICE_FUNC void DoDimScatterAdd(DimOpIndexNdHelper<IDX_T> input_nd_helper,
                                     int64_t elem_cnt, int64_t dim, const IDX_T* index,
                                     const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
-    // output[x][j][k] = input[i][j][k]  # if dim == 0, x = index[i][j][k]
-    // index.shape == input.shape
-
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
-    coordinate[dim] = index[input_offset];  // x == index[input_offset]
+    coordinate[dim] = index[input_offset];
 
     IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
     DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
