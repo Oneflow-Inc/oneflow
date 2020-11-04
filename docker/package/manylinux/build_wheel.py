@@ -96,6 +96,7 @@ def build_third_party(
     )
 
     bash_cmd = f"""set -ex
+export TEST_TMPDIR={cache_dir}/bazel_cache
 {cmake_cmd}
 make -j`nproc` prepare_oneflow_third_party
 """
