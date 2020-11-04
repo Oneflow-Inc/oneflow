@@ -116,6 +116,13 @@ void ClusterInstruction::MasterSendHalt() {
   HaltBarrier();
 }
 
+void ClusterInstruction::MasterSendAbort() {
+  LOG(ERROR) << "sending abort instruction";
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_abort();
+  PushClusterInstruction(cluster_instruction);
+}
+
 void ClusterInstruction::MasterSendEagerInstruction(
     const ClusterInstructionProto& cluster_instruction) {
   CHECK(cluster_instruction.has_eager_instruction());

@@ -64,6 +64,18 @@ atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 del atexit
 
+import sys
+
+
+def custom_exit(returncode):
+    if returncode != 0:
+        oneflow_api.MasterSendAbort()
+
+
+sys.exit = custom_exit
+
+del custom_exit
+del sys
 del absolute_import
 del oneflow
 del python
