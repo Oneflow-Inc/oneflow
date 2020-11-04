@@ -33,16 +33,18 @@ import unittest
 from collections import OrderedDict
 
 
-def compare_range_with_np(device_type, datatype, machine_ids, device_counts, start, limit, delta):
-    assert device_type in ["cpu", "gpu"]  
-    
+def compare_range_with_np(
+    device_type, datatype, machine_ids, device_counts, start, limit, delta
+):
+    assert device_type in ["cpu", "gpu"]
+
     flow.clear_default_session()
     flow.env.init()
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
-    
+
     func_config = flow.FunctionConfig()
     func_config.default_data_type(datatype[0])
 
@@ -126,7 +128,6 @@ class Testrange1n1d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 class Testrange1n2d(flow.unittest.TestCase):
-
     def test_range1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -178,6 +179,7 @@ class Testrange1n2d(flow.unittest.TestCase):
         # test like flow.range(2, 10, 3) -> [2, 5, 8]
         for arg in GenArgList(arg_dict):
             compare_range_with_np(*arg)
+
 
 if __name__ == "__main__":
     unittest.main()
