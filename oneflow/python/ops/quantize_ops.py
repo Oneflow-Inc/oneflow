@@ -50,3 +50,37 @@ def generate_quantize_scale_for_weight(
     )
 
     return scale, zero_point
+
+
+@oneflow_export("nn.generate_quantize_scale_for_activation")
+def generate_quantize_scale_for_activation(
+    activation: remote_blob_util.BlobDef,
+    moving_max: remote_blob_util.BlobDef,
+    moving_min: remote_blob_util.BlobDef,
+    quantize_to_bit: int = 8,
+    quantizer_type: str = "symmetric",
+    momentum: float = 0.95,
+    name: Optional[str] = None,
+) -> Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]:
+
+    scale, zero_point = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("Generate_Quantize_Scale_For_Activation_")
+        )
+        .Op("generate_quantize_scale_for_activation")
+        .Input("activation", [activation])
+        .Input("moving_max", [moving_max])
+        .Input("moving_min", [moving_min])
+        .Output("scale")
+        .Output("zero_point")
+        .Attr("quantize_to_bit", quantize_to_bit)
+        .Attr("quantizer_type", quantizer_type)
+        .Attr("momentum", momentum)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+
+    return scale, zero_point
