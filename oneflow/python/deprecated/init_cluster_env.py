@@ -84,20 +84,22 @@ def delete_worker() -> None:
 def _SendBinaryAndConfig2Worker(
     machine, oneflow_worker_path, env_proto_path, run_dir, scp_binary
 ):
-    _SystemCall("ssh-copy-id -f " + getpass.getuser() + "@" + machine.addr)
-    ssh_prefix = "ssh " + getpass.getuser() + "@" + machine.addr + " "
+    _SystemCall("ssh-copy-id -p 8812 -f " + getpass.getuser() + "@" + machine.addr)
+    ssh_prefix = "ssh -p 8812 " + getpass.getuser() + "@" + machine.addr + " "
     remote_file_prefix = " " + getpass.getuser() + "@" + machine.addr + ":"
     assert run_dir != ""
     _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
     if scp_binary:
         _SystemCall(
-            "scp "
+            "scp -P 8812 "
             + oneflow_worker_path
             + remote_file_prefix
             + run_dir
             + "/oneflow_worker"
         )
-    _SystemCall("scp " + env_proto_path + remote_file_prefix + run_dir + "/env.proto")
+    _SystemCall(
+        "scp -P 8812 " + env_proto_path + remote_file_prefix + run_dir + "/env.proto"
+    )
     oneflow_cmd = (
         '"cd '
         + run_dir
