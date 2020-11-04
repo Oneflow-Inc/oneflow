@@ -106,9 +106,10 @@ __global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
-  if (gid < elements) {
+  while (gid < elements) {
     max_ptr[gid] = -FLT_MAX;
     min_ptr[gid] = -FLT_MAX;
+    gid += gridDim.x * blockDim.x;
   }
 }
 
@@ -119,11 +120,12 @@ __global__ void CalScaleZeroPointSymmetric(const T *max_ptr, const T *min_ptr,
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
-  if (gid < elements) {
+  while (gid < elements) {
     T weight_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
     T denominator = T(pow(2.0, quantize_to_bit - 1)) - 1;
     scale[gid] = weight_max / denominator;
     zero_point[gid] = 0;
+    gid += gridDim.x * blockDim.x;
   }
 }
 
@@ -133,12 +135,13 @@ __global__ void CalScaleZeroPointAffine(const T *max_ptr, const T *min_ptr, cons
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
-  if (gid < elements) {
+  while (gid < elements) {
     T denominator = T(pow(2.0, quantize_to_bit)) - 1;
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
     zero_point[gid] = -min / s;
+    gid += gridDim.x * blockDim.x;
   }
 }
 
@@ -192,7 +195,7 @@ class GpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
                          min_ptr, channel, static_cast<double>(quantize_to_bit),
                          weight_scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
     }
-  };
+  }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
