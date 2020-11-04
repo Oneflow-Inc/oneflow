@@ -22,27 +22,13 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
+import oneflow.python.framework.check_point as new_check_point
 import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.ops.initializer_util as initializer_util
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.op_executor as op_executor
-import oneflow.python.eager.op_infer_util as op_infer_util
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
-import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
-from oneflow.python.experimental import interface_op_read_and_write
-from oneflow.python.framework.remote_blob import EagerBlobTrait
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.ops.get_variable as get_variable
 
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Dict, List, Union, Sequence, Optional
@@ -68,7 +54,7 @@ class CheckPoint(object):
             print(
                 "'checkpoint.save()' is deprecated. Please use the new checkpoint API"
             )
-            Save(GetAllVariables(), path)
+            new_check_point.Save(new_check_point.GetAllVariables(), path)
             return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
@@ -95,7 +81,7 @@ class CheckPoint(object):
             print(
                 "'checkpoint.load()' is deprecated. Please use the new checkpoint API"
             )
-            LoadVariables(Load(path))
+            new_check_point.LoadVariables(new_check_point.Load(path))
             return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
