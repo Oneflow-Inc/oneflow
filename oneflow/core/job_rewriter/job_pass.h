@@ -41,20 +41,6 @@ class JobPassState {
   JobPassState() = default;
 };
 
-class JobPassMethod {
- public:
-  virtual ~JobPassMethod() = default;
-
- protected:
-  explicit JobPassMethod(JobPassCtx* ctx) : ctx_(ctx) {}
-
-  const JobPassCtx& ctx() const { return *ctx_; }
-  JobPassCtx* mut_ctx() const { return ctx_; }
-
- private:
-  JobPassCtx* ctx_;
-};
-
 class JobPassCtx {
  public:
   JobPassCtx(const JobPassCtx&) = delete;
@@ -65,7 +51,7 @@ class JobPassCtx {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   template<typename T>
-  Maybe<const T&> State(const std::string& key) const {
+  Maybe<const T&> GetState(const std::string& key) const {
     const auto& iter = key2state_.find(key);
     CHECK_OR_RETURN(iter != key2state_.end());
     const T* ptr = dynamic_cast<T*>(iter->second.get());
