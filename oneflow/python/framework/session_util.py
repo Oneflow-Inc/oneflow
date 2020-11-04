@@ -305,6 +305,8 @@ class Session(object):
         self.interface_op_name2job_name_[
             interface_op_name
         ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        if oneflow.eager_execution_enabled():
+            self.interface_op_name2op_conf_[interface_op_name] = op_conf
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]

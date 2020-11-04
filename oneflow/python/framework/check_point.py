@@ -231,6 +231,7 @@ def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
 @oneflow_export("load")
 @session_ctx.try_init_default_session
 def Load(path):
+    assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     var_dict = {}
     for f in os.listdir(path):
         var_dir = os.path.join(path, f)
@@ -259,8 +260,17 @@ def _ReadSliceFromEagerBlob(blob):
 @oneflow_export("save")
 @session_ctx.try_init_default_session
 def Save(var_dict, path):
-    assert os.path.exists(path), "Directory {} already exists!".format(path)
-    os.makedirs(path, exist_ok=False)
+    def IsFileOrNonEmptyDir(path):
+        if os.path.isfile(path):
+            return True
+        if len(os.listdir(path)) != 0:
+            return True
+        return False
+
+    assert not IsFileOrNonEmptyDir(
+        path
+    ), "Non-empty directory {} already exists!".format(path)
+    os.makedirs(path, exist_ok=True)
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape

@@ -116,6 +116,32 @@ def _TestSaveCorrectness(test_case, model_getter, dtype, legacy_api):
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
+def _TestRoundTrip(test_case, model_getter, dtype):
+    """
+    Save weights by new model io, load weights by new model io,
+    and check the equality.
+    """
+    with tempfile.TemporaryDirectory() as save_dir:
+        flow.clear_default_session()
+        flow.config.gpu_device_num(4)
+
+        large1 = get_checkpoint_ready_model(model_getter, dtype)
+
+        flow.save(flow.get_all_variables(), save_dir)
+        res1 = large1()
+
+        flow.clear_default_session()
+        flow.config.gpu_device_num(4)
+
+        large2 = get_checkpoint_ready_model(model_getter, dtype)
+
+        vars_in_file = flow.load(save_dir)
+        flow.load_variables(vars_in_file)
+        res2 = large2()
+
+        test_case.assertTrue(np.array_equal(res1, res2))
+
+
 def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
     """
     Save weights by legacy model io, load weights by new model io,
@@ -162,22 +188,54 @@ class TestCheckpoint(flow.unittest.TestCase):
         _TestLoadCorrectness(test_case, get_simple_model, flow.float, True)
 
     @flow.unittest.skip_unless_1n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
     def test_save_correctness_1node(test_case):
         for dtype in [flow.float, flow.double]:
             _TestSaveCorrectness(test_case, get_large_model, dtype, False)
 
     @flow.unittest.skip_unless_2n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
     def test_save_correctness_2node(test_case):
         _TestSaveCorrectness(test_case, get_large_model, flow.float, False)
 
     @flow.unittest.skip_unless_1n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
     def test_load_correctness_1node(test_case):
         for dtype in [flow.float, flow.double]:
             _TestLoadCorrectness(test_case, get_large_model, dtype, False)
 
     @flow.unittest.skip_unless_2n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
     def test_load_correctness_2node(test_case):
         _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
+
+    @flow.unittest.skip_unless_2n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
+    def test_load_correctness_2node(test_case):
+        _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
+
+    @flow.unittest.skip_unless_1n4d()
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "Save and load are covered by other tests in lazy mode",
+    )
+    def test_round_trip(test_case):
+        _TestRoundTrip(test_case, get_large_model, flow.float)
 
 
 if __name__ == "__main__":
