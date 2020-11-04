@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-struct AdamBiasCorrectionLearningRateStateKey {
+struct AdamBiasCorrectionLearningRateCacheKey {
   float beta1;
   float beta2;
   std::string lr_lbn;
@@ -26,8 +26,8 @@ struct AdamBiasCorrectionLearningRateStateKey {
   ParallelConf parallel_conf;
 };
 
-bool operator==(const AdamBiasCorrectionLearningRateStateKey& lhs,
-                const AdamBiasCorrectionLearningRateStateKey& rhs) {
+bool operator==(const AdamBiasCorrectionLearningRateCacheKey& lhs,
+                const AdamBiasCorrectionLearningRateCacheKey& rhs) {
   return (lhs.beta1 == rhs.beta1) && (lhs.beta2 == rhs.beta2) && (lhs.lr_lbn == rhs.lr_lbn)
          && (lhs.step_lbn == rhs.step_lbn) && (lhs.parallel_conf == rhs.parallel_conf);
 }
@@ -37,8 +37,8 @@ bool operator==(const AdamBiasCorrectionLearningRateStateKey& lhs,
 namespace std {
 
 template<>
-struct hash<oneflow::AdamBiasCorrectionLearningRateStateKey> {
-  size_t operator()(const oneflow::AdamBiasCorrectionLearningRateStateKey& key) const {
+struct hash<oneflow::AdamBiasCorrectionLearningRateCacheKey> {
+  size_t operator()(const oneflow::AdamBiasCorrectionLearningRateCacheKey& key) const {
     const auto& str_hash = std::hash<std::string>();
     const auto& float_hash = std::hash<float>();
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
@@ -85,24 +85,24 @@ class AdamBiasCorrectionLearningRateState final : public JobPassState {
   std::string GetLbn(float beta1, float beta2, std::string lr_lbn, std::string step_lbn,
                      ParallelConf parallel_conf,
                      std::function<std::string()> AddAdamBiasCorrectionLearningRateOp) {
-    AdamBiasCorrectionLearningRateStateKey state_key;
-    state_key.beta1 = beta1;
-    state_key.beta2 = beta2;
-    state_key.lr_lbn = lr_lbn;
-    state_key.step_lbn = step_lbn;
-    state_key.parallel_conf = parallel_conf;
-    const auto& iter = key2lbn_.find(state_key);
+    AdamBiasCorrectionLearningRateCacheKey cache_key;
+    cache_key.beta1 = beta1;
+    cache_key.beta2 = beta2;
+    cache_key.lr_lbn = lr_lbn;
+    cache_key.step_lbn = step_lbn;
+    cache_key.parallel_conf = parallel_conf;
+    const auto& iter = key2lbn_.find(cache_key);
     if (iter != key2lbn_.end()) {
       return iter->second;
     } else {
       std::string lbn = AddAdamBiasCorrectionLearningRateOp();
-      key2lbn_.emplace(state_key, lbn);
+      key2lbn_.emplace(cache_key, lbn);
       return lbn;
     }
   }
 
  private:
-  HashMap<AdamBiasCorrectionLearningRateStateKey, std::string> key2lbn_;
+  HashMap<AdamBiasCorrectionLearningRateCacheKey, std::string> key2lbn_;
 };
 
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
@@ -139,14 +139,14 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
   std::string lr_lbn;
   if (do_bias_correction) {
-    const bool has_state = CHECK_JUST(
-        ctx->HasState<AdamBiasCorrectionLearningRateState>("adam_bias_correction_learning_rate"));
+    const std::string& job_pass_state_key = "adam_bias_correction_learning_rate";
+    const bool has_state =
+        CHECK_JUST(ctx->HasState<AdamBiasCorrectionLearningRateState>(job_pass_state_key));
     if (!has_state) {
-      ctx->ResetState("adam_bias_correction_learning_rate",
-                      std::make_unique<AdamBiasCorrectionLearningRateState>());
+      ctx->ResetState(job_pass_state_key, std::make_unique<AdamBiasCorrectionLearningRateState>());
     }
-    auto* state = CHECK_JUST(ctx->MutableState<AdamBiasCorrectionLearningRateState>(
-        "adam_bias_correction_learning_rate"));
+    auto* state =
+        CHECK_JUST(ctx->MutableState<AdamBiasCorrectionLearningRateState>(job_pass_state_key));
     ParallelConf bias_correction_parallel_conf;
     const auto& lr_parallel_conf = job_builder->ParallelConf4Lbi(GenLogicalBlobId(primary_lr_lbn));
     const auto& train_step_parallel_conf =
