@@ -25,11 +25,8 @@ import atexit
 _shutting_down = [False]
 
 
-def _AtShutDown():
+def SetShuttingDown():
     _shutting_down[0] = True
-
-
-atexit.register(_AtShutDown)
 
 
 def IsShuttingDown(_shutting_down=_shutting_down):
