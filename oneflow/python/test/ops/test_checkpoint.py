@@ -66,7 +66,7 @@ def get_large_model(dtype):
         with get_placement():
             x = flow.get_variable(
                 name="x",
-                shape=(8801, 8203, 4),
+                shape=(10, 8801, 820, 4),
                 dtype=dtype,
                 initializer=flow.random_normal_initializer(mean=10, stddev=1),
                 distribute=flow.distribute.split(0),

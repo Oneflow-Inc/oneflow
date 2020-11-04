@@ -189,14 +189,11 @@ class FileBackendVariableBlob:
 
     @property
     def quant_info(self):
-        pass
+        raise NotImplementedError()
 
     @property
     def dtype(self):
         return self.dtype_
-
-    def _IsTooLarge(self):
-        return False
 
     def numpy(self) -> np.ndarray:
         if not self.has_meta_info_:
@@ -222,8 +219,6 @@ def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
 
 
 def _LoadSingleVariable(path):
-    if not os.path.isdir(path):
-        return None
     if os.path.isfile(os.path.join(path, DATA_FILENAME)):
         return FileBackendVariableBlob(path)
     return None
@@ -475,16 +470,16 @@ def _ForEverySlice(var_blob, f):
         cnt *= var_blob.shape[axis]
         if cnt > SLICE_LEN:
             break
-    small_size = np.prod(var_blob.shape[axis + 1 :]).astype(np.int).item()
-    max_unit_len_on_axis = SLICE_LEN // small_size
+    unit_size = np.prod(var_blob.shape[axis + 1 :]).astype(np.int).item()
+    max_unit_num = SLICE_LEN // unit_size
     while start_idx < size:
         remainder = var_blob.shape[axis]
         while remainder > 0:
-            unit_length = (
-                max_unit_len_on_axis if remainder >= max_unit_len_on_axis else remainder
+            unit_num = (
+                max_unit_num if remainder >= max_unit_num else remainder
             )
-            length = unit_length * small_size
-            remainder -= unit_length
+            length = unit_num * unit_size
+            remainder -= unit_num
             stop_idx = start_idx + length
             start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
             stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
@@ -493,51 +488,6 @@ def _ForEverySlice(var_blob, f):
                 var_blob, start_nd_idx, stop_nd_idx, length
             )
             start_idx = stop_idx
-
-
-_init_map = {}
-
-
-def register_initializer(flow_initializer):
-    def deco(func):
-        _init_map[flow_initializer] = func
-        return func
-
-    return deco
-
-
-def _GetInitializerGenerator(initializer_conf, random_seed):
-    f = None
-    for m in _init_map:
-        if initializer_conf.HasField(m):
-            f = _init_map[m]
-            break
-    if f is None:
-        print("No initializer, use constant 3 instead")
-        f = lambda a, b: lambda length: [3] * length
-    # assert f is not None, initializer_conf
-    return f(getattr(initializer_conf, m), random_seed)
-
-
-@register_initializer("constant_conf")
-@register_initializer("constant_int_conf")
-def constant_initializer(
-    initializer_conf: Union[
-        op_conf_pb.ConstantInitializerConf, op_conf_pb.ConstantIntInitializerConf
-    ],
-    random_seed: int,
-):
-    return lambda length: [initializer_conf.value] * length
-
-
-@register_initializer("random_normal_conf")
-def random_normal_initializer(
-    initializer_conf: op_conf_pb.RandomNormalInitializerConf, random_seed: int
-):
-    rng = np.random.default_rng(random_seed)
-    return lambda length: rng.normal(
-        loc=initializer_conf.mean, scale=initializer_conf.std, size=length
-    )
 
 
 def Init():
@@ -554,7 +504,9 @@ def Init():
             )
             LoadVariables({op_name: Load(var_dir)})
             continue
-        g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed)
+        g = initializer_util.GetInitializerGenerator(
+            var_conf.initializer, var_conf.random_seed
+        )
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
             np_dtype = np.dtype(
