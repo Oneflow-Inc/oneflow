@@ -573,7 +573,9 @@ class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
       .SetCreateFn<AdamBiasCorrectionLearningRateKernel<device>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device));
 REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
 REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
+#endif  // WITH_CUDA
 
 }  // namespace
 
