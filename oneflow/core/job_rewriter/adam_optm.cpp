@@ -35,6 +35,7 @@ bool operator==(const AdamBiasCorrectionLearningRateStateKey& lhs,
 }  // namespace oneflow
 
 namespace std {
+
 template<>
 struct hash<oneflow::AdamBiasCorrectionLearningRateStateKey> {
   size_t operator()(const oneflow::AdamBiasCorrectionLearningRateStateKey& key) const {
@@ -45,6 +46,7 @@ struct hash<oneflow::AdamBiasCorrectionLearningRateStateKey> {
            ^ str_hash(key.step_lbn) ^ parallel_conf_hash(key.parallel_conf);
   }
 };
+
 }  // namespace std
 
 namespace oneflow {
@@ -103,8 +105,8 @@ class AdamBiasCorrectionLearningRateState final : public JobPassState {
   HashMap<AdamBiasCorrectionLearningRateStateKey, std::string> key2lbn_;
 };
 
-void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, JobPassCtx* ctx,
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
+                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
                              const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
