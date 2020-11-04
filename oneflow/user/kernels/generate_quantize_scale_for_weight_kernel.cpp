@@ -90,7 +90,7 @@ class CpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
         zero_point_ptr += 1;
       }
     }
-  };
+  }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

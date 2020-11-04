@@ -19,41 +19,46 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("generate_quantize_scale_for_weight")
-    .Input("weight")
+REGISTER_USER_OP("generate_quantize_scale_for_activation")
+    .Input("activation")
+    .Input("moving_max")
+    .Input("moving_min")
     .Output("scale")
     .Output("zero_point")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
     .Attr<std::string>("quantizer_type", "symmetric")
-    // NOTE(Liang Depeng): "true" or "false": per-layer or per-channel quantization
-    .Attr<bool>("per_layer_quantization", true)
+    // NOTE(Liang Depeng): smoothing parameter for exponential moving averages operation
+    .Attr<float>("momentum", 0.95)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);
-      // NOTE(Liang Depeng): support weights for 1/2D convolution and fully-connected layers.
-      //                     And assume weight shape is (Cout, Cin, K, K) or (Cout, Cin) for 2D
-      //                     convolution or fully-connected.
-      CHECK_GE_OR_RETURN(weight_shape->NumAxes(), 2);
-      CHECK_LE_OR_RETURN(weight_shape->NumAxes(), 4);
+      Shape* moving_max_shape = ctx->Shape4ArgNameAndIndex("moving_max", 0);
+      Shape* moving_min_shape = ctx->Shape4ArgNameAndIndex("moving_min", 0);
+      // NOTE(Liang Depeng): activation only support per-layer quantization
+      CHECK_OR_RETURN(moving_max_shape->NumAxes() == 1 && moving_max_shape->At(0) == 1);
+      CHECK_OR_RETURN(moving_min_shape->NumAxes() == 1 && moving_min_shape->At(0) == 1);
 
-      if (ctx->Attr<bool>("per_layer_quantization") == true) {
-        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
-        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
-      } else {
-        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({weight_shape->At(0)});
-        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({weight_shape->At(0)});
-      }
-
-      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
-      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
+      *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
+      *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
+      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("activation", 0);
+      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("activation", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* weight = GetInputArgModifierFn("weight", 0);
-      CHECK(weight != nullptr);
-      weight->set_requires_grad(false);
+      user_op::InputArgModifier* activation = GetInputArgModifierFn("activation", 0);
+      CHECK(activation != nullptr);
+      activation->set_requires_grad(false);
+
+      user_op::InputArgModifier* moving_max = GetInputArgModifierFn("moving_max", 0);
+      CHECK(moving_max != nullptr);
+      moving_max->set_requires_grad(false);
+      moving_max->set_is_mutable(true);
+
+      user_op::InputArgModifier* moving_min = GetInputArgModifierFn("moving_min", 0);
+      CHECK(moving_min != nullptr);
+      moving_min->set_requires_grad(false);
+      moving_min->set_is_mutable(true);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       const auto ClearBatchAxis = [ctx](const std::string& name) {
@@ -66,7 +71,7 @@ REGISTER_USER_OP("generate_quantize_scale_for_weight")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO(Liang Depeng): refer to reduce_max op
+      // TODO(Liang Depeng): refer to reduce_max and normalization op
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
