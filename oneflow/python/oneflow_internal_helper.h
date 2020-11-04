@@ -239,7 +239,7 @@ Maybe<void> WriteInt8Calibration(const std::string& path) {
 }
 
 Maybe<long long> GetUserOpAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  return JUST(GetUserOpAttrTypeImpl(op_type_name, attr_name));
+  return JUST(GetAttrTypeImpl(op_type_name, attr_name));
 }
 
 Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
