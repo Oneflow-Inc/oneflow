@@ -177,7 +177,7 @@ class TestCheckpoint(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_2n4d()
     def test_load_correctness_2node(test_case):
-        _TestLoadCorrectness(test_case, get_simple_model, flow.float, False)
+        _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
 
 
 if __name__ == "__main__":

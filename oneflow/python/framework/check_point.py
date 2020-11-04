@@ -393,14 +393,15 @@ def _ReadSliceFromEagerBlob(blob):
 @oneflow_export("save")
 @session_ctx.try_init_default_session
 def Save(var_dict, path):
-    os.makedirs(path, exist_ok=True)
+    assert os.path.exists(path), "Directory {} already exists!".format(path)
+    os.makedirs(path, exist_ok=False)
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
         meta_info.data_type = var.dtype.oneflow_proto_dtype
         var_dir = os.path.join(path, name)
         param_path = os.path.join(var_dir, "out")
-        os.makedirs(os.path.dirname(param_path), exist_ok=True)
+        os.makedirs(os.path.dirname(param_path))
         sess = session_ctx.GetDefaultSession()
         var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
@@ -446,10 +447,6 @@ def _LogicalSlice(input_blob, start, stop):
                 parallel_conf=parallel_conf,
                 bn_in_op2blob_object=bn_in_op2blob_object,
             )
-            parallel_desc_symbol = oneflow.current_scope().device_parallel_desc_symbol
-            op_arg_parallel_attr = op_arg_util.MakeBroadcastOpArgParallelAttribute(
-                parallel_desc_symbol
-            )
             Yield(bn_in_op2blob_object["y_0"])
 
         vm_util.LogicalRun(build)
@@ -466,7 +463,7 @@ def _LogicalSlice(input_blob, start, stop):
     return blob.numpy()
 
 
-def _GetVariableBlobFromNumpy(np_array: np.ndarray):
+def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray):
     with oneflow.scope.placement("cpu", "0:0"):
         flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
         op_name = id_util.UniqueStr("system_checkpoint")
@@ -554,7 +551,7 @@ def _FeedValueToVariable(var_name, value_blob):
         value_name = value_blob.logical_blob_name.split("/")[0]
         value_op_conf = sess.OpConf4InterfaceOpName(value_name)
         for start, stop, slice in _ReadSliceFromEagerBlob(value_blob):
-            slice_value_blob = _GetVariableBlobFromNumpy(slice)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
@@ -567,7 +564,7 @@ def _FeedValueToVariable(var_name, value_blob):
             var_blob.shape, value_blob.shape
         )
         for start, stop, slice in value_blob.GetSlicesAsNumpy():
-            slice_value_blob = _GetVariableBlobFromNumpy(slice)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
@@ -636,7 +633,10 @@ def _GetInitializerGenerator(initializer_conf, random_seed):
         if initializer_conf.HasField(m):
             f = _init_map[m]
             break
-    assert f is not None, initializer_conf
+    if f is None:
+        print("No initializer, use constant 3 instead")
+        f = lambda a, b: lambda length: [3] * length
+    # assert f is not None, initializer_conf
     return f(getattr(initializer_conf, m), random_seed)
 
 
@@ -664,16 +664,13 @@ def random_normal_initializer(
 def Init():
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
-        rng = np.random.default_rng()
         var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
-        np_dtype = np.dtype(
-            dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
-        )
-
-        # TODO:
         g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
+            np_dtype = np.dtype(
+                dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
+            )
             vals = g(length)
             vals = (
                 np.array(vals)
@@ -681,7 +678,7 @@ def Init():
                 .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
             )
 
-            slice_value_blob = _GetVariableBlobFromNumpy(vals)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
             )
