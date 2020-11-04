@@ -336,32 +336,36 @@ def _test_batchnorm_add_relu(test_case, input_shape, axis, data_type):
         flow.watch(y1, test_global_storage.Setter("y1"))
         flow.watch(y2, test_global_storage.Setter("y2"))
 
-        loss = flow.math.reduce_mean(y1 + y2)
+        y1 = flow.where(flow.math.greater(y2, v), y1, v)
+        y2 = flow.where(flow.math.greater(y1, v), y2, v)
+
+        loss = y1 + y2
         flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
         ).minimize(flow.math.reduce_sum(loss))
 
         return loss
 
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+
     x = np.random.rand(*input_shape).astype(np.float32)
     addend = np.random.rand(*input_shape).astype(np.float32)
 
     test_job(x, addend).get()
 
-    test_case.assertTrue(
-        np.allclose(test_global_storage.Get("y1"), test_global_storage.Get("y2"))
-    )
-    test_case.assertTrue(
-        np.allclose(
-            test_global_storage.Get("x1_diff"), test_global_storage.Get("x2_diff")
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            test_global_storage.Get("addend1_diff"),
-            test_global_storage.Get("addend2_diff"),
-        )
-    )
+    tol = 1e-3 if data_type == flow.float16 else 1e-5
+
+    y1 = test_global_storage.Get("y1")
+    y2 = test_global_storage.Get("y2")
+    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol))
+
+    x1_diff = test_global_storage.Get("x1_diff")
+    x2_diff = test_global_storage.Get("x2_diff")
+    test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
+    addend1_diff = test_global_storage.Get("addend1_diff")
+    addend2_diff = test_global_storage.Get("addend2_diff")
+    test_case.assertTrue(np.allclose(addend1_diff, addend2_diff, rtol=tol, atol=tol))
 
 
 def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
@@ -399,25 +403,32 @@ def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
         flow.watch(y1, test_global_storage.Setter("y1"))
         flow.watch(y2, test_global_storage.Setter("y2"))
 
-        loss = flow.math.reduce_mean(y1 + y2)
+        y1 = flow.where(flow.math.greater(y2, v), y1, v)
+        y2 = flow.where(flow.math.greater(y1, v), y2, v)
+
+        loss = y1 + y2
         flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
         ).minimize(flow.math.reduce_sum(loss))
 
         return loss
 
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+
     x = np.random.rand(*input_shape).astype(np.float32)
 
     test_job(x).get()
 
-    test_case.assertTrue(
-        np.allclose(test_global_storage.Get("y1"), test_global_storage.Get("y2"))
-    )
-    test_case.assertTrue(
-        np.allclose(
-            test_global_storage.Get("x1_diff"), test_global_storage.Get("x2_diff")
-        )
-    )
+    tol = 1e-3 if data_type == flow.float16 else 1e-5
+
+    y1 = test_global_storage.Get("y1")
+    y2 = test_global_storage.Get("y2")
+
+    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol))
+    x1_diff = test_global_storage.Get("x1_diff")
+    x2_diff = test_global_storage.Get("x2_diff")
+    test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
 
 
 @flow.unittest.skip_unless_1n1d()
