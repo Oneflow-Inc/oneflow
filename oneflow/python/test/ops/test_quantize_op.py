@@ -128,22 +128,6 @@ def _run_test(
     )
 
 
-# @flow.unittest.skip_unless_1n1d()
-# class TestGenQuantScaleForWeight(flow.unittest.TestCase):
-#     def test_gen_quant_scale_for_weight(test_case):
-#         arg_dict = OrderedDict()
-#         arg_dict["test_case"] = [test_case]
-#         arg_dict["device_type"] = ["cpu"]  # ["gpu", "cpu"]
-#         arg_dict["dtype"] = ["float32", "double"]
-#         arg_dict["weight_shape"] = [(10, 10, 20, 20)]
-#         arg_dict["quantize_to_bit"] = [8, 7, 6, 5, 4, 3, 2]
-#         arg_dict["quantizer_type"] = ["symmetric", "affine"]
-#         arg_dict["per_layer_quantization"] = [True, False]
-
-#         for arg in GenArgList(arg_dict):
-#             _run_test(*arg)
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestGenQuantScaleForWeight(flow.unittest.TestCase):
     def test_gen_quant_scale_for_weight(test_case):
