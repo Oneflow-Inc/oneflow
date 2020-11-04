@@ -53,7 +53,16 @@ REGISTER_USER_OP("generate_quantize_scale_for_weight")
       user_op::InputArgModifier* weight = GetInputArgModifierFn("weight", 0);
       weight->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::DefaultAsFirstHasValueInput)
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      const auto ClearBatchAxis = [ctx](const std::string& name) {
+        if (ctx->user_op_conf().has_output(name, 0)) {
+          ctx->BatchAxis4ArgNameAndIndex(name, 0)->clear_value();
+        }
+      };
+      ClearBatchAxis("scale");
+      ClearBatchAxis("zero_point");
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // TODO(Liang Depeng): refer to reduce_max op
       return Maybe<void>::Ok();
