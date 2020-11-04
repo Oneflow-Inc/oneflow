@@ -32,12 +32,11 @@ REGISTER_USER_OP("dim_gather")
 
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       int64_t index_num_axes = index->shape().NumAxes();
-      CHECK_GT_OR_RETURN(index_num_axes, 0);
-      CHECK_LE_OR_RETURN(index_num_axes, kDimGatherMaxDimCount);
       CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
 
       const int64_t dim = ctx->Attr<int64_t>("dim");
       CHECK_GE_OR_RETURN(dim, 0);
+      CHECK_LT_OR_RETURN(dim, input_num_axes);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
       // split_axs should NOT equals dim when in consistent view

@@ -2190,7 +2190,46 @@ def dim_gather(
 
     Returns:
         remote_blob_util.BlobDef: The elements gathered from `input` will be retnred as the output Blob.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def dim_gather_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float64), 
+                        index:tp.Numpy.Placeholder((2, 2), dtype=flow.int32))->tp.Numpy:
+            return flow.dim_gather(input, 1, index)
+
+        input = np.array([[1, 2], [3, 4]]).astype(np.float64)
+        index = np.array([[1, 0], [0, 1]]).astype(np.int32)
+
+        out = dim_gather_Job(input, index)       
+        # output 
+        # [[2. 1.]
+        #  [3. 4.]]
+
     """
+    if len(input.shape) != len(index.shape):
+        raise ValueError("Dimensions of input and index should equal")
+
+    for i in range(0, len(input.shape)):
+        if dim == i:
+            continue
+        else:
+            if input.shape[i] != index.shape[i]:
+                raise ValueError(
+                    "Dimensions of input and index should be same except at dim"
+                )
+
+    if dim >= len(index.shape):
+        raise ValueError(
+            "Value of dim is out of range(dim should less than len(index.shape))"
+        )
+
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("DimGather_")

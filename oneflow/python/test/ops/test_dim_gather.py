@@ -17,7 +17,6 @@ import oneflow as flow
 import numpy as np
 import oneflow.typing as oft
 from test_util import GenArgList
-import oneflow.typing as oft
 import unittest
 from collections import OrderedDict
 
@@ -125,6 +124,7 @@ def _make_dim_gather_fn(
         test_case.assertTrue(np.allclose(grad, blob) == True)
 
     if value_type == flow.float16:
+
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
             params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float32),
@@ -140,18 +140,18 @@ def _make_dim_gather_fn(
                 x_var = flow.cast_to_current_logical_view(x_var)
                 x = x_var + params_def
                 x_f16 = flow.cast(x, flow.float16)
-            
+
             y_f16 = flow.dim_gather(x_f16, dim, indices_def)
             x_f32 = flow.cast(x, flow.float32)
             y_f32 = flow.cast(y_f16, flow.float32)
-            
+
             y = flow.dim_gather(x, dim, indices_def)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
                 ).minimize(y_f32)
-            
+
             flow.watch_diff(x_f32, _compare_diff)
             return y_f32
 
@@ -172,14 +172,14 @@ def _make_dim_gather_fn(
                 )
                 x_var = flow.cast_to_current_logical_view(x_var)
                 x = x_var + params_def
-            
+
             y = flow.dim_gather(x, dim, indices_def)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
                 ).minimize(y)
-            
+
             flow.watch_diff(x, _compare_diff)
             return y
 
@@ -249,7 +249,7 @@ class TestDimGather1n2d(flow.unittest.TestCase):
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
         arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
         arg_dict["value_type"] = [
-            #(np.float32, flow.float16),
+            # (np.float32, flow.float16),
             (np.float32, flow.float32),
             (np.float64, flow.float64),
         ]

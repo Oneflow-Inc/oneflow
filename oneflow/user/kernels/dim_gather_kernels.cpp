@@ -43,8 +43,6 @@ class DimGatherKernel final : public user_op::OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
 
-    if (index_tensor->shape().elem_cnt() == 0) { return; }
-
     const IN_T* input = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
@@ -76,8 +74,6 @@ class ScatterDimKernel final : public user_op::OpKernel {
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int64_t dim = ctx->Attr<int64_t>("dim");
-
-    if (index_tensor->shape().elem_cnt() == 0) { return; }
 
     const IN_T* src = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
@@ -116,7 +112,6 @@ class ScatterDimKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
 #define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(device) \
-  REGISTER_DIM_GATHER_KERNEL(device, float16, int32_t)  \
   REGISTER_DIM_GATHER_KERNEL(device, float, int32_t)    \
   REGISTER_DIM_GATHER_KERNEL(device, double, int32_t)   \
   REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t)  \
@@ -125,10 +120,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
   REGISTER_DIM_GATHER_KERNEL(device, double, int64_t)   \
   REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t)
 
-#define REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE_INDEX64(device)
-
 #define REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(device) \
-  REGISTER_DIM_SCATTER_KERNEL(device, float16, int32_t)           \
   REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t)             \
   REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t)            \
   REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t)           \
@@ -141,6 +133,10 @@ REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_DIM_GATHER_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+
+// float16 kernel on GPU
+REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t);
+REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int32_t);
 
 }  // namespace user_op
 }  // namespace oneflow
