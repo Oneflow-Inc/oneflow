@@ -28,19 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-void CheckFunctionConfig(const JobConfigProto& job_conf) {
-  const auto& attr_name2attr_def = GlobalFunctionConfigDef().attr_name2attr_def();
-  for (const auto& pair : job_conf.flag_name2flag_value()) {
-    const auto& iter = attr_name2attr_def.find(pair.first);
-    CHECK(iter != attr_name2attr_def.end());
-    CHECK_EQ(iter->second.default_val().value_case(), pair.second.value_case());
-  }
-}
-
-}  // namespace
-
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.exp_run_conf().piece_num_of_experiment_phase();
 }
@@ -81,16 +68,8 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
 #endif
-  CheckFunctionConfig(job_conf_);
-}
-
-const AttrValue& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
-  const auto& iter = job_conf_.flag_name2flag_value().find(field_name);
-  if (iter != job_conf_.flag_name2flag_value().end()) { return iter->second; }
-  const auto& attr_name2attr_def = GlobalFunctionConfigDef().attr_name2attr_def();
-  const auto& def_iter = attr_name2attr_def.find(field_name);
-  CHECK(def_iter != attr_name2attr_def.end());
-  return def_iter->second.default_val();
+  job_attrs_accessor_.reset(new DefaultedAttrsAccessor(
+      job_conf_.job_attrs(), GlobalConfigDefAccessor<kFunctionAttrDefType>()));
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {

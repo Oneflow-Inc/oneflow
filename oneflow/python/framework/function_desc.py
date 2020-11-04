@@ -50,16 +50,16 @@ class FunctionDesc(object):
         raise NotImplementedError
 
     def HasAttr(self, attr_name):
-        if attr_name == "flag_name2flag_value":
+        if attr_name == "job_attrs":
             return False
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
-        if attr_name in self.job_config_proto.flag_name2flag_value:
+        if attr_name in self.job_config_proto.job_attrs.attr_name2attr_value:
             return True
         return self.job_config_proto.HasField(attr_name)
 
     def __getattr__(self, attr_name):
-        assert attr_name != "flag_name2flag_value"
-        flag_name2flag_value = self.job_config_proto.flag_name2flag_value
+        assert attr_name != "job_attrs"
+        flag_name2flag_value = self.job_config_proto.job_attrs.attr_name2attr_value
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name not in name2default:
             assert self.job_config_proto.HasField(attr_name)

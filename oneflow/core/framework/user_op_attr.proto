@@ -1,3 +1,4 @@
+// TODO(caishenghang) Move all code into attr.proto
 syntax = "proto2";
 package oneflow;
 
@@ -57,10 +58,4 @@ message AttrValue {
     ListShape at_list_shape = 13;
     ListString at_list_string = 14;
   }
-}
-
-message AttrDef {
-  required string name = 1;
-  required string description = 2;
-  required AttrValue default_val = 3;
 }

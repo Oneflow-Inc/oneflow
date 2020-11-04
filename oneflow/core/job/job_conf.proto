@@ -7,6 +7,7 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
+import "oneflow/core/framework/attr.proto";
 
 message TrainConf {
   optional NormalModelUpdateOpUserConf model_update_conf = 3;
@@ -112,7 +113,7 @@ message JobConfigProto {
 
   optional int64 concurrency_width = 1000 [default = 128];
 
-  map<string, AttrValue> flag_name2flag_value = 2000;
+  optional AttrCollection job_attrs = 2000;
 
   optional int64 logical_object_id = 3000;
 }

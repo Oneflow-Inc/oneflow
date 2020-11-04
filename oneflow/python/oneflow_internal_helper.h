@@ -190,7 +190,8 @@ Maybe<std::string> GetSerializedJobSet() {
 
 Maybe<std::string> GetFunctionConfigDef() {
   std::string ret;
-  google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
+  const auto& attr_defs = GlobalConfigDefAccessor<kFunctionAttrDefType>().attr_defs();
+  google::protobuf::TextFormat::PrintToString(attr_defs, &ret);
   return ret;
 }
 

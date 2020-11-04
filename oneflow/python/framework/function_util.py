@@ -52,7 +52,9 @@ class FunctionConfig(object):
     ) -> Callable[[Optional[Union[bool, int, float, str]]], None]:
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
-        flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
+        flag_name2flag_value = (
+            self.function_desc.job_config_proto.job_attrs.attr_name2attr_value
+        )
         default_val = name2default[attr_name]
 
         def FunctionConfigSetter(

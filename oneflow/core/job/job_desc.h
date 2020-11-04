@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/attr.h"
 
 namespace oneflow {
 
@@ -70,16 +71,14 @@ class JobDesc final {
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 
-#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name) \
-  T func_name(const std::string& field_name) const {            \
-    const AttrValue& attr_val = GetFunctionFlagVal(field_name); \
-    CHECK(attr_val.has_##field_name());                         \
-    return attr_val.field_name();                               \
+#define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name)                \
+  T func_name(const std::string& field_name) const {               \
+    return CHECK_JUST(job_attrs_accessor_->func_name(field_name)); \
   }
-  DEFINE_FUNCTION_CONFIG_GETTER(bool, Bool, at_bool);
-  DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64, at_int64);
-  DEFINE_FUNCTION_CONFIG_GETTER(double, Double, at_double);
-  DEFINE_FUNCTION_CONFIG_GETTER(const std::string&, String, at_string);
+  DEFINE_FUNCTION_CONFIG_GETTER(bool, Bool);
+  DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64);
+  DEFINE_FUNCTION_CONFIG_GETTER(double, Double);
+  DEFINE_FUNCTION_CONFIG_GETTER(const std::string&, String);
 
   // Train conf
   int64_t TotalBatchNum() const;
@@ -88,10 +87,10 @@ class JobDesc final {
 
  private:
   void Init();
-  const AttrValue& GetFunctionFlagVal(const std::string& field_name) const;
 
   JobConfigProto job_conf_;
   int64_t job_id_;
+  std::unique_ptr<const DefaultedAttrsAccessor> job_attrs_accessor_;
 };
 
 typedef HashMap<std::string, int64_t> JobName2JobId;

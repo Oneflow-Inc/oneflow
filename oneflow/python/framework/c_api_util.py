@@ -28,7 +28,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.oneflow_internal as oneflow_internal
-from oneflow.core.framework.config_def_pb2 import ConfigDef
+import oneflow.core.framework.attr_pb2 as attr_pb
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 import oneflow
@@ -566,11 +566,11 @@ def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
 
 
 def GetFunctionConfigDef():
-    func_config_def, error_str = oneflow_internal.GetFunctionConfigDef()
+    func_attr_defs, error_str = oneflow_internal.GetFunctionConfigDef()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(func_config_def, ConfigDef())
+    return text_format.Parse(func_attr_defs, attr_pb.AttrDefCollection())
 
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):

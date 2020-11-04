@@ -92,7 +92,8 @@ void MakeModelInitJob(
     const std::string& job_name, Job* job,
     const HashMap<std::string, OperatorConf>& var_op_name2op_conf,
     const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  auto* flag_name2flag_value =
+      job->mutable_job_conf()->mutable_job_attrs()->mutable_attr_name2attr_value();
   (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   SetModelIoDefaultJobConf(job->mutable_job_conf(), job_name);
   Global<InterUserJobInfo>::Get()->set_global_model_init_job_name(job_name);
@@ -127,7 +128,8 @@ void MakeModelLoadJob(
     const std::string& job_name, Job* job,
     const HashMap<std::string, OperatorConf>& var_op_name2op_conf,
     const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  auto* flag_name2flag_value =
+      job->mutable_job_conf()->mutable_job_attrs()->mutable_attr_name2attr_value();
   (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   SetModelIoDefaultJobConf(job->mutable_job_conf(), job_name);
   Global<InterUserJobInfo>::Get()->set_global_model_load_job_name(job_name);
@@ -167,7 +169,8 @@ void MakeModelSaveJob(
     const std::string& job_name, Job* job,
     const HashMap<std::string, OperatorConf>& var_op_name2op_conf,
     const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  auto* flag_name2flag_value =
+      job->mutable_job_conf()->mutable_job_attrs()->mutable_attr_name2attr_value();
   (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   Global<InterUserJobInfo>::Get()->set_global_model_save_job_name(job_name);
   SetModelIoDefaultJobConf(job->mutable_job_conf(), job_name);

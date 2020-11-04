@@ -816,7 +816,8 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
 
 void MakePullJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  auto* flag_name2flag_value =
+      job->mutable_job_conf()->mutable_job_attrs()->mutable_attr_name2attr_value();
   (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_output_or_var_op_name2pull_job_name();
@@ -854,7 +855,8 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
 
 void MakePushJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
+  auto* flag_name2flag_value =
+      job->mutable_job_conf()->mutable_job_attrs()->mutable_attr_name2attr_value();
   (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
   auto* op_name2job_name =
       Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2push_job_name();

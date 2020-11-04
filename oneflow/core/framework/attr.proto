@@ -1,0 +1,20 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/framework/user_op_attr.proto";
+
+message AttrCollection {
+  map<string, AttrValue> attr_name2attr_value = 1;
+}
+
+message AttrDef {
+  required string name = 1;
+  required AttrType type = 2;
+  optional AttrValue default_val = 3;
+  optional string description = 4;
+}
+
+message AttrDefCollection {
+  repeated AttrDef attr_def = 1;
+  map<string, int32> attr_name2attr_index = 2;
+}
