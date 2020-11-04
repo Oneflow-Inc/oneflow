@@ -66,15 +66,19 @@ del atexit
 
 import sys
 
+original_exit = sys.exit
+
 
 def custom_exit(returncode):
     if returncode != 0:
         oneflow_api.MasterSendAbort()
+    original_exit(returncode)
 
 
 sys.exit = custom_exit
 
 del custom_exit
+del original_exit
 del sys
 del absolute_import
 del oneflow
