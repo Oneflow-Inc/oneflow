@@ -23,7 +23,7 @@ REGISTER_USER_OP("dim_gather")
     .Input("input")
     .Input("index")
     .Output("output")
-    .Attr<int64_t>("dim")
+    .Attr<int32_t>("dim")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       int64_t input_num_axes = in->shape().NumAxes();
@@ -34,7 +34,7 @@ REGISTER_USER_OP("dim_gather")
       int64_t index_num_axes = index->shape().NumAxes();
       CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
 
-      const int64_t dim = ctx->Attr<int64_t>("dim");
+      const int32_t dim = ctx->Attr<int32_t>("dim");
       CHECK_GE_OR_RETURN(dim, 0);
       CHECK_LT_OR_RETURN(dim, input_num_axes);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
@@ -82,7 +82,7 @@ REGISTER_USER_OP("dim_gather")
       const user_op::TensorDesc& index_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
       int64_t index_num_axes = index_tensor.shape().NumAxes();
-      const int64_t dim = ctx->Attr<int64_t>("dim");
+      const int32_t dim = ctx->Attr<int32_t>("dim");
 
       FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
         if (i != dim) {
@@ -119,14 +119,14 @@ REGISTER_USER_OP("dim_scatter_add_like")
     .Input("input")
     .Input("index")
     .Output("output")
-    .Attr<int64_t>("dim")
+    .Attr<int32_t>("dim")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
 
       const Shape& like_shape = like->shape();
-      int64_t dim = ctx->Attr<int64_t>("dim");
+      int32_t dim = ctx->Attr<int32_t>("dim");
 
       const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
       int64_t split_axis = input_sbp.split_parallel().axis();
@@ -168,7 +168,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
       const user_op::TensorDesc& index_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
       int64_t index_num_axes = index_tensor.shape().NumAxes();
-      const int64_t dim = ctx->Attr<int64_t>("dim");
+      const int32_t dim = ctx->Attr<int32_t>("dim");
 
       FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
         if (i != dim) {
@@ -203,7 +203,7 @@ REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardO
                    ctx->FwOp().output_grad("output", 0))  // scatter.input <- grad of gather.out
         .InputBind("like", ctx->FwOp().input("input", 0))
         .Output("output")
-        .Attr("dim", ctx->FwOp().attr<int64_t>("dim"))
+        .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))
         .Build();
   });
 

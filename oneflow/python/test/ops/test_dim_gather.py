@@ -231,7 +231,7 @@ class TestDimGather1n1d(flow.unittest.TestCase):
             (np.float32, flow.float32),
             (np.float64, flow.float64),
         ]
-        arg_dict["index_type"] = [(np.int32, flow.int32)]
+        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
@@ -253,7 +253,7 @@ class TestDimGather1n2d(flow.unittest.TestCase):
             (np.float32, flow.float32),
             (np.float64, flow.float64),
         ]
-        arg_dict["index_type"] = [(np.int32, flow.int32)]
+        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_count"] = [2]
         for arg in GenArgList(arg_dict):

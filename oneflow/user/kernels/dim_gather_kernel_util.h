@@ -37,20 +37,20 @@ template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
   void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
                   DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
+                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor final {
   void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
                   DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim, int64_t elem_cnt,
-                  int64_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
+                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
 };
 
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimGather(DimOpIndexNdHelper<IDX_T> input_nd_helper,
                                 DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim,
-                                int64_t elem_cnt, int64_t dim, const IDX_T* index,
+                                int64_t elem_cnt, int32_t dim, const IDX_T* index,
                                 const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
@@ -77,7 +77,7 @@ struct DeviceAdd {
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimScatterAdd(DimOpIndexNdHelper<IDX_T> input_nd_helper,
                                     DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim,
-                                    int64_t elem_cnt, int64_t dim, const IDX_T* index,
+                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
                                     const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};

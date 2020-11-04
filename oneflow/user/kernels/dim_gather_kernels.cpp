@@ -15,6 +15,8 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_GATHER_KERNELS_H_
 #define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNELS_H_
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 
@@ -41,19 +43,22 @@ class DimGatherKernel final : public user_op::OpKernel {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const int64_t dim = ctx->Attr<int64_t>("dim");
+    const int32_t dim = ctx->Attr<int32_t>("dim");
 
     const IN_T* input = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
-    IDX_T shape_buffer[kDimGatherMaxDimCount] = {0};
     int ndim = input_tensor->shape().NumAxes();
-    ConvertShape2Array(input_tensor->shape(), shape_buffer, ndim);
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, ndim);
-
-    ConvertShape2Array(index_tensor->shape(), shape_buffer, ndim);
-    DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer, ndim);
+    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_buffer(ndim);
+    auto shape2dims = [&shape_buffer, &ndim](const ShapeView& tensor_shape) {
+      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_buffer.begin(),
+                     [](int64_t dim) { return static_cast<IDX_T>(dim); });
+    };
+    shape2dims(input_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer.data(), ndim);
+    shape2dims(index_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer.data(), ndim);
 
     DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->device_ctx(), input_nd_helper, index_nd_helpr,
                                                  ndim, index_tensor->shape().elem_cnt(), dim, index,
@@ -73,7 +78,7 @@ class ScatterDimKernel final : public user_op::OpKernel {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const int64_t dim = ctx->Attr<int64_t>("dim");
+    const int32_t dim = ctx->Attr<int32_t>("dim");
 
     const IN_T* src = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
@@ -82,13 +87,16 @@ class ScatterDimKernel final : public user_op::OpKernel {
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
-    IDX_T shape_buffer[kDimGatherMaxDimCount] = {0};
     int ndim = input_tensor->shape().NumAxes();
-    ConvertShape2Array(input_tensor->shape(), shape_buffer, ndim);
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer, ndim);
-
-    ConvertShape2Array(out_tensor->shape(), shape_buffer, ndim);
-    DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer, ndim);
+    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_buffer(ndim);
+    auto shape2dims = [&shape_buffer, &ndim](const ShapeView& tensor_shape) {
+      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_buffer.begin(),
+                     [](int64_t dim) { return static_cast<IDX_T>(dim); });
+    };
+    shape2dims(input_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer.data(), ndim);
+    shape2dims(out_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer.data(), ndim);
 
     DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
         ctx->device_ctx(), input_nd_helper, output_nd_helpr, ndim, input_tensor->shape().elem_cnt(),
