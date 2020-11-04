@@ -21,7 +21,8 @@ namespace oneflow {
 namespace {
 
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+                             JobBuilder* job_builder, JobPassCtx* ctx,
+                             const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
   user_op::UserOpConfWrapperBuilder sgd_update_op_builder(op.op_name() + "_optimizer");

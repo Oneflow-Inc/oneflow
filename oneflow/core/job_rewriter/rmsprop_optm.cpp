@@ -32,7 +32,8 @@ OperatorConf GenerateRmspropHelperVariableOpConf(const VariableOp& op, const std
 }
 
 void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+                             JobBuilder* job_builder, JobPassCtx* ctx,
+                             const LogicalBlobId& diff_lbi_of_var_out) {
   OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(op, "mean_square", 0.f));
 
   OperatorConf mdupdt_op;
