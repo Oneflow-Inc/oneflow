@@ -48,6 +48,10 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Dict, List, Union, Sequence, Optional
 
 
+META_INFO_FILENAME = "meta"
+DATA_FILENAME = "out"
+
+
 @oneflow_export("train.SimpleCheckPointManager")
 class SimpleCheckPointManager(object):
     r"""`SimpleCheckPointManager` is a simple automatic checkpoint manager.
@@ -113,14 +117,14 @@ class SnapshotManager(object):
             has_out_subfile = False
             for f in os.listdir(file_path):
                 fpath = os.path.join(file_path, f)
-                if f == "out" and os.path.isfile(fpath):
+                if f == DATA_FILENAME and os.path.isfile(fpath):
                     has_out_subfile = True
 
             if not has_out_subfile:
                 continue
 
             assert file not in self.name2path_
-            self.name2path_[file] = os.path.join(file_path, "out")
+            self.name2path_[file] = os.path.join(file_path, DATA_FILENAME)
 
     def get_snapshot_path(self, name):
         try:
@@ -129,18 +133,13 @@ class SnapshotManager(object):
             return None
 
 
-META_INFO_FILENAME = "meta"
-
-
 class FileBackendVariableBlob:
     def __init__(
         self,
-        name: str,
         var_dir: str,
         dtype: Optional[dtype_util.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
-        self.name_ = name
         self.var_dir_ = var_dir
         meta_info_path = os.path.join(self.var_dir_, META_INFO_FILENAME)
         if os.path.exists(meta_info_path):
@@ -182,11 +181,7 @@ class FileBackendVariableBlob:
 
     @property
     def file_path_(self):
-        return os.path.join(self.var_dir_, "out")
-
-    @property
-    def name(self):
-        return self.name_
+        return os.path.join(self.var_dir_, DATA_FILENAME)
 
     @property
     def shape(self):
@@ -205,9 +200,7 @@ class FileBackendVariableBlob:
 
     def numpy(self) -> np.ndarray:
         if not self.has_meta_info_:
-            raise RuntimeError(
-                'The variable "{}" does not have meta info'.format(self.name)
-            )
+            raise RuntimeError("This variable does not have meta info")
         return np.fromfile(
             self.file_path_,
             dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype),
@@ -228,17 +221,27 @@ def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
     return variables
 
 
+def _LoadSingleVariable(path):
+    if not os.path.isdir(path):
+        return None
+    if os.path.isfile(os.path.join(path, DATA_FILENAME)):
+        return FileBackendVariableBlob(path)
+    return None
+
+
 @oneflow_export("load")
 @session_ctx.try_init_default_session
 def Load(path):
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
+    single_var = _LoadSingleVariable(path)
+    if single_var is not None:
+        return single_var
     var_dict = {}
     for f in os.listdir(path):
         var_dir = os.path.join(path, f)
-        if os.path.isdir(var_dir):
-            var_path = os.path.join(var_dir, "out")
-            if os.path.isfile(var_path):
-                var_dict[f] = FileBackendVariableBlob(f, var_dir)
+        var = _LoadSingleVariable(var_dir)
+        if var is not None:
+            var_dict[f] = var
     return var_dict
 
 
@@ -263,7 +266,7 @@ def Save(var_dict, path):
     def IsFileOrNonEmptyDir(path):
         if os.path.isfile(path):
             return True
-        if len(os.listdir(path)) != 0:
+        if os.path.isdir(path) and len(os.listdir(path)) != 0:
             return True
         return False
 
@@ -276,7 +279,7 @@ def Save(var_dict, path):
         meta_info.shape.dim[:] = var.shape
         meta_info.data_type = var.dtype.oneflow_proto_dtype
         var_dir = os.path.join(path, name)
-        param_path = os.path.join(var_dir, "out")
+        param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
         sess = session_ctx.GetDefaultSession()
         var_op_conf = sess.OpConf4InterfaceOpName(name)
@@ -434,7 +437,7 @@ def _FeedValueToVariable(var_name, value_blob):
     elif isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
-                value_blob.name, value_blob.var_dir_, var_blob.dtype, var_blob.shape
+                value_blob.var_dir_, var_blob.dtype, var_blob.shape
             )
         assert var_blob.shape == value_blob.shape, "{} vs {}".format(
             var_blob.shape, value_blob.shape
@@ -541,6 +544,16 @@ def Init():
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
         var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
+        if var_conf.HasField("initialize_with_snapshot"):
+            initialize_with_snapshot_conf = var_conf.initialize_with_snapshot
+            var_dir = os.path.dirname(
+                os.path.join(
+                    initialize_with_snapshot_conf.path,
+                    initialize_with_snapshot_conf.key,
+                )
+            )
+            LoadVariables({op_name: Load(var_dir)})
+            continue
         g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
