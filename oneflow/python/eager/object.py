@@ -54,9 +54,6 @@ class BlobObject(Object):
         self.release_.append(release)
 
     def __del__(self):
-        try:
-            for release in self.release_:
-                release(self)
-            self.release_ = []
-        except:
-            pass
+        for release in self.release_:
+            release(self)
+        self.release_ = []
