@@ -171,21 +171,8 @@ class FileBackendVariableBlob:
             ).itemsize
             assert os.path.getsize(data_path) == np.prod(self.shape).item() * itemsize
 
-    def GetSlicesAsNumpy(self):
-        assert self.shape is not None
-        np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype))
-        with open(self.file_path_, "rb") as f:
-
-            def ReadFromFile(blob, start_nd_idx, stop_nd_idx, length):
-                slice = f.read(length * np_dtype.itemsize)
-                return np.frombuffer(slice, dtype=np_dtype,).reshape(
-                    np.array(stop_nd_idx) - np.array(start_nd_idx)
-                )
-
-            yield from _ForEverySlice(self, ReadFromFile)
-
     @property
-    def file_path_(self):
+    def file_path(self):
         return os.path.join(self.var_dir_, DATA_FILENAME)
 
     @property
@@ -204,7 +191,7 @@ class FileBackendVariableBlob:
         if not self.has_meta_info_:
             raise RuntimeError("This variable does not have meta info")
         return np.fromfile(
-            self.file_path_,
+            self.file_path,
             dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype),
         ).reshape(self.shape)
 
@@ -245,19 +232,40 @@ def Load(path):
     return var_dict
 
 
+def _GetOpNameFromLbn(lbn):
+    return lbn.split("/")[0]
+
+
 def _GetScopeSymbolIdFromEagerBlob(blob):
-    name = blob.logical_blob_name.split("/")[0]
+    name = _GetOpNameFromLbn(blob.logical_blob_name)
     sess = session_ctx.GetDefaultSession()
     op_conf = sess.OpConf4InterfaceOpName(name)
     scope_symbol_id = op_conf.scope_symbol_id
     return scope_symbol_id
 
 
-def _ReadSliceFromEagerBlob(blob):
-    def ReadSlice(blob, start_nd_idx, stop_nd_idx, length):
-        return _LogicalSlice(blob, start_nd_idx, stop_nd_idx)
+def _ReadSliceFromBlob(blob):
+    if isinstance(blob, EagerBlobTrait):
 
-    yield from _ForEverySlice(blob, ReadSlice)
+        def ReadSlice(blob, start_nd_idx, stop_nd_idx, length):
+            return _LogicalSlice(blob, start_nd_idx, stop_nd_idx)
+
+        yield from _ForEverySlice(blob, ReadSlice)
+    elif isinstance(blob, FileBackendVariableBlob):
+        np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
+        with open(blob.file_path, "rb") as f:
+
+            def ReadFromFile(blob, start_nd_idx, stop_nd_idx, length):
+                slice = f.read(length * np_dtype.itemsize)
+                return np.frombuffer(slice, dtype=np_dtype,).reshape(
+                    np.array(stop_nd_idx) - np.array(start_nd_idx)
+                )
+
+            yield from _ForEverySlice(blob, ReadFromFile)
+    else:
+        raise RuntimeError(
+            "Unknown value_blob type: {}".format(type(value_blob).__name__)
+        )
 
 
 @oneflow_export("save")
@@ -284,7 +292,7 @@ def Save(var_dict, path):
         sess = session_ctx.GetDefaultSession()
         var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
-            for _, _, slice in _ReadSliceFromEagerBlob(var):
+            for _, _, slice in _ReadSliceFromBlob(var):
                 f.write(slice.tobytes())
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
@@ -400,37 +408,29 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
 
 
 def _FeedValueToVariable(var_name, value_blob):
+    assert isinstance(
+        value_blob, (EagerBlobTrait, FileBackendVariableBlob)
+    ), "Unknown value_blob type: {}".format(type(value_blob).__name__)
     sess = session_ctx.GetDefaultSession()
     var_op_conf = sess.OpConf4InterfaceOpName(var_name)
     var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
 
-    def CheckLegality(var_blob, value_blob):
-        assert var_blob.shape == value_blob.shape, "{} vs {}".format(
-            var_blob.shape, value_blob.shape
-        )
-
-    if isinstance(value_blob, EagerBlobTrait):
-        CheckLegality(var_blob, value_blob)
-        value_name = value_blob.logical_blob_name.split("/")[0]
-        value_op_conf = sess.OpConf4InterfaceOpName(value_name)
-        for start, stop, slice in _ReadSliceFromEagerBlob(value_blob):
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
-            _LogicalSliceAssign(
-                var_blob, slice_value_blob, start, stop,
-            )
-    elif isinstance(value_blob, FileBackendVariableBlob):
+    if isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
             value_blob = FileBackendVariableBlob(
                 value_blob.var_dir_, var_blob.dtype, var_blob.shape
             )
-        CheckLegality(var_blob, value_blob)
-        for start, stop, slice in value_blob.GetSlicesAsNumpy():
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
-            _LogicalSliceAssign(
-                var_blob, slice_value_blob, start, stop,
-            )
-    else:
-        raise RuntimeError("Unknown value_blob type: " + type(value_blob).__name__)
+    assert var_blob.shape == value_blob.shape, "{} vs {}".format(
+        var_blob.shape, value_blob.shape
+    )
+    assert var_blob.dtype == value_blob.dtype, "{} vs {}".format(
+        var_blob.dtype, value_blob.dtype
+    )
+    for start, stop, slice in _ReadSliceFromBlob(value_blob):
+        slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
+        _LogicalSliceAssign(
+            var_blob, slice_value_blob, start, stop,
+        )
 
 
 @oneflow_export("load_variables")
@@ -446,6 +446,7 @@ def LoadVariables(var_dict, ignore_mismatch=False):
 
 
 def _ForEverySlice(var_blob, f):
+    assert var_blob.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
     SLICE_BYTES = 20 * 1024 * 1024
     np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype))
@@ -506,8 +507,7 @@ def Init():
                 var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
             )
 
-        # we don't care about the return value,
-        # only want to run f on every slice
+        # we just want to run f on every slice without caring about the return value
         for _ in _ForEverySlice(var_blob, GenerateValueAndAssign):
             pass
     oneflow_api.eager.Sync()
