@@ -70,6 +70,7 @@ original_exit = sys.exit
 
 
 def custom_exit(returncode):
+    global original_exit
     if returncode != 0:
         oneflow_api.MasterSendAbort()
     original_exit(returncode)
