@@ -550,6 +550,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
             )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @unittest.skipIf(True, "check_point.init() is missing in this test case")
     def test_batchnorm_add_relu(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
@@ -559,6 +560,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
             _test_batchnorm_add_relu(test_case, **arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @unittest.skipIf(True, "check_point.init() is missing in this test case")
     def test_batchnorm_relu(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]

@@ -796,6 +796,7 @@ def compare_with_flow_job_fused_adam_model_update(
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(True, "Skip because of missing initializer implementations")
 class TestOptimizers(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()

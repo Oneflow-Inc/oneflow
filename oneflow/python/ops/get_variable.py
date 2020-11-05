@@ -340,7 +340,7 @@ def _CreateVariableBlob(op_conf):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-def _CreateEagerVariableBlob(op_attribute):
+def CreateEagerVariableBlob(op_attribute, job_name=None):
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):
@@ -355,6 +355,6 @@ def _CreateEagerVariableBlob(op_attribute):
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_attribute.op_conf.name
     lbi.blob_name = op_attribute.op_conf.variable_conf.out
-    return remote_blob_util.EagerLogicalBlob(
-        lbi, blob_object=bn_in_op2blob_object["out"]
+    return remote_blob_util.EagerConsistentBlob(
+        lbi, blob_object=bn_in_op2blob_object["out"], job_name=job_name
     )

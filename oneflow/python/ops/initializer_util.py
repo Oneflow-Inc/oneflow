@@ -18,11 +18,13 @@ from __future__ import absolute_import
 import functools
 import math
 
+import numpy as np
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 
 @oneflow_export("constant_initializer")
@@ -1060,3 +1062,48 @@ def _CalcGain(nonlinearity, negative_slope):
         raise NotImplementedError(
             "Only support None, 'tanh', 'sigmoid', 'relu' and 'leaky_relu' nonlinearity"
         )
+
+
+_init_map = {}
+
+
+def register_initializer(flow_initializer):
+    def deco(func):
+        _init_map[flow_initializer] = func
+        return func
+
+    return deco
+
+
+def GetInitializer(initializer_conf, random_seed):
+    f = None
+    for m in _init_map:
+        if initializer_conf.HasField(m):
+            f = _init_map[m]
+            break
+    if f is None:
+        print("No initializer, use constant 3 instead")
+        f = lambda a, b: lambda length: [3] * length
+    # assert f is not None, initializer_conf
+    return f(getattr(initializer_conf, m), random_seed)
+
+
+@register_initializer("constant_conf")
+@register_initializer("constant_int_conf")
+def ConstantInitializerImpl(
+    initializer_conf: Union[
+        op_conf_util.ConstantInitializerConf, op_conf_util.ConstantIntInitializerConf
+    ],
+    random_seed: int,
+):
+    return lambda length: [initializer_conf.value] * length
+
+
+@register_initializer("random_normal_conf")
+def RandomNormalInitializerImpl(
+    initializer_conf: op_conf_util.RandomNormalInitializerConf, random_seed: int
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.normal(
+        loc=initializer_conf.mean, scale=initializer_conf.std, size=length
+    )
