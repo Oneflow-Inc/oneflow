@@ -353,9 +353,6 @@ def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype)
             trainable=False,
             need_root_path=False,
         )
-        device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
-        op_conf.device_tag = device_tag
-        bn_in_op2blob_object = {}
         op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
         bn_in_op2blob_object = {}
 
