@@ -184,9 +184,9 @@ def _TestAssignmentBetweenMemory(test_case, dtype):
 
     model = get_checkpoint_ready_model(get_simple_model, dtype)
     all_vars = flow.get_all_variables()
-    flow.load_variables({'x': all_vars['z']})
+    flow.load_variables({"x": all_vars["z"]})
     flow_res = model()
-    np_res = all_vars['z'].numpy() * 2 + all_vars['y'].numpy()
+    np_res = all_vars["z"].numpy() * 2 + all_vars["y"].numpy()
     test_case.assertTrue(np.allclose(flow_res, np_res))
 
 

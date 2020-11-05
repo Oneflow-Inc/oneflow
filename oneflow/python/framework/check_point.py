@@ -47,6 +47,7 @@ from typing import Dict, List, Union, Sequence, Optional
 
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"
+FAKE_JOB_NAME = "system_checkpoint"
 
 
 @oneflow_export("train.SimpleCheckPointManager")
@@ -165,9 +166,10 @@ class FileBackendVariableBlob:
             else:
                 pass
         if self.has_meta_info_:
-            itemsize = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype_)).itemsize
+            itemsize = np.dtype(
+                dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype_)
+            ).itemsize
             assert os.path.getsize(data_path) == np.prod(self.shape).item() * itemsize
-
 
     def GetSlicesAsNumpy(self):
         assert self.shape is not None
@@ -306,8 +308,8 @@ def _LogicalSlice(input_blob, start, stop):
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
             op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
             op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
-            op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1]*len(start)
-            bn_in_op2blob_object = {'x_0': input_blob_object}
+            op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
+            bn_in_op2blob_object = {"x_0": input_blob_object}
             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(input_blob)
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
@@ -328,7 +330,7 @@ def _LogicalSlice(input_blob, start, stop):
     blob_object = async_util.Await(1, AsyncSlice)[0]
 
     blob = remote_blob_util.EagerConsistentBlob(
-        lbi, blob_object=blob_object, job_name="system_checkpoint"
+        lbi, blob_object=blob_object, job_name=FAKE_JOB_NAME
     )
     return blob.numpy()
 
@@ -352,22 +354,11 @@ def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype)
         current_parallel_desc_sym = oneflow.current_scope().device_parallel_desc_symbol
         device_tag = current_parallel_desc_sym.device_tag
         op_conf.device_tag = device_tag
-        bn_in_op2blob_object = {}
-        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
-
-        def BuildInstruction(builder):
-            parallel_conf = current_parallel_desc_sym.parallel_conf
-            builder.StatelessCall(
-                op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
-            )
-
-        vm_util.LogicalRun(BuildInstruction)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = op_attribute.op_conf.name
-        lbi.blob_name = op_attribute.op_conf.variable_conf.out
-        var_blob = remote_blob_util.EagerConsistentBlob(
-            lbi, job_name="system_checkpoint", blob_object=bn_in_op2blob_object["out"]
+        op_attribute = op_infer_util.Infer(op_conf, {})
+        var_blob = get_variable.CreateEagerVariableBlob(
+            op_attribute, job_name=FAKE_JOB_NAME
         )
+
         interface_op_read_and_write.FeedValueToInterfaceBlobObject(
             var_blob.blob_object, np_array
         )
@@ -392,8 +383,8 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
         op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
         op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
         op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
-        op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1]*len(start)
-        bn_in_op2blob_object = {'ref_0': ref_blob_object, 'value_0': value_blob_object}
+        op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
+        bn_in_op2blob_object = {"ref_0": ref_blob_object, "value_0": value_blob_object}
         scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(ref_blob)
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
@@ -412,10 +403,12 @@ def _FeedValueToVariable(var_name, value_blob):
     sess = session_ctx.GetDefaultSession()
     var_op_conf = sess.OpConf4InterfaceOpName(var_name)
     var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
+
     def CheckLegality(var_blob, value_blob):
         assert var_blob.shape == value_blob.shape, "{} vs {}".format(
             var_blob.shape, value_blob.shape
         )
+
     if isinstance(value_blob, EagerBlobTrait):
         CheckLegality(var_blob, value_blob)
         value_name = value_blob.logical_blob_name.split("/")[0]
@@ -496,9 +489,7 @@ def Init():
             )
             LoadVariables({op_name: Load(var_dir)})
             continue
-        g = initializer_util.GetInitializer(
-            var_conf.initializer, var_conf.random_seed
-        )
+        g = initializer_util.GetInitializer(var_conf.initializer, var_conf.random_seed)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
             np_dtype = np.dtype(
