@@ -19,54 +19,44 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("generate_quantize_scale_for_weight")
-    .Input("weight")
-    .Output("scale")
-    .Output("zero_point")
+REGISTER_USER_OP("fake_quantization")
+    .Input("in")
+    .Input("scale")
+    .Input("zero_point")
+    .Output("out")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
     .Attr<std::string>("quantizer_type", "symmetric")
-    // NOTE(Liang Depeng): "true" or "false": per-layer or per-channel quantization
-    .Attr<bool>("per_layer_quantization", true)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);
-      // NOTE(Liang Depeng): support weights for 1/2D convolution and fully-connected layers.
-      //                     And assume weight shape is (Cout, Cin, K, K) or (Cout, Cin) for 2D
-      //                     convolution or fully-connected.
-      CHECK_GE_OR_RETURN(weight_shape->NumAxes(), 2);
-      CHECK_LE_OR_RETURN(weight_shape->NumAxes(), 4);
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
+      Shape* zero_point_shape = ctx->Shape4ArgNameAndIndex("zero_point", 0);
 
-      if (ctx->Attr<bool>("per_layer_quantization") == true) {
-        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
-        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
-      } else {
-        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({weight_shape->At(0)});
-        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({weight_shape->At(0)});
+      std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
+
+      // NOTE(Liang Depeng): scale_shape->elem_cnt() > 1 means per-channel quantization for weights.
+      if (scale_shape->elem_cnt() > 1) {
+        CHECK_OR_RETURN(scale_shape->elem_cnt() == in_shape->At(0));
+        CHECK_OR_RETURN(zero_point_shape->elem_cnt() == in_shape->At(0));
       }
 
-      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
-      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* weight = GetInputArgModifierFn("weight", 0);
-      CHECK(weight != nullptr);
-      weight->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto ClearBatchAxis = [ctx](const std::string& name) {
-        if (ctx->user_op_conf().has_output(name, 0)) {
-          ctx->BatchAxis4ArgNameAndIndex(name, 0)->clear_value();
-        }
-      };
-      ClearBatchAxis("scale");
-      ClearBatchAxis("zero_point");
-      return Maybe<void>::Ok();
+      user_op::InputArgModifier* scale = GetInputArgModifierFn("scale", 0);
+      CHECK(scale != nullptr);
+      scale->set_requires_grad(false);
+
+      user_op::InputArgModifier* zero_point = GetInputArgModifierFn("zero_point", 0);
+      CHECK(zero_point != nullptr);
+      zero_point->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO(Liang Depeng): refer to reduce_max op
+      // TODO(Liang Depeng): refer to eltwise op
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
@@ -78,6 +68,20 @@ REGISTER_USER_OP("generate_quantize_scale_for_weight")
       std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");
       CHECK_OR_RETURN(quantizer_type == "symmetric" || quantizer_type == "affine");
       return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("fake_quantization")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper identity_op =
+            builder.Op("identity")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(identity_op.output("out", 0), "in", 0);
+        AddOp(identity_op);
+      }
     });
 
 }  // namespace
