@@ -27,16 +27,12 @@ import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.framework.job_instance as job_instance
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
@@ -141,6 +137,8 @@ class FileBackendVariableBlob:
         dtype: Optional[dtype_util.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
+        data_path = os.path.join(var_dir, DATA_FILENAME)
+        assert os.path.isfile(data_path)
         self.var_dir_ = var_dir
         meta_info_path = os.path.join(self.var_dir_, META_INFO_FILENAME)
         if os.path.exists(meta_info_path):
@@ -166,6 +164,10 @@ class FileBackendVariableBlob:
                 raise RuntimeError("both or neither of shape and dtype should be None")
             else:
                 pass
+        if self.has_meta_info_:
+            itemsize = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype_)).itemsize
+            assert os.path.getsize(data_path) == np.prod(self.shape).item() * itemsize
+
 
     def GetSlicesAsNumpy(self):
         assert self.shape is not None
@@ -302,17 +304,10 @@ def _LogicalSlice(input_blob, start, stop):
             input_blob_object = input_blob.blob_object
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-            attribute = attr_value_pb.AttrValue()
-            attribute.at_list_int64.val[:] = start
-            op_conf.user_conf.attr["start"].CopyFrom(attribute)
-            attribute = attr_value_pb.AttrValue()
-            attribute.at_list_int64.val[:] = stop
-            op_conf.user_conf.attr["stop"].CopyFrom(attribute)
-            attribute = attr_value_pb.AttrValue()
-            step = [1] * len(start)
-            attribute.at_list_int64.val[:] = step
-            op_conf.user_conf.attr["step"].CopyFrom(attribute)
-            bn_in_op2blob_object = dict(x_0=input_blob_object)
+            op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
+            op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
+            op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1]*len(start)
+            bn_in_op2blob_object = {'x_0': input_blob_object}
             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(input_blob)
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
@@ -339,10 +334,10 @@ def _LogicalSlice(input_blob, start, stop):
 
 
 def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype):
-    # Note: dtype argument cannot be replaced with 
-    # convert_numpy_dtype_to_oneflow_dtype(np_array.dtype), 
-    # because np.int8 == np.char and 
-    # numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8)) 
+    # Note: dtype argument cannot be replaced with
+    # convert_numpy_dtype_to_oneflow_dtype(np_array.dtype),
+    # because np.int8 == np.char and
+    # numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8))
     # may be flow.char
     with oneflow.scope.placement("cpu", "0:0"):
         op_name = id_util.UniqueStr("system_checkpoint")
@@ -354,13 +349,14 @@ def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype)
             trainable=False,
             need_root_path=False,
         )
-        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
+        current_parallel_desc_sym = oneflow.current_scope().device_parallel_desc_symbol
+        device_tag = current_parallel_desc_sym.device_tag
+        op_conf.device_tag = device_tag
         bn_in_op2blob_object = {}
+        op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
 
         def BuildInstruction(builder):
-            parallel_conf = (
-                oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
-            )
+            parallel_conf = current_parallel_desc_sym.parallel_conf
             builder.StatelessCall(
                 op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
             )
@@ -394,17 +390,10 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
         op_conf.user_conf.input["ref"].s.append("{}/ref_0".format(op_name))
         parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
         op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-        attribute = attr_value_pb.AttrValue()
-        attribute.at_list_int64.val[:] = start
-        op_conf.user_conf.attr["start"].CopyFrom(attribute)
-        attribute = attr_value_pb.AttrValue()
-        attribute.at_list_int64.val[:] = stop
-        op_conf.user_conf.attr["stop"].CopyFrom(attribute)
-        attribute = attr_value_pb.AttrValue()
-        step = [1] * len(start)
-        attribute.at_list_int64.val[:] = step
-        op_conf.user_conf.attr["step"].CopyFrom(attribute)
-        bn_in_op2blob_object = dict(ref_0=ref_blob_object, value_0=value_blob_object)
+        op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
+        op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
+        op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1]*len(start)
+        bn_in_op2blob_object = {'ref_0': ref_blob_object, 'value_0': value_blob_object}
         scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(ref_blob)
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
@@ -423,11 +412,16 @@ def _FeedValueToVariable(var_name, value_blob):
     sess = session_ctx.GetDefaultSession()
     var_op_conf = sess.OpConf4InterfaceOpName(var_name)
     var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
+    def CheckLegality(var_blob, value_blob):
+        assert var_blob.shape == value_blob.shape, "{} vs {}".format(
+            var_blob.shape, value_blob.shape
+        )
     if isinstance(value_blob, EagerBlobTrait):
+        CheckLegality(var_blob, value_blob)
         value_name = value_blob.logical_blob_name.split("/")[0]
         value_op_conf = sess.OpConf4InterfaceOpName(value_name)
         for start, stop, slice in _ReadSliceFromEagerBlob(value_blob):
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dype)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
@@ -436,11 +430,9 @@ def _FeedValueToVariable(var_name, value_blob):
             value_blob = FileBackendVariableBlob(
                 value_blob.var_dir_, var_blob.dtype, var_blob.shape
             )
-        assert var_blob.shape == value_blob.shape, "{} vs {}".format(
-            var_blob.shape, value_blob.shape
-        )
+        CheckLegality(var_blob, value_blob)
         for start, stop, slice in value_blob.GetSlicesAsNumpy():
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dype)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
@@ -504,7 +496,7 @@ def Init():
             )
             LoadVariables({op_name: Load(var_dir)})
             continue
-        g = initializer_util.GetInitializerGenerator(
+        g = initializer_util.GetInitializer(
             var_conf.initializer, var_conf.random_seed
         )
 
@@ -512,9 +504,8 @@ def Init():
             np_dtype = np.dtype(
                 dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
             )
-            vals = g(length)
             vals = (
-                np.array(vals)
+                np.array(g(length))
                 .astype(np_dtype)
                 .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
             )

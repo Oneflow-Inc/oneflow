@@ -1075,7 +1075,7 @@ def register_initializer(flow_initializer):
     return deco
 
 
-def GetInitializerGenerator(initializer_conf, random_seed):
+def GetInitializer(initializer_conf, random_seed):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
