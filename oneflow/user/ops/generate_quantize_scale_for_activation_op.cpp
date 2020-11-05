@@ -77,7 +77,7 @@ REGISTER_USER_OP("generate_quantize_scale_for_activation")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       int32_t quantize_to_bit = op_conf.attr<int32_t>("quantize_to_bit");
-      CHECK_GT_OR_RETURN(quantize_to_bit, 0);
+      CHECK_GT_OR_RETURN(quantize_to_bit, 1);
       CHECK_LE_OR_RETURN(quantize_to_bit, 8);
 
       std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");

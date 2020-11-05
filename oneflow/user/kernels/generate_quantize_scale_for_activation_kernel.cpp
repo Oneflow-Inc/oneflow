@@ -20,9 +20,9 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void gen_quant_scale_per_layer_symmetric(const int32_t quantize_to_bit, const int64_t num_elements,
-                                         const float momentum, const T *activation, T *moving_max,
-                                         T *moving_min, T *scale, T *zero_point) {
+void GenQuantScalePerLayerSymmetric(const int32_t quantize_to_bit, const int64_t num_elements,
+                                    const float momentum, const T *activation, T *moving_max,
+                                    T *moving_min, T *scale, T *zero_point) {
   T activation_max = *std::max_element(activation, activation + num_elements);
   T activation_min = *std::min_element(activation, activation + num_elements);
 
@@ -44,9 +44,9 @@ void gen_quant_scale_per_layer_symmetric(const int32_t quantize_to_bit, const in
 }
 
 template<typename T>
-void gen_quant_scale_per_layer_affine(const int32_t quantize_to_bit, const int64_t num_elements,
-                                      const float momentum, const T *activation, T *moving_max,
-                                      T *moving_min, T *scale, T *zero_point) {
+void GenQuantScalePerLayerAffine(const int32_t quantize_to_bit, const int64_t num_elements,
+                                 const float momentum, const T *activation, T *moving_max,
+                                 T *moving_min, T *scale, T *zero_point) {
   T activation_max = *std::max_element(activation, activation + num_elements);
   T activation_min = *std::min_element(activation, activation + num_elements);
 
@@ -94,12 +94,11 @@ class CpuGenerateQuantizeScaleForActivationKernel final : public user_op::OpKern
     int64_t num_elements = activation->shape().elem_cnt();
 
     if (quantizer_type == "symmetric") {
-      gen_quant_scale_per_layer_symmetric(quantize_to_bit, num_elements, momentum, activation_ptr,
-                                          moving_max_ptr, moving_min_ptr, scale_ptr,
-                                          zero_point_ptr);
+      GenQuantScalePerLayerSymmetric(quantize_to_bit, num_elements, momentum, activation_ptr,
+                                     moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
     } else {  // quantizer_type == "affine"
-      gen_quant_scale_per_layer_affine(quantize_to_bit, num_elements, momentum, activation_ptr,
-                                       moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
+      GenQuantScalePerLayerAffine(quantize_to_bit, num_elements, momentum, activation_ptr,
+                                  moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
     }
   }
 
