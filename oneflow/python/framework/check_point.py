@@ -337,15 +337,15 @@ def _LogicalSlice(input_blob, start, stop):
     return blob.numpy()
 
 
-def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray):
+def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype):
+    # Note: dtype argument cannot be replaced with convert_numpy_dtype_to_oneflow_dtype(np_array.dtype), because np.int8 == np.char and convert_numpy_dtype_to_oneflow_dtype(convert_oneflow_dtype_to_numpy_dtype(flow.int8)) may be flow.char
     with oneflow.scope.placement("cpu", "0:0"):
-        flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(np_array.dtype)
         op_name = id_util.UniqueStr("system_checkpoint")
         op_conf = get_variable.GenerateVariableOpConf(
             name=op_name,
             shape=np_array.shape,
-            dtype=flow_dtype,
-            initializer=initializer_util.zeros_initializer(dtype=flow_dtype),
+            dtype=dtype,
+            initializer=initializer_util.zeros_initializer(dtype=dtype),
             trainable=False,
             need_root_path=False,
         )
@@ -425,7 +425,7 @@ def _FeedValueToVariable(var_name, value_blob):
         value_name = value_blob.logical_blob_name.split("/")[0]
         value_op_conf = sess.OpConf4InterfaceOpName(value_name)
         for start, stop, slice in _ReadSliceFromEagerBlob(value_blob):
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dype)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
@@ -438,7 +438,7 @@ def _FeedValueToVariable(var_name, value_blob):
             var_blob.shape, value_blob.shape
         )
         for start, stop, slice in value_blob.GetSlicesAsNumpy():
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dype)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start, stop,
             )
@@ -519,7 +519,7 @@ def Init():
                 .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
             )
 
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals)
+            slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
             _LogicalSliceAssign(
                 var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
             )
