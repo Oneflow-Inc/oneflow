@@ -338,7 +338,11 @@ def _LogicalSlice(input_blob, start, stop):
 
 
 def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype):
-    # Note: dtype argument cannot be replaced with convert_numpy_dtype_to_oneflow_dtype(np_array.dtype), because np.int8 == np.char and convert_numpy_dtype_to_oneflow_dtype(convert_oneflow_dtype_to_numpy_dtype(flow.int8)) may be flow.char
+    # Note: dtype argument cannot be replaced with 
+    # convert_numpy_dtype_to_oneflow_dtype(np_array.dtype), 
+    # because np.int8 == np.char and 
+    # numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8)) 
+    # may be flow.char
     with oneflow.scope.placement("cpu", "0:0"):
         op_name = id_util.UniqueStr("system_checkpoint")
         op_conf = get_variable.GenerateVariableOpConf(
@@ -475,9 +479,7 @@ def _ForEverySlice(var_blob, f):
     while start_idx < size:
         remainder = var_blob.shape[axis]
         while remainder > 0:
-            unit_num = (
-                max_unit_num if remainder >= max_unit_num else remainder
-            )
+            unit_num = max_unit_num if remainder >= max_unit_num else remainder
             length = unit_num * unit_size
             remainder -= unit_num
             stop_idx = start_idx + length
