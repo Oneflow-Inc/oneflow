@@ -21,6 +21,7 @@ import numpy as np
 from google.protobuf import text_format
 
 import oneflow
+import oneflow_api
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
@@ -456,7 +457,7 @@ def LoadVariables(var_dict, ignore_mismatch=False):
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
-    vm_util.Sync()
+    oneflow_api.eager.Sync()
 
 
 def _ForEverySlice(var_blob, f):
@@ -527,4 +528,4 @@ def Init():
         # only want to run f on every slice
         for _ in _ForEverySlice(var_blob, GenerateValueAndAssign):
             pass
-    vm_util.Sync()
+    oneflow_api.eager.Sync()
