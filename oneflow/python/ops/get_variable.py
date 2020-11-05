@@ -202,7 +202,7 @@ def get_eager_variable(
         )
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
-            var_blob = _CreateEagerVariableBlob(op_attribute)
+            var_blob = CreateEagerVariableBlob(op_attribute)
             op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
 
         assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
