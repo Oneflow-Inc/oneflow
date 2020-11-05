@@ -259,14 +259,6 @@ class LazyMirroredBlob(MirroredBlob):
 
 
 class EagerBlobTrait(object):
-    def _NumpyFriendlyToRepr(self):
-        return self.numpy()
-
-    def __repr__(self):
-        return "({}, shape={}, dtype={})".format(
-            self._NumpyFriendlyToRepr(), self.shape, self.dtype
-        )
-
     def numpy_size(self):
         return self.blob_object.parallel_desc_symbol.parallel_num
 

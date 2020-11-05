@@ -38,7 +38,7 @@ import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
-import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
+import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.python.framework.remote_blob import EagerBlobTrait
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
@@ -296,9 +296,10 @@ class FileBackendVariableBlob:
                 self.shape_ = shape
                 self.dtype_ = dtype
                 self.has_meta_info_ = True
-            # TODO:
             elif shape is not None or dtype is not None:
                 raise RuntimeError("both or neither of shape and dtype should be None")
+            else:
+                pass
 
     def GetSlicesAsNumpy(self):
         assert self.shape is not None
@@ -316,17 +317,6 @@ class FileBackendVariableBlob:
     @property
     def file_path_(self):
         return os.path.join(self.var_dir_, "out")
-
-    def _NumpyFriendlyToRepr(self):
-        return self.numpy()
-
-    def __repr__(self):
-        if self.has_meta_info_:
-            return '({}, name="{}", shape={}, dtype={})'.format(
-                self._NumpyFriendlyToRepr(), self.name, self.shape, self.dtype
-            )
-        else:
-            return '(variable without meta info, name="{}")'.format(self.name)
 
     @property
     def name(self):
@@ -348,8 +338,6 @@ class FileBackendVariableBlob:
         return False
 
     def numpy(self) -> np.ndarray:
-        if self._IsTooLarge():
-            raise RuntimeError('Blob "{}" is too large'.format(self.name))
         if not self.has_meta_info_:
             raise RuntimeError(
                 'The variable "{}" does not have meta info'.format(self.name)
@@ -362,7 +350,7 @@ class FileBackendVariableBlob:
 
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
-def GetAllVariables() -> Dict[str, FileBackendVariableBlob]:
+def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
     variables = {}
@@ -428,6 +416,7 @@ def _LogicalSlice(input_blob, start, stop):
     def AsyncSlice(Yield):
         def build(builder):
             op_conf = op_conf_pb.OperatorConf()
+            # device_tag doesn't matter for logical_slice op
             device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
             op_conf.device_tag = device_tag
             op_conf.name = op_name
@@ -437,13 +426,13 @@ def _LogicalSlice(input_blob, start, stop):
             input_blob_object = input_blob.blob_object
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-            attribute = user_op_attr_util.UserOpAttrVal()
+            attribute = attr_value_pb.AttrValue()
             attribute.at_list_int64.val[:] = start
             op_conf.user_conf.attr["start"].CopyFrom(attribute)
-            attribute = user_op_attr_util.UserOpAttrVal()
+            attribute = attr_value_pb.AttrValue()
             attribute.at_list_int64.val[:] = stop
             op_conf.user_conf.attr["stop"].CopyFrom(attribute)
-            attribute = user_op_attr_util.UserOpAttrVal()
+            attribute = attr_value_pb.AttrValue()
             step = [1] * len(start)
             attribute.at_list_int64.val[:] = step
             op_conf.user_conf.attr["step"].CopyFrom(attribute)
@@ -522,7 +511,7 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
 
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
-        # TODO:
+        # device_tag doesn't matter for logical_slice_assign op
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
         op_name = id_util.UniqueStr("system_checkpoint")
@@ -532,13 +521,13 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
         op_conf.user_conf.input["ref"].s.append("{}/ref_0".format(op_name))
         parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
         op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         attribute.at_list_int64.val[:] = start
         op_conf.user_conf.attr["start"].CopyFrom(attribute)
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         attribute.at_list_int64.val[:] = stop
         op_conf.user_conf.attr["stop"].CopyFrom(attribute)
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         step = [1] * len(start)
         attribute.at_list_int64.val[:] = step
         op_conf.user_conf.attr["step"].CopyFrom(attribute)
@@ -604,18 +593,14 @@ def _ForEverySlice(var_blob, f):
     np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype))
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
-    size = np.prod(var_blob.shape).item()
-    print("total: ")
-    print(size / SLICE_LEN)
+    size = np.prod(var_blob.shape).astype(np.int).item()
     cnt = 1
     for axis in reversed(range(len(var_blob.shape))):
         cnt *= var_blob.shape[axis]
         if cnt > SLICE_LEN:
             break
-    small_size = np.prod(var_blob.shape[axis + 1 :]).item()
+    small_size = np.prod(var_blob.shape[axis + 1 :]).astype(np.int).item()
     max_unit_len_on_axis = SLICE_LEN // small_size
-    print(small_size)
-    print(max_unit_len_on_axis)
     while start_idx < size:
         remainder = var_blob.shape[axis]
         while remainder > 0:
@@ -645,14 +630,14 @@ def register_initializer(flow_initializer):
     return deco
 
 
-def _GetInitializerGenerator(initializer_conf, random_seed):
+def _GetInitializerGenerator(initializer_conf, random_seed, var_blob_shape):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
             f = _init_map[m]
             break
     assert f is not None, initializer_conf
-    return f(getattr(initializer_conf, m), random_seed)
+    return f(getattr(initializer_conf, m), random_seed, var_blob_shape)
 
 
 @register_initializer("constant_conf")
@@ -688,23 +673,59 @@ def random_uniform_initializer(
         min = initializer_conf.min, max = initializer_conf.max, size = length
     )
 
-def RngTruncatedNormal(truncated_mean, truncated_std, truncated_size, truncated_random_seed):
-    truncated_value = 2 * truncated_std
-    rng = np.random.default_rng(truncated_random_seed)
-    generator = lambda truncated_mean, truncated_std, truncated_size:rng.normal(truncated_mean, truncated_std, truncated_size)
-    generator_data = []
-    generator_data = generator(truncated_mean, truncated_std, truncated_size)
-    res = []
-    res = filter(lambda value: abs(value - truncated_mean) < truncated_value, generator_data)
-    return res
+def RngTruncatedNormal(mean, std, size, random_seed):
+    truncated_value = 2 * std
+    rng = np.random.default_rng(random_seed)
+    data = []
+    while len(data) < length:
+        data.extend(filter(lambda value: abs(value - mean) < truncated_value, data), rng.normal(mean, std, size = length - len(data)) )
+    return data
     
 @register_initializer("truncated_normal_conf")
 def truncated_normal_initializer(
     initializer_conf:op_conf_pb.TruncatedNormalInitializerConf, random_seed: int,):
-    # rng = np.random.default_rng(random_seed)
     return lambda length, random_seed:RngTruncatedNormal(
         initializer_conf.mean, initializer_conf.std, length, random_seed,
     )
+import cmath
+def GenInitialFan(initializer_conf, var_blob_shape):
+    variance_norm = initializer_conf.variance_norm
+    data_format = initializer_conf.data_format
+    kFan_in = op_conf_pb.kFanIn
+    kFan_out = op_conf_pb.kFanOut
+    k_average = op_conf_pb.kAverage
+    fan = 0
+    fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
+    fan_out = var_blob_shape[0]
+    if data_format == "channel_first":
+        fan_out = np.prod(var_blob_shape[2:]).astype(np.int).item()
+    else data_format == "channel_last":
+        fan_out = np.prod(var_blob_shape[1:-1]).astype(np.int).item()
+
+    if variance_norm == k_average:
+        fan = (fan_in + fan_out) / 2
+    elif variance_norm == kFan_in:
+        fan = fan_in
+    elif variance_norm == kFan_out:
+        fan = fan_out
+    else:
+        print("UNIMPLEMENTED")
+    return fan
+
+
+   
+
+
+@register_initializer("xavier_conf")
+def xavier_initializer(initializer_conf:op_conf_pb.XavierInitializerConf, random_seed:int, var_blob_shape):
+    scale = cmath.sqrt(3 / GenInitialFan(initializer_conf, var_blob_shape))
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.uniform(
+        min = -scale, max = scale, size = length,
+        )
+
+
+
 
 def Init():
     sess = session_ctx.GetDefaultSession()
@@ -715,7 +736,8 @@ def Init():
             dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
         )
 
-        g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed)
+        # TODO:
+        g = _GetInitializerGenerator(var_conf.initializer, var_conf.random_seed, var_blob.shape)
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
             vals = g(length)

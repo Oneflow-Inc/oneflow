@@ -27,15 +27,15 @@ namespace user_op {
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
   CHECK(op_conf_.has_user_conf());
   for (const auto& kv : op_conf_.user_conf().attr()) {
-    UserOpAttrVal::ValueCase value_case = kv.second.value_case();
+    AttrValue::ValueCase value_case = kv.second.value_case();
     switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                              \
-  /* UserOpAttrVal::ValueCase has the same order and naming convention as UserOpAttrType */ \
-  case (static_cast<UserOpAttrVal::ValueCase>(attr_type)):                                  \
-    CHECK(attrs_                                                                            \
-              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(                  \
-                                     AttrValAccessor<cpp_type>::Attr(kv.second)))           \
-              .second);                                                                     \
+#define CASE_ENTRY(field, cpp_type, attr_type)                                      \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */   \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                              \
+    CHECK(attrs_                                                                    \
+              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(          \
+                                     AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                             \
     break;
       OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
 #undef CASE_ENTRY
@@ -98,15 +98,15 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
     } else {                                                                                       \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
-                 << " with UserOpAttrType: " << static_cast<int32_t>(attr_type);                   \
+                 << " with AttrType: " << static_cast<int32_t>(attr_type);                         \
     }                                                                                              \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \
-    UserOpAttrVal attr_val;                                                                        \
-    AttrValAccessor<cpp_type>::Attr(val, &attr_val);                                               \
+    AttrValue attr_val;                                                                            \
+    AttrValueAccessor<cpp_type>::Attr(val, &attr_val);                                             \
     attr_.emplace(attr_name, attr_val);                                                            \
     return *this;                                                                                  \
   }
@@ -323,7 +323,7 @@ Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorCo
         << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
         << " attr_name: " << attr.name()
         << " has different attr type in OpDef and OpConf, it should be with type: "
-        << UserOpAttrType_Name(attr.type());
+        << AttrType_Name(attr.type());
   }
   return Maybe<void>::Ok();
 }
@@ -344,8 +344,7 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
   return Maybe<void>::Ok();
 }
 
-Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
-                                       const std::string& attr_name) {
+Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name) {
   const user_op::OpRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_OR_RETURN(val) << " Cannot find op " << op_type_name;
