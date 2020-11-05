@@ -178,6 +178,18 @@ def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
+def _TestAssignmentBetweenMemory(test_case, dtype):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+
+    model = get_checkpoint_ready_model(get_simple_model, dtype)
+    all_vars = flow.get_all_variables()
+    flow.load_variables({'x': all_vars['z']})
+    flow_res = model()
+    np_res = all_vars['z'].numpy() * 2 + all_vars['y'].numpy()
+    test_case.assertTrue(np.allclose(flow_res, np_res))
+
+
 class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_save_correctness_1node_legacy_api(test_case):
@@ -228,6 +240,10 @@ class TestCheckpoint(flow.unittest.TestCase):
     )
     def test_load_correctness_2node(test_case):
         _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_assignment_between_memory(test_case):
+        _TestAssignmentBetweenMemory(test_case, flow.float)
 
     @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(
