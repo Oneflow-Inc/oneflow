@@ -330,7 +330,7 @@ def api_legacy_model_io_enabled():
 
 
 @oneflow_export("config.enable_legacy_model_io")
-def api_enable_legacy_model_io(val):
+def api_enable_legacy_model_io(val: bool = True):
     r"""Whether or not use legacy model io.
 
     Args:

@@ -48,6 +48,7 @@ from typing import Dict, List, Union, Sequence, Optional
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"
 FAKE_JOB_NAME = "system_checkpoint"
+OP_PREFIX = "system_checkpoint"
 
 
 @oneflow_export("train.SimpleCheckPointManager")
@@ -299,7 +300,7 @@ def Save(var_dict, path):
 
 
 def _LogicalSlice(input_blob, start, stop):
-    op_name = id_util.UniqueStr("system_checkpoint")
+    op_name = id_util.UniqueStr(OP_PREFIX)
 
     def AsyncSlice(Yield):
         def build(builder):
@@ -350,7 +351,7 @@ def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype)
     # numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8))
     # may be flow.char
     with oneflow.scope.placement("cpu", "0:0"):
-        op_name = id_util.UniqueStr("system_checkpoint")
+        op_name = id_util.UniqueStr(OP_PREFIX)
         op_conf = get_variable.GenerateVariableOpConf(
             name=op_name,
             shape=np_array.shape,
@@ -382,7 +383,7 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
         # device_tag doesn't matter for logical_slice_assign op
         device_tag = oneflow.current_scope().device_parallel_desc_symbol.device_tag
         op_conf.device_tag = device_tag
-        op_name = id_util.UniqueStr("system_checkpoint")
+        op_name = id_util.UniqueStr(OP_PREFIX)
         op_conf.name = op_name
         op_conf.user_conf.op_type_name = "logical_slice_assign"
         op_conf.user_conf.input["value"].s.append("{}/value_0".format(op_name))
@@ -446,6 +447,10 @@ def LoadVariables(var_dict, ignore_mismatch=False):
 
 
 def _ForEverySlice(var_blob, f):
+    """
+    Slice var_blob into slices whose size < SLICE_BYTES. For every slice,
+    yield start_nd_idx, stop_nd_idx and f(slice)
+    """
     assert var_blob.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
     SLICE_BYTES = 20 * 1024 * 1024
