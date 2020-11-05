@@ -84,3 +84,32 @@ def generate_quantize_scale_for_activation(
     )
 
     return scale, zero_point
+
+
+@oneflow_export("nn.fake_quantization")
+def fake_quantization(
+    input: remote_blob_util.BlobDef,
+    scale: remote_blob_util.BlobDef,
+    zero_point: remote_blob_util.BlobDef,
+    quantize_to_bit: int = 8,
+    quantizer_type: str = "symmetric",
+    name: Optional[str] = None,
+) -> Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]:
+
+    out = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Fake_Quantization_")
+        )
+        .Op("fake_quantization")
+        .Input("in", [input])
+        .Input("scale", [scale])
+        .Input("zero_point", [zero_point])
+        .Output("out")
+        .Attr("quantize_to_bit", quantize_to_bit)
+        .Attr("quantizer_type", quantizer_type)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+    return out
