@@ -1,6 +1,4 @@
 FROM ufoym/deepo
-COPY requirements.txt .
-RUN pip3 install -i http://mirrors.aliyun.com/pypi/simple -r requirements.txt
 
 RUN apt remove openmpi-common libfabric1 openmpi-bin librdmacm1:amd64 libopenmpi2 libopenmpi2:amd64 -y
 ENV MOFED_DIR MLNX_OFED_LINUX-4.3-1.0.1.0-ubuntu18.04-x86_64
@@ -15,3 +13,6 @@ RUN apt update && apt install -y --no-install-recommends gdb openssh-server open
 
 RUN echo 'ALL ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+COPY requirements.txt .
+RUN pip3 install -i http://mirrors.aliyun.com/pypi/simple -r requirements.txt
