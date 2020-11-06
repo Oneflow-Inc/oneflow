@@ -123,7 +123,6 @@ class ScatterDimKernel final : public user_op::OpKernel {
   REGISTER_DIM_GATHER_KERNEL(device, float, int32_t)    \
   REGISTER_DIM_GATHER_KERNEL(device, double, int32_t)   \
   REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t)  \
-  REGISTER_DIM_GATHER_KERNEL(device, float16, int64_t)  \
   REGISTER_DIM_GATHER_KERNEL(device, float, int64_t)    \
   REGISTER_DIM_GATHER_KERNEL(device, double, int64_t)   \
   REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t)
@@ -132,7 +131,6 @@ class ScatterDimKernel final : public user_op::OpKernel {
   REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t)             \
   REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t)            \
   REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t)           \
-  REGISTER_DIM_SCATTER_KERNEL(device, float16, int64_t)           \
   REGISTER_DIM_SCATTER_KERNEL(device, float, int64_t)             \
   REGISTER_DIM_SCATTER_KERNEL(device, double, int64_t)            \
   REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int64_t)
@@ -145,6 +143,8 @@ REGISTER_DIM_SCATTER_ADD_LIKE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 // float16 kernel on GPU
 REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t);
 REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int32_t);
+REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int64_t);
+REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t);
 
 }  // namespace user_op
 }  // namespace oneflow
