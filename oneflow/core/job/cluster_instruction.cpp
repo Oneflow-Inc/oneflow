@@ -124,7 +124,9 @@ void ClusterInstruction::MasterSendAbort() {
 }
 
 void ClusterInstruction::MasterSendEagerInstruction(
-    const ClusterInstructionProto& cluster_instruction) {
+    const cfg::ClusterInstructionProto& cfg_cluster_instruction) {
+  ClusterInstructionProto cluster_instruction;
+  cfg_cluster_instruction.ToProto(&cluster_instruction);
   CHECK(cluster_instruction.has_eager_instruction());
   PushClusterInstruction(cluster_instruction);
 }

@@ -34,13 +34,13 @@ void Operand::__Init__(const ObjectId& logical_object_id, const AllMirroredObjec
   mutable_all_mirrored_object();
 }
 
-void Operand::__Init__(const OperandProto& proto) {
-  set_logical_object_id(proto.logical_object_id());
-  if (proto.has_sole_mirrored_object()) {
+void Operand::__Init__(const cfg::OperandProto& cfg_proto) {
+  set_logical_object_id(cfg_proto.logical_object_id());
+  if (cfg_proto.has_sole_mirrored_object()) {
     mutable_sole_mirrored_object();
-  } else if (proto.has_current_global_device_id()) {
+  } else if (cfg_proto.has_current_global_device_id()) {
     mutable_current_global_device_id();
-  } else if (proto.has_all_mirrored_object()) {
+  } else if (cfg_proto.has_all_mirrored_object()) {
     mutable_all_mirrored_object();
   } else {
     UNIMPLEMENTED();

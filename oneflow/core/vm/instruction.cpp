@@ -51,14 +51,14 @@ void InstructionMsg::__Init__(const std::string& instr_type_name) {
   mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
 }
 
-void InstructionMsg::__Init__(const InstructionProto& proto) {
-  __Init__(proto.instr_type_name());
-  mutable_operand()->resize(proto.operand_size());
-  if (proto.has_parallel_desc_symbol_id()) {
-    set_parallel_desc_symbol_id(proto.parallel_desc_symbol_id());
+void InstructionMsg::__Init__(const cfg::InstructionProto& cfg_proto) {
+  __Init__(cfg_proto.instr_type_name());
+  mutable_operand()->resize(cfg_proto.operand_size());
+  if (cfg_proto.has_parallel_desc_symbol_id()) {
+    set_parallel_desc_symbol_id(cfg_proto.parallel_desc_symbol_id());
   }
-  for (int i = 0; i < proto.operand_size(); ++i) {
-    mutable_operand()->at(i)->__Init__(proto.operand(i));
+  for (int i = 0; i < cfg_proto.operand_size(); ++i) {
+    mutable_operand()->at(i)->__Init__(cfg_proto.operand(i));
   }
 }
 
