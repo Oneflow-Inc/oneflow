@@ -77,6 +77,7 @@ jobs:
           ./oneflow_testexe
     - name: Op test (distributed)
       run: |
+        python3 ci/test/distributed_run.py --make_dotssh
         python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
           --build_docker_img \
           --oneflow_wheel_path=${wheelhouse_dir} \
