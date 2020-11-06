@@ -58,9 +58,5 @@ REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16)
 // #ifdef WITH_CUDA
 
 // #endif
-
-
 }  // namespace user_op
-
 }  // namespace oneflow
-

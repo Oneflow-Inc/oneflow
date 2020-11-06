@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/range_kernel_util.h"
 
@@ -52,3 +53,5 @@ struct RangeFunctor<DeviceType::kGPU, float16> {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kGPU), RANGE_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
+
+#endif  // End WITH_CUDA
