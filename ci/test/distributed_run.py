@@ -54,15 +54,41 @@ chmod 777 {dotssh_dir}/*
         f.write(config_content)
 
 
-def launch_remote_container(hostname, docker_ssh_port, survival_time, dotssh_dir):
+def build_docker_img(hostname=None, workspace_dir=None):
+    if hostname:
+        assert workspace_dir
+        subprocess.check_call("rm -f > oneflow-src.zip", shell=True)
+        subprocess.check_call(
+            "git archive --format zip HEAD > oneflow-src.zip", shell=True
+        )
+        subprocess.check_call(
+            f"scp oneflow-src.zip {hostname}:{workspace_dir}/oneflow-src.zip",
+            shell=True,
+        )
+        subprocess.check_call(
+            f"ssh  {hostname} unzip {workspace_dir}/oneflow-src.zip -d {workspace_dir}/oneflow-src",
+            shell=True,
+        )
+        subprocess.check_call(
+            f"ssh  {hostname} bash {workspace_dir}/oneflow-src/docker/ci/test/build.sh",
+            shell=True,
+        )
+    else:
+        subprocess.check_call(f"bash docker/ci/test/build.sh", shell=True)
+
+
+def launch_remote_container(
+    hostname, docker_ssh_port, survival_time, dotssh_dir, should_build_docker_img
+):
     workspace_dir = os.path.join(
         os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
     )
-
     subprocess.check_call(f"ssh {hostname} mkdir -p {workspace_dir}", shell=True)
     subprocess.check_call(
         f"scp -r {dotssh_dir} {hostname}:{workspace_dir}/dotssh", shell=True
     )
+    if should_build_docker_img:
+        build_docker_img(hostname, workspace_dir)
     bash_cmd = f"""set -ex
 {FIX_SSH_PERMISSION}
 /usr/sbin/sshd -p {docker_ssh_port}
@@ -142,6 +168,9 @@ if __name__ == "__main__":
         "--make_dotssh", action="store_true", required=False, default=False
     )
     parser.add_argument("--run", action="store_true", required=False, default=False)
+    parser.add_argument(
+        "--build_docker_img", action="store_true", required=False, default=False
+    )
     parser.add_argument("--bash_script", type=str, required=False)
     default_this_host = "192.168.1.16"
     parser.add_argument(
@@ -174,10 +203,15 @@ if __name__ == "__main__":
         launch_remote_container(
             args.remote_host, ssh_port, args.timeout, args.dotssh_dir
         )
-
+    if args.build_docker_img:
+        build_docker_img()
     if args.run:
         launch_remote_container(
-            args.remote_host, ssh_port, args.timeout, args.dotssh_dir
+            args.remote_host,
+            ssh_port,
+            args.timeout,
+            args.dotssh_dir,
+            args.build_docker_img,
         )
         assert args.bash_script
         run_bash_script(
