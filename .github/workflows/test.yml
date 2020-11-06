@@ -80,6 +80,12 @@ jobs:
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
+    - name: Op test (distributed)
+      run: |
+        python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
+          --build_docker_img \
+          --oneflow_wheel_path=${wheelhouse_dir} \
+          --oneflow_worker_bin=${bin_dir}/oneflow_worker
     - name: Op test (eager)
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
