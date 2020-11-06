@@ -39,7 +39,7 @@ def get_affiliations(host):
     return affiliations
 
 
-def try_resolve_hostname(host: str):
+def resolve_hostname_hardcoded(host: str):
     if host.startswith("oneflow"):
         number = host.split("-")[-1]
         return f"192.168.1.{number}"
@@ -237,7 +237,7 @@ if __name__ == "__main__":
         remote_host = socket.gethostbyname(remote_host)
 
     this_host = args.this_host
-    this_host = try_resolve_hostname(this_host)
+    this_host = resolve_hostname_hardcoded(this_host)
 
     print(f"this_host: {this_host}, remote_host: {remote_host}")
     if args.launch_remote_container:
