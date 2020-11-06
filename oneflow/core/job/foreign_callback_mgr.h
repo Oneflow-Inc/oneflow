@@ -16,10 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
 #define ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/foreign_callback.h"
-
 namespace oneflow {
+
+class ForeignCallback;
 
 void RegisterForeignCallbackOnlyOnce(ForeignCallback* callback);
 

@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/foreign_callback_mgr.h"
 
 namespace oneflow {
