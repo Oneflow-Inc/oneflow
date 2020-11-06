@@ -12,7 +12,6 @@ mkdir -p $test_tmp_dir
 cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
-ssh oneflow-15 -p ${ONEFLOW_TEST_SSH_PORT} ps aux
 ONEFLOW_TEST_DEVICE_NUM=1 python3 -m unittest discover test/ops --failfast --verbose
 ONEFLOW_TEST_DEVICE_NUM=2 python3 -m unittest discover test/ops --failfast --verbose
 ONEFLOW_TEST_DEVICE_NUM=4 python3 -m unittest discover test/ops --failfast --verbose
