@@ -15,4 +15,4 @@ RUN echo 'ALL ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
 COPY requirements.txt .
-RUN pip3 install -i http://mirrors.aliyun.com/pypi/simple -r requirements.txt
+RUN pip3 install -i https://mirrors.aliyun.com/pypi/simple -r requirements.txt
