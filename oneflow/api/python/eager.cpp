@@ -13,23 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/register/blob.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/job/cluster_instruction.h"
 
-namespace oneflow {
-
-namespace user_op {
-
-#ifdef WITH_CUDA
-
-template<>
-void Tensor::CheckDataType<half>() const {
-  LOG_IF(FATAL, data_type() != DataType::kFloat16)
-      << "tensor data_type mismatched. value: kFloat16, template T: half";
+ONEFLOW_API_PYBIND11_MODULE("eager", m) {
+  using namespace oneflow;
+  m.def("Sync", &ClusterInstruction::MasterSendEagerSync);
 }
-
-#endif  // WITH_CUDA
-
-}  // namespace user_op
-
-}  // namespace oneflow
