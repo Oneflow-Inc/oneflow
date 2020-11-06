@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -114,7 +113,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVI
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-template<DeviceType device_type, typename K>
+template<typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
  public:
   UnsortedSegmentSumHalfKernel() = default;
@@ -150,10 +149,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
     int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
-                        out->shape().elem_cnt() * sizeof(float16));
-    Memset<device_type>(ctx->device_ctx(), tmp_buf->mut_dptr(), 0,
-                        out->shape().elem_cnt() * sizeof(float));
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), tmp_buf->mut_dptr(), 0,
+                             out->shape().elem_cnt() * sizeof(float));
     int64_t offset = 0;
     if (state != nullptr) {
       auto* sum_state = dynamic_cast<UnsortedSegmentSumOpKernelState*>(state);
@@ -162,7 +159,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
       offset = sum_state->lower();
     }
 
-    UnsortedSegmentSumKernelUtil<device_type, float16, K, float>::UnsortedSegmentSum(
+    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K, float>::UnsortedSegmentSum(
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
         num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
     CopyElemOnGpu<float, float16>(ctx->device_ctx(), tmp_buf->dptr<float>(),
@@ -171,35 +168,31 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(device, out_type, segment_ids_type,     \
-                                                       kernel_type)                            \
-  REGISTER_USER_KERNEL(kernel_type)                                                            \
-      .SetCreateFn<UnsortedSegmentSumHalfKernel<device, OF_PP_PAIR_FIRST(segment_ids_type)>>() \
-      .SetIsMatchedHob(                                                                        \
-          (user_op::HobDeviceTag() == device)                                                  \
-          & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
-          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                   \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                      \
-        const Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);                         \
-        return GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float));                      \
+#define REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type, kernel_type) \
+  REGISTER_USER_KERNEL(kernel_type)                                                             \
+      .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
+      .SetIsMatchedHob(                                                                         \
+          (user_op::HobDeviceTag() == DeviceType::kGPU)                                         \
+          & (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))     \
+          & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                    \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);                          \
+        return GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float));                       \
       });
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE(device_type, out_type, segment_ids_type) \
-  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(device_type, out_type, segment_ids_type,       \
+#define REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE(out_type, segment_ids_type) \
+  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,       \
                                                  ("unsorted_segment_sum"))
 
-#define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_HALF_KERNEL_CASE(device_type, out_type,        \
-                                                            segment_ids_type)             \
-  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(device_type, out_type, segment_ids_type, \
+#define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_HALF_KERNEL_CASE(out_type, segment_ids_type) \
+  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,            \
                                                  ("unsorted_segment_sum_like"))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), FLOAT16_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_HALF_KERNEL_CASE,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU), FLOAT16_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op
 
