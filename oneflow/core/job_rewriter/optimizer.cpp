@@ -18,22 +18,23 @@ limitations under the License.
 
 namespace oneflow {
 
-void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
+void GenerateOptimizerOpConfWrapperStruct::Call(JobPassCtx* ctx, const VariableOp& var_op,
                                                 const ParallelConf& parallel_conf,
                                                 JobBuilder* job_builder,
                                                 const LogicalBlobId& diff_lbi_of_var_out) const {
-  (*func_)(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
+  (*func_)(ctx, var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
-void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
-                               JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+void GenerateOptimizerOpConfIf(JobPassCtx* ctx, const VariableOp& var_op,
+                               const ParallelConf& parallel_conf, JobBuilder* job_builder,
+                               const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<int32_t, GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
+  obj->Call(ctx, var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
-void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
+void AddOptimizerOpConf(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
@@ -42,7 +43,7 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
 
     LogicalBlobId diff_lbi_of_var_out = lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), job_builder,
+    GenerateOptimizerOpConfIf(ctx, *var_op, parallel_desc.parallel_conf(), job_builder,
                               diff_lbi_of_var_out);
   });
 }
