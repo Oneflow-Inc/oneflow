@@ -91,4 +91,4 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR, (DeviceTyp
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif //WITH_CUDA
+#endif  // WITH_CUDA
