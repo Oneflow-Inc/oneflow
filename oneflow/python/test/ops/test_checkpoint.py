@@ -66,11 +66,7 @@ def get_large_model(dtype):
         with get_placement():
             x = flow.get_variable(
                 name="x",
-<<<<<<< HEAD
-                shape=(8801, 8203, 4),
-=======
                 shape=(10, 8801, 820, 4),
->>>>>>> 47db99fd8d8257749d8d43b7451b6c5c990fb4c7
                 dtype=dtype,
                 initializer=flow.random_normal_initializer(mean=10, stddev=1),
                 distribute=flow.distribute.split(0),
@@ -120,8 +116,6 @@ def _TestSaveCorrectness(test_case, model_getter, dtype, legacy_api):
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
-<<<<<<< HEAD
-=======
 def _TestRoundTrip(test_case, model_getter, dtype):
     """
     Save weights by new model io, load weights by new model io,
@@ -148,7 +142,6 @@ def _TestRoundTrip(test_case, model_getter, dtype):
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
->>>>>>> 47db99fd8d8257749d8d43b7451b6c5c990fb4c7
 def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
     """
     Save weights by legacy model io, load weights by new model io,
@@ -238,9 +231,6 @@ class TestCheckpoint(flow.unittest.TestCase):
         "legacy model io doesn't work in eager mode",
     )
     def test_load_correctness_2node(test_case):
-<<<<<<< HEAD
-        _TestLoadCorrectness(test_case, get_simple_model, flow.float, False)
-=======
         _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
 
     @flow.unittest.skip_unless_2n4d()
@@ -262,7 +252,6 @@ class TestCheckpoint(flow.unittest.TestCase):
     )
     def test_round_trip(test_case):
         _TestRoundTrip(test_case, get_large_model, flow.float)
->>>>>>> 47db99fd8d8257749d8d43b7451b6c5c990fb4c7
 
 
 if __name__ == "__main__":

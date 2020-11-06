@@ -1075,7 +1075,7 @@ def register_initializer(flow_initializer):
     return deco
 
 
-def GetInitializer(initializer_conf, random_seed):
+def GetInitializer(initializer_conf, random_seed, var_blob_shape):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
@@ -1083,9 +1083,9 @@ def GetInitializer(initializer_conf, random_seed):
             break
     if f is None:
         print("No initializer, use constant 3 instead")
-        f = lambda a, b: lambda length: [3] * length
+        f = lambda a, b, c: lambda length: [3] * length
     # assert f is not None, initializer_conf
-    return f(getattr(initializer_conf, m), random_seed)
+    return f(getattr(initializer_conf, m), random_seed, var_blob_shape)
 
 
 @register_initializer("constant_conf")
@@ -1101,9 +1101,77 @@ def ConstantInitializerImpl(
 
 @register_initializer("random_normal_conf")
 def RandomNormalInitializerImpl(
-    initializer_conf: op_conf_util.RandomNormalInitializerConf, random_seed: int
+    initializer_conf: op_conf_util.RandomNormalInitializerConf, random_seed: int,
 ):
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.normal(
         loc=initializer_conf.mean, scale=initializer_conf.std, size=length
     )
+
+@register_initializer("random_uniform_conf")
+@register_initializer("random_int_uniform_conf")
+def RandomUniformInitializerImpl(
+    initializer_conf : Union[
+        op_conf_util.RandomUniformInitializerConf, op_conf_util.RandomUniformIntInitializerConf
+    ],
+    random_seed: int,
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.uniform(
+        min = initializer_conf.min, max = initializer_conf.max, size = length
+    )
+
+def RngTruncatedNormal(mean, std, size, random_seed):
+    truncated_value = 2 * std
+    rng = np.random.default_rng(random_seed)
+    data = []
+    while len(data) < length:
+        data.extend(filter(lambda value: abs(value - mean) < truncated_value, data), rng.normal(mean, std, size = length - len(data)) )
+    return data
+    
+@register_initializer("truncated_normal_conf")
+def TruncatedNormalInitializerImpl(
+    initializer_conf:op_conf_util.TruncatedNormalInitializerConf, random_seed: int,):
+    return lambda length, random_seed:RngTruncatedNormal(
+        initializer_conf.mean, initializer_conf.std, length, random_seed,
+    )
+import cmath
+def GenInitialFan(initializer_conf, var_blob_shape):
+    variance_norm = initializer_conf.variance_norm
+    data_format = initializer_conf.data_format
+    kFan_in = op_conf_util.kFanIn
+    kFan_out = op_conf_util.kFanOut
+    k_average = op_conf_util.kAverage
+    fan = 0
+    fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
+    fan_out = var_blob_shape[0]
+    if data_format == "channel_first":
+        fan_out = np.prod(var_blob_shape[2:]).astype(np.int).item()
+    else data_format == "channel_last":
+        fan_out = np.prod(var_blob_shape[1:-1]).astype(np.int).item()
+
+    if variance_norm == k_average:
+        fan = (fan_in + fan_out) / 2
+    elif variance_norm == kFan_in:
+        fan = fan_in
+    elif variance_norm == kFan_out:
+        fan = fan_out
+    else:
+        print("UNIMPLEMENTED")
+    return fan
+
+
+   
+
+
+@register_initializer("xavier_conf")
+def XavierInitializerImpl(initializer_conf:op_conf_util.XavierInitializerConf, random_seed:int, var_blob_shape):
+    scale = cmath.sqrt(3 / GenInitialFan(initializer_conf, var_blob_shape))
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.uniform(
+        min = -scale, max = scale, size = length,
+        )
+
+
+
+
