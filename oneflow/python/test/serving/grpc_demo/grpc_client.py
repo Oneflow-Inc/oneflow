@@ -54,11 +54,16 @@ class PredictionServiceClient(object):
         self.stub = grpc_service_pb2.PredictionServiceStub(self.channel)
 
     def get_predict_result(self, image):
-        request = predict_message_pb2.PredictRequest()
-        request.np_array_content = image.tobytes()
+        request = predict_message_pb2.ClassificationRequest()
+
+        ndarray = predict_message_pb2.NumpyArray()
+        ndarray.np_array_content = image.tobytes()
         for dim in image.shape:
-            request.np_array_shapes.append(dim)
-        return self.stub.Predict(request)
+            ndarray.np_array_shapes.append(dim)
+
+        request.numpy_inputs.numpy_arrays.append(ndarray)
+
+        return self.stub.Classify(request)
 
 
 client = PredictionServiceClient()
@@ -72,7 +77,7 @@ while True:
         print("\n##############################\n")
         print("send image %s to server" % im)
         result = client.get_predict_result(img)
-        print(f"{result}")
+        print(f"get result from server: \n{result}")
         print("##############################\n")
 
         time.sleep(2)

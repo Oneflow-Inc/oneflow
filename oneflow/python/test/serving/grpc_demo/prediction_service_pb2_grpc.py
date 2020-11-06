@@ -29,17 +29,17 @@ class PredictionServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.Predict = channel.unary_unary(
-            "/oneflow.serving.PredictionService/Predict",
-            request_serializer=prediction__service__pb2.PredictRequest.SerializeToString,
-            response_deserializer=prediction__service__pb2.PredictResponse.FromString,
+        self.Classify = channel.unary_unary(
+            "/oneflow.serving.PredictionService/Classify",
+            request_serializer=prediction__service__pb2.ClassificationRequest.SerializeToString,
+            response_deserializer=prediction__service__pb2.ClassificationResponse.FromString,
         )
 
 
 class PredictionServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def Predict(self, request, context):
+    def Classify(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details("Method not implemented!")
@@ -48,10 +48,10 @@ class PredictionServiceServicer(object):
 
 def add_PredictionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "Predict": grpc.unary_unary_rpc_method_handler(
-            servicer.Predict,
-            request_deserializer=prediction__service__pb2.PredictRequest.FromString,
-            response_serializer=prediction__service__pb2.PredictResponse.SerializeToString,
+        "Classify": grpc.unary_unary_rpc_method_handler(
+            servicer.Classify,
+            request_deserializer=prediction__service__pb2.ClassificationRequest.FromString,
+            response_serializer=prediction__service__pb2.ClassificationResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -65,7 +65,7 @@ class PredictionService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def Predict(
+    def Classify(
         request,
         target,
         options=(),
@@ -80,9 +80,9 @@ class PredictionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/oneflow.serving.PredictionService/Predict",
-            prediction__service__pb2.PredictRequest.SerializeToString,
-            prediction__service__pb2.PredictResponse.FromString,
+            "/oneflow.serving.PredictionService/Classify",
+            prediction__service__pb2.ClassificationRequest.SerializeToString,
+            prediction__service__pb2.ClassificationResponse.FromString,
             options,
             channel_credentials,
             insecure,

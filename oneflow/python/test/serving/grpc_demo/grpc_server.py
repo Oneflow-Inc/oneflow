@@ -25,7 +25,6 @@ import numpy as np
 import os
 import prediction_service_pb2_grpc as grpc_service_pb2
 import prediction_service_pb2 as predict_message_pb2
-import resnet_model
 
 from concurrent import futures
 from imagenet1000_clsidx_to_labels import clsidx_2_labels
@@ -41,9 +40,7 @@ def get_parser():
     parser.add_argument(
         "--saved_model_path", type=str, default="./resnet50_models", help=""
     )
-    parser.add_argument(
-        "--model_version", type=int, default=1, help=""
-    )
+    parser.add_argument("--model_version", type=int, default=1, help="")
     parser.add_argument(
         "--rgb-mean",
         type=float_list,
@@ -92,6 +89,7 @@ checkpoint_path = os.path.join(
 )
 infer_session.set_checkpoint_path(checkpoint_path)
 for job_name, signature in saved_model_proto.signatures_v2.items():
+    # print(signature)
     infer_session.setup_job_signature(job_name, signature)
 
 for job_name, net in saved_model_proto.graphs.items():
@@ -103,29 +101,32 @@ infer_session.launch()
 input_names = infer_session.list_inputs()
 print("input names:", input_names)
 for input_name in input_names:
-    print('input "{}" info: {}'.format(input_name, infer_session.input_info(input_name)))
+    print(
+        'input "{}" info: {}'.format(input_name, infer_session.input_info(input_name))
+    )
 
 batch_size, channel, height, width = infer_session.input_info(input_names[0])["shape"]
 
-class PredictionServiceServicer(grpc_service_pb2.PredictionService):
+
+class PredictionServicer(grpc_service_pb2.PredictionService):
     def __init__(self, *args, **kwargs):
         print("create servicer")
 
-    def Predict(self, predict_request, context):
-        message_from_client = f'Server received data_len: "{len(predict_request.np_array_content)}", data_shape: "{predict_request.np_array_shapes}"'
+    def Classify(self, classification_request, context):
+        message_from_client = f'Server received input image size: "{len(classification_request.numpy_inputs.numpy_arrays)}"'
         print(message_from_client)
 
-        deserialized_bytes = np.frombuffer(
-            predict_request.np_array_content, dtype=np.uint8
-        )
+        input_array = classification_request.numpy_inputs.numpy_arrays[0]
+
+        deserialized_bytes = np.frombuffer(input_array.np_array_content, dtype=np.uint8)
         image = np.reshape(
-            deserialized_bytes, newshape=tuple(predict_request.np_array_shapes)
+            deserialized_bytes, newshape=tuple(input_array.np_array_shapes)
         )
 
         image = preprocess_image(image, height, width)
-        images = np.repeat(image, batch_size, axis = 0).astype(np.float32)
+        images = np.repeat(image, batch_size, axis=0).astype(np.float32)
 
-        predictions = infer_session.run("resnet_inference", image = images)
+        predictions = infer_session.run("resnet_inference", image=images)
 
         clsidxs = np.argmax(predictions[0], axis=1)
         probs = np.max(predictions[0], axis=1)
@@ -135,18 +136,21 @@ class PredictionServiceServicer(grpc_service_pb2.PredictionService):
             % (clsidx_2_labels[clsidxs[0]], probs[0])
         )
 
+        respond = predict_message_pb2.ClassificationResponse()
+        class_lists = predict_message_pb2.ClassLists()
         result = {
-            "predicted_class": clsidx_2_labels[clsidxs[0]],
+            "predicted_label": clsidx_2_labels[clsidxs[0]],
             "predicted_score": probs[0],
         }
-
-        return predict_message_pb2.PredictResponse(**result)
+        class_lists.classes.append(predict_message_pb2.SingleClass(**result))
+        respond.result.classlists.append(class_lists)
+        return respond
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     grpc_service_pb2.add_PredictionServiceServicer_to_server(
-        PredictionServiceServicer(), server
+        PredictionServicer(), server
     )
     server.add_insecure_port("%s:%d" % (args.server_address, args.server_port))
     server.start()

@@ -33,13 +33,95 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax="proto2",
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x18prediction_service.proto\x12\x0foneflow.serving"C\n\x0ePredictRequest\x12\x18\n\x10np_array_content\x18\x02 \x02(\x0c\x12\x17\n\x0fnp_array_shapes\x18\x03 \x03(\x05"C\n\x0fPredictResponse\x12\x17\n\x0fpredicted_class\x18\x03 \x02(\t\x12\x17\n\x0fpredicted_score\x18\x04 \x02(\x02\x32\x63\n\x11PredictionService\x12N\n\x07Predict\x12\x1f.oneflow.serving.PredictRequest\x1a .oneflow.serving.PredictResponse"\x00',
+    serialized_pb=b'\n\x18prediction_service.proto\x12\x0foneflow.serving"K\n\x15\x43lassificationRequest\x12\x32\n\x0cnumpy_inputs\x18\x01 \x02(\x0b\x32\x1c.oneflow.serving.NumpyInputs"@\n\x0bNumpyInputs\x12\x31\n\x0cnumpy_arrays\x18\x01 \x03(\x0b\x32\x1b.oneflow.serving.NumpyArray"?\n\nNumpyArray\x12\x18\n\x10np_array_content\x18\x02 \x02(\x0c\x12\x17\n\x0fnp_array_shapes\x18\x03 \x03(\x05"O\n\x16\x43lassificationResponse\x12\x35\n\x06result\x18\x01 \x02(\x0b\x32%.oneflow.serving.ClassificationResult"G\n\x14\x43lassificationResult\x12/\n\nclasslists\x18\x01 \x03(\x0b\x32\x1b.oneflow.serving.ClassLists";\n\nClassLists\x12-\n\x07\x63lasses\x18\x01 \x03(\x0b\x32\x1c.oneflow.serving.SingleClass"?\n\x0bSingleClass\x12\x17\n\x0fpredicted_label\x18\x01 \x02(\t\x12\x17\n\x0fpredicted_score\x18\x02 \x02(\x02\x32r\n\x11PredictionService\x12]\n\x08\x43lassify\x12&.oneflow.serving.ClassificationRequest\x1a\'.oneflow.serving.ClassificationResponse"\x00',
 )
 
 
-_PREDICTREQUEST = _descriptor.Descriptor(
-    name="PredictRequest",
-    full_name="oneflow.serving.PredictRequest",
+_CLASSIFICATIONREQUEST = _descriptor.Descriptor(
+    name="ClassificationRequest",
+    full_name="oneflow.serving.ClassificationRequest",
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name="numpy_inputs",
+            full_name="oneflow.serving.ClassificationRequest.numpy_inputs",
+            index=0,
+            number=1,
+            type=11,
+            cpp_type=10,
+            label=2,
+            has_default_value=False,
+            default_value=None,
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+    ],
+    extensions=[],
+    nested_types=[],
+    enum_types=[],
+    serialized_options=None,
+    is_extendable=False,
+    syntax="proto2",
+    extension_ranges=[],
+    oneofs=[],
+    serialized_start=45,
+    serialized_end=120,
+)
+
+
+_NUMPYINPUTS = _descriptor.Descriptor(
+    name="NumpyInputs",
+    full_name="oneflow.serving.NumpyInputs",
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name="numpy_arrays",
+            full_name="oneflow.serving.NumpyInputs.numpy_arrays",
+            index=0,
+            number=1,
+            type=11,
+            cpp_type=10,
+            label=3,
+            has_default_value=False,
+            default_value=[],
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+    ],
+    extensions=[],
+    nested_types=[],
+    enum_types=[],
+    serialized_options=None,
+    is_extendable=False,
+    syntax="proto2",
+    extension_ranges=[],
+    oneofs=[],
+    serialized_start=122,
+    serialized_end=186,
+)
+
+
+_NUMPYARRAY = _descriptor.Descriptor(
+    name="NumpyArray",
+    full_name="oneflow.serving.NumpyArray",
     filename=None,
     file=DESCRIPTOR,
     containing_type=None,
@@ -47,7 +129,7 @@ _PREDICTREQUEST = _descriptor.Descriptor(
     fields=[
         _descriptor.FieldDescriptor(
             name="np_array_content",
-            full_name="oneflow.serving.PredictRequest.np_array_content",
+            full_name="oneflow.serving.NumpyArray.np_array_content",
             index=0,
             number=2,
             type=12,
@@ -66,7 +148,7 @@ _PREDICTREQUEST = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="np_array_shapes",
-            full_name="oneflow.serving.PredictRequest.np_array_shapes",
+            full_name="oneflow.serving.NumpyArray.np_array_shapes",
             index=1,
             number=3,
             type=5,
@@ -92,24 +174,147 @@ _PREDICTREQUEST = _descriptor.Descriptor(
     syntax="proto2",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=45,
-    serialized_end=112,
+    serialized_start=188,
+    serialized_end=251,
 )
 
 
-_PREDICTRESPONSE = _descriptor.Descriptor(
-    name="PredictResponse",
-    full_name="oneflow.serving.PredictResponse",
+_CLASSIFICATIONRESPONSE = _descriptor.Descriptor(
+    name="ClassificationResponse",
+    full_name="oneflow.serving.ClassificationResponse",
     filename=None,
     file=DESCRIPTOR,
     containing_type=None,
     create_key=_descriptor._internal_create_key,
     fields=[
         _descriptor.FieldDescriptor(
-            name="predicted_class",
-            full_name="oneflow.serving.PredictResponse.predicted_class",
+            name="result",
+            full_name="oneflow.serving.ClassificationResponse.result",
             index=0,
-            number=3,
+            number=1,
+            type=11,
+            cpp_type=10,
+            label=2,
+            has_default_value=False,
+            default_value=None,
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+    ],
+    extensions=[],
+    nested_types=[],
+    enum_types=[],
+    serialized_options=None,
+    is_extendable=False,
+    syntax="proto2",
+    extension_ranges=[],
+    oneofs=[],
+    serialized_start=253,
+    serialized_end=332,
+)
+
+
+_CLASSIFICATIONRESULT = _descriptor.Descriptor(
+    name="ClassificationResult",
+    full_name="oneflow.serving.ClassificationResult",
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name="classlists",
+            full_name="oneflow.serving.ClassificationResult.classlists",
+            index=0,
+            number=1,
+            type=11,
+            cpp_type=10,
+            label=3,
+            has_default_value=False,
+            default_value=[],
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+    ],
+    extensions=[],
+    nested_types=[],
+    enum_types=[],
+    serialized_options=None,
+    is_extendable=False,
+    syntax="proto2",
+    extension_ranges=[],
+    oneofs=[],
+    serialized_start=334,
+    serialized_end=405,
+)
+
+
+_CLASSLISTS = _descriptor.Descriptor(
+    name="ClassLists",
+    full_name="oneflow.serving.ClassLists",
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name="classes",
+            full_name="oneflow.serving.ClassLists.classes",
+            index=0,
+            number=1,
+            type=11,
+            cpp_type=10,
+            label=3,
+            has_default_value=False,
+            default_value=[],
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+    ],
+    extensions=[],
+    nested_types=[],
+    enum_types=[],
+    serialized_options=None,
+    is_extendable=False,
+    syntax="proto2",
+    extension_ranges=[],
+    oneofs=[],
+    serialized_start=407,
+    serialized_end=466,
+)
+
+
+_SINGLECLASS = _descriptor.Descriptor(
+    name="SingleClass",
+    full_name="oneflow.serving.SingleClass",
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name="predicted_label",
+            full_name="oneflow.serving.SingleClass.predicted_label",
+            index=0,
+            number=1,
             type=9,
             cpp_type=9,
             label=2,
@@ -126,9 +331,9 @@ _PREDICTRESPONSE = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="predicted_score",
-            full_name="oneflow.serving.PredictResponse.predicted_score",
+            full_name="oneflow.serving.SingleClass.predicted_score",
             index=1,
-            number=4,
+            number=2,
             type=2,
             cpp_type=6,
             label=2,
@@ -152,35 +357,100 @@ _PREDICTRESPONSE = _descriptor.Descriptor(
     syntax="proto2",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=114,
-    serialized_end=181,
+    serialized_start=468,
+    serialized_end=531,
 )
 
-DESCRIPTOR.message_types_by_name["PredictRequest"] = _PREDICTREQUEST
-DESCRIPTOR.message_types_by_name["PredictResponse"] = _PREDICTRESPONSE
+_CLASSIFICATIONREQUEST.fields_by_name["numpy_inputs"].message_type = _NUMPYINPUTS
+_NUMPYINPUTS.fields_by_name["numpy_arrays"].message_type = _NUMPYARRAY
+_CLASSIFICATIONRESPONSE.fields_by_name["result"].message_type = _CLASSIFICATIONRESULT
+_CLASSIFICATIONRESULT.fields_by_name["classlists"].message_type = _CLASSLISTS
+_CLASSLISTS.fields_by_name["classes"].message_type = _SINGLECLASS
+DESCRIPTOR.message_types_by_name["ClassificationRequest"] = _CLASSIFICATIONREQUEST
+DESCRIPTOR.message_types_by_name["NumpyInputs"] = _NUMPYINPUTS
+DESCRIPTOR.message_types_by_name["NumpyArray"] = _NUMPYARRAY
+DESCRIPTOR.message_types_by_name["ClassificationResponse"] = _CLASSIFICATIONRESPONSE
+DESCRIPTOR.message_types_by_name["ClassificationResult"] = _CLASSIFICATIONRESULT
+DESCRIPTOR.message_types_by_name["ClassLists"] = _CLASSLISTS
+DESCRIPTOR.message_types_by_name["SingleClass"] = _SINGLECLASS
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-PredictRequest = _reflection.GeneratedProtocolMessageType(
-    "PredictRequest",
+ClassificationRequest = _reflection.GeneratedProtocolMessageType(
+    "ClassificationRequest",
     (_message.Message,),
     {
-        "DESCRIPTOR": _PREDICTREQUEST,
+        "DESCRIPTOR": _CLASSIFICATIONREQUEST,
         "__module__": "prediction_service_pb2"
-        # @@protoc_insertion_point(class_scope:oneflow.serving.PredictRequest)
+        # @@protoc_insertion_point(class_scope:oneflow.serving.ClassificationRequest)
     },
 )
-_sym_db.RegisterMessage(PredictRequest)
+_sym_db.RegisterMessage(ClassificationRequest)
 
-PredictResponse = _reflection.GeneratedProtocolMessageType(
-    "PredictResponse",
+NumpyInputs = _reflection.GeneratedProtocolMessageType(
+    "NumpyInputs",
     (_message.Message,),
     {
-        "DESCRIPTOR": _PREDICTRESPONSE,
+        "DESCRIPTOR": _NUMPYINPUTS,
         "__module__": "prediction_service_pb2"
-        # @@protoc_insertion_point(class_scope:oneflow.serving.PredictResponse)
+        # @@protoc_insertion_point(class_scope:oneflow.serving.NumpyInputs)
     },
 )
-_sym_db.RegisterMessage(PredictResponse)
+_sym_db.RegisterMessage(NumpyInputs)
+
+NumpyArray = _reflection.GeneratedProtocolMessageType(
+    "NumpyArray",
+    (_message.Message,),
+    {
+        "DESCRIPTOR": _NUMPYARRAY,
+        "__module__": "prediction_service_pb2"
+        # @@protoc_insertion_point(class_scope:oneflow.serving.NumpyArray)
+    },
+)
+_sym_db.RegisterMessage(NumpyArray)
+
+ClassificationResponse = _reflection.GeneratedProtocolMessageType(
+    "ClassificationResponse",
+    (_message.Message,),
+    {
+        "DESCRIPTOR": _CLASSIFICATIONRESPONSE,
+        "__module__": "prediction_service_pb2"
+        # @@protoc_insertion_point(class_scope:oneflow.serving.ClassificationResponse)
+    },
+)
+_sym_db.RegisterMessage(ClassificationResponse)
+
+ClassificationResult = _reflection.GeneratedProtocolMessageType(
+    "ClassificationResult",
+    (_message.Message,),
+    {
+        "DESCRIPTOR": _CLASSIFICATIONRESULT,
+        "__module__": "prediction_service_pb2"
+        # @@protoc_insertion_point(class_scope:oneflow.serving.ClassificationResult)
+    },
+)
+_sym_db.RegisterMessage(ClassificationResult)
+
+ClassLists = _reflection.GeneratedProtocolMessageType(
+    "ClassLists",
+    (_message.Message,),
+    {
+        "DESCRIPTOR": _CLASSLISTS,
+        "__module__": "prediction_service_pb2"
+        # @@protoc_insertion_point(class_scope:oneflow.serving.ClassLists)
+    },
+)
+_sym_db.RegisterMessage(ClassLists)
+
+SingleClass = _reflection.GeneratedProtocolMessageType(
+    "SingleClass",
+    (_message.Message,),
+    {
+        "DESCRIPTOR": _SINGLECLASS,
+        "__module__": "prediction_service_pb2"
+        # @@protoc_insertion_point(class_scope:oneflow.serving.SingleClass)
+    },
+)
+_sym_db.RegisterMessage(SingleClass)
 
 
 _PREDICTIONSERVICE = _descriptor.ServiceDescriptor(
@@ -190,16 +460,16 @@ _PREDICTIONSERVICE = _descriptor.ServiceDescriptor(
     index=0,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
-    serialized_start=183,
-    serialized_end=282,
+    serialized_start=533,
+    serialized_end=647,
     methods=[
         _descriptor.MethodDescriptor(
-            name="Predict",
-            full_name="oneflow.serving.PredictionService.Predict",
+            name="Classify",
+            full_name="oneflow.serving.PredictionService.Classify",
             index=0,
             containing_service=None,
-            input_type=_PREDICTREQUEST,
-            output_type=_PREDICTRESPONSE,
+            input_type=_CLASSIFICATIONREQUEST,
+            output_type=_CLASSIFICATIONRESPONSE,
             serialized_options=None,
             create_key=_descriptor._internal_create_key,
         ),
