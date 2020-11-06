@@ -22,6 +22,9 @@ HARD_CODED_AFFILIATIONS = [
     ["192.168.1.11", "192.168.1.12",],
     ["192.168.1.13", "192.168.1.14",],
     ["192.168.1.15", "192.168.1.16",],
+    ["oneflow-11", "oneflow-12",],
+    ["oneflow-13", "oneflow-14",],
+    ["oneflow-15", "oneflow-16",],
 ]
 
 
@@ -34,6 +37,14 @@ def get_affiliations(host):
             a_set.remove(host)
             affiliations = list(a_set)
     return affiliations
+
+
+def try_resolve_hostname(host: str):
+    if host.startswith("oneflow"):
+        number = host.split("-")[-1]
+        return f"192.168.1.{number}"
+    else:
+        return host
 
 
 def find_free_port():
@@ -189,7 +200,7 @@ if __name__ == "__main__":
         "--build_docker_img", action="store_true", required=False, default=False
     )
     parser.add_argument("--bash_script", type=str, required=False)
-    default_this_host = socket.gethostbyname(socket.gethostname())
+    default_this_host = socket.gethostname()
     parser.add_argument(
         "--this_host", type=str, required=False, default=default_this_host
     )
@@ -223,6 +234,12 @@ if __name__ == "__main__":
             affiliations
         ), f"no affiliated node found for {args.this_host}, you should specify one"
         remote_host = affiliations[0]
+        remote_host = socket.gethostbyname(remote_host)
+
+    this_host = args.this_host
+    this_host = try_resolve_hostname(this_host)
+
+    print(f"this_host: {this_host}, remote_host: {remote_host}")
     if args.launch_remote_container:
         launch_remote_container(remote_host, ssh_port, args.timeout, args.dotssh_dir)
     if args.build_docker_img:
@@ -237,7 +254,7 @@ if __name__ == "__main__":
             args.timeout,
             ssh_port,
             args.dotssh_dir,
-            args.this_host,
+            this_host,
             remote_host,
             args.oneflow_worker_bin,
             args.oneflow_wheel_path,
