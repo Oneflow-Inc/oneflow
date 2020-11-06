@@ -13,32 +13,42 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/range_kernel_util.h"
 
 namespace oneflow {
 
-namespace {
+namespace user_op{
 
 template<typename T>
 __global__ void RangeForwardGpuKernel(const int start, const int delta, const int range_shape,
                                       T* out) {
   // Use Loop to set the value
-  DoRange(start, delta, range_shape, out);
+  DoRange<T>(start, delta, range_shape, out);
 }
 
-}  // namespace
-
 template<typename T>
-struct RangeKernelUtil<DeviceType::kGPU, T> {
+struct RangeFunctor<DeviceType::kGPU, T> final {
   static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out) {
     // Run cuda range forward kernel
     // The thread num is set as range_shape
-    RUN_CUDA_KERNEL(RangeForwardGpuKernel, ctx, range_shape, start, delta, range_shape, out);
+    RUN_CUDA_KERNEL((RangeForwardGpuKernel<T>), ctx, range_shape, start, delta, range_shape, out);
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+// float16 special case of RangeKernel template
+template<>
+struct RangeFunctor<DeviceType::kGPU, float16> {
+  static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
+                    float16* out) {
+    // Run cuda range forward kernel
+    // The thread num is set as range_shape
+    RUN_CUDA_KERNEL((RangeForwardGpuKernel<half>), ctx, range_shape, start, delta, range_shape, reinterpret_cast<half*>(out));
+  }
+};
 
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kGPU), RANGE_DATA_TYPE_SEQ);
+}  // namespace user_op
 }  // namespace oneflow

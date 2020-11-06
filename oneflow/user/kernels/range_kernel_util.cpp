@@ -17,15 +17,18 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace user_op{
 template<typename T>
-struct RangeKernelUtil<DeviceType::kCPU, T> {
+struct RangeFunctor<DeviceType::kCPU, T> {
   static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out) {
-    DoRange(start, delta, range_shape, out);
+    DoRange<T>(start, delta, range_shape, out);
   }
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+                                 RANGE_DATA_TYPE_SEQ);
 
+} // namespace user_op
 }  // namespace oneflow
+

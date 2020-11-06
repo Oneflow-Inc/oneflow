@@ -21,8 +21,14 @@ limitations under the License.
 
 namespace oneflow {
 
+#define RANGE_DATA_TYPE_SEQ \
+  FLOATING_DATA_TYPE_SEQ                 \
+  FLOAT16_DATA_TYPE_SEQ                  \
+  INT_DATA_TYPE_SEQ
+
+namespace user_op{
 template<DeviceType device_type, typename T>
-struct RangeKernelUtil {
+struct RangeFunctor final {
   static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out);
 };
@@ -33,8 +39,9 @@ OF_DEVICE_FUNC void DoRange(const int start, const int delta, const int range_sh
 }
 
 #define INSTANTIATE_RANGE_FUNCTOR(device_type_v, dtype_pair) \
-  template struct RangeKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
+  template struct RangeFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
+} // namespace user_op
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_RANGE_KERNEL_UTIL_H_
