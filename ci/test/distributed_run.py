@@ -139,7 +139,7 @@ sleep {survival_time}
         survival_time_min = survival_time / 60
         survival_time_min = int(survival_time_min)
         print(
-            f"remote container launched, host: {hostname}, ssh port:{docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
+            f"remote container launched, host: {hostname}, ssh port: {docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
         )
 
 
