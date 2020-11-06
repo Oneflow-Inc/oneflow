@@ -53,9 +53,7 @@ class RangeKernel final : public OpKernel {
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 
-// Register float16 version
 REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16)
-// #ifdef WITH_CUDA
 
 // #endif
 }  // namespace user_op
