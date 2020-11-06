@@ -105,18 +105,16 @@ def build_docker_img(hostname=None, workspace_dir=None):
         subprocess.check_call(f"bash docker/ci/test/build.sh", shell=True)
 
 
-def launch_remote_container(
-    hostname, docker_ssh_port, survival_time, dotssh_dir, should_build_docker_img
-):
-    workspace_dir = os.path.join(
-        os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
-    )
+def create_remote_workspace_dir(hostname, workspace_dir):
     subprocess.check_call(f"ssh {hostname} mkdir -p {workspace_dir}", shell=True)
+
+
+def launch_remote_container(
+    hostname, docker_ssh_port, survival_time, dotssh_dir, workspace_dir
+):
     subprocess.check_call(
         f"scp -r {dotssh_dir} {hostname}:{workspace_dir}/dotssh", shell=True
     )
-    if should_build_docker_img:
-        build_docker_img(hostname, workspace_dir)
     bash_cmd = f"""set -ex
 {FIX_SSH_PERMISSION}
 /usr/sbin/sshd -p {docker_ssh_port}
@@ -240,13 +238,18 @@ if __name__ == "__main__":
     this_host = resolve_hostname_hardcoded(this_host)
 
     print(f"this_host: {this_host}, remote_host: {remote_host}")
+    workspace_dir = os.path.join(
+        os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
+    )
+    create_remote_workspace_dir(remote_host, workspace_dir)
     if args.launch_remote_container:
         launch_remote_container(remote_host, ssh_port, args.timeout, args.dotssh_dir)
     if args.build_docker_img:
         build_docker_img()
+        build_docker_img(remote_host, workspace_dir)
     if args.run:
         launch_remote_container(
-            remote_host, ssh_port, args.timeout, args.dotssh_dir, args.build_docker_img,
+            remote_host, ssh_port, args.timeout, args.dotssh_dir, workspace_dir,
         )
         assert args.bash_script
         run_bash_script(
