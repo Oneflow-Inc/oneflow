@@ -18,6 +18,23 @@ chmod 400 ~/.ssh/id_rsa.pub
 chmod 600 ~/.ssh/config
 """
 
+HARD_CODED_AFFILIATIONS = [
+    ["192.168.1.11", "192.168.1.12",],
+    ["192.168.1.13", "192.168.1.14",],
+    ["192.168.1.15", "192.168.1.16",],
+]
+
+
+def get_affiliations(host):
+    # TODO(tsai): Implement a HTTP endpoint to retrieve affiliations
+    affiliations = None
+    for a in HARD_CODED_AFFILIATIONS:
+        if host in a:
+            a_set = set(a)
+            a_set.remove(host)
+            affiliations = list(a_set)
+    return affiliations
+
 
 def find_free_port():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
@@ -172,14 +189,11 @@ if __name__ == "__main__":
         "--build_docker_img", action="store_true", required=False, default=False
     )
     parser.add_argument("--bash_script", type=str, required=False)
-    default_this_host = "192.168.1.16"
+    default_this_host = socket.gethostbyname(socket.gethostname())
     parser.add_argument(
         "--this_host", type=str, required=False, default=default_this_host
     )
-    default_remote_host = "192.168.1.15"
-    parser.add_argument(
-        "--remote_host", type=str, required=False, default=default_remote_host
-    )
+    parser.add_argument("--remote_host", type=str, required=False)
     default_dotssh_dir = os.path.expanduser("~/distributed_run_dotssh")
     parser.add_argument(
         "--dotssh_dir", type=str, required=False, default=default_dotssh_dir
@@ -199,19 +213,23 @@ if __name__ == "__main__":
     if args.make_dotssh:
         make_dotssh(args.dotssh_dir)
 
+    remote_host = None
+    if args.remote_host:
+        assert len(args.remote_host.split(",")) == 1, "only support 2-nodes run for now"
+        remote_host = args.remote_host
+    else:
+        affiliations = get_affiliations(args.this_host)
+        assert (
+            affiliations
+        ), f"no affiliated node found for {args.this_host}, you should specify one"
+        remote_host = affiliations[0]
     if args.launch_remote_container:
-        launch_remote_container(
-            args.remote_host, ssh_port, args.timeout, args.dotssh_dir
-        )
+        launch_remote_container(remote_host, ssh_port, args.timeout, args.dotssh_dir)
     if args.build_docker_img:
         build_docker_img()
     if args.run:
         launch_remote_container(
-            args.remote_host,
-            ssh_port,
-            args.timeout,
-            args.dotssh_dir,
-            args.build_docker_img,
+            remote_host, ssh_port, args.timeout, args.dotssh_dir, args.build_docker_img,
         )
         assert args.bash_script
         run_bash_script(
@@ -220,7 +238,7 @@ if __name__ == "__main__":
             ssh_port,
             args.dotssh_dir,
             args.this_host,
-            args.remote_host,
+            remote_host,
             args.oneflow_worker_bin,
             args.oneflow_wheel_path,
         )
