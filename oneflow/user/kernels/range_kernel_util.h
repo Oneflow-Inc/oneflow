@@ -29,7 +29,7 @@ namespace oneflow {
 namespace user_op{
 template<DeviceType device_type, typename T>
 struct RangeFunctor final {
-  static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
+  void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out);
 };
 

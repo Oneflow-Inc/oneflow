@@ -30,7 +30,7 @@ __global__ void RangeForwardGpuKernel(const int start, const int delta, const in
 
 template<typename T>
 struct RangeFunctor<DeviceType::kGPU, T> final {
-  static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
+  void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     T* out) {
     // Run cuda range forward kernel
     // The thread num is set as range_shape
@@ -41,13 +41,16 @@ struct RangeFunctor<DeviceType::kGPU, T> final {
 // float16 special case of RangeKernel template
 template<>
 struct RangeFunctor<DeviceType::kGPU, float16> {
-  static void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
+  void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
+                    float16* out);
+};
+
+void RangeFunctor<DeviceType::kGPU, float16>::Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
                     float16* out) {
     // Run cuda range forward kernel
     // The thread num is set as range_shape
     RUN_CUDA_KERNEL((RangeForwardGpuKernel<half>), ctx, range_shape, start, delta, range_shape, reinterpret_cast<half*>(out));
   }
-};
 
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_RANGE_FUNCTOR, (DeviceType::kGPU), RANGE_DATA_TYPE_SEQ);

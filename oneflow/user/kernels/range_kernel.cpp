@@ -34,7 +34,7 @@ class RangeKernel final : public OpKernel {
     const int64_t limit = ctx->Attr<int64_t>("limit");
     const int64_t range_shape =
         (((limit - start) + delta - 1) / delta);  // Do the ceil division, ceil((limit-start)/delta)
-    RangeFunctor<device_type, T>::Range(ctx->device_ctx(), start, delta, range_shape, output);
+    RangeFunctor<device_type, T>().Range(ctx->device_ctx(), start, delta, range_shape, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
