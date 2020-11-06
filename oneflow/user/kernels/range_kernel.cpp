@@ -55,6 +55,5 @@ REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
 
 REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16)
 
-// #endif
 }  // namespace user_op
 }  // namespace oneflow
