@@ -76,7 +76,7 @@ def init_worker(scp_binary: bool = True, use_uuid: bool = True, ssh_port=22) -> 
 
 @oneflow_export("deprecated.delete_worker")
 def delete_worker(ssh_port=22) -> None:
-    ssh_port_arg = f" -p {ssh_port} "
+    ssh_port_arg = " -p {} ".format(ssh_port)
     # assert env_util.env_proto_mutable == False
     env_proto = env_util.default_env_proto
     assert isinstance(env_proto, EnvProto)
@@ -86,34 +86,43 @@ def delete_worker(ssh_port=22) -> None:
         if machine.id == 0:
             continue
         ssh_prefix = (
-            f"ssh {ssh_port_arg} " + getpass.getuser() + "@" + machine.addr + " "
+            "ssh {} ".format(ssh_port_arg)
+            + getpass.getuser()
+            + "@"
+            + machine.addr
+            + " "
         )
         _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
-        print(f"temp run dir removed at: {machine.addr}", flush=True)
+        print("temp run dir removed at: {}".format(machine.addr), flush=True)
 
 
 def _SendBinaryAndConfig2Worker(
     machine, oneflow_worker_path, env_proto_path, run_dir, scp_binary, ssh_port
 ):
-    ssh_port_arg = f" -p {ssh_port} "
-    scp_port_arg = f" -P {ssh_port} "
+    ssh_port_arg = " -p {} ".format(ssh_port)
+    scp_port_arg = " -P {} ".format(ssh_port)
     _SystemCall(
-        f"ssh-copy-id {ssh_port_arg} -f " + getpass.getuser() + "@" + machine.addr
+        "ssh-copy-id {} -f ".format(ssh_port_arg)
+        + getpass.getuser()
+        + "@"
+        + machine.addr
     )
-    ssh_prefix = f"ssh {ssh_port_arg}" + getpass.getuser() + "@" + machine.addr + " "
+    ssh_prefix = (
+        "ssh {}".format(ssh_port_arg) + getpass.getuser() + "@" + machine.addr + " "
+    )
     remote_file_prefix = " " + getpass.getuser() + "@" + machine.addr + ":"
     assert run_dir != ""
     _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
     if scp_binary:
         _SystemCall(
-            f"scp {scp_port_arg}"
+            "scp {}".format(scp_port_arg)
             + oneflow_worker_path
             + remote_file_prefix
             + run_dir
             + "/oneflow_worker"
         )
     _SystemCall(
-        f"scp {scp_port_arg}"
+        "scp {}".format(scp_port_arg)
         + env_proto_path
         + remote_file_prefix
         + run_dir
