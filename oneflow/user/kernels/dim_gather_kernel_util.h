@@ -67,7 +67,9 @@ template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
 #ifdef __CUDA_ARCH__
+#ifdef WITH_CUDA
     gpu_atomic_add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
+#endif
 #else
     *y += *x;
 #endif

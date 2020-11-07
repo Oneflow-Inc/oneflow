@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_DIM_GATHER_KERNELS_H_
-#define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNELS_H_
+
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/framework/framework.h"
@@ -148,4 +147,3 @@ REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t);
 
 }  // namespace user_op
 }  // namespace oneflow
-#endif
