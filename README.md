@@ -129,12 +129,16 @@
     - #### Option 1: Build in docker container (recommended)
       - In the root directory of OneFlow source code, run:
         ```
-        python3 docker/package/manylinux/build_wheel.py --cuda_version=10.1 --python_version=3.6,3.7
+        python3 docker/package/manylinux/build_wheel.py
         ```
         This should produces `.whl` files in the directory `wheelhouse`
       - If you are in China, you might need to add these flags:
         ```
         --use_tuna --use_system_proxy --use_aliyun_mirror
+        ```
+      - You can choose CUDA/Python versions of wheel by adding:
+        ```
+        --cuda_version=10.1 --python_version=3.6,3.7
         ```
       - For more useful flags, plese run the script with flag "--help" or refer to the source code of the script.
 
