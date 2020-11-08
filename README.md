@@ -126,7 +126,7 @@
 
 3. #### Build and Install OneFlow
 
-    - #### Option 1: Build in docker container
+    - #### Option 1: Build in docker container (recommended)
       - In the root directory of OneFlow source code, run:
         ```
         python3 docker/package/manylinux/build_wheel.py --cuda_version=10.1 --python_version=3.6,3.7
