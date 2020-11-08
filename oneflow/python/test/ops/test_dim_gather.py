@@ -19,6 +19,7 @@ import oneflow.typing as oft
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
+import os
 
 
 def gen_gather_test_sample(input_shape, index_shape, dim):
@@ -218,10 +219,30 @@ def _compare_dim_gather_with_samples(
 
 @flow.unittest.skip_unless_1n1d()
 class TestDimGather1n1d(flow.unittest.TestCase):
-    def test_dim_gather(test_case):
+    def test_dim_gather_cpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_type"] = ["cpu"]
+        arg_dict["samples"] = []
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
+        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
+        arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
+        arg_dict["value_type"] = [
+            # (np.float32, flow.float16), #TODO:(YaoChi) float16 only works fine on ARCH > 700 CUDA > 10000
+            (np.float32, flow.float32),
+            (np.float64, flow.float64),
+        ]
+        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
+        arg_dict["machine_ids"] = ["0:0"]
+        arg_dict["device_count"] = [1]
+        for arg in GenArgList(arg_dict):
+            _compare_dim_gather_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_gather_gpu(test_case):
+        global g_samples
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
         arg_dict["samples"] = []
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
         arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
@@ -240,6 +261,7 @@ class TestDimGather1n1d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 class TestDimGather1n2d(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_gather(test_case):
         global g_samples
         arg_dict = OrderedDict()
