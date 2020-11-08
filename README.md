@@ -126,19 +126,30 @@
 
 3. #### Build and Install OneFlow
 
-    - In the root directory of OneFlow source code, run:
+    - #### Option 1: Build on bare metal
+      - In the root directory of OneFlow source code, run:
 
-      ```
-      mkdir build
-      cd build
-      cmake ..
-      make -j$(nproc)
-      make pip_install
-      ```
+        ```
+        mkdir build
+        cd build
+        cmake ..
+        make -j$(nproc)
+        make pip_install
+        ```
 
-    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
-    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
+      - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
+      - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 
+    - #### Option 2: Build in docker container
+      - In the root directory of OneFlow source code, run:
+        ```
+        python3 docker/package/manylinux/build_wheel.py --cuda_version=10.1 --python_version=3.6,3.7
+        ```
+      - If you are in China, you might need to add these flags:
+        ```
+        --use_tuna --use_system_proxy --use_aliyun_mirror
+        ```
+      - For more useful flags, plese run the script with flag "--help" or refer to the source code of the script.
 ### Troubleshooting
 
 Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.
