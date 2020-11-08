@@ -15,7 +15,9 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
+#ifdef WITH_CUDA
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
+#endif  // WITH_CUDA
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
