@@ -145,6 +145,7 @@
         ```
         python3 docker/package/manylinux/build_wheel.py --cuda_version=10.1 --python_version=3.6,3.7
         ```
+        This should produces `.whl` files in the directory `wheelhouse`
       - If you are in China, you might need to add these flags:
         ```
         --use_tuna --use_system_proxy --use_aliyun_mirror
