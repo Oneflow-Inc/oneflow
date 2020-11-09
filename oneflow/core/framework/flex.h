@@ -80,7 +80,6 @@ class FlexFieldDef final {
   FlexLabel label() const { return proto_.label(); }
   const std::shared_ptr<const FlexDef>& flex_def() const { return flex_def_; }
   const std::string& field_name() const { return proto_.field_name(); }
-  int32_t field_number() const { return proto_.field_number(); }
   const std::shared_ptr<const FlexValue>& default_val() const { return default_val_; }
   const std::string& description() const { return proto_.description(); }
 
@@ -88,7 +87,6 @@ class FlexFieldDef final {
   void set_label(FlexLabel label) { proto_.set_label(label); }
   void set_flex_def(const std::shared_ptr<const FlexDef>& flex_def) { flex_def_ = flex_def; }
   void set_field_name(const std::string& name) { proto_.set_field_name(name); }
-  void set_field_number(int32_t field_number) { proto_.set_field_number(field_number); }
   void set_default_val(const std::shared_ptr<const FlexValue>& flex_value) {
     default_val_ = flex_value;
   }
@@ -112,21 +110,15 @@ class StructFlexDef : public FlexDef {
   ~StructFlexDef() override = default;
 
   bool Has(const std::string& field_name) const {
-    return field_name2field_number_.find(field_name) != field_name2field_number_.end();
+    return field_name2field_.find(field_name) != field_name2field_.end();
   }
   const std::vector<std::shared_ptr<const FlexFieldDef>>& fields() const { return fields_; }
-  int64_t FieldNumber4FieldName(const std::string& field_name) const {
-    return field_name2field_number_.at(field_name);
-  }
-  const FlexFieldDef& Field4FieldNumber(int32_t field_number) const {
-    return *field_number2field_.at(field_number);
-  }
   const FlexFieldDef& Field4FieldName(const std::string& field_name) const {
-    return Field4FieldNumber(FieldNumber4FieldName(field_name));
+    return *field_name2field_.at(field_name);
   }
 
   // Setters
-  FlexFieldDef* AddField(const std::string& field_name, int32_t field_number);
+  FlexFieldDef* AddField(const std::string& field_name);
 
   // proto
   void InitFromProto(const FlexDefProto& proto);
@@ -136,31 +128,8 @@ class StructFlexDef : public FlexDef {
 
  private:
   std::vector<std::shared_ptr<const FlexFieldDef>> fields_;
-  // field_number is not fields_'s index
-  std::map<int32_t, std::shared_ptr<const FlexFieldDef>> field_number2field_;
-  std::map<std::string, int32_t> field_name2field_number_;
+  std::map<std::string, std::shared_ptr<const FlexFieldDef>> field_name2field_;
 };
-
-struct FieldNumber {
-  FieldNumber() = default;
-
-  FieldNumber operator=(int32_t value) {
-    FieldNumber field_number;
-    field_number.value_ = value;
-    return field_number;
-  }
-
-  int32_t value() const { return value_; };
-
- private:
-  int32_t value_;
-};
-
-namespace flex {
-
-extern FieldNumber field_number;
-
-}  // namespace flex
 
 template<typename T, typename Enabled = void>
 struct ScalarOrConstRef;
@@ -200,48 +169,45 @@ class StructFlexDefBuilder final {
   ~StructFlexDefBuilder() = default;
 
   StructFlexDefBuilder& Field(FlexLabel label, const std::shared_ptr<const FlexDef>& flex_def,
-                              const std::string& field_name, int64_t field_number,
+                              const std::string& field_name,
                               const std::function<void(FlexValue*)>& SetDefaultVal,
                               const std::string& description);
 
   template<typename T>
-  StructFlexDefBuilder& Required(const std::string& field_name, const FieldNumber& field_number) {
+  StructFlexDefBuilder& Required(const std::string& field_name) {
     const auto& flex_def = FlexDefBuilderTrait<T>::GetFlexDef();
-    return Required(flex_def, field_name, field_number);
+    return Required(flex_def, field_name);
   }
   StructFlexDefBuilder& Required(const std::shared_ptr<const FlexDef>& flex_def,
-                                 const std::string& field_name, const FieldNumber& field_number) {
-    return Field(kFlexLabelRequired, flex_def, field_name, field_number.value(), [](FlexValue*) {},
-                 "");
+                                 const std::string& field_name) {
+    return Field(kFlexLabelRequired, flex_def, field_name, [](FlexValue*) {}, "");
   }
 
   template<typename T>
   typename std::enable_if<IsNativeFlexDef<T>::value, StructFlexDefBuilder&>::type Optional(
-      const std::string& field_name, const T& default_val, const FieldNumber& field_number) {
-    StructFlexDefOptional<T>::Field(this, field_name, default_val, field_number);
+      const std::string& field_name, const T& default_val) {
+    StructFlexDefOptional<T>::Field(this, field_name, default_val);
     return *this;
   }
   template<typename T>
   typename std::enable_if<!IsNativeFlexDef<T>::value, StructFlexDefBuilder&>::type Optional(
-      const std::string& field_name, const FieldNumber& field_number) {
+      const std::string& field_name) {
     const auto& flex_def = T::GetFlexDef();
-    return Optional(flex_def, field_name, field_number);
+    return Optional(flex_def, field_name);
   }
   StructFlexDefBuilder& Optional(const std::shared_ptr<const FlexDef>& flex_def,
-                                 const std::string& field_name, const FieldNumber& field_number) {
-    return Field(kFlexLabelOptional, flex_def, field_name, field_number.value(), [](FlexValue*) {},
-                 "");
+                                 const std::string& field_name) {
+    return Field(kFlexLabelOptional, flex_def, field_name, [](FlexValue*) {}, "");
   }
 
   template<typename T>
-  StructFlexDefBuilder& Repeated(const std::string& field_name, const FieldNumber& field_number) {
+  StructFlexDefBuilder& Repeated(const std::string& field_name) {
     const auto& flex_def = FlexDefBuilderTrait<T>::GetFlexDef();
-    return Repeated(flex_def, field_name, field_number);
+    return Repeated(flex_def, field_name);
   }
   StructFlexDefBuilder& Repeated(const std::shared_ptr<const FlexDef>& flex_def,
-                                 const std::string& field_name, const FieldNumber& field_number) {
-    return Field(kFlexLabelRepeated, flex_def, field_name, field_number.value(), [](FlexValue*) {},
-                 "");
+                                 const std::string& field_name) {
+    return Field(kFlexLabelRepeated, flex_def, field_name, [](FlexValue*) {}, "");
   }
 
   std::shared_ptr<const FlexDef> Build() { return flex_def_; }
@@ -473,8 +439,6 @@ class StructFlexValue : public FlexValue {
   // for struct flex value
   bool Defined(const std::string& field_name) const override;
   bool Has(const std::string& field_name) const override;
-  const FlexValue& GetByFieldNumber(int64_t field_number) const;
-  FlexValue* MutableByFieldNumber(int64_t field_number);
   const FlexValue& Get(const std::string& field_name) const override;
   FlexValue* Mutable(const std::string& field_name) override;
 
@@ -485,7 +449,7 @@ class StructFlexValue : public FlexValue {
   const StructFlexDef& struct_flex_def() const { return *struct_flex_def_; }
 
   const StructFlexDef* struct_flex_def_;
-  std::map<int64_t, std::shared_ptr<FlexValue>> field_number2flex_value_;
+  std::map<std::string, std::shared_ptr<FlexValue>> field_name2flex_value_;
 };
 
 template<typename T>
@@ -524,40 +488,40 @@ inline std::shared_ptr<FlexValue> NewFlexValue(const std::shared_ptr<const FlexD
 #define DEFINE_FLEX_DEF(customized_flex_struct, builder) \
   std::shared_ptr<const FlexDef> customized_flex_struct::MakeFlexDef(FlexDefBuilder& builder)
 
-#define SPECIALIZE_STRUCT_FLEX_DEF_UTIL(T, name)                                     \
-  template<>                                                                         \
-  struct IsNativeFlexDef<T> final {                                                  \
-    static const bool value = true;                                                  \
-  };                                                                                 \
-  template<>                                                                         \
-  struct FlexDefBuilderTrait<T> {                                                    \
-    static const std::shared_ptr<const FlexDef>& GetFlexDef() {                      \
-      static const std::shared_ptr<const FlexDef> ptr = MakeFlexDef();               \
-      return ptr;                                                                    \
-    }                                                                                \
-    static std::shared_ptr<const FlexDef> MakeFlexDef() {                            \
-      auto flex_def = std::make_shared<NativeFlexDef>();                             \
-      flex_def->set_cpp_type(kFlexCppType##name);                                    \
-      return flex_def;                                                               \
-    }                                                                                \
-  };                                                                                 \
-  template<>                                                                         \
-  struct FlexValueAccessHelper<T> final {                                            \
-    static typename ScalarOrConstRef<T>::type Get(const FlexValue* that) {           \
-      return that->Get##name();                                                      \
-    }                                                                                \
-    static void Set(FlexValue* that, typename ScalarOrConstRef<T>::type val) {       \
-      return that->Set##name(val);                                                   \
-    }                                                                                \
-  };                                                                                 \
-  template<>                                                                         \
-  struct StructFlexDefOptional<T> {                                                  \
-    static void Field(StructFlexDefBuilder* builder, const std::string& field_name,  \
-                      const T& default_val, const FieldNumber& field_number) {       \
-      const auto& flex_def = FlexDefBuilderTrait<T>::GetFlexDef();                   \
-      builder->Field(kFlexLabelOptional, flex_def, field_name, field_number.value(), \
-                     [&](FlexValue* value) { value->Set##name(default_val); }, "");  \
-    }                                                                                \
+#define SPECIALIZE_STRUCT_FLEX_DEF_UTIL(T, name)                                    \
+  template<>                                                                        \
+  struct IsNativeFlexDef<T> final {                                                 \
+    static const bool value = true;                                                 \
+  };                                                                                \
+  template<>                                                                        \
+  struct FlexDefBuilderTrait<T> {                                                   \
+    static const std::shared_ptr<const FlexDef>& GetFlexDef() {                     \
+      static const std::shared_ptr<const FlexDef> ptr = MakeFlexDef();              \
+      return ptr;                                                                   \
+    }                                                                               \
+    static std::shared_ptr<const FlexDef> MakeFlexDef() {                           \
+      auto flex_def = std::make_shared<NativeFlexDef>();                            \
+      flex_def->set_cpp_type(kFlexCppType##name);                                   \
+      return flex_def;                                                              \
+    }                                                                               \
+  };                                                                                \
+  template<>                                                                        \
+  struct FlexValueAccessHelper<T> final {                                           \
+    static typename ScalarOrConstRef<T>::type Get(const FlexValue* that) {          \
+      return that->Get##name();                                                     \
+    }                                                                               \
+    static void Set(FlexValue* that, typename ScalarOrConstRef<T>::type val) {      \
+      return that->Set##name(val);                                                  \
+    }                                                                               \
+  };                                                                                \
+  template<>                                                                        \
+  struct StructFlexDefOptional<T> {                                                 \
+    static void Field(StructFlexDefBuilder* builder, const std::string& field_name, \
+                      const T& default_val) {                                       \
+      const auto& flex_def = FlexDefBuilderTrait<T>::GetFlexDef();                  \
+      builder->Field(kFlexLabelOptional, flex_def, field_name,                      \
+                     [&](FlexValue* value) { value->Set##name(default_val); }, ""); \
+    }                                                                               \
   };
 
 SPECIALIZE_STRUCT_FLEX_DEF_UTIL(bool, Bool);

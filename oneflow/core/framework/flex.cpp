@@ -77,11 +77,10 @@ void FlexFieldDef::ToProto(FlexFieldDefProto* proto) const {
 }
 
 // Setters
-FlexFieldDef* StructFlexDef::AddField(const std::string& field_name, int32_t field_number) {
-  CHECK(field_name2field_number_.emplace(field_name, field_number).second);
+FlexFieldDef* StructFlexDef::AddField(const std::string& field_name) {
   auto field = std::make_shared<FlexFieldDef>();
   fields_.push_back(field);
-  CHECK(field_number2field_.emplace(field_number, field).second);
+  CHECK(field_name2field_.emplace(field_name, field).second);
   return field.get();
 }
 
@@ -94,47 +93,31 @@ std::shared_ptr<FlexValue> StructFlexDef::New(
 // proto
 void StructFlexDef::InitFromProto(const FlexDefProto& proto) {
   CHECK(proto.has_struct_flex_def());
-  {
-    const auto& field_name2field_number = proto.struct_flex_def().field_name2field_number();
-    field_name2field_number_ = {field_name2field_number.begin(), field_name2field_number.end()};
-  }
-  const auto& field_number2field = proto.struct_flex_def().field_number2field();
-  for (const auto& pair : field_number2field) {
+  const auto& field_name2field = proto.struct_flex_def().field_name2field();
+  for (const auto& pair : field_name2field) {
     auto field = std::make_shared<FlexFieldDef>();
     field->InitFromProto(pair.second);
-    CHECK_EQ(pair.first, pair.second.field_number());
     fields_.push_back(field);
-    field_number2field_[pair.first] = field;
+    field_name2field_[pair.first] = field;
   }
 }
 
 void StructFlexDef::ToProto(FlexDefProto* proto) const {
   auto* struct_flex_def = proto->mutable_struct_flex_def();
   struct_flex_def->Clear();
-  *struct_flex_def->mutable_field_name2field_number() = {field_name2field_number_.begin(),
-                                                         field_name2field_number_.end()};
   for (const auto& field : fields_) {
-    CHECK_EQ(field_name2field_number_.at(field->field_name()), field->field_number());
-    field->ToProto(&(*struct_flex_def->mutable_field_number2field())[field->field_number()]);
+    field->ToProto(&(*struct_flex_def->mutable_field_name2field())[field->field_name()]);
   }
-}
-
-namespace flex {
-
-FieldNumber field_number;
 }
 
 StructFlexDefBuilder& StructFlexDefBuilder::Field(
     FlexLabel label, const std::shared_ptr<const FlexDef>& flex_def, const std::string& field_name,
-    int64_t field_number, const std::function<void(FlexValue*)>& SetDefaultVal,
-    const std::string& description) {
+    const std::function<void(FlexValue*)>& SetDefaultVal, const std::string& description) {
   CHECK(static_cast<bool>(flex_def));
-  CHECK_GT(field_number, 0);
-  auto* field = flex_def_->AddField(field_name, field_number);
+  auto* field = flex_def_->AddField(field_name);
   field->set_label(label);
   field->set_flex_def(flex_def);
   field->set_field_name(field_name);
-  field->set_field_number(field_number);
   {
     auto default_val = flex_def->New(label, flex_def);
     SetDefaultVal(default_val.get());
@@ -344,30 +327,25 @@ bool StructFlexValue::Defined(const std::string& field_name) const {
 }
 
 bool StructFlexValue::Has(const std::string& field_name) const {
-  int64_t field_number = struct_flex_def().FieldNumber4FieldName(field_name);
-  return field_number2flex_value_.find(field_number) != field_number2flex_value_.end();
+  return field_name2flex_value_.find(field_name) != field_name2flex_value_.end();
 }
 
-const FlexValue& StructFlexValue::GetByFieldNumber(int64_t field_number) const {
-  const auto& iter = field_number2flex_value_.find(field_number);
-  if (iter == field_number2flex_value_.end()) {
-    return *struct_flex_def().Field4FieldNumber(field_number).default_val();
+const FlexValue& StructFlexValue::Get(const std::string& field_name) const {
+  const auto& iter = field_name2flex_value_.find(field_name);
+  if (iter == field_name2flex_value_.end()) {
+    return *struct_flex_def().Field4FieldName(field_name).default_val();
   } else {
     return *iter->second;
   }
 }
 
-const FlexValue& StructFlexValue::Get(const std::string& field_name) const {
-  return GetByFieldNumber(struct_flex_def().FieldNumber4FieldName(field_name));
-}
-
-FlexValue* StructFlexValue::MutableByFieldNumber(int64_t field_number) {
-  const auto& iter = field_number2flex_value_.find(field_number);
+FlexValue* StructFlexValue::Mutable(const std::string& field_name) {
+  const auto& iter = field_name2flex_value_.find(field_name);
   FlexValue* ptr = nullptr;
-  if (iter == field_number2flex_value_.end()) {
-    const auto& flex_field_def = struct_flex_def().Field4FieldNumber(field_number);
+  if (iter == field_name2flex_value_.end()) {
+    const auto& flex_field_def = struct_flex_def().Field4FieldName(field_name);
     auto field = flex_field_def.flex_def()->New(flex_field_def.label(), flex_field_def.flex_def());
-    field_number2flex_value_[field_number] = field;
+    field_name2flex_value_[field_name] = field;
     ptr = field.get();
   } else {
     ptr = iter->second.get();
@@ -375,22 +353,18 @@ FlexValue* StructFlexValue::MutableByFieldNumber(int64_t field_number) {
   return ptr;
 }
 
-FlexValue* StructFlexValue::Mutable(const std::string& field_name) {
-  return MutableByFieldNumber(struct_flex_def().FieldNumber4FieldName(field_name));
-}
-
 void StructFlexValue::InitFromProto(const FlexValueProto& proto) {
-  for (const auto& pair : proto.struct_flex_value().field_number2flex_value()) {
-    const auto& flex_field_def = struct_flex_def().Field4FieldNumber(pair.first);
+  for (const auto& pair : proto.struct_flex_value().field_name2flex_value()) {
+    const auto& flex_field_def = struct_flex_def().Field4FieldName(pair.first);
     auto field = flex_field_def.flex_def()->New(flex_field_def.label(), flex_field_def.flex_def());
     field->InitFromProto(pair.second);
-    CHECK(field_number2flex_value_.emplace(pair.first, field).second);
+    CHECK(field_name2flex_value_.emplace(pair.first, field).second);
   }
 }
 
 void StructFlexValue::ToProto(FlexValueProto* proto) const {
-  auto* map = proto->mutable_struct_flex_value()->mutable_field_number2flex_value();
-  for (const auto& pair : field_number2flex_value_) { pair.second->ToProto(&(*map)[pair.first]); }
+  auto* map = proto->mutable_struct_flex_value()->mutable_field_name2flex_value();
+  for (const auto& pair : field_name2flex_value_) { pair.second->ToProto(&(*map)[pair.first]); }
 }
 
 }  // namespace oneflow
