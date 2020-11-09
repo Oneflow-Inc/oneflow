@@ -127,5 +127,64 @@ TEST(FlexValue, dynamic_nested) {
   ASSERT_EQ(geo_obj->Get("location").Get<std::string>("description"), "Company");
 }
 
+FLEX_DEF(BinaryTree, builder) {
+  return builder.Struct()
+      .Optional<BinaryTree>("left", flex::field_number = 1)
+      .Optional<BinaryTree>("right", flex::field_number = 2)
+      .Optional<int32_t>("weight", 1, flex::field_number = 3)
+      .Build();
+}
+
+TEST(FlexDef, defined_or_has) {
+  auto tree = BinaryTree::NewFlexValue();
+  ASSERT_TRUE(tree->Defined("weight"));
+  ASSERT_TRUE(!tree->Defined("undefined-field"));
+  ASSERT_TRUE(!tree->Has("weight"));
+  tree->Set<int32_t>("weight", 3);
+  ASSERT_TRUE(tree->Has("weight"));
+}
+
+TEST(FlexDef, recursive) {
+  auto tree = BinaryTree::NewFlexValue();
+  ASSERT_EQ(tree->Get<int32_t>("weight"), 1);
+  ASSERT_TRUE(!tree->Has("left"));
+  ASSERT_TRUE(!tree->Has("right"));
+  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 1);
+  ASSERT_EQ(tree->Get("right").Get<int32_t>("weight"), 1);
+  tree->Mutable("left")->Set<int32_t>("weight", 2);
+  ASSERT_TRUE(tree->Has("left"));
+  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 2);
+}
+
+DECLARE_FLEX_DEF(RedTree);
+DECLARE_FLEX_DEF(BlackTree);
+
+DEFINE_FLEX_DEF(RedTree, builder) {
+  return builder.Struct()
+      .Optional<BlackTree>("left", flex::field_number = 1)
+      .Optional<BlackTree>("right", flex::field_number = 2)
+      .Optional<int32_t>("weight", 1, flex::field_number = 3)
+      .Build();
+}
+DEFINE_FLEX_DEF(BlackTree, builder) {
+  return builder.Struct()
+      .Optional<RedTree>("left", flex::field_number = 1)
+      .Optional<RedTree>("right", flex::field_number = 2)
+      .Optional<int32_t>("weight", 1, flex::field_number = 3)
+      .Build();
+}
+
+TEST(FlexDef, recursive_two_flex_def) {
+  auto tree = BlackTree::NewFlexValue();
+  ASSERT_EQ(tree->Get<int32_t>("weight"), 1);
+  ASSERT_TRUE(!tree->Has("left"));
+  ASSERT_TRUE(!tree->Has("right"));
+  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 1);
+  ASSERT_EQ(tree->Get("right").Get<int32_t>("weight"), 1);
+  tree->Mutable("left")->Set<int32_t>("weight", 2);
+  ASSERT_TRUE(tree->Has("left"));
+  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 2);
+}
+
 }  // namespace test
 }  // namespace oneflow

@@ -111,6 +111,9 @@ class StructFlexDef : public FlexDef {
   StructFlexDef() = default;
   ~StructFlexDef() override = default;
 
+  bool Has(const std::string& field_name) const {
+    return field_name2field_number_.find(field_name) != field_name2field_number_.end();
+  }
   const std::vector<std::shared_ptr<const FlexFieldDef>>& fields() const { return fields_; }
   int64_t FieldNumber4FieldName(const std::string& field_name) const {
     return field_name2field_number_.at(field_name);
@@ -179,7 +182,7 @@ struct IsNativeFlexDef final {
 
 template<typename T>
 struct FlexDefBuilderTrait {
-  static const std::shared_ptr<const FlexDef>& GetFlexDef() { return T::GetFlexDef(); }
+  static std::shared_ptr<const FlexDef> GetFlexDef() { return T::GetFlexDef(); }
 };
 
 template<typename T>
@@ -189,7 +192,11 @@ struct StructFlexDefOptional {
 
 class StructFlexDefBuilder final {
  public:
+  StructFlexDefBuilder(const StructFlexDefBuilder&) = delete;
+  StructFlexDefBuilder(StructFlexDefBuilder&&) = default;
   StructFlexDefBuilder() : flex_def_(std::make_shared<StructFlexDef>()) {}
+  explicit StructFlexDefBuilder(const std::shared_ptr<StructFlexDef>& flex_def)
+      : flex_def_(flex_def) {}
   ~StructFlexDefBuilder() = default;
 
   StructFlexDefBuilder& Field(FlexLabel label, const std::shared_ptr<const FlexDef>& flex_def,
@@ -245,10 +252,14 @@ class StructFlexDefBuilder final {
 
 class FlexDefBuilder final {
  public:
-  FlexDefBuilder() = default;
+  FlexDefBuilder() : flex_def_(std::make_shared<StructFlexDef>()) {}
+  FlexDefBuilder(const std::shared_ptr<StructFlexDef>& flex_def) : flex_def_(flex_def) {}
   ~FlexDefBuilder() = default;
 
-  StructFlexDefBuilder Struct() const { return StructFlexDefBuilder(); }
+  StructFlexDefBuilder Struct() const { return StructFlexDefBuilder(flex_def_); }
+
+ private:
+  std::shared_ptr<StructFlexDef> flex_def_;
 };
 
 class RepeatedFlexValue;
@@ -267,6 +278,8 @@ class FlexValue {
 
   const RepeatedFlexValue& Repeated() const;
   RepeatedFlexValue* MutableRepeated();
+
+  virtual bool Defined(const std::string& field_name) const { return false; }
 
   // for native flex value
   template<typename T>
@@ -300,6 +313,7 @@ class FlexValue {
   virtual FlexValue* Add() = 0;
 
   // for struct flex value
+  virtual bool Has(const std::string& field_name) const = 0;
   template<typename T>
   typename ScalarOrConstRef<T>::type Get(const std::string& field_name) const {
     return this->Get(field_name).Get<T>();
@@ -349,6 +363,7 @@ class NativeFlexValue : public FlexValue {
   FlexValue* Add() override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   // for struct flex value
+  bool Has(const std::string& field_name) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const FlexValue& Get(const std::string& field_name) const override {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
@@ -409,6 +424,7 @@ class RepeatedFlexValue : public FlexValue {
   std::size_t size() const { return flex_values_.size(); }
 
   // for struct flex value
+  bool Has(const std::string& field_name) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const FlexValue& Get(const std::string& field_name) const override {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
@@ -455,6 +471,8 @@ class StructFlexValue : public FlexValue {
   FlexValue* Add() override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   // for struct flex value
+  bool Defined(const std::string& field_name) const override;
+  bool Has(const std::string& field_name) const override;
   const FlexValue& GetByFieldNumber(int64_t field_number) const;
   FlexValue* MutableByFieldNumber(int64_t field_number);
   const FlexValue& Get(const std::string& field_name) const override;
@@ -478,16 +496,32 @@ inline std::shared_ptr<FlexValue> NewFlexValue(const std::shared_ptr<const FlexD
   return flex_def->New(flex_def);
 }
 
-#define FLEX_DEF(customized_flex_struct, builder)                                                \
+#define FLEX_DEF(customized_flex_struct, builder) \
+  DECLARE_FLEX_DEF(customized_flex_struct);       \
+  DEFINE_FLEX_DEF(customized_flex_struct, builder)
+
+#define DECLARE_FLEX_DEF(customized_flex_struct)                                                 \
   struct customized_flex_struct {                                                                \
     static std::shared_ptr<FlexValue> NewFlexValue() { return GetFlexDef()->New(GetFlexDef()); } \
-    static const std::shared_ptr<const FlexDef>& GetFlexDef() {                                  \
-      static FlexDefBuilder builder;                                                             \
-      static const std::shared_ptr<const FlexDef> ptr = MakeFlexDef(builder);                    \
-      return ptr;                                                                                \
+    static std::shared_ptr<const FlexDef> GetFlexDef() {                                         \
+      static std::shared_ptr<StructFlexDef> flex_def;                                            \
+      static std::atomic<bool> flex_def_allocated(false);                                        \
+      if (flex_def_allocated) { /* avoid circular reference deadlock */                          \
+        CHECK(static_cast<bool>(flex_def));                                                      \
+        return flex_def;                                                                         \
+      }                                                                                          \
+      static std::mutex mutex;                                                                   \
+      std::unique_lock<std::mutex> lock(mutex);                                                  \
+      flex_def.reset(new StructFlexDef());                                                       \
+      flex_def_allocated = true;                                                                 \
+      static FlexDefBuilder builder(flex_def);                                                   \
+      CHECK(MakeFlexDef(builder) == flex_def);                                                   \
+      return flex_def;                                                                           \
     }                                                                                            \
     static std::shared_ptr<const FlexDef> MakeFlexDef(FlexDefBuilder& builder);                  \
-  };                                                                                             \
+  }
+
+#define DEFINE_FLEX_DEF(customized_flex_struct, builder) \
   std::shared_ptr<const FlexDef> customized_flex_struct::MakeFlexDef(FlexDefBuilder& builder)
 
 #define SPECIALIZE_STRUCT_FLEX_DEF_UTIL(T, name)                                     \
