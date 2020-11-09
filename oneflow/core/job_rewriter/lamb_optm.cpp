@@ -43,8 +43,9 @@ void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
   CHECK_NE(op_conf->name(), std::string(""));
 }
 
-void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
+                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
+                             const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
   OperatorConf m_var = GenerateLAMBHelperVariableOpConf(op, "m", 0.f);
