@@ -235,3 +235,57 @@ def same_padding(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("reflection_pad2d")
+def reflection_pad2d(
+    x: remote_blob_util.BlobDef,
+    padding: Union[int, tuple, list],
+    data_format: str,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Pads the input tensor using the reflection of the input boundary. 
+          Same as :https://pytorch.org/docs/master/generated/torch.nn.ReflectionPad2d.html?highlight=reflection#torch.nn.ReflectionPad2d
+
+    Args:
+        x (remote_blob_util.BlobDef): input blob
+        padding (Union[int, remote_blob_util.BlobDef]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
+        data_format (Optional[str]): "NCHW" or "NHWC". Defaults to "NCHW"
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: [description]
+    """
+    if data_format == "NCHW":
+        H, W = x.shape[2], x.shape[3]
+    elif data_format == "NHWC":
+        H, W = x.shape[1], x.shape[2]
+    else:
+        raise ValueError("data_format must be 'NCHW' or 'NHWC'")
+
+    if isinstance(padding, (tuple, list)):
+        assert len(padding) == len(x.shape), ValueError("padding boundry must be the same size of input dims")
+        assert padding[2] < H and padding[3] < H and padding[0] < W and padding[1] < W, ValueError(
+            "Padding size should be less than the corresponding input dimension!"
+        )
+        boundry = [0, 0, padding[2], padding[3]] if data_format == "NCHW" else [0, padding[1], padding[2], 0]
+    elif isinstance(padding, int):
+        assert padding < H and padding < W, ValueError("Padding size should be less than the corresponding input dimension!")
+        boundry = [padding, padding, padding, padding]
+    else:
+        raise ValueError("padding must be in or list or tuple!")
+
+    return (
+            oneflow.user_op_builder(
+                name if name is not None else id_util.UniqueStr("Reflection_Pad2d")
+            )
+            .Op("reflection_pad2d")
+            .Input("x", [x])
+            .Output("y")
+            .Attr("data_format", data_format)
+            .Attr("padding", list(boundry))
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
