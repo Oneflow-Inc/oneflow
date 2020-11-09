@@ -191,9 +191,8 @@ class OpLibLoader(object):
                 return full_reg_src
 
             self.out_path = os.path.join(os.getcwd(), "op_lib_loader_out")
-            if os.path.exists(self.out_path):
-                shutil.rmtree(self.out_path)
-            os.makedirs(self.out_path)
+            if not os.path.exists(self.out_path):
+                os.makedirs(self.out_path)
             gen_src_path = os.path.join(self.out_path, "cpp2py_gen.cpp")
             gen_obj_path = os.path.join(self.out_path, "cpp2py.o")
             gen_so_path = os.path.join(self.out_path, "cpp2py.so")
