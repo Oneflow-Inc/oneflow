@@ -128,6 +128,7 @@ StructFlexDefBuilder& StructFlexDefBuilder::Field(
     FlexLabel label, const std::shared_ptr<const FlexDef>& flex_def, const std::string& field_name,
     int64_t field_number, const std::function<void(FlexValue*)>& SetDefaultVal,
     const std::string& description) {
+  CHECK(static_cast<bool>(flex_def));
   CHECK_GT(field_number, 0);
   auto* field = flex_def_->AddField(field_name, field_number);
   field->set_label(label);
@@ -336,6 +337,15 @@ void RepeatedFlexValue::InitFromProto(const FlexValueProto& proto) {
 void RepeatedFlexValue::ToProto(FlexValueProto* proto) const {
   auto* list_flex_value = proto->mutable_list_flex_value()->mutable_flex_value();
   for (const auto& flex_value : flex_values_) { flex_value->ToProto(list_flex_value->Add()); }
+}
+
+bool StructFlexValue::Defined(const std::string& field_name) const {
+  return struct_flex_def().Has(field_name);
+}
+
+bool StructFlexValue::Has(const std::string& field_name) const {
+  int64_t field_number = struct_flex_def().FieldNumber4FieldName(field_name);
+  return field_number2flex_value_.find(field_number) != field_number2flex_value_.end();
 }
 
 const FlexValue& StructFlexValue::GetByFieldNumber(int64_t field_number) const {
