@@ -82,13 +82,36 @@ class ShapeViewBase {
    */
   int64_t elem_cnt() const;
   
+  /**
+   * @brief The shape of tensor is stored as array in the memory and the method ptr 
+   * will get the pointer to the begin of the array buffer. 
+   * 
+   * @return const DimType* (a.k.a const DimT*)
+   */
   const DimType* ptr() const { return ptr_; }
 
   bool operator==(const ShapeViewBase& rhs) const;
   std::string ToString() const;
+
+  /**
+   * @brief Convert ShapeViewBase to DimVector
+   * 
+   * @param dim_vec 
+   */
   void ToDimVector(DimVector* dim_vec) const;
+
+  /**
+   * @brief Convert ShapeViewBase to Shape
+   * 
+   * @param shape 
+   */
   void ToShape(Shape* shape) const;
 
+  /**
+   * @brief Set the pointer to the array buffer
+   * 
+   * @param ptr 
+   */
   void set_ptr(DimType* ptr) { ptr_ = ptr; }
 
  protected:
