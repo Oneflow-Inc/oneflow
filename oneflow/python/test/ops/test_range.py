@@ -46,21 +46,30 @@ def compare_range_with_np_CPU(device_type, machine_ids, device_counts):
 
     func_config = flow.FunctionConfig()
 
-    @flow.global_function(function_config=func_config)
+    @flow.global_function(function_config=func_config, type="train")
     def oneflow_range() -> List[tp.Numpy]:
         with flow.scope.placement(device_type, machine_ids):
-            out_1 = flow.range(2, 10, 3, dtype=flow.float64, name="range_float64")
-            out_2 = flow.range(0, 10, 1, dtype=flow.float32, name="range_float32")
-            out_3 = flow.range(10, dtype=flow.int32, name="range_int32")
-            out_4 = flow.range(0, 10, 2, dtype=flow.int64, name="range_int64")
+            out_1 = flow.range(1, 10, 3, dtype=flow.float64, name="range_float64")
+            out_2 = flow.range(3, 6, 1, dtype=flow.float32, name="range_float32")
+            out_3 = flow.range(3, dtype=flow.int32, name="range_int32")
+            out_4 = flow.range(0, 6, 2, dtype=flow.int64, name="range_int64")
+
+            x_var = flow.get_variable(
+                "cpu_input",
+                shape=(3, ),
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+            )
+            x_out = out_2 + x_var
+            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(x_out)
 
         return [out_1, out_2, out_3, out_4]
 
     def np_range():
-        np_out_1 = np.arange(2, 10, 3).astype(np.float64)
-        np_out_2 = np.arange(0, 10, 1).astype(np.float32)
-        np_out_3 = np.arange(10).astype(np.int32)
-        np_out_4 = np.arange(0, 10, 2).astype(np.int64)
+        np_out_1 = np.arange(1, 10, 3).astype(np.float64)
+        np_out_2 = np.arange(3, 6, 1).astype(np.float32)
+        np_out_3 = np.arange(3).astype(np.int32)
+        np_out_4 = np.arange(0, 6, 2).astype(np.int64)
 
         return [np_out_1, np_out_2, np_out_3, np_out_4]
 
@@ -83,25 +92,34 @@ def compare_range_with_np_GPU(device_type, machine_ids, device_counts):
 
     func_config = flow.FunctionConfig()
 
-    @flow.global_function(function_config=func_config)
+    @flow.global_function(function_config=func_config, type="train")
     def oneflow_range_gpu() -> List[tp.Numpy]:
         with flow.scope.placement(device_type, machine_ids):
-            out_1 = flow.range(2, 10, 3, dtype=flow.float64, name="range_float64")
-            out_2 = flow.range(0, 10, 1, dtype=flow.float32, name="range_float32")
-            out_3 = flow.range(0, 10, 1, dtype=flow.float32, name="range_float16")
+            out_1 = flow.range(1, 10, 3, dtype=flow.float64, name="range_float64")
+            out_2 = flow.range(3, 6, 1, dtype=flow.float32, name="range_float32")
+            out_3 = flow.range(4, 13, 4, dtype=flow.float32, name="range_float16")
             # Oneflow doesn't support float16 output, so we need to cast it to float32
             out_3 = flow.cast(out_3, dtype=flow.float32)
-            out_4 = flow.range(10, dtype=flow.int32, name="range_int32")
-            out_5 = flow.range(0, 10, 2, dtype=flow.int64, name="range_int64")
+            out_4 = flow.range(3, dtype=flow.int32, name="range_int32")
+            out_5 = flow.range(0, 6, 2, dtype=flow.int64, name="range_int64")
+
+            x_var = flow.get_variable(
+                "gpu_input",
+                shape=(3, ),
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0.0),
+            )
+            x_gpu_out = x_var + out_2
+            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(x_gpu_out)
 
         return [out_1, out_2, out_3, out_4, out_5]
 
     def np_range_gpu():
-        np_out_1 = np.arange(2, 10, 3).astype(np.float64)
-        np_out_2 = np.arange(0, 10, 1).astype(np.float32)
-        np_out_3 = np.arange(0, 10, 1).astype(np.float16)
-        np_out_4 = np.arange(10).astype(np.int32)
-        np_out_5 = np.arange(0, 10, 2).astype(np.int64)
+        np_out_1 = np.arange(1, 10, 3).astype(np.float64)
+        np_out_2 = np.arange(3, 6, 1).astype(np.float32)
+        np_out_3 = np.arange(4, 13, 4).astype(np.float16)
+        np_out_4 = np.arange(3).astype(np.int32)
+        np_out_5 = np.arange(0, 6, 2).astype(np.int64)
 
         return [np_out_1, np_out_2, np_out_3, np_out_4, np_out_5]
 

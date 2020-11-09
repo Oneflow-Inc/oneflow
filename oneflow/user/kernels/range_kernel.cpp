@@ -29,12 +29,12 @@ class RangeKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
-    const int64_t start = ctx->Attr<int64_t>("start");
-    const int64_t delta = ctx->Attr<int64_t>("delta");
-    const int64_t limit = ctx->Attr<int64_t>("limit");
-    const int64_t range_shape =
+    const int32_t start = ctx->Attr<int64_t>("start");
+    const int32_t delta = ctx->Attr<int64_t>("delta");
+    const int32_t limit = ctx->Attr<int64_t>("limit");
+    const int32_t range_elem_cnt =
         (((limit - start) + delta - 1) / delta);  // Do the ceil division, ceil((limit-start)/delta)
-    RangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, range_shape, output);
+    RangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, range_elem_cnt, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -56,7 +56,7 @@ REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 // Register GPU version
 #ifdef WITH_CUDA
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
-REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16)
+REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16);
 #endif
 }  // namespace user_op
 }  // namespace oneflow
