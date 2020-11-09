@@ -61,7 +61,7 @@ int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const ShapeV
 /**
  * @brief Convert one-dimensional array index to high-dimensional coordinates
  */
-std::vector<int64_t>  index_to_coordinate(const int64_t idx, const std::vector<int64_t> shape, std::vector<int64_t>   coordinate){
+std::vector<int64_t>  index_to_coordinate(const int64_t idx, const std::vector<int64_t> shape, std::vector<int64_t> &  coordinate){
   int64_t  tmp = idx;
   int64_t i = shape.size()-1;
   while(i >=0){
