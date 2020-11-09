@@ -72,7 +72,7 @@ def get_cpp2py_path():
     )
 
 
-@oneflow_export("util.op_lib")
+@oneflow_export("experimental.op_lib")
 class OpLib(object):
     def __init__(self, op_type_name, lib_path=""):
         self.op_type_name = op_type_name
@@ -150,7 +150,7 @@ class OpLib(object):
         return self.so_path
 
 
-@oneflow_export("util.op_lib_loader")
+@oneflow_export("experimental.op_lib_loader")
 class OpLibLoader(object):
     def __init__(self):
         self.py_names = []
