@@ -55,6 +55,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
       return Global<IDMgr>::Get()->CpuMemZoneId();
     } else {
       UNIMPLEMENTED();
+      return -1;
     }
   }
 

@@ -91,9 +91,9 @@ class OpRegistry final {
   OpRegistry& SupportCpuOnly();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
-  __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, UserOpAttrType type);
+  __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type);
   template<typename T>
-  __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, UserOpAttrType type,
+  __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type,
                                                const T& default_val);
   template<typename T>
   OpRegistry& Attr(const std::string& name, const T& default_val);
@@ -115,7 +115,7 @@ class OpRegistry final {
  private:
   OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
                       bool num_as_min);
-  OpRegistry& DefaultedAttr(const std::string& name, UserOpAttrType type,
+  OpRegistry& DefaultedAttr(const std::string& name, AttrType type,
                             const std::function<void(UserOpDef::AttrDef*)>& SetDefault);
 
  private:

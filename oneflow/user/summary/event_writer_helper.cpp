@@ -132,7 +132,7 @@ Maybe<void> FillImageInSummary(const user_op::Tensor& tensor, const std::string&
   const int64_t hw = h * w;
   const int64_t depth = static_cast<int64_t>(tensor.shape().At(3));
   if (tensor.data_type() == DataType::kUInt8) {
-    auto ith_image = [tensor, hw, depth](int i) {
+    auto ith_image = [&tensor, hw, depth](int i) {
       auto images = tensor.dptr<uint8_t>();
       uint8_t* image_i = (uint8_t*)malloc(sizeof(uint8_t) * hw * depth);
       memcpy(image_i, images + i * hw * depth, hw * depth);

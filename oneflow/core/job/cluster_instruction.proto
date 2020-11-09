@@ -5,11 +5,15 @@ import "oneflow/core/eager/eager_instruction.proto";
 
 message ClusterCtrlSessionStart {}
 message ClusterCtrlHalt {}
+message ClusterCtrlAbort {}
+message ClusterCtrlEagerSync {}
 
 message ClusterInstructionProto {
   oneof instruction_type {
     ClusterCtrlSessionStart cluster_ctrl_session_start = 1;
-    ClusterCtrlHalt cluster_ctrl_halt = 2;
+    ClusterCtrlHalt cluster_ctrl_halt = 2; // normal exit
     eager.EagerInstruction eager_instruction = 3;
+    ClusterCtrlEagerSync cluster_ctrl_eager_sync = 4;
+    ClusterCtrlAbort cluster_ctrl_abort = 5; // error exit
   }
 }
