@@ -153,22 +153,4 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
     }
 });
 
-
-REGISTER_USER_OP_GRAD("reflection_pad2d_grad")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-    if (op.NeedGenGradTensor4OpInput("dy", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("reflection_pad2d")
-                .Input("x", op.GetGradTensorWithOpOutput("dx", 0))
-                .Output("y")
-                .Attr("data_format", op.attr<std::string>("data_format"))
-                .Attr("padding", op.attr<std::vector<int64_t>>("padding"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "dy", 0);
-        AddOp(grad_op);
-    }
-});
-
-
 }  // namespace oneflow
