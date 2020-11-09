@@ -29,9 +29,9 @@ REGISTER_USER_OP("fake_quantization")
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
     .Attr<std::string>("quantizer_type", "symmetric")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
-      Shape* zero_point_shape = ctx->Shape4ArgNameAndIndex("zero_point", 0);
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
+      const Shape* zero_point_shape = ctx->Shape4ArgNameAndIndex("zero_point", 0);
 
       std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
 
@@ -56,16 +56,44 @@ REGISTER_USER_OP("fake_quantization")
       zero_point->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO(Liang Depeng): refer to eltwise op
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const Shape& logical_scale_shape =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("scale", 0).shape();
+      if (logical_scale_shape.elem_cnt() > 1) {
+        // NOTE(Liang Depeng): per-channel quantization
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), 0)
+            .Split(user_op::OpArg("scale", 0), 0)
+            .Split(user_op::OpArg("zero_point", 0), 0)
+            .Split(user_op::OpArg("out", 0), 0)
+            .Build();
+      } else {
+        // NOTE(Liang Depeng): the sbp signature of per-layer quantization is the same as eltwise
+        // ops
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), 0)
+            .Broadcast(user_op::OpArg("scale", 0))
+            .Broadcast(user_op::OpArg("zero_point", 0))
+            .Split(user_op::OpArg("out", 0), 0)
+            .Build();
+      }
+      FOR_RANGE(int64_t, i, 1, in_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), i)
+            .Broadcast(user_op::OpArg("scale", 0))
+            .Broadcast(user_op::OpArg("zero_point", 0))
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      int32_t quantize_to_bit = op_conf.attr<int32_t>("quantize_to_bit");
+      const int32_t quantize_to_bit = op_conf.attr<int32_t>("quantize_to_bit");
       CHECK_GT_OR_RETURN(quantize_to_bit, 1);
       CHECK_LE_OR_RETURN(quantize_to_bit, 8);
 
-      std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");
+      const std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");
       CHECK_OR_RETURN(quantizer_type == "symmetric" || quantizer_type == "affine");
       return Maybe<void>::Ok();
     });
