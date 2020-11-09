@@ -80,7 +80,7 @@ REGISTER_USER_OP("reflection_pad2d")
         y_dim_vec[channel_w_idx] = w_x +  2*padding[channel_w_idx];
         if (data_format=="NCHW"){
             y_dim_vec[1] = x_shape->At(1);
-        }else if (data_format=="NHWC"){
+        }else{
             y_dim_vec[3] = x_shape->At(3);
         }
         *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);
@@ -126,7 +126,7 @@ REGISTER_USER_OP("reflection_pad2d_grad")
         dx_dim_vec[channel_w_idx] = w_dy -  2*padding[channel_w_idx];
         if (data_format=="NCHW"){
             dx_dim_vec[1] = dy_shape->At(1);
-        }else if (data_format=="NHWC"){
+        }else{
             dx_dim_vec[3] = dy_shape->At(3);
         }
         *ctx->Shape4ArgNameAndIndex("dx", 0) = Shape(dx_dim_vec);
