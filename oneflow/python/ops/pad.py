@@ -272,7 +272,7 @@ def reflection_pad2d(
         boundry = [0, 0, padding[2], padding[3]] if data_format == "NCHW" else [0, padding[1], padding[2], 0]
     elif isinstance(padding, int):
         assert padding < H and padding < W, ValueError("Padding size should be less than the corresponding input dimension!")
-        boundry = [padding, padding, padding, padding]
+        boundry = [0, 0, padding, padding] if data_format == "NCHW" else [0, padding, padding, 0]
     else:
         raise ValueError("padding must be in or list or tuple!")
 
