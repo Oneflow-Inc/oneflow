@@ -159,7 +159,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
       offset = sum_state->lower();
     }
 
-    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float16, K, float>::UnsortedSegmentSum(
+    UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float, K, float16>::UnsortedSegmentSum(
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
         num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
     CopyElemOnGpu<float, float16>(ctx->device_ctx(), tmp_buf->dptr<float>(),
@@ -182,17 +182,14 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE(out_type, segment_ids_type) \
   REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,       \
-                                                 ("unsorted_segment_sum"))
-
-#define REGISTER_UNSORTED_SEGMENT_SUM_LIKE_HALF_KERNEL_CASE(out_type, segment_ids_type) \
-  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,            \
+                                                 ("unsorted_segment_sum"))         \
+  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,       \
                                                  ("unsorted_segment_sum_like"))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_HALF_KERNEL_CASE,
-                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#undef REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE
 
 }  // namespace user_op
 
