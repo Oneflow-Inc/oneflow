@@ -26,7 +26,7 @@ namespace{
  * such as shape=(2,3,4,5), idx=0, then num = 5*4*3*2=120; idx=1, then num=5*4*3=60
  */
 int64_t dim_factorial(int64_t idx, const std::vector<int64_t> shape){
-    int64_t num=1;
+    int64_t num = 1;
     for(idx; idx < shape.size(); idx++){
         num *= shape[idx];
     }
@@ -35,24 +35,12 @@ int64_t dim_factorial(int64_t idx, const std::vector<int64_t> shape){
 
 
 /**
- * @brief Find the dimension factorial \n 
- * such as shape=(2,3,4,5), idx=0, then num = 5*4*3*2=120; idx=1, then num=5*4*3=60
- */
-int64_t dim_factorial(int64_t idx, const ShapeView  shape){
-    int64_t num=1;
-    for(idx; idx < 4; ++idx){
-        num *= shape.At(idx);
-    }
-    return num;
-}
-
-/**
  * @brief Convert high-dimensional array coordinates to one-dimensional array index
  */
 int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const std::vector<int64_t> shape, const int64_t size_of_data_type){
-    int64_t idx=0;
-    for(int64_t i=0; i<shape.size(); i++){
-        idx+=coordinate[i] * dim_factorial(i+1, shape);
+    int64_t idx = 0;
+    for(int64_t i = 0; i<shape.size(); ++i){
+        idx += coordinate[i] * dim_factorial(i+1, shape);
     }
     return idx;
 }
@@ -62,22 +50,23 @@ int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const std::v
  * @brief Convert high-dimensional array coordinates to one-dimensional array index
  */
 int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const ShapeView shape, const int64_t size_of_data_type){
-    int64_t idx=0;
-    for(int64_t i=0; i<4; ++i){
-        idx+=coordinate[i] * dim_factorial(i+1, shape);
+    int64_t idx = 0;
+    for(int64_t i = 0; i<shape.NumAxes(); ++i){
+        idx += coordinate[i] * shape.Count(i+1);
     }
     return idx;
 }
 
 
-//将一维数组索引转化为高维坐标
-std::vector<int64_t>  index_to_coordinate(const int64_t idx, const std::vector<int64_t> shape){
-  std::vector<int64_t>  coordinate(shape.size());
+/**
+ * @brief Convert one-dimensional array index to high-dimensional coordinates
+ */
+std::vector<int64_t>  index_to_coordinate(const int64_t idx, const std::vector<int64_t> shape, std::vector<int64_t>   coordinate){
   int64_t  tmp = idx;
   int64_t i = shape.size()-1;
   while(i >=0){
       int64_t dim_i_idx = (tmp % shape[i]);
-      coordinate[i]= dim_i_idx;
+      coordinate[i] =  dim_i_idx;
       tmp = (tmp-dim_i_idx)/shape[i];
       i -= 1;
   }
@@ -150,27 +139,16 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
                                      static_cast<T>(1.01), y->mut_dptr<T>());
 
-    //   printf("padding >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>[%ld, %ld, %ld, %ld]\n", padding[0], padding[1], padding[2], padding[3]);
-    //   printf("x.shape; y.shape >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>(%ld,%ld,%ld,%ld);(%ld,%ld,%ld,%ld)\n", x->shape().At(0),  x->shape().At(1),  x->shape().At(2), 
-    //    x->shape().At(3),y->shape().At(0),  y->shape().At(1),  y->shape().At(2),  y->shape().At(3));
-
-
       MemoryCopyNdDesc memory_copy_nd_desc;
       DimVector src_shape_vec(ndims);
       DimVector dst_shape_vec(ndims);
-
-
       DimVector  x_vector = shapeview_to_dimvector(x->shape());
       DimVector  y_vector = shapeview_to_dimvector(y->shape());
-    
 
       GetDimVectorInBytes(x->shape(), sizeof_dtype, src_shape_vec);
       GetDimVectorInBytes(y->shape(), sizeof_dtype, dst_shape_vec);
-
-
       memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
       memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
-
 
       DimVector src_pos_vec(ndims, 0);
       DimVector dst_pos_vec(padding.cbegin(), padding.cend());
@@ -183,82 +161,70 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                reduced_memory_copy_nd_desc);
 
-      
 
     int64_t padding_h, padding_w, channel_h_idx, channel_w_idx;
-    if (data_format=="NCHW"){
+    if (data_format == "NCHW"){
         channel_h_idx = 2;
         channel_w_idx = 3;
     }else{
         channel_h_idx = 1;
         channel_w_idx = 2;
     }
-    padding_h=padding[channel_h_idx];
-    padding_w=padding[channel_w_idx];
+    padding_h = padding[channel_h_idx];
+    padding_w = padding[channel_w_idx];
+    const ShapeView&  x_shape = x->shape();
+    const ShapeView&  y_shape = y->shape();
+    //elements index vector of diagonal elements
+    std::vector<int64_t> index_vector; 
     
-    
-    std::vector<int64_t> cornor_item_vector;
-    const ShapeView&  x_shape=x->shape();
-    const ShapeView&  y_shape=y->shape();
-    //padding的对角线元素列表
-    std::vector<int64_t> index_vector;
-    std::vector<int64_t> top_left;
-    std::vector<int64_t> top_right;
-    std::vector<int64_t> bottom_left;
-    std::vector<int64_t> bottom_right;
-
-
-    // float out = 1.2;
-    // void *pf = &out;
-    // Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>()+i, pf, sizeof(out));
-
-    int y_vector_count = int(y_shape.At(0)* y_shape.At(1) * y_shape.At(2)* y_shape.At(3));
-    for(int i=0;i< y_vector_count; i++){
+    int  y_vector_count  = y->shape().elem_cnt();
+    for(int i = 0;i< y_vector_count; i++){
         //Traverse one-dimensional array y
-        std::vector<int64_t>  coord_y = index_to_coordinate(i, shapeview_to_vector(y_shape));
+        std::vector<int64_t>  coordinate(y_shape.NumAxes());
+        std::vector<int64_t>  coord_y = index_to_coordinate(i, shapeview_to_vector(y_shape), coordinate);
         int channel_h;
-        int64_t x_h=coord_y[channel_h_idx]-padding_h;
-        int64_t  x_w=coord_y[channel_w_idx]-padding_w;
+        int64_t x_h = coord_y[channel_h_idx] - padding_h;
+        int64_t  x_w = coord_y[channel_w_idx] - padding_w;
         //printf("i:%d >>>>>>coord_y:  [%ld, %ld, %ld, %ld];  coord_x: [%ld, %ld, %ld, %ld]\n", i, coord_y[0], coord_y[1], coord_y[2], coord_y[3], coord_y[0], coord_y[1], x_h, x_w);
-        if(x_h<0 || x_h>=x_shape.At(channel_h_idx) || x_w<0 || x_w>=x_shape.At(channel_w_idx)){
+        if(x_h < 0 || x_h >= x_shape.At(channel_h_idx) || x_w < 0 || x_w >= x_shape.At(channel_w_idx)){
             //Indicates that the element is no longer in the original x range (the data to be padding outside)
             std::vector<int64_t> dest_coords;
             int64_t dest_index;
             //Determine whether it is a diagonal element
-            if((x_h>=0 && x_h<x_shape.At(2))){
+            if((x_h >= 0 && x_h < x_shape.At(2))){
                 //Within the left and right range lines, non-diagonal elements
                 int64_t dest_w;
-                if(x_w<0){
+                if(x_w < 0){
                     //left part
-                    dest_w = 2*padding_w-coord_y[channel_w_idx];
+                    dest_w = 2*padding_w - coord_y[channel_w_idx];
                 }else{ 
                     //rithr pary
-                    dest_w = 2*(padding_w+x_shape.At(channel_w_idx)-1)-coord_y[channel_w_idx];
+                    dest_w = 2*(padding_w + x_shape.At(channel_w_idx) - 1) - coord_y[channel_w_idx];
                 }
-                if(data_format=="NCHW"){
+                if(data_format == "NCHW"){
                     dest_coords = {coord_y[0], coord_y[1], coord_y[2], dest_w};
                 }else{
                     dest_coords = {coord_y[0], coord_y[1], dest_w, coord_y[3]};
                 }
                 dest_index = coordinate_to_index(dest_coords, y_shape, 1);
-                Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>()+i, y->mut_dptr<T>()+dest_index, sizeof_dtype);
-            }else if( x_w>=0 && x_w<x_shape.At(channel_w_idx)){
+                Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i, y->mut_dptr<T>() + dest_index, sizeof_dtype);
+            }else if( x_w >= 0 && x_w < x_shape.At(channel_w_idx)){
                 //Within the upper and lower range lines, non-diagonal elements
                 int64_t dest_h;
-                if(x_h<0){
+                if(x_h < 0){
                     //upper part 
                     dest_h = 2*padding_h-coord_y[channel_h_idx];
                 }else{
                     //lower part
-                    dest_h = 2*(padding_h+x_shape.At(channel_h_idx)-1)-coord_y[channel_h_idx];
+                    dest_h = 2*(padding_h + x_shape.At(channel_h_idx)-1) - coord_y[channel_h_idx];
                 }
-                if(data_format=="NCHW"){
+                if(data_format == "NCHW"){
                     dest_coords = {coord_y[0], coord_y[1], dest_h, coord_y[3]};
                 }else{
                     dest_coords = {coord_y[0], dest_h, coord_y[2], coord_y[3]};
                 }
                 dest_index = coordinate_to_index(dest_coords, y_shape, 1);
-                Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>()+i, y->mut_dptr<T>()+dest_index, sizeof_dtype);
+                Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i, y->mut_dptr<T>() + dest_index, sizeof_dtype);
             }else{
                 //Diagonal element
                 index_vector.push_back(i);           
@@ -266,26 +232,28 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
         }
      }
 
+
      //Traverse the diagonal elements around index_vector and assign values
     for(int i=0; i<index_vector.size(); i++){
-        std::vector<int64_t>  coord_y = index_to_coordinate(index_vector[i], shapeview_to_vector(y_shape));
+        std::vector<int64_t>  coordinate(y_shape.NumAxes());
+        std::vector<int64_t>  coord_y = index_to_coordinate(index_vector[i], shapeview_to_vector(y_shape), coordinate);
         int64_t dest_w;
         int64_t dest_index;
         std::vector<int64_t> dest_coords;
-        if(coord_y[channel_w_idx]< padding_w){
+        if(coord_y[channel_w_idx] <  padding_w){
             //left part
-            dest_w = 2*padding_w-coord_y[channel_w_idx];
+            dest_w = 2 * padding_w-coord_y[channel_w_idx];
         }else{
             //right part
-            dest_w = 2*(padding_w+x_shape.At(channel_w_idx)-1)-coord_y[channel_w_idx];
+            dest_w = 2 * (padding_w + x_shape.At(channel_w_idx) - 1) - coord_y[channel_w_idx];
         }
-        if(data_format=="NCHW"){
+        if(data_format == "NCHW"){
             dest_coords = {coord_y[0], coord_y[1], coord_y[2], dest_w};
         }else{
             dest_coords = {coord_y[0], coord_y[1], dest_w, coord_y[3]};
         }
         dest_index = coordinate_to_index(dest_coords, y_shape, 1);
-        Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>()+index_vector[i], y->mut_dptr<T>()+dest_index, sizeof_dtype);
+        Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + index_vector[i], y->mut_dptr<T>() + dest_index, sizeof_dtype);
     }
 
   }
