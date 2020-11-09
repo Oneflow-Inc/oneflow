@@ -21,24 +21,21 @@ namespace test {
 
 FLEX_DEF(Location, builder) {
   return builder.Struct()
-      .Required<int32_t>("x", flex::field_number = 1)
-      .Required<int32_t>("y", flex::field_number = 2)
-      .Optional<std::string>("description", "Home", flex::field_number = 3)
+      .Required<int32_t>("x")
+      .Required<int32_t>("y")
+      .Optional<std::string>("description", "Home")
       .Build();
 }
 
 FLEX_DEF(GeoObject, builder) {
   return builder.Struct()
-      .Required<Location>("location", flex::field_number = 1)
-      .Optional<std::string>("name", "undefined", flex::field_number = 2)
+      .Required<Location>("location")
+      .Optional<std::string>("name", "undefined")
       .Build();
 }
 
 void TestField(const StructFlexDef* location) {
   ASSERT_TRUE(location != nullptr);
-  ASSERT_EQ(location->FieldNumber4FieldName("x"), 1);
-  ASSERT_EQ(location->FieldNumber4FieldName("y"), 2);
-  ASSERT_EQ(location->FieldNumber4FieldName("description"), 3);
   ASSERT_TRUE(location->Field4FieldName("x").flex_def()
               == FlexDefBuilderTrait<int32_t>::GetFlexDef());
   ASSERT_TRUE(location->Field4FieldName("y").flex_def()
@@ -62,19 +59,17 @@ TEST(FlexDef, nested_field_type) {
 }
 
 TEST(FlexDef, dynamic_build) {
-  std::shared_ptr<const FlexDef> Location =
-      FlexDefBuilder()
-          .Struct()
-          .Required<int32_t>("x", flex::field_number = 1)
-          .Required<int32_t>("y", flex::field_number = 2)
-          .Optional<std::string>("description", "Home", flex::field_number = 3)
-          .Build();
-  std::shared_ptr<const FlexDef> GeoObject =
-      FlexDefBuilder()
-          .Struct()
-          .Required(Location, "location", flex::field_number = 1)
-          .Optional<std::string>("name", "undefined", flex::field_number = 2)
-          .Build();
+  std::shared_ptr<const FlexDef> Location = FlexDefBuilder()
+                                                .Struct()
+                                                .Required<int32_t>("x")
+                                                .Required<int32_t>("y")
+                                                .Optional<std::string>("description", "Home")
+                                                .Build();
+  std::shared_ptr<const FlexDef> GeoObject = FlexDefBuilder()
+                                                 .Struct()
+                                                 .Required(Location, "location")
+                                                 .Optional<std::string>("name", "undefined")
+                                                 .Build();
   const auto* geo_type = dynamic_cast<const StructFlexDef*>(GeoObject.get());
   const auto* ptr = geo_type->Field4FieldName("location").flex_def().get();
   const auto* location = dynamic_cast<const StructFlexDef*>(ptr);
@@ -103,19 +98,17 @@ TEST(FlexValue, nested) {
 }
 
 TEST(FlexValue, dynamic_nested) {
-  std::shared_ptr<const FlexDef> Location =
-      FlexDefBuilder()
-          .Struct()
-          .Required<int32_t>("x", flex::field_number = 1)
-          .Required<int32_t>("y", flex::field_number = 2)
-          .Optional<std::string>("description", "Home", flex::field_number = 3)
-          .Build();
-  std::shared_ptr<const FlexDef> GeoObject =
-      FlexDefBuilder()
-          .Struct()
-          .Required(Location, "location", flex::field_number = 1)
-          .Optional<std::string>("name", "undefined", flex::field_number = 2)
-          .Build();
+  std::shared_ptr<const FlexDef> Location = FlexDefBuilder()
+                                                .Struct()
+                                                .Required<int32_t>("x")
+                                                .Required<int32_t>("y")
+                                                .Optional<std::string>("description", "Home")
+                                                .Build();
+  std::shared_ptr<const FlexDef> GeoObject = FlexDefBuilder()
+                                                 .Struct()
+                                                 .Required(Location, "location")
+                                                 .Optional<std::string>("name", "undefined")
+                                                 .Build();
   std::shared_ptr<FlexValue> geo_obj = NewFlexValue(GeoObject);
   ASSERT_EQ(geo_obj->Get("location").Get<std::string>("description"), "Home");
   FlexValue* location = geo_obj->Mutable("location");
@@ -129,9 +122,9 @@ TEST(FlexValue, dynamic_nested) {
 
 FLEX_DEF(BinaryTree, builder) {
   return builder.Struct()
-      .Optional<BinaryTree>("left", flex::field_number = 1)
-      .Optional<BinaryTree>("right", flex::field_number = 2)
-      .Optional<int32_t>("weight", 1, flex::field_number = 3)
+      .Optional<BinaryTree>("left")
+      .Optional<BinaryTree>("right")
+      .Optional<int32_t>("weight", 1)
       .Build();
 }
 
@@ -161,16 +154,16 @@ DECLARE_FLEX_DEF(BlackTree);
 
 DEFINE_FLEX_DEF(RedTree, builder) {
   return builder.Struct()
-      .Optional<BlackTree>("left", flex::field_number = 1)
-      .Optional<BlackTree>("right", flex::field_number = 2)
-      .Optional<int32_t>("weight", 1, flex::field_number = 3)
+      .Optional<BlackTree>("left")
+      .Optional<BlackTree>("right")
+      .Optional<int32_t>("weight", 1)
       .Build();
 }
 DEFINE_FLEX_DEF(BlackTree, builder) {
   return builder.Struct()
-      .Optional<RedTree>("left", flex::field_number = 1)
-      .Optional<RedTree>("right", flex::field_number = 2)
-      .Optional<int32_t>("weight", 1, flex::field_number = 3)
+      .Optional<RedTree>("left")
+      .Optional<RedTree>("right")
+      .Optional<int32_t>("weight", 1)
       .Build();
 }
 

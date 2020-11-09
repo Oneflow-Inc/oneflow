@@ -33,7 +33,7 @@ message RepeatedFlexValueProto {
 }
 
 message StructFlexValueProto {
-  map<int32, FlexValueProto> field_number2flex_value = 1;
+  map<string, FlexValueProto> field_name2flex_value = 1;
 }
 
 message FlexValueProto {
@@ -58,14 +58,12 @@ message FlexFieldDefProto {
   required FlexLabel label = 1;
   required FlexDefProto flex_def = 2;
   required string field_name = 3;
-  required int32 field_number = 4;
   optional FlexValueProto default_val = 5;
   optional string description = 6;
 }
 
 message StructFlexDefProto {
-  map<string, int32> field_name2field_number = 2;
-  map<int32, FlexFieldDefProto> field_number2field = 3;
+  map<string, FlexFieldDefProto> field_name2field = 1;
 }
 
 message FlexDefProto {
