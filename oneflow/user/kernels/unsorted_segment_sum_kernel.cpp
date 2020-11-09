@@ -36,6 +36,24 @@ class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelState {
   const int64_t upper_;
 };
 
+std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
+    user_op::KernelInitContext* ctx) {
+  const auto axis = ctx->Attr<int64_t>("axis");
+  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == axis
+      && ctx->parallel_ctx().parallel_num() > 1) {
+    CHECK(ctx->SbpParallel4ArgNameAndIndex("segment_ids", 0).has_broadcast_parallel());
+    CHECK(ctx->SbpParallel4ArgNameAndIndex("data", 0).has_broadcast_parallel());
+    const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
+    const int64_t sum_dim_size = out_logical_desc->shape().At(axis);
+    BalancedSplitter bs(sum_dim_size, ctx->parallel_ctx().parallel_num());
+    return std::make_shared<UnsortedSegmentSumOpKernelState>(
+        bs.At(ctx->parallel_ctx().parallel_id()).begin(),
+        bs.At(ctx->parallel_ctx().parallel_id()).end());
+  } else {
+    return std::shared_ptr<OpKernelState>(nullptr);
+  }
+}
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
@@ -46,21 +64,7 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto axis = ctx->Attr<int64_t>("axis");
-    const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-    if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == axis
-        && ctx->parallel_ctx().parallel_num() > 1) {
-      CHECK(ctx->SbpParallel4ArgNameAndIndex("segment_ids", 0).has_broadcast_parallel());
-      CHECK(ctx->SbpParallel4ArgNameAndIndex("data", 0).has_broadcast_parallel());
-      const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-      const int64_t sum_dim_size = out_logical_desc->shape().At(axis);
-      BalancedSplitter bs(sum_dim_size, ctx->parallel_ctx().parallel_num());
-      return std::make_shared<UnsortedSegmentSumOpKernelState>(
-          bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-          bs.At(ctx->parallel_ctx().parallel_id()).end());
-    } else {
-      return std::shared_ptr<OpKernelState>(nullptr);
-    }
+    return CreateUnsortedSegmentSumOpKernelState(ctx);
   }
 
  private:
@@ -121,21 +125,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto axis = ctx->Attr<int64_t>("axis");
-    const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-    if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == axis
-        && ctx->parallel_ctx().parallel_num() > 1) {
-      CHECK(ctx->SbpParallel4ArgNameAndIndex("segment_ids", 0).has_broadcast_parallel());
-      CHECK(ctx->SbpParallel4ArgNameAndIndex("data", 0).has_broadcast_parallel());
-      const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-      const int64_t sum_dim_size = out_logical_desc->shape().At(axis);
-      BalancedSplitter bs(sum_dim_size, ctx->parallel_ctx().parallel_num());
-      return std::make_shared<UnsortedSegmentSumOpKernelState>(
-          bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-          bs.At(ctx->parallel_ctx().parallel_id()).end());
-    } else {
-      return std::shared_ptr<OpKernelState>(nullptr);
-    }
+    return CreateUnsortedSegmentSumOpKernelState(ctx);
   }
 
  private:
