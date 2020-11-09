@@ -19,8 +19,9 @@ namespace oneflow {
 
 namespace {
 
-void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
+                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
+                             const LogicalBlobId& diff_lbi_of_var_out) {
   OperatorConf momentum_var(op.op_conf());
   InitializerConf constant_initializer;
   constant_initializer.mutable_constant_conf()->set_value(0.f);
