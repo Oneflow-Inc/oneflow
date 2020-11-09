@@ -71,9 +71,7 @@ class JobPassCtx {
   template<typename T>
   Maybe<bool> HasState(const std::string& key) const {
     const auto& iter = key2state_.find(key);
-    CHECK_OR_RETURN(iter != key2state_.end());
-    const T* ptr = dynamic_cast<T*>(iter->second.get());
-    return ptr != nullptr;
+    return (iter != key2state_.end());
   }
 
   Maybe<void> ResetState(const std::string& key, std::unique_ptr<JobPassState>&& state) {

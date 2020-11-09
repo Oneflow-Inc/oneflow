@@ -1,0 +1,74 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/shape.proto";
+
+enum FlexCppType {
+  kFlexCppTypeBool = 1;
+  kFlexCppTypeInt32 = 2;
+  kFlexCppTypeInt64 = 3;
+  kFlexCppTypeFloat = 4;
+  kFlexCppTypeDouble = 5;
+  kFlexCppTypeDataType = 6;
+  kFlexCppTypeString = 7;
+  kFlexCppTypeShape = 8;
+}
+
+message NativeFlexValueProto {
+  oneof value {
+    bool bool_val = 1; // field_numbe == kFlexCppTypeBool
+    int32 int32_val = 2; // field_numbe == kFlexCppTypeInt32
+    int64 int64_val = 3; // field_numbe == kFlexCppTypeInt64
+    float float_val = 4; // field_numbe == kFlexCppTypeFloat
+    double double_val = 5; // field_numbe == kFlexCppTypeDouble
+    DataType data_type_val = 6; // field_numbe == kFlexCppTypeDataType
+    string string_val = 7; // field_numbe == kFlexCppTypeString
+    ShapeProto shape_val = 8; // field_numbe == kFlexCppTypeShape
+  }
+}
+
+message RepeatedFlexValueProto {
+  repeated FlexValueProto flex_value = 1;
+}
+
+message StructFlexValueProto {
+  map<string, FlexValueProto> field_name2flex_value = 1;
+}
+
+message FlexValueProto {
+  oneof type {
+    NativeFlexValueProto native_flex_value = 1;
+    RepeatedFlexValueProto list_flex_value = 2;
+    StructFlexValueProto struct_flex_value = 3;
+  }
+}
+
+enum FlexLabel {
+  kFlexLabelRequired = 1;
+  kFlexLabelOptional = 2;
+  kFlexLabelRepeated = 3;
+}
+
+message NativeFlexDefProto {
+  required FlexCppType cpp_type = 1;
+}
+
+message FlexFieldDefProto {
+  required FlexLabel label = 1;
+  required FlexDefProto flex_def = 2;
+  required string field_name = 3;
+  optional FlexValueProto default_val = 5;
+  optional string description = 6;
+}
+
+message StructFlexDefProto {
+  map<string, FlexFieldDefProto> field_name2field = 1;
+}
+
+message FlexDefProto {
+  oneof type {
+    NativeFlexDefProto native_flex_def = 1;
+    StructFlexDefProto struct_flex_def = 2;
+  }
+}
