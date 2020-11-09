@@ -168,9 +168,9 @@ class GpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
     const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
 
-    int64_t elements = weight->shape().elem_cnt();
-    int64_t channel = weight_scale->shape().At(0);
-    int64_t panel_size = elements / channel;
+    const int64_t elements = weight->shape().elem_cnt();
+    const int64_t channel = weight_scale->shape().At(0);
+    const int64_t panel_size = elements / channel;
     T *max_ptr = tmp_buffer->mut_dptr<T>();
     T *min_ptr = max_ptr + channel;
 
@@ -181,9 +181,11 @@ class GpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
                          kCudaThreadsNumPerBlock * 2 * sizeof(T), weight->dptr<T>(), elements,
                          max_ptr, min_ptr);
     } else {  // per-channel quantization
-      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerChannel<T>), ctx->device_ctx(), channel,
-                         kCudaThreadsNumPerBlock * 2 * sizeof(T), weight->dptr<T>(), elements,
-                         channel, panel_size, max_ptr, min_ptr);
+      // NOTE(Liang Depeng): each block of threads will be responsible for
+      //                     computing the max and min values of the whole channel.
+      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerChannel<T>), ctx->device_ctx(),
+                         channel * kCudaThreadsNumPerBlock, kCudaThreadsNumPerBlock * 2 * sizeof(T),
+                         weight->dptr<T>(), elements, channel, panel_size, max_ptr, min_ptr);
     }
 
     if (quantizer_type == "symmetric") {
@@ -207,7 +209,7 @@ class GpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t {                        \
         size_t tmp_buffer_size = 1;                                                        \
-        Shape *weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);                     \
+        const Shape *weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);               \
         if (ctx->Attr<bool>("per_layer_quantization") == false) {                          \
           tmp_buffer_size = weight_shape->At(0);                                           \
         }                                                                                  \
