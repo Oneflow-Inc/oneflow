@@ -20,8 +20,9 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void FakeQuantizationPerLayerSymmetric(const int32_t quantize_to_bit, const int64_t num_elements,
-                                       const T *in_ptr, const T scale, T *out_ptr) {
+void FakeQuantizationPerLayerSymmetric(const T *in_ptr, const T scale,
+                                       const int32_t quantize_to_bit, const int64_t num_elements,
+                                       T *out_ptr) {
   T upper_bound = T(pow(2.0, quantize_to_bit - 1)) - 1;
   T lower_bound = -upper_bound;
   FOR_RANGE(int64_t, i, 0, num_elements) {
@@ -33,8 +34,8 @@ void FakeQuantizationPerLayerSymmetric(const int32_t quantize_to_bit, const int6
 }
 
 template<typename T>
-void FakeQuantizationPerLayerAffine(const int32_t quantize_to_bit, const int64_t num_elements,
-                                    const T *in_ptr, const T scale, const T zero_point,
+void FakeQuantizationPerLayerAffine(const T *in_ptr, const T scale, const T zero_point,
+                                    const int32_t quantize_to_bit, const int64_t num_elements,
                                     T *out_ptr) {
   T upper_bound = T(pow(2.0, quantize_to_bit)) - 1;
   T lower_bound = 0;
@@ -76,15 +77,15 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
 
     if (quantizer_type == "symmetric") {
       FOR_RANGE(int64_t, c, 0, outer_num) {
-        FakeQuantizationPerLayerSymmetric(quantize_to_bit, inner_num, in_ptr, scale_ptr[c],
+        FakeQuantizationPerLayerSymmetric(in_ptr, scale_ptr[c], quantize_to_bit, inner_num,
                                           out_ptr);
         in_ptr += inner_num;
         out_ptr += inner_num;
       }
     } else {  // quantizer_type == "affine"
       FOR_RANGE(int64_t, c, 0, outer_num) {
-        FakeQuantizationPerLayerAffine(quantize_to_bit, inner_num, in_ptr, scale_ptr[c],
-                                       zero_point_ptr[c], out_ptr);
+        FakeQuantizationPerLayerAffine(in_ptr, scale_ptr[c], zero_point_ptr[c], quantize_to_bit,
+                                       inner_num, out_ptr);
         in_ptr += inner_num;
         out_ptr += inner_num;
       }

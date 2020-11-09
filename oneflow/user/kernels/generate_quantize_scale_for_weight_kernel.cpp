@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void GenQuantScalePerLayerSymmetric(const int32_t quantize_to_bit, const int64_t num_elements,
-                                    const T *weight_ptr, T *weight_scale, T *zero_point) {
+void GenQuantScalePerLayerSymmetric(const T *weight_ptr, const int32_t quantize_to_bit,
+                                    const int64_t num_elements, T *weight_scale, T *zero_point) {
   T weight_max = *std::max_element(weight_ptr, weight_ptr + num_elements);
   T weight_min = *std::min_element(weight_ptr, weight_ptr + num_elements);
 
@@ -34,8 +34,8 @@ void GenQuantScalePerLayerSymmetric(const int32_t quantize_to_bit, const int64_t
 }
 
 template<typename T>
-void GenQuantScalePerLayerAffine(const int32_t quantize_to_bit, const int64_t num_elements,
-                                 const T *weight_ptr, T *weight_scale, T *zero_point) {
+void GenQuantScalePerLayerAffine(const T *weight_ptr, const int32_t quantize_to_bit,
+                                 const int64_t num_elements, T *weight_scale, T *zero_point) {
   T weight_max = *std::max_element(weight_ptr, weight_ptr + num_elements);
   T weight_min = *std::min_element(weight_ptr, weight_ptr + num_elements);
 
@@ -65,7 +65,7 @@ class CpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
     T *weight_scale_ptr = weight_scale->mut_dptr<T>();
     T *zero_point_ptr = zero_point->mut_dptr<T>();
 
-    // NOTE(Liang Depeng): default is per layer quantization
+    // NOTE(Liang Depeng): per-layer quantization by default
     int64_t outer_num = 1;
     int64_t inner_num = weight->shape().elem_cnt();
     if (!per_layer_quantization) {  // per-channel quantization
@@ -75,7 +75,7 @@ class CpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
 
     if (quantizer_type == "symmetric") {
       FOR_RANGE(int64_t, c, 0, outer_num) {
-        GenQuantScalePerLayerSymmetric(quantize_to_bit, inner_num, weight_ptr, weight_scale_ptr,
+        GenQuantScalePerLayerSymmetric(weight_ptr, quantize_to_bit, inner_num, weight_scale_ptr,
                                        zero_point_ptr);
         weight_ptr += inner_num;
         weight_scale_ptr += 1;
@@ -83,7 +83,7 @@ class CpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
       }
     } else {  // quantizer_type == "affine"
       FOR_RANGE(int64_t, c, 0, outer_num) {
-        GenQuantScalePerLayerAffine(quantize_to_bit, inner_num, weight_ptr, weight_scale_ptr,
+        GenQuantScalePerLayerAffine(weight_ptr, quantize_to_bit, inner_num, weight_scale_ptr,
                                     zero_point_ptr);
         weight_ptr += inner_num;
         weight_scale_ptr += 1;
