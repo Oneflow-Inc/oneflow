@@ -34,7 +34,7 @@ class RangeKernel final : public OpKernel {
     const int64_t limit = ctx->Attr<int64_t>("limit");
     const int64_t range_shape =
         (((limit - start) + delta - 1) / delta);  // Do the ceil division, ceil((limit-start)/delta)
-    RangeFunctor<device_type, T>().Range(ctx->device_ctx(), start, delta, range_shape, output);
+    RangeFunctor<device_type, T>()(ctx->device_ctx(), start, delta, range_shape, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -50,10 +50,13 @@ class RangeKernel final : public OpKernel {
   REGISTER_RANGE_KERNEL(device, float)             \
   REGISTER_RANGE_KERNEL(device, double)
 
+// Register CPU version
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
+
+// Register GPU version
+#ifdef WITH_CUDA
 REGISTER_RANGE_KERNELS_WITH_DEVICE(DeviceType::kGPU);
-
 REGISTER_RANGE_KERNEL(DeviceType::kGPU, float16)
-
+#endif
 }  // namespace user_op
 }  // namespace oneflow

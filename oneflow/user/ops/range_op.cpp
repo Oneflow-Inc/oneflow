@@ -39,7 +39,6 @@ REGISTER_USER_OP("range")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // Still in process
       ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     });

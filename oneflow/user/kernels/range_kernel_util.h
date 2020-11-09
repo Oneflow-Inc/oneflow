@@ -15,22 +15,20 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_RANGE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_RANGE_KERNEL_UTIL_H_
-
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 
 #define RANGE_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ                 \
-  FLOAT16_DATA_TYPE_SEQ                  \
+  FLOATING_DATA_TYPE_SEQ    \
+  FLOAT16_DATA_TYPE_SEQ     \
   INT_DATA_TYPE_SEQ
 
-namespace user_op{
+namespace user_op {
 template<DeviceType device_type, typename T>
 struct RangeFunctor final {
-  void Range(DeviceCtx* ctx, const int start, const int delta, const int range_shape,
-                    T* out);
+  void operator()(DeviceCtx* ctx, const int start, const int delta, const int range_shape, T* out);
 };
 
 template<typename T>
@@ -41,7 +39,7 @@ OF_DEVICE_FUNC void DoRange(const int start, const int delta, const int range_sh
 #define INSTANTIATE_RANGE_FUNCTOR(device_type_v, dtype_pair) \
   template struct RangeFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
-} // namespace user_op
+}  // namespace user_op
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_RANGE_KERNEL_UTIL_H_

@@ -31,12 +31,11 @@ import oneflow.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
+from typing import List
 
 
-def compare_range_with_np(
-    device_type, datatype, machine_ids, device_counts, start, limit, delta
-):
-    assert device_type in ["cpu", "gpu"]
+def compare_range_with_np_CPU(device_type, machine_ids, device_counts):
+    assert device_type in ["cpu"]
 
     flow.clear_default_session()
     flow.env.init()
@@ -46,139 +45,101 @@ def compare_range_with_np(
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(datatype[0])
 
     @flow.global_function(function_config=func_config)
-    def oneflow_range() -> tp.Numpy:
+    def oneflow_range() -> List[tp.Numpy]:
         with flow.scope.placement(device_type, machine_ids):
-            return flow.range(start, limit, delta, dtype=datatype[0])
+            out_1 = flow.range(2, 10, 3, dtype=flow.float64, name="range_float64")
+            out_2 = flow.range(0, 10, 1, dtype=flow.float32, name="range_float32")
+            out_3 = flow.range(10, dtype=flow.int32, name="range_int32")
+            out_4 = flow.range(0, 10, 2, dtype=flow.int64, name="range_int64")
 
-    of_out = oneflow_range()
-    np_out = np.arange(start, limit, delta, dtype=datatype[1])
-    assert np.array_equal(of_out, np_out)
+        return [out_1, out_2, out_3, out_4]
+
+    def np_range():
+        np_out_1 = np.arange(2, 10, 3).astype(np.float64)
+        np_out_2 = np.arange(0, 10, 1).astype(np.float32)
+        np_out_3 = np.arange(10).astype(np.int32)
+        np_out_4 = np.arange(0, 10, 2).astype(np.int64)
+
+        return [np_out_1, np_out_2, np_out_3, np_out_4]
+
+    of_out_list = oneflow_range()
+    np_out_list = np_range()
+
+    for i in range(len(of_out_list)):
+        assert np.array_equal(of_out_list[i], np_out_list[i])
+
+
+def compare_range_with_np_GPU(device_type, machine_ids, device_counts):
+    assert device_type in ["gpu"]
+
+    flow.clear_default_session()
+    flow.env.init()
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_counts)
+    else:
+        flow.config.gpu_device_num(device_counts)
+
+    func_config = flow.FunctionConfig()
+
+    @flow.global_function(function_config=func_config)
+    def oneflow_range_gpu() -> List[tp.Numpy]:
+        with flow.scope.placement(device_type, machine_ids):
+            out_1 = flow.range(2, 10, 3, dtype=flow.float64, name="range_float64")
+            out_2 = flow.range(0, 10, 1, dtype=flow.float32, name="range_float32")
+            out_3 = flow.range(0, 10, 1, dtype=flow.float32, name="range_float16")
+            # Oneflow doesn't support float16 output, so we need to cast it to float32
+            out_3 = flow.cast(out_3, dtype=flow.float32)
+            out_4 = flow.range(10, dtype=flow.int32, name="range_int32")
+            out_5 = flow.range(0, 10, 2, dtype=flow.int64, name="range_int64")
+
+        return [out_1, out_2, out_3, out_4, out_5]
+
+    def np_range_gpu():
+        np_out_1 = np.arange(2, 10, 3).astype(np.float64)
+        np_out_2 = np.arange(0, 10, 1).astype(np.float32)
+        np_out_3 = np.arange(0, 10, 1).astype(np.float16)
+        np_out_4 = np.arange(10).astype(np.int32)
+        np_out_5 = np.arange(0, 10, 2).astype(np.int64)
+
+        return [np_out_1, np_out_2, np_out_3, np_out_4, np_out_5]
+
+    of_out_list = oneflow_range_gpu()
+    np_out_list = np_range_gpu()
+
+    for i in range(len(of_out_list)):
+        assert np.array_equal(of_out_list[i], np_out_list[i])
 
 
 @flow.unittest.skip_unless_1n1d()
 class Testrange1n1d(flow.unittest.TestCase):
-    def test_range1(test_case):
+    def test_range_cpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.float32, np.float32]]
+        arg_dict["device_type"] = ["cpu"]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_counts"] = [1]
-        arg_dict["start"] = [0]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [1]
-        # test like flow.range(0, 10, 1)
         for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
+            compare_range_with_np_CPU(*arg)
 
-    def test_range2(test_case):
+    def test_range_gpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.int32, np.int32]]
+        arg_dict["device_type"] = ["gpu"]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_counts"] = [1]
-        arg_dict["start"] = [10]
-        arg_dict["limit"] = [None]
-        arg_dict["delta"] = [1]
-        # test like flow.range(10)
         for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
-
-    def test_range3(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.int64, np.int64]]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
-        arg_dict["start"] = [0]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [2]
-        # test like flow.range(0, 10, 2) -> [0, 2, 4, 6, 8]
-        for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
-
-    def test_range4(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.float32, np.float32]]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
-        arg_dict["start"] = [1]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [3]
-        # test like flow.range(1, 10, 3) -> [1, 4, 7]
-        for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
-
-    def test_range5(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.float64, np.float64]]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
-        arg_dict["start"] = [2]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [3]
-        # test like flow.range(2, 10, 3) -> [2, 5, 8]
-        for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
+            compare_range_with_np_GPU(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
 class Testrange1n2d(flow.unittest.TestCase):
-    def test_range1(test_case):
+    def test_range_gpu_1n2d(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.int32, np.int32]]
+        arg_dict["device_type"] = ["gpu"]
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_counts"] = [2]
-        arg_dict["start"] = [10]
-        arg_dict["limit"] = [None]
-        arg_dict["delta"] = [1]
-        # test like flow.range(10)
         for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
-
-    def test_range2(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.int64, np.int64]]
-        arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["device_counts"] = [2]
-        arg_dict["start"] = [0]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [2]
-        # test like flow.range(0, 10, 2) -> [0, 2, 4, 6, 8]
-        for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
-
-    def test_range3(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.float32, np.float32]]
-        arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["device_counts"] = [2]
-        arg_dict["start"] = [1]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [3]
-        # test like flow.range(1, 10, 3) -> [1, 4, 7]
-        for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
-
-    def test_range4(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["datatype"] = [[flow.float64, np.float64]]
-        arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["device_counts"] = [2]
-        arg_dict["start"] = [2]
-        arg_dict["limit"] = [10]
-        arg_dict["delta"] = [3]
-        # test like flow.range(2, 10, 3) -> [2, 5, 8]
-        for arg in GenArgList(arg_dict):
-            compare_range_with_np(*arg)
+            compare_range_with_np_GPU(*arg)
 
 
 if __name__ == "__main__":
