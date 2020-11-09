@@ -21,8 +21,8 @@ namespace {
 
 REGISTER_USER_OP("generate_quantize_scale_for_activation")
     .Input("activation")
-    .Input("moving_max")
-    .Input("moving_min")
+    .Input("moving_max")  // NOTE(Liang Depeng): needs to be initialized as 0
+    .Input("moving_min")  // NOTE(Liang Depeng): needs to be initialized as 0
     .Output("scale")
     .Output("zero_point")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
@@ -71,7 +71,8 @@ REGISTER_USER_OP("generate_quantize_scale_for_activation")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // TODO(Liang Depeng): refer to reduce_max and normalization op
+      // NOTE(Liang Depeng): all inputs need to be broadcast in order to accuratly calculate the
+      // global scale and zero_point
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
