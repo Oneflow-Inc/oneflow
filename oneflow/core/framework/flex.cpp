@@ -34,17 +34,6 @@ std::shared_ptr<FlexDef> NewFlexDef(const FlexDefProto& flex_def_proto) {
   return std::shared_ptr<FlexDef>();
 }
 
-std::shared_ptr<FlexValue> FlexDef::New(FlexLabel label,
-                                        const std::shared_ptr<const FlexDef>& flex_def) const {
-  switch (label) {
-    case kFlexLabelRequired:
-    case kFlexLabelOptional: return New(flex_def);
-    case kFlexLabelRepeated: return std::make_shared<RepeatedFlexValue>(flex_def);
-    default: LOG(FATAL) << "UNIMPLEMENTED";
-  }
-  return std::shared_ptr<FlexValue>();
-}
-
 void NativeFlexDef::InitFromProto(const FlexDefProto& proto) {
   CHECK(proto.has_native_flex_def());
   native_flex_def_proto_ = proto.native_flex_def();
@@ -54,18 +43,20 @@ void NativeFlexDef::ToProto(FlexDefProto* proto) const {
   *proto->mutable_native_flex_def() = native_flex_def_proto_;
 }
 
-FlexCppType NativeFlexDef::cpp_type() const { return native_flex_def_proto_.cpp_type(); }
+NativeFlexType NativeFlexDef::native_flex_type() const {
+  return native_flex_def_proto_.native_flex_type();
+}
 
 std::shared_ptr<FlexValue> NativeFlexDef::New(
     const std::shared_ptr<const FlexDef>& flex_def) const {
-  CHECK_NOTNULL(dynamic_cast<const NativeFlexDef*>(flex_def.get()));
+  CHECK(static_cast<bool>(std::dynamic_pointer_cast<const NativeFlexDef>(flex_def)));
   return std::make_shared<NativeFlexValue>(flex_def);
 }
 
 void FlexFieldDef::InitFromProto(const FlexFieldDefProto& proto) {
   proto_ = proto;
   flex_def_ = NewFlexDef(proto.flex_def());
-  auto value = flex_def_->New(proto.label(), flex_def_);
+  auto value = flex_def_->New(flex_def_);
   value->InitFromProto(proto.default_val());
   default_val_ = value;
 }
@@ -86,6 +77,7 @@ FlexFieldDef* StructFlexDef::AddField(const std::string& field_name) {
 
 std::shared_ptr<FlexValue> StructFlexDef::New(
     const std::shared_ptr<const FlexDef>& flex_def) const {
+  CHECK(static_cast<bool>(std::dynamic_pointer_cast<const StructFlexDef>(flex_def)));
   CHECK_NOTNULL(dynamic_cast<const StructFlexDef*>(flex_def.get()));
   return std::make_shared<StructFlexValue>(flex_def);
 }
@@ -110,6 +102,20 @@ void StructFlexDef::ToProto(FlexDefProto* proto) const {
   }
 }
 
+void ListFlexDef::InitFromProto(const FlexDefProto& proto) {
+  CHECK(proto.has_list_flex_def());
+  elem_flex_def_ = NewFlexDef(proto.list_flex_def().elem_flex_def());
+}
+
+void ListFlexDef::ToProto(FlexDefProto* proto) const {
+  elem_flex_def_->ToProto(proto->mutable_list_flex_def()->mutable_elem_flex_def());
+}
+
+std::shared_ptr<FlexValue> ListFlexDef::New(const std::shared_ptr<const FlexDef>& flex_def) const {
+  CHECK(static_cast<bool>(std::dynamic_pointer_cast<const ListFlexDef>(flex_def)));
+  return std::make_shared<ListFlexValue>(flex_def);
+}
+
 StructFlexDefBuilder& StructFlexDefBuilder::Field(
     FlexLabel label, const std::shared_ptr<const FlexDef>& flex_def, const std::string& field_name,
     const std::function<void(FlexValue*)>& SetDefaultVal, const std::string& description) {
@@ -119,7 +125,7 @@ StructFlexDefBuilder& StructFlexDefBuilder::Field(
   field->set_flex_def(flex_def);
   field->set_field_name(field_name);
   {
-    auto default_val = flex_def->New(label, flex_def);
+    auto default_val = flex_def->New(flex_def);
     SetDefaultVal(default_val.get());
     field->set_default_val(default_val);
   }
@@ -127,27 +133,14 @@ StructFlexDefBuilder& StructFlexDefBuilder::Field(
   return *this;
 }
 
-const RepeatedFlexValue& FlexValue::Repeated() const {
-  const auto* ptr = reinterpret_cast<const RepeatedFlexValue*>(this);
-  CHECK_NOTNULL(ptr);
-  return *ptr;
-}
-
-RepeatedFlexValue* FlexValue::MutableRepeated() {
-  auto* ptr = reinterpret_cast<RepeatedFlexValue*>(this);
-  CHECK_NOTNULL(ptr);
-  return ptr;
-}
-
 NativeFlexValue::NativeFlexValue(const std::shared_ptr<const FlexDef>& flex_def)
     : FlexValue(flex_def),
       value_case_(static_cast<NativeFlexValueProto::ValueCase>(
-          std::dynamic_pointer_cast<const NativeFlexDef>(flex_def)->cpp_type())) {
+          std::dynamic_pointer_cast<const NativeFlexDef>(flex_def)->native_flex_type())) {
   switch (value_case_) {
     case NativeFlexValueProto::kBoolVal: bool_val_ = false; return;
-    case NativeFlexValueProto::kInt32Val: int32_val_ = 0; return;
     case NativeFlexValueProto::kInt64Val: int64_val_ = 0; return;
-    case NativeFlexValueProto::kFloatVal: float_val_ = 0; return;
+    case NativeFlexValueProto::kUint64Val: uint64_val_ = 0; return;
     case NativeFlexValueProto::kDoubleVal: double_val_ = 0; return;
     case NativeFlexValueProto::kDataTypeVal: data_type_val_ = kInvalidDataType; return;
     case NativeFlexValueProto::kStringVal: new (&string_val_buffer_) std::string(); return;
@@ -159,9 +152,8 @@ NativeFlexValue::NativeFlexValue(const std::shared_ptr<const FlexDef>& flex_def)
 NativeFlexValue::~NativeFlexValue() {
   switch (value_case_) {
     case NativeFlexValueProto::kBoolVal: bool_val_ = false; return;
-    case NativeFlexValueProto::kInt32Val: int32_val_ = 0; return;
     case NativeFlexValueProto::kInt64Val: int64_val_ = 0; return;
-    case NativeFlexValueProto::kFloatVal: float_val_ = 0; return;
+    case NativeFlexValueProto::kUint64Val: uint64_val_ = 0; return;
     case NativeFlexValueProto::kDoubleVal: double_val_ = 0; return;
     case NativeFlexValueProto::kDataTypeVal: data_type_val_ = kInvalidDataType; return;
     case NativeFlexValueProto::kStringVal: {
@@ -184,19 +176,14 @@ bool NativeFlexValue::GetBool() const {
   return bool_val_;
 }
 
-int32_t NativeFlexValue::GetInt32() const {
-  CHECK_EQ(value_case_, NativeFlexValueProto::kInt32Val);
-  return int32_val_;
-}
-
 int64_t NativeFlexValue::GetInt64() const {
   CHECK_EQ(value_case_, NativeFlexValueProto::kInt64Val);
   return int64_val_;
 }
 
-float NativeFlexValue::GetFloat() const {
-  CHECK_EQ(value_case_, NativeFlexValueProto::kFloatVal);
-  return float_val_;
+uint64_t NativeFlexValue::GetUint64() const {
+  CHECK_EQ(value_case_, NativeFlexValueProto::kUint64Val);
+  return uint64_val_;
 }
 
 double NativeFlexValue::GetDouble() const {
@@ -226,19 +213,14 @@ void NativeFlexValue::SetBool(bool val) {
   bool_val_ = val;
 }
 
-void NativeFlexValue::SetInt32(int32_t val) {
-  CHECK_EQ(value_case_, NativeFlexValueProto::kInt32Val);
-  int32_val_ = val;
-}
-
 void NativeFlexValue::SetInt64(int64_t val) {
   CHECK_EQ(value_case_, NativeFlexValueProto::kInt64Val);
   int64_val_ = val;
 }
 
-void NativeFlexValue::SetFloat(float val) {
-  CHECK_EQ(value_case_, NativeFlexValueProto::kFloatVal);
-  float_val_ = val;
+void NativeFlexValue::SetUint64(uint64_t val) {
+  CHECK_EQ(value_case_, NativeFlexValueProto::kUint64Val);
+  uint64_val_ = val;
 }
 
 void NativeFlexValue::SetDouble(double val) {
@@ -269,9 +251,8 @@ void NativeFlexValue::InitFromProto(const FlexValueProto& proto) {
   CHECK_EQ(value_case_, native.value_case());
   switch (value_case_) {
     case NativeFlexValueProto::kBoolVal: return SetBool(native.bool_val());
-    case NativeFlexValueProto::kInt32Val: return SetInt32(native.int32_val());
     case NativeFlexValueProto::kInt64Val: return SetInt64(native.int64_val());
-    case NativeFlexValueProto::kFloatVal: return SetFloat(native.float_val());
+    case NativeFlexValueProto::kUint64Val: return SetUint64(native.uint64_val());
     case NativeFlexValueProto::kDoubleVal: return SetDouble(native.double_val());
     case NativeFlexValueProto::kDataTypeVal: return SetDataType(native.data_type_val());
     case NativeFlexValueProto::kStringVal: return SetString(native.string_val());
@@ -284,9 +265,8 @@ void NativeFlexValue::ToProto(FlexValueProto* proto) const {
   auto* native_flex_value = proto->mutable_native_flex_value();
   switch (value_case_) {
     case NativeFlexValueProto::kBoolVal: return native_flex_value->set_bool_val(GetBool());
-    case NativeFlexValueProto::kInt32Val: return native_flex_value->set_int32_val(GetInt32());
     case NativeFlexValueProto::kInt64Val: return native_flex_value->set_int64_val(GetInt64());
-    case NativeFlexValueProto::kFloatVal: return native_flex_value->set_float_val(GetFloat());
+    case NativeFlexValueProto::kUint64Val: return native_flex_value->set_uint64_val(GetUint64());
     case NativeFlexValueProto::kDoubleVal: return native_flex_value->set_double_val(GetDouble());
     case NativeFlexValueProto::kDataTypeVal:
       return native_flex_value->set_data_type_val(GetDataType());
@@ -297,27 +277,27 @@ void NativeFlexValue::ToProto(FlexValueProto* proto) const {
   }
 }
 
-const FlexValue& RepeatedFlexValue::Get(int64_t index) const { return *flex_values_.at(index); }
+const FlexValue& ListFlexValue::Get(int64_t index) const { return *flex_values_.at(index); }
 
-FlexValue* RepeatedFlexValue::Mutable(int64_t index) {
+FlexValue* ListFlexValue::Mutable(int64_t index) {
   FlexValue* ptr = flex_values_.at(index).get();
   return ptr;
 }
 
-FlexValue* RepeatedFlexValue::Add() {
-  auto flex_value = flex_def()->New(flex_def());
+FlexValue* ListFlexValue::Add() {
+  auto flex_value = elem_flex_def()->New(elem_flex_def());
   flex_values_.push_back(flex_value);
   return flex_value.get();
 }
 
-void RepeatedFlexValue::InitFromProto(const FlexValueProto& proto) {
+void ListFlexValue::InitFromProto(const FlexValueProto& proto) {
   CHECK(proto.has_list_flex_value());
   for (const auto& flex_value : proto.list_flex_value().flex_value()) {
     Add()->InitFromProto(flex_value);
   }
 }
 
-void RepeatedFlexValue::ToProto(FlexValueProto* proto) const {
+void ListFlexValue::ToProto(FlexValueProto* proto) const {
   auto* list_flex_value = proto->mutable_list_flex_value()->mutable_flex_value();
   for (const auto& flex_value : flex_values_) { flex_value->ToProto(list_flex_value->Add()); }
 }
@@ -344,7 +324,7 @@ FlexValue* StructFlexValue::Mutable(const std::string& field_name) {
   FlexValue* ptr = nullptr;
   if (iter == field_name2flex_value_.end()) {
     const auto& flex_field_def = struct_flex_def().Field4FieldName(field_name);
-    auto field = flex_field_def.flex_def()->New(flex_field_def.label(), flex_field_def.flex_def());
+    auto field = flex_field_def.flex_def()->New(flex_field_def.flex_def());
     field_name2flex_value_[field_name] = field;
     ptr = field.get();
   } else {
@@ -356,7 +336,7 @@ FlexValue* StructFlexValue::Mutable(const std::string& field_name) {
 void StructFlexValue::InitFromProto(const FlexValueProto& proto) {
   for (const auto& pair : proto.struct_flex_value().field_name2flex_value()) {
     const auto& flex_field_def = struct_flex_def().Field4FieldName(pair.first);
-    auto field = flex_field_def.flex_def()->New(flex_field_def.label(), flex_field_def.flex_def());
+    auto field = flex_field_def.flex_def()->New(flex_field_def.flex_def());
     field->InitFromProto(pair.second);
     CHECK(field_name2flex_value_.emplace(pair.first, field).second);
   }

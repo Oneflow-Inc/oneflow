@@ -36,9 +36,6 @@ class FlexDef {
  public:
   virtual ~FlexDef() = default;
 
-  std::shared_ptr<FlexValue> New(FlexLabel label,
-                                 const std::shared_ptr<const FlexDef>& flex_def) const;
-
   virtual std::shared_ptr<FlexValue> New(const std::shared_ptr<const FlexDef>& flex_def) const = 0;
   virtual void InitFromProto(const FlexDefProto& proto) = 0;
   virtual void ToProto(FlexDefProto* proto) const = 0;
@@ -57,15 +54,18 @@ class NativeFlexDef : public FlexDef {
   NativeFlexDef() = default;
   ~NativeFlexDef() override = default;
 
+  NativeFlexType native_flex_type() const;
+
+  void set_native_flex_type(NativeFlexType native_flex_type) {
+    native_flex_def_proto_.set_native_flex_type(native_flex_type);
+  }
+
   void InitFromProto(const FlexDefProto& proto) override;
   void ToProto(FlexDefProto* proto) const override;
 
-  FlexCppType cpp_type() const;
-
-  void set_cpp_type(FlexCppType cpp_type) { native_flex_def_proto_.set_cpp_type(cpp_type); }
+  std::shared_ptr<FlexValue> New(const std::shared_ptr<const FlexDef>& flex_def) const override;
 
  private:
-  std::shared_ptr<FlexValue> New(const std::shared_ptr<const FlexDef>& flex_def) const override;
   NativeFlexDefProto native_flex_def_proto_;
 };
 
@@ -131,6 +131,26 @@ class StructFlexDef : public FlexDef {
   std::map<std::string, std::shared_ptr<const FlexFieldDef>> field_name2field_;
 };
 
+class ListFlexDef : public FlexDef {
+ public:
+  ListFlexDef(const ListFlexDef&) = delete;
+  ListFlexDef(ListFlexDef&&) = delete;
+  explicit ListFlexDef(const std::shared_ptr<const FlexDef>& elem_flex_def)
+      : FlexDef(), elem_flex_def_(elem_flex_def) {}
+  ~ListFlexDef() = default;
+
+  const std::shared_ptr<const FlexDef> elem_flex_def() const { return elem_flex_def_; }
+
+  // proto
+  void InitFromProto(const FlexDefProto& proto);
+  void ToProto(FlexDefProto* proto) const;
+
+  std::shared_ptr<FlexValue> New(const std::shared_ptr<const FlexDef>& flex_def) const override;
+
+ private:
+  std::shared_ptr<const FlexDef> elem_flex_def_;
+};
+
 template<typename T, typename Enabled = void>
 struct ScalarOrConstRef;
 
@@ -185,7 +205,7 @@ class StructFlexDefBuilder final {
 
   template<typename T>
   typename std::enable_if<IsNativeFlexDef<T>::value, StructFlexDefBuilder&>::type Optional(
-      const std::string& field_name, const T& default_val) {
+      const std::string& field_name, typename ScalarOrConstRef<T>::type default_val) {
     StructFlexDefOptional<T>::Field(this, field_name, default_val);
     return *this;
   }
@@ -201,13 +221,14 @@ class StructFlexDefBuilder final {
   }
 
   template<typename T>
-  StructFlexDefBuilder& Repeated(const std::string& field_name) {
+  StructFlexDefBuilder& List(const std::string& field_name) {
     const auto& flex_def = FlexDefBuilderTrait<T>::GetFlexDef();
-    return Repeated(flex_def, field_name);
+    return List(flex_def, field_name);
   }
-  StructFlexDefBuilder& Repeated(const std::shared_ptr<const FlexDef>& flex_def,
-                                 const std::string& field_name) {
-    return Field(kFlexLabelRepeated, flex_def, field_name, [](FlexValue*) {}, "");
+  StructFlexDefBuilder& List(const std::shared_ptr<const FlexDef>& flex_def,
+                             const std::string& field_name) {
+    const auto list_flex_def = std::make_shared<ListFlexDef>(flex_def);
+    return Field(kFlexLabelOptional, list_flex_def, field_name, [](FlexValue*) {}, "");
   }
 
   std::shared_ptr<const FlexDef> Build() { return flex_def_; }
@@ -228,7 +249,7 @@ class FlexDefBuilder final {
   std::shared_ptr<StructFlexDef> flex_def_;
 };
 
-class RepeatedFlexValue;
+class ListFlexValue;
 class StructFlexValue;
 template<typename T>
 struct FlexValueAccessHelper;
@@ -242,54 +263,69 @@ class FlexValue {
 
   const std::shared_ptr<const FlexDef>& flex_def() const { return flex_def_; }
 
-  const RepeatedFlexValue& Repeated() const;
-  RepeatedFlexValue* MutableRepeated();
-
   virtual bool Defined(const std::string& field_name) const { return false; }
 
   // for native flex value
-  template<typename T>
-  typename ScalarOrConstRef<T>::type Get() const {
-    return FlexValueAccessHelper<T>::Get(this);
-  }
   virtual bool GetBool() const = 0;
-  virtual int32_t GetInt32() const = 0;
   virtual int64_t GetInt64() const = 0;
-  virtual float GetFloat() const = 0;
+  virtual uint64_t GetUint64() const = 0;
   virtual double GetDouble() const = 0;
   virtual DataType GetDataType() const = 0;
   virtual const Shape& GetShape() const = 0;
   virtual const std::string& GetString() const = 0;
-  template<typename T>
-  void Set(typename ScalarOrConstRef<T>::type val) {
-    return FlexValueAccessHelper<T>::Set(this, val);
-  }
   virtual void SetBool(bool val) = 0;
-  virtual void SetInt32(int32_t val) = 0;
   virtual void SetInt64(int64_t val) = 0;
-  virtual void SetFloat(float val) = 0;
+  virtual void SetUint64(uint64_t val) = 0;
   virtual void SetDouble(double val) = 0;
   virtual void SetDataType(DataType val) = 0;
   virtual void SetShape(const Shape& val) = 0;
   virtual void SetString(const std::string& val) = 0;
+  template<typename T>
+  typename ScalarOrConstRef<T>::type Get() const {
+    return FlexValueAccessHelper<T>::Get(this);
+  }
+  template<typename T>
+  void Set(const T& val) {
+    return FlexValueAccessHelper<T>::Set(this, val);
+  }
 
   // for list flex value
+  virtual const ListFlexValue& GetList() const = 0;
+  virtual ListFlexValue* MutableList() = 0;
   virtual const FlexValue& Get(int64_t index) const = 0;
   virtual FlexValue* Mutable(int64_t index) = 0;
   virtual FlexValue* Add() = 0;
+  template<typename T>
+  typename ScalarOrConstRef<T>::type Get(int64_t index) const {
+    return Get(index).Get<T>();
+  }
+  template<typename T>
+  void Set(int64_t index, const T& val) {
+    Mutable(index)->Set<T>(val);
+  }
+  template<typename T>
+  void Add(const T& val) {
+    Add()->Set<T>(val);
+  }
 
   // for struct flex value
   virtual bool Has(const std::string& field_name) const = 0;
+  virtual const FlexValue& Get(const std::string& field_name) const = 0;
+  const ListFlexValue& GetList(const std::string& field_name) const {
+    return Get(field_name).GetList();
+  }
+  virtual FlexValue* Mutable(const std::string& field_name) = 0;
+  ListFlexValue* MutableList(const std::string& field_name) {
+    return Mutable(field_name)->MutableList();
+  }
   template<typename T>
   typename ScalarOrConstRef<T>::type Get(const std::string& field_name) const {
     return this->Get(field_name).Get<T>();
   }
-  virtual const FlexValue& Get(const std::string& field_name) const = 0;
   template<typename T>
-  void Set(const std::string& field_name, typename ScalarOrConstRef<T>::type val) {
+  void Set(const std::string& field_name, const T& val) {
     this->Mutable(field_name)->Set<T>(val);
   }
-  virtual FlexValue* Mutable(const std::string& field_name) = 0;
 
   virtual void InitFromProto(const FlexValueProto& proto) = 0;
   virtual void ToProto(FlexValueProto* proto) const = 0;
@@ -307,23 +343,31 @@ class NativeFlexValue : public FlexValue {
 
   // for native flex value
   bool GetBool() const override;
-  int32_t GetInt32() const override;
   int64_t GetInt64() const override;
-  float GetFloat() const override;
+  uint64_t GetUint64() const override;
   double GetDouble() const override;
   DataType GetDataType() const override;
   const Shape& GetShape() const override;
   const std::string& GetString() const override;
   void SetBool(bool val) override;
-  void SetInt32(int32_t val) override;
   void SetInt64(int64_t val) override;
-  void SetFloat(float val) override;
+  void SetUint64(uint64_t val) override;
   void SetDouble(double val) override;
   void SetDataType(DataType val) override;
   void SetShape(const Shape& val) override;
   void SetString(const std::string& val) override;
+  template<typename T>
+  typename ScalarOrConstRef<T>::type Get() const {
+    return FlexValueAccessHelper<T>::Get(this);
+  }
+  template<typename T>
+  void Set(const T& val) {
+    return FlexValueAccessHelper<T>::Set(this, val);
+  }
 
   // for list flex value
+  const ListFlexValue& GetList() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  ListFlexValue* MutableList() override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const FlexValue& Get(int64_t index) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   FlexValue* Mutable(int64_t index) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   FlexValue* Add() override { LOG(FATAL) << "UNIMPLEMENTED"; }
@@ -344,7 +388,7 @@ class NativeFlexValue : public FlexValue {
     bool bool_val_;
     int32_t int32_val_;
     int64_t int64_val_;
-    float float_val_;
+    uint64_t uint64_val_;
     double double_val_;
     DataType data_type_val_;
     char string_val_buffer_[sizeof(std::string)];
@@ -352,35 +396,49 @@ class NativeFlexValue : public FlexValue {
   };
 };
 
-class RepeatedFlexValue : public FlexValue {
+class ListFlexValue : public FlexValue {
  public:
-  RepeatedFlexValue(const RepeatedFlexValue&) = delete;
-  RepeatedFlexValue(RepeatedFlexValue&&) = delete;
-  RepeatedFlexValue(const std::shared_ptr<const FlexDef>& flex_def) : FlexValue(flex_def) {}
-  ~RepeatedFlexValue() override = default;
+  ListFlexValue(const ListFlexValue&) = delete;
+  ListFlexValue(ListFlexValue&&) = delete;
+  ListFlexValue(const std::shared_ptr<const FlexDef>& flex_def)
+      : FlexValue(flex_def),
+        elem_flex_def_(std::dynamic_pointer_cast<const ListFlexDef>(flex_def)->elem_flex_def()) {}
+  ~ListFlexValue() override = default;
 
   // for native flex value
   bool GetBool() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  int32_t GetInt32() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   int64_t GetInt64() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  float GetFloat() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  uint64_t GetUint64() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   double GetDouble() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   DataType GetDataType() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const Shape& GetShape() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const std::string& GetString() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetBool(bool val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void SetInt32(int32_t val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetInt64(int64_t val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void SetFloat(float val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void SetUint64(uint64_t val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetDouble(double val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetDataType(DataType val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetShape(const Shape& val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetString(const std::string& val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   // for list flex value
+  const ListFlexValue& GetList() const override { return *this; }
+  ListFlexValue* MutableList() override { return this; }
   const FlexValue& Get(int64_t index) const override;
   FlexValue* Mutable(int64_t index) override;
   FlexValue* Add() override;
+  template<typename T>
+  typename ScalarOrConstRef<T>::type Get(int64_t index) const {
+    return Get(index).Get<T>();
+  }
+  template<typename T>
+  void Set(int64_t index, const T& val) {
+    Mutable(index)->Set<T>(val);
+  }
+  template<typename T>
+  void Add(const T& val) {
+    Add()->Set<T>(val);
+  }
 
   using VecType = std::vector<std::shared_ptr<FlexValue>>;
   VecType::const_iterator begin() const { return flex_values_.begin(); }
@@ -399,7 +457,10 @@ class RepeatedFlexValue : public FlexValue {
   void InitFromProto(const FlexValueProto& proto) override;
   void ToProto(FlexValueProto* proto) const override;
 
+  const std::shared_ptr<const FlexDef>& elem_flex_def() const { return elem_flex_def_; }
+
  private:
+  const std::shared_ptr<const FlexDef> elem_flex_def_;
   std::vector<std::shared_ptr<FlexValue>> flex_values_;
 };
 
@@ -415,26 +476,34 @@ class StructFlexValue : public FlexValue {
 
   // for native flex value
   bool GetBool() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  int32_t GetInt32() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   int64_t GetInt64() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  float GetFloat() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  uint64_t GetUint64() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   double GetDouble() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   DataType GetDataType() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const Shape& GetShape() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const std::string& GetString() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetBool(bool val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void SetInt32(int32_t val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetInt64(int64_t val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
-  void SetFloat(float val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void SetUint64(uint64_t val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetDouble(double val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetDataType(DataType val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetShape(const Shape& val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   void SetString(const std::string& val) override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   // for list flex value
+  const ListFlexValue& GetList() const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  ListFlexValue* MutableList() override { LOG(FATAL) << "UNIMPLEMENTED"; }
   const FlexValue& Get(int64_t index) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
   FlexValue* Mutable(int64_t index) override { LOG(FATAL) << "UNIMPLEMENTED"; }
   FlexValue* Add() override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  template<typename T>
+  typename ScalarOrConstRef<T>::type Get(const std::string& field_name) const {
+    return this->Get(field_name).Get<T>();
+  }
+  template<typename T>
+  void Set(const std::string& field_name, const T& val) {
+    this->Mutable(field_name)->Set<T>(val);
+  }
 
   // for struct flex value
   bool Defined(const std::string& field_name) const override;
@@ -501,7 +570,7 @@ inline std::shared_ptr<FlexValue> NewFlexValue(const std::shared_ptr<const FlexD
     }                                                                               \
     static std::shared_ptr<const FlexDef> MakeFlexDef() {                           \
       auto flex_def = std::make_shared<NativeFlexDef>();                            \
-      flex_def->set_cpp_type(kFlexCppType##name);                                   \
+      flex_def->set_native_flex_type(kNativeFlexType##name);                        \
       return flex_def;                                                              \
     }                                                                               \
   };                                                                                \
@@ -510,14 +579,12 @@ inline std::shared_ptr<FlexValue> NewFlexValue(const std::shared_ptr<const FlexD
     static typename ScalarOrConstRef<T>::type Get(const FlexValue* that) {          \
       return that->Get##name();                                                     \
     }                                                                               \
-    static void Set(FlexValue* that, typename ScalarOrConstRef<T>::type val) {      \
-      return that->Set##name(val);                                                  \
-    }                                                                               \
+    static void Set(FlexValue* that, const T& val) { return that->Set##name(val); } \
   };                                                                                \
   template<>                                                                        \
   struct StructFlexDefOptional<T> {                                                 \
     static void Field(StructFlexDefBuilder* builder, const std::string& field_name, \
-                      const T& default_val) {                                       \
+                      typename ScalarOrConstRef<T>::type default_val) {             \
       const auto& flex_def = FlexDefBuilderTrait<T>::GetFlexDef();                  \
       builder->Field(kFlexLabelOptional, flex_def, field_name,                      \
                      [&](FlexValue* value) { value->Set##name(default_val); }, ""); \
@@ -525,9 +592,15 @@ inline std::shared_ptr<FlexValue> NewFlexValue(const std::shared_ptr<const FlexD
   };
 
 SPECIALIZE_STRUCT_FLEX_DEF_UTIL(bool, Bool);
-SPECIALIZE_STRUCT_FLEX_DEF_UTIL(int32_t, Int32);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(int8_t, Int64);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(int16_t, Int64);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(int32_t, Int64);
 SPECIALIZE_STRUCT_FLEX_DEF_UTIL(int64_t, Int64);
-SPECIALIZE_STRUCT_FLEX_DEF_UTIL(float, Float);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(uint8_t, Uint64);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(uint16_t, Uint64);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(uint32_t, Uint64);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(uint64_t, Uint64);
+SPECIALIZE_STRUCT_FLEX_DEF_UTIL(float, Double);
 SPECIALIZE_STRUCT_FLEX_DEF_UTIL(double, Double);
 SPECIALIZE_STRUCT_FLEX_DEF_UTIL(DataType, DataType);
 SPECIALIZE_STRUCT_FLEX_DEF_UTIL(Shape, Shape);
