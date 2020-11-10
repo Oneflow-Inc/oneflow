@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import, print_function
 
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
@@ -37,6 +38,22 @@ def load_library(val):
     assert type(val) is str
     sess = session_ctx.GetDefaultSession()
     sess.config_proto.load_lib_path.append(val)
+
+
+@oneflow_export("config.load_library_now")
+def api_load_library_now(val: str) -> None:
+    r"""Load necessary library for job now
+
+    Args:
+        val (str): path to shared object file
+    """
+    return enable_if.unique([load_library_now, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def load_library_now(val):
+    assert type(val) is str
+    c_api_util.LoadLibraryNow(val)
 
 
 @oneflow_export("config.machine_num")

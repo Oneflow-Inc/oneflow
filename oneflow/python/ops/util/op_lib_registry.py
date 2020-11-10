@@ -68,7 +68,7 @@ def get_lflags():
 
 def get_cpp2py_path():
     return os.path.join(
-        oneflow_sysconfig.get_include(), "oneflow/python/ops/util/cpp2py.hpp"
+        oneflow_sysconfig.get_include(), "oneflow/python/ops/util/py_kernel_caller.hpp"
     )
 
 
@@ -218,7 +218,8 @@ class OpLibLoader(object):
     def Load(self):
         assert self.linked
         for lib in self.lib_names:
-            oneflow.config.load_library(lib)
+            # oneflow.config.load_library(lib)
+            oneflow.config.load_library_now(lib)
 
     def LibList(self):
         assert self.linked

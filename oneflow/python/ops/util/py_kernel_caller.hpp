@@ -260,6 +260,29 @@ class PyGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+REGISTER_USER_KERNEL("py_op").SetCreateFn<PyKernel>().SetIsMatchedHob(
+    (user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
+
+REGISTER_USER_KERNEL("py_op_grad")
+    .SetCreateFn<PyGradKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
 }  // namespace
+
+void RegisterPyKernel(const std::string& op_type_name) {
+  // register python op kernel
+  auto reg =
+      user_op::UserOpRegistryMgr::Get()
+          .CheckAndGetOpKernelRegistry(op_type_name)
+          .SetCreateFn<PyKernel>()
+          .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
+  user_op::UserOpRegistryMgr::Get().Register(reg.Finish().GetResult());
+  // register python grad op kernel
+  auto grad_reg =
+      user_op::UserOpRegistryMgr::Get()
+          .CheckAndGetOpKernelRegistry(op_type_name + "_grad")
+          .SetCreateFn<PyGradKernel>()
+          .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
+  user_op::UserOpRegistryMgr::Get().Register(grad_reg.Finish().GetResult());
+}
 
 }  // namespace oneflow

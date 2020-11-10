@@ -381,5 +381,5 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_PYTHON_HDRS)
-list(APPEND OF_PYTHON_HDRS "${PROJECT_SOURCE_DIR}/oneflow/python/ops/util/cpp2py.hpp")
+list(APPEND OF_PYTHON_HDRS "${PROJECT_SOURCE_DIR}/oneflow/python/ops/util/py_kernel_caller.hpp")
 copy_files("${OF_PYTHON_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
