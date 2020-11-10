@@ -29,11 +29,12 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
   CHECK_GE_OR_RETURN(true_end_dim, 0);
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
+  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
   for (int i = 0; i <= start_dim; ++i) {
     ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
   }
-  int32_t diff = true_end_dim - start_dim;
+  const int32_t diff = true_end_dim - start_dim;
   for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("in", 0), i)
@@ -57,8 +58,8 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
   CHECK_GE_OR_RETURN(true_end_dim, 0);
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
+  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  CHECK_OR_RETURN(in_tensor_desc->is_dynamic() == false);
   *out_tensor_desc = *in_tensor_desc;
 
   Shape* out_shape = out_tensor_desc->mut_shape();
@@ -66,15 +67,43 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   DimVector dim_vec;
 
   for (int i = 0; i < start_dim; ++i) { dim_vec.push_back(in_shape.At(i)); }
-  if (start_dim < true_end_dim) {
-    int64_t flatten_dim = 1;
-    for (int i = start_dim; i <= true_end_dim; ++i) { flatten_dim *= in_shape.At(i); }
-    dim_vec.push_back(flatten_dim);
-  }
+  int64_t flatten_dim = 1;
+  for (int i = start_dim; i <= true_end_dim; ++i) { flatten_dim *= in_shape.At(i); }
+  dim_vec.push_back(flatten_dim);
   for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) { dim_vec.push_back(in_shape.At(i)); }
 
   *out_shape = Shape(dim_vec);
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
+  const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
+  const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
+
+  const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+
+  CHECK_GE_OR_RETURN(start_dim, 0);
+  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
+  const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
+  CHECK_GE_OR_RETURN(true_end_dim, 0);
+  CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
+  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
+
+  const int64_t input_batch_axis = (*ctx->BatchAxis4ArgNameAndIndex("in", 0)).value();
+
+  OptInt64 output_batch_axis;
+
+  if (input_batch_axis < start_dim) {
+    output_batch_axis.set_value(input_batch_axis);
+  } else if (input_batch_axis >= start_dim && input_batch_axis <= true_end_dim) {
+    output_batch_axis.set_value(start_dim);
+  } else if (input_batch_axis > true_end_dim) {
+    output_batch_axis.set_value(input_batch_axis - (true_end_dim - start_dim));
+  }
+
+  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = output_batch_axis;
+
   return Maybe<void>::Ok();
 }
 
@@ -84,7 +113,8 @@ REGISTER_USER_OP("flatten")
     .Attr<int32_t>("start_dim", 0)
     .Attr<int32_t>("end_dim", -1)
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetGetSbpFn(GetSbpFn);
+    .SetGetSbpFn(GetSbpFn)
+    .SetBatchAxisInferFn(GetBatchAxisInferFn);
 
 REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {

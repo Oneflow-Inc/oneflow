@@ -33,7 +33,7 @@ def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):
     end_dim = start_end_dim[1]
 
     @flow.global_function(type="train", function_config=func_config)
-    def FlattenJob():
+    def FlattenJob() -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "in",
@@ -56,7 +56,7 @@ def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = FlattenJob().get()
+    of_out = FlattenJob()
 
     # Numpy
     of_x = test_global_storage.Get("x")
@@ -73,10 +73,11 @@ def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):
     new_shape.append(flatten_dim)
     for i in range(true_end_dim + 1, len(of_x_shape)):
         new_shape.append(of_x_shape[i])
+
     np_out = np.reshape(of_x, tuple(new_shape))
 
     test_case.assertTrue(of_out.shape == np_out.shape)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(np.allclose(of_out, np_out, rtol=1e-5, atol=1e-5))
     test_case.assertTrue(
         np.allclose(of_x_diff, np.ones(of_x_diff.shape), rtol=1e-5, atol=1e-5)
     )

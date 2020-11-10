@@ -158,20 +158,20 @@ def gather(
 
 @oneflow_export("flatten")
 def flatten(
-    x: remote_blob_util.BlobDef,
+    input: remote_blob_util.BlobDef,
     start_dim: int = 0,
     end_dim: int = -1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator will flatten a Blob. 
+    r"""Flattens a contiguous range of dims in a Blob.
     
     Args:
-        x: A `Blob`.
+        input: A `Blob`.
         start_dim: The first dim to flatten.
         end_dim: The last dim to flatten.
         name: A name for the operation (optional).
     Returns:
-        A `Blob`, has the same type as `x`. 
+        A `Blob`, has the same type as `input`. 
 
     For example: 
 
@@ -182,24 +182,24 @@ def flatten(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def flatten_Job(x: tp.Numpy.Placeholder(shape=(4, 4, 3, 2), dtype=flow.float32)
+        def flatten_Job(input: tp.Numpy.Placeholder(shape=(4, 4, 3, 2), dtype=flow.float32)
         ) -> tp.Numpy:
-            flatten_blob = flow.flatten(x, start_dim=1, end_dim=-1)
+            flatten_blob = flow.flatten(input, start_dim=1, end_dim=-1)
             return flatten_blob
 
 
-        x = np.zeros((4, 4, 3, 2)).astype(np.float32)
-        out = flatten_Job(x)
+        input = np.zeros((4, 4, 3, 2)).astype(np.float32)
+        out = flatten_Job(input)
 
         # out.shape (4, 24)
 
     """
     if name is None:
-        name = id_util.UniqueStr("Reshape_")
+        name = id_util.UniqueStr("Flatten_")
     return (
         flow.user_op_builder(name)
         .Op("flatten")
-        .Input("in", [x])
+        .Input("in", [input])
         .Output("out")
         .Attr("start_dim", start_dim)
         .Attr("end_dim", end_dim)
