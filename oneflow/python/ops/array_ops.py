@@ -2227,7 +2227,7 @@ def dim_gather(
 
     if dim >= len(index.shape):
         raise ValueError(
-            "Value of dim is out of range(dim should less than len(index.shape))"
+            "Value of dim is out of range(dim should be less than len(index.shape))"
         )
 
     return (

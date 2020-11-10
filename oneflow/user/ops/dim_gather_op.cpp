@@ -103,12 +103,6 @@ REGISTER_USER_OP("dim_gather")
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("input", 0))
           .Broadcast(user_op::OpArg("index", 0))
-          .Broadcast(user_op::OpArg("output", 0))
-          .Build();
-
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("input", 0))
-          .PartialSum(user_op::OpArg("index", 0))
           .PartialSum(user_op::OpArg("output", 0))
           .Build();
       return Maybe<void>::Ok();

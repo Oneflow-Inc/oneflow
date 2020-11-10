@@ -22,8 +22,9 @@ namespace user_op {
 
 template<typename IN_T, typename IDX_T>
 struct DimGatherFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
-  void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                  DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim, int64_t elem_cnt,
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, 
+                  int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
     DoDimGather<IN_T, IDX_T>(input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, input,
                              output);
@@ -32,8 +33,9 @@ struct DimGatherFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
 
 template<typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
-  void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                  DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim, int64_t elem_cnt,
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, 
+                  int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
     DoDimScatterAdd<IN_T, IDX_T>(input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,
                                  input, output);
@@ -41,9 +43,9 @@ struct DimScatterAddFunctor<DeviceType::kCPU, IN_T, IDX_T> final {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_GATHER_FUNCTOR, (DeviceType::kCPU),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ, INDEX_DATA_TYPE_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR, (DeviceType::kCPU),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

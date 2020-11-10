@@ -49,17 +49,17 @@ class DimGatherKernel final : public user_op::OpKernel {
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
     int ndim = input_tensor->shape().NumAxes();
-    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_buffer(ndim);
-    auto shape2dims = [&shape_buffer, &ndim](const ShapeView& tensor_shape) {
-      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_buffer.begin(),
-                     [](int64_t dim) { return static_cast<IDX_T>(dim); });
+    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
+    auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void{
+      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
+                     [](int64_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
     };
     shape2dims(input_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer.data(), ndim);
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_vec.data(), ndim);
     shape2dims(index_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> index_nd_helpr(shape_buffer.data(), ndim);
+    DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
 
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->device_ctx(), input_nd_helper, index_nd_helpr,
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->device_ctx(), input_nd_helper, index_nd_helper,
                                                  ndim, index_tensor->shape().elem_cnt(), dim, index,
                                                  input, output);
   }
@@ -86,19 +86,19 @@ class ScatterDimKernel final : public user_op::OpKernel {
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
     Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
 
-    int ndim = input_tensor->shape().NumAxes();
-    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_buffer(ndim);
-    auto shape2dims = [&shape_buffer, &ndim](const ShapeView& tensor_shape) {
-      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_buffer.begin(),
-                     [](int64_t dim) { return static_cast<IDX_T>(dim); });
+    int ndim = index_tensor->shape().NumAxes();
+    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
+    auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
+      std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
+                     [](int64_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
     };
-    shape2dims(input_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_buffer.data(), ndim);
+    shape2dims(index_tensor->shape());
+    DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_vec.data(), ndim);
     shape2dims(out_tensor->shape());
-    DimOpIndexNdHelper<IDX_T> output_nd_helpr(shape_buffer.data(), ndim);
+    DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
-        ctx->device_ctx(), input_nd_helper, output_nd_helpr, ndim, input_tensor->shape().elem_cnt(),
+        ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(),
         dim, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

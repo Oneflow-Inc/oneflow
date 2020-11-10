@@ -23,10 +23,13 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DIM_GATHER_SCATTER_DATA_TYPE_SEQ \
+#define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
   FLOATING_DATA_TYPE_SEQ                 \
-  FLOAT16_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+
+#define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
+  DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ       \
+  FLOAT16_DATA_TYPE_SEQ
 
 constexpr int kDimGatherMaxDimCount = 8;
 
@@ -37,21 +40,23 @@ namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
-  void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                  DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim, int64_t elem_cnt,
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, 
+                  int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor final {
-  void operator()(DeviceCtx* ctx, DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                  DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim, int64_t elem_cnt,
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, 
+                  int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
 };
 
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimGather(DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                                DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim,
+OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                                const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
                                 int64_t elem_cnt, int32_t dim, const IDX_T* index,
                                 const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
@@ -69,9 +74,7 @@ template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
 #ifdef __CUDA_ARCH__
-#ifdef WITH_CUDA
     gpu_atomic_add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
-#endif
 #else
     *y += *x;
 #endif
@@ -79,8 +82,8 @@ struct DeviceAdd {
 };
 
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimScatterAdd(DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                                    DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim,
+OF_DEVICE_FUNC void DoDimScatterAdd(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
                                     int64_t elem_cnt, int32_t dim, const IDX_T* index,
                                     const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {

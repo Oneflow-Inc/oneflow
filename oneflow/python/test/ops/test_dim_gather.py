@@ -22,7 +22,7 @@ from collections import OrderedDict
 import os
 
 
-def gen_gather_test_sample(input_shape, index_shape, dim):
+def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
     def _flatten_array(input_array):
         output_array = list()
         for x in np.nditer(input_array):
@@ -52,7 +52,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
             offset += size_at_axis
         return offset
 
-    def _torch_gather(input, dim, index):
+    def _np_dim_gather(input, dim, index):
         output = np.zeros(index.shape)
         output = _flatten_array(output)
         input1d = _flatten_array(input)
@@ -67,7 +67,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
         ret = np.resize(np.array(output), index.shape)
         return np.array(ret)
 
-    def _torch_scatter_add(src, dim, index, outshape):
+    def _np_dim_scatter_add(src, dim, index, outshape):
         output = np.zeros(outshape)
         output1d = _flatten_array(output)
         index1d = _flatten_array(index)
@@ -81,11 +81,13 @@ def gen_gather_test_sample(input_shape, index_shape, dim):
 
         ret = np.resize(np.array(output1d), outshape)
         return ret
-
-    input = np.random.random(input_shape)
+    if is_float:
+        input = np.random.random(input_shape)
+    else:
+        input = np.random.randint(0, 100, input_shape)
     index = np.random.randint(0, input_shape[dim], index_shape)
-    output = _torch_gather(input, dim, index)
-    grad = _torch_scatter_add(np.ones_like(output), dim, index, input_shape)
+    output = _np_dim_gather(input, dim, index)
+    grad = _np_dim_scatter_add(np.ones_like(output), dim, index, input_shape)
 
     ret = {"input": input, "index": index, "dim": dim, "output": output, "grad": grad}
     return ret
@@ -122,7 +124,7 @@ def _make_dim_gather_fn(
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: oft.Numpy):
-        test_case.assertTrue(np.allclose(grad, blob) == True)
+        test_case.assertTrue(np.allclose(grad, blob))
 
     if value_type == flow.float16:
 
@@ -213,13 +215,13 @@ def _compare_dim_gather_with_samples(
         )
     else:
         test_case.assertTrue(
-            np.allclose(y, sample["output"].astype(value_type[0]), 1e-3, 1e-3)
+            np.allclose(y, sample["output"].astype(value_type[0]))
         )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestDimGather1n1d(flow.unittest.TestCase):
-    def test_dim_gather_cpu(test_case):
+    def test_dim_gather_float_cpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
@@ -230,7 +232,7 @@ class TestDimGather1n1d(flow.unittest.TestCase):
         arg_dict["value_type"] = [
             # (np.float32, flow.float16), #TODO:(YaoChi) float16 only works fine on ARCH > 700 CUDA > 10000
             (np.float32, flow.float32),
-            (np.float64, flow.float64),
+            (np.float64, flow.float64)
         ]
         arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
         arg_dict["machine_ids"] = ["0:0"]
@@ -239,7 +241,7 @@ class TestDimGather1n1d(flow.unittest.TestCase):
             _compare_dim_gather_with_samples(test_case, *arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_dim_gather_gpu(test_case):
+    def test_dim_gather_float_gpu(test_case):
         global g_samples
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
