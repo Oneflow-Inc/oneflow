@@ -68,7 +68,7 @@ def get_lflags():
 
 def get_cpp2py_path():
     return os.path.join(
-        oneflow_sysconfig.get_include(), "oneflow/python/ops/util/py_kernel_caller.hpp"
+        oneflow_sysconfig.get_include(), "oneflow/extension/python/py_kernel_caller.cpp"
     )
 
 
