@@ -21,30 +21,6 @@ namespace oneflow{
 
 namespace{
 
-/**
- * @brief Find the dimension factorial \n 
- * such as shape=(2,3,4,5), idx=0, then num = 5*4*3*2=120; idx=1, then num=5*4*3=60
- */
-int64_t dim_factorial(int64_t idx, const std::vector<int64_t> shape){
-    int64_t num = 1;
-    for(idx; idx < shape.size(); idx++){
-        num *= shape[idx];
-    }
-    return num;
-}
-
-
-/**
- * @brief Convert high-dimensional array coordinates to one-dimensional array index
- */
-int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const std::vector<int64_t> shape, const int64_t size_of_data_type){
-    int64_t idx = 0;
-    for(int64_t i = 0; i<shape.size(); ++i){
-        idx += coordinate[i] * dim_factorial(i+1, shape);
-    }
-    return idx;
-}
-
 
 /**
  * @brief Convert high-dimensional array coordinates to one-dimensional array index
@@ -182,7 +158,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
         //Traverse one-dimensional array y
         std::vector<int64_t>  coordinate(y_shape.NumAxes());
         std::vector<int64_t>  coord_y = index_to_coordinate(i, shapeview_to_vector(y_shape), coordinate);
-        int channel_h;
         int64_t x_h = coord_y[channel_h_idx] - padding_h;
         int64_t  x_w = coord_y[channel_w_idx] - padding_w;
         //printf("i:%d >>>>>>coord_y:  [%ld, %ld, %ld, %ld];  coord_x: [%ld, %ld, %ld, %ld]\n", i, coord_y[0], coord_y[1], coord_y[2], coord_y[3], coord_y[0], coord_y[1], x_h, x_w);
