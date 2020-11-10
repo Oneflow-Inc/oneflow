@@ -162,6 +162,15 @@ struct IndexedSlicesAdamMdUpdateKernelUtil {
                      T* v, T* beta1_t, T* beta2_t);
 };
 
+template<DeviceType device_type, typename T, typename G>
+struct LambUpdateKernelUtil {
+ public:
+  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
+                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+                     T* norm_buffer, T* beta1_t, T* beta2_t);
+};
+
 template<typename T, typename G>
 struct RmsPropUpdateFunctor {
   OF_DEVICE_FUNC
@@ -194,14 +203,25 @@ struct RmsPropUpdateKernelUtil {
                      T* model);
 };
 
-template<DeviceType device_type, typename T, typename G>
-struct LambUpdateKernelUtil {
- public:
-  static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
-                     const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
-                     T* norm_buffer, T* beta1_t, T* beta2_t);
+template<typename T>
+struct LarsUpdateFunctor {
+  OF_DEVICE_FUNC
+  void operator()(T* model_diff_tmp, T* model, float momentum_beta, T* momentum, float weight_decay,
+                    const T local_learning_rate) const {
+    const T model_val = *model;
+    T reg_diff = *model_diff_tmp + *model * weight_decay;
+    *momentum = *momentum * momentum_beta - local_learning_rate * reg_diff;
+    *model = model_val + *momentum;
+  }
 };
+
+template<DeviceType device_type, typename T, typename G>
+struct LarsUpdateKernelUtil {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon, 
+    float lars_coefficient, float weight_decay, const float* learning_rate, const int64_t* train_step, T* momentum,
+    const T* scale_by_ptr, const G* model_diff, T* model, T* data_tmp, T* model_diff_tmp);
+};
+
 
 #endif
 

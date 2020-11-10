@@ -68,7 +68,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (user_op_conf.op_type_name() != "sgd_update"
         && user_op_conf.op_type_name() != "momentum_update"
         && user_op_conf.op_type_name() != "adam_update"
-        && user_op_conf.op_type_name() != "rmsprop_update") {
+        && user_op_conf.op_type_name() != "rmsprop_update"
+        && user_op_conf.op_type_name() != "lars_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -183,6 +184,10 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         if (centered) {
           fused_op_builder.Input("mean_gradient", user_op_conf.input("mean_gradient", 0.f));
         }
+    } else if (user_op_conf.op_type_name() == "lars_update") {
+        fused_op_builder.Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
+        .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+        .Attr<float>("lars_coefficient", user_op_conf.attr<float>("lars_coefficient"));
     } else {
       UNIMPLEMENTED();
     }
