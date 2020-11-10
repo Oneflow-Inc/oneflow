@@ -136,8 +136,8 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
 
       CHECK_EQ(padding.size(), ndims);
-      NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
-                                     static_cast<T>(1.01), y->mut_dptr<T>());
+    //   NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
+    //                                  static_cast<T>(0.0), y->mut_dptr<T>());
 
       MemoryCopyNdDesc memory_copy_nd_desc;
       DimVector src_shape_vec(ndims);
