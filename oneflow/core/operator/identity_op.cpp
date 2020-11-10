@@ -31,7 +31,6 @@ class IdentityOpTpl final : public Operator {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
   }
-  const PbMessage& GetCustomizedConf() const override { return T::GetCustomizedConf(op_conf()); }
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override {
     *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
@@ -54,18 +53,10 @@ class IdentityOpTpl final : public Operator {
   }
 };
 
-struct IdentityOp {
-  static const PbMessage& GetCustomizedConf(const OperatorConf& op_conf) {
-    return op_conf.identity_conf();
-  }
-};
+struct IdentityOp {};
 REGISTER_OP(OperatorConf::kIdentityConf, IdentityOpTpl<IdentityOp>);
 
-struct CopyOp {
-  static const PbMessage& GetCustomizedConf(const OperatorConf& op_conf) {
-    return op_conf.copy_conf();
-  }
-};
+struct CopyOp {};
 REGISTER_OP(OperatorConf::kCopyConf, IdentityOpTpl<CopyOp>);
 
 class MirroredCastOp : public Operator {
@@ -98,8 +89,6 @@ class CastToMirroredOp : public MirroredCastOp {
   OF_DISALLOW_COPY_AND_MOVE(CastToMirroredOp);
   CastToMirroredOp() = default;
   virtual ~CastToMirroredOp() override = default;
-
-  const PbMessage& GetCustomizedConf() const override { return op_conf().cast_to_mirrored_conf(); }
 
  private:
   Maybe<void> InferLogicalOutBlobDescs(
@@ -159,10 +148,6 @@ class CastFromMirroredOp : public MirroredCastOp {
   OF_DISALLOW_COPY_AND_MOVE(CastFromMirroredOp);
   CastFromMirroredOp() = default;
   virtual ~CastFromMirroredOp() override = default;
-
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().cast_from_mirrored_conf();
-  }
 
  private:
   Maybe<void> InferLogicalOutBlobDescs(
@@ -225,10 +210,6 @@ class CastToStaticShapeOp final : public Operator {
   void InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
-  }
-
-  const PbMessage& GetCustomizedConf() const override {
-    return this->op_conf().cast_to_static_shape_conf();
   }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -117,7 +117,7 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
    *    lbi2ibns  A HaspMap defined on logical blob ids of input blob of downstream.
    *              The image of this map is input blob names.
    *              The key of lbi2obn contains lbis as a subset as well.
-   */ 
+   */
   explicit OpEdge(std::shared_ptr<std::vector<LogicalBlobId>> lbis,
                   std::shared_ptr<HashMap<LogicalBlobId, std::string>> lbi2obn,
                   std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> lbi2ibns)
@@ -187,8 +187,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   Maybe<void> Init(const Job& job);
 
  private:
- friend class SbpConstructor;
- 
+  friend class SbpConstructor;
+
   void InitNodes(const Job& job);
   void InitEdges();
   void InitProducerOpName2CtrlConsumerOpNames(const Job& job);

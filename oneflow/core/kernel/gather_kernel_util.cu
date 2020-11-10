@@ -87,7 +87,6 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
   }
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
 template<typename K>
 struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
   static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const float16* in,
@@ -97,7 +96,6 @@ struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
         reinterpret_cast<half*>(out), offset);
   }
 };
-#endif
 
 #define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \

@@ -38,21 +38,111 @@ Error Error::ProtoParseFailedError() {
   return error;
 }
 
-Error Error::JobSetEmpty() {
+Error Error::JobSetEmptyError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_job_build_and_infer_error(JobBuildAndInferError::kJobSetEmpty);
+  error->mutable_job_set_empty_error();
   return error;
 }
 
-Error Error::DeviceTagNotFound() {
+Error Error::DeviceTagNotFoundError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_job_build_and_infer_error(JobBuildAndInferError::kDeviceTagNotFound);
+  error->mutable_device_tag_not_found_error();
   return error;
 }
 
-Error Error::JobTypeNotSet() {
+Error Error::JobNameExistError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_job_build_and_infer_error(JobBuildAndInferError::kJobTypeNotSet);
+  error->mutable_job_name_exist_error();
+  return error;
+}
+
+Error Error::JobNameEmptyError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_name_empty_error();
+  return error;
+}
+
+Error Error::JobNameNotEqualError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_name_not_equal_error();
+  return error;
+}
+
+Error Error::NoJobBuildAndInferCtxError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_no_job_build_and_infer_ctx_error();
+  return error;
+}
+
+Error Error::JobConfFrozenError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_conf_frozen_error();
+  return error;
+}
+
+Error Error::JobConfNotSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_conf_not_set_error();
+  return error;
+}
+
+Error Error::JobConfRepeatedSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_conf_repeated_set_error();
+  return error;
+}
+
+Error Error::JobTypeNotSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_job_type_not_set_error();
+  return error;
+}
+
+Error Error::LogicalBlobNameNotExistError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_logical_blob_name_not_exist_error();
+  return error;
+}
+
+Error Error::LogicalBlobNameExistError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_logical_blob_name_exist_error();
+  return error;
+}
+
+Error Error::LogicalBlobNameInvalidError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_logical_blob_name_invalid_error();
+  return error;
+}
+
+Error Error::OpNameExistError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_op_name_exist_error();
+  return error;
+}
+
+Error Error::OpConfDeviceTagNoSetError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_op_conf_device_tag_no_set_error();
+  return error;
+}
+
+Error Error::PlacementError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_placement_error();
+  return error;
+}
+
+Error Error::BlobSplitAxisInferError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_blob_split_axis_infer_error();
+  return error;
+}
+
+Error Error::UnknownJobBuildAndInferError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_unknown_job_build_and_infer_error();
   return error;
 }
 
@@ -74,9 +164,9 @@ Error Error::Unimplemented() {
   return error;
 }
 
-Error Error::BoxingNotSupported() {
+Error Error::BoxingNotSupportedError() {
   auto error = std::make_shared<ErrorProto>();
-  error->set_boxing_error(BoxingError::kNotSupported);
+  error->mutable_boxing_not_supported_error();
   return error;
 }
 
@@ -118,6 +208,12 @@ Error Error::LossBlobNotFoundError(const std::string& error_summary) {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_loss_blob_not_found_error();
   error->set_error_summary(error_summary);
+  return error;
+}
+
+Error Error::RwMutexedObjectNotFoundError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_rw_mutexed_object_not_found_error();
   return error;
 }
 

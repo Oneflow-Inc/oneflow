@@ -14,46 +14,144 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cudnn_util.h"
+#endif
 
 namespace oneflow {
 
-Maybe<void> NormalizationTensorDescInfer(user_op::InferContext* ctx) {
-#ifdef WITH_CUDA
-  // assume cudnn is enabled
-  CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
-#endif
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const auto data_type = x->data_type();
-  *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x;
-  const auto axis = ctx->Attr<int32_t>("axis");
-  CHECK_GE_OR_RETURN(axis, 0);
-  CHECK_LT_OR_RETURN(axis, x->shape().NumAxes());
-  const Shape param_shape({x->shape().At(axis)});
-  const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
-  const auto CheckParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
-    const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-    if (tensor_desc != nullptr) {
-      CHECK_EQ_OR_RETURN(tensor_desc->data_type(), param_data_type);
-      CHECK_EQ_OR_RETURN(tensor_desc->shape(), param_shape);
+namespace {
+
+std::function<Maybe<void>(const std::string&)> MakeCheckParamTensorDescFn(
+    user_op::InferContext* ctx, DataType data_type, const Shape& shape) {
+  return [=](const std::string& bn) -> Maybe<void> {
+    if (ctx->user_op_conf().has_input(bn, 0)) {
+      const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
+      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(tensor_desc->shape(), shape);
     }
     return Maybe<void>::Ok();
   };
-  const auto SetParamTensorDesc = [&](const std::string& bn) -> Maybe<void> {
-    auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-    CHECK_OR_RETURN(tensor_desc != nullptr);
-    *tensor_desc->mut_data_type() = param_data_type;
-    *tensor_desc->mut_shape() = param_shape;
+}
+
+std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op::InferContext* ctx,
+                                                                        DataType data_type,
+                                                                        const Shape& shape) {
+  return [=](const std::string& bn) -> Maybe<void> {
+    if (ctx->user_op_conf().has_output(bn, 0)) {
+      auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
+      CHECK_OR_RETURN(tensor_desc != nullptr);
+      *tensor_desc->mut_data_type() = data_type;
+      *tensor_desc->mut_shape() = shape;
+    }
     return Maybe<void>::Ok();
   };
-  JUST(CheckParamTensorDesc("moving_mean"));
-  JUST(CheckParamTensorDesc("moving_variance"));
-  JUST(CheckParamTensorDesc("beta"));
-  JUST(CheckParamTensorDesc("gamma"));
-  if (ctx->Attr<bool>("training")) {
+}
+
+void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                        const user_op::UserOpConfWrapper& conf) {
+  bool training;
+  if (conf.op_type_name() == "normalization") {
+    training = conf.attr<bool>("training");
+  } else {
+    training = true;
+  }
+  user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
+  CHECK(moving_mean_modifier != nullptr);
+  moving_mean_modifier->set_is_mutable(training);
+  moving_mean_modifier->set_requires_grad(false);
+  user_op::InputArgModifier* moving_variance_modifier = GetInputArgModifierFn("moving_variance", 0);
+  CHECK(moving_variance_modifier != nullptr);
+  moving_variance_modifier->set_is_mutable(training);
+  moving_variance_modifier->set_requires_grad(false);
+}
+
+Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
+  const OptInt64* x_batch_axis = ctx->BatchAxis4ArgNameAndIndex("x", 0);
+  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *x_batch_axis;
+  const auto ClearBatchAxis = [ctx](const std::string& name) {
+    if (ctx->user_op_conf().has_output(name, 0)) {
+      ctx->BatchAxis4ArgNameAndIndex(name, 0)->clear_value();
+    }
+  };
+  ClearBatchAxis("mean");
+  ClearBatchAxis("inv_variance");
+  ClearBatchAxis("reserve_space");
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> split_args;
+  split_args.emplace_back("x", 0);
+  split_args.emplace_back("y", 0);
+  if (ctx->user_op_conf().has_input("addend", 0)) { split_args.emplace_back("addend", 0); }
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    split_args.emplace_back("_add_to_output", 0);
+  }
+  std::vector<user_op::OpArg> broadcast_args;
+  broadcast_args.emplace_back("moving_mean", 0);
+  broadcast_args.emplace_back("moving_variance", 0);
+  broadcast_args.emplace_back("gamma", 0);
+  broadcast_args.emplace_back("beta", 0);
+  if (ctx->user_op_conf().has_output("mean", 0)) { broadcast_args.emplace_back("mean", 0); }
+  if (ctx->user_op_conf().has_output("inv_variance", 0)) {
+    broadcast_args.emplace_back("inv_variance", 0);
+  }
+  if (ctx->user_op_conf().has_output("reserve_space", 0)) {
+    broadcast_args.emplace_back("reserve_space", 0);
+  }
+  ctx->NewBuilder().Broadcast(broadcast_args).Split(split_args, 0).Build();
+  return Maybe<void>::Ok();
+}
+
+user_op::TensorDescInferFn MakeFwTensorDescInferFn(
+    const std::function<Maybe<void>(user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                    user_op::TensorDesc* reserve_space)>& reserve_space_infer_fn) {
+  return [reserve_space_infer_fn](user_op::InferContext* ctx) -> Maybe<void> {
+#ifdef WITH_CUDA
+    // assume cudnn is enabled
+    CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
+#endif
+    const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+    const auto data_type = x->data_type();
+    const Shape& x_shape = x->shape();
+    if (ctx->user_op_conf().has_input("addend", 0)) {
+      const auto* addend = ctx->TensorDesc4ArgNameAndIndex("addend", 0);
+      CHECK_EQ_OR_RETURN(addend->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(addend->shape(), x_shape);
+    }
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ_OR_RETURN(add_to_output->data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output->shape(), x_shape);
+    }
+    *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x;
+    const auto axis = ctx->Attr<int32_t>("axis");
+    CHECK_GE_OR_RETURN(axis, 0);
+    CHECK_LT_OR_RETURN(axis, x_shape.NumAxes());
+    const Shape param_shape({x_shape.At(axis)});
+    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
+    const auto CheckParamTensorDesc = MakeCheckParamTensorDescFn(ctx, param_data_type, param_shape);
+    const auto SetParamTensorDesc = MakeSetParamTensorDescFn(ctx, param_data_type, param_shape);
+    JUST(CheckParamTensorDesc("moving_mean"));
+    JUST(CheckParamTensorDesc("moving_variance"));
+    JUST(CheckParamTensorDesc("beta"));
+    JUST(CheckParamTensorDesc("gamma"));
     JUST(SetParamTensorDesc("mean"));
     JUST(SetParamTensorDesc("inv_variance"));
-  }
-  return Maybe<void>::Ok();
+    if (ctx->user_op_conf().has_output("reserve_space", 0)) {
+      CHECK(reserve_space_infer_fn);
+      reserve_space_infer_fn(ctx, x, ctx->TensorDesc4ArgNameAndIndex("reserve_space", 0));
+    }
+    return Maybe<void>::Ok();
+  };
+}
+
+user_op::TensorDescInferFn MakeFwTensorDescInferFn() {
+  return MakeFwTensorDescInferFn(
+      std::function<Maybe<void>(user_op::InferContext * ctx, const user_op::TensorDesc* x,
+                                user_op::TensorDesc* reserve_space)>());
 }
 
 REGISTER_USER_OP("normalization")
@@ -62,80 +160,167 @@ REGISTER_USER_OP("normalization")
     .Input("moving_variance")
     .Input("gamma")
     .Input("beta")
+    .OptionalInput("_add_to_output")
     .Output("y")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .Attr("training", UserOpAttrType::kAtBool)
-    .Attr("momentum", UserOpAttrType::kAtFloat)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) {
-      user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
-      CHECK(moving_mean_modifier != nullptr);
-      const bool training = conf.attr<bool>("training");
-      moving_mean_modifier->set_is_mutable(training);
-      moving_mean_modifier->set_requires_grad(false);
-      user_op::InputArgModifier* moving_variance_modifier =
-          GetInputArgModifierFn("moving_variance", 0);
-      CHECK(moving_variance_modifier != nullptr);
-      moving_variance_modifier->set_is_mutable(training);
-      moving_variance_modifier->set_requires_grad(false);
-    })
-    .SetTensorDescInferFn(NormalizationTensorDescInfer)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      if (ctx->Attr<bool>("training")) {
-        ctx->BatchAxis4ArgNameAndIndex("mean", 0)->clear_value();
-        ctx->BatchAxis4ArgNameAndIndex("inv_variance", 0)->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Broadcast(ctx->inputs())
-          .Broadcast(ctx->outputs())
-          .Split(user_op::OpArg("x", 0), 0)
-          .Split(user_op::OpArg("y", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .Attr<bool>("training")
+    .Attr<float>("momentum")
+    .SetInputArgModifyFn(FwInputArgModifyFn)
+    .SetTensorDescInferFn(MakeFwTensorDescInferFn())
+    .SetBatchAxisInferFn(FwBatchAxisInferFn)
+    .SetGetSbpFn(FwGetSbpFn);
 
-Maybe<void> NormalizationGradTensorDescInfer(user_op::InferContext* ctx) {
+REGISTER_USER_OP("normalization_add_relu")
+    .Input("x")
+    .OptionalInput("addend")
+    .Input("moving_mean")
+    .Input("moving_variance")
+    .Input("gamma")
+    .Input("beta")
+    .Output("y")
+    .Output("reserve_space")
+    .OptionalOutput("mean")
+    .OptionalOutput("inv_variance")
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .Attr<float>("momentum")
+    .SetInputArgModifyFn(FwInputArgModifyFn)
+    .SetTensorDescInferFn(
+        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+          const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          *reserve_space->mut_data_type() = DataType::kInt32;
+          *reserve_space->mut_shape() =
+              Shape({static_cast<int64_t>(RoundUp(x_desc->shape().elem_cnt(), 32) / 32)});
+          return Maybe<void>::Ok();
+        }))
+    .SetBatchAxisInferFn(FwBatchAxisInferFn)
+    .SetGetSbpFn(FwGetSbpFn);
+
+#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+
+REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
+    .Input("x")
+    .OptionalInput("addend")
+    .Input("moving_mean")
+    .Input("moving_variance")
+    .Input("gamma")
+    .Input("beta")
+    .Output("y")
+    .Output("reserve_space")
+    .OptionalOutput("mean")
+    .OptionalOutput("inv_variance")
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .Attr<float>("momentum")
+    .SetInputArgModifyFn(FwInputArgModifyFn)
+    .SetTensorDescInferFn(
+        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+          const Shape& x_shape = x->shape();
+          const auto axis = ctx->Attr<int32_t>("axis");
+          CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+          int64_t n = x_shape.At(0);
+          int64_t h = x_shape.Count(1, axis);
+          int64_t w = 1;
+          int64_t c = x_shape.At(axis);
+          cudnnHandle_t cudnn_handle;
+          size_t reserve_space_size;
+          OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
+          CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, x->data_type(), n, c, h, w);
+          CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
+          cudnnBatchNormOps_t ops;
+          if (ctx->user_op_conf().has_input("addend", 0)) {
+            ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+          } else {
+            ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+          }
+          OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
+              cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(),
+              xy_desc.Get(), &reserve_space_size));
+          reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+          *reserve_space->mut_data_type() = DataType::kChar;
+          *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+          OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
+          return Maybe<void>::Ok();
+        }))
+    .SetBatchAxisInferFn(FwBatchAxisInferFn)
+    .SetGetSbpFn(FwGetSbpFn);
+
+#endif
+
+Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
 #ifdef WITH_CUDA
   // assume cudnn is enabled
   CHECK_GE_OR_RETURN(ctx->Attr<float>("epsilon"), CUDNN_BN_MIN_EPSILON);
 #endif
-  const auto x_type = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  const auto dy_type = *ctx->Dtype4ArgNameAndIndex("dy", 0);
-  CHECK_EQ_OR_RETURN(x_type, dy_type);
-  const auto x_shape = *ctx->Shape4ArgNameAndIndex("x", 0);
-  const auto dy_shape = *ctx->Shape4ArgNameAndIndex("dy", 0);
-  CHECK_EQ_OR_RETURN(dy_shape, x_shape);
-  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
-
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const DataType x_type = x->data_type();
+  const Shape& x_shape = x->shape();
+  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  CHECK_EQ_OR_RETURN(dy->data_type(), x_type);
+  CHECK_EQ_OR_RETURN(dy->shape(), x_shape);
+  if (ctx->user_op_conf().has_input("y", 0)) {
+    const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    CHECK_EQ_OR_RETURN(y->data_type(), x_type);
+    CHECK_EQ_OR_RETURN(y->shape(), x_shape);
+  }
+  *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *x;
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = *x;
+  }
   const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
   const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
-  const auto CheckParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
-    CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex(bn, 0), param_data_type);
-    const auto* blob_shape = ctx->Shape4ArgNameAndIndex(bn, 0);
-    if (blob_shape) { CHECK_EQ_OR_RETURN(*blob_shape, param_shape); }
-    return Maybe<void>::Ok();
-  };
-  const auto SetParamBlobDesc = [&](const std::string& bn) -> Maybe<void> {
-    auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
-    if (tensor_desc) {
-      *tensor_desc->mut_data_type() = param_data_type;
-      *tensor_desc->mut_shape() = param_shape;
-    }
-    return Maybe<void>::Ok();
-  };
+  const auto CheckParamTensorDesc = MakeCheckParamTensorDescFn(ctx, param_data_type, param_shape);
+  const auto SetParamTensorDesc = MakeSetParamTensorDescFn(ctx, param_data_type, param_shape);
+  JUST(CheckParamTensorDesc("mean"));
+  JUST(CheckParamTensorDesc("inv_variance"));
+  JUST(CheckParamTensorDesc("gamma"));
+  JUST(CheckParamTensorDesc("beta"));
+  JUST(SetParamTensorDesc("gamma_diff"));
+  JUST(SetParamTensorDesc("beta_diff"));
+  return Maybe<void>::Ok();
+}
 
-  JUST(CheckParamBlobDesc("mean"));
-  JUST(CheckParamBlobDesc("inv_variance"));
-  JUST(CheckParamBlobDesc("gamma"));
-  JUST(SetParamBlobDesc("gamma_diff"));
-  JUST(SetParamBlobDesc("beta_diff"));
+Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
+  const OptInt64* dy_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dy", 0);
+  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dy_batch_axis;
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    *ctx->BatchAxis4ArgNameAndIndex("addend_diff", 0) = *dy_batch_axis;
+  }
+  ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
+  ctx->BatchAxis4ArgNameAndIndex("beta_diff", 0)->clear_value();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  broadcast_args.emplace_back("mean", 0);
+  broadcast_args.emplace_back("inv_variance", 0);
+  broadcast_args.emplace_back("gamma", 0);
+  if (ctx->user_op_conf().has_input("beta", 0)) { broadcast_args.emplace_back("beta", 0); }
+  if (ctx->user_op_conf().has_input("reserve_space", 0)) {
+    broadcast_args.emplace_back("reserve_space", 0);
+  }
+  std::vector<user_op::OpArg> partial_sum_args;
+  partial_sum_args.emplace_back("gamma_diff", 0);
+  partial_sum_args.emplace_back("beta_diff", 0);
+  std::vector<user_op::OpArg> split_args;
+  split_args.emplace_back("x", 0);
+  split_args.emplace_back("dy", 0);
+  split_args.emplace_back("dx", 0);
+  if (ctx->user_op_conf().has_input("y", 0)) { split_args.emplace_back("y", 0); }
+  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    split_args.emplace_back("addend_diff", 0);
+  }
+  ctx->NewBuilder()
+      .Broadcast(broadcast_args)
+      .PartialSum(partial_sum_args)
+      .Split(split_args, 0)
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -148,25 +333,53 @@ REGISTER_USER_OP("normalization_grad")
     .Output("gamma_diff")
     .Output("beta_diff")
     .Output("dx")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .SetTensorDescInferFn(NormalizationGradTensorDescInfer)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
-      ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
-      ctx->BatchAxis4ArgNameAndIndex("beta_diff", 0)->clear_value();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Broadcast(ctx->inputs())
-          .PartialSum(ctx->outputs())
-          .Split(user_op::OpArg("x", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .SetTensorDescInferFn(BwTensorDescInferFn)
+    .SetBatchAxisInferFn(BwBatchAxisInferFn)
+    .SetGetSbpFn(BwGetSbpFn);
+
+REGISTER_USER_OP("normalization_add_relu_grad")
+    .Input("x")
+    .Input("dy")
+    .Input("mean")
+    .Input("inv_variance")
+    .Input("gamma")
+    .Input("beta")
+    .Input("reserve_space")
+    .Input("y")
+    .Output("gamma_diff")
+    .Output("beta_diff")
+    .Output("dx")
+    .OptionalOutput("addend_diff")
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .SetTensorDescInferFn(BwTensorDescInferFn)
+    .SetBatchAxisInferFn(BwBatchAxisInferFn)
+    .SetGetSbpFn(BwGetSbpFn);
+
+#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+
+REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
+    .Input("x")
+    .Input("dy")
+    .Input("mean")
+    .Input("inv_variance")
+    .Input("gamma")
+    .Input("beta")
+    .Input("reserve_space")
+    .Input("y")
+    .Output("gamma_diff")
+    .Output("beta_diff")
+    .Output("dx")
+    .OptionalOutput("addend_diff")
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .SetTensorDescInferFn(BwTensorDescInferFn)
+    .SetBatchAxisInferFn(BwBatchAxisInferFn)
+    .SetGetSbpFn(BwGetSbpFn);
+
+#endif
 
 REGISTER_USER_OP_GRAD("normalization")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
@@ -341,5 +554,69 @@ REGISTER_USER_OP_GRAD("normalization")
                                   return ctx->GetOp(beta_identity_op_name).output("out", 0);
                                 });
     });
+
+REGISTER_USER_OP_GRAD("normalization_add_relu")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        builder.OpTypeName("normalization_add_relu_grad")
+            .InputBind("x", ctx->FwOp().input("x", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+            .InputBind("gamma", ctx->FwOp().input("gamma", 0))
+            .InputBind("beta", ctx->FwOp().input("beta", 0))
+            .InputBind("reserve_space", ctx->FwOp().output("reserve_space", 0))
+            .InputBind("mean", ctx->FwOp().output("mean", 0))
+            .InputBind("inv_variance", ctx->FwOp().output("inv_variance", 0))
+            .InputBind("y", ctx->FwOp().output("y", 0))
+            .Attr("axis", ctx->FwOp().attr<int32_t>("axis"))
+            .Attr("epsilon", ctx->FwOp().attr<float>("epsilon"))
+            .Output("gamma_diff")
+            .Output("beta_diff")
+            .Output("dx");
+        if (ctx->FwOp().input_size("addend") != 0) { builder.Output("addend_diff"); }
+        return builder.Build();
+      });
+
+      // TODO(liujuncheng): delete identity op when boxing support separated regsts
+      const auto gamma_identity_op_name = ctx->FwOp().op_name() + "_grad_gamma_diff_identity";
+      ctx->DefineOp(gamma_identity_op_name,
+                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
+                      return builder.OpTypeName("identity")
+                          .InputBind("in", ctx->GetOp(grad_op_name).output("gamma_diff", 0))
+                          .Output("out")
+                          .Build();
+                    });
+
+      // TODO(liujuncheng): delete identity op when boxing support separated regsts
+      const auto beta_identity_op_name = ctx->FwOp().op_name() + "_grad_beta_diff_identity";
+      ctx->DefineOp(beta_identity_op_name,
+                    [&ctx, &grad_op_name](user_op::BackwardOpBuilder& builder) {
+                      return builder.OpTypeName("identity")
+                          .InputBind("in", ctx->GetOp(grad_op_name).output("beta_diff", 0))
+                          .Output("out")
+                          .Build();
+                    });
+
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                                [&ctx, &grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(grad_op_name).output("dx", 0);
+                                });
+      if (ctx->FwOp().user_op_conf().has_input("addend", 0)) {
+        ctx->FwOp().InputGradBind(user_op::OpArg("addend", 0),
+                                  [&ctx, &grad_op_name]() -> const std::string& {
+                                    return ctx->GetOp(grad_op_name).output("addend_diff", 0);
+                                  });
+      }
+      ctx->FwOp().InputGradBind(user_op::OpArg("gamma", 0),
+                                [&ctx, &gamma_identity_op_name]() -> const std::string& {
+                                  return ctx->GetOp(gamma_identity_op_name).output("out", 0);
+                                });
+      ctx->FwOp().InputGradBind(user_op::OpArg("beta", 0),
+                                [&ctx, &beta_identity_op_name]() -> const std::string& {
+                                  return ctx->GetOp(beta_identity_op_name).output("out", 0);
+                                });
+    });
+
+}  // namespace
 
 }  // namespace oneflow

@@ -34,6 +34,7 @@ class JobBuildAndInferCtx {
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
+  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair);
   Maybe<OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf);
   // Add loss logical blob name (lbn)

@@ -23,6 +23,9 @@ limitations under the License.
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -215,6 +218,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
       return collective_boxing_conf_.nccl_fusion_reduce();
     } else if (op_type == OpType::kOpTypeBroadcast) {
       return collective_boxing_conf_.nccl_fusion_broadcast();
+    } else if (op_type == OpType::kOpTypeAll2All) {
+      return false;
     } else {
       UNIMPLEMENTED();
       return false;
@@ -237,6 +242,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
     } else if (op_type == OpType::kOpTypeReduce || op_type == OpType::kOpTypeBroadcast
                || op_type == OpType::kOpTypeReduceScatter || op_type == OpType::kOpTypeAllGather) {
       return true;
+    } else if (op_type == OpType::kOpTypeAll2All) {
+      return false;
     } else {
       UNIMPLEMENTED();
       return false;
@@ -245,7 +252,8 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
 
   for (const RequestDesc* request : requests) {
     const int64_t size = GetAlignedRequestSize(request);
-    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_) {
+    if (group.empty() || !CanFuse(group.back(), request) || group_size + size > fusion_threshold_
+        || group.size() >= collective_boxing_conf_.nccl_fusion_max_ops()) {
       if (!group.empty()) {
         groups->emplace_back();
         groups->back().swap(group);
@@ -374,6 +382,23 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
         } else if (op_type == OpType::kOpTypeBroadcast) {
           OF_NCCL_CHECK(ncclBroadcast(send_buff, recv_buff, elem_cnt, nccl_data_type,
                                       op_desc.root(), comm, device_ctx->stream));
+        } else if (op_type == OpType::kOpTypeAll2All) {
+#if NCCL_VERSION_CODE > 2700
+          const int64_t elem_per_rank = elem_cnt / num_ranks;
+          const int64_t elem_per_chunk = elem_per_rank / num_ranks;
+          const int64_t dtype_size = GetSizeOfDataType(op_desc.data_type());
+          const int64_t chunk_size = elem_per_chunk * dtype_size;
+          for (int64_t j = 0; j < num_ranks; ++j) {
+            OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
+                                       reinterpret_cast<const char*>(send_buff) + j * chunk_size),
+                                   elem_per_chunk, nccl_data_type, j, comm, device_ctx->stream));
+            OF_NCCL_CHECK(ncclRecv(
+                reinterpret_cast<void*>(reinterpret_cast<char*>(recv_buff) + j * chunk_size),
+                elem_per_chunk, nccl_data_type, j, comm, device_ctx->stream));
+          }
+#else
+          UNIMPLEMENTED();
+#endif
         } else {
           UNIMPLEMENTED();
         }

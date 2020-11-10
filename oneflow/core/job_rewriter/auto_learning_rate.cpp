@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -22,15 +22,21 @@ namespace oneflow {
 
 namespace {
 
-class AutoLearningRate final : public OpGraphPass {
+class AutoLearningRate final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoLearningRate);
   AutoLearningRate() = default;
   ~AutoLearningRate() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    return Apply(op_graph, job);
+  }
 };
 
 Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
@@ -68,10 +74,9 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
                                    .Attr<DataType>("dtype", DataType::kFloat)
                                    .Attr<Shape>("shape", Shape({1}))
                                    .Output("out")
+                                   .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
                                    .Build();
-      OperatorConf op_conf(constant_op.op_conf());
-      op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
-      job_builder.AddOps(parallel_conf, {op_conf});
+      job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
       return constant_op.output("out", 0);
     }
   };
@@ -94,7 +99,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("AutoLearningRate", AutoLearningRate);
+REGISTER_JOB_PASS("AutoLearningRate", AutoLearningRate);
 
 }  // namespace
 

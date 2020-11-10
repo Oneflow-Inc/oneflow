@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import oneflow as flow
 
 
@@ -20,5 +21,11 @@ def AddLossUnderNormalMode():
     flow.losses.add_loss(None)
 
 
-def test_ApiNotImplementedError(test_case):
-    test_case.assertRaises(NotImplementedError, AddLossUnderNormalMode)
+@flow.unittest.skip_unless_1n1d()
+class TestOneflowExport(flow.unittest.TestCase):
+    def test_ApiNotImplementedError(test_case):
+        test_case.assertRaises(NotImplementedError, AddLossUnderNormalMode)
+
+
+if __name__ == "__main__":
+    unittest.main()

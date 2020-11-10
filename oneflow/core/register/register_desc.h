@@ -72,7 +72,15 @@ class RegstDesc final {
   int64_t mem_block_offset() const;
   void set_mem_block_offset(int64_t val) { mem_block_offset_ = val; }
   void set_hint_inplace_consumed_regst_desc_id(int64_t val) {
+    CHECK_EQ(force_inplace_consumed_regst_desc_id_, -1);
     hint_inplace_consumed_regst_desc_id_ = val;
+  }
+  bool has_force_inplace_consumed_regst_desc_id() {
+    return force_inplace_consumed_regst_desc_id_ != -1;
+  }
+  void set_force_inplace_consumed_regst_desc_id(int64_t val) {
+    CHECK_EQ(hint_inplace_consumed_regst_desc_id_, -1);
+    force_inplace_consumed_regst_desc_id_ = val;
   }
   int32_t mem_block_id() const { return mem_block_id_; }
   void set_mem_block_id(int32_t val) { mem_block_id_ = val; }
@@ -96,7 +104,6 @@ class RegstDesc final {
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
-  int64_t ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) const;
 
  private:
   int64_t regst_desc_id_;
@@ -115,6 +122,7 @@ class RegstDesc final {
   int32_t mem_block_id_;
   int64_t mem_block_offset_;
   int32_t hint_inplace_consumed_regst_desc_id_;
+  int32_t force_inplace_consumed_regst_desc_id_;
 
   std::shared_ptr<Shape> data_regst_time_shape_;
 };

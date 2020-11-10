@@ -14,15 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
 
 
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
-
-
 def generate_binary_op_test(flow_op, *args, opset=None, **kwargs):
-    @flow.global_function(func_config)
+    @flow.global_function()
     def job1():
         x = flow.get_variable(
             name="x1",
@@ -44,7 +41,7 @@ def generate_binary_op_test(flow_op, *args, opset=None, **kwargs):
 def generate_unary_op_test(
     flow_op, *args, opset=None, min_val=-10, max_val=10, **kwargs
 ):
-    @flow.global_function(func_config)
+    @flow.global_function()
     def job1():
         x = flow.get_variable(
             name="x1",

@@ -1,8 +1,7 @@
+include(python)
 # main cpp
-# TODO(tsai): skip for now, fail to link when building CPU only
-if (BUILD_CUDA)
-  list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
-endif()
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})
@@ -47,7 +46,7 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
- "${PROJECT_SOURCE_DIR}/oneflow/user/*.*")
+ "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
@@ -121,8 +120,20 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.cpp$")
+    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
+    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
+      list(APPEND of_transport_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     else()
@@ -141,60 +152,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     source_group("${group_name}" FILES ${oneflow_single_file})
   endif()
 endforeach()
-
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
-message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
-set(Python_EXECUTABLE ${Python3_EXECUTABLE})
-message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
-
-message(STATUS "Installing necessary Python packages...")
-set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
-execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
-)
-message(STATUS "Python packages are installed.")
-
-find_package(Python3 COMPONENTS Development NumPy)
-if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
-  set(Python_INCLUDE_DIRS ${Python3_INCLUDE_DIRS})
-endif()
-if (Python3_NumPy_FOUND AND Python3_NumPy_INCLUDE_DIRS)
-  set(Python_NumPy_INCLUDE_DIRS ${Python3_NumPy_INCLUDE_DIRS})
-endif()
-if (NOT Python_INCLUDE_DIRS)
-  message(STATUS "Getting python include directory from sysconfig..")
-  execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
-    OUTPUT_VARIABLE Python_INCLUDE_DIRS
-    RESULT_VARIABLE ret_code)
-  string(STRIP "${Python_INCLUDE_DIRS}" Python_INCLUDE_DIRS)
-  if ((NOT (ret_code EQUAL "0")) OR (NOT IS_DIRECTORY ${Python_INCLUDE_DIRS})
-    OR (NOT EXISTS ${Python_INCLUDE_DIRS}/Python.h))
-    set(Python_INCLUDE_DIRS "")
-  endif()
-endif()
-if (NOT Python_INCLUDE_DIRS)
-  message(FATAL_ERROR "Cannot find python include directory")
-endif()
-message(STATUS "Found python include directory ${Python_INCLUDE_DIRS}")
-
-if (NOT Python_NumPy_INCLUDE_DIRS)
-  message(STATUS "Getting numpy include directory by numpy.get_include()..")
-  execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
-    OUTPUT_VARIABLE Python_NumPy_INCLUDE_DIRS
-    RESULT_VARIABLE ret_code)
-  string(STRIP "${Python_NumPy_INCLUDE_DIRS}" Python_NumPy_INCLUDE_DIRS)
-  if ((NOT ret_code EQUAL 0) OR (NOT IS_DIRECTORY ${Python_NumPy_INCLUDE_DIRS})
-    OR (NOT EXISTS ${Python_NumPy_INCLUDE_DIRS}/numpy/arrayobject.h))
-    set(Python_NumPy_INCLUDE_DIRS "")
-  endif()
-endif()
-if (NOT Python_NumPy_INCLUDE_DIRS)
-  message(FATAL_ERROR "Cannot find numpy include directory")
-endif()
-message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
 # clang format
 add_custom_target(of_format
@@ -244,12 +201,19 @@ oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 add_dependencies(of_protoobj make_pyproto_dir)
 
+include(cfg)
+GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
+target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
+add_dependencies(of_cfgobj of_protoobj)
+
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
+add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
   add_dependencies(of_ccobj of_git_version)
 endif()
@@ -258,11 +222,11 @@ if (USE_CLANG_FORMAT)
 endif()
 
 if(APPLE)
-  set(of_libs -Wl,-force_load of_ccobj of_protoobj)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj)
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj -Wl,--no-whole-archive)
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj -Wl,--no-whole-archive -ldl)
 elseif(WIN32)
-  set(of_libs of_ccobj of_protoobj)
+  set(of_libs of_ccobj of_protoobj of_cfgobj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
@@ -273,12 +237,15 @@ foreach(swig_name ${of_all_swig})
 endforeach()
 
 RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
-                              ${PROJECT_SOURCE_DIR}
-                              ${of_all_rel_swigs})
-oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
+                          ${PROJECT_SOURCE_DIR}
+                          ${of_all_rel_swigs})
+
+pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc} ${PYBIND_REGISTRY_CC})
+set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
+add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
@@ -369,6 +336,16 @@ if(BUILD_TESTING)
     endif()
   endif()
 endif()
+
+# build transport_test
+foreach(cc ${of_transport_test_cc})
+  get_filename_component(transport_test_name ${cc} NAME_WE)
+  string(CONCAT transport_test_exe_name ${transport_test_name} _exe)
+  oneflow_add_executable(${transport_test_exe_name} ${cc})
+  target_link_libraries(${transport_test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+  set_target_properties(${transport_test_exe_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+endforeach()
+
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")

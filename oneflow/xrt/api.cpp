@@ -60,7 +60,6 @@ namespace xrt {
 static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Identity), "Identity"},
     // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
-    {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
     // TODO(hjchen2)
 };
 
@@ -76,6 +75,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"broadcast_add", "BcastAdd"},
     {"broadcast_mul", "BcastMul"},
     {"broadcast_div", "BcastDiv"},
+    {"broadcast_min", "BcastMin"},
     {"cast", "Cast"},
     {"concat", "Concat"},
     {"conv2d", "Conv2D"},
@@ -100,6 +100,9 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"scalar_add", "ScalarAdd"},
     {"scalar_mul", "ScalarMul"},
     {"leaky_relu", "LeakyRelu"},
+    {"adam_update", "AdamOptimizer"},
+    {"rsqrt", "Rsqrt"},
+    {"square_sum", "SquareSum"},
 };
 
 std::string ExtractOpTypeAsString(const OperatorConf &conf) {

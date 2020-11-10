@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include <cstring>
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 
@@ -25,9 +26,10 @@ namespace {
 
 constexpr size_t kDefaultBufferSize = 32 * 1024;  // 32KB
 
-size_t GetBufferSize() {
-  if (Global<const IOConf>::Get()->has_persistence_buf_byte()) {
-    const int64_t buffer_size = Global<const IOConf>::Get()->persistence_buf_byte();
+size_t GetBufferSize(int64_t session_id) {
+  const auto& io_conf = *Global<const IOConf>::Get(session_id);
+  if (io_conf.has_persistence_buf_byte()) {
+    const int64_t buffer_size = io_conf.persistence_buf_byte();
     CHECK_GT(buffer_size, 0);
     return buffer_size;
   } else {
@@ -38,6 +40,11 @@ size_t GetBufferSize() {
 }  // namespace
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
+                                       const std::vector<std::string>& file_paths, uint64_t offset,
+                                       bool cyclic, bool with_local_copy)
+    : PersistentInStream(kInvalidSessionId, fs, file_paths, offset, cyclic, with_local_copy) {}
+
+PersistentInStream::PersistentInStream(int64_t session_id, fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, uint64_t offset,
                                        bool cyclic, bool with_local_copy) {
   if (with_local_copy) { CHECK_EQ(offset, 0); }
@@ -54,8 +61,7 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
   } else {
     stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
-
-  buffer_.resize(GetBufferSize() + 1);
+  buffer_.resize(GetBufferSize(session_id) + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
@@ -77,6 +83,10 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& fi
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path)
     : PersistentInStream(fs, file_path, 0, false, false) {}
+
+PersistentInStream::PersistentInStream(int64_t session_id, fs::FileSystem* fs,
+                                       const std::string& file_path)
+    : PersistentInStream(session_id, fs, std::vector<std::string>({file_path}), 0, false, false) {}
 
 int32_t PersistentInStream::ReadLine(std::string* l) {
   if (IsEof()) { return -1; }

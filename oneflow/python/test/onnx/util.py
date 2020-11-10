@@ -34,7 +34,7 @@ def convert_to_onnx_and_check(
     check_point = flow.train.CheckPoint()
     if explicit_init:
         # it is a trick to keep check_point.save() from hanging when there is no variable
-        @flow.global_function(flow.FunctionConfig())
+        @flow.global_function()
         def add_var():
             return flow.get_variable(
                 name="trick",

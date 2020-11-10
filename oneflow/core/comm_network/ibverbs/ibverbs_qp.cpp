@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
 
@@ -218,4 +218,4 @@ void IBVerbsQP::DeleteWorkRequestId(WorkRequestId* wr_id) {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX

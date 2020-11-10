@@ -1,7 +1,8 @@
 pycocotools
 opencv-python==4.2.0.34
 sphinx
-sphinx-material
 recommonmark
 scipy
 pillow
+sphinx_rtd_theme
+tensorflow-addons==0.9.1

@@ -26,7 +26,8 @@ namespace {
 void GroupParallelIdByMachine(const ParallelDesc& pd,
                               HashMap<int64_t, std::vector<int64_t>>* machine_id2parallel_ids) {
   FOR_RANGE(int64_t, parallel_id, 0, pd.parallel_num()) {
-    (*machine_id2parallel_ids)[pd.MachineIdForParallelId(parallel_id)].push_back(parallel_id);
+    int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
+    (*machine_id2parallel_ids)[machine_id].push_back(parallel_id);
   }
 }
 
@@ -46,8 +47,8 @@ bool IsCopyContiguous(const TensorSliceView& src, const TensorSliceView& dst) {
 bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
                   const int64_t in_parallel_id, const int64_t out_parallel_id) {
   return in_pd.device_type() == out_pd.device_type()
-         && in_pd.DeviceIdForParallelId(in_parallel_id)
-                == out_pd.DeviceIdForParallelId(out_parallel_id);
+         && CHECK_JUST(in_pd.DeviceId4ParallelId(in_parallel_id))
+                == CHECK_JUST(out_pd.DeviceId4ParallelId(out_parallel_id));
 }
 
 }  // namespace
@@ -59,28 +60,28 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(dst_parallel_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(src_parallel_desc.parallel_num(), src_sbp_parallel,
                                                  logical_blob_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(dst_parallel_desc.parallel_num(), dst_sbp_parallel,
                                                  logical_blob_desc)) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   if (!(SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)
         || SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel))) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
 #ifdef WITH_CUDA
@@ -102,13 +103,14 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                        const TensorSliceView& slice,
                                        SliceBoxingTaskMode mode) -> SliceBoxingTaskNode* {
     SliceBoxingTaskNode* node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
-    const int64_t machine_id = pd.MachineIdForParallelId(parallel_id);
+    const int64_t machine_id = CHECK_JUST(pd.MachineId4ParallelId(parallel_id));
     int64_t thrd_id = -1;
     if (pd.device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id);
     } else if (pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      thrd_id = GetBoxingGpuThrdId(pd.DeviceIdForParallelId(parallel_id), CudaWorkType::kCopyH2D);
+      thrd_id = GetBoxingGpuThrdId(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)),
+                                   CudaWorkType::kCopyH2D);
 #else
       UNIMPLEMENTED();
 #endif
@@ -399,7 +401,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         if (out_pd.device_type() == DeviceType::kCPU) {
           mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
         } else if (out_pd.device_type() == DeviceType::kGPU) {
-          mem_zone_id = Global<IDMgr>::Get()->GpuMemZoneId(out_pd.DeviceIdForParallelId(out_id));
+          mem_zone_id =
+              Global<IDMgr>::Get()->GpuMemZoneId(CHECK_JUST(out_pd.DeviceId4ParallelId(out_id)));
         } else {
           UNIMPLEMENTED();
         }

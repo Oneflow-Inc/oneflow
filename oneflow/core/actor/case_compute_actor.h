@@ -31,7 +31,7 @@ class CaseCompActor final : public CompActor {
   bool IsCustomizedReadReady() const override;
   bool IsCustomizedWriteReady() const override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
-  void UpdtStateAsCustomizedProducedRegst(Regst* regst);
+  void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;

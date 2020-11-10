@@ -14,5 +14,5 @@ message NodeDef {
   required string op = 2;
   repeated string input = 3;
   optional string device = 4;
-  map<string, UserOpAttrVal> attr = 5;
+  map<string, AttrValue> attr = 5;
 }
