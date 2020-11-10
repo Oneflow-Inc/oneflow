@@ -56,12 +56,14 @@ def compare_range_with_np_CPU(device_type, machine_ids, device_counts):
 
             x_var = flow.get_variable(
                 "cpu_input",
-                shape=(3, ),
+                shape=(3,),
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
             )
             x_out = out_2 + x_var
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(x_out)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(x_out)
 
         return [out_1, out_2, out_3, out_4]
 
@@ -105,12 +107,14 @@ def compare_range_with_np_GPU(device_type, machine_ids, device_counts):
 
             x_var = flow.get_variable(
                 "gpu_input",
-                shape=(3, ),
+                shape=(3,),
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0.0),
             )
             x_gpu_out = x_var + out_2
-            flow.optimizer.SGD(flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0).minimize(x_gpu_out)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(x_gpu_out)
 
         return [out_1, out_2, out_3, out_4, out_5]
 

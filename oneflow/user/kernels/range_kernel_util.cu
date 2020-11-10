@@ -22,25 +22,27 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-__global__ void RangeForwardGpuKernel(const int64_t start, const int64_t delta, const int64_t range_elem_cnt,
-                                      T* out) {
+__global__ void RangeForwardGpuKernel(const int64_t start, const int64_t delta,
+                                      const int64_t range_elem_cnt, T* out) {
   // Use Loop to set the value
   DoRange<T>(start, delta, range_elem_cnt, out);
 }
 
 template<typename T>
 struct RangeFunctor<DeviceType::kGPU, T> final {
-  void operator()(DeviceCtx* ctx, const int32_t start, const int32_t delta, const int32_t range_elem_cnt, T* out) {
+  void operator()(DeviceCtx* ctx, const int32_t start, const int32_t delta,
+                  const int32_t range_elem_cnt, T* out) {
     // The thread num is set as range_elem_cnt
-    RUN_CUDA_KERNEL((RangeForwardGpuKernel<T>), ctx, range_elem_cnt, start, delta, range_elem_cnt, out);
+    RUN_CUDA_KERNEL((RangeForwardGpuKernel<T>), ctx, range_elem_cnt, start, delta, range_elem_cnt,
+                    out);
   }
 };
 
 // float16 special case of RangeKernel template
 template<>
 void RangeFunctor<DeviceType::kGPU, float16>::operator()(DeviceCtx* ctx, const int32_t start,
-                                                         const int32_t delta, const int32_t range_shape,
-                                                         float16* out) {
+                                                         const int32_t delta,
+                                                         const int32_t range_shape, float16* out) {
   RUN_CUDA_KERNEL((RangeForwardGpuKernel<half>), ctx, range_shape, start, delta, range_shape,
                   reinterpret_cast<half*>(out));
 }

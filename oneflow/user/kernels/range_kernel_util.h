@@ -28,12 +28,14 @@ namespace oneflow {
 namespace user_op {
 template<DeviceType device_type, typename T>
 struct RangeFunctor final {
-  void operator()(DeviceCtx* ctx, const int32_t start, const int32_t delta, const int32_t range_elem_cnt, T* out);
+  void operator()(DeviceCtx* ctx, const int32_t start, const int32_t delta,
+                  const int32_t range_elem_cnt, T* out);
 };
 
 template<typename T>
-OF_DEVICE_FUNC void DoRange(const int32_t start, const int32_t delta, const int32_t range_elem_cnt, T* out) {
-    XPU_1D_KERNEL_LOOP(i, range_elem_cnt) { out[i] = start + i * delta; }
+OF_DEVICE_FUNC void DoRange(const int32_t start, const int32_t delta, const int32_t range_elem_cnt,
+                            T* out) {
+  XPU_1D_KERNEL_LOOP(i, range_elem_cnt) { out[i] = start + i * delta; }
 }
 
 #define INSTANTIATE_RANGE_FUNCTOR(device_type_v, dtype_pair) \
