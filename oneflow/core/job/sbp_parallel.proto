@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-// Take matmal_op as an example.
+// Take matmul_op as an example.
 
 //   Y     =   A    *   B
 // (m, n)    (m, k) , (k, n)
