@@ -27,13 +27,6 @@ FLEX_DEF(Location, builder) {
       .Build();
 }
 
-FLEX_DEF(GeoObject, builder) {
-  return builder.Struct()
-      .Required<Location>("location")
-      .Optional<std::string>("name", "undefined")
-      .Build();
-}
-
 void TestField(const StructFlexDef* location) {
   ASSERT_TRUE(location != nullptr);
   ASSERT_TRUE(location->Field4FieldName("x").flex_def()
@@ -49,6 +42,13 @@ TEST(FlexDef, field_type) {
   const auto* ptr = Location::GetFlexDef().get();
   const auto* location = dynamic_cast<const StructFlexDef*>(ptr);
   TestField(location);
+}
+
+FLEX_DEF(GeoObject, builder) {
+  return builder.Struct()
+      .Required<Location>("location")
+      .Optional<std::string>("name", "undefined")
+      .Build();
 }
 
 TEST(FlexDef, nested_field_type) {
@@ -83,6 +83,39 @@ TEST(FlexValue, basic) {
   ASSERT_EQ(location->Get<int32_t>("x"), 30);
   ASSERT_EQ(location->Get<int32_t>("y"), 40);
   ASSERT_EQ(location->Get<std::string>("description"), "Home");
+}
+
+FLEX_DEF(Ids, builder) { return builder.Struct().List<int32_t>("ids").Build(); }
+
+TEST(List, ids) {
+  auto ids = Ids::NewFlexValue();
+  ASSERT_EQ(ids->GetList("ids").size(), 0);
+  auto* list_int32 = ids->MutableList("ids");
+  list_int32->Add<int32_t>(0);
+  list_int32->Add<int32_t>(1);
+  // also valid if compatible
+  list_int32->Add<int16_t>(2);
+  // deduced type is valid if compatible
+  list_int32->Add(3);
+  ASSERT_EQ(list_int32->size(), 4);
+  for (int64_t i = 0; i < 4; ++i) { ASSERT_EQ(list_int32->Get<int32_t>(i), i); }
+}
+
+FLEX_DEF(Strings, builder) { return builder.Struct().List<std::string>("strings").Build(); }
+
+TEST(List, Strings) {
+  auto strings = Strings::NewFlexValue();
+  auto* list_string = strings->MutableList("strings");
+  list_string->Add<std::string>("0");
+  list_string->Add<std::string>("1");
+  // also valid if compatible
+  list_string->Add<std::string>("2");
+  // deduced type is valid if compatible
+  list_string->Add<std::string>("3");
+  ASSERT_EQ(list_string->size(), 4);
+  for (int64_t i = 0; i < 4; ++i) {
+    ASSERT_EQ(list_string->Get<std::string>(i), std::to_string(i));
+  }
 }
 
 TEST(FlexValue, nested) {
