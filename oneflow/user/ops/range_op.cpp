@@ -27,11 +27,11 @@ REGISTER_USER_OP("range")
       int64_t start = ctx->Attr<int64_t>("start");
       int64_t delta = ctx->Attr<int64_t>("delta");
       int64_t limit = ctx->Attr<int64_t>("limit");
-      int64_t range_shape = (((limit - start) + delta - 1)
-                             / delta);  // Do the ceil division, ceil((limit-start)/delta)
+      int64_t range_elem_cnt = (((limit - start) + delta - 1)
+                                / delta);  // Do the ceil division, ceil((limit-start)/delta)
       auto dtype = ctx->Attr<DataType>("dtype");
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
-      *out_shape = Shape({range_shape});
+      *out_shape = Shape({range_elem_cnt});
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

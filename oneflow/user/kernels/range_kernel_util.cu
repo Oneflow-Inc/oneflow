@@ -22,8 +22,8 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-__global__ void RangeForwardGpuKernel(const int64_t start, const int64_t delta,
-                                      const int64_t range_elem_cnt, T* out) {
+__global__ void RangeForwardGpuKernel(const int32_t start, const int32_t delta,
+                                      const int32_t range_elem_cnt, T* out) {
   // Use Loop to set the value
   DoRange<T>(start, delta, range_elem_cnt, out);
 }
@@ -42,8 +42,9 @@ struct RangeFunctor<DeviceType::kGPU, T> final {
 template<>
 void RangeFunctor<DeviceType::kGPU, float16>::operator()(DeviceCtx* ctx, const int32_t start,
                                                          const int32_t delta,
-                                                         const int32_t range_shape, float16* out) {
-  RUN_CUDA_KERNEL((RangeForwardGpuKernel<half>), ctx, range_shape, start, delta, range_shape,
+                                                         const int32_t range_elem_cnt,
+                                                         float16* out) {
+  RUN_CUDA_KERNEL((RangeForwardGpuKernel<half>), ctx, range_elem_cnt, start, delta, range_elem_cnt,
                   reinterpret_cast<half*>(out));
 }
 
