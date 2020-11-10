@@ -99,7 +99,6 @@ def _run_test_gen_quant_scale_for_weight(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.enable_debug_mode(True)
 
     @flow.global_function(type="predict", function_config=flow.FunctionConfig())
     def QuantizeJob(
@@ -211,7 +210,6 @@ def _run_test_gen_quant_scale_for_activation(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.enable_debug_mode(True)
 
     @flow.global_function(type="predict", function_config=flow.FunctionConfig())
     def QuantizeJob(
@@ -353,7 +351,6 @@ def _run_test_fake_quantization(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.enable_debug_mode(True)
 
     @flow.global_function(type="train", function_config=flow.FunctionConfig())
     def QuantizeJob(
@@ -409,8 +406,8 @@ class TestGenQuantScaleForWeight(flow.unittest.TestCase):
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["weight_shape"] = [(9, 10, 20, 20), (10, 3, 3, 3)]
-        arg_dict["quantize_to_bit"] = [8, 5, 2]
+        arg_dict["weight_shape"] = [(89, 40, 20, 10)]
+        arg_dict["quantize_to_bit"] = [8, 2]
         arg_dict["quantizer_type"] = ["symmetric", "affine"]
         arg_dict["per_layer_quantization"] = [True, False]
 
@@ -425,13 +422,10 @@ class TestGenQuantScaleForWeight(flow.unittest.TestCase):
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["activation_shape"] = [
-            (9, 10, 20, 20),
-            (10, 3, 3, 3),
-        ]
-        arg_dict["quantize_to_bit"] = [8, 5, 2]
+        arg_dict["activation_shape"] = [(89, 40, 20, 10)]
+        arg_dict["quantize_to_bit"] = [8, 2]
         arg_dict["quantizer_type"] = ["symmetric", "affine"]
-        arg_dict["momentum"] = [0.95, 0.5]
+        arg_dict["momentum"] = [0.95]
 
         for arg in GenArgList(arg_dict):
             _run_test_gen_quant_scale_for_activation(*arg)
@@ -444,8 +438,8 @@ class TestFakeQuantization(flow.unittest.TestCase):
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["in_shape"] = [(9, 10, 20, 20), (10, 3, 3, 3)]
-        arg_dict["quantize_to_bit"] = [8, 5, 2]
+        arg_dict["in_shape"] = [(89, 40, 20, 10)]
+        arg_dict["quantize_to_bit"] = [8, 2]
         arg_dict["quantizer_type"] = ["symmetric", "affine"]
         arg_dict["per_layer_quantization"] = [True, False]
 
