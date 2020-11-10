@@ -136,28 +136,21 @@ REGISTER_USER_OP("reflection_pad2d_grad")
     .SetGetSbpFn(GetOpGradSbpSignature);
 
 
-REGISTER_USER_OP_GRAD("reflection_pad2d").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-
-  const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
-
-  ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder
-        .OpTypeName(
-            "reflection_pad2d_grad")
-        .InputBind("dy", ctx->FwOp().input("dy", 0))  
-        .Output("dx")
-        .Attr("data_format", ctx->FwOp().attr<std::string>("data_format"))
-        .Attr("padding", ctx->FwOp().attr<std::vector<int64_t>>("padding"))
-        .Build();
-  });
-
-  ctx->FwOp().InputGradBind(user_op::OpArg("dy", 0),
-                            [&ctx, &op_grad_name]() -> const std::string& {
-                              return ctx->GetOp(op_grad_name).output("dx", 0);
-                            });
+REGISTER_USER_OP_GRAD("reflection_pad2d").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                       user_op::AddOpFn AddOp) {
+  if (op.NeedGenGradTensor4OpInput("x", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    user_op::UserOpConfWrapper grad_op =
+        builder.Op("reflection_pad2d_grad")
+            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+            .Output("dx")
+            .Attr("data_format", op.attr<std::string>("data_format"))
+            .Attr("padding", op.attr<std::vector<int64_t>>("padding"))
+            .Build();
+    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+    AddOp(grad_op);
+  }
 });
-
-
 
 
 }  // namespace oneflow

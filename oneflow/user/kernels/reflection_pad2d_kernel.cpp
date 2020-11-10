@@ -270,13 +270,8 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
             const std::string  data_format = ctx->Attr<std::string>("data_format");
             const int64_t ndims = dy->shape().NumAxes();
             const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
-
             CHECK_EQ(padding.size(), ndims);
 
-
-            // printf("padding >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>[%ld, %ld, %ld, %ld]\n", padding[0], padding[1], padding[2], padding[3]);
-            // printf("x.shape; y.shape >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>(%ld,%ld,%ld,%ld);(%ld,%ld,%ld,%ld)\n", x->shape().At(0),  x->shape().At(1),  x->shape().At(2), 
-            // x->shape().At(3),y->shape().At(0),  y->shape().At(1),  y->shape().At(2),  y->shape().At(3));
 
 
             MemoryCopyNdDesc memory_copy_nd_desc;
@@ -284,8 +279,8 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
             DimVector dst_shape_vec(ndims);
 
 
-            DimVector  x_vector = shapeview_to_dimvector(dy->shape());
-            DimVector  y_vector = shapeview_to_dimvector(dx->shape());
+            DimVector  y_vector = shapeview_to_dimvector(dy->shape());
+            DimVector  x_vector = shapeview_to_dimvector(dx->shape());
             
 
             GetDimVectorInBytes(dy->shape(), size_of_data_type, src_shape_vec);
@@ -296,13 +291,13 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
             memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
 
 
-            DimVector src_pos_vec(ndims, 0);
-            DimVector dst_pos_vec(padding.cbegin(), padding.cend());
-            dst_pos_vec[ndims - 1] *= size_of_data_type;
+            DimVector dst_pos_vec(ndims, 0);
+            DimVector src_pos_vec(padding.cbegin(), padding.cend());
+            src_pos_vec[ndims - 1] *= size_of_data_type;
 
             memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
             memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-            memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
+            memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
             MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
             std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
             device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
