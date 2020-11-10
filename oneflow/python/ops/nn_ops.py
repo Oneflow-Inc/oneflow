@@ -2646,3 +2646,84 @@ def leaky_relu(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.L1Loss")
+def l1_loss(
+    input: remote_blob_util.BlobDef, 
+    target: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """This operator computes the L1 Loss. It's a little different between `Torch.L1Loss` is that 
+    we don't provide the `reduction` parameter. You can add reduce mean/sum after calling the function. 
+    We will give an example in the code below. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob.  
+        target (remote_blob_util.BlobDef): The target value. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, name="l1")
+            # Do the reduce mean, it's equal to `Torch.nn.L1Loss(reduction="mean")
+            reduced = flow.math.reduce_mean(out)
+
+            return reduced
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [2.6666667]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, name="l1")
+            # Do the reduce sum, it's equal to `Torch.nn.L1Loss(reduction="sum")
+            reduced = flow.math.reduce_sum(out)
+
+            return reduced
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [24.]
+
+    """
+    assert input.shape == target.shape, "The Input shape must be the same as Target shape"
+
+    if name is None: 
+        name = "L1Loss"
+
+    return flow.math.abs(flow.math.subtract(target, input, name=name+"_sub"), name=name+"_abs")
