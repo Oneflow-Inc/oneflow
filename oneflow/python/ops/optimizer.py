@@ -36,7 +36,54 @@ class ClipGradientConf:
 
 
 @oneflow_export("optimizer.grad_clipping.by_global_norm")
-class ClipByGlobalNorm(ClipGradientConf):
+class by_global_norm(ClipGradientConf):
+    r"""This operator limits the norm of `Input` with `clip_norm`.
+
+    If the norm of `Input` is less than the `clip_norm`,
+
+    the `Output` will be the same as `Input`.
+
+    If the norm of `Input` is greater than the `clip_norm`, the `Output` will be scaled.
+
+    The equation is:
+
+    .. math::
+
+        Output = \frac{clip\_norm*Input}{norm(Input)}
+
+    Args:
+        clip_norm (float): The maximum norm value.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            # Set learning rate as 0.001
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+            # Set gradient_clip
+            gradient_clip = flow.optimizer.grad_clipping.by_global_norm(1.0)
+            # Set AdamW optimizer with gradient clip
+            flow.optimizer.AdamW(lr_scheduler,
+                        do_bias_correction=False, weight_decay=0.00005,
+                        grad_clipping=gradient_clip).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(self, clip_norm):
         self.clip_norm = clip_norm
 
@@ -54,7 +101,53 @@ class WarmupConf:
 
 
 @oneflow_export("optimizer.warmup.constant")
-class ConstantWarmup(WarmupConf):
+class constant(WarmupConf):
+    r"""This operator use the constant warmup strategy to adjust the learning rate.
+
+    Before the steps are specified by user, the learning rate is:
+
+    .. math::
+
+        learning\_rate = base\_learning\_rate*multiplier
+
+    After the steps are specified by user, the learning rate is:
+
+    .. math::
+
+        learning\_rate = base\_learning\_rate
+
+    Args:
+        steps (int): [description]
+        multiplier (float): The scale factor :math:`multiplier`, it should be greater than 0. and less than 1.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            # Before 10 epochs, the learning rate is 0.001
+            # After 10 epochs, the learning rate is 0.01
+            warmup_scheduler = flow.optimizer.warmup.constant(10, 0.1)
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.01], warmup=warmup_scheduler)
+            flow.optimizer.Adam(lr_scheduler).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(self, steps, multiplier):
         self.steps = steps
         self.multiplier = multiplier
@@ -68,7 +161,48 @@ class ConstantWarmup(WarmupConf):
 
 
 @oneflow_export("optimizer.warmup.linear")
-class LinearWarmup(WarmupConf):
+class linear(WarmupConf):
+    r"""This operator uses the linear warmup strategy to adjust the learning rate.
+
+    When current train step is less than warmup steps, the learning rate will be updated as:
+
+    .. math::
+
+        & current\_multiplier = start\_multiplier + (1-start\_multiplier)*\frac{train\_step}{warmup\_step}
+
+        & current\_learning\_rate = learning\_rate*current\_multiplier
+
+    Args:
+        steps (int): The warmup steps.
+        start_multiplier (float): The start multiplier(:math:`start\_multiplier`). It should be greater than 0. and less than 1.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            # Before 10 epochs, the learning rate will increase from 0.001 to 0.01 in linear.
+            warmup_scheduler = flow.optimizer.warmup.linear(10, 0.1)
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.01], warmup=warmup_scheduler)
+            flow.optimizer.Adam(lr_scheduler).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(self, steps, start_multiplier):
         self.steps = steps
         self.start_multiplier = start_multiplier
@@ -121,6 +255,57 @@ class LrScheduler:
 
 @oneflow_export("optimizer.CosineScheduler")
 class CosineScheduler(LrScheduler):
+    r"""This operator creates a Cosine decayed learning rate scheduler.
+
+    Before the steps are specified by user, the learning rate will be updated as:
+
+    .. math::
+
+        & cos\_decay = 0.5*(1+cos(\pi*\frac{current\_batch}{decayed\_batch}))
+
+        & decay\_factor = (1-\alpha)*cos\_decay+\alpha
+
+        & learning\_rate = base\_learning\_rate*decay\_factor
+
+    After the steps specified by user, the learning rate will be :
+
+    .. math::
+
+        learning\_rate = {base\_learning\_rate}*{\alpha}
+
+    Args:
+        base_lr (float): The base learning rate (:math:`base\_learning\_rate`)
+        steps (int): The decay steps in the scheduler (:math:`decayed\_batch`)
+        alpha (float, optional): The learning rate scale factor (:math:`\alpha`). Defaults to 0.0.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            lr_scheduler = flow.optimizer.CosineScheduler(base_lr=0.01,
+                                                          steps=10,
+                                                          alpha=0.1)
+            flow.optimizer.Adam(lr_scheduler).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -152,6 +337,53 @@ class CustomScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PiecewiseConstantScheduler")
 class PiecewiseConstantScheduler(LrScheduler):
+    r"""This operator creates a piecewise constant learning rate scheduler.
+
+    The change in learning rate can be described as follows:
+
+    .. code-block:: python
+
+        boundaries = [1000, 2000]
+        values = [0.1, 0.01, 0.001]
+
+        if current_step < 1000:
+            learning_rate = 0.1
+        elif 1000 < current_step < 2000:
+            learning_rate = 0.01
+        else:
+            learning_rate = 0.001
+
+    Args:
+        boundaries (Sequence[int]): A list of train steps.
+        values (Sequence[float]): A list of learning rate values during the different train step boundary.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+                images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler(boundaries=[10, 20],
+                                                                     values=[0.1, 0.01, 0.001])
+            flow.optimizer.Adam(lr_scheduler).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         boundaries: Sequence[int],
@@ -175,6 +407,56 @@ class PiecewiseConstantScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PiecewiseScalingScheduler")
 class PiecewiseScalingScheduler(LrScheduler):
+    """This operator creates a piecewise scaled decayed learning rate scheduler.
+
+    The change in learning rate can be described as follows:
+
+    .. code-block:: python
+
+        boundaries = [1000, 2000]
+        scale = [0.1, 0.01]
+        base_lr = 0.1
+
+        if current_step < 1000:
+            learning_rate = base_lr
+        elif 1000 < current_step < 2000:
+            learning_rate = 0.1*base_lr
+        else:
+            learning_rate = 0.01*base_lr
+
+    Args:
+        base_lr (float): The base learning rate
+        boundaries (Sequence[int]): A list of train steps.
+        scale (Union[float, Sequence[float]]): A list of learning rate scaled factors during the different train step boundary.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            lr_scheduler = flow.optimizer.PiecewiseScalingScheduler(base_lr=0.1,
+                                                                    boundaries=[5, 10],
+                                                                    scale=[0.5, 0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -201,6 +483,62 @@ class PiecewiseScalingScheduler(LrScheduler):
 
 @oneflow_export("optimizer.PolynomialSchduler")
 class PolynomialSchduler(LrScheduler):
+    r"""This operator creates a polynomial decayed learning rate scheduler.
+
+    The learning rate will be updated as follows:
+
+    If cycle is `True`, the equation is:
+
+    .. math::
+
+        & decay\_batch = decay\_batch*ceil(\frac{current\_batch}{decay\_batch})
+
+        & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+
+    If cycle is `False`, the equation is:
+
+    .. math::
+
+        & decay\_batch = min(decay\_batch, current\_batch)
+
+        & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+
+    Args:
+        base_lr (float): The base learning rate
+        steps (int): The decayed steps
+        end_learning_rate (float, optional): The final learning rate. Defaults to 0.0001.
+        power (float, optional): The power of polynomial. Defaults to 1.0.
+        cycle (bool, optional): If cycle is true, the scheduler will decay the learning rate every decay steps. Defaults to False.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import oneflow.typing as tp
+
+            @flow.global_function(type="train")
+            def train_job(
+                    images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                    labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+            ) -> tp.Numpy:
+                with flow.scope.placement("gpu", "0:0"):
+                    logits = lenet(images, train=True)
+                    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels, logits, name="softmax_loss"
+                    )
+
+                lr_scheduler = flow.optimizer.PolynomialSchduler(base_lr=0.001,
+                                                                 steps=5,
+                                                                 end_learning_rate=0.00001,
+                                                                 power=2)
+                flow.optimizer.Adam(lr_scheduler).minimize(loss)
+
+                return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -230,6 +568,56 @@ class PolynomialSchduler(LrScheduler):
 
 @oneflow_export("optimizer.LinearCosineScheduler")
 class LinearCosineScheduler(LrScheduler):
+    r"""This operator creates a linear cosine decayed learning rate scheduler.
+
+    The learning rate will be updated as follows:
+
+    .. math::
+
+        & current\_batch = min(current\_batch, decay\_batch)
+
+        & linear\_decay = \frac{(decay\_batch - current\_batch)}{decay\_batch}
+
+        & cosine\_decay = 0.5*(1.0+cos(2*\pi*num\_periods*\frac{current\_batch}{decay\_batch}))
+
+        & decay\_factor = (\alpha+linear\_decay)*cosine\_decay + \beta
+
+        & learning\_rate = base\_learning\_rate*decay\_factor
+
+    Args:
+        base_lr (float): The base learning rate
+        steps (int): The decay steps
+        num_periods (float, optional): The number of decay periods. Defaults to 0.5.
+        alpha (float, optional): The :math:`\alpha` in equation. Defaults to 0.0.
+        beta (float, optional): The :math:`\beta` in equation. Defaults to 0.001.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import oneflow.typing as tp
+
+            @flow.global_function(type="train")
+            def train_job(
+                    images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                    labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+            ) -> tp.Numpy:
+                with flow.scope.placement("gpu", "0:0"):
+                    logits = lenet(images, train=True)
+                    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels, logits, name="softmax_loss"
+                    )
+
+                lr_scheduler = flow.optimizer.LinearCosineScheduler(base_lr=0.1,
+                                                                    steps=10)
+                flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(loss)
+
+                return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -250,13 +638,67 @@ class LinearCosineScheduler(LrScheduler):
         learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
         learning_rate_decay_conf.linear_cosine_conf.decay_batches = self.steps
         learning_rate_decay_conf.linear_cosine_conf.num_periods = self.num_periods
-        learning_rate_decay_conf.polynomial_conf.alpha = self.alpha
-        learning_rate_decay_conf.polynomial_conf.beta = self.beta
+        learning_rate_decay_conf.linear_cosine_conf.alpha = self.alpha
+        learning_rate_decay_conf.linear_cosine_conf.beta = self.beta
         return learning_rate_decay_conf
 
 
 @oneflow_export("optimizer.ExponentialScheduler")
 class ExponentialScheduler(LrScheduler):
+    r"""This operator creates a exponential decayed learning rate scheduler.
+
+    The learning rate will be updated as follows:
+
+    If staircase is set to False, the equation is:
+
+    .. math::
+
+        & pow = \frac{current\_batch}{decay\_batch}
+
+        & learning\_rate = base\_learning\_rate*decay\_rate^{pow}
+
+    If staircase is set to True, the equation is:
+
+    .. math::
+
+        & pow = floor(\frac{current\_batch}{decay\_batch})
+
+        & learning\_rate = base\_learning\_rate*decay\_rate^{pow}
+
+    Args:
+        base_lr (float): The base learning rate
+        steps (int): The decay steps
+        decay_rate (float): The decay rate
+        staircase (bool, optional): If staircase is True, the scheduler decay the learning rate at discrete intervals. Defaults to False.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+        .. code-block::python
+
+            import oneflow as flow
+            import oneflow.typing as tp
+
+            @flow.global_function(type="train")
+            def train_job(
+                    images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                    labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+            ) -> tp.Numpy:
+                with flow.scope.placement("gpu", "0:0"):
+                    logits = lenet(images, train=True)
+                    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels, logits, name="softmax_loss"
+                    )
+
+                lr_scheduler = flow.optimizer.CosineScheduler(base_lr=0.01,
+                                                              steps=10,
+                                                              alpha=0.1)
+                flow.optimizer.Adam(lr_scheduler).minimize(loss)
+
+                return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -281,6 +723,60 @@ class ExponentialScheduler(LrScheduler):
 
 @oneflow_export("optimizer.InverseTimeScheduler")
 class InverseTimeScheduler(LrScheduler):
+    r"""This operator creates a inverse time decayed learning rate scheduler.
+
+    The learning rate will be updated as follows:
+
+    If staircase is set to False, the equation is:
+
+    .. math::
+
+        & step\_ratio = \frac{current\_batch}{decay\_batch}
+
+        & learning\_rate = \frac{base\_learning\_rate}{1+decay\_rate*step\_ratio}
+
+    If staircase is set to True, the equation is:
+
+    .. math::
+
+        & step\_ratio = \frac{current\_batch}{decay\_batch}
+
+        & learning\_rate = \frac{base\_learning\_rate}{1+floor(decay\_rate*step\_ratio)}
+
+    Args:
+        base_lr (float): The base learning rate
+        steps (int): The decay steps
+        decay_rate (float): The decay rate
+        staircase (bool, optional): If staircase is True, the scheduler decay the learning rate at discrete intervals. Defaults to False.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import oneflow.typing as tp
+
+            @flow.global_function(type="train")
+            def train_job(
+                    images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                    labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+            ) -> tp.Numpy:
+                with flow.scope.placement("gpu", "0:0"):
+                    logits = lenet(images, train=True)
+                    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels, logits, name="softmax_loss"
+                    )
+
+                lr_scheduler = flow.optimizer.InverseTimeScheduler(base_lr=0.1,
+                                                                   steps=5,
+                                                                   decay_rate=0.9)
+                flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(loss)
+
+                return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -305,6 +801,60 @@ class InverseTimeScheduler(LrScheduler):
 
 @oneflow_export("optimizer.NaturalExpScheduler")
 class NaturalExpScheduler(LrScheduler):
+    r"""This operator creates a natural exponential decayed learning rate scheduler.
+
+    The learning rate will be updated as follows:
+
+    If staircase is set to False, the equation is:
+
+    .. math::
+
+        & step\_ratio = \frac{current\_batch}{decay\_batch}
+
+        & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*step\_ratio}
+
+    If staircase is set to True, the equation is:
+
+    .. math::
+
+        & step\_ratio = \frac{current\_batch}{decay\_batch}
+
+        & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*floor(step\_ratio)}
+
+    Args:
+        base_lr (float): The base learning rate
+        steps (int): The decay steps
+        decay_rate (float): The decay rate
+        staircase (bool, optional): If staircase is True, the scheduler decay the learning rate at discrete intervals. Defaults to False.
+        warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
+
+    For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import oneflow.typing as tp
+
+            @flow.global_function(type="train")
+            def train_job(
+                    images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                    labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+            ) -> tp.Numpy:
+                with flow.scope.placement("gpu", "0:0"):
+                    logits = lenet(images, train=True)
+                    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                        labels, logits, name="softmax_loss"
+                    )
+
+                lr_scheduler = flow.optimizer.NaturalExpScheduler(base_lr=0.1,
+                                                                  steps=10,
+                                                                  decay_rate=0.5)
+                flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(loss)
+
+                return loss
+
+    """
+
     def __init__(
         self,
         base_lr: float,
@@ -369,11 +919,62 @@ class Optimizer:
 
 @oneflow_export("optimizer.SGD")
 class SGD(Optimizer):
+    r"""The optimizer of the stochastic gradient descent algorithm.
+
+    This algorithm takes a random sample's gradient as an approximate estimate of the overall gradient in small batch gradient descent.
+
+    When the momentum = 0, the equation of parameters updating is:
+
+    .. math::
+
+        param_{new} = param_{old} - learning\_rate*grad
+
+    With momentum, the equation of parameters updating is:
+
+    .. math::
+
+        & V_{t} = \beta*V_{t-1} + learning\_rate*g_t
+
+        & param_{new} = param_{old} - V_{t}
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        momentum (float, optional): Momentum factor (:math:`\beta`). Defaults to 0.9.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            # Set Learning rate as 0.1
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            # Set Momentum=0.9 SGD optimizer
+            flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(loss)
+
+            return loss
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[float] = None,
-        momentum: int = 0.9,
+        momentum: float = 0.9,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
     ):
@@ -391,6 +992,78 @@ class SGD(Optimizer):
 
 @oneflow_export("optimizer.Adam")
 class Adam(Optimizer):
+    r"""The optimizer of the Adam algorithm.
+
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates
+
+    and the 2nd-moment estimates of gradient.
+
+    With bias correction, the equation of parameters updating is:
+
+    .. math::
+
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
+
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
+
+        & \hat{V_t} = \frac{V_t}{1-\beta_1^t}
+
+        & \hat{S_t} = \frac{S_t}{1-\beta_2^t}
+
+        & \hat{g} = learning\_rate*\frac{\hat{V_t}}{\sqrt{\hat{S_t}}+\epsilon}
+
+        & param_{new} = param_{old} - \hat{g}
+
+    Without bias correction, the equation of parameters updating is:
+
+    .. math::
+
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
+
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
+
+        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}
+
+        & param_{new} = param_{old} - \hat{g}
+
+    More details please refer to `Adam <https://arxiv.org/abs/1412.6980>`_
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        beta1 (float, optional): The exponential weighted average decay rate for the 1st-moment estimates (:math:`\beta_1`). Defaults to 0.9.
+        beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
+        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
+        do_bias_correction (bool, optional): Whether to do the bias correction. Defaults to False.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            # Set learning rate as 0.001
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+            # Set Adam optimizer
+            flow.optimizer.Adam(lr_scheduler, do_bias_correction=False).minimize(loss)
+
+            return loss
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -421,6 +1094,90 @@ class Adam(Optimizer):
 
 @oneflow_export("optimizer.AdamW")
 class AdamW(Optimizer):
+    r"""The optimizer of the Adam-weight-decay algorithm.
+
+    If we use L2 regularization,
+
+    it will be invalid due to the adaptive learning rate in Adam optimizer
+
+    (More details please refer to `Adam-weight-decay <https://www.fast.ai/2018/07/02/adam-weight-decay/>`_).
+
+    So we use Adam-weight-decay algorithm to solve this problem.
+
+    With bias correction, the equation of parameters updating is:
+
+    .. math::
+
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
+
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
+
+        & \hat{V_t} = \frac{V_t}{1-\beta_1^t}
+
+        & \hat{S_t} = \frac{S_t}{1-\beta_2^t}
+
+        & \hat{g} = learning\_rate*(\frac{\hat{V_t}}{\sqrt{\hat{S_t}}+\epsilon}+\lambda*param_{old})
+
+        & param_{new} = param_{old} - \hat{g}
+
+    Without bias correction, the equation of parameters updating is:
+
+    .. math::
+
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
+
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
+
+        & \hat{g} = learning\_rate*(\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}+\lambda*param_{old})
+
+        & param_{new} = param_{old} - \hat{g}
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        beta1 (float, optional): The exponential weighted average decay rate for the 1st-moment estimates (:math:`\beta_1`). Defaults to 0.9.
+        beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
+        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
+        do_bias_correction (bool, optional): Whether to do the bias correction. Defaults to False.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        weight_decay (Optional[float], optional): The weight decay factor (In the equation is :math:`\lambda`). Defaults to None.
+        weight_decay_includes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that use weight decay. Defaults to None.
+        weight_decay_excludes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that do not use weight decay. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    Note:
+
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None,
+        all the model parameters will use weight decay.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            # Set learning rate as 0.001
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+            # Set AdamW optimizer, weight_decay factor is 0.00005
+            flow.optimizer.AdamW(lr_scheduler,
+                    do_bias_correction=False, weight_decay=0.00005).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -477,11 +1234,74 @@ class AdamW(Optimizer):
 
 @oneflow_export("optimizer.RMSProp")
 class RMSProp(Optimizer):
+    r"""The optimizer of the RMSProp algorithm.
+
+    This algorithm uses mean squared gradient to adjust the learning rate.
+
+    The equation of parameters updating is:
+    
+        if centered:
+    
+            .. math::
+    
+                & mg_t = mg * \beta_1 + (1 - \beta_1) * grad
+    
+                & denom_t = S_t - mg_t * mg_t
+        
+        else:
+    
+            .. math::
+    
+                denom_t = S_t
+
+        .. math::
+
+            param_{new} = param_{old} - \frac{learning\_rate}{\sqrt{denom_t+\epsilon}} \odot grad
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        decay_rate (float, optional): The decay factor (:math:`\beta_1`). Defaults to 0.99.
+        epsilon (float, optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
+        centered (bool, optional): If `True`, gradients are normalized by the estimated
+                                   variance of the gradient; if False, by the uncentered second moment.
+                                   Setting this to `True` may help with training, but is slightly more
+                                   expensive in terms of computation and memory. Defaults to `False`.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            # Set learning rate as 0.001
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+            # Set RMSProp optimizer
+            flow.optimizer.RMSProp(lr_scheduler).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
         decay_rate: float = 0.99,
         epsilon: float = 1e-8,
+        centered: bool = False,
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
@@ -491,14 +1311,63 @@ class RMSProp(Optimizer):
         )
         self.decay_rate = decay_rate
         self.epsilon = epsilon
+        self.centered = centered
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
         train_conf.model_update_conf.rmsprop_conf.decay_rate = self.decay_rate
         train_conf.model_update_conf.rmsprop_conf.epsilon = self.epsilon
+        train_conf.model_update_conf.rmsprop_conf.centered = self.centered
 
 
 @oneflow_export("optimizer.LARS")
 class LARS(Optimizer):
+    r"""The optimizer of the LARS algorithm.
+
+    The equation of parameters updating is:
+
+    .. math::
+
+        & local\_learning\_rate = learning\_rate*lars\_coeff*\frac{\lVert{parm_{old}\rVert}}{\epsilon+\lVert{grad\rVert}}
+
+        & momentum_t = \beta*momentum_{t-1} + local\_learning\_rate*(grad)
+
+        & param_{new} = param_{old} - momentum_t
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        momentum_beta (float, optional): The momentum factor (:math:`\beta`). Defaults to 0.9.
+        epsilon (float, optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-9.
+        lars_coefficient (float, optional): The coefficient factor, it defines how much we trust the layer to change its weights (:math:`lars\_coeff`). Defaults to 0.0001.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+                images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+                labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            # Set learning rate as 0.1
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            # Set LARS optimizer, momentum factor is 0.9
+            flow.optimizer.LARS(lr_scheduler, momentum_beta=0.9).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -524,6 +1393,58 @@ class LARS(Optimizer):
 
 @oneflow_export("optimizer.LazyAdam")
 class LazyAdam(Optimizer):
+    r"""
+    The optimizer of the LazyAdam algorithm.
+
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of the gradient.
+
+    The difference between Adam optimizer and LazyAdam optimizer is that LazyAdam only updates the element that has gradient in the current batch, it is faster than Adam optimizer.
+
+    .. math::
+
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
+
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
+
+        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}
+
+        & param_{new} = param_{old} - \hat{g}
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        beta1 (float, optional): The exponential weighted average decay rate for the 1st-moment estimates (:math:`\beta_1`). Defaults to 0.9.
+        beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
+        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-8.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            # Set learning rate as 0.001
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+            # Set LazyAdam optimizer
+            flow.optimizer.LazyAdam(lr_scheduler).minimize(loss)
+
+            return loss
+
+    """
+
     def __init__(
         self,
         lr_scheduler: LrScheduler,
@@ -545,3 +1466,42 @@ class LazyAdam(Optimizer):
         train_conf.model_update_conf.lazy_adam_conf.beta1 = self.beta1
         train_conf.model_update_conf.lazy_adam_conf.beta2 = self.beta2
         train_conf.model_update_conf.lazy_adam_conf.epsilon = self.epsilon
+
+
+@oneflow_export("optimizer.LAMB")
+class LAMB(Optimizer):
+
+    r"""
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        beta1 (float, optional): The exponential weighted average decay rate for the 1st-moment estimates (:math:`\beta_1`). Defaults to 0.9.
+        beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
+        epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-6.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+
+    """
+
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        epsilon: float = 1e-6,
+        loss_scale_factor: Optional[float] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+    ):
+        super().__init__(
+            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+        )
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
+        train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
+        train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon

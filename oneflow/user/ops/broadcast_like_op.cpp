@@ -82,7 +82,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 REGISTER_USER_OP("broadcast_like")
     .Input("x")
     .Input("like")
-    .Attr("broadcast_axes", UserOpAttrType::kAtListInt32)
+    .Attr<std::vector<int32_t>>("broadcast_axes")
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -97,5 +97,23 @@ REGISTER_USER_OP("broadcast_like")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures);
+
+REGISTER_USER_OP_GRAD("broadcast_like")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+      const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+      ctx->DefineOp(x_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("reduce_sum_like")
+            .InputBind("x", ctx->FwOp().output_grad("y", 0))
+            .InputBind("like", ctx->FwOp().input("x", 0))
+            .Output("y")
+            .Attr("axis", ctx->FwOp().attr<std::vector<int32_t>>("broadcast_axes"))
+            .Build();
+      });
+
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                                [&ctx, &x_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(x_grad_op_name).output("y", 0);
+                                });
+    });
 
 }  // namespace oneflow

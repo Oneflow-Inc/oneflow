@@ -40,8 +40,6 @@ Maybe<void> OutputOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-const PbMessage& OutputOp::GetCustomizedConf() const { return op_conf().output_conf(); }
-
 Maybe<void> OutputOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   OptInt64* out_batch_axis = BatchAxis4BnInOp("out");

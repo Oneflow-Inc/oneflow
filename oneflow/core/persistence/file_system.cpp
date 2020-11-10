@@ -109,7 +109,7 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 }  // namespace fs
 
 fs::FileSystem* LocalFS() {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   static fs::FileSystem* fs = new fs::PosixFileSystem;
 #endif
   return fs;
@@ -135,5 +135,8 @@ fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
 }
 
 fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
+fs::FileSystem* DataFS(int64_t session_id) {
+  return GetFS(Global<const IOConf>::Get(session_id)->data_fs_conf());
+}
 fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
 }  // namespace oneflow

@@ -38,8 +38,6 @@ Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   return Maybe<void>::Ok();
 }
 
-const PbMessage& CaseOp::GetCustomizedConf() const { return op_conf().case_conf(); }
-
 Maybe<void> CaseOp::InferBatchAxis(
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }

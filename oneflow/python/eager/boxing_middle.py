@@ -143,7 +143,7 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
         parallel_conf.device_name.append(device_name)
     if builder is None:
         return symbol_util.ParallelDescSymbol(
-            parallel_desc_symbol.symbol_id, parallel_conf, device_tag
+            parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:
         return builder.GetParallelDescSymbol(parallel_conf)
@@ -160,7 +160,7 @@ def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=No
         parallel_conf.device_name.append("%s:%s" % (machine_id, dev_id))
     if builder is None:
         return symbol_util.ParallelDescSymbol(
-            parallel_desc_symbol.symbol_id, parallel_conf, device_tag
+            parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:
         return builder.GetParallelDescSymbol(parallel_conf)

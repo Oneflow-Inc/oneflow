@@ -44,7 +44,7 @@ bool IsInterfaceTask(const TaskNode* node) {
   if (comp_task_node == nullptr) { return false; }
   if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
   auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_type_case);
+  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
@@ -133,7 +133,7 @@ bool IsInplaceAllowed(
     if (first_blob == nullptr) {
       first_blob = blob_desc;
     } else {
-      if (!(first_blob->shape() == blob_desc->shape()
+      if (!(first_blob->shape().elem_cnt() == blob_desc->shape().elem_cnt()
             && first_blob->data_type() == blob_desc->data_type())) {
         return false;
       }
@@ -293,18 +293,13 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain
 
 void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
   ChainGraph chain_graph(*this);
-  const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
-  for (auto& chain_node : ordered_chain_nodes) {
-    auto& ordered_in_chain = chain_node->TaskNodes();
-    int64_t chain_id = chain_node->chain_id();
-    for (auto& task_node : ordered_in_chain) {
-      task_node->set_chain_id(chain_id);
-      task_node->set_order_in_graph(order_in_graph);
-      ordered_task_nodes_.emplace_back(task_node);
-      ++order_in_graph;
-    }
-  }
+  AcyclicTopoForEachNode([&](TaskNode* task_node) {
+    task_node->set_chain_id(chain_graph.ChainId4TaskNode(task_node));
+    task_node->set_order_in_graph(order_in_graph);
+    ordered_task_nodes_.emplace_back(task_node);
+    ++order_in_graph;
+  });
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
@@ -529,6 +524,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
+  CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
+  FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
+    CompTaskNode* src = sorted_src_comp_tasks.at(i);
+    CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
+    Connect<TaskNode>(src, NewEdge(), dst);
+  }
+}
+
 void TaskGraph::BuildTaskPath(
     CompTaskNode* src, CompTaskNode* dst,
     std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
@@ -594,7 +598,7 @@ TaskNode* TaskGraph::BuildTaskStep(
 
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
   if (IsInterfaceTask(task)) { return nullptr; }
-  if (IsClassRegistered<TickTockTaskType>(task->GetTaskType())) { return nullptr; }
+  if (IsClassRegistered<int32_t, TickTockTaskType>(task->GetTaskType())) { return nullptr; }
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());

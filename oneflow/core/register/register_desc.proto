@@ -43,5 +43,8 @@ message RegstDescProto {
   required int64 mem_block_offset = 11;
   optional int64 separated_header_mem_block_id = 12 [default = -1];
   optional int64 inplace_consumed_regst_desc_id = 13 [default = -1];
-  optional int64 hint_inplace_consumed_regst_desc_id = 14 [default = -1];
+  oneof inplace_info_type {
+    int64 hint_inplace_consumed_regst_desc_id = 14 [default = -1];
+    int64 force_inplace_consumed_regst_desc_id = 15 [default = -1];
+  }
 }

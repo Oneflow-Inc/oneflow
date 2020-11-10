@@ -25,36 +25,6 @@ import oneflow.typing as oft
 import unittest
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_no_watch_scope_consistent(test_case):
-    func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.default_data_type(flow.float32)
-
-    @flow.global_function(function_config=func_config)
-    def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
-        return flow.layers.batch_normalization(x)
-
-    Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_train_consistent(test_case):
-    flow.config.enable_debug_mode(True)
-    func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.default_data_type(flow.float32)
-
-    @flow.global_function(type="train", function_config=func_config)
-    def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
-        y = flow.layers.batch_normalization(x, axis=1)
-        flow.optimizer.SGD(
-            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
-        ).minimize(flow.math.reduce_sum(y))
-
-    Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
-
-
 def TODO_test_train(test_case):
     flow.config.enable_debug_mode(True)
     func_config = flow.FunctionConfig()
@@ -71,6 +41,7 @@ def TODO_test_train(test_case):
 
 
 def CompareNnBnWithTensorFlow(
+    test_case,
     device_type,
     input_shape,
     data_type,
@@ -157,9 +128,26 @@ def CompareNnBnWithTensorFlow(
         x_diff = tape.gradient(y, x)
         return y.numpy(), x_diff.numpy()
 
+    msg = (
+        "device_type={}, input_shape={}, data_type={}, input_minval={}, input_maxval={}, y_rtol={}, "
+        "y_atol={}, x_diff_rtol={}, x_diff_atol={}".format(
+            device_type,
+            input_shape,
+            data_type,
+            input_minval,
+            input_maxval,
+            y_rtol,
+            y_atol,
+            x_diff_rtol,
+            x_diff_atol,
+        )
+    )
+
     tf_y, tf_x_diff = TensorFlowNnBn(x, mean, variance, offset, scale)
-    assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
-    assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
+    test_case.assertTrue(np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol), msg)
+    test_case.assertTrue(
+        np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol), msg
+    )
 
 
 def RunTensorFlowBn(x, tf_args, training, trainable):
@@ -231,6 +219,7 @@ def RunOneflowLayerBn(
 
 
 def CompareFp16WithFp32(
+    test_case,
     device_type,
     input_shape,
     op_args=None,
@@ -249,6 +238,23 @@ def CompareFp16WithFp32(
     else:
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
+    msg = (
+        "device_type={}, input_shape={}, op_args={}, input_minval={}, input_maxval={}, y_rtol={}, "
+        "y_atol={}, x_diff_rtol={}, x_diff_atol={}, training={}, trainable={}".format(
+            device_type,
+            input_shape,
+            op_args,
+            input_minval,
+            input_maxval,
+            y_rtol,
+            y_atol,
+            x_diff_rtol,
+            x_diff_atol,
+            training,
+            trainable,
+        )
+    )
+
     x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
     if trainable:
         y_fp16, x_diff_fp16 = RunOneflowLayerBn(
@@ -257,8 +263,11 @@ def CompareFp16WithFp32(
         y_fp32, x_diff_fp32 = RunOneflowLayerBn(
             device_type, x, "float32", flow_args, training=training, trainable=trainable
         )
-        assert np.allclose(y_fp16, y_fp32, rtol=y_rtol, atol=y_atol)
-        assert np.allclose(x_diff_fp16, x_diff_fp32, rtol=x_diff_rtol, atol=x_diff_atol)
+        test_case.assertTrue(np.allclose(y_fp16, y_fp32, rtol=y_rtol, atol=y_atol), msg)
+        test_case.assertTrue(
+            np.allclose(x_diff_fp16, x_diff_fp32, rtol=x_diff_rtol, atol=x_diff_atol),
+            msg,
+        )
     else:
         y_fp16 = RunOneflowLayerBn(
             device_type, x, "float16", flow_args, training=training, trainable=trainable
@@ -266,10 +275,11 @@ def CompareFp16WithFp32(
         y_fp32 = RunOneflowLayerBn(
             device_type, x, "float32", flow_args, training=training, trainable=trainable
         )
-        assert np.allclose(y_fp16, y_fp32, rtol=y_rtol, atol=y_atol)
+        test_case.assertTrue(np.allclose(y_fp16, y_fp32, rtol=y_rtol, atol=y_atol), msg)
 
 
 def CompareBnWithTensorFlow(
+    test_case,
     device_type,
     input_shape,
     data_type,
@@ -297,6 +307,25 @@ def CompareBnWithTensorFlow(
         y_atol *= 100
         x_diff_rtol *= 100
         x_diff_atol *= 100
+
+    msg = (
+        "device_type={}, input_shape={}, data_type={}, op_args={}, input_minval={}, input_maxval={}, y_rtol={}, "
+        "y_atol={}, x_diff_rtol={}, x_diff_atol={}, training={}, trainable={}".format(
+            device_type,
+            input_shape,
+            data_type,
+            op_args,
+            input_minval,
+            input_maxval,
+            y_rtol,
+            y_atol,
+            x_diff_rtol,
+            x_diff_atol,
+            training,
+            trainable,
+        )
+    )
+
     if trainable:
         of_y, of_x_diff = RunOneflowLayerBn(
             device_type, x, data_type, flow_args, training=training, trainable=trainable
@@ -304,115 +333,319 @@ def CompareBnWithTensorFlow(
         tf_y, tf_x_diff = RunTensorFlowBn(
             x, tf_args, training=training, trainable=trainable
         )
-        assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol), of_y - tf_y
-        assert np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol)
+        test_case.assertTrue(np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol), msg)
+        test_case.assertTrue(
+            np.allclose(of_x_diff, tf_x_diff, rtol=x_diff_rtol, atol=x_diff_atol), msg
+        )
     else:
         of_y = RunOneflowLayerBn(
             device_type, x, data_type, flow_args, training=training, trainable=trainable
         )
         tf_y = RunTensorFlowBn(x, tf_args, training=training, trainable=trainable)
-        assert np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol)
+        test_case.assertTrue(np.allclose(of_y, tf_y, rtol=y_rtol, atol=y_atol), msg)
 
 
-def test_layer_batchnorm(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["input_shape"] = [(1, 4, 1, 2)]
-    arg_dict["op_args"] = [
-        Args([1]),
-        Args([2]),
-        Args([1, 0.95, 0.0001]),
-        Args([1, 0.99, 0.001, False]),
-        Args([1, 0.99, 0.001, False, False]),
-        Args([]),
-        Args([1, 0.95, 0.1]),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareBnWithTensorFlow(**arg)
+def _test_batchnorm_add_relu(test_case, input_shape, axis, data_type):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_data_type(flow.float32)
 
-
-def test_layer_batchnorm_inference(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["input_shape"] = [(1, 4, 1, 2)]
-    arg_dict["op_args"] = [
-        Args([1]),
-        Args([2]),
-        Args([1, 0.95, 0.0001]),
-        Args([1, 0.99, 0.001, False]),
-        Args([1, 0.99, 0.001, False, False]),
-        Args([]),
-        Args([1, 0.95, 0.1]),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareBnWithTensorFlow(**arg, training=False, trainable=False)
-
-
-def test_layer_batchnorm_trainable_without_training(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["input_shape"] = [(2, 4, 3, 5)]
-    arg_dict["op_args"] = [
-        Args([1]),
-        Args([2]),
-        Args([1, 0.95, 0.0001]),
-        Args([1, 0.99, 0.001, False]),
-        Args([1, 0.99, 0.001, False, False]),
-        Args([]),
-        Args([1, 0.95, 0.1]),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareBnWithTensorFlow(**arg, training=False, trainable=True)
-
-
-def test_nn_batchnorm(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["input_shape"] = [(2, 4, 3, 5)]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["axis"] = [1, -1]
-    arg_dict["epsilon"] = [1.001e-5, 1e-4]
-    for arg in GenArgDict(arg_dict):
-        CompareNnBnWithTensorFlow(**arg)
-
-
-def test_batchnorm_fp16(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["input_shape"] = [(2, 4, 3, 5)]
-    arg_dict["input_minval"] = [-2]
-    arg_dict["input_maxval"] = [2]
-    arg_dict["op_args"] = [
-        Args([1]),
-        Args([2]),
-        Args([1, 0.95, 0.0001]),
-        Args([1, 0.99, 0.001, False]),
-        Args([1, 0.99, 0.001, False, False]),
-        Args([]),
-        Args([1, 0.95, 0.1]),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareFp16WithFp32(
-            **arg, training=False, trainable=False, y_rtol=1e-3, y_atol=1e-3
+    @flow.global_function(type="train", function_config=func_config)
+    def test_job(
+        x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),
+        addend: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),
+    ):
+        v = flow.get_variable(
+            name="v",
+            shape=(1,),
+            dtype=flow.float32,
+            initializer=flow.zeros_initializer(),
         )
-        CompareFp16WithFp32(
-            **arg,
-            training=True,
-            trainable=True,
-            y_rtol=1e-3,
-            y_atol=1e-3,
-            x_diff_rtol=1e-3,
-            x_diff_atol=1e-3
+
+        x = x + v
+        addend = addend + v
+
+        x1 = flow.identity(x)
+        x2 = flow.identity(x)
+
+        addend1 = flow.identity(addend)
+        addend2 = flow.identity(addend)
+
+        flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
+        flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
+
+        flow.watch_diff(addend1, test_global_storage.Setter("addend1_diff"))
+        flow.watch_diff(addend2, test_global_storage.Setter("addend2_diff"))
+
+        x1 = flow.cast(x1, data_type)
+        x2 = flow.cast(x2, data_type)
+
+        addend1 = flow.cast(addend1, data_type)
+        addend2 = flow.cast(addend2, data_type)
+
+        y1 = flow.layers.batch_normalization_add_relu(
+            x1, addend=addend1, axis=axis, name="BN1"
         )
-        CompareFp16WithFp32(
-            **arg,
-            training=False,
-            trainable=True,
-            y_rtol=1e-3,
-            y_atol=1e-3,
-            x_diff_rtol=1e-3,
-            x_diff_atol=1e-3
+        y2 = flow.math.relu(
+            flow.layers.batch_normalization(x2, axis=axis, name="BN2") + addend2
         )
+
+        y1 = flow.cast(y1, flow.float32)
+        y2 = flow.cast(y2, flow.float32)
+
+        flow.watch(y1, test_global_storage.Setter("y1"))
+        flow.watch(y2, test_global_storage.Setter("y2"))
+
+        y1 = flow.where(flow.math.greater(y2, v), y1, v)
+        y2 = flow.where(flow.math.greater(y1, v), y2, v)
+
+        loss = y1 + y2
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(flow.math.reduce_sum(loss))
+
+        return loss
+
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+
+    x = np.random.rand(*input_shape).astype(np.float32)
+    addend = np.random.rand(*input_shape).astype(np.float32)
+
+    test_job(x, addend).get()
+
+    tol = 1e-3 if data_type == flow.float16 else 1e-5
+
+    y1 = test_global_storage.Get("y1")
+    y2 = test_global_storage.Get("y2")
+    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol))
+
+    x1_diff = test_global_storage.Get("x1_diff")
+    x2_diff = test_global_storage.Get("x2_diff")
+    test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
+    addend1_diff = test_global_storage.Get("addend1_diff")
+    addend2_diff = test_global_storage.Get("addend2_diff")
+    test_case.assertTrue(np.allclose(addend1_diff, addend2_diff, rtol=tol, atol=tol))
+
+
+def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def test_job(x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),):
+        v = flow.get_variable(
+            name="v",
+            shape=(1,),
+            dtype=flow.float32,
+            initializer=flow.zeros_initializer(),
+        )
+
+        x = x + v
+
+        x1 = flow.identity(x)
+        x2 = flow.identity(x)
+
+        flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
+        flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
+
+        x1 = flow.cast(x1, data_type)
+        x2 = flow.cast(x2, data_type)
+
+        y1 = flow.layers.batch_normalization_relu(x1, axis=axis, name="BN1")
+        y2 = flow.math.relu(flow.layers.batch_normalization(x2, axis=axis, name="BN2"))
+
+        y1 = flow.cast(y1, flow.float32)
+        y2 = flow.cast(y2, flow.float32)
+
+        flow.watch(y1, test_global_storage.Setter("y1"))
+        flow.watch(y2, test_global_storage.Setter("y2"))
+
+        y1 = flow.where(flow.math.greater(y2, v), y1, v)
+        y2 = flow.where(flow.math.greater(y1, v), y2, v)
+
+        loss = y1 + y2
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+        ).minimize(flow.math.reduce_sum(loss))
+
+        return loss
+
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+
+    x = np.random.rand(*input_shape).astype(np.float32)
+
+    test_job(x).get()
+
+    tol = 1e-3 if data_type == flow.float16 else 1e-5
+
+    y1 = test_global_storage.Get("y1")
+    y2 = test_global_storage.Get("y2")
+
+    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol))
+    x1_diff = test_global_storage.Get("x1_diff")
+    x2_diff = test_global_storage.Get("x2_diff")
+    test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBatchNormalization(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_no_watch_scope_consistent(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.consistent_view())
+        func_config.default_data_type(flow.float32)
+
+        @flow.global_function(function_config=func_config)
+        def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
+            return flow.layers.batch_normalization(x)
+
+        Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_train_consistent(test_case):
+        flow.config.enable_debug_mode(True)
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.consistent_view())
+        func_config.default_data_type(flow.float32)
+
+        @flow.global_function(type="train", function_config=func_config)
+        def Foo(x: oft.Numpy.Placeholder((2, 8, 32, 32))):
+            y = flow.layers.batch_normalization(x, axis=1)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0.001]), momentum=0
+            ).minimize(flow.math.reduce_sum(y))
+
+        Foo(np.ones((2, 8, 32, 32), dtype=np.float32))
+
+    def test_layer_batchnorm(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["input_shape"] = [(1, 4, 1, 2)]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([2]),
+            Args([1, 0.95, 0.0001]),
+            Args([1, 0.99, 0.001, False]),
+            Args([1, 0.99, 0.001, False, False]),
+            Args([]),
+            Args([1, 0.95, 0.1]),
+        ]
+        for arg in GenArgDict(arg_dict):
+            CompareBnWithTensorFlow(test_case, **arg)
+
+    def test_layer_batchnorm_inference(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["input_shape"] = [(1, 4, 1, 2)]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([2]),
+            Args([1, 0.95, 0.0001]),
+            Args([1, 0.99, 0.001, False]),
+            Args([1, 0.99, 0.001, False, False]),
+            Args([]),
+            Args([1, 0.95, 0.1]),
+        ]
+        for arg in GenArgDict(arg_dict):
+            CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=False)
+
+    def test_layer_batchnorm_trainable_without_training(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["input_shape"] = [(2, 4, 3, 5)]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([2]),
+            Args([1, 0.95, 0.0001]),
+            Args([1, 0.99, 0.001, False]),
+            Args([1, 0.99, 0.001, False, False]),
+            Args([]),
+            Args([1, 0.95, 0.1]),
+        ]
+        for arg in GenArgDict(arg_dict):
+            CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=True)
+
+    def test_nn_batchnorm(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["input_shape"] = [(2, 4, 3, 5)]
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["axis"] = [1, -1]
+        arg_dict["epsilon"] = [1.001e-5, 1e-4]
+        for arg in GenArgDict(arg_dict):
+            CompareNnBnWithTensorFlow(test_case, **arg)
+
+    def test_batchnorm_fp16(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(2, 4, 3, 5)]
+        arg_dict["input_minval"] = [-2]
+        arg_dict["input_maxval"] = [2]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([2]),
+            Args([1, 0.95, 0.0001]),
+            Args([1, 0.99, 0.001, False]),
+            Args([1, 0.99, 0.001, False, False]),
+            Args([]),
+            Args([1, 0.95, 0.1]),
+        ]
+        for arg in GenArgDict(arg_dict):
+            CompareFp16WithFp32(
+                test_case,
+                **arg,
+                training=False,
+                trainable=False,
+                y_rtol=1e-3,
+                y_atol=1e-3
+            )
+            CompareFp16WithFp32(
+                test_case,
+                **arg,
+                training=True,
+                trainable=True,
+                y_rtol=1e-3,
+                y_atol=1e-3,
+                x_diff_rtol=1e-3,
+                x_diff_atol=1e-3
+            )
+            CompareFp16WithFp32(
+                test_case,
+                **arg,
+                training=False,
+                trainable=True,
+                y_rtol=1e-3,
+                y_atol=1e-3,
+                x_diff_rtol=1e-3,
+                x_diff_atol=1e-3
+            )
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_batchnorm_add_relu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+        arg_dict["axis"] = [0, 1, 2, 3]
+        arg_dict["data_type"] = [flow.float32, flow.float16]
+        for arg in GenArgDict(arg_dict):
+            _test_batchnorm_add_relu(test_case, **arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_batchnorm_relu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+        arg_dict["axis"] = [0, 1, 2, 3]
+        arg_dict["data_type"] = [flow.float32, flow.float16]
+        for arg in GenArgDict(arg_dict):
+            _test_batchnorm_relu(test_case, **arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -69,6 +70,12 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_argmax(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestArgmax(flow.unittest.TestCase):
+    def test_argmax(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

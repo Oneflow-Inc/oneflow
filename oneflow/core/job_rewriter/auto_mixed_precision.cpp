@@ -22,7 +22,7 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -166,6 +166,9 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     const std::string& lbn = pair.first;
     OpNode* src_node = pair.second.front()->src_node();
 
+    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(lbn));
+    if (blob_desc.data_type() != DataType::kFloat) { continue; }
+
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
     DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
     auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
@@ -198,10 +201,8 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
             dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf())));
       }
       OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
-      PbMessage* dst_op_type_conf =
-          MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string new_lbn = cast_op.op_name() + "/out_0";
-      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
+      CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, new_lbn));
     }
 
     if (cast_is_consumed) {
@@ -217,7 +218,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   job_builder->MutOpsOnlyOnce(dst_op_confs);
 }
 
-class AutoMixedPrecision final : public OpGraphPass {
+class AutoMixedPrecision final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoMixedPrecision);
   AutoMixedPrecision()
@@ -227,9 +228,18 @@ class AutoMixedPrecision final : public OpGraphPass {
         clear_list_(AutoMixedPrecisionLists::ClearList()) {}
   ~AutoMixedPrecision() = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().enable_auto_mixed_precision(); }
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().enable_auto_mixed_precision();
+  }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 
  private:
   void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
@@ -363,7 +373,7 @@ void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpN
   InsertCastOpImpl(false, op_graph, white_set, job_builder);
 }
 
-REGISTER_FUNCTION_PASS("AutoMixedPrecision", AutoMixedPrecision);
+REGISTER_JOB_PASS("AutoMixedPrecision", AutoMixedPrecision);
 
 }  // namespace
 
@@ -388,6 +398,11 @@ REGISTER_NO_CAST_REGISTRY("normalization", "moving_mean", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "moving_variance", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "gamma", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "beta", 0)
+
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_mean", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_variance", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "gamma", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "beta", 0)
 
 }  // namespace
 

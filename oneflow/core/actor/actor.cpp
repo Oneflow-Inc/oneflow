@@ -58,7 +58,6 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
-    ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
 
@@ -105,6 +104,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   is_naive_consumed_eord_ = false;
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   TakeOverNaiveProduced(task_proto.produced_regst_desc());
+  InitBnInOp2BlobInfo(task_proto);
   VirtualActorInit(task_proto);
 }
 
@@ -170,6 +170,43 @@ void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& prod
     if (naive_produced_rs_.HasRegstDescId(pair.first) == false) { continue; }
     for (const auto& regst : pair.second) {
       CHECK_EQ(0, naive_produced_rs_.TryPushBackRegst(regst.get()));
+    }
+  }
+}
+
+void Actor::InitBnInOp2BlobInfo(const TaskProto& task_proto) {
+  for (int64_t i = 0; i < exec_kernel_vec_.size(); ++i) {
+    ExecKernel& ek = exec_kernel_vec_.at(i);
+    const ExecNodeProto& node = task_proto.exec_sequence().exec_node(i);
+    for (auto& pair : node.kernel_conf().op_attribute().arg_signature().bn_in_op2lbi()) {
+      BlobInfo blob_info;
+      blob_info.lbi = pair.second;
+      const std::string& bn = pair.first;
+      auto regst_desc_id_it = node.bn_in_op2regst_desc_id().find(bn);
+      if (regst_desc_id_it != node.bn_in_op2regst_desc_id().end()
+          && Global<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
+        const int64_t regst_desc_id = regst_desc_id_it->second;
+        blob_info.regst_desc_id = regst_desc_id;
+        const RtRegstDesc& regst_desc =
+            Global<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
+        blob_info.ordinal = regst_desc.GetOrdinalForLbi(blob_info.lbi);
+        if (naive_produced_rs_.HasRegstDescId(regst_desc_id)) {
+          blob_info.rs = &naive_produced_rs_;
+        } else if (inplace_produced_rs_.HasRegstDescId(regst_desc_id)) {
+          blob_info.rs = &inplace_produced_rs_;
+        } else if (naive_consumed_rs_.HasRegstDescId(regst_desc_id)) {
+          blob_info.rs = &naive_consumed_rs_;
+        } else if (inplace_consumed_rs_.HasRegstDescId(regst_desc_id)) {
+          blob_info.rs = &inplace_consumed_rs_;
+        } else {
+          blob_info.rs = nullptr;
+        }
+      } else {
+        blob_info.regst_desc_id = -1;
+        blob_info.ordinal = -1;
+        blob_info.rs = nullptr;
+      }
+      ek.bn_in_op2blob_info.emplace(bn, std::move(blob_info));
     }
   }
 }
@@ -515,14 +552,22 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
                               std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-      auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-      if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
-      Regst* regst = GetNaiveOrInplaceCurWriteable(regst_desc_id_it->second);
-      if (regst == nullptr) { regst = GetNaiveOrInplaceCurReadable(regst_desc_id_it->second); }
-      if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
+      const auto blob_info_it = ek.bn_in_op2blob_info.find(bn_in_op);
+      if (blob_info_it == ek.bn_in_op2blob_info.cend()) { return nullptr; }
+      const BlobInfo& info = blob_info_it->second;
+      if (info.regst_desc_id == -1) { return nullptr; }
+      Regst* regst;
+      if (info.rs != nullptr) {
+        regst = info.rs->Front(info.regst_desc_id);
+      } else {
+        regst = Regst4RegstDescId(info.regst_desc_id);
+      }
       if (regst == nullptr) { return nullptr; }
-      const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
-      return regst->GetBlobByLbi(lbi);
+      if (info.ordinal >= 0) {
+        return regst->GetBlobByOrdinal(info.ordinal);
+      } else {
+        return regst->GetBlobByLbi(info.lbi);
+      }
     });
   }
 }
@@ -703,7 +748,7 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 }
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  Actor* rptr = NewObj<Actor>(task_proto.task_type());
+  Actor* rptr = NewObj<int32_t, Actor>(task_proto.task_type());
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
   rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);

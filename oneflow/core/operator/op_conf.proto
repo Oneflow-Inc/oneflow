@@ -207,6 +207,7 @@ message MomentumModelUpdateConf {
 message RMSPropModelUpdateConf {
   optional float decay_rate = 1 [default = 0.99];
   optional float epsilon = 2 [default = 1e-8];
+  optional bool centered = 3 [default = false];
 }
 
 message LARSModelUpdateConf {
@@ -226,6 +227,12 @@ message LazyAdamModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
+}
+
+message LambModelUpdateConf {
+  required float beta1 = 1;
+  required float beta2 = 2;
+  required float epsilon = 3;
 }
 
 message ExponentialDecayConf {
@@ -340,6 +347,7 @@ message NormalModelUpdateOpUserConf {
     LARSModelUpdateConf lars_conf = 1003;
     AdamModelUpdateConf adam_conf = 1004;
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LambModelUpdateConf lamb_conf = 1006;
   }
 }
 
@@ -352,32 +360,15 @@ message NormalModelUpdateOpConf {
   optional float weight_decay = 7 [default = 0.0];
 }
 
-message NaiveModelUpdateOpConf {
+message RMSPropModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string model = 4;
-  required string train_step = 5;
-  required string learning_rate = 6;
-  optional float weight_decay = 7 [default = 0.0];
-}
-
-message MomentumModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string momentum = 2;
-  required string model_diff = 3;
+  required string mean_square = 3;
+  optional string mean_gradient = 4;
   required string model = 5;
   required string train_step = 6;
   required string learning_rate = 7;
   optional float weight_decay = 8 [default = 0.0];
-}
-
-message RMSPropModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string model_diff = 2;
-  required string model = 4;
-  required string train_step = 5;
-  required string learning_rate = 6;
-  optional float weight_decay = 7 [default = 0.0];
 }
 
 message LARSModelUpdateOpConf {
@@ -388,32 +379,6 @@ message LARSModelUpdateOpConf {
   required string train_step = 6;
   required string learning_rate = 7;
   optional float weight_decay = 8 [default = 0.0];
-}
-
-message AdamModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string m = 2;
-  required string v = 3;
-  optional string beta1_t = 4;
-  optional string beta2_t = 5;
-  required string model_diff = 6;
-  required string model = 8;
-  required string train_step = 9;
-  required string learning_rate = 10;
-  optional float weight_decay = 11 [default = 0.0];
-}
-
-message LazyAdamModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string m = 2;
-  required string v = 3;
-  optional string beta1_t = 4;
-  optional string beta2_t = 5;
-  required string model_diff = 6;
-  required string model = 8;
-  required string train_step = 9;
-  required string learning_rate = 10;
-  optional float weight_decay = 11 [default = 0.0];
 }
 
 message AccumulateOpConf {
@@ -582,24 +547,6 @@ message DecodeRandomOpConf {
   required int64 batch_size = 8;
 }
 
-message PackOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 pack_num = 3;
-}
-
-message UnpackOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 unpack_num = 3;
-}
-
-message RepeatOpConf {
-  required string in = 1;
-  required string out = 2;
-  required int32 repeat_num = 3;
-}
-
 message TickOpConf {
   repeated string tick = 1;
   required string out = 2;
@@ -638,11 +585,6 @@ message SinkTickOpConf {
   required string out = 2;
 }
 
-message TupleIdentityOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-}
-
 message KeepHeaderOnlyOpConf {
   repeated string in = 1;
   repeated string out = 2;
@@ -674,20 +616,12 @@ message ShapeElemCntOpConf {
   }
 }
 
-message AccOpConf {
-  // in
-  required string one = 1;
-  // out
-  required string acc = 2;
-  optional int32 max_acc_num = 3 [default = 1];   
-}
-
 message AccTickOpConf {
   // in
   required string one = 1;
   // out
   required string acc = 2;
-  optional int32 max_acc_num = 3 [default = 1];   
+  optional int32 max_acc_num = 3 [default = 1];
 }
 
 message ModelInitOpConf {
@@ -868,19 +802,6 @@ message IndexedSlicesReduceSumOpConf {
   required string num_unique = 5;
 }
 
-message L1L2RegularizeGradientOpConf {
-  required string model = 1;
-  required string model_diff = 2;
-  required string out = 3;
-  required float l1 = 4;
-  required float l2 = 5;
-}
-
-message SquareSumOpConf {
-  required string x = 1;
-  required string y = 2;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -889,36 +810,6 @@ message ConstantLikeOpConf {
     int64 int_operand = 4;
     double float_operand = 5;
   }
-}
-
-message IndexedSlicesNaiveModelUpdateOpConf {
-  required string model_diff_indices = 1;
-  required string model_diff_values = 2;
-  required string model = 3;
-  required string learning_rate = 4;
-}
-
-message IndexedSlicesMomentumModelUpdateOpConf {
-  required string momentum = 1;
-  required string model_diff_indices = 2;
-  required string model_diff_values = 3;
-  required string model = 4;
-  required string train_step = 5;
-  required string learning_rate = 6;
-  optional float beta = 7 [default = 0.9];
-}
-
-message IndexedSlicesLazyAdamModelUpdateOpConf {
-  required string m = 1;
-  required string v = 2;
-  required string model_diff_indices = 3;
-  required string model_diff_values = 4;
-  required string model = 5;
-  required string train_step = 6;
-  required string learning_rate = 7;
-  optional float beta1 = 8 [default = 0.9];
-  optional float beta2 = 9 [default = 0.999];
-  optional float epsilon = 10 [default = 1e-8];
 }
 
 message SyncDynamicResizeOpConf {
@@ -973,12 +864,40 @@ message CastToStaticShapeOpConf {
   required string out = 2;
 }
 
+message BoxingS2SAll2AllPackOpConf {
+  required LogicalBlobId lbi = 1;
+  required int64 dst_split_axis = 2;
+  required int64 num_ranks = 3;
+}
+
+message BoxingS2SAll2AllUnpackOpConf {
+  required LogicalBlobId lbi = 1;
+  required int64 src_split_axis = 2;
+  required int64 dst_split_axis = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
+}
+
+message ImageDecoderRandomCropResizeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 target_width = 3;
+  required int64 target_height = 4;
+  optional int64 num_workers = 5 [default = 3];
+  optional int64 max_num_pixels = 6 [default = 67108864];
+  optional int64 warmup_size = 7 [default = 6400];
+  optional int64 seed = 8;
+  optional int64 num_attempts = 9 [default = 10];
+  optional float random_area_min = 10 [default = 0.08];
+  optional float random_area_max = 11 [default = 1.0];
+  optional float random_aspect_ratio_min = 12 [default = 0.75];
+  optional float random_aspect_ratio_max = 13 [default = 1.333333];
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
   optional string device_tag = 4 [default = "invalid_device"];
-  optional bool enable_cudnn = 5;
-  optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
   oneof op_type {
@@ -995,13 +914,9 @@ message OperatorConf {
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
-    NaiveModelUpdateOpConf naive_model_update_conf = 127;
-    MomentumModelUpdateOpConf momentum_model_update_conf = 128;
     RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
     LARSModelUpdateOpConf lars_model_update_conf = 130;
-    AdamModelUpdateOpConf adam_model_update_conf = 131;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
-    AccOpConf acc_conf = 133;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -1014,7 +929,6 @@ message OperatorConf {
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
     PartialTickOpConf partial_tick_conf = 149;
-    LazyAdamModelUpdateOpConf lazy_adam_model_update_conf = 150;
     ForeignWatchOpConf foreign_watch_conf = 151;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
@@ -1023,10 +937,6 @@ message OperatorConf {
     DeviceTickOpConf device_tick_conf = 159;
     DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
     DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
-    L1L2RegularizeGradientOpConf l1_l2_regularize_gradient_conf = 162;
-    IndexedSlicesNaiveModelUpdateOpConf indexed_slices_naive_model_update_conf = 163;
-    IndexedSlicesMomentumModelUpdateOpConf indexed_slices_momentum_model_update_conf = 164;
-    IndexedSlicesLazyAdamModelUpdateOpConf indexed_slices_lazy_adam_model_update_conf = 165;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
@@ -1035,14 +945,12 @@ message OperatorConf {
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
+    BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
+    BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
     UserOpConf user_conf = 199;
-    
+
     // domain op
-    TupleIdentityOpConf tuple_identity_conf = 200;
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    PackOpConf pack_conf = 237;
-    UnpackOpConf unpack_conf = 238;
-    RepeatOpConf repeat_conf = 239;
     SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
@@ -1066,10 +974,10 @@ message OperatorConf {
     ModelInitV2OpConf model_init_v2_conf = 346;
     ModelLoadV2OpConf model_load_v2_conf = 347;
     ModelSaveV2OpConf model_save_v2_conf = 348;
+    ImageDecoderRandomCropResizeOpConf image_decoder_random_crop_resize_conf = 349;
     XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
-    SquareSumOpConf square_sum_conf = 522;
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
   }

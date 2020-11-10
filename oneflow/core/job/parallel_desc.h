@@ -69,9 +69,11 @@ class ParallelDesc final {
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
-  int64_t MachineIdForParallelId(int64_t parallel_id) const;
-  int64_t DeviceIdForParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
+  bool ContainingMachineId(int64_t machine_id) const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
@@ -86,7 +88,7 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
-  // There is a one-to-one map between parallel_id and (machine_id, device_id) 
+  // There is a one-to-one map between parallel_id and (machine_id, device_id)
   HashMap<int64_t, int64_t> parallel_id2machine_id_;
   HashMap<int64_t, int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;

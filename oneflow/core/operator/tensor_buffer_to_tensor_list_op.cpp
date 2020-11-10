@@ -30,10 +30,6 @@ class TensorBufferToTensorListOp final : public Operator {
     EnrollOutputBn("out", false)->set_header_infered_before_compute(false);
   }
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().tensor_buffer_to_tensor_list_conf();
-  }
-
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
                              std::function<void(OpContext*)> EnrollOpCtx) const override {

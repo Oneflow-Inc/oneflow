@@ -21,7 +21,7 @@ REGISTER_USER_OP("gather")
     .Input("in")
     .Input("indices")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);

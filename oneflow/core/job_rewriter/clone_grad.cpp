@@ -55,10 +55,11 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, JobBuilder* job_builder,
         add_op_builder.Input("in", GenLogicalBlobName(lbis_to_add.at(i)));
       }
       lbis_to_add.resize(start);
-      const auto add_op = add_op_builder.Output("out").Build();
-      OperatorConf add_op_conf(add_op.op_conf());
-      add_op_conf.set_scope_symbol_id(job_builder->OpConf4OpName(lbi.op_name()).scope_symbol_id());
-      job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op_conf});
+      const auto add_op =
+          add_op_builder.Output("out")
+              .ScopeSymbolId(job_builder->OpConf4OpName(lbi.op_name()).scope_symbol_id())
+              .Build();
+      job_builder->AddOps(job_builder->ParallelConf4Lbi(lbi), {add_op.op_conf()});
       lbis_to_add.push_back(GenLogicalBlobId(add_op.output("out", 0)));
     }
     if (need_add) { CHECK(out_oba2clone_bw_add_out_lbi->emplace(oba, lbis_to_add.front()).second); }

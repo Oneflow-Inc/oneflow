@@ -30,13 +30,28 @@ class Error final {
 
   static Error Ok();
   static Error ProtoParseFailedError();
-  static Error JobSetEmpty();
-  static Error DeviceTagNotFound();
-  static Error JobTypeNotSet();
+  static Error JobSetEmptyError();
+  static Error DeviceTagNotFoundError();
+  static Error JobNameExistError();
+  static Error JobNameEmptyError();
+  static Error JobNameNotEqualError();
+  static Error NoJobBuildAndInferCtxError();
+  static Error JobConfFrozenError();
+  static Error JobConfNotSetError();
+  static Error JobConfRepeatedSetError();
+  static Error JobTypeNotSetError();
+  static Error LogicalBlobNameNotExistError();
+  static Error LogicalBlobNameExistError();
+  static Error LogicalBlobNameInvalidError();
+  static Error OpNameExistError();
+  static Error OpConfDeviceTagNoSetError();
+  static Error PlacementError();
+  static Error BlobSplitAxisInferError();
+  static Error UnknownJobBuildAndInferError();
   static Error CheckFailedError();
   static Error Todo();
   static Error Unimplemented();
-  static Error BoxingNotSupported();
+  static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                           uint64_t available, const std::string& device_type);
   static Error OpKernelNotFoundError(const std::string& error_summary,
@@ -45,12 +60,15 @@ class Error final {
                                              const std::vector<std::string>& error_msgs);
   static Error LossBlobNotFoundError(const std::string& error_summary);
 
+  static Error RwMutexedObjectNotFoundError();
+
   // gradient
   static Error GradientFunctionNotFound();
 
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
   ErrorProto* operator->() const { return error_proto_.get(); }
   operator std::string() const;
+  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
 
  private:
   std::shared_ptr<ErrorProto> error_proto_;
@@ -65,8 +83,8 @@ Error&& operator<<(Error&& error, const T& x) {
 }
 
 template<>
-inline Error&& operator<<(Error&& error, const JobBuildAndInferError& x) {
-  error->set_job_build_and_infer_error(x);
+inline Error&& operator<<(Error&& error, const Error& other) {
+  error.Assign(other);
   return std::move(error);
 }
 

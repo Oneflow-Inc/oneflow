@@ -5,7 +5,8 @@ set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
-set(gflags_URL ${THIRD_PARTY_SUBMODULE_DIR}/gflags/src/gflags)
+set(gflags_URL https://github.com/Oneflow-Inc/gflags/archive/9314597d4.tar.gz)
+use_mirror(VARIABLE gflags_URL URL ${gflags_URL})
 
 if(WIN32)
     set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
@@ -32,13 +33,10 @@ set (GFLAGS_PUBLIC_H
 
 if (THIRD_PARTY)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fPIC")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-
 ExternalProject_Add(gflags
     PREFIX gflags
     URL ${gflags_URL}
+    URL_MD5 9677cc51d63642ba3d5f2a57a1fa2bd0
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
@@ -46,7 +44,8 @@ ExternalProject_Add(gflags
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
-        -DCMAKE_CXX_FLAGS:STRING=-fPIC
+        -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
+        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
         -DGFLAGS_NAMESPACE:STRING=gflags
 )
 

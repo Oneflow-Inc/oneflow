@@ -14,36 +14,76 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/cluster.h"
-#include "oneflow/core/control/cluster_control.pb.h"
-#include "oneflow/core/control/cluster_control.h"
+#include "oneflow/core/job/cluster_instruction.pb.h"
+#include "oneflow/core/job/cluster_instruction.h"
+#include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
-Maybe<void> Cluster::WorkerLoop() {
-  CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
-  while (ClusterControl::WorkerReceiveHalt() == false) {
+namespace {
+
+void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
+  lazy_runtime_thread->AddWork([] {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
     int32_t machine_num = config_proto.resource().machine_num();
-    if (Global<MachineCtx>::Get()->this_machine_id() >= machine_num) { continue; }
+    // do nothing if it's not my business
+    if (Global<MachineCtx>::Get()->this_machine_id() >= machine_num) { return; }
     Global<SessionGlobalObjectsScope>::New();
-    JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
-
+    CHECK_JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
     {
       Oneflow oneflow;
-      JUST(oneflow.Init(job_set));
+      CHECK_JUST(oneflow.Init(job_set));
     }
     Global<SessionGlobalObjectsScope>::Delete();
+  });
+}
+
+}  // namespace
+
+Maybe<void> Cluster::WorkerLoop() {
+  // The reason why excluding master machine is that
+  // eager instruction for compile-time symbol constructing must be done synchronously
+  CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
+  {
+    // Oneflow::~Oneflow blocking in current thread is not acceptable
+    // Two reasons why `lazy_runtime_thread` is needed:
+    //   1. making current thread non-block by
+    //      taking over the execution of Oneflow::~Oneflow
+    //   2. as a Synchronizing guard for all unfinished Oneflow::~Oneflow
+    //
+    // thread_num must be 1.
+    ThreadPool lazy_runtime_thread(1);
+    while (true) {
+      auto mut_cluster_instruction = std::make_shared<ClusterInstructionProto>();
+      ClusterInstruction::WorkerReceiveInstruction(mut_cluster_instruction.get());
+      if (mut_cluster_instruction->has_cluster_ctrl_halt()) {
+        break;
+      } else if (mut_cluster_instruction->has_cluster_ctrl_abort()) {
+        LOG(FATAL) << "received abort instruction";
+      } else if (mut_cluster_instruction->has_cluster_ctrl_session_start()) {
+        ClusterInstruction::NewSessionBarrier();
+        AsyncRunLazyJobSet(&lazy_runtime_thread);
+      } else if (mut_cluster_instruction->has_eager_instruction()) {
+        Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
+            std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
+      } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
+        ClusterInstruction::EagerSyncBarrier();
+      } else {
+        OF_UNIMPLEMENTED();
+      }
+    }
   }
-  ClusterControl::HaltBarrier();
+  ClusterInstruction::HaltBarrier();
   Global<EnvGlobalObjectsScope>::Delete();
   exit(0);
 }

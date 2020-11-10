@@ -102,8 +102,25 @@ __global__ void CropMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t* in_d
     int32_t out_idx[4];
     out_helper.OffsetToNdIndex(out_offset, out_idx);
     OutIdx2InIdx<layout>(out_idx, in_idx, mirror_dptr, out_W, H_offset, W_offset);
-    float mean_val = mean.val[in_idx[3]];
-    float inv_std_val = inv_std.val[in_idx[3]];
+    float mean_val;
+    float inv_std_val;
+    const int32_t c = in_idx[3];
+    // When the compiler can't resolve array indices to constants it will put private arrays into
+    // GPU local memory. Using local memory is slower than keeping array elements directly in
+    // registers.
+    if (c == 0) {
+      mean_val = mean.val[0];
+      inv_std_val = inv_std.val[0];
+    } else if (c == 1) {
+      mean_val = mean.val[1];
+      inv_std_val = inv_std.val[1];
+    } else if (c == 2) {
+      mean_val = mean.val[2];
+      inv_std_val = inv_std.val[2];
+    } else {
+      // undefined behavior
+      assert(false);
+    }
     int32_t in_offset = in_helper.NdIndexToOffset(in_idx);
     out_dptr[out_offset] = (static_cast<float>(in_dptr[in_offset]) - mean_val) * inv_std_val;
   }

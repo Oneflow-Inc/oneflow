@@ -25,9 +25,6 @@ endif()
 message(STATUS ${TENSORFLOW_BUILD_CMD})
 
 set(TENSORFLOW_PROJECT  tensorflow)
-set(TENSORFLOW_GIT_URL  https://github.com/OneFlow-Inc/tensorflow.git)
-#set(TENSORFLOW_GIT_TAG  master)
-set(TENSORFLOW_GIT_TAG  dea9488e5f05ffcaff7e729f33d475af3a7021ba)
 set(TENSORFLOW_SOURCES_DIR ${CMAKE_CURRENT_BINARY_DIR}/tensorflow)
 set(TENSORFLOW_SRCS_DIR ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
 set(TENSORFLOW_INC_DIR  ${TENSORFLOW_SOURCES_DIR}/src/tensorflow)
@@ -36,8 +33,7 @@ set(TENSORFLOW_INSTALL_DIR ${THIRD_PARTY_DIR}/tensorflow)
 
 set(PATCHES_DIR  ${PROJECT_SOURCE_DIR}/oneflow/xrt/patches)
 set(TENSORFLOW_JIT_DIR ${TENSORFLOW_SRCS_DIR}/tensorflow/compiler/jit)
-
-set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TENSORFLOW_GENFILE_DIR}/genfiles)
+set(TENSORFLOW_GEN_DIR ${TENSORFLOW_SRCS_DIR}/bazel-out/${TENSORFLOW_GENFILE_DIR}/bin)
 set(TENSORFLOW_EXTERNAL_DIR ${TENSORFLOW_SRCS_DIR}/bazel-tensorflow/external)
 set(THIRD_ABSL_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_absl)
 set(THIRD_PROTOBUF_DIR ${TENSORFLOW_EXTERNAL_DIR}/com_google_protobuf/src)
@@ -54,36 +50,69 @@ list(APPEND TENSORFLOW_XLA_INCLUDE_DIR
   ${THIRD_SNAPPY_DIR}
   ${THIRD_RE2_DIR}
 )
-include_directories(${TENSORFLOW_XLA_INCLUDE_DIR})
+
+list(APPEND TENSORFLOW_XLA_INCLUDE_INSTALL_DIR
+  "${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc"
+  "${TENSORFLOW_INSTALL_DIR}/include/tensorflow_gen"
+  "${TENSORFLOW_INSTALL_DIR}/include/absl"
+  "${TENSORFLOW_INSTALL_DIR}/include/protobuf"
+  "${TENSORFLOW_INSTALL_DIR}/include/boringssl"
+  "${TENSORFLOW_INSTALL_DIR}/include/snappy"
+  "${TENSORFLOW_INSTALL_DIR}/include/re2"
+)
+
 list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
+if(NOT XRT_TF_URL)
+  set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/1f_dep_v2.3.0r4.zip)
+  use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
+endif()
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
-    GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
-    GIT_TAG ${TENSORFLOW_GIT_TAG}
+    URL ${XRT_TF_URL}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                  bazel build ${TENSORFLOW_BUILD_CMD} -j 20 //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                  bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
-set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.1)
-set(TENSORFLOW_XLA_CORE_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib/libxla_core.so)
+  set(TENSORFLOW_XLA_FRAMEWORK_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/libtensorflow_framework.so.2)
+  set(TENSORFLOW_XLA_CORE_LIB ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/jit/xla_lib/libxla_core.so)
 
-add_custom_target(tensorflow_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${TENSORFLOW_INSTALL_DIR}/lib
-  DEPENDS ${TENSORFLOW_PROJECT})
+  add_custom_target(tensorflow_create_library_dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${TENSORFLOW_INSTALL_DIR}/lib
+    DEPENDS ${TENSORFLOW_PROJECT})
 
-add_custom_target(tensorflow_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      ${TENSORFLOW_XLA_FRAMEWORK_LIB} ${TENSORFLOW_XLA_CORE_LIB} ${TENSORFLOW_INSTALL_DIR}/lib
-  COMMAND ${CMAKE_COMMAND} -E create_symlink
-      ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so.1
-      ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so
-  DEPENDS tensorflow_create_library_dir)
+  add_custom_target(tensorflow_copy_libs_to_destination
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${TENSORFLOW_XLA_FRAMEWORK_LIB} ${TENSORFLOW_XLA_CORE_LIB} ${TENSORFLOW_INSTALL_DIR}/lib
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so.2
+        ${TENSORFLOW_INSTALL_DIR}/lib/libtensorflow_framework.so
+    DEPENDS tensorflow_create_library_dir)
+
+  add_custom_target(tensorflow_create_include_dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${TENSORFLOW_INSTALL_DIR}/include
+    DEPENDS ${TENSORFLOW_PROJECT})
+
+  add_custom_target(tensorflow_symlink_headers
+    DEPENDS tensorflow_create_include_dir)
+
+  foreach(src_dst_pair IN ZIP_LISTS TENSORFLOW_XLA_INCLUDE_DIR TENSORFLOW_XLA_INCLUDE_INSTALL_DIR)
+    set(src ${src_dst_pair_0})
+    set(dst ${src_dst_pair_1})
+    add_custom_command(TARGET tensorflow_symlink_headers
+      COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${src}
+        ${dst}
+    )
+  endforeach()
+
 endif(THIRD_PARTY)
+
+include_directories(${TENSORFLOW_XLA_INCLUDE_INSTALL_DIR})
 
 endif(WITH_XLA)

@@ -90,7 +90,7 @@ def load_mnist(
         x_test, y_test = f["x_test"], f["y_test"]
 
     def normalize(x, y, batch_size):
-        x = (x.astype(np.float32) - 128.0) / 255.0
+        x = x.astype(np.float32) / 255.0
         y = y.astype(np.int32)
         if data_format == "NCHW":
             images = x.reshape((-1, batch_size, 1, x.shape[1], x.shape[2]))

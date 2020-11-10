@@ -49,8 +49,6 @@ void EnableEagerEnvironment(bool enable_eager_execution) {
   *Global<bool, EagerExecution>::Get() = enable_eager_execution;
 }
 
-bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
-
 bool IsEnvInited() {
   using namespace oneflow;
   return Global<EnvGlobalObjectsScope>::Get() != nullptr;
@@ -69,21 +67,21 @@ bool IsSessionInited() {
   return Global<SessionGlobalObjectsScope>::Get() != nullptr;
 }
 
-void InitGlobalSession(const std::string& config_proto_str, std::string* error_str) {
+void InitLazyGlobalSession(const std::string& config_proto_str, std::string* error_str) {
   using namespace oneflow;
-  return InitGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
+  return InitLazyGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
 }
 
-void DestroyGlobalSession(std::string* error_str) {
-  return oneflow::DestroyGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void DestroyLazyGlobalSession(std::string* error_str) {
+  return oneflow::DestroyLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StartGlobalSession(std::string* error_str) {
-  return oneflow::StartGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void StartLazyGlobalSession(std::string* error_str) {
+  return oneflow::StartLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StopGlobalSession(std::string* error_str) {
-  return oneflow::StopGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void StopLazyGlobalSession(std::string* error_str) {
+  return oneflow::StopLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
@@ -127,7 +125,7 @@ std::string InferOpConf(const std::string& serialized_op_conf,
 }
 
 bool IsInterfaceOpTypeCase(int64_t op_type_case) {
-  return oneflow::IsClassRegistered<oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
+  return oneflow::IsClassRegistered<int32_t, oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 long GetOpParallelSymbolId(const std::string& serialized_op_conf, std::string* error_str) {

@@ -19,6 +19,11 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+#include "oneflow/core/graph/boxing_s2s_all2all_pack_compute_task_node.h"
+#include "oneflow/core/graph/boxing_s2s_all2all_unpack_compute_task_node.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -56,20 +61,20 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   op_desc->set_backend(Backend::kBackendNCCL);
   rank_desc->set_rank(parallel_id);
 
-  const int64_t machine_id = parallel_desc.MachineIdForParallelId(parallel_id);
-  const int64_t device_id = parallel_desc.DeviceIdForParallelId(parallel_id);
+  const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+  const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
   const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuNcclThrdId(device_id);
   node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
 }
 
 int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
   CHECK_EQ(sole_device.parallel_num(), 1);
-  const int64_t root_machine_id = sole_device.MachineIdForParallelId(0);
-  const int64_t root_device_id = sole_device.DeviceIdForParallelId(0);
+  const int64_t root_machine_id = CHECK_JUST(sole_device.MachineId4ParallelId(0));
+  const int64_t root_device_id = CHECK_JUST(sole_device.DeviceId4ParallelId(0));
   int64_t root_parallel_id = -1;
   FOR_RANGE(int64_t, i, 0, multi_device.parallel_num()) {
-    if (multi_device.MachineIdForParallelId(i) == root_machine_id
-        && multi_device.DeviceIdForParallelId(i) == root_device_id) {
+    if (CHECK_JUST(multi_device.MachineId4ParallelId(i)) == root_machine_id
+        && CHECK_JUST(multi_device.DeviceId4ParallelId(i)) == root_device_id) {
       root_parallel_id = i;
       break;
     }
@@ -115,7 +120,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -157,7 +162,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -199,9 +204,9 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
+          "NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -226,7 +231,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && src_sbp_parallel.has_partial_sum_parallel()) {
       const int64_t root_parallel_id = FindRootParallelId(src_parallel_desc, dst_parallel_desc);
-      if (root_parallel_id == -1) { return Error::BoxingNotSupported(); }
+      if (root_parallel_id == -1) { return Error::BoxingNotSupportedError(); }
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingReduce-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
@@ -246,9 +251,9 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
+          "NcclCollectiveBoxingReduceSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
@@ -289,7 +294,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
             SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
-        const auto src_machine_id = src_parallel_desc.MachineIdForParallelId(0);
+        const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, src_machine_id,
                          Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_machine_id));
         slice_node->ConnectToSrcNodeWithSlice(src_node, ctx->task_graph()->NewEdge(), in_slice);
@@ -307,9 +312,9 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
+          "CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   };
 };
@@ -349,9 +354,9 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
         gpu_src_node = sorted_src_comp_tasks.front();
       } else {
-        return Error::BoxingNotSupported();
+        return Error::BoxingNotSupportedError();
       }
-      if (root_parallel_id == -1) { return Error::BoxingNotSupported(); }
+      if (root_parallel_id == -1) { return Error::BoxingNotSupportedError(); }
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingBroadcast-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
@@ -370,15 +375,79 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       return TRY(BuildSubTskGphBuilderStatus(
           sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
+          "NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
     } else {
-      return Error::BoxingNotSupported();
+      return Error::BoxingNotSupportedError();
     }
   }
 };
+
+class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingAll2AllSubTskGphBuilder);
+  NcclCollectiveBoxingAll2AllSubTskGphBuilder() = default;
+  ~NcclCollectiveBoxingAll2AllSubTskGphBuilder() override = default;
+
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+                                      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+                                      const ParallelDesc& src_parallel_desc,
+                                      const ParallelDesc& dst_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const SbpParallel& src_sbp_parallel,
+                                      const SbpParallel& dst_sbp_parallel) const override {
+    if (dst_parallel_desc.EqualsIgnoringDeviceType(src_parallel_desc)
+        && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
+        && src_parallel_desc.device_type() == DeviceType::kGPU
+        && dst_parallel_desc.device_type() == DeviceType::kGPU
+        && dst_parallel_desc.parallel_num() > 1
+        && logical_blob_desc.shape().At(src_sbp_parallel.split_parallel().axis())
+                   % src_parallel_desc.parallel_num()
+               == 0
+        && logical_blob_desc.shape().At(dst_sbp_parallel.split_parallel().axis())
+                   % dst_parallel_desc.parallel_num()
+               == 0
+        && src_sbp_parallel.split_parallel().axis() != dst_sbp_parallel.split_parallel().axis()
+        && SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
+      const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
+      FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
+        CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
+        CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+
+        BoxingS2SAll2AllPackCompTaskNode* pack_node =
+            ctx->task_graph()->NewNode<BoxingS2SAll2AllPackCompTaskNode>();
+        pack_node->Init(src_node, lbi, dst_sbp_parallel.split_parallel().axis());
+        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), pack_node);
+
+        auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
+        NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
+                               logical_blob_desc, OpType::kOpTypeAll2All, -1);
+        Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
+
+        BoxingS2SAll2AllUnpackCompTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<BoxingS2SAll2AllUnpackCompTaskNode>();
+        unpack_node->Init(src_node, lbi, logical_blob_desc.shape(),
+                          src_sbp_parallel.split_parallel().axis(),
+                          dst_sbp_parallel.split_parallel().axis());
+
+        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
+        Connect<TaskNode>(unpack_node, ctx->task_graph()->NewEdge(), dst_node);
+      }
+      return TRY(BuildSubTskGphBuilderStatus(
+          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
+          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+          "NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
+    } else {
+      return Error::BoxingNotSupportedError();
+    }
+  }
+};
+
 }  // namespace
 
 CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
+  const CollectiveBoxingConf collective_boxing_conf =
+      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new NcclCollectiveBoxingAllReduceSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());
@@ -386,6 +455,13 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
+  if (collective_boxing_conf.nccl_enable_all_to_all()) {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+    builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
+#else
+    LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
+#endif
+  }
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
 }
 
@@ -395,9 +471,9 @@ Maybe<SubTskGphBuilderStatus> CollectiveBoxingSubTskGphBuilder::Build(
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
-  if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupported(); }
+  if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
   if (!IsSourceTimeShape(*sorted_src_comp_tasks.front()->logical_node()->out_blob_time_shape())) {
-    return Error::BoxingNotSupported();
+    return Error::BoxingNotSupportedError();
   }
   return chain_builder_->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc,
                                dst_parallel_desc, lbi, logical_blob_desc, src_sbp_parallel,

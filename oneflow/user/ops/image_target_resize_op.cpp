@@ -22,8 +22,8 @@ REGISTER_CPU_ONLY_USER_OP("image_target_resize")
     .Output("out")
     .Output("size")
     .Output("scale")
-    .Attr("target_size", UserOpAttrType::kAtInt32)
-    .Attr("max_size", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("target_size")
+    .Attr<int32_t>("max_size")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;

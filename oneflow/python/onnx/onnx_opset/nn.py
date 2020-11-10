@@ -72,24 +72,24 @@ def _ConvConvertInputs(
     if node.is_nhwc():
         # transpose input if needed, no need to record shapes on input
         for idx in input_indices:
-            parent = node.inputs[idx]
+            parent = node.input_nodes[idx]
             if (
-                node.inputs[idx].is_const()
-                and len(ctx.FindOutputConsumers(node.input[1])) == 1
+                node.input_nodes[idx].is_const()
+                and len(ctx.FindOutputConsumers(node.input_tensor_names[1])) == 1
             ):
                 # if input is a constant, transpose that one if we are the only consumer
                 val = parent.get_tensor_value(as_list=False)
                 parent.set_tensor_value(val.transpose(constants.NHWC_TO_NCHW))
             else:
                 # if input comes from a op, insert transpose op
-                input_name = node.input[idx]
+                input_name = node.input_tensor_names[idx]
                 transpose = ctx.InsertNewNodeOnInput(node, "Transpose", input_name)
-                transpose.set_attr("perm", constants.NHWC_TO_NCHW)
+                transpose.attrs["perm"] = constants.NHWC_TO_NCHW
                 transpose.skip_conversion = True
                 shape = ctx.get_shape(input_name)
                 if shape is not None:
                     new_shape = _SpatialMap(shape, constants.NHWC_TO_NCHW)
-                    ctx.set_shape(transpose.output[0], new_shape)
+                    ctx.set_shape(transpose.output_tensor_names[0], new_shape)
 
     # kernel need to be transposed if the data format is nhwc
     if with_kernel:
@@ -97,26 +97,26 @@ def _ConvConvertInputs(
         if new_kernel_shape:
             if ctx.opset < 5:
                 # old reshape takes new shape as attribute
-                input_name = node.input[1]
+                input_name = node.input_tensor_names[1]
                 reshape = ctx.InsertNewNodeOnInput(node, "Reshape", input_name)
-                reshape.set_attr("shape", new_kernel_shape)
+                reshape.attrs["shape"] = new_kernel_shape
                 reshape.skip_conversion = True
             else:
-                # new reshape takes new shape as input[1]
+                # new reshape takes new shape as input_tensor_names[1]
                 shape_name = id_util.UniqueStr(node.name)
                 ctx.MakeConst(shape_name, np.array(new_kernel_shape, dtype=np.int64))
-                input_name = node.input[1]
+                input_name = node.input_tensor_names[1]
                 reshape = ctx.MakeNode("Reshape", [input_name, shape_name])
-                ctx.ReplaceAllInputs(node, input_name, reshape.output[0])
+                ctx.ReplaceAllInputs(node, input_name, reshape.output_tensor_names[0])
                 reshape.skip_conversion = True
-            ctx.set_shape(reshape.output[0], new_kernel_shape)
+            ctx.set_shape(reshape.output_tensor_names[0], new_kernel_shape)
 
         if node.is_nhwc():
-            parent = node.inputs[1]
+            parent = node.input_nodes[1]
             need_transpose = True
-            if node.inputs[1].is_const():
+            if node.input_nodes[1].is_const():
                 # kernel is const - transpose the const if we are the only consumer of const
-                consumers = ctx.FindOutputConsumers(node.input[1])
+                consumers = ctx.FindOutputConsumers(node.input_tensor_names[1])
                 if len(consumers) == 1:
                     val = parent.get_tensor_value(as_list=False)
                     val = val.transpose(constants.NHWC_TO_NCHW)
@@ -124,28 +124,28 @@ def _ConvConvertInputs(
                     need_transpose = False
 
             if need_transpose:
-                input_name = node.input[1]
+                input_name = node.input_tensor_names[1]
                 transpose = ctx.InsertNewNodeOnInput(node, "Transpose", input_name)
-                transpose.set_attr("perm", constants.NHWC_TO_NCHW)
+                transpose.attrs["perm"] = constants.NHWC_TO_NCHW
                 transpose.skip_conversion = True
                 new_shape = _SpatialMap(
                     ctx.get_shape(input_name), constants.NHWC_TO_NCHW
                 )
-                ctx.set_shape(transpose.output[0], new_shape)
+                ctx.set_shape(transpose.output_tensor_names[0], new_shape)
 
     # transpose outputs if needed
     if node.is_nhwc():
         for idx in output_indices:
-            output_name = node.output[idx]
-            output_shape = ctx.get_shape(node.output[idx])
+            output_name = node.output_tensor_names[idx]
+            output_shape = ctx.get_shape(node.output_tensor_names[idx])
             op_name = id_util.UniqueStr(node.name)
             transpose = ctx.InsertNewNodeOnOutput(
                 "Transpose", output_name, name=op_name
             )
-            transpose.set_attr("perm", constants.NCHW_TO_NHWC)
+            transpose.attrs["perm"] = constants.NCHW_TO_NHWC
             transpose.skip_conversion = True
-            # set NHWC shape to transpose node output
-            ctx.set_shape(transpose.output[0], output_shape)
+            # set NHWC shape to transpose node output_tensor_names
+            ctx.set_shape(transpose.output_tensor_names[0], output_shape)
             # Transpose NHWC shape back to NCHW shape for current ONNX conv node output
             ctx.set_shape(
                 output_name, _SpatialMap(output_shape, constants.NHWC_TO_NCHW)
@@ -154,17 +154,16 @@ def _ConvConvertInputs(
 
 
 def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
-    padding = node.get_attr("padding")
+    padding = node.attrs.get("padding")
     if padding:
         if dilations is None:
             dilations = [1] * spatial * 2
-        padding = padding.s.decode("utf-8")
         if padding == "same":
             padding = "same_lower"
         if padding in ["same_lower", "same_upper"]:
             pads = [0] * spatial * 2
-            input_shape = ctx.get_shape(node.input[0])
-            output_shape = ctx.get_shape(node.output[0])
+            input_shape = ctx.get_shape(node.input_tensor_names[0])
+            output_shape = ctx.get_shape(node.output_tensor_names[0])
             # check if the input shape is valid
             if len(input_shape) != len(pads):
                 logger.error(
@@ -190,9 +189,9 @@ def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                     output_shape,
                 )
                 if padding == "same_lower":
-                    node.set_attr("auto_pad", "SAME_LOWER")
+                    node.attrs["auto_pad"] = "SAME_LOWER"
                 else:
-                    node.set_attr("auto_pad", "SAME_UPPER")
+                    node.attrs["auto_pad"] = "SAME_UPPER"
             else:
                 for i in range(spatial):
                     pad = (
@@ -208,7 +207,7 @@ def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
                     else:
                         pads[i] = pad // 2
                         pads[i + spatial] = pad - pad // 2
-                node.set_attr("pads", pads)
+                node.attrs["pads"] = pads
 
         elif padding == "valid":
             pass
@@ -219,10 +218,9 @@ def _AddPadding(ctx, node, kernel_shape, strides, dilations=None, spatial=2):
 def conv_dims_attr(node, name, new_name=None):
     if new_name is None:
         new_name = name
-    dims = node.get_attr(name)
+    dims = node.attrs.get(name, None)
     if not dims:
         return None
-    dims = dims.ints
     if len(dims) == 2:
         h, w = dims
         c = n = 1
@@ -232,14 +230,13 @@ def conv_dims_attr(node, name, new_name=None):
         else:
             n, c, h, w = dims
     dims = [h, w]
-    node.set_attr(new_name, dims)
+    node.attrs[new_name] = dims
     return dims
 
 
 def conv_kernel_shape(ctx, node, input_idx, spatial=2):
-    kernel_shape = node.get_attr("kernel_size").ints
-    node.set_attr("kernel_shape", kernel_shape)
-    return kernel_shape
+    node.attrs["kernel_shape"] = node.attrs["kernel_size"]
+    return node.attrs["kernel_shape"]
 
 
 @flow_op(["conv2d"], flow_ibns=["in", "weight"])
@@ -250,13 +247,13 @@ class ConvOp:
         #                       @string padding, @string data_format)
         # T Y = Conv(T X, T W, T B, @AttrType.STRING auto_pad, @AttrType.INTS dilations, @AttrType.INT group,
         #                       @AttrType.INTS kernel_shape, @AttrType.INTS pads, @AttrType.INTS strides)
-        node.type = "Conv"
+        node.op_type = "Conv"
         kernel_shape = conv_kernel_shape(ctx, node, 1, spatial=2)
-        node.set_attr("group", node.get_attr_value("groups", 1))
-        node.set_attr("dilations", node.get_attr_value("dilation_rate", [1, 1]))
+        node.attrs["group"] = node.attrs.get("groups", 1)
+        node.attrs["dilations"] = node.attrs.get("dilation_rate", [1, 1])
         strides = conv_dims_attr(node, "strides")
         dilations = conv_dims_attr(node, "dilations")
-        node.set_attr("pads", node.get_attr_value("padding_before", [0, 0]) * 2)
+        node.attrs["pads"] = node.attrs.get("padding_before", [0, 0]) * 2
         _ConvConvertInputs(ctx, node, with_kernel=True)
 
     @classmethod
@@ -286,25 +283,25 @@ class PoolOp:
         # T output = MaxPool(T input, @list(int) ksize, @list(int) strides, @string padding, @string data_format)
         # T Y = MaxPool(T X, @AttrType.STRING auto_pad, @AttrType.INTS kernel_shape, @AttrType.INTS pads,
         #               @AttrType.INTS strides)
-        if len(node.input) < 3:
-            kernel_shape_flow = node.get_attr("pool_size").ints
-            strides_flow = node.get_attr("strides").ints
+        if len(node.input_tensor_names) < 3:
+            kernel_shape_flow = node.attrs["pool_size"]
+            strides_flow = node.attrs["strides"]
         else:
-            kernel_shape_flow = node.inputs[1].get_tensor_value()
-            strides_flow = node.inputs[2].get_tensor_value()
-            ctx.RemoveInput(node, node.input[2])
-            ctx.RemoveInput(node, node.input[1])
+            kernel_shape_flow = node.input_nodes[1].get_tensor_value()
+            strides_flow = node.input_nodes[2].get_tensor_value()
+            ctx.RemoveInput(node, node.input_tensor_names[2])
+            ctx.RemoveInput(node, node.input_tensor_names[1])
 
-        node.set_attr("kernel_shape", kernel_shape_flow)
-        node.set_attr("strides", strides_flow)
+        node.attrs["kernel_shape"] = kernel_shape_flow
+        node.attrs["strides"] = strides_flow
         conv_dims_attr(node, "dilations")
-        if node.get_attr("padding") is not None:
+        if "padding" in node.attrs:
             _AddPadding(ctx, node, kernel_shape_flow, strides_flow)
         else:
-            pads = node.get_attr_value("padding_before", [0, 0]) + node.get_attr_value(
+            pads = node.attrs.get("padding_before", [0, 0]) + node.attrs.get(
                 "padding_after", [0, 0]
             )
-            node.set_attr("pads", pads)
+            node.attrs["pads"] = pads
         _ConvConvertInputs(ctx, node, with_kernel=False)
 
 
@@ -312,35 +309,35 @@ class PoolOp:
 class Pad:
     @classmethod
     def Version_2(cls, ctx, node, **kwargs):
-        padding_before = node.get_attr_value("padding_before")
-        padding_after = node.get_attr_value("padding_after")
+        padding_before = node.attrs["padding_before"]
+        padding_after = node.attrs["padding_after"]
         paddings = padding_before + padding_after
-        node.set_attr("pads", paddings)
-        node.set_attr("mode", "constant")
+        node.attrs["pads"] = paddings
+        node.attrs["mode"] = "constant"
         const_val = (
-            node.get_attr_value("integral_constant_value")
-            if util.is_integral_onnx_dtype(ctx.get_dtype(node.input[0]))
-            else node.get_attr_value("floating_constant_value")
+            node.attrs["integral_constant_value"]
+            if util.is_integral_onnx_dtype(ctx.get_dtype(node.input_tensor_names[0]))
+            else node.attrs["floating_constant_value"]
         )
-        node.set_attr("value", const_val)
+        node.attrs["value"] = const_val
 
     @classmethod
     def Version_11(cls, ctx, node, **kwargs):
-        node.set_attr("mode", "constant")
-        padding_before = node.get_attr_value("padding_before")
-        padding_after = node.get_attr_value("padding_after")
+        node.attrs["mode"] = "constant"
+        padding_before = node.attrs["padding_before"]
+        padding_after = node.attrs["padding_after"]
         paddings = np.array(padding_before + padding_after).astype(np.int64)
         padding_node = ctx.MakeConst(id_util.UniqueStr("const"), paddings)
-        node.input.append(padding_node.output[0])
-        dtype = ctx.get_dtype(node.input[0])
+        node.input_tensor_names.append(padding_node.output_tensor_names[0])
+        dtype = ctx.get_dtype(node.input_tensor_names[0])
         const_val = (
-            node.get_attr_value("integral_constant_value")
+            node.attrs["integral_constant_value"]
             if util.is_integral_onnx_dtype(dtype)
-            else node.get_attr_value("floating_constant_value")
+            else node.attrs["floating_constant_value"]
         )
         const_val = np.array(const_val).astype(util.Onnx2NumpyDtype(dtype))
         const_val_node = ctx.MakeConst(id_util.UniqueStr("const"), const_val)
-        node.input.append(const_val_node.output[0])
+        node.input_tensor_names.append(const_val_node.output_tensor_names[0])
 
 
 @flow_op(
@@ -350,7 +347,7 @@ class Pad:
 class BatchNorm:
     @classmethod
     def Version_6(cls, ctx, node, **kwargs):
-        node.type = "BatchNormalization"
+        node.op_type = "BatchNormalization"
         # flow inputs: x, gamma, beta, moving_mean, moving_variance
         # flow outputs: y, mean, inv_variance
         # a: data_format, epsilon, is_training
@@ -358,41 +355,46 @@ class BatchNorm:
         # output: y, mean, var, savedmean, savedvar,
         # detach unused outputs. While we could let the unused outputs dangle,
         # some runtimes like pytorch/caffe2 do complain about it.
-        if node.get_attr_value("training") or node.get_attr_value("trainable"):
+        if node.attrs["training"]:
             raise NotImplementedError(
                 "We only support inference mode ONNX BatchNormalization now"
             )
         consumers = [
-            ctx.FindOutputConsumers(output_name) for output_name in node.output[1:]
+            ctx.FindOutputConsumers(output_name)
+            for output_name in node.output_tensor_names[1:]
         ]
         if not any(consumers):
-            new_output = [node.output[0]]
-            node.output = new_output
+            new_output = [node.output_tensor_names[0]]
+            node.output_tensor_names = new_output
 
         _ConvConvertInputs(ctx, node, with_kernel=False)
 
-        scale_shape = ctx.get_shape(node.input[1])
-        mean_shape = ctx.get_shape(node.input[3])
-        var_shape = ctx.get_shape(node.input[4])
-        val_type = util.Onnx2NumpyDtype(ctx.get_dtype(node.input[1]))
+        scale_shape = ctx.get_shape(node.input_tensor_names[1])
+        mean_shape = ctx.get_shape(node.input_tensor_names[3])
+        var_shape = ctx.get_shape(node.input_tensor_names[4])
+        val_type = util.Onnx2NumpyDtype(ctx.get_dtype(node.input_tensor_names[1]))
 
         if mean_shape != scale_shape:
             new_mean_value = np.array(
-                np.resize(node.inputs[3].get_tensor_value(as_list=False), scale_shape),
+                np.resize(
+                    node.input_nodes[3].get_tensor_value(as_list=False), scale_shape
+                ),
                 dtype=val_type,
             )
             new_mean_node_name = id_util.UniqueStr(node.name)
             ctx.MakeConst(new_mean_node_name, new_mean_value)
-            node.input[3] = new_mean_node_name
+            node.input_tensor_names[3] = new_mean_node_name
 
         if var_shape != scale_shape:
             new_var_value = np.array(
-                np.resize(node.inputs[4].get_tensor_value(as_list=False), scale_shape),
+                np.resize(
+                    node.input_nodes[4].get_tensor_value(as_list=False), scale_shape
+                ),
                 dtype=val_type,
             )
             new_val_node_name = id_util.UniqueStr(node.name)
             ctx.MakeConst(new_val_node_name, new_var_value)
-            node.input[4] = new_val_node_name
+            node.input_tensor_names[4] = new_val_node_name
 
     @classmethod
     def Version_9(cls, ctx, node, **kwargs):

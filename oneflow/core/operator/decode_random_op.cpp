@@ -23,10 +23,6 @@ void DecodeRandomOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& DecodeRandomOp::GetCustomizedConf() const {
-  return op_conf().decode_random_conf();
-}
-
 void DecodeRandomOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {

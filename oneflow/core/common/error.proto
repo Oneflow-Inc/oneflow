@@ -39,29 +39,41 @@ message ConfigResourceUnavailableError {
   required FieldValue field_value = 1;
 }
 
-enum JobBuildAndInferError {
-  kJobSetEmpty = 1;
-  kDeviceTagNotFound = 2;
-  kJobNameExist = 100;
-  kJobNameEmpty = 101;
-  kJobNameNotEqual = 102;
-  kNoJobBuildAndInferCtx = 200;
-  
-  kJobConfFrozen = 300;
-  kJobConfNotSet = 301;
-  kJobConfRepeatedSet = 302;
-  kJobTypeNotSet = 303;
-  
-  kLogicalBlobNameNotExist = 400;
-  kLogicalBlobNameRepeated = 401;
-  kLogicalBlobNameInvalid = 402;
-  
-  kOpNameExist = 450;
-  kOpConfDeviceTagNoSet = 460;
-  kPlacementError = 470;
-  kBlobSplitAxisInferError = 480;
-  kUnknownJobBuildAndInferError = 500;
-}
+message JobSetEmptyError { }
+
+message DeviceTagNotFoundError { }
+
+message JobNameExistError { }
+
+message JobNameEmptyError { }
+
+message JobNameNotEqualError { }
+
+message NoJobBuildAndInferCtxError { }
+
+message JobConfFrozenError { }
+
+message JobConfNotSetError { }
+
+message JobConfRepeatedSetError { }
+
+message JobTypeNotSetError { }
+
+message LogicalBlobNameNotExistError { }
+
+message LogicalBlobNameExistError { }
+
+message LogicalBlobNameInvalidError { }
+
+message OpNameExistError { }
+
+message OpConfDeviceTagNoSetError { }
+
+message PlacementError { }
+
+message BlobSplitAxisInferError { }
+
+message UnknownJobBuildAndInferError { }
 
 message ProtoParseFailedError { }
 
@@ -71,9 +83,7 @@ message TodoError { }
 
 message UnimplementedError { }
 
-enum BoxingError {
-  kNotSupported = 1;
-}
+message BoxingNotSupportedError { }
 
 message GradientFunctionNotFoundError { }
 
@@ -95,6 +105,8 @@ message MemoryZoneOutOfMemoryError {
 
 message LossBlobNotFoundError { }
 
+message RwMutexedObjectNotFoundError { }
+
 message UnkownError { }
 
 message ErrorStackFrame {
@@ -109,17 +121,35 @@ message ErrorProto {
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 12;
     ConfigResourceUnavailableError config_resource_unavailable_error = 13;
-    JobBuildAndInferError job_build_and_infer_error = 14;
     ProtoParseFailedError proto_parse_failed_error = 15;
     CheckFailedError check_failed_error = 16;
     TodoError todo_error = 17;
     UnimplementedError unimplemented_error = 18;
-    BoxingError boxing_error = 19;
+    BoxingNotSupportedError boxing_not_supported_error = 19;
     GradientFunctionNotFoundError gradient_function_not_found_error = 20;
     OpKernelNotFoundError op_kernel_not_found_error = 21;
     MultipleOpKernelsMatchedError multiple_op_kernels_matched_error = 22;
     MemoryZoneOutOfMemoryError memory_zone_out_of_memory_error = 23;
     LossBlobNotFoundError loss_blob_not_found_error = 24;
-    UnkownError unknown_error = 100;
+    JobSetEmptyError job_set_empty_error = 25;
+    DeviceTagNotFoundError device_tag_not_found_error = 26;
+    JobNameExistError job_name_exist_error = 100;
+    JobNameEmptyError job_name_empty_error = 101;
+    JobNameNotEqualError job_name_not_equal_error = 102;
+    NoJobBuildAndInferCtxError no_job_build_and_infer_ctx_error = 200;
+    JobConfFrozenError job_conf_frozen_error = 300;
+    JobConfNotSetError job_conf_not_set_error = 301;
+    JobConfRepeatedSetError job_conf_repeated_set_error = 302;
+    JobTypeNotSetError job_type_not_set_error = 303;
+    LogicalBlobNameNotExistError logical_blob_name_not_exist_error = 400;
+    LogicalBlobNameExistError logical_blob_name_exist_error = 401;
+    LogicalBlobNameInvalidError logical_blob_name_invalid_error = 402;
+    OpNameExistError op_name_exist_error = 450;
+    OpConfDeviceTagNoSetError op_conf_device_tag_no_set_error = 460;
+    PlacementError placement_error= 470;
+    BlobSplitAxisInferError blob_split_axis_infer_error = 480;
+    UnknownJobBuildAndInferError unknown_job_build_and_infer_error = 500;
+    RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
+    UnkownError unknown_error = 900;
   }
 }

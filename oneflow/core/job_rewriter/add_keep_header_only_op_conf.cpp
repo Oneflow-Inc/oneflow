@@ -56,8 +56,6 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
       src_node2ibns[src_node].push_back(ibn);
     }
     OperatorConf dst_op_conf = node->op().op_conf();
-    PbMessage* dst_op_type_conf =
-        MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
     for (const auto& pair : src_node2ibns) {
       OpNode* src_node = pair.first;
       const std::vector<std::string>& cur_ibns = pair.second;
@@ -80,7 +78,8 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
         *(kho_conf->mutable_out()->Add()) = cur_lbi.blob_name();
 
         std::string lbn = op_conf.name() + "/" + cur_lbi.blob_name();
-        ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, ibn, GenLogicalBlobName(cur_lbi), lbn);
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, ibn, lbn);
+        CHECK_EQ(GenLogicalBlobName(cur_lbi), old_val);
         job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
                             std::vector<OperatorConf>{op_conf});
       }

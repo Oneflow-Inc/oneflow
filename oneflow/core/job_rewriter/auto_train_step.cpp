@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
@@ -22,15 +22,21 @@ namespace oneflow {
 
 namespace {
 
-class AutoTrainStep final : public OpGraphPass {
+class AutoTrainStep final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoTrainStep);
   AutoTrainStep() = default;
   ~AutoTrainStep() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    return Apply(op_graph, job);
+  }
 };
 
 Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
@@ -53,6 +59,11 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
   const std::string& train_step_lbn =
       GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
 
+  JobBuilder job_builder(job);
+  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
+
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
                            .Op("scalar_add")
                            .Input("in", train_step_lbn)
@@ -61,6 +72,7 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
                            .Attr<double>("float_operand", 0)
                            .Attr<bool>("has_int_operand", true)
                            .Attr<int64_t>("int_operand", 1)
+                           .ScopeSymbolId(scope_symbol_id)
                            .Build();
 
   auto assign_op =
@@ -68,25 +80,18 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
           .Op("assign")
           .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
           .Input("value", scalar_add_op.output("out", 0))
+          .ScopeSymbolId(scope_symbol_id)
           .Build();
 
-  JobBuilder job_builder(job);
-  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
-  OperatorConf scalar_add_op_conf(scalar_add_op.op_conf());
-  OperatorConf assign_op_conf(assign_op.op_conf());
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
-  scalar_add_op_conf.set_scope_symbol_id(scope_symbol_id);
-  assign_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder.AddOps(parallel_conf,
-                     {variable_op_conf, identity_op_conf, scalar_add_op_conf, assign_op_conf});
+  job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf(),
+                                     assign_op.op_conf()});
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("AutoTrainStep", AutoTrainStep);
+REGISTER_JOB_PASS("AutoTrainStep", AutoTrainStep);
 
 }  // namespace
 

@@ -155,6 +155,8 @@ class UserOpConfWrapperBuilder final {
   template<typename T>
   UserOpConfWrapperBuilder& Attr(const std::string& attr_name, const T& val);
 
+  UserOpConfWrapperBuilder& ScopeSymbolId(int64_t scope_symbol_id);
+
   UserOpConfWrapper Build();
 
  private:
@@ -163,7 +165,8 @@ class UserOpConfWrapperBuilder final {
   std::string op_type_name_;
   HashMap<std::string, std::vector<std::string>> input_;
   HashMap<std::string, std::vector<std::string>> output_;
-  HashMap<std::string, UserOpAttrVal> attr_;
+  HashMap<std::string, AttrValue> attr_;
+  OptInt64 scope_symbol_id_;
 };
 
 using BackwardOpBuilder = UserOpConfWrapperBuilder;
@@ -187,8 +190,7 @@ class BackwardOpConfContext final {
 
 }  // namespace user_op
 
-Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
-                                       const std::string& attr_name);
+Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name);
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
 
 }  // namespace oneflow

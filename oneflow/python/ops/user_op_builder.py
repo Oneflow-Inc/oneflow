@@ -22,7 +22,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.framework.user_op_attr_pb2 as user_op_attr_util
+import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
 import oneflow
@@ -84,6 +84,28 @@ class UserOp(object):
 
         return tuple(remote_blob_list)
 
+    def RemoteBlobDict(self):
+        remote_blob_dict = {}
+        for k in self.op_conf_.user_conf.output:
+            if k not in self.output_arg_key_list_:
+                raise ValueError(
+                    "output_arg_name {} of {} op is not set in python op builder".format(
+                        k, self.op_conf_.name
+                    )
+                )
+
+        for output_arg_name in self.output_arg_key_list_:
+            assert output_arg_name in self.op_conf_.user_conf.output
+            if output_arg_name not in remote_blob_dict:
+                remote_blob_dict[output_arg_name] = []
+            for i in range(len(self.op_conf_.user_conf.output[output_arg_name].s)):
+                lbi = logical_blob_id_util.LogicalBlobId()
+                lbi.op_name = self.op_conf_.name
+                lbi.blob_name = "{}_{}".format(output_arg_name, i)
+                remote_blob_dict[output_arg_name].append(self.MakeRemoteBlob(lbi))
+
+        return remote_blob_dict
+
     def SoleOutputBlob(self):
         blobs = self.RemoteBlobList()
         assert len(blobs) == 1
@@ -133,12 +155,13 @@ def api_user_op_builder(op_name):
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, LazyUserOp)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+    return UserOpConfBuilder(LazyUserOp, op_name, None)
 
 
 class LazyUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InferAndTryRun(self):
         compile_context.CurJobAddOp(self.op_conf_)
@@ -151,12 +174,13 @@ class LazyUserOp(UserOp):
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, EagerUserOp)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+    return UserOpConfBuilder(EagerUserOp, op_name, None)
 
 
 class EagerUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InferAndTryRun(self):
         interpret_util.Forward(self.op_conf_)
@@ -166,18 +190,16 @@ class EagerUserOp(UserOp):
         return remote_blob_util.EagerLogicalBlob(lbi)
 
 
-in_physical_placement = hob.env_initialized & hob.is_current_placement_physical
-
-
 @oneflow_export("consistent_user_op_builder")
-def consistent_user_op_builder(op_name):
+def api_consistent_user_op_builder(op_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpConfBuilder(job_name, op_name, ConsistentUserOp)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+    return UserOpConfBuilder(ConsistentUserOp, op_name, None)
 
 
 class ConsistentUserOp(UserOp):
-    def __init__(self, op_name):
-        UserOp.__init__(self, op_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InferAndTryRun(self):
         interpret_util.ConsistentForward(self.op_conf_)
@@ -188,9 +210,8 @@ class ConsistentUserOp(UserOp):
 
 
 class UserOpConfBuilder(object):
-    def __init__(self, job_name, op_name, user_op_class):
-        name_scope_prefix = name_scope.GetJobNameScopePrefix(job_name)
-        self.user_op_ = user_op_class(name_scope_prefix + op_name)
+    def __init__(self, user_op_or_module_class, op_name, op_type_name):
+        self.user_op_ = user_op_or_module_class(op_name, op_type_name)
 
     def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
@@ -201,7 +222,7 @@ class UserOpConfBuilder(object):
 
     def Build(self):
         r"""Build op when in/output and other attribute set up.
-        
+
         Returns:
             self
 
@@ -209,6 +230,9 @@ class UserOpConfBuilder(object):
         return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
+        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
+
         self.user_op_.op_conf_.name = op_name
         user_conf = self.user_op_.op_conf_.user_conf
 
@@ -301,52 +325,52 @@ class UserOpConfBuilder(object):
             )
             print(traceback.format_stack()[-2])
 
-        attribute = user_op_attr_util.UserOpAttrVal()
+        attribute = attr_value_pb.AttrValue()
         assert isinstance(attr_name, str)
         attr_type = c_api_util.GetUserOpAttrType(
             self.user_op_.op_conf_.user_conf.op_type_name, attr_name
         )
-        if attr_type == user_op_attr_util.kAtInt32:
+        if attr_type == attr_value_pb.kAtInt32:
             assert isinstance(attr_value, int)
             attribute.at_int32 = attr_value
-        elif attr_type == user_op_attr_util.kAtInt64:
+        elif attr_type == attr_value_pb.kAtInt64:
             assert isinstance(attr_value, int)
             attribute.at_int64 = attr_value
-        elif attr_type == user_op_attr_util.kAtBool:
+        elif attr_type == attr_value_pb.kAtBool:
             assert isinstance(attr_value, bool)
             attribute.at_bool = attr_value
-        elif attr_type == user_op_attr_util.kAtFloat:
+        elif attr_type == attr_value_pb.kAtFloat:
             assert isinstance(attr_value, float)
             attribute.at_float = attr_value
-        elif attr_type == user_op_attr_util.kAtDouble:
+        elif attr_type == attr_value_pb.kAtDouble:
             assert isinstance(attr_value, float)
             attribute.at_double = attr_value
-        elif attr_type == user_op_attr_util.kAtString:
+        elif attr_type == attr_value_pb.kAtString:
             assert isinstance(attr_value, str)
             attribute.at_string = attr_value
-        elif attr_type == user_op_attr_util.kAtShape:
+        elif attr_type == attr_value_pb.kAtShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.kAtDataType:
+        elif attr_type == attr_value_pb.kAtDataType:
             assert (
                 isinstance(attr_value.oneflow_proto_dtype, int)
                 and attr_value in oneflow.dtypes()
             )
             attribute.at_data_type = attr_value.oneflow_proto_dtype
-        elif attr_type == user_op_attr_util.kAtListInt32:
+        elif attr_type == attr_value_pb.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int32.val[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.kAtListInt64:
+        elif attr_type == attr_value_pb.kAtListInt64:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int64.val[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.kAtListFloat:
+        elif attr_type == attr_value_pb.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, float) for x in attr_value)
             attribute.at_list_float.val[:] = list(attr_value)
-        elif attr_type == user_op_attr_util.kAtListDataType:
+        elif attr_type == attr_value_pb.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
                 isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
@@ -355,14 +379,14 @@ class UserOpConfBuilder(object):
             attribute.at_list_data_type.val[:] = list(
                 [x.oneflow_proto_dtype for x in attr_value]
             )
-        elif attr_type == user_op_attr_util.kAtListShape:
+        elif attr_type == attr_value_pb.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])
                 attribute.at_list_shape.val.append(shape)
-        elif attr_type == user_op_attr_util.kAtListString:
+        elif attr_type == attr_value_pb.kAtListString:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, str) for x in attr_value)
             attribute.at_list_string.val[:] = list(attr_value)
@@ -374,11 +398,11 @@ class UserOpConfBuilder(object):
 
 
 @oneflow_export("user_op_module_builder")
-def api_user_op_module_builder(op_name):
+def api_user_op_module_builder(op_type_name):
     api = enable_if.unique(
         [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
     )
-    return api(op_name)
+    return api(op_type_name)
 
 
 class UserOpModuleBuilder(UserOpConfBuilder):
@@ -390,22 +414,31 @@ class UserOpModuleBuilder(UserOpConfBuilder):
     def user_op_module(self):
         return self.user_op_
 
+    def Op(self, op_type_name):
+        raise ValueError(
+            "user op module builder of {} can't call '.Op(op_type_name)' method".format(
+                op_type_name
+            )
+        )
+
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_module_builder(op_name):
+def lazy_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_name, LazyUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(LazyUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_module_builder(op_name):
+def eager_logical_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_name, EagerLogicalUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(EagerLogicalUserOpModule, op_name, op_type_name)
 
 
 class LazyUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         self.set_opkernel_object(None)
@@ -420,8 +453,8 @@ class LazyUserOpModule(UserOpModule, UserOp):
 
 
 class EagerLogicalUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
@@ -452,18 +485,20 @@ def api_consistent_user_op_module_builder(op_type_name):
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_consistent_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, LazyConsistentUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(LazyConsistentUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_consistent_user_op_module_builder(op_type_name):
     job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
-    return UserOpModuleBuilder(job_name, op_type_name, EagerConsistentUserOpModule)
+    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
+    return UserOpModuleBuilder(EagerConsistentUserOpModule, op_name, op_type_name)
 
 
 class LazyConsistentUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         self.set_opkernel_object(None)
@@ -478,8 +513,8 @@ class LazyConsistentUserOpModule(UserOpModule, UserOp):
 
 
 class EagerConsistentUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_type_name):
-        UserOp.__init__(self, op_type_name, op_type_name)
+    def __init__(self, op_name, op_type_name):
+        UserOp.__init__(self, op_name, op_type_name)
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
