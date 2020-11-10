@@ -17,7 +17,7 @@ limitations under the License.
 #define SBP_EDGE_H_
 
 //#include "SbpGraph.h"
-#include "SbpNode.h"
+#include "sbp_node.h"
 #include <assert.h>
 
 namespace Algorithm {

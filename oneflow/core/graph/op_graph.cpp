@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/operator/normal_model_update_op.h"
-#include "oneflow/core/auto_parallel/include/SbpConstructor.h"
+#include "oneflow/core/auto_parallel/sbp_constructor.h"
 
 namespace oneflow {
 

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef SBP_CONSTRUCTOR_
 #define SBP_CONSTRUCTOR_
 
-#include "oneflow/core/auto_parallel/include/SbpGraph.h"
+#include "sbp_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"

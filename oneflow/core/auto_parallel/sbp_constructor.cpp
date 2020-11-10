@@ -19,29 +19,9 @@ limitations under the License.
 #define DEBUG_ALGORITHM_
 // #define PRINT_GRAPH_
 
-#include "oneflow/core/auto_parallel/include/SbpConstructor.h"
+#include "sbp_constructor.h"
 
 using namespace Algorithm;
-
-/*
-double SbpInferHint4Ibn(SbpNode<SbpSignature> *start_node,
-                         SbpSignature *sbp_start,
-                         SbpNode<SbpSignature> *end_node,
-                         SbpSignature *sbp_end) {
-  return 10000;
-}
-
-double SbpComputationCost(SbpNode<SbpSignature> *node, SbpSignature *sbp) {
-  return 11000;
-}
-
-int32_t CalcOrderValue4SbpSig() {
-  int32_t orderValue = rand() % 4;
-  if (orderValue > 3)
-    orderValue = 3;
-  return -orderValue;
-}
-*/
 
 namespace oneflow {
 

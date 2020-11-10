@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef SBP_NODE_H_
 #define SBP_NODE_H_
 
-//#include "SbpGraph.h"
 #include <cstdlib>
 #include <functional>
 #include <iostream>

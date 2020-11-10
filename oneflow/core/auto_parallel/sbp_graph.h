@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef SBP_GRAPH_H_
 #define SBP_GRAPH_H_
 
-#include "BinarySet.h"
-#include "SbpEdge.h"
+#include "binary_set.h"
+#include "sbp_edge.h"
 
 namespace Algorithm {
 
