@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
-  FLOATING_DATA_TYPE_SEQ                 \
+  FLOATING_DATA_TYPE_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
@@ -41,16 +41,14 @@ namespace user_op {
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, 
-                  int ndim, int64_t elem_cnt,
+                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
 };
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimScatterAddFunctor final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, 
-                  int ndim, int64_t elem_cnt,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
 };
 

@@ -81,6 +81,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
 
         ret = np.resize(np.array(output1d), outshape)
         return ret
+
     if is_float:
         input = np.random.random(input_shape)
     else:
@@ -106,7 +107,6 @@ def _make_dim_gather_fn(
     device_counts,
 ):
     flow.clear_default_session()
-    flow.env.init()
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
@@ -159,7 +159,7 @@ def _make_dim_gather_fn(
             return y_f32
 
         return gather_fn
-    else:
+    elif value_type == flow.float32 or value_type == flow.float64:
 
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
@@ -185,6 +185,36 @@ def _make_dim_gather_fn(
 
             flow.watch_diff(x, _compare_diff)
             return y
+
+        return gather_fn
+    elif value_type == flow.int32:
+
+        @flow.global_function(type="train", function_config=func_config)
+        def gather_fn(
+            params_def: oft.Numpy.Placeholder(input.shape, dtype=flow.float32),
+            indices_def: oft.Numpy.Placeholder(index.shape, dtype=index_type),
+        ) -> oft.Numpy:
+            with flow.scope.placement(device_type, "0:0"):
+                x_var = flow.get_variable(
+                    "input",
+                    shape=input.shape,
+                    dtype=flow.float32,
+                    initializer=flow.constant_initializer(0),
+                )
+                x_var = flow.cast_to_current_logical_view(x_var)
+                x = x_var + params_def
+
+            x_int32 = flow.cast(x, dtype=flow.int32)
+            y_int32 = flow.dim_gather(x, dim, indices_def)
+            y_fp32 = flow.cast(y_int32, dtype=flow.float32)
+
+            with flow.scope.placement(device_type, "0:0"):
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+                ).minimize(y_fp32)
+
+            flow.watch_diff(x, _compare_diff)
+            return y_fp32
 
         return gather_fn
 
@@ -214,49 +244,57 @@ def _compare_dim_gather_with_samples(
             np.allclose(y, sample["output"].astype(np.float32), 1e-3, 1e-3)
         )
     else:
-        test_case.assertTrue(
-            np.allclose(y, sample["output"].astype(value_type[0]))
-        )
+        test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0])))
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestDimGather1n1d(flow.unittest.TestCase):
-    def test_dim_gather_float_cpu(test_case):
-        global g_samples
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
-        arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
-        arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
-        arg_dict["value_type"] = [
-            # (np.float32, flow.float16), #TODO:(YaoChi) float16 only works fine on ARCH > 700 CUDA > 10000
-            (np.float32, flow.float32),
-            (np.float64, flow.float64)
-        ]
-        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_count"] = [1]
-        for arg in GenArgList(arg_dict):
-            _compare_dim_gather_with_samples(test_case, *arg)
-
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_dim_gather_float_gpu(test_case):
-        global g_samples
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
-        arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
+def _gen_arg_dict(
+    device_type="gpu", value_type="float", machine_ids="0:0", device_count=1
+):
+    global g_samples
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = [device_type]
+    arg_dict["samples"] = []
+    arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
+    arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
+    arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
+    if value_type == "float":
         arg_dict["value_type"] = [
             # (np.float32, flow.float16), #TODO:(YaoChi) float16 only works fine on ARCH > 700 CUDA > 10000
             (np.float32, flow.float32),
             (np.float64, flow.float64),
         ]
-        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_count"] = [1]
+    elif value_type == "int":
+        arg_dict["value_type"] = [(np.float32, flow.int32)]
+    else:
+        raise "float or int for value type only"
+
+    arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
+    arg_dict["machine_ids"] = [machine_ids]
+    arg_dict["device_count"] = [device_count]
+    return arg_dict
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestDimGather1n1d(flow.unittest.TestCase):
+    def test_dim_gather_float_cpu(test_case):
+        arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)
+        for arg in GenArgList(arg_dict):
+            _compare_dim_gather_with_samples(test_case, *arg)
+
+    def test_dim_gather_int_cpu(test_case):
+        arg_dict = _gen_arg_dict("cpu", "int", "0:0", 1)
+        for arg in GenArgList(arg_dict):
+            _compare_dim_gather_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_gather_float_gpu(test_case):
+        arg_dict = _gen_arg_dict("gpu", "float", "0:0", 1)
+        for arg in GenArgList(arg_dict):
+            _compare_dim_gather_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_gather_int_gpu(test_case):
+        arg_dict = _gen_arg_dict("gpu", "int", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
 
@@ -264,22 +302,14 @@ class TestDimGather1n1d(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n2d()
 class TestDimGather1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_dim_gather(test_case):
-        global g_samples
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["samples"] = []
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 1))
-        arg_dict["samples"].append(gen_gather_test_sample((2, 2), (2, 2), 0))
-        arg_dict["samples"].append(gen_gather_test_sample((8, 3, 2), (4, 3, 2), 0))
-        arg_dict["value_type"] = [
-            # (np.float32, flow.float16),
-            (np.float32, flow.float32),
-            (np.float64, flow.float64),
-        ]
-        arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
-        arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["device_count"] = [2]
+    def test_dim_gather_float(test_case):
+        arg_dict = _gen_arg_dict("gpu", "float", "0:0-1", 2)
+        for arg in GenArgList(arg_dict):
+            _compare_dim_gather_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_gather_int(test_case):
+        arg_dict = _gen_arg_dict("gpu", "int", "0:0-1", 2)
         for arg in GenArgList(arg_dict):
             _compare_dim_gather_with_samples(test_case, *arg)
 

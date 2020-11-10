@@ -141,11 +141,10 @@ REGISTER_USER_OP("dim_scatter_add_like")
       }
 
       FOR_RANGE(int64_t, i, 0, index_num_axes) {
-        if (i == dim) { 
-          CHECK_LE_OR_RETURN(index->shape().At(i), like_shape.At(i)); 
-        }
-        else{
-          CHECK_EQ_OR_RETURN(index->shape().At(i), like_shape.At(i)); 
+        if (i == dim) {
+          CHECK_LE_OR_RETURN(index->shape().At(i), like_shape.At(i));
+        } else {
+          CHECK_EQ_OR_RETURN(index->shape().At(i), like_shape.At(i));
         }
       }
 
