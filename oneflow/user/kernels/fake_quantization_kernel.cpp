@@ -23,7 +23,7 @@ template<typename T>
 void FakeQuantizationPerLayerSymmetric(const T *in_ptr, const T scale,
                                        const int32_t quantize_to_bit, const int64_t num_elements,
                                        T *out_ptr) {
-  T upper_bound = T(pow(2.0, quantize_to_bit - 1)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
   T lower_bound = -upper_bound;
   FOR_RANGE(int64_t, i, 0, num_elements) {
     T out = std::round(in_ptr[i] / scale);
@@ -37,7 +37,7 @@ template<typename T>
 void FakeQuantizationPerLayerAffine(const T *in_ptr, const T scale, const T zero_point,
                                     const int32_t quantize_to_bit, const int64_t num_elements,
                                     T *out_ptr) {
-  T upper_bound = T(pow(2.0, quantize_to_bit)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
   T lower_bound = 0;
   FOR_RANGE(int64_t, i, 0, num_elements) {
     T out = std::round(in_ptr[i] / scale + zero_point);

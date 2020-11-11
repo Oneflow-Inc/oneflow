@@ -66,8 +66,8 @@ REGISTER_USER_OP("generate_quantize_scale_for_weight")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // NOTE(Liang Depeng): weight needs to be broadcast in order to accuratly calculate the global
-      // scale and zero_point
+      // NOTE(Liang Depeng): weight needs to be broadcast in order to accurately calculate the
+      // global scale and zero_point
       return Maybe<void>::Ok();
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
