@@ -180,7 +180,6 @@ def _compare_op_function_with_samples(
 def _gen_arg_dict(
     device_type="gpu", value_type="float", machine_ids="0:0", device_count=1
 ):
-    global g_samples
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
