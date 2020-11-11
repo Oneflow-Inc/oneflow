@@ -526,10 +526,10 @@ namespace {
     
     template<typename T>
     __global__ void LarsUpdateGpu(int64_t n, float momentum_beta, T* momentum, float weight_decay,
-                                  T local_learning_rate, T* model_diff_tmp, T* model) {
+                                  T* local_learning_rate, T* model_diff_tmp, T* model) {
       CUDA_1D_KERNEL_LOOP(i, n) {
         LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta,
-            momentum + i, weight_decay, local_learning_rate);
+            momentum + i, weight_decay, *local_learning_rate);
       }
     }
   }  // namespace
@@ -551,13 +551,13 @@ namespace {
             n, scale, l1, l2, model_diff, model, model_diff_tmp);
         T* model_norm = data_tmp;
         T* model_diff_norm = data_tmp + 1;
-
+        T* local_learning_rate = data_tmp + 2;
         KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, model_norm);
         KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1, model_diff_norm);
         GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(learning_rate, weight_decay, epsilon, 
             lars_coefficient, train_step, data_tmp);
         LarsUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, momentum_beta, momentum, weight_decay, data_tmp[2], model_diff_tmp, model);
+            n, momentum_beta, momentum, weight_decay, local_learning_rate, model_diff_tmp, model);
   }
   
   template<typename T>
@@ -575,12 +575,16 @@ namespace {
         if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
         GetModelDiffTGpu<T, half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, scale, l1, l2, reinterpret_cast<const half*>(model_diff), model, model_diff_tmp);
-        KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, data_tmp);
-        KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1, data_tmp + 1);
-        GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
-          learning_rate, weight_decay, epsilon, lars_coefficient, train_step, data_tmp);
+
+        T* model_norm = data_tmp;
+        T* model_diff_norm = data_tmp + 1;
+        T* local_learning_rate = data_tmp + 2;
+        KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, model_norm);
+        KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1, model_diff_norm);
+        GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(learning_rate, weight_decay, epsilon, 
+            lars_coefficient, train_step, data_tmp);
         LarsUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, momentum_beta, momentum, weight_decay, data_tmp[2], model_diff_tmp, model);
+          n, momentum_beta, momentum, weight_decay, local_learning_rate, model_diff_tmp, model);
   }
   
   template struct LarsUpdateKernelUtil<DeviceType::kGPU, float, float>;
