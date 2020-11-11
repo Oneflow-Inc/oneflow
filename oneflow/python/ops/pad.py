@@ -245,7 +245,6 @@ def reflection_pad2d(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """Pads the input tensor using the reflection of the input boundary. 
-          Same as :https://pytorch.org/docs/master/generated/torch.nn.ReflectionPad2d.html?highlight=reflection#torch.nn.ReflectionPad2d
 
     Args:
         x (remote_blob_util.BlobDef): input blob
@@ -256,6 +255,39 @@ def reflection_pad2d(
 
     Returns:
         remote_blob_util.BlobDef: [description]
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def pad_Job(x: tp.Numpy.Placeholder((1, 2, 3, 3))
+        ) -> tp.Numpy:
+            return flow.reflection_pad2d(x, 
+                            padding=[0, 0, 1, 2], 
+                            data_format="NCHW")
+
+
+        x = np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32)
+        out = pad_Job(x)
+
+        # out [[[[ 5.  4.  3.  4.  5.  4.  3.]
+        #    [ 2.  1.  0.  1.  2.  1.  0.]
+        #    [ 5.  4.  3.  4.  5.  4.  3.]
+        #    [ 8.  7.  6.  7.  8.  7.  6.]
+        #    [ 5.  4.  3.  4.  5.  4.  3.]]
+
+        #   [[14. 13. 12. 13. 14. 13. 12.]
+        #    [11. 10.  9. 10. 11. 10.  9.]
+        #    [14. 13. 12. 13. 14. 13. 12.]
+        #    [17. 16. 15. 16. 17. 16. 15.]
+        #    [14. 13. 12. 13. 14. 13. 12.]]]]
+
     """
     if data_format == "NCHW":
         H, W = x.shape[2], x.shape[3]
