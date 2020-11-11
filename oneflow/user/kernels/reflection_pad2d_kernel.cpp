@@ -22,9 +22,7 @@ namespace oneflow{
 namespace{
 
 
-/**
- * @brief Convert high-dimensional array coordinates to one-dimensional array index
- */
+// Convert high-dimensional array coordinates to one-dimensional array index
 int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const ShapeView shape, const int64_t size_of_data_type){
     int64_t idx = 0;
     for(int64_t i = 0; i<shape.NumAxes(); ++i){
@@ -34,9 +32,7 @@ int64_t coordinate_to_index(const std::vector<int64_t> coordinate,  const ShapeV
 }
 
 
-/**
- * @brief Convert one-dimensional array index to high-dimensional coordinates
- */
+//Convert one-dimensional array index to high-dimensional coordinates
 std::vector<int64_t>  index_to_coordinate(const int64_t idx, const std::vector<int64_t> shape, std::vector<int64_t> &  coordinate){
   int64_t  tmp = idx;
   int64_t i = shape.size()-1;
@@ -50,24 +46,19 @@ std::vector<int64_t>  index_to_coordinate(const int64_t idx, const std::vector<i
 }
 
 
-/**
- * @brief Get dim vector with size of data type.\n
- * Replace the last dimension of the dim vector with: the number of elements n × the number of bytes of the data type \n
- *  (if there are 4 float32 types in the last dimension, then 4×4=16)
- */
+// Get dim vector with size of data type
 void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_data_type,
                          DimVector& shape_vec) {
    int64_t ndims = tensor_shape.NumAxes();
   for (int64_t i = 0; i < ndims; ++i) {
     shape_vec[i] = tensor_shape.At(i); 
   }
+  // Replace the last dimension of the dim vector with: the number of elements n × the number of bytes of the data type 
   shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
 }
 
 
-/**
- * @brief Fill ShapeView into vector
- */
+// Fill ShapeView into vector
 std::vector<int64_t>  shapeview_to_vector(const ShapeView& tensor_shape) {
     int64_t ndims = tensor_shape.NumAxes();
     std::vector<int64_t> shape_vec(ndims);
@@ -79,9 +70,7 @@ std::vector<int64_t>  shapeview_to_vector(const ShapeView& tensor_shape) {
 }
 
 
-/**
- * @brief Fill ShapeView into dim vector
- */
+// Fill ShapeView into dim vector
 DimVector  shapeview_to_dimvector(const ShapeView& tensor_shape) {
     int64_t ndims = tensor_shape.NumAxes();
     DimVector shape_vec(ndims);
@@ -112,8 +101,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
 
       CHECK_EQ(padding.size(), ndims);
-    //   NewKernelUtil<device_type>::Fill(ctx->device_ctx(), y->shape().elem_cnt(),
-    //                                  static_cast<T>(0.0), y->mut_dptr<T>());
 
       MemoryCopyNdDesc memory_copy_nd_desc;
       DimVector src_shape_vec(ndims);
@@ -136,7 +123,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
       device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                reduced_memory_copy_nd_desc);
-
 
     int64_t padding_h, padding_w, channel_h_idx, channel_w_idx;
     if (data_format == "NCHW"){
