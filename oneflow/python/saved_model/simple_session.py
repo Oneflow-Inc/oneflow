@@ -256,9 +256,8 @@ class SimpleSession(object):
         # TODO: check args and warn unexpected args
         self._check_status(self.SessionStatus.RUNNING)
         self._run_push_jobs(**kwargs)
-        for job_name in self.job_name2job_conf_.keys():
-            job_inst = job_instance_util.MakeUserJobInstance(job_name)
-            self._run_job(job_inst)
+        job_inst = job_instance_util.MakeUserJobInstance(job_name)
+        self._run_job(job_inst)
         self._run_pull_jobs()
 
         # process result
