@@ -19,9 +19,10 @@ import oneflow.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
+from typing import List
 
 
-def compare_l1loss_with_np(
+def _compare_l1loss_with_np(
     input_shape, target_shape, device_type, machine_ids, device_counts
 ):
     input = np.random.random(size=input_shape).astype(np.float32)
@@ -38,11 +39,11 @@ def compare_l1loss_with_np(
 
     func_config = flow.FunctionConfig()
 
-    @flow.global_function(function_config=func_config, type="train")
+    @flow.global_function(type="train", function_config=func_config)
     def oneflow_l1loss(
         of_input: tp.Numpy.Placeholder(shape=input.shape),
         of_target: tp.Numpy.Placeholder(shape=target.shape),
-    ) -> tp.Numpy:
+    ) -> List[tp.Numpy]:
         x_var = flow.get_variable(
             shape=input.shape,
             dtype=flow.float32,
@@ -51,44 +52,62 @@ def compare_l1loss_with_np(
         )
 
         with flow.scope.placement(device_type, machine_ids):
-            l1loss = flow.nn.L1Loss(of_input, of_target, name="of_l1loss")
+            l1loss = flow.nn.L1Loss(
+                of_input, of_target, reduction="none", name="of_l1loss"
+            )
+            l1loss_mean = flow.nn.L1Loss(
+                of_input, of_target, reduction="mean", name="of_l1loss_mean"
+            )
+            l1loss_sum = flow.nn.L1Loss(
+                of_input, of_target, reduction="sum", name="of_l1loss_sum"
+            )
+
             out = l1loss + x_var
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(out)
 
-        return l1loss
+        return [l1loss, l1loss_mean, l1loss_sum]
 
     def np_l1loss(np_input, np_target):
-        return np.abs(np_target - np_input)
+        np_l1 = np.abs(np_target - np_input)
+        np_l1_mean = np.mean(np_l1)
+        np_l1_sum = np.sum(np_l1)
+
+        return [np_l1, np_l1_mean, np_l1_sum]
 
     of_out_l1loss = oneflow_l1loss(input, target)
     np_out_l1loss = np_l1loss(input, target)
 
-    assert np.array_equal(of_out_l1loss, np_out_l1loss)
+    assert np.allclose(of_out_l1loss[0], np_out_l1loss[0])
+
+    for i in range(1, len(np_out_l1loss)):
+        # Numpy return a scalar(no shape), but oneflow return a N-D tensor.
+        # I need to get it by using index [0]
+        assert np.allclose(of_out_l1loss[i][0], np_out_l1loss[i])
 
 
 @flow.unittest.skip_unless_1n1d()
 class Testl1loss1n1d(flow.unittest.TestCase):
     def test_l1loss_cpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(3, 16, 32)]
-        arg_dict["target_shape"] = [(3, 16, 32)]
+        arg_dict["input_shape"] = [(3, 16, 16)]
+        arg_dict["target_shape"] = [(3, 16, 16)]
         arg_dict["device_type"] = ["cpu"]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_counts"] = [1]
         for arg in GenArgList(arg_dict):
-            compare_l1loss_with_np(*arg)
+            _compare_l1loss_with_np(*arg)
 
     def test_l1loss_gpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(3, 64, 16)]
-        arg_dict["target_shape"] = [(3, 64, 16)]
+        arg_dict["input_shape"] = [(3, 16, 32)]
+        arg_dict["target_shape"] = [(3, 16, 32)]
         arg_dict["device_type"] = ["gpu"]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_counts"] = [1]
         for arg in GenArgList(arg_dict):
-            compare_l1loss_with_np(*arg)
+            _compare_l1loss_with_np(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
@@ -101,7 +120,7 @@ class Testrange1n2d(flow.unittest.TestCase):
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_counts"] = [2]
         for arg in GenArgList(arg_dict):
-            compare_l1loss_with_np(*arg)
+            _compare_l1loss_with_np(*arg)
 
 
 if __name__ == "__main__":
