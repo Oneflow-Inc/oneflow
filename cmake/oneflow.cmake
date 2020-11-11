@@ -46,7 +46,8 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
- "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*")
+ "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
@@ -127,6 +128,16 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.cpp$")
+    list(APPEND of_pyext_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.h$")
+    list(APPEND of_pyext_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -221,12 +232,18 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
+oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
+target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+target_link_libraries(of_pyext_obj of_ccobj)
+target_link_libraries(of_pyext_obj ${Python_LIBRARIES})
+add_dependencies(of_pyext_obj of_ccobj)
+
 if(APPLE)
-  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj of_pyext_obj)
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj -Wl,--no-whole-archive -ldl)
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj of_pyext_obj -Wl,--no-whole-archive -ldl)
 elseif(WIN32)
-  set(of_libs of_ccobj of_protoobj of_cfgobj)
+  set(of_libs of_ccobj of_protoobj of_cfgobj of_pyext_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 

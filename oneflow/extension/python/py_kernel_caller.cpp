@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/extension/python/py_kernel_caller.h"
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/util.h"
 
@@ -239,26 +240,11 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   // release GIL
   PyGILState_Release(py_gil_st);
 }
+}  // namespace
 
-class PyKernel : public user_op::OpKernel {
- public:
-  PyKernel() = default;
-  ~PyKernel() = default;
+void PyKernel::Compute(user_op::KernelComputeContext* ctx) const { PyCompute(ctx, "forward"); }
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute(ctx, "forward"); }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-class PyGradKernel final : public user_op::OpKernel {
- public:
-  PyGradKernel() = default;
-  ~PyGradKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { PyCompute(ctx, "backward"); }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
+void PyGradKernel::Compute(user_op::KernelComputeContext* ctx) const { PyCompute(ctx, "backward"); }
 
 REGISTER_USER_KERNEL("py_op").SetCreateFn<PyKernel>().SetIsMatchedHob(
     ((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
@@ -266,6 +252,5 @@ REGISTER_USER_KERNEL("py_op").SetCreateFn<PyKernel>().SetIsMatchedHob(
 REGISTER_USER_KERNEL("py_op_grad")
     .SetCreateFn<PyGradKernel>()
     .SetIsMatchedHob(((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
-}  // namespace
 
 }  // namespace oneflow
