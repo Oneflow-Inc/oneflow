@@ -68,13 +68,7 @@ class TestPySigmoid(flow.unittest.TestCase):
         py_sigmoid_lib.AddPythonAPI()
         py_sigmoid_lib.AddOpDef()
         py_sigmoid_lib.AddPythonKernel()
-        py_sigmoid_lib.Build()
-
-        op_lib_ld = flow.experimental.op_lib_loader()
-        op_lib_ld.AddLib(py_sigmoid_lib)
-        op_lib_ld.Link()
-        op_lib_ld.Load()
-        print(op_lib_ld.LibList())
+        py_sigmoid_lib.BuildAndLoad()
 
         def make_py_job(input_shape, dtype=flow.float32):
             @flow.global_function(function_config=func_config)
@@ -96,19 +90,7 @@ class TestPySigmoid(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
         test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
-    def test_py_sigmoid_grad(test_case):
-        py_sigmoid_lib = flow.experimental.op_lib("py_sigmoid", lib_path)
-        py_sigmoid_lib.AddPythonAPI()
-        py_sigmoid_lib.AddOpDef()
-        py_sigmoid_lib.AddPythonKernel()
-        py_sigmoid_lib.Build()
-
-        op_lib_ld = flow.experimental.op_lib_loader()
-        op_lib_ld.AddLib(py_sigmoid_lib)
-        op_lib_ld.Link()
-        op_lib_ld.Load()
-        print(op_lib_ld.LibList())
-
+    def _test_py_sigmoid_grad(test_case):
         def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_grad_job(

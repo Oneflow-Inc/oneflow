@@ -27,6 +27,7 @@ import numpy
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.sysconfig as oneflow_sysconfig
 import oneflow
+import oneflow_api
 
 
 def run_cmd(cmd, cwd=None):
@@ -122,6 +123,7 @@ class OpLib(object):
 
     def AddPythonKernel(self):
         assert os.path.exists(f"{self.src_prefix}_py_kernel.py")
+        oneflow_api.RegisterPyKernel(self.op_type_name)
         self.has_py_kernel = True
 
     def AddCPPKernel(self):
@@ -140,91 +142,12 @@ class OpLib(object):
     def AddGPUKernel(self):
         raise NotImplementedError
 
-    def Build(self):
+    def BuildAndLoad(self):
         if len(self.objs) > 0:
             flags = "-std=c++11 -shared -fPIC " + get_cflags()
             compile("g++", flags, get_lflags(), self.objs, f"{self.out_prefix}.so")
             self.got_so = True
             self.so_path = self.out_prefix + ".so"
 
-        return self.so_path
-
-
-@oneflow_export("experimental.op_lib_loader")
-class OpLibLoader(object):
-    def __init__(self):
-        self.py_names = []
-        self.so_names = []
-        self.lib_names = []
-        self.py_kernel_lib = ""
-        self.linked = False
-
-    def AddLib(self, op_lib_builder):
-        if op_lib_builder.got_so:
-            self.so_names.append(op_lib_builder.so_path)
-        if op_lib_builder.has_py_kernel:
-            self.py_names.append(op_lib_builder.op_type_name)
-
-    def Link(self):
-        for so in self.so_names:
-            self.lib_names.append(so)
-
-        if len(self.py_names) > 0:
-
-            def get_one_reg_src(op_type_name):
-                one_reg_src = f"""
-                REGISTER_USER_KERNEL("{op_type_name}").SetCreateFn<PyKernel>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
-
-                REGISTER_USER_KERNEL("{op_type_name}_grad").SetCreateFn<PyGradKernel>().SetIsMatchedHob((user_op::HobDeviceTag() == "cpu" & user_op::HobDeviceSubTag() == "py"));
-                """
-                return one_reg_src
-
-            def get_reg_src():
-                reg_src = []
-                for op in self.py_names:
-                    reg_src.append(get_one_reg_src(op))
-                full_reg_src = f"""
-                namespace oneflow {{
-                    {"".join(reg_src)}
-                }}  // namespace oneflow
-                """
-                return full_reg_src
-
-            self.out_path = os.path.join(os.getcwd(), "op_lib_loader_out")
-            if not os.path.exists(self.out_path):
-                os.makedirs(self.out_path)
-            gen_src_path = os.path.join(self.out_path, "cpp2py_gen.cpp")
-            gen_obj_path = os.path.join(self.out_path, "cpp2py.o")
-            gen_so_path = os.path.join(self.out_path, "cpp2py.so")
-            shutil.copy2(get_cpp2py_path(), gen_src_path)
-            with open(gen_src_path, "a") as f:
-                f.write(get_reg_src())
-            # compile obj
-            py_cflags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
-            py_cflags += " -I" + sysconfig.get_paths()["include"]
-            py_cflags += " -I" + numpy.get_include()
-            compile("g++", py_cflags, "", gen_src_path, gen_obj_path)
-            # compile so
-            py_cflags = "-std=c++11 -shared -fPIC " + get_cflags()
-            py_cflags += " -I" + sysconfig.get_paths()["include"]
-            py_cflags += " -I" + numpy.get_include()
-            py_lflags = get_lflags()
-            py_lflags += " -L" + sysconfig.get_paths()["stdlib"]
-            compile("g++", py_cflags, py_lflags, gen_obj_path, gen_so_path)
-            self.py_kernel_lib = gen_so_path
-            self.lib_names.append(gen_so_path)
-        self.linked = True
-
-    def Load(self):
-        assert self.linked
-        for lib in self.lib_names:
-            # oneflow.config.load_library(lib)
-            oneflow.config.load_library_now(lib)
-
-    def LibList(self):
-        assert self.linked
-        return self.lib_names
-
-    def PythonKernelLib(self):
-        assert self.linked
-        return self.py_kernel_lib
+        oneflow.config.load_library(self.so_path)
+        return True
