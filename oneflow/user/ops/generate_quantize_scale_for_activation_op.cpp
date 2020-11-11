@@ -35,6 +35,7 @@ REGISTER_USER_OP("generate_quantize_scale_for_activation")
       Shape* moving_max_shape = ctx->Shape4ArgNameAndIndex("moving_max", 0);
       Shape* moving_min_shape = ctx->Shape4ArgNameAndIndex("moving_min", 0);
       // NOTE(Liang Depeng): activation only support per-layer quantization
+      // TODO(Liang Depeng): depthwise convolution support per-channel quantization
       CHECK_OR_RETURN(moving_max_shape->NumAxes() == 1 && moving_max_shape->At(0) == 1);
       CHECK_OR_RETURN(moving_min_shape->NumAxes() == 1 && moving_min_shape->At(0) == 1);
 

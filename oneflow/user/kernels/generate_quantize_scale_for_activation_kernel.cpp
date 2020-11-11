@@ -28,19 +28,20 @@ void GenQuantScalePerLayerSymmetric(const T *activation, const int32_t quantize_
 
   activation_max = std::max(std::abs(activation_max), std::abs(activation_min));
 
-  T moving_max_val = moving_max[0];
+  T moving_max_val = *moving_max;
 
-  if (moving_max_val == 0)
-    moving_max[0] = activation_max;
-  else
-    moving_max[0] = moving_max_val * momentum + activation_max * (1 - momentum);
+  if (moving_max_val == 0) {
+    *moving_max = activation_max;
+  } else {
+    *moving_max = moving_max_val * momentum + activation_max * (1 - momentum);
+  }
 
   // NOTE(Liang Depeng): symmetric quantization only use moving_max to calculate the scale
-  moving_min[0] = moving_max[0];
+  *moving_min = *moving_max;
 
-  T denominator = T(pow(2.0, quantize_to_bit - 1)) - 1;
-  scale[0] = moving_max[0] / denominator;
-  zero_point[0] = 0;
+  T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+  *scale = (*moving_max) / denominator;
+  *zero_point = 0;
 }
 
 template<typename T>
@@ -50,21 +51,23 @@ void GenQuantScalePerLayerAffine(const T *activation, const int32_t quantize_to_
   T activation_max = *std::max_element(activation, activation + num_elements);
   T activation_min = *std::min_element(activation, activation + num_elements);
 
-  T moving_max_val = moving_max[0];
-  if (moving_max_val == 0)
-    moving_max[0] = activation_max;
-  else
-    moving_max[0] = moving_max_val * momentum + activation_max * (1 - momentum);
+  T moving_max_val = *moving_max;
+  if (moving_max_val == 0) {
+    *moving_max = activation_max;
+  } else {
+    *moving_max = moving_max_val * momentum + activation_max * (1 - momentum);
+  }
 
-  T moving_min_val = moving_min[0];
-  if (moving_min_val == 0)
-    moving_min[0] = activation_min;
-  else
-    moving_min[0] = moving_min_val * momentum + activation_min * (1 - momentum);
+  T moving_min_val = *moving_min;
+  if (moving_min_val == 0) {
+    *moving_min = activation_min;
+  } else {
+    *moving_min = moving_min_val * momentum + activation_min * (1 - momentum);
+  }
 
-  T denominator = T(pow(2.0, quantize_to_bit)) - 1;
-  scale[0] = (moving_max[0] - moving_min[0]) / denominator;
-  zero_point[0] = -moving_min[0] / scale[0];
+  T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+  *scale = ((*moving_max) - (*moving_min)) / denominator;
+  *zero_point = -(*moving_min) / (*scale);
 }
 
 template<typename T>

@@ -29,7 +29,7 @@ __global__ void FakeQuantizationSymmetric(const T *in_ptr, const T *scale_ptr,
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = T(pow(2.0, quantize_to_bit - 1)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
   T lower_bound = -upper_bound;
 
   while (gid < elements) {
@@ -55,7 +55,7 @@ __global__ void FakeQuantizationAffine(const T *in_ptr, const T *scale_ptr, cons
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = T(pow(2.0, quantize_to_bit)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
   T lower_bound = 0;
 
   while (gid < elements) {
