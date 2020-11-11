@@ -77,57 +77,55 @@ TEST(FlexDef, dynamic_build) {
 }
 
 TEST(FlexValue, basic) {
-  std::shared_ptr<FlexValue> location = Location::NewFlexValue();
-  location->Set<int32_t>("x", 30);
-  location->Set<int32_t>("y", 40);
-  ASSERT_EQ(location->Get<int32_t>("x"), 30);
-  ASSERT_EQ(location->Get<int32_t>("y"), 40);
-  ASSERT_EQ(location->Get<std::string>("description"), "Home");
+  MutFlexValue location = Location::NewMutFlexValue();
+  location.Set<int32_t>("x", 30);
+  location.Set<int32_t>("y", 40);
+  ASSERT_EQ(location.Get<int32_t>("x"), 30);
+  ASSERT_EQ(location.Get<int32_t>("y"), 40);
+  ASSERT_EQ(location.Get<std::string>("description"), "Home");
 }
 
 FLEX_DEF(Ids, builder) { return builder.Struct().List<int32_t>("ids").Build(); }
 
 TEST(List, ids) {
-  auto ids = Ids::NewFlexValue();
-  ASSERT_EQ(ids->GetList("ids").size(), 0);
-  auto* list_int32 = ids->MutableList("ids");
-  list_int32->Add<int32_t>(0);
-  list_int32->Add<int32_t>(1);
+  MutFlexValue ids = Ids::NewMutFlexValue();
+  ASSERT_EQ(ids.GetList("ids").size(), 0);
+  MutListFlexValue list_int32 = ids.MutableList("ids");
+  list_int32.Add<int32_t>(0);
+  list_int32.Add<int32_t>(1);
   // also valid if compatible
-  list_int32->Add<int16_t>(2);
+  list_int32.Add<int16_t>(2);
   // deduced type is valid if compatible
-  list_int32->Add(3);
-  ASSERT_EQ(list_int32->size(), 4);
-  for (int64_t i = 0; i < 4; ++i) { ASSERT_EQ(list_int32->Get<int32_t>(i), i); }
+  list_int32.Add(3);
+  ASSERT_EQ(list_int32.size(), 4);
+  for (int64_t i = 0; i < 4; ++i) { ASSERT_EQ(list_int32.Get<int32_t>(i), i); }
 }
 
 FLEX_DEF(Strings, builder) { return builder.Struct().List<std::string>("strings").Build(); }
 
 TEST(List, Strings) {
-  auto strings = Strings::NewFlexValue();
-  auto* list_string = strings->MutableList("strings");
-  list_string->Add<std::string>("0");
-  list_string->Add<std::string>("1");
+  MutFlexValue strings = Strings::NewMutFlexValue();
+  MutListFlexValue list_string = strings.MutableList("strings");
+  list_string.Add<std::string>("0");
+  list_string.Add<std::string>("1");
   // also valid if compatible
-  list_string->Add<std::string>("2");
+  list_string.Add<std::string>("2");
   // deduced type is valid if compatible
-  list_string->Add<std::string>("3");
-  ASSERT_EQ(list_string->size(), 4);
-  for (int64_t i = 0; i < 4; ++i) {
-    ASSERT_EQ(list_string->Get<std::string>(i), std::to_string(i));
-  }
+  list_string.Add<std::string>("3");
+  ASSERT_EQ(list_string.size(), 4);
+  for (int64_t i = 0; i < 4; ++i) { ASSERT_EQ(list_string.Get<std::string>(i), std::to_string(i)); }
 }
 
 TEST(FlexValue, nested) {
-  std::shared_ptr<FlexValue> geo_obj = GeoObject::NewFlexValue();
-  ASSERT_EQ(geo_obj->Get("location").Get<std::string>("description"), "Home");
-  FlexValue* location = geo_obj->Mutable("location");
-  location->Set<int32_t>("x", 30);
-  location->Set<int32_t>("y", 40);
-  location->Set<std::string>("description", "Company");
-  ASSERT_EQ(location->Get<int32_t>("x"), 30);
-  ASSERT_EQ(location->Get<int32_t>("y"), 40);
-  ASSERT_EQ(geo_obj->Get("location").Get<std::string>("description"), "Company");
+  MutFlexValue geo_obj = GeoObject::NewMutFlexValue();
+  ASSERT_EQ(geo_obj.Get("location").Get<std::string>("description"), "Home");
+  MutFlexValue location = geo_obj.Mutable("location");
+  location.Set<int32_t>("x", 30);
+  location.Set<int32_t>("y", 40);
+  location.Set<std::string>("description", "Company");
+  ASSERT_EQ(location.Get<int32_t>("x"), 30);
+  ASSERT_EQ(location.Get<int32_t>("y"), 40);
+  ASSERT_EQ(geo_obj.Get("location").Get<std::string>("description"), "Company");
 }
 
 TEST(FlexValue, dynamic_nested) {
@@ -142,15 +140,15 @@ TEST(FlexValue, dynamic_nested) {
                                                  .Required(Location, "location")
                                                  .Optional<std::string>("name", "undefined")
                                                  .Build();
-  std::shared_ptr<FlexValue> geo_obj = NewFlexValue(GeoObject);
-  ASSERT_EQ(geo_obj->Get("location").Get<std::string>("description"), "Home");
-  FlexValue* location = geo_obj->Mutable("location");
-  location->Set<int32_t>("x", 30);
-  location->Set<int32_t>("y", 40);
-  location->Set<std::string>("description", "Company");
-  ASSERT_EQ(location->Get<int32_t>("x"), 30);
-  ASSERT_EQ(location->Get<int32_t>("y"), 40);
-  ASSERT_EQ(geo_obj->Get("location").Get<std::string>("description"), "Company");
+  MutFlexValue geo_obj = NewMutFlexValue(GeoObject);
+  ASSERT_EQ(geo_obj.Get("location").Get<std::string>("description"), "Home");
+  MutFlexValue location = geo_obj.Mutable("location");
+  location.Set<int32_t>("x", 30);
+  location.Set<int32_t>("y", 40);
+  location.Set<std::string>("description", "Company");
+  ASSERT_EQ(location.Get<int32_t>("x"), 30);
+  ASSERT_EQ(location.Get<int32_t>("y"), 40);
+  ASSERT_EQ(geo_obj.Get("location").Get<std::string>("description"), "Company");
 }
 
 FLEX_DEF(BinaryTree, builder) {
@@ -162,24 +160,24 @@ FLEX_DEF(BinaryTree, builder) {
 }
 
 TEST(FlexDef, defined_or_has) {
-  auto tree = BinaryTree::NewFlexValue();
-  ASSERT_TRUE(tree->Defined("weight"));
-  ASSERT_TRUE(!tree->Defined("undefined-field"));
-  ASSERT_TRUE(!tree->Has("weight"));
-  tree->Set<int32_t>("weight", 3);
-  ASSERT_TRUE(tree->Has("weight"));
+  MutFlexValue tree = BinaryTree::NewMutFlexValue();
+  ASSERT_TRUE(tree.Defined("weight"));
+  ASSERT_TRUE(!tree.Defined("undefined-field"));
+  ASSERT_TRUE(!tree.Has("weight"));
+  tree.Set<int32_t>("weight", 3);
+  ASSERT_TRUE(tree.Has("weight"));
 }
 
 TEST(FlexDef, recursive) {
-  auto tree = BinaryTree::NewFlexValue();
-  ASSERT_EQ(tree->Get<int32_t>("weight"), 1);
-  ASSERT_TRUE(!tree->Has("left"));
-  ASSERT_TRUE(!tree->Has("right"));
-  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 1);
-  ASSERT_EQ(tree->Get("right").Get<int32_t>("weight"), 1);
-  tree->Mutable("left")->Set<int32_t>("weight", 2);
-  ASSERT_TRUE(tree->Has("left"));
-  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 2);
+  MutFlexValue tree = BinaryTree::NewMutFlexValue();
+  ASSERT_EQ(tree.Get<int32_t>("weight"), 1);
+  ASSERT_TRUE(!tree.Has("left"));
+  ASSERT_TRUE(!tree.Has("right"));
+  ASSERT_EQ(tree.Get("left").Get<int32_t>("weight"), 1);
+  ASSERT_EQ(tree.Get("right").Get<int32_t>("weight"), 1);
+  tree.Mutable("left").Set<int32_t>("weight", 2);
+  ASSERT_TRUE(tree.Has("left"));
+  ASSERT_EQ(tree.Get("left").Get<int32_t>("weight"), 2);
 }
 
 DECLARE_FLEX_DEF(RedTree);
@@ -201,15 +199,15 @@ DEFINE_FLEX_DEF(BlackTree, builder) {
 }
 
 TEST(FlexDef, recursive_two_flex_def) {
-  auto tree = BlackTree::NewFlexValue();
-  ASSERT_EQ(tree->Get<int32_t>("weight"), 1);
-  ASSERT_TRUE(!tree->Has("left"));
-  ASSERT_TRUE(!tree->Has("right"));
-  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 1);
-  ASSERT_EQ(tree->Get("right").Get<int32_t>("weight"), 1);
-  tree->Mutable("left")->Set<int32_t>("weight", 2);
-  ASSERT_TRUE(tree->Has("left"));
-  ASSERT_EQ(tree->Get("left").Get<int32_t>("weight"), 2);
+  MutFlexValue tree = BlackTree::NewMutFlexValue();
+  ASSERT_EQ(tree.Get<int32_t>("weight"), 1);
+  ASSERT_TRUE(!tree.Has("left"));
+  ASSERT_TRUE(!tree.Has("right"));
+  ASSERT_EQ(tree.Get("left").Get<int32_t>("weight"), 1);
+  ASSERT_EQ(tree.Get("right").Get<int32_t>("weight"), 1);
+  tree.Mutable("left").Set<int32_t>("weight", 2);
+  ASSERT_TRUE(tree.Has("left"));
+  ASSERT_EQ(tree.Get("left").Get<int32_t>("weight"), 2);
 }
 
 }  // namespace test
