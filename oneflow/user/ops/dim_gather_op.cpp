@@ -140,14 +140,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
         CHECK_EQ_OR_RETURN(index->shape().At(i), input->shape().At(i));
       }
 
-      FOR_RANGE(int64_t, i, 0, index_num_axes) {
-        if (i == dim) {
-          CHECK_LE_OR_RETURN(index->shape().At(i), like_shape.At(i));
-        } else {
-          CHECK_EQ_OR_RETURN(index->shape().At(i), like_shape.At(i));
-        }
-      }
-
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_shape() = like_shape;
       *out->mut_data_type() = input->data_type();
