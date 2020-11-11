@@ -279,15 +279,12 @@ void NativeFlexValue::ToProto(FlexValueProto* proto) const {
 
 const FlexValue& ListFlexValue::Get(int64_t index) const { return *flex_values_.at(index); }
 
-FlexValue* ListFlexValue::Mutable(int64_t index) {
-  FlexValue* ptr = flex_values_.at(index).get();
-  return ptr;
-}
+std::shared_ptr<FlexValue> ListFlexValue::Mutable(int64_t index) { return flex_values_.at(index); }
 
-FlexValue* ListFlexValue::Add() {
+std::shared_ptr<FlexValue> ListFlexValue::Add() {
   auto flex_value = elem_flex_def()->New(elem_flex_def());
   flex_values_.push_back(flex_value);
-  return flex_value.get();
+  return flex_value;
 }
 
 void ListFlexValue::InitFromProto(const FlexValueProto& proto) {
@@ -319,18 +316,16 @@ const FlexValue& StructFlexValue::Get(const std::string& field_name) const {
   }
 }
 
-FlexValue* StructFlexValue::Mutable(const std::string& field_name) {
+std::shared_ptr<FlexValue> StructFlexValue::Mutable(const std::string& field_name) {
   const auto& iter = field_name2flex_value_.find(field_name);
-  FlexValue* ptr = nullptr;
   if (iter == field_name2flex_value_.end()) {
     const auto& flex_field_def = struct_flex_def().Field4FieldName(field_name);
     auto field = flex_field_def.flex_def()->New(flex_field_def.flex_def());
     field_name2flex_value_[field_name] = field;
-    ptr = field.get();
+    return field;
   } else {
-    ptr = iter->second.get();
+    return iter->second;
   }
-  return ptr;
 }
 
 void StructFlexValue::InitFromProto(const FlexValueProto& proto) {
