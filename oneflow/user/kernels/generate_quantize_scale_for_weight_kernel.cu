@@ -122,7 +122,7 @@ __global__ void CalScaleZeroPointSymmetric(const T *max_ptr, const T *min_ptr,
 
   while (gid < elements) {
     T weight_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
-    T denominator = T(pow(2.0, quantize_to_bit - 1)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
     scale[gid] = weight_max / denominator;
     zero_point[gid] = 0;
     gid += gridDim.x * blockDim.x;
@@ -136,7 +136,7 @@ __global__ void CalScaleZeroPointAffine(const T *max_ptr, const T *min_ptr, cons
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = T(pow(2.0, quantize_to_bit)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
@@ -209,8 +209,8 @@ class GpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t {                        \
         size_t tmp_buffer_size = 1;                                                        \
-        const Shape *weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);               \
         if (ctx->Attr<bool>("per_layer_quantization") == false) {                          \
+          const Shape *weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);             \
           tmp_buffer_size = weight_shape->At(0);                                           \
         }                                                                                  \
         return 2 * tmp_buffer_size * sizeof(dtype);                                        \

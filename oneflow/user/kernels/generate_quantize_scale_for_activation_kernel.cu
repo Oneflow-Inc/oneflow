@@ -80,7 +80,7 @@ __global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double 
 
   while (gid < elements) {
     T activation_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
-    T denominator = T(pow(2.0, quantize_to_bit - 1)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
 
     if (moving_max_ptr[gid] == 0)
       moving_max_ptr[gid] = activation_max;
@@ -105,7 +105,7 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = T(pow(2.0, quantize_to_bit)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
 
     if (moving_max_ptr[gid] == 0)
       moving_max_ptr[gid] = max_ptr[gid];
