@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
-from test_util import Args, GenArgDict,  GenArgList
+from test_util import Args, GenArgDict, GenArgList
 
 
 def _make_op_function(
@@ -55,6 +55,7 @@ def _make_op_function(
         test_case.assertTrue(np.allclose(grad, blob))
 
     if value_type == flow.float32 or value_type == flow.float64:
+
         @flow.global_function(type="train", function_config=func_config)
         def op_function(x: tp.Numpy.Placeholder(input.shape, dtype=value_type)):
             with flow.scope.placement(device_type, "0:0"):
@@ -71,9 +72,11 @@ def _make_op_function(
 
                 flow.watch_diff(x, _compare_diff)
             return out
+
         return op_function
-    
+
     elif value_type == flow.int32:
+
         @flow.global_function(type="train", function_config=func_config)
         def op_function(x: tp.Numpy.Placeholder(input.shape, dtype=flow.float32)):
             with flow.scope.placement(device_type, "0:0"):
@@ -91,6 +94,7 @@ def _make_op_function(
 
                 flow.watch_diff(x, _compare_diff)
             return y_fp32
+
         return op_function
 
 
@@ -124,14 +128,14 @@ def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
         return idx
 
     def _np_reflection_pad2d(input, padding, data_format):
-        if data_format=="NCHW":
+        if data_format == "NCHW":
             pad_top = pad_bottom = padding[2]
-            pad_left = pad_right =padding[3]
-            pad_shape = ((0, 0), (0, 0 ), (pad_top, pad_bottom), (pad_left, pad_right))
-        elif data_format=="NHWC":
+            pad_left = pad_right = padding[3]
+            pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
+        elif data_format == "NHWC":
             pad_top = pad_bottom = padding[1]
-            pad_left = pad_right =padding[2]
-            pad_shape = ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right),  (0, 0 ))
+            pad_left = pad_right = padding[2]
+            pad_shape = ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
         else:
             raise "data_format must be 'NCHW' or 'NHWC'"
 
@@ -149,7 +153,13 @@ def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
     output = _np_reflection_pad2d(input, padding, data_format)
     grad = _np_reflection_pad2d_grad(input, padding, data_format)
 
-    numpy_results = {"input": input, "padding": padding, "data_format": data_format, "output": output, "grad": grad}
+    numpy_results = {
+        "input": input,
+        "padding": padding,
+        "data_format": data_format,
+        "output": output,
+        "grad": grad,
+    }
     return numpy_results
 
 
@@ -166,8 +176,13 @@ def _compare_op_function_with_samples(
         value_type[1],
         machine_ids,
         device_count,
-    )    
-    y = op_function(sample["input"].astype(value_type[0])).get().numpy().astype(value_type[0])
+    )
+    y = (
+        op_function(sample["input"].astype(value_type[0]))
+        .get()
+        .numpy()
+        .astype(value_type[0])
+    )
 
     if value_type == flow.float16:
         test_case.assertTrue(
@@ -183,9 +198,15 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(gen_numpy_test_sample((1, 1, 2, 2), [0, 0, 1, 1], "NCHW"))
-    arg_dict["samples"].append(gen_numpy_test_sample((3, 3, 3, 2), [0, 0, 2, 1], "NHWC"))
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 2], "NCHW"))
+    arg_dict["samples"].append(
+        gen_numpy_test_sample((1, 1, 2, 2), [0, 0, 1, 1], "NCHW")
+    )
+    arg_dict["samples"].append(
+        gen_numpy_test_sample((3, 3, 3, 2), [0, 0, 2, 1], "NHWC")
+    )
+    arg_dict["samples"].append(
+        gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 2], "NCHW")
+    )
     if value_type == "float":
         arg_dict["value_type"] = [
             # (np.float32, flow.float16), #TODO:(ZhaoLuyang) float16 only works fine on ARCH > 700 CUDA > 10000
