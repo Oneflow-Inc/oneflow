@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow.typing as tp
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
@@ -70,28 +72,47 @@ def compare_with_tensorflow(device_type, input_shape, perm):
     )
 
 
-def test_transpose(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(10, 11, 12, 13)]
-    arg_dict["perm"] = [(2, 0, 1, 3), (1, 0, 2, 3), (3, 2, 1, 0), (3, 1, 2, 0)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestTranspose(flow.unittest.TestCase):
+    def test_transpose(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(10, 11, 12, 13)]
+        arg_dict["perm"] = [(2, 0, 1, 3), (1, 0, 2, 3), (3, 2, 1, 0), (3, 1, 2, 0)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_transpose2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(10, 11, 12)]
+        arg_dict["perm"] = [(2, 0, 1), (1, 0, 2), (2, 1, 0), (1, 2, 0)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_transpose3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(10, 11)]
+        arg_dict["perm"] = [(1, 0), (0, 1)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_transpose4(test_case):
+        # Test the param "batch_axis_non_change"
+
+        @flow.global_function()
+        def transpose_batchaxis_non_change_job(
+            x: tp.Numpy.Placeholder((3, 3), dtype=flow.float, batch_axis=0),
+        ) -> None:
+            pre_batch_axis = x.batch_axis
+            transpose_blob = flow.transpose(x, perm=[1, 0], batch_axis_non_change=True)
+            tranposed_batch_axis = transpose_blob.batch_axis
+            test_case.assertTrue(np.array_equal(pre_batch_axis, tranposed_batch_axis))
+
+        x = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]]).astype(np.float32)
+        transpose_batchaxis_non_change_job(x)
 
 
-def test_transpose2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(10, 11, 12)]
-    arg_dict["perm"] = [(2, 0, 1), (1, 0, 2), (2, 1, 0), (1, 2, 0)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_transpose3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(10, 11)]
-    arg_dict["perm"] = [(1, 0), (0, 1)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

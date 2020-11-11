@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
@@ -39,14 +39,22 @@ class OpConfCache {
   }
 };
 
-class DoParallelCastBeforeWideningTypeCast final : public OpGraphPass {
+class DoParallelCastBeforeWideningTypeCast final : public JobPass {
  public:
   DoParallelCastBeforeWideningTypeCast() = default;
   ~DoParallelCastBeforeWideningTypeCast() override = default;
-  bool IsEnabled() const override {
-    return GlobalJobDesc().do_parallel_cast_before_widening_type_cast();
+
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().do_parallel_cast_before_widening_type_cast();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
@@ -77,8 +85,9 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       auto new_parallel_cast_op_conf = parallel_cast_op_conf;
       const std::string cast_input = cast_conf_wrapper.input("in", 0);
       const std::string parallel_cast_input = parallel_cast_op_conf.parallel_cast_conf().in();
-      ReplaceInputLbnInOpCustomizedConf(new_parallel_cast_op_conf.mutable_parallel_cast_conf(),
-                                        "in", parallel_cast_input, cast_input);
+      const auto& old_val =
+          ReplaceInputLbnInOpCustomizedConf(&new_parallel_cast_op_conf, "in", cast_input);
+      CHECK_EQ(parallel_cast_input, old_val);
 
       op_conf_cache.Put(new_parallel_cast_op_conf);
     }
@@ -88,8 +97,9 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       const std::string parallel_cast_output =
           parallel_cast_op_conf.name() + "/" + parallel_cast_op_conf.parallel_cast_conf().out();
       const std::string cast_input = cast_conf_wrapper.input("in", 0);
-      ReplaceInputLbnInOpCustomizedConf(new_cast_op_conf.mutable_user_conf(), "in_0", cast_input,
-                                        parallel_cast_output);
+      const auto& old_val =
+          ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output);
+      CHECK_EQ(cast_input, old_val);
       op_conf_cache.Put(new_cast_op_conf);
     }
 
@@ -104,9 +114,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
 
       OpNode* dst_node = edge->dst_node();
       OperatorConf dst_op_conf = op_conf_cache.GetLatest(dst_node->op().op_conf());
-      PbMessage* dst_op_type_conf =
-          MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      ReplaceInputLbnInOpCustomizedConf(dst_op_type_conf, dst_ibn, lbn, cast_output);
+      CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, cast_output));
       op_conf_cache.Put(dst_op_conf);
     }
   });
@@ -116,7 +124,6 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("DoParallelCastBeforeWideningTypeCast",
-                       DoParallelCastBeforeWideningTypeCast);
+REGISTER_JOB_PASS("DoParallelCastBeforeWideningTypeCast", DoParallelCastBeforeWideningTypeCast);
 
 }  // namespace oneflow

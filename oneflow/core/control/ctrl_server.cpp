@@ -31,15 +31,14 @@ int ExtractPortFromAddr(const std::string& addr) {
 }  // namespace
 
 CtrlServer::~CtrlServer() {
+  // NOTE(chengcheng): This enqueues a special event (with a null tag) that causes
+  // the completion queue to be shut down on the polling thread.
   grpc::Alarm alarm(cq_.get(), gpr_now(GPR_CLOCK_MONOTONIC), nullptr);
   loop_thread_.join();
-  grpc_server_->Shutdown();
-  cq_->Shutdown();
 }
 
 CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
-  if (Global<EnvDesc>::Get()->grpc_use_no_signal()) { grpc_use_signal(-1); }
   int port = Global<EnvDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
@@ -61,14 +60,33 @@ void CtrlServer::HandleRpcs() {
 
   void* tag = nullptr;
   bool ok = false;
-  while (true) {
-    CHECK(cq_->Next(&tag, &ok));
-    CHECK(ok);
+  // NOTE(chengcheng): The is_shutdown bool flag make sure that 'ok = false' occurs ONLY after
+  // cq_->Shutdown() for security check.
+  bool is_shutdown = false;
+  // NOTE(chengcheng): The final end is that cq_->Next() get false and cq_ is empty with no item.
+  while (cq_->Next(&tag, &ok)) {
     auto call = static_cast<CtrlCallIf*>(tag);
+    if (!ok) {
+      // NOTE(chengcheng): After call grpc_server_->Shutdown() and cq_->Shutdown(),
+      // there will trigger some cancel tag items on each RPC. And cq_->Next() can get these tag
+      // with ok = false. Then delete the tag with CtrlCallIf pointer for recovery.
+      CHECK(is_shutdown);
+      CHECK(call);
+      delete call;
+      continue;
+    }
     if (call) {
       call->Process();
     } else {
-      break;
+      // NOTE(chengcheng): A null `call` indicates that this is the shutdown alarm.
+      CHECK(!is_shutdown);
+      is_shutdown = true;
+      grpc_server_->Shutdown();
+      cq_->Shutdown();
+
+      // NOTE(chengcheng): You CANNOT use code 'break;' in this block because that
+      // there still be items in the cq_.
+      // 'break;'
     }
   }
 }
@@ -195,7 +213,8 @@ void CtrlServer::Init() {
   Add([this](CtrlCall<CtrlMethod::kClear>* call) {
     name2lock_status_.clear();
     kv_.clear();
-    CHECK(pending_kv_calls_.empty());
+    CHECK(pending_kv_calls_.empty()) << "size(): " << pending_kv_calls_.size()
+                                     << ", begin()->key: " << pending_kv_calls_.begin()->first;
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kClear>();
   });

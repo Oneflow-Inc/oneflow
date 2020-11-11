@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -43,7 +44,7 @@ def _check(test_case, data, segment_ids, out_shape, axis, out):
     if axis != 0:
         ref_perm = list(range(1, axis + 1)) + [0] + list(range(axis + 1, ref.ndim))
         ref = np.transpose(ref, ref_perm)
-    test_case.assertTrue(np.allclose(ref, out))
+    test_case.assertTrue(np.allclose(ref, out, rtol=1e-3, atol=1e-3))
 
 
 def _gen_segment_ids(out_shape, axis, segment_ids_shape):
@@ -95,14 +96,20 @@ def _run_test(test_case, device, out_shape, axis, segment_ids_shape):
     _check(test_case, data, segment_ids, out_shape, axis, out.numpy())
 
 
-def test_unsorted_segment_sum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["out_shape"] = [(4,), (4, 5), (4, 5, 6), (4, 5, 6, 7)]
-    arg_dict["axis"] = [0, 1, 2, 3]
-    arg_dict["segment_ids_shape"] = [(64,), (64, 96)]
-    for arg in GenArgList(arg_dict):
-        # axis >= len(out_shape)
-        if arg[2] >= len(arg[1]):
-            continue
-        _run_test(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestUnsortedSegmentSum(flow.unittest.TestCase):
+    def test_unsorted_segment_sum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["out_shape"] = [(4,), (4, 5), (4, 5, 6), (4, 5, 6, 7)]
+        arg_dict["axis"] = [0, 1, 2, 3]
+        arg_dict["segment_ids_shape"] = [(64,), (64, 96)]
+        for arg in GenArgList(arg_dict):
+            # axis >= len(out_shape)
+            if arg[2] >= len(arg[1]):
+                continue
+            _run_test(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.typing as tp
 from util import convert_to_onnx_and_check
-
-func_config = flow.FunctionConfig()
-func_config.default_data_type(flow.float)
 
 
 def test_gather_nd(test_case):
-    @flow.global_function(func_config)
+    @flow.global_function()
     def gather_nd():
         x = flow.get_variable(
             name="x",

@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      placeholder:
+        description: 'placeholder, no effect'
+        required: false
+jobs:
+  staging_release:
+    name: Staging Release
+    runs-on: [self-hosted, linux]
+    steps:
+    - name: Fix permissions
+      run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+    - uses: actions/checkout@v2
+    - name: Build OneFlow
+      env:
+        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      run: |
+        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-rel-102
+        docker run --rm -v $ONEFLOW_CI_TMP_DIR/:$HOME/ci-tmp/ busybox rm -rf $HOME/ci-tmp/wheelhouse
+        export ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
+        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=OFF"
+        export ONEFLOW_CI_BUILD_WHEEL_BASH_ARGS=" "
+        export ONEFLOW_CI_PACKAGE_SUFFIX="_cu102"
+        if [ -d $ONEFLOW_CI_TMP_DIR/wheelhouse ]; then
+            echo "existing wheelhouse found"
+            exit 1
+        fi
+        bash ci/build/make.sh
+        git_hash=$(git rev-parse --short "$GITHUB_SHA")
+        git_branch=${GITHUB_REF##*/}
+        timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
+        dir=${git_branch}/${timestamp}-${git_hash}
+        $HOME/ossutil64 cp --update -r $ONEFLOW_CI_TMP_DIR/wheelhouse oss://oneflow-static/staging/${dir}
+        python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+        python3 -m pip install oss2 beautifulsoup4 --user
+        python3 tools/create_pip_index.py --dir_key staging/${dir} -b oneflow-static --index_key=staging/${git_branch}/pip.index.html
+    - name: Update API docs
+      if: github.ref == 'refs/heads/master'
+      env:
+        READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
+      run: |
+        curl -X POST -d "branches=master" -d "token=${READTHEDOCS_TOKEN}"  https://readthedocs.org/api/v2/webhook/oneflow/135376/
+  pack_src:
+    name: Pack source code
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Pack OneFlow source code
+      if: github.ref == 'refs/heads/master'
+      env:
+        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      run: |
+        git reset --hard
+        git clean -f
+        git archive --format zip HEAD > oneflow-src.zip
+        curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
+        chmod 755 $HOME/ossutil64
+        $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET}  -L EN -c $HOME/.ossutilconfig
+        $HOME/ossutil64 cp --update oneflow-src.zip oss://oneflow-public/oneflow-src.zip

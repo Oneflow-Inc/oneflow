@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -89,23 +90,32 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
     )
 
 
-def test_softmax(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [
-        (10, 10, 20, 30),
-        (10, 20, 30),
-        (10, 20),
-        (10, 960),
-        (10, 4096),
-        (10, 8092),
-        (256, 1001),
-    ]
-    arg_dict["data_type"] = ["float32", "double", "float16"]
-    arg_dict["axis"] = [-1, 1, 2, 3]
-    for arg in GenArgList(arg_dict):
-        if arg[0] == "cpu" and arg[2] == "float16":
-            continue
-        if arg[3] >= len(arg[1]):
-            continue
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestSoftmax(flow.unittest.TestCase):
+    def test_softmax(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [
+            (10, 10, 20, 30),
+            (10, 20, 30),
+            (10, 20),
+            (10, 960),
+            (10, 4096),
+            (10, 8092),
+            (256, 1001),
+        ]
+        arg_dict["data_type"] = ["float32", "double", "float16"]
+        arg_dict["axis"] = [-1, 1, 2, 3]
+        for arg in GenArgList(arg_dict):
+            if arg[0] == "cpu" and arg[2] == "float16":
+                continue
+            if arg[3] >= len(arg[1]):
+                continue
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

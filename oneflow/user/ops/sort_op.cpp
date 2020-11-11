@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_USER_OP("sort")
     .Input("in")
     .Output("out")
-    .Attr("direction", UserOpAttrType::kAtString)
+    .Attr<std::string>("direction")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);

@@ -304,7 +304,50 @@ def ofrecord_reader(
         name (Optional[str], optional): Optional name. Defaults to None.
         
     Returns:
-        remote_blob_util.BlobDef: [description]
+        remote_blob_util.BlobDef: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        @flow.global_function(type="predict")
+        def ofrecord_reader_job() -> Tuple[tp.Numpy, tp.Numpy]:
+            batch_size = 16
+            with flow.scope.placement("cpu", "0:0"):
+                # our ofrecord file path is "./dataset/part-0"
+                ofrecord = flow.data.ofrecord_reader(
+                    "./dataset/",
+                    batch_size=batch_size,
+                    data_part_num=1,
+                    part_name_suffix_length=-1,
+                    part_name_prefix='part-', 
+                    random_shuffle=True,
+                    shuffle_after_epoch=True,
+                )
+                # image shape is (28*28, )
+                image = flow.data.OFRecordRawDecoder(
+                    ofrecord, "images", shape=(784, ), dtype=flow.int32
+                )
+                # label shape is (1, )
+                label = flow.data.OFRecordRawDecoder(
+                    ofrecord, "labels", shape=(1, ), dtype=flow.int32
+                )
+                
+                return image, label
+
+        if __name__ == "__main__":
+            images, labels = ofrecord_reader_job()
+            print("In per batch, images shape is", images.shape)
+            print("In per batch, labels shape is", labels.shape)
+
+            # In per batch, images shape is (16, 784)
+            # In per batch, labels shape is (16, 1)
+
     """
     if name is None:
         name = id_util.UniqueStr("OFRecord_Reader_")
@@ -368,3 +411,90 @@ def decode_random(
 
     interpret_util.ConsistentForward(op_conf)
     return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export(
+    "data.image_decoder_random_crop_resize", "data.ImageDecoderRandomCropResize"
+)
+def image_decoder_random_crop_resize(
+    input_blob: remote_blob_util.BlobDef,
+    target_width: int,
+    target_height: int,
+    num_attempts: Optional[int] = None,
+    seed: Optional[int] = None,
+    random_area: Optional[Sequence[float]] = None,
+    random_aspect_ratio: Optional[Sequence[float]] = None,
+    num_workers: Optional[int] = None,
+    warmup_size: Optional[int] = None,
+    max_num_pixels: Optional[int] = None,
+    name: Optional[str] = None,
+) -> Tuple[remote_blob_util.BlobDef]:
+    if name is None:
+        name = id_util.UniqueStr("ImageDecoderRandomCropResize_")
+
+    op_conf = op_conf_util.OperatorConf()
+    op_conf.name = name
+    setattr(op_conf.image_decoder_random_crop_resize_conf, "in", input_blob.unique_name)
+    op_conf.image_decoder_random_crop_resize_conf.out = "out"
+    op_conf.image_decoder_random_crop_resize_conf.target_width = target_width
+    op_conf.image_decoder_random_crop_resize_conf.target_height = target_height
+    if num_attempts is not None:
+        op_conf.image_decoder_random_crop_resize_conf.num_attempts = num_attempts
+    if seed is not None:
+        op_conf.image_decoder_random_crop_resize_conf.seed = seed
+    if random_area is not None:
+        assert len(random_area) == 2
+        op_conf.image_decoder_random_crop_resize_conf.random_area_min = random_area[0]
+        op_conf.image_decoder_random_crop_resize_conf.random_area_max = random_area[1]
+    if random_aspect_ratio is not None:
+        assert len(random_aspect_ratio) == 2
+        op_conf.image_decoder_random_crop_resize_conf.random_aspect_ratio_min = random_aspect_ratio[
+            0
+        ]
+        op_conf.image_decoder_random_crop_resize_conf.random_aspect_ratio_max = random_aspect_ratio[
+            1
+        ]
+    if num_workers is not None:
+        op_conf.image_decoder_random_crop_resize_conf.num_workers = num_workers
+    if warmup_size is not None:
+        op_conf.image_decoder_random_crop_resize_conf.warmup_size = warmup_size
+    if max_num_pixels is not None:
+        op_conf.image_decoder_random_crop_resize_conf.max_num_pixels = max_num_pixels
+    interpret_util.Forward(op_conf)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = op_conf.name
+    lbi.blob_name = "out"
+    return remote_blob_util.RemoteBlob(lbi)
+
+
+@oneflow_export("data.onerec_reader")
+def onerec_reader(
+    files,
+    batch_size=1,
+    random_shuffle=False,
+    shuffle_mode="instance",
+    shuffle_buffer_size=1024,
+    shuffle_after_epoch=False,
+    verify_example=True,
+    name=None,
+):
+    assert isinstance(files, (list, tuple))
+
+    if name is None:
+        name = id_util.UniqueStr("OneRecReader_")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("OneRecReader")
+        .Output("out")
+        .Attr("files", files)
+        .Attr("batch_size", batch_size)
+        .Attr("random_shuffle", random_shuffle)
+        .Attr("shuffle_mode", shuffle_mode)
+        .Attr("shuffle_buffer_size", shuffle_buffer_size)
+        .Attr("shuffle_after_epoch", shuffle_after_epoch)
+        .Attr("verify_example", verify_example)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

@@ -1,10 +1,9 @@
 name: Build and Test CI
-
 on:
   pull_request:
     types: [synchronize, opened, reopened, ready_for_review]
     branches:
-      - master
+      - '*'
     paths-ignore:
       - '**.md'
       - '.gitignore'
@@ -15,151 +14,191 @@ on:
         required: false
 jobs:
 
-  build_and_test:
-
-    runs-on: [self-hosted, linux, gpu]
+  check_license_and_format:
+    name: License and format
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
-    - name: Clean environment
+    - uses: actions/checkout@v2
+    - name: Check license and format (please run 'make of_format' if failed)
+      uses: ./.github/actions/fmt
+
+  mirror_third_party:
+    name: Mirror third party dependencies
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Mirror dependencies to aliyun
+      env:
+        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      run: |
+        python3 -m pip install setuptools wheel
+        python3 -m pip install oss2
+        python3 tools/package_mirror.py -i cmake
+
+  build_and_test_cuda:
+    needs: check_license_and_format
+    name: CUDA
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    env:
+      ci_tmp_dir: /home/ci-user/ci-tmp
+      wheelhouse_dir: "/home/ci-user/ci-tmp/wheelhouse"
+      bin_dir: "/home/ci-user/ci-tmp/manylinux2014-build-cache/10.2/build-oneflow/bin"
+    steps:
+    - name: Fix permissions
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-        rm -rf build/third_party
-        bash ci/build/clean.sh
     - uses: actions/checkout@v2
-    - name: Check license (please run 'make of_format' if failed)
-      run: |
-        python3 ci/check/run_license_format.py -i oneflow -c
-    - name: Check C++ format (please run 'make of_format' if failed)
-      run: |
-        python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-    - name: Check python format (please run 'make of_format' if failed)
-      run: |
-        docker run --rm -v $PWD:$PWD --entrypoint "/bin/sh" cytopia/black@sha256:ea649b81bf6a64aaa34f4abba803da83528135b5d12bed9b485bcabb37480d33 -c "python3 $PWD/ci/check/run_py_format.py --source_dir $PWD"
-    - name: Setup environment
-      run: |
-        echo $HOSTNAME
-        bash ci/setup_submodule.sh
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
-      run: |
-        ONEFLOW_CI_PACKAGE_APPENDIX="_cu102" \
-        bash ci/build/make.sh
+      uses: ./.github/actions/whl
+      with:
+        tmp_dir: ${ci_tmp_dir}
+    - name: Upload wheel
+      uses: ./.github/actions/upload_oss
+      with:
+        src_path: ${wheelhouse_dir}
+        oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cuda
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
     - name: Exe test
       run: |
+        set -x
         docker run --shm-size=8g --rm \
           -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w /ci-tmp/manylinux2014-build-cache/build-oneflow/bin \
-          oneflow-test \
+          -v ${bin_dir}:${bin_dir} \
+          -w ${bin_dir} \
+          oneflow-test:$USER \
           ./oneflow_testexe
-    - name: Unit test
+    - name: Op test (distributed)
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
+        python3 ci/test/distributed_run.py --make_dotssh
+        python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
+          --build_docker_img \
+          --oneflow_wheel_path=${wheelhouse_dir} \
+          --oneflow_worker_bin=${bin_dir}/oneflow_worker
+    - name: Op test
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: Integration test
+    - name: Op test (eager)
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          --env ONEFLOW_TEST_ENABLE_EAGER=1 \
+          oneflow-test:$USER \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
+    - name: Model test
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
     - name: Benchmark
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
     - name: Benchmark FP16
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
     - name: ONNX export test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
     - name: Build documentation
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp:/ci-tmp \
-          -w $PWD -v $PWD:$PWD \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
-          oneflow-test \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-    - name: Clean up files created by root
-      if: ${{ always() }}
-      run: |
-        bash ci/build/clean.sh
 
-  build_and_test_cpu:
-
+  build_and_test_xla:
+    needs: [check_license_and_format, build_and_test_cuda, mirror_third_party]
+    name: XLA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    env:
+      ci_tmp_dir: /home/ci-user/ci-tmp-xla
+      wheelhouse_dir: "/home/ci-user/ci-tmp-xla/wheelhouse"
     steps:
-    - name: Clean environment
+    - name: Fix permissions
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-        rm -rf build/third_party
-        bash ci/build/clean.sh
     - uses: actions/checkout@v2
-    - name: Setup environment
-      run: |
-        echo $HOSTNAME
-        bash ci/setup_submodule.sh
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --recursive
     - name: Build OneFlow
-      run: |
-        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DBUILD_CUDA=OFF"
-        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu
-        bash ci/build/make.sh
+      uses: ./.github/actions/whl
+      with:
+        cuda_version: 10.1
+        extra_flags: --xla
+        tmp_dir: ${ci_tmp_dir}
+    - name: Upload wheel
+      uses: ./.github/actions/upload_oss
+      with:
+        src_path: ${wheelhouse_dir}
+        oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-xla
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
-    - name: Unit test
+    - name: Test
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp-cpu:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
-          oneflow-test \
+          oneflow-test:$USER \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
+
+  build_and_test_cpu:
+    needs: [check_license_and_format, build_and_test_cuda]
+    name: CPU-only
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    env:
+      ci_tmp_dir: /home/ci-user/ci-tmp-cpu
+      wheelhouse_dir: "/home/ci-user/ci-tmp-cpu/wheelhouse"
+    steps:
+    - name: Fix permissions
+      run: |
+        docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+    - uses: actions/checkout@v2
+    - name: Build OneFlow
+      uses: ./.github/actions/whl
+      with:
+        extra_flags: --cpu
+        tmp_dir: ${ci_tmp_dir}
+    - name: Upload wheel
+      uses: ./.github/actions/upload_oss
+      with:
+        src_path: ${wheelhouse_dir}
+        oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cpu
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+    - name: Build docker image for testing
+      run: |
+        bash docker/ci/test/build.sh
+    - name: Op test
+      run: |
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          --env ONEFLOW_TEST_CPU_ONLY=1 \
+          oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: Integration test
+    - name: Op test (eager)
       run: |
-        docker run --shm-size=8g --rm \
-          -v $HOME/ci-tmp-cpu:/ci-tmp \
-          -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-          --env ONEFLOW_WHEEL_PATH=/ci-tmp/wheelhouse \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
-          oneflow-test \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-    - name: Clean up files created by root
-      if: ${{ always() }}
+          --env ONEFLOW_TEST_ENABLE_EAGER=1 \
+          oneflow-test:$USER \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
+    - name: Model test
       run: |
-        ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-cpu \
-        bash ci/build/clean.sh
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+          --env ONEFLOW_TEST_CPU_ONLY=1 \
+          oneflow-test:$USER \
+          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"

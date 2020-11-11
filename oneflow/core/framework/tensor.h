@@ -19,63 +19,44 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+
 namespace oneflow {
 
 class Blob;
-class BlobAccessChecker;
 
 namespace user_op {
 
-class Tensor final {
+class Tensor {
  public:
-  Tensor(Blob*);
   ~Tensor() = default;
 
-  Tensor(const Tensor& rhs) { this->CopyWithoutData(rhs); }
-  Tensor(Tensor&& rhs) { *this = std::move(rhs); }
-  void CopyWithoutData(const Tensor& rhs);
-  Tensor& operator=(Tensor&& rhs);
-
-  const ShapeView& shape() const { return shape_; }
-  MutShapeView* mut_shape() {
-    this->header_access_check();
-    return mut_shape_.get();
-  }
-
-  DataType data_type() const { return data_type_; }
-  const MemoryCase& mem_case() const { return *mem_case_; }
+  virtual const ShapeView& shape() const = 0;
+  virtual MutShapeView* mut_shape() = 0;
+  virtual DataType data_type() const = 0;
+  virtual const MemoryCase& mem_case() const = 0;
+  virtual const void* raw_dptr() const = 0;
+  virtual void* mut_raw_dptr() = 0;
 
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();
-    return static_cast<const T*>(dptr_);
+    return reinterpret_cast<const T*>(raw_dptr());
   }
 
   template<typename T = void>
   T* mut_dptr() {
-    this->body_access_check();
     CheckDataType<T>();
-    return static_cast<T*>(dptr_);
+    return reinterpret_cast<T*>(mut_raw_dptr());
   }
 
- private:
+ protected:
   template<typename T>
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-                   && data_type_ != DataType::kChar && data_type_ != GetDataType<T>::value))
-        << "tensor data_type dismatched. value: " << DataType_Name(data_type_)
+                   && data_type() != DataType::kChar && data_type() != GetDataType<T>::value))
+        << "tensor data_type mismatched. value: " << DataType_Name(data_type())
         << ", template T:" << DataType_Name(GetDataType<T>::value);
   }
-
-  void header_access_check();
-  void body_access_check();
-
-  void* dptr_;
-  ShapeView shape_;
-  std::unique_ptr<MutShapeView> mut_shape_;
-  DataType data_type_;
-  const MemoryCase* mem_case_;
-  const BlobAccessChecker* blob_access_checker_;
 };
 
 }  // namespace user_op

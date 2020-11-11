@@ -21,7 +21,7 @@ REGISTER_USER_OP("smooth_l1_loss")
     .Input("prediction")
     .Input("label")
     .Output("loss")
-    .Attr("beta", UserOpAttrType::kAtFloat)
+    .Attr<float>("beta")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("prediction", 0),
                          *ctx->Shape4ArgNameAndIndex("label", 0));
@@ -56,7 +56,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
     .Input("prediction")
     .Input("label")
     .Output("prediction_grad")
-    .Attr("beta", UserOpAttrType::kAtFloat)
+    .Attr<float>("beta")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("loss_grad", 0),
                          *ctx->Shape4ArgNameAndIndex("prediction", 0));

@@ -16,6 +16,7 @@ option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
+set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
@@ -25,13 +26,25 @@ endif()
 
 project(oneflow C CXX)
 
+set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+
+# Modules
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
+include(util)
+include(proto2cpp)
+include(swig)
+
 if (NOT DEFINED USE_CXX11_ABI)
-  if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
-    set(USE_CXX11_ABI OFF)
-  else()
-    set(USE_CXX11_ABI ON)
+  check_cxx11_abi(CXX11_ABI_AVAILABLE)
+  set(USE_CXX11_ABI ${CXX11_ABI_AVAILABLE})
+elseif(USE_CXX11_ABI)
+  check_cxx11_abi(CXX11_ABI_AVAILABLE)
+  if (NOT CXX11_ABI_AVAILABLE)
+    message(FATAL_ERROR "cxx11 abi is not available for current compiler")
   endif()
 endif()
+message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
@@ -49,20 +62,11 @@ enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
-
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
   CACHE PATH "Where the third party headers and libs are put")
 
 set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
   CACHE PATH "Where the third party submodules are")
-
-# Modules
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
-include(util)
-include(proto2cpp)
-include(swig)
 
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)
@@ -105,18 +109,15 @@ if (BUILD_CUDA)
   else()
     #  half is not fully supported when __CUDA_ARCH__ < 530
     #  list(APPEND __cuda_nvcc_gencodes "arch=compute_30,code=sm_30")
-    #  list(APPEND __cuda_nvcc_gencodes "arch=compute_30,code=compute_30")
     #  list(APPEND __cuda_nvcc_gencodes "arch=compute_52,code=sm_52")
-    #  list(APPEND __cuda_nvcc_gencodes "arch=compute_52,code=compute_52")
     list(APPEND __cuda_nvcc_gencodes "arch=compute_60,code=sm_60")
-    list(APPEND __cuda_nvcc_gencodes "arch=compute_60,code=compute_60")
     list(APPEND __cuda_nvcc_gencodes "arch=compute_61,code=sm_61")
-    list(APPEND __cuda_nvcc_gencodes "arch=compute_61,code=compute_61")
+    list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=sm_70")
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=sm_70")
-      list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=compute_70")
       list(APPEND __cuda_nvcc_gencodes "arch=compute_75,code=sm_75")
       list(APPEND __cuda_nvcc_gencodes "arch=compute_75,code=compute_75")
+    else()
+      list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=compute_70")
     endif()
     set(CUDA_NVCC_GENCODES ${__cuda_nvcc_gencodes})
   endif()
