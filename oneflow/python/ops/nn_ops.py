@@ -2657,9 +2657,30 @@ def mse_loss(
 ) -> remote_blob_util.BlobDef:
     r"""This operator computes the mean squared error between each element in `input` and `target`. 
 
+    The equation is: 
+
+    if reduction = "none": 
+    
+    .. math:: 
+        
+        out = (Target_i - Input_i)^2
+
+    if reduction = "mean": 
+    
+    .. math:: 
+        
+        out = \frac{1}{n}\sum_{i=1}^n(Target_i - Input_i)^2
+
+    if reduction = "sum": 
+    
+    .. math:: 
+        
+        out = \sum_{i=1}^n(Target_i - Input_i)^2
+
     Args:
         input (remote_blob_util.BlobDef): The input Blob.
         target (remote_blob_util.BlobDef): The target value. 
+        reduction (str) = The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean". 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
