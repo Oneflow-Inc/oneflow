@@ -2646,3 +2646,93 @@ def leaky_relu(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.MSELoss")
+def mse_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+    reduction: str = "mean",
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the mean squared error between each element in `input` and `target`. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob.
+        target (remote_blob_util.BlobDef): The target value. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob.
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        @flow.global_function()
+        def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
+                        target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
+            # It's equal to `Torch.nn.MSELoss(reduction="mean")
+            out = flow.nn.MSELoss(input, target, reduction="mean")
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = mseloss_job(input, target)
+
+        # output [7.3333335]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        @flow.global_function()
+        def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
+                        target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
+            # It's equal to `Torch.nn.MSELoss(reduction="sum")
+            out = flow.nn.MSELoss(input, target, reduction="sum")
+            
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = mseloss_job(input, target)
+
+        # output [66.]
+
+    """
+
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = "MSELoss"
+
+    mean_squared_difference = flow.math.squared_difference(
+        target, input, name=name + "_mean_squared"
+    )
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(
+            mean_squared_difference, name=name + "_reduce_mean"
+        )
+    elif reduction == "sum":
+        return flow.math.reduce_sum(mean_squared_difference, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return mean_squared_difference
