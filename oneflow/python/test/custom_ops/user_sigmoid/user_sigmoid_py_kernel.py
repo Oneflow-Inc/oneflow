@@ -16,20 +16,33 @@ limitations under the License.
 import numpy as np
 
 
-def sigmoid(x):
+def forward(args):
+    print("user sigmoid forward args", args)
+    (x,) = args
     y = 1 / (1 + np.exp(-x))
     return y
 
 
-def sigmoid_grad(y, dy):
-    return y * (1 - y) * dy
+# import torch
+# def forward(args):
+#     print("user sigmoid forward args", args)
+#     print("compute with pytorch")
+#     x, = args
+#     b = torch.from_numpy(x)
+#     print(b)
+#     y = torch.sigmoid(b).numpy()
+#     return y
 
-
-def forward(args):
-    print("forward args", args)
-    return sigmoid(*args)
+# import tensorflow as tf
+# def forward(args):
+#     print("user sigmoid forward args", args)
+#     print("compute with tf")
+#     x, = args
+#     y = tf.math.sigmoid(x).numpy()
+#     return y
 
 
 def backward(args):
-    print("backward args", args)
-    return sigmoid_grad(*args)
+    print("user sigmoid backward args", args)
+    y, dy = args
+    return y * (1 - y) * dy

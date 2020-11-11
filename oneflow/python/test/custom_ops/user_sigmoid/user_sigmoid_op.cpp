@@ -20,26 +20,23 @@ namespace oneflow {
 namespace {
 
 REGISTER_USER_OP("user_sigmoid")
-    .Input("in")
-    .Output("out")
+    .Input("x")
+    .Output("y")
     .Attr<std::string>("device_sub_tag", "py")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *out_shape = *in_shape;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
+        ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
       }
       return Maybe<void>::Ok();
     });
@@ -78,8 +75,8 @@ REGISTER_USER_OP_GRAD("user_sigmoid")
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("user_sigmoid_grad")
-            .InputBind("y", ctx->FwOp().output("out", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .InputBind("y", ctx->FwOp().output("y", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .Output("dx")
             .Build();
       };
@@ -88,7 +85,7 @@ REGISTER_USER_OP_GRAD("user_sigmoid")
       const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dx", 0);
       };
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), dx_get_func);
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);
     });
 
 }  // namespace
