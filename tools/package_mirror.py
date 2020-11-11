@@ -61,7 +61,7 @@ def should_be_mirrored(url: str):
         not parsed.port
         and not parsed.query
         and not parsed.params
-        and url.endswith(("gz", "tar", "zip"))
+        and url.endswith(("gz", "tar", "zip", "xz"))
     )
 
 
