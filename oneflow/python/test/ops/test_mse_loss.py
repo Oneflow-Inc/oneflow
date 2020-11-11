@@ -22,7 +22,12 @@ from collections import OrderedDict
 from typing import List
 
 
-def _compare_mseloss_with_np(input, target, device_type, machine_ids, device_counts):
+def _compare_mseloss_with_np(
+    input_shape, target_shape, device_type, machine_ids, device_counts
+):
+    input = np.random.random(size=input_shape).astype(np.float32)
+    target = np.random.random(size=target_shape).astype(np.float32)
+
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -76,27 +81,19 @@ def _compare_mseloss_with_np(input, target, device_type, machine_ids, device_cou
     of_out_mseloss = oneflow_mseloss(input, target)
     np_out_mseloss = np_mseloss(input, target)
 
-    assert np.array_equal(of_out_mseloss[0], np_out_mseloss[0])
+    assert np.allclose(of_out_mseloss[0], np_out_mseloss[0])
 
     for i in range(1, len(np_out_mseloss)):
-        # TODO: Should I change to use np.allclose?
-        # There may have some numerical error in float value
 
-        # Numpy return a scalar(no shape), but oneflow return a N-D tensor.
-        # I need to get it by using index [0]
-        assert np.array_equal(of_out_mseloss[i][0], np_out_mseloss[i])
+        assert np.allclose(of_out_mseloss[i][0], np_out_mseloss[i])
 
 
 @flow.unittest.skip_unless_1n1d()
 class Testl1loss1n1d(flow.unittest.TestCase):
     def test_mseloss_cpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input"] = [
-            np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).astype(np.float32)
-        ]
-        arg_dict["target"] = [
-            np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]]).astype(np.float32)
-        ]
+        arg_dict["input"] = [(3, 32, 16)]
+        arg_dict["target"] = [(3, 32, 16)]
         arg_dict["device_type"] = ["cpu"]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_counts"] = [1]
@@ -105,12 +102,8 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 
     def test_mseloss_gpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input"] = [
-            np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).astype(np.float32)
-        ]
-        arg_dict["target"] = [
-            np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]).astype(np.float32)
-        ]
+        arg_dict["input"] = [(3, 16, 32)]
+        arg_dict["target"] = [(3, 16, 32)]
         arg_dict["device_type"] = ["gpu"]
         arg_dict["machine_ids"] = ["0:0"]
         arg_dict["device_counts"] = [1]
@@ -122,12 +115,8 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 class Testrange1n2d(flow.unittest.TestCase):
     def test_mseloss_gpu_1n2d(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input"] = [
-            np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).astype(np.float32)
-        ]
-        arg_dict["target"] = [
-            np.array([[3, 3, 3], [3, 3, 3], [3, 3, 3]]).astype(np.float32)
-        ]
+        arg_dict["input"] = [(3, 16, 16)]
+        arg_dict["target"] = [(3, 16, 16)]
         arg_dict["device_type"] = ["gpu"]
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_counts"] = [2]
