@@ -2650,13 +2650,19 @@ def leaky_relu(
 
 @oneflow_export("nn.L1Loss")
 def l1_loss(
-    input: remote_blob_util.BlobDef, 
-    target: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator computes the L1 Loss. It's a little different between `Torch.L1Loss` is that 
     we don't provide the `reduction` parameter. You can add reduce mean/sum after calling the function. 
     We will give an example in the code below. 
+
+    The equation is: 
+
+    .. math:: 
+
+        output = |Target - Input|
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob.  
@@ -2721,9 +2727,13 @@ def l1_loss(
         # output [24.]
 
     """
-    assert input.shape == target.shape, "The Input shape must be the same as Target shape"
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
 
-    if name is None: 
+    if name is None:
         name = "L1Loss"
 
-    return flow.math.abs(flow.math.subtract(target, input, name=name+"_sub"), name=name+"_abs")
+    return flow.math.abs(
+        flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
+    )
