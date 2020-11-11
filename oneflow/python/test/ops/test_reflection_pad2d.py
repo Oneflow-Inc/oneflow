@@ -191,7 +191,7 @@ def _gen_arg_dict(
     arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 2], "NCHW"))
     if value_type == "float":
         arg_dict["value_type"] = [
-            # (np.float32, flow.float16), #TODO:(YaoChi) float16 only works fine on ARCH > 700 CUDA > 10000
+            # (np.float32, flow.float16), #TODO:(ZhaoLuyang) float16 only works fine on ARCH > 700 CUDA > 10000
             (np.float32, flow.float32),
             (np.float64, flow.float64),
         ]
