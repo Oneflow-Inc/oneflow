@@ -94,7 +94,7 @@ def fake_quantization(
     quantize_to_bit: int = 8,
     quantizer_type: str = "symmetric",
     name: Optional[str] = None,
-) -> Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]:
+) -> remote_blob_util.BlobDef:
 
     out = (
         flow.user_op_builder(
@@ -109,7 +109,7 @@ def fake_quantization(
         .Attr("quantizer_type", quantizer_type)
         .Build()
         .InferAndTryRun()
-        .RemoteBlobList()[0]
+        .SoleOutputBlob()
     )
 
     return out
