@@ -94,8 +94,6 @@ def _make_op_function(
         return op_function
 
 
-
-
 def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
     def _flatten_array(input_array):
         output_array = list()
