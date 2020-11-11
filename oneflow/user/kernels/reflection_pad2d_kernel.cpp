@@ -146,7 +146,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
         std::vector<int64_t>  coord_y = index_to_coordinate(i, shapeview_to_vector(y_shape), coordinate);
         int64_t x_h = coord_y[channel_h_idx] - padding_h;
         int64_t  x_w = coord_y[channel_w_idx] - padding_w;
-        //printf("i:%d >>>>>>coord_y:  [%ld, %ld, %ld, %ld];  coord_x: [%ld, %ld, %ld, %ld]\n", i, coord_y[0], coord_y[1], coord_y[2], coord_y[3], coord_y[0], coord_y[1], x_h, x_w);
         if(x_h < 0 || x_h >= x_shape.At(channel_h_idx) || x_w < 0 || x_w >= x_shape.At(channel_w_idx)){
             //Indicates that the element is no longer in the original x range (the data to be padding outside)
             std::vector<int64_t> dest_coords;
