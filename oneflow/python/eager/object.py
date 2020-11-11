@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 import oneflow.python.eager.symbol as symbol_util
 import oneflow
 
@@ -53,7 +54,11 @@ class BlobObject(Object):
     def add_releaser(self, release):
         self.release_.append(release)
 
-    def __del__(self):
+    # Bind `python_interpreter_util.IsShuttingDown` early.
+    # See the comments of `python_interpreter_util.IsShuttingDown`
+    def __del__(self, is_shutting_down=python_interpreter_util.IsShuttingDown):
+        if is_shutting_down():
+            return
         for release in self.release_:
             release(self)
         self.release_ = []

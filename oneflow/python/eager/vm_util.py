@@ -421,14 +421,13 @@ class InstructionsBuilder(object):
         return symbol
 
     def GetParallelDescSymbol(self, parallel_conf):
-        device_tag = parallel_conf.device_tag
         serialized_parallel_conf = parallel_conf.SerializeToString()
         if symbol_storage.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
             return symbol_storage.GetSymbol4SerializedParallelConf(
                 serialized_parallel_conf
             )
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
-        symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf, device_tag)
+        symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf)
         symbol_storage.SetSymbol4Id(symbol_id, symbol)
         symbol_storage.SetSymbol4SerializedParallelConf(
             serialized_parallel_conf, symbol

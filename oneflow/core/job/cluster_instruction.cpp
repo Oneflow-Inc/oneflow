@@ -116,10 +116,24 @@ void ClusterInstruction::MasterSendHalt() {
   HaltBarrier();
 }
 
+void ClusterInstruction::MasterSendAbort() {
+  LOG(ERROR) << "sending abort instruction";
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_abort();
+  PushClusterInstruction(cluster_instruction);
+}
+
 void ClusterInstruction::MasterSendEagerInstruction(
     const ClusterInstructionProto& cluster_instruction) {
   CHECK(cluster_instruction.has_eager_instruction());
   PushClusterInstruction(cluster_instruction);
+}
+
+void ClusterInstruction::MasterSendEagerSync() {
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_eager_sync();
+  PushClusterInstruction(cluster_instruction);
+  EagerSyncBarrier();
 }
 
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
@@ -127,5 +141,10 @@ void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* clust
 }
 
 void ClusterInstruction::HaltBarrier() { OF_ENV_BARRIER(); }
+
+void ClusterInstruction::EagerSyncBarrier() {
+  // TODO(jianhao): update here after eager instructions are run asynchronously
+  OF_ENV_BARRIER();
+}
 
 }  // namespace oneflow
