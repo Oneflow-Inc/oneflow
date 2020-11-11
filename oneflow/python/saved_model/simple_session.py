@@ -107,13 +107,13 @@ class SimpleSession(object):
         self.status_ = self.SessionStatus.CLOSED
 
     def _check_status(self, *status):
-        check_sucess = False
+        check_success = False
         for stat in status:
             if self.status_ == stat:
-                check_sucess = True
+                check_success = True
                 break
 
-        if check_sucess is False:
+        if check_success is False:
             caller_func_name = inspect.stack()[1].function
             allowed_status = ",".join(status)
             raise ValueError(
