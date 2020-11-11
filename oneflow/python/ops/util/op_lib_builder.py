@@ -67,22 +67,19 @@ def get_lflags():
     )
 
 
-def get_cpp2py_path():
-    return os.path.join(
-        oneflow_sysconfig.get_include(), "oneflow/extension/python/py_kernel_caller.cpp"
-    )
-
-
 @oneflow_export("experimental.op_lib")
-class OpLib(object):
+class CustomOp(object):
     def __init__(self, op_type_name, lib_path=""):
         self.op_type_name = op_type_name
+        self.api = None
+        self.so_path = ""
         self.objs = []
+        self.has_api = False
         self.has_def = False
         self.has_py_kernel = False
         self.has_cpu_kernel = False
+        self.has_gpu_kernel = False
         self.got_so = False
-        self.api = None
 
         lib_path = os.path.normpath(lib_path)
         pwd_path = os.getcwd()
@@ -99,7 +96,6 @@ class OpLib(object):
         if not os.path.exists(out_path):
             os.makedirs(out_path)
         self.out_prefix = os.path.join(out_path, self.op_type_name)
-        self.so_path = ""
 
     def AddOpDef(self):
         flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
@@ -112,7 +108,7 @@ class OpLib(object):
         )
         self.objs.append(f"{self.out_prefix}_op.o")
         self.has_def = True
-        return True
+        return self
 
     def AddPythonAPI(self):
         spec = importlib.util.spec_from_file_location(
@@ -120,11 +116,13 @@ class OpLib(object):
         )
         self.api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.api)
+        return self
 
     def AddPythonKernel(self):
         assert os.path.exists(f"{self.src_prefix}_py_kernel.py")
         oneflow_api.RegisterPyKernel(self.op_type_name)
         self.has_py_kernel = True
+        return self
 
     def AddCPPKernel(self):
         flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
@@ -137,7 +135,7 @@ class OpLib(object):
         )
         self.objs.append(f"{self.out_prefix}_cpp_kernel.o")
         self.has_cpu_kernel = True
-        return True
+        return self
 
     def AddGPUKernel(self):
         raise NotImplementedError
@@ -149,5 +147,4 @@ class OpLib(object):
             self.got_so = True
             self.so_path = self.out_prefix + ".so"
 
-        oneflow.config.load_library(self.so_path)
-        return True
+        oneflow.config.load_library_now(self.so_path)
