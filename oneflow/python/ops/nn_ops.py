@@ -2652,8 +2652,8 @@ def leaky_relu(
 def mse_loss(
     input: remote_blob_util.BlobDef,
     target: remote_blob_util.BlobDef,
-    name: Optional[str] = None,
     reduction: str = "mean",
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""This operator computes the mean squared error between each element in `input` and `target`. 
 
