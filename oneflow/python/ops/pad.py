@@ -297,29 +297,41 @@ def reflection_pad2d(
         raise ValueError("data_format must be 'NCHW' or 'NHWC'")
 
     if isinstance(padding, (tuple, list)):
-        assert len(padding) == len(x.shape), ValueError("padding boundry must be the same size of input dims")
-        assert padding[2] < H and padding[3] < H and padding[0] < W and padding[1] < W, ValueError(
+        assert len(padding) == len(x.shape), ValueError(
+            "padding boundry must be the same size of input dims"
+        )
+        assert (
+            padding[2] < H and padding[3] < H and padding[0] < W and padding[1] < W
+        ), ValueError(
             "Padding size should be less than the corresponding input dimension!"
         )
-        boundry = [0, 0, padding[2], padding[3]] if data_format == "NCHW" else [0, padding[1], padding[2], 0]
+        boundry = (
+            [0, 0, padding[2], padding[3]]
+            if data_format == "NCHW"
+            else [0, padding[1], padding[2], 0]
+        )
     elif isinstance(padding, int):
-        assert padding < H and padding < W, ValueError("Padding size should be less than the corresponding input dimension!")
-        boundry = [0, 0, padding, padding] if data_format == "NCHW" else [0, padding, padding, 0]
+        assert padding < H and padding < W, ValueError(
+            "Padding size should be less than the corresponding input dimension!"
+        )
+        boundry = (
+            [0, 0, padding, padding]
+            if data_format == "NCHW"
+            else [0, padding, padding, 0]
+        )
     else:
         raise ValueError("padding must be in or list or tuple!")
 
     return (
-            oneflow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Reflection_Pad2d")
-            )
-            .Op("reflection_pad2d")
-            .Input("x", [x])
-            .Output("y")
-            .Attr("data_format", data_format)
-            .Attr("padding", list(boundry))
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Reflection_Pad2d")
         )
-
-        
+        .Op("reflection_pad2d")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("data_format", data_format)
+        .Attr("padding", list(boundry))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
