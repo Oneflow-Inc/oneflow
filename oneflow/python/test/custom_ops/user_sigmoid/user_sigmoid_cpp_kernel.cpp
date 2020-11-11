@@ -21,14 +21,14 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-class PySigmoidKernel final : public user_op::OpKernel {
+class UserSigmoidKernel final : public user_op::OpKernel {
  public:
-  PySigmoidKernel() = default;
-  ~PySigmoidKernel() = default;
+  UserSigmoidKernel() = default;
+  ~UserSigmoidKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    std::cout << "py sigmoid cpp kernel forward compute " << std::endl;
+    std::cout << "user sigmoid cpp kernel forward compute " << std::endl;
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     NewKernelUtil<device_type>::Sigmoid(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
@@ -37,9 +37,9 @@ class PySigmoidKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PY_SIGMOID_KERNEL(device, dtype)                                                  \
-  REGISTER_USER_KERNEL("py_sigmoid")                                                               \
-      .SetCreateFn<PySigmoidKernel<device, dtype>>()                                               \
+#define REGISTER_USER_SIGMOID_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("user_sigmoid")                                                             \
+      .SetCreateFn<UserSigmoidKernel<device, dtype>>()                                             \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device) & (user_op::HobDeviceSubTag() == "cpp") \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))            \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                       \
@@ -48,18 +48,18 @@ class PySigmoidKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                                  \
       });
 
-REGISTER_PY_SIGMOID_KERNEL(DeviceType::kCPU, float)
-REGISTER_PY_SIGMOID_KERNEL(DeviceType::kCPU, double)
+REGISTER_USER_SIGMOID_KERNEL(DeviceType::kCPU, float)
+REGISTER_USER_SIGMOID_KERNEL(DeviceType::kCPU, double)
 
 template<DeviceType device_type, typename T>
-class PySigmoidGradKernel final : public user_op::OpKernel {
+class UserSigmoidGradKernel final : public user_op::OpKernel {
  public:
-  PySigmoidGradKernel() = default;
-  ~PySigmoidGradKernel() = default;
+  UserSigmoidGradKernel() = default;
+  ~UserSigmoidGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    std::cout << "py sigmoid cpp kernel backward compute " << std::endl;
+    std::cout << "user sigmoid cpp kernel backward compute " << std::endl;
     const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -70,9 +70,9 @@ class PySigmoidGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PY_SIGMOID_GRAD_KERNEL(device, dtype)                                             \
-  REGISTER_USER_KERNEL("py_sigmoid_grad")                                                          \
-      .SetCreateFn<PySigmoidGradKernel<device, dtype>>()                                           \
+#define REGISTER_USER_SIGMOID_GRAD_KERNEL(device, dtype)                                           \
+  REGISTER_USER_KERNEL("user_sigmoid_grad")                                                        \
+      .SetCreateFn<UserSigmoidGradKernel<device, dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device) & (user_op::HobDeviceSubTag() == "cpp") \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))             \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                       \
@@ -81,8 +81,8 @@ class PySigmoidGradKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                                  \
       });
 
-REGISTER_PY_SIGMOID_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_PY_SIGMOID_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_USER_SIGMOID_GRAD_KERNEL(DeviceType::kCPU, float)
+REGISTER_USER_SIGMOID_GRAD_KERNEL(DeviceType::kCPU, double)
 
 }  // namespace
 

@@ -21,12 +21,12 @@ import oneflow as flow
 from typing import Union, Tuple, List, Optional, Sequence, Callable
 
 
-def py_sigmoid(x, device_sub_tag="py", name: Optional[str] = None):
+def user_sigmoid(x, device_sub_tag="py", name: Optional[str] = None):
     return (
         flow.user_op_builder(
-            name if name is not None else flow.util.unique_str("PySigmoid_")
+            name if name is not None else flow.util.unique_str("UserSigmoid_")
         )
-        .Op("py_sigmoid")
+        .Op("user_sigmoid")
         .Input("in", [x])
         .Output("out")
         .Attr("device_sub_tag", device_sub_tag)
@@ -36,14 +36,14 @@ def py_sigmoid(x, device_sub_tag="py", name: Optional[str] = None):
     )
 
 
-def py_sigmoid_grad(
+def user_sigmoid_grad(
     y, dy, device_sub_tag="py", name: Optional[str] = None,
 ):
     return (
         flow.user_op_builder(
-            name if name is not None else flow.util.unique_str("PySigmoidGrad_")
+            name if name is not None else flow.util.unique_str("UerSigmoidGrad_")
         )
-        .Op("py_sigmoid_grad")
+        .Op("user_sigmoid_grad")
         .Input("y", [y])
         .Input("dy", [dy])
         .Output("dx")

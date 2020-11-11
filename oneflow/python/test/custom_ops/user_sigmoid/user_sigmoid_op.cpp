@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("py_sigmoid")
+REGISTER_USER_OP("user_sigmoid")
     .Input("in")
     .Output("out")
     .Attr<std::string>("device_sub_tag", "py")
@@ -44,7 +44,7 @@ REGISTER_USER_OP("py_sigmoid")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("py_sigmoid_grad")
+REGISTER_USER_OP("user_sigmoid_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
@@ -73,22 +73,23 @@ REGISTER_USER_OP("py_sigmoid_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("py_sigmoid").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto py_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  const auto& py_grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("py_sigmoid_grad")
-        .InputBind("y", ctx->FwOp().output("out", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Output("dx")
-        .Build();
-  };
-  ctx->DefineOp(py_grad_op_name, py_grad_op_func);
+REGISTER_USER_OP_GRAD("user_sigmoid")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+      const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("user_sigmoid_grad")
+            .InputBind("y", ctx->FwOp().output("out", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .Output("dx")
+            .Build();
+      };
+      ctx->DefineOp(grad_op_name, grad_op_func);
 
-  const auto& dx_get_func = [&ctx, &py_grad_op_name]() -> const std::string& {
-    return ctx->GetOp(py_grad_op_name).output("dx", 0);
-  };
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), dx_get_func);
-});
+      const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& {
+        return ctx->GetOp(grad_op_name).output("dx", 0);
+      };
+      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), dx_get_func);
+    });
 
 }  // namespace
 

@@ -62,19 +62,20 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
     "eager mode has not support op load yet",
 )
 @flow.unittest.skip_unless_1n1d()
-class TestPySigmoid(flow.unittest.TestCase):
-    def test_py_sigmoid(test_case):
-        py_sigmoid_lib = flow.experimental.op_lib("py_sigmoid", lib_path)
-        py_sigmoid_lib.AddPythonAPI()
-        py_sigmoid_lib.AddOpDef()
-        py_sigmoid_lib.AddPythonKernel()
-        py_sigmoid_lib.BuildAndLoad()
+class TestUserSigmoid(flow.unittest.TestCase):
+    def test_user_sigmoid(test_case):
+        user_sigmoid_lib = flow.experimental.op_lib("user_sigmoid", lib_path)
+        user_sigmoid_lib.AddPythonAPI()
+        user_sigmoid_lib.AddOpDef()
+        user_sigmoid_lib.AddPythonKernel()
+        user_sigmoid_lib.AddCPPKernel()
+        user_sigmoid_lib.BuildAndLoad()
 
         def make_py_job(input_shape, dtype=flow.float32):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
                 with flow.scope.placement("cpu", "0:0"):
-                    return py_sigmoid_lib.api.py_sigmoid(x, "py")
+                    return user_sigmoid_lib.api.user_sigmoid(x, "cpp")
 
             return sigmoid_py_job
 
@@ -90,7 +91,7 @@ class TestPySigmoid(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(sig, py_sig, rtol=1e-03, atol=1e-05))
         test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
-    def _test_py_sigmoid_grad(test_case):
+    def _test_user_sigmoid_grad(test_case):
         def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_grad_job(
@@ -98,7 +99,7 @@ class TestPySigmoid(flow.unittest.TestCase):
                 dy: oft.Numpy.Placeholder(dy_shape, dtype=dtype),
             ):
                 with flow.scope.placement("cpu", "0:0"):
-                    return py_sigmoid_lib.api.py_sigmoid_grad(y, dy, "py")
+                    return user_sigmoid_lib.api.py_sigmoid_grad(y, dy, "py")
 
             return sigmoid_py_grad_job
 
