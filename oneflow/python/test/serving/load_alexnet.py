@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import oneflow.core.job.saved_model_pb2 as saved_model_pb
+import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.common.error_pb2 as error_util
 
 from google.protobuf import text_format

@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import oneflow as flow
-import oneflow.core.job.saved_model_pb2 as saved_model_pb
+import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.record.record_pb2 as record_pb
 import unittest
 import os

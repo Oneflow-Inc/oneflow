@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/load_model.h"
-#include <string>
-#include "oneflow/core/job/saved_model.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/serving/saved_model.pb.h"
+#include <string>
 
 namespace oneflow {
 

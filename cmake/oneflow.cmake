@@ -45,8 +45,12 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
- "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*")
+file(GLOB_RECURSE oneflow_all_src 
+  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*"
+)
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)

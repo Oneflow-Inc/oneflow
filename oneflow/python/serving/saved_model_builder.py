@@ -17,13 +17,13 @@ limitations under the License.
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.shape_pb2 as shape_pb2
-import oneflow.core.job.saved_model_pb2 as model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2
+import oneflow.core.serving.saved_model_pb2 as model_pb
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.python.oneflow_export import oneflow_export
 
 import os
