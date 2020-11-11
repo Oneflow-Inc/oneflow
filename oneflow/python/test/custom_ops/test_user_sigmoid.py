@@ -75,7 +75,7 @@ class TestUserSigmoid(flow.unittest.TestCase):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
                 with flow.scope.placement("cpu", "0:0"):
-                    return user_sigmoid_lib.api.user_sigmoid(x, "cpp")
+                    return user_sigmoid_lib.api.user_sigmoid(x, "py")
 
             return sigmoid_py_job
 
