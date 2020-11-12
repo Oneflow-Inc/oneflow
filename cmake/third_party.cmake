@@ -20,7 +20,6 @@ include(openssl)
 include(grpc)
 include(flatbuffers)
 include(lz4)
-include(llvm-project)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -120,7 +119,6 @@ set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${FLATBUFFERS_STATIC_LIBRARIES}
     ${LZ4_STATIC_LIBRARIES}
-    ${LLVM_PROJECT_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -161,7 +159,6 @@ set(oneflow_third_party_dependencies
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
-  llvm-project
 )
 
 
@@ -185,7 +182,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
-    ${LLVM_PROJECT_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)
