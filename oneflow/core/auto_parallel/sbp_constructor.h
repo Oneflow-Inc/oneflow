@@ -29,7 +29,7 @@ namespace oneflow {
 class SbpConstructor {
  public:
   SbpConstructor() {
-    std::ifstream ifs("/root/work/codes/oneflow/oneflow/core/auto_prallel/CostRatioFile.txt");
+    std::ifstream ifs("/home/liyipeng/OneFlow-Benchmark/Classification/cnns/CostRatioFile.txt");
     if (ifs.is_open()) {
       ifs >> CostRatio;
       std::cout << "CostRatio is read from file: " << CostRatio << std::endl;
