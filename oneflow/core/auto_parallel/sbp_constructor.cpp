@@ -243,8 +243,8 @@ void break_point_here() { std::cout << "break point here" << std::endl; }
 double SbpConstructor::ComputeComputationCost(const SbpParallel& sbp_parallel_,
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& parallel_desc) {
-  double total_cost =
-      CostRatio * logical_blob_desc.shape().elem_cnt() * logical_blob_desc.shape().elem_cnt();
+  double total_cost = CostRatio * logical_blob_desc.shape().elem_cnt();
+  // CostRatio * logical_blob_desc.shape().elem_cnt() * logical_blob_desc.shape().elem_cnt();
   if (sbp_parallel_.has_split_parallel())
     return total_cost / parallel_desc.parallel_num();
   else
@@ -350,15 +350,20 @@ void SbpConstructor::InitializeComputationCost(
 
     // look through sbp signature in this sbp node
     sbp_node->Cost.resize(sbp_node->SbpSignatureList.size());
+    auto logical_blob_desc4lbi_ = [&](const LogicalBlobId& lbi) -> const BlobDesc& {
+      return op_node->LogicalBlobDesc4Lbi(lbi);
+    };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
-      auto sbp_bn_in_op2sbp_parallel =
-          sbp_node->SbpSignatureList[sbp_id]->mutable_bn_in_op2sbp_parallel();
-      for (const std::string& obn : op_node->op().output_bns()) {
-        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-        const BlobDesc& logical_blob_desc = op_node->LogicalBlobDesc4Lbi(lbi);
-        const SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[obn];
-        sbp_node->Cost[sbp_id] += ComputeComputationCost(sbp, logical_blob_desc, parallel_desc);
-      }
+      // auto sbp_bn_in_op2sbp_parallel =
+      //     sbp_node->SbpSignatureList[sbp_id]->mutable_bn_in_op2sbp_parallel();
+      // for (const std::string& obn : op_node->op().output_bns()) {
+      //   const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
+      //   const BlobDesc& logical_blob_desc = op_node->LogicalBlobDesc4Lbi(lbi);
+      //   const SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[obn];
+      //   sbp_node->Cost[sbp_id] += ComputeComputationCost(sbp, logical_blob_desc, parallel_desc);
+      // }
+      sbp_node->Cost[sbp_id] = op_node->op().Complexity4SbpBlobdesc(
+          sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4lbi_, parallel_desc, CostRatio);
     }
   });
 }

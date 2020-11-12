@@ -184,6 +184,13 @@ class Operator {
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
+  // Compute time complexity for given blob description and sbp signature.
+  // Use OpNode to repalce the HashMap from logical blob id to blob description pointer.
+  virtual double Complexity4SbpBlobdesc(
+      SbpSignature* sbp_signature_,
+      std::function<const BlobDesc&(const LogicalBlobId& lbi)> logical_blob_desc4lbi_,
+      const ParallelDesc& parallel_desc, double CostRatio) const;
+
   ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
 
   Maybe<const SbpSignature*> sbp_signature() const;

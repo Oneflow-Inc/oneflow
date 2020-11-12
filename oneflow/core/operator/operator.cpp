@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -702,6 +701,32 @@ std::shared_ptr<OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const
   op_attribute->mutable_sbp_signature();
   *op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
   return op_attribute;
+}
+
+// Compute time complexity for given blob description and sbp signature.
+// Use function to repalce the HashMap from logical blob id to blob description pointer.
+double Operator::Complexity4SbpBlobdesc(
+    SbpSignature* sbp_signature_,
+    std::function<const BlobDesc&(const LogicalBlobId& lbi)> logical_blob_desc4lbi_,
+    const ParallelDesc& parallel_desc, double CostRatio) const{
+  auto sbp_bn_in_op2sbp_parallel = sbp_signature_->mutable_bn_in_op2sbp_parallel();
+  double complexity_ = 0;
+  auto ComputeComplexity4Blobs = [&](const PbRpf<std::string>& bns) {
+    for (const auto& bn : bns) {
+      const LogicalBlobId& lbi = BnInOp2Lbi(bn);
+      const BlobDesc& logical_blob_desc = logical_blob_desc4lbi_(lbi);
+      const SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[bn];
+
+      double total_cost = CostRatio * logical_blob_desc.shape().elem_cnt();
+      if (sbp.has_split_parallel())
+        complexity_ += total_cost / parallel_desc.parallel_num();
+      else
+        complexity_ += total_cost;
+    }
+  };
+  ComputeComplexity4Blobs(input_bns());
+  ComputeComplexity4Blobs(output_bns());
+  return complexity_;
 }
 
 LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
