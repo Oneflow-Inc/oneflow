@@ -16,32 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
 namespace {
-
-// Convert high-dimensional array coordinates to one-dimensional array index
-int64_t coordinate_to_index(const std::vector<int64_t> coordinate, const ShapeView shape,
-                            const int64_t size_of_data_type) {
-  int64_t idx = 0;
-  for (int64_t i = 0; i < shape.NumAxes(); ++i) { idx += coordinate[i] * shape.Count(i + 1); }
-  return idx;
-}
-
-// Convert one-dimensional array index to high-dimensional coordinates
-std::vector<int64_t> index_to_coordinate(const int64_t idx, const std::vector<int64_t> shape,
-                                         std::vector<int64_t>& coordinate) {
-  int64_t tmp = idx;
-  int64_t i = shape.size() - 1;
-  while (i >= 0) {
-    int64_t dim_i_idx = (tmp % shape[i]);
-    coordinate[i] = dim_i_idx;
-    tmp = (tmp - dim_i_idx) / shape[i];
-    i -= 1;
-  }
-  return coordinate;
-}
 
 // Get dim vector with size of data type
 void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_data_type,
@@ -51,15 +30,6 @@ void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_da
   // Replace the last dimension of the dim vector with: the number of elements n × the number of
   // bytes of the data type
   shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
-}
-
-// Fill ShapeView into vector
-std::vector<int64_t> shapeview_to_vector(const ShapeView& tensor_shape) {
-  int64_t ndims = tensor_shape.NumAxes();
-  std::vector<int64_t> shape_vec(ndims);
-  for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = tensor_shape.At(i); }
-  shape_vec[ndims - 1] = shape_vec[ndims - 1];
-  return shape_vec;
 }
 
 // Fill ShapeView into dim vector
@@ -93,8 +63,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc memory_copy_nd_desc;
     DimVector src_shape_vec(ndims);
     DimVector dst_shape_vec(ndims);
-    DimVector x_vector = shapeview_to_dimvector(x->shape());
-    DimVector y_vector = shapeview_to_dimvector(y->shape());
 
     GetDimVectorInBytes(x->shape(), sizeof_dtype, src_shape_vec);
     GetDimVectorInBytes(y->shape(), sizeof_dtype, dst_shape_vec);
@@ -123,23 +91,22 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     padding_h = padding[channel_h_idx];
     padding_w = padding[channel_w_idx];
     const ShapeView& x_shape = x->shape();
-    const ShapeView& y_shape = y->shape();
     // elements index vector of diagonal elements
     std::vector<int64_t> index_vector;
 
-    int y_vector_count = y->shape().elem_cnt();
-    for (int i = 0; i < y_vector_count; i++) {
+    DimVector y_vector = shapeview_to_dimvector(y->shape());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+    FOR_RANGE(int, i, 0, y->shape().elem_cnt()) {
       // Traverse one-dimensional array y
-      std::vector<int64_t> coordinate(y_shape.NumAxes());
-      std::vector<int64_t> coord_y =
-          index_to_coordinate(i, shapeview_to_vector(y_shape), coordinate);
+      int64_t coord_y[ndims];
+      index_helper.OffsetToNdIndex(i, coord_y);
       int64_t x_h = coord_y[channel_h_idx] - padding_h;
       int64_t x_w = coord_y[channel_w_idx] - padding_w;
       if (x_h < 0 || x_h >= x_shape.At(channel_h_idx) || x_w < 0
           || x_w >= x_shape.At(channel_w_idx)) {
         // Indicates that the element is no longer in the original x range (the data to be padding
         // outside)
-        std::vector<int64_t> dest_coords;
+        int64_t dest_coords[4];
         int64_t dest_index;
         // Determine whether it is a diagonal element
         if ((x_h >= 0 && x_h < x_shape.At(2))) {
@@ -152,12 +119,16 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
             // right pary
             dest_w = 2 * (padding_w + x_shape.At(channel_w_idx) - 1) - coord_y[channel_w_idx];
           }
+          dest_coords[0] = coord_y[0];
+          dest_coords[1] = coord_y[1];
           if (data_format == "NCHW") {
-            dest_coords = {coord_y[0], coord_y[1], coord_y[2], dest_w};
+            dest_coords[2] = coord_y[2];
+            dest_coords[3] = dest_w;
           } else {
-            dest_coords = {coord_y[0], coord_y[1], dest_w, coord_y[3]};
+            dest_coords[2] = dest_w;
+            dest_coords[3] = coord_y[3];
           }
-          dest_index = coordinate_to_index(dest_coords, y_shape, 1);
+          dest_index = index_helper.NdIndexToOffset(dest_coords);
           Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i,
                               y->mut_dptr<T>() + dest_index, sizeof_dtype);
         } else if (x_w >= 0 && x_w < x_shape.At(channel_w_idx)) {
@@ -170,12 +141,16 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
             // lower part
             dest_h = 2 * (padding_h + x_shape.At(channel_h_idx) - 1) - coord_y[channel_h_idx];
           }
+          dest_coords[0] = coord_y[0];
+          dest_coords[3] = coord_y[3];
           if (data_format == "NCHW") {
-            dest_coords = {coord_y[0], coord_y[1], dest_h, coord_y[3]};
+            dest_coords[1] = coord_y[1];
+            dest_coords[2] = dest_h;
           } else {
-            dest_coords = {coord_y[0], dest_h, coord_y[2], coord_y[3]};
+            dest_coords[1] = dest_h;
+            dest_coords[2] = coord_y[2];
           }
-          dest_index = coordinate_to_index(dest_coords, y_shape, 1);
+          dest_index = index_helper.NdIndexToOffset(dest_coords);
           Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i,
                               y->mut_dptr<T>() + dest_index, sizeof_dtype);
         } else {
@@ -186,13 +161,12 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     }
 
     // Traverse the diagonal elements around index_vector and assign values
-    for (int i = 0; i < index_vector.size(); i++) {
-      std::vector<int64_t> coordinate(y_shape.NumAxes());
-      std::vector<int64_t> coord_y =
-          index_to_coordinate(index_vector[i], shapeview_to_vector(y_shape), coordinate);
+    FOR_RANGE(int, i, 0, index_vector.size()) {
+      int64_t coord_y[ndims];
+      index_helper.OffsetToNdIndex(index_vector[i], coord_y);
       int64_t dest_w;
       int64_t dest_index;
-      std::vector<int64_t> dest_coords;
+      int64_t dest_coords[4];
       if (coord_y[channel_w_idx] < padding_w) {
         // left part
         dest_w = 2 * padding_w - coord_y[channel_w_idx];
@@ -200,12 +174,16 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
         // right part
         dest_w = 2 * (padding_w + x_shape.At(channel_w_idx) - 1) - coord_y[channel_w_idx];
       }
+      dest_coords[0] = coord_y[0];
+      dest_coords[1] = coord_y[1];
       if (data_format == "NCHW") {
-        dest_coords = {coord_y[0], coord_y[1], coord_y[2], dest_w};
+        dest_coords[2] = coord_y[2];
+        dest_coords[3] = dest_w;
       } else {
-        dest_coords = {coord_y[0], coord_y[1], dest_w, coord_y[3]};
+        dest_coords[2] = dest_w;
+        dest_coords[3] = coord_y[3];
       }
-      dest_index = coordinate_to_index(dest_coords, y_shape, 1);
+      dest_index = index_helper.NdIndexToOffset(dest_coords);
       Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + index_vector[i],
                           y->mut_dptr<T>() + dest_index, sizeof_dtype);
     }
@@ -252,9 +230,6 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
     MemoryCopyNdDesc memory_copy_nd_desc;
     DimVector src_shape_vec(ndims);
     DimVector dst_shape_vec(ndims);
-
-    DimVector y_vector = shapeview_to_dimvector(dy->shape());
-    DimVector x_vector = shapeview_to_dimvector(dx->shape());
 
     GetDimVectorInBytes(dy->shape(), size_of_data_type, src_shape_vec);
     GetDimVectorInBytes(dx->shape(), size_of_data_type, dst_shape_vec);
