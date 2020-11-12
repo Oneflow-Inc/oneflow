@@ -30,9 +30,9 @@ def _compare_l1loss_with_np(
     target = np.random.random(size=target_shape).astype(np.float32)
 
     assert device_type in ["cpu", "gpu"]
-    
+
     func_config = flow.FunctionConfig()
-    
+
     flow.clear_default_session()
     flow.env.init()
     if device_type == "cpu":
@@ -108,9 +108,7 @@ def _compare_l1loss_with_np(
         # watch the diff
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        l1loss = flow.nn.L1Loss(
-            x_var, of_target, reduction="none", name="of_l1loss"
-        )
+        l1loss = flow.nn.L1Loss(x_var, of_target, reduction="none", name="of_l1loss")
         l1loss_mean = flow.nn.L1Loss(
             x_var, of_target, reduction="mean", name="of_l1loss_mean"
         )
