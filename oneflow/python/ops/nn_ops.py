@@ -2702,14 +2702,14 @@ def bce_loss(
     if name is None:
         name = "BCELoss"
 
-    if weight is not None: 
-        assert weight.shape == input.shape, "The weight shape must be the same as Input shape"
-    else: 
-        weight = flow.constant_like(like=input, value=1.0, dtype=flow.float32, name=name+"_weight")
-
     _sigmiod_value = flow.math.sigmoid(input, name=name+"_sigmoided_input")
     _cross_entropy_loss = flow.math.negative(target*flow.math.log(_sigmiod_value) + (1-target)*flow.math.log(1-_sigmiod_value))
-    _weighted_loss = weight * _cross_entropy_loss
+    
+    if weight is not None: 
+        assert weight.shape == input.shape, "The weight shape must be the same as Input shape"
+        _weighted_loss = weight * _cross_entropy_loss
+    else: 
+        _weighted_loss = _cross_entropy_loss
 
     if reduction == "mean":
         return flow.math.reduce_mean(
