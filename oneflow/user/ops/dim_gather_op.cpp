@@ -71,7 +71,7 @@ REGISTER_USER_OP("dim_gather")
       OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
       if (indices_batch_axis->has_value()) {
         CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-        CHECK_LT_OR_RETURN(
+        CHECK_LE_OR_RETURN(
             indices_batch_axis->value(),
             ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
       }
