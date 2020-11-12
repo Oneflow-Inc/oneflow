@@ -156,7 +156,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("index", 0)
                       == *ctx->BatchAxis4ArgNameAndIndex("input", 0));
-      ctx->BatchAxis4ArgNameAndIndex("output", 0)->clear_value();
+      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *ctx->BatchAxis4ArgNameAndIndex("input", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
