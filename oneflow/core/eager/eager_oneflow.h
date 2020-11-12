@@ -20,23 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.pb.h"
 
 namespace oneflow {
-
-namespace vm {
-namespace cfg {
-
-class InstructionListProto;
-
-}  // namespace cfg
-}  // namespace vm
-
-namespace eager {
-namespace cfg {
-
-class EagerSymbolList;
-
-}  // namespace cfg
-}  // namespace eager
-
 namespace eager {
 
 class EagerOneflow final {
@@ -46,9 +29,6 @@ class EagerOneflow final {
 
   Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
                                     const std::string& eager_symbol_list_str);
-
-  Maybe<void> RunLogicalInstruction(const vm::cfg::InstructionListProto& instruction_list_proto,
-                                    const eager::cfg::EagerSymbolList& eager_symbol_list);
 
   Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
                                      const std::string& eager_symbol_list_str);

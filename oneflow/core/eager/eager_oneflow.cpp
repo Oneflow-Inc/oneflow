@@ -18,9 +18,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
-#include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/machine_context.h"
@@ -90,18 +88,6 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
   return RunPhysicalInstruction(cluster_instruction);
-}
-
-Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const vm::cfg::InstructionListProto& instruction_list_proto,
-    const eager::cfg::EagerSymbolList& eager_symbol_list) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto.ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
-  eager_symbol_list.ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunLogicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(const std::string& instruction_list_proto_str,
