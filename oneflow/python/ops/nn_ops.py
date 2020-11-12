@@ -2686,7 +2686,6 @@ def l1_loss(
         @flow.global_function()
         def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
                 y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
-            # It's equal to `Torch.nn.L1Loss(reduction="mean")
             out = flow.nn.L1Loss(x, y, reduction="mean", name="l1")
 
             return out
@@ -2711,7 +2710,6 @@ def l1_loss(
         @flow.global_function()
         def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
                 y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
-            # It's equal to `Torch.nn.L1Loss(reduction="sum")
             out = flow.nn.L1Loss(x, y, reduction="sum", name="l1")
 
             return out
@@ -2729,8 +2727,16 @@ def l1_loss(
         input.shape == target.shape
     ), "The Input shape must be the same as Target shape"
 
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
     if name is None:
-        name = "L1Loss"
+        name = id_util.UniqueStr("L1Loss_")
 
     l1_value = flow.math.abs(
         flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
