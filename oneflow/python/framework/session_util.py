@@ -72,7 +72,11 @@ class Session(object):
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
+        # parallel conf in op attribute is not always correct
+        # as parallel conf may be updated in some passes
+        # (like non_distributed_optimizer_pass)
         self.interface_op_name2op_attr_ = {}
+        self.interface_op_name2parallel_conf_ = {}
         self.interface_op_name2op_conf_ = {}
         self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
@@ -188,11 +192,19 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
-            # Get latest op_conf after compiler.Compile
+            # Get latest op_conf and parallel_conf after compiler.Compile
             for job in c_api_util.GetJobSet().job:
+                op_name2parallel_conf = {}
+                for placement_group in job.placement.placement_group:
+                    for op_name in placement_group.op_set.op_name:
+                        op_name2parallel_conf[op_name] = placement_group.parallel_conf
                 for op_conf in job.net.op:
                     if c_api_util.IsInterfaceOpConf(op_conf):
                         self.interface_op_name2op_conf_[op_conf.name] = op_conf
+                        self.interface_op_name2parallel_conf_[
+                            op_conf.name
+                        ] = op_name2parallel_conf[op_conf.name]
+
             if not config_util.api_legacy_model_io_enabled():
                 check_point.Init()
         else:
@@ -312,6 +324,9 @@ class Session(object):
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
+
+    def ParallelConf4InterfaceOpName(self, interface_op_name):
+        return self.interface_op_name2parallel_conf_[interface_op_name]
 
     def OpConf4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_conf_[interface_op_name]
