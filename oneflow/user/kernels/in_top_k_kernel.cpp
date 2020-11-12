@@ -15,14 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/user/kernels/in_top_k_kernel_util.h"
 
 namespace oneflow {
 
-template<typename TargetT, typename T>
-class CpuInTopkKernel final : public user_op::OpKernel {
+template<DeviceType device_type, typename T, typename K>
+class InTopkKernel final : public user_op::OpKernel {
  public:
-  CpuInTopkKernel() = default;
-  ~CpuInTopkKernel() = default;
+  InTopkKernel() = default;
+  ~InTopkKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -33,47 +34,29 @@ class CpuInTopkKernel final : public user_op::OpKernel {
 
     CHECK_EQ(targets->shape().At(0), predictions->shape().At(0));
 
-    const TargetT* target_ptr = targets->dptr<TargetT>();
-    const T* prediction_ptr = predictions->dptr<T>();
+    const T* target_ptr = targets->dptr<T>();
+    const K* prediction_ptr = predictions->dptr<K>();
     int8_t* out_ptr = out->mut_dptr<int8_t>();
 
     const int32_t targets_num = predictions->shape().At(0);
     const int32_t classes_num = predictions->shape().At(1);
-    FOR_RANGE(int32_t, batch_idx, 0, targets_num) {
-      TargetT target = target_ptr[batch_idx];
 
-      bool cannot_say = (target >= classes_num)
-                        || !std::isfinite(prediction_ptr[batch_idx * classes_num + target]);
-
-      int32_t more_probable_classes = 0;
-      if (!cannot_say) {
-        const T target_prediction = prediction_ptr[batch_idx * classes_num + target];
-        FOR_RANGE(int32_t, class_idx, 0, classes_num) {
-          T pred = prediction_ptr[batch_idx * classes_num + class_idx];
-
-          if (!std::isfinite(pred)) {
-            cannot_say = true;
-            break;
-          } else if (pred > target_prediction) {
-            ++more_probable_classes;
-            if (more_probable_classes > k) break;
-          }
-        }
-      }
-      out_ptr[batch_idx] = cannot_say ? false : (more_probable_classes < k);
-    }
+    InTopkKernelUtil<device_type, T, K>::InTopk(ctx->device_ctx(), targets_num, classes_num,
+                                                target_ptr, prediction_ptr, k, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_IN_TOP_K_KERNEL(target_dtype, dtype)                                         \
-  REGISTER_USER_KERNEL("in_top_k")                                                                \
-      .SetCreateFn<CpuInTopkKernel<target_dtype, dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                         \
-                       & (user_op::HobDataType("targets", 0) == GetDataType<target_dtype>::value) \
-                       & (user_op::HobDataType("predictions", 0) == GetDataType<dtype>::value));
+#define REGISTER_IN_TOP_K_KERNEL_CASE(device, target_dtype, pred_dtype)              \
+  REGISTER_USER_KERNEL("in_top_k")                                                   \
+      .SetCreateFn<InTopkKernel<target_dtype, target_dtype, pred_dtype>>()           \
+      .SetIsMatchedHob(                                                              \
+          (user_op::HobDeviceTag() == device)                                        \
+          & (user_op::HobDataType("targets", 0) == GetDataType<target_dtype>::value) \
+          & (user_op::HobDataType("predictions", 0) == GetDataType<dtype>::pred_dtype));
 
-REGISTER_CPU_IN_TOP_K_KERNEL(int32_t, float)
-REGISTER_CPU_IN_TOP_K_KERNEL(int64_t, float)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_IN_TOP_K_KERNEL_CASE, DEVICE_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ, ,
+                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat))
 
 }  // namespace oneflow

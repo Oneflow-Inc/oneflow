@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_USER_OP("in_top_k")
     .Input("targets")
     .Input("predictions")
-    .Attr("k", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("k")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
 
