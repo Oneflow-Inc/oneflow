@@ -20,6 +20,7 @@ include(openssl)
 include(grpc)
 include(flatbuffers)
 include(lz4)
+include(llvm-project)
 
 if (WITH_XLA)
   include(tensorflow)
