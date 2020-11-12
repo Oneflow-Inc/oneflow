@@ -233,14 +233,6 @@ class TestCheckpoint(flow.unittest.TestCase):
     def test_load_correctness_2node(test_case):
         _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
 
-    @flow.unittest.skip_unless_2n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "legacy model io doesn't work in eager mode",
-    )
-    def test_load_correctness_2node(test_case):
-        _TestLoadCorrectness(test_case, get_large_model, flow.float, False)
-
     @flow.unittest.skip_unless_1n4d()
     def test_assignment_between_memory(test_case):
         _TestAssignmentBetweenMemory(test_case, flow.float)

@@ -42,7 +42,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.ops.get_variable as get_variable
 
 from oneflow.python.oneflow_export import oneflow_export
-from typing import Dict, List, Union, Sequence, Optional
+from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple
 
 
 META_INFO_FILENAME = "meta"
@@ -173,11 +173,11 @@ class FileBackendVariableBlob:
             assert os.path.getsize(data_path) == np.prod(self.shape).item() * itemsize
 
     @property
-    def file_path(self):
+    def file_path(self) -> str:
         return os.path.join(self.var_dir_, DATA_FILENAME)
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int]:
         return self.shape_
 
     @property
@@ -185,7 +185,7 @@ class FileBackendVariableBlob:
         raise NotImplementedError()
 
     @property
-    def dtype(self):
+    def dtype(self) -> dtype_util.dtype:
         return self.dtype_
 
     def numpy(self) -> np.ndarray:
@@ -211,7 +211,7 @@ def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
     return variables
 
 
-def _LoadSingleVariable(path):
+def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
     if os.path.isfile(os.path.join(path, DATA_FILENAME)):
         return FileBackendVariableBlob(path)
     return None
@@ -219,7 +219,12 @@ def _LoadSingleVariable(path):
 
 @oneflow_export("load")
 @session_ctx.try_init_default_session
-def Load(path):
+def Load(
+    path: str,
+) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
+    """
+    Load variable(s) from disk.
+    """
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     single_var = _LoadSingleVariable(path)
     if single_var is not None:
@@ -245,7 +250,13 @@ def _GetScopeSymbolIdFromEagerBlob(blob):
     return scope_symbol_id
 
 
-def _ReadSliceFromBlob(blob):
+def _ReadSliceFromBlob(
+    blob: Union[EagerBlobTrait, FileBackendVariableBlob]
+) -> Iterable[Tuple[Sequence[int], Sequence[int], np.ndarray]]:
+    """
+    Return a generator which iterates over the input blob and yields
+    (start_nd_idx, stop_nd_idx, slice_np_array)
+    """
     if isinstance(blob, EagerBlobTrait):
 
         def ReadSlice(blob, start_nd_idx, stop_nd_idx, length):
@@ -264,14 +275,18 @@ def _ReadSliceFromBlob(blob):
 
             yield from _ForEverySlice(blob, ReadFromFile)
     else:
-        raise RuntimeError(
-            "Unknown value_blob type: {}".format(type(value_blob).__name__)
-        )
+        raise RuntimeError("Unknown value_blob type: {}".format(type(blob).__name__))
 
 
 @oneflow_export("save")
 @session_ctx.try_init_default_session
-def Save(var_dict, path):
+def Save(
+    var_dict: Dict[str, Union[FileBackendVariableBlob, EagerBlobTrait]], path: str
+) -> None:
+    """
+    Save `var_dict` to `path`
+    """
+
     def IsFileOrNonEmptyDir(path):
         if os.path.isfile(path):
             return True
@@ -290,8 +305,6 @@ def Save(var_dict, path):
         var_dir = os.path.join(path, name)
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
-        sess = session_ctx.GetDefaultSession()
-        var_op_conf = sess.OpConf4InterfaceOpName(name)
         with open(param_path, "wb") as f:
             for _, _, slice in _ReadSliceFromBlob(var):
                 f.write(slice.tobytes())
@@ -299,7 +312,13 @@ def Save(var_dict, path):
             f.write(text_format.MessageToString(meta_info))
 
 
-def _LogicalSlice(input_blob, start, stop):
+def _LogicalSlice(
+    input_blob: EagerBlobTrait, start: Sequence[int], stop: Sequence[int]
+) -> np.ndarray:
+    """
+    Construct a logical_slice op and run it by oneflow eager,
+    return the sliced result as a numpy ndarray
+    """
     op_name = id_util.UniqueStr(OP_PREFIX)
 
     def AsyncSlice(Yield):
@@ -344,12 +363,18 @@ def _LogicalSlice(input_blob, start, stop):
     return blob.numpy()
 
 
-def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype):
-    # Note: dtype argument cannot be replaced with
-    # convert_numpy_dtype_to_oneflow_dtype(np_array.dtype),
-    # because np.int8 == np.char and
-    # numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8))
-    # may be flow.char
+def _GetCpu0VariableBlobFromNumpy(
+    np_array: np.ndarray, dtype: dtype_util.dtype
+) -> remote_blob_util.EagerConsistentBlob:
+    """
+    Add a variable on cpu 0, and feed the value of `np_array`
+
+    Note: dtype argument cannot be replaced with
+    convert_numpy_dtype_to_oneflow_dtype(np_array.dtype),
+    because np.int8 == np.char and
+    numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8))
+    may be flow.char
+    """
     with oneflow.scope.placement("cpu", "0:0"):
         op_name = id_util.UniqueStr(OP_PREFIX)
         op_conf = get_variable.GenerateVariableOpConf(
@@ -374,7 +399,15 @@ def _GetCpu0VariableBlobFromNumpy(np_array: np.ndarray, dtype: dtype_util.dtype)
         return var_blob
 
 
-def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
+def _LogicalSliceAssign(
+    ref_blob: EagerBlobTrait,
+    value_blob: EagerBlobTrait,
+    start: Sequence[int],
+    stop: Sequence[int],
+) -> None:
+    """
+    Construct a logical_slice_assign op and run it by oneflow eager
+    """
     ref_blob_object = ref_blob.blob_object
     value_blob_object = value_blob.blob_object
 
@@ -408,13 +441,16 @@ def _LogicalSliceAssign(ref_blob, value_blob, start, stop):
     blob_cache_util.TryDisableBlobCache(ref_blob_object)
 
 
-def _FeedValueToVariable(var_name, value_blob):
+def _FeedValueToVariable(
+    var_blob: remote_blob_util.EagerConsistentBlob,
+    value_blob: Union[EagerBlobTrait, FileBackendVariableBlob],
+) -> None:
+    """
+    Feed the value of `value_blob` to the variable `var_blob`
+    """
     assert isinstance(
         value_blob, (EagerBlobTrait, FileBackendVariableBlob)
     ), "Unknown value_blob type: {}".format(type(value_blob).__name__)
-    sess = session_ctx.GetDefaultSession()
-    var_op_conf = sess.OpConf4InterfaceOpName(var_name)
-    var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(var_name)
 
     if isinstance(value_blob, FileBackendVariableBlob):
         if not value_blob.has_meta_info_:
@@ -436,52 +472,60 @@ def _FeedValueToVariable(var_name, value_blob):
 
 @oneflow_export("load_variables")
 @session_ctx.try_init_default_session
-def LoadVariables(var_dict, ignore_mismatch=False):
-    for name, var in var_dict.items():
+def LoadVariables(
+    value_dict: Dict[str, Union[EagerBlobTrait, FileBackendVariableBlob]],
+    ignore_mismatch: bool = False,
+):
+    for name, value_blob in value_dict.items():
         if name in GetAllVariables():
-            _FeedValueToVariable(name, var)
+            var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
+            _FeedValueToVariable(var_blob, value_blob)
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
     oneflow_api.eager.Sync()
 
 
-def _ForEverySlice(var_blob, f):
+def _ForEverySlice(
+    blob: Union[EagerBlobTrait, FileBackendVariableBlob],
+    f: Union[
+        Callable[[EagerBlobTrait, Sequence[int], Sequence[int], int], Any],
+        Callable[[FileBackendVariableBlob, Sequence[int], Sequence[int], int], Any],
+    ],
+):
     """
-    Slice var_blob into slices whose size < SLICE_BYTES. For every slice,
+    Slice blob into slices whose size < SLICE_BYTES. For every slice,
     yield start_nd_idx, stop_nd_idx and f(slice)
     """
-    assert var_blob.shape is not None
+    assert blob.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
     SLICE_BYTES = 20 * 1024 * 1024
-    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype))
+    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
-    size = np.prod(var_blob.shape).astype(np.int).item()
+    size = np.prod(blob.shape).astype(np.int).item()
     cnt = 1
-    for axis in reversed(range(len(var_blob.shape))):
-        cnt *= var_blob.shape[axis]
+    for axis in reversed(range(len(blob.shape))):
+        cnt *= blob.shape[axis]
         if cnt > SLICE_LEN:
             break
-    unit_size = np.prod(var_blob.shape[axis + 1 :]).astype(np.int).item()
+    unit_size = np.prod(blob.shape[axis + 1 :]).astype(np.int).item()
     max_unit_num = SLICE_LEN // unit_size
     while start_idx < size:
-        remainder = var_blob.shape[axis]
+        remainder = blob.shape[axis]
         while remainder > 0:
             unit_num = max_unit_num if remainder >= max_unit_num else remainder
             length = unit_num * unit_size
             remainder -= unit_num
             stop_idx = start_idx + length
-            start_nd_idx = np.unravel_index(start_idx, var_blob.shape)
-            stop_nd_idx = np.unravel_index(stop_idx - 1, var_blob.shape)
+            start_nd_idx = np.unravel_index(start_idx, blob.shape)
+            stop_nd_idx = np.unravel_index(stop_idx - 1, blob.shape)
             stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
-            yield start_nd_idx, stop_nd_idx, f(
-                var_blob, start_nd_idx, stop_nd_idx, length
-            )
+            yield start_nd_idx, stop_nd_idx, f(blob, start_nd_idx, stop_nd_idx, length)
             start_idx = stop_idx
 
 
-def Init():
+def Init() -> None:
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
         var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
