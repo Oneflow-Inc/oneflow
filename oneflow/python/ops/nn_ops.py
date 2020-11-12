@@ -2652,7 +2652,7 @@ def leaky_relu(
 def bce_loss(
     input: remote_blob_util.BlobDef,
     target: remote_blob_util.BlobDef,
-    weight: remote_blob_util = None, 
+    weight: remote_blob_util = None,
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -2702,22 +2702,24 @@ def bce_loss(
     if name is None:
         name = "BCELoss"
 
-    _sigmiod_value = flow.math.sigmoid(input, name=name+"_sigmoided_input")
-    _cross_entropy_loss = flow.math.negative(target*flow.math.log(_sigmiod_value) + (1-target)*flow.math.log(1-_sigmiod_value))
-    
-    if weight is not None: 
-        assert weight.shape == input.shape, "The weight shape must be the same as Input shape"
+    _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
+    _cross_entropy_loss = flow.math.negative(
+        target * flow.math.log(_sigmiod_value)
+        + (1 - target) * flow.math.log(1 - _sigmiod_value)
+    )
+
+    if weight is not None:
+        assert (
+            weight.shape == input.shape
+        ), "The weight shape must be the same as Input shape"
         _weighted_loss = weight * _cross_entropy_loss
-    else: 
+    else:
         _weighted_loss = _cross_entropy_loss
 
     if reduction == "mean":
-        return flow.math.reduce_mean(
-            _weighted_loss, name=name + "_reduce_mean"
-        )
+        return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
     elif reduction == "sum":
         return flow.math.reduce_sum(_weighted_loss, name=name + "_reduce_sum")
     else:
         # Do no reduction
         return _weighted_loss
-

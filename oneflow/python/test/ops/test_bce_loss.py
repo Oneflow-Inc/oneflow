@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import numpy as np
 import oneflow.typing as tp
@@ -5,7 +20,7 @@ from test_util import GenArgList
 import unittest
 from collections import OrderedDict
 from typing import List
-import os 
+import os
 
 
 def _compare_bceloss_with_np(
@@ -26,24 +41,31 @@ def _compare_bceloss_with_np(
 
     func_config = flow.FunctionConfig()
 
-    def _np_sigmoid_fn(x): 
+    def _np_sigmoid_fn(x):
         # Compute sigmoid function
-        return 1 / (1+np.exp(-x))
+        return 1 / (1 + np.exp(-x))
 
     def np_bceloss(np_input, np_target, np_weight):
         np_sigmoid_input = _np_sigmoid_fn(np_input)
-        np_bce = -np_weight*((np_target*np.log(np_sigmoid_input) + (1-np_target)*(np.log(1-np_sigmoid_input))))
-        
+        np_bce = -np_weight * (
+            (
+                np_target * np.log(np_sigmoid_input)
+                + (1 - np_target) * (np.log(1 - np_sigmoid_input))
+            )
+        )
+
         np_bce_mean = np.mean(np_bce)
         np_bce_sum = np.sum(np_bce)
 
         return [np_bce, np_bce_mean, np_bce_sum]
 
-    def np_bce_loss_diff(np_input, np_target, np_weight): 
+    def np_bce_loss_diff(np_input, np_target, np_weight):
         # Use numpy to compute diff
         elemcnt = np_target.size
         elemcnt = np.reshape(elemcnt, -1)
-        diff = -(np_weight/elemcnt)*(np_target - (np.exp(np_input) / (1+np.exp(np_input))))
+        diff = -(np_weight / elemcnt) * (
+            np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
+        )
         return diff
 
     np_out_bceloss = np_bceloss(input, target, weight)
@@ -61,7 +83,7 @@ def _compare_bceloss_with_np(
     def oneflow_bceloss(
         of_input: tp.Numpy.Placeholder(shape=input.shape),
         of_target: tp.Numpy.Placeholder(shape=target.shape),
-        of_weight: tp.Numpy.Placeholder(shape=weight.shape)
+        of_weight: tp.Numpy.Placeholder(shape=weight.shape),
     ) -> List[tp.Numpy]:
         v = flow.get_variable(
             shape=target.shape,
@@ -71,7 +93,7 @@ def _compare_bceloss_with_np(
         )
 
         x_var = of_input + v
-        
+
         flow.watch_diff(x_var, assert_prediction_grad)
 
         with flow.scope.placement(device_type, machine_ids):
@@ -79,10 +101,18 @@ def _compare_bceloss_with_np(
                 x_var, of_target, of_weight, reduction="none", name="of_mseloss"
             )
             bceloss_mean = flow.nn.BCELoss(
-                x_var, of_target, of_weight, reduction="mean", name="of_mseloss_reduce_mean"
+                x_var,
+                of_target,
+                of_weight,
+                reduction="mean",
+                name="of_mseloss_reduce_mean",
             )
             bceloss_sum = flow.nn.BCELoss(
-                x_var, of_target, of_weight, reduction="sum", name="of_mseloss_reduce_sum"
+                x_var,
+                of_target,
+                of_weight,
+                reduction="sum",
+                name="of_mseloss_reduce_sum",
             )
             # Because our gradient is use "mean" mode to compute
             out = bceloss_mean
@@ -144,4 +174,3 @@ class Testrange1n2d(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
