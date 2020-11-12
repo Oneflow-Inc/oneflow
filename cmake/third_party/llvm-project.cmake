@@ -43,7 +43,13 @@ if(THIRD_PARTY)
             -DMLIR_CUDA_RUNNER_ENABLED:BOOL=OFF
             -DMLIR_INCLUDE_INTEGRATION_TESTS:BOOL=OFF
         BUILD_COMMAND make -j${PROC_NUM}
-        INSTALL_COMMAND make install
     )
-
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}/llvm-project/src/llvm-project/llvm/cmake/modules")
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}/llvm-project/src/llvm-project/mlir/cmake/modules")
+else()
+    list(APPEND CMAKE_MODULE_PATH "${LLVM_PROJECT_LIBRARY_DIR}/cmake/llvm")
+    list(APPEND CMAKE_MODULE_PATH "${LLVM_PROJECT_LIBRARY_DIR}/cmake/mlir")
 endif(THIRD_PARTY)
+
+include(AddLLVM)
+include(TableGen)
