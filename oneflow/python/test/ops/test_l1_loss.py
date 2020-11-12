@@ -30,7 +30,9 @@ def _compare_l1loss_with_np(
     target = np.random.random(size=target_shape).astype(np.float32)
 
     assert device_type in ["cpu", "gpu"]
-
+    
+    func_config = flow.FunctionConfig()
+    
     flow.clear_default_session()
     flow.env.init()
     if device_type == "cpu":
@@ -38,7 +40,8 @@ def _compare_l1loss_with_np(
     else:
         flow.config.gpu_device_num(device_counts)
 
-    func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     def np_l1loss(np_input, np_target):
         np_l1 = np.abs(np_target - np_input)
@@ -92,28 +95,30 @@ def _compare_l1loss_with_np(
         of_input: tp.Numpy.Placeholder(shape=input.shape),
         of_target: tp.Numpy.Placeholder(shape=target.shape),
     ) -> Dict[str, tp.Numpy]:
-        v = flow.get_variable(
-            shape=target.shape,
-            dtype=flow.float32,
-            initializer=flow.constant_initializer(0),
-            name="v",
-        )
 
-        x_var = of_input + v
+        with flow.scope.placement(device_type, "0:0"):
+            v = flow.get_variable(
+                shape=target.shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+                name="v",
+            )
+
+            x_var = of_input + v
         # watch the diff
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        with flow.scope.placement(device_type, machine_ids):
-            l1loss = flow.nn.L1Loss(
-                x_var, of_target, reduction="none", name="of_l1loss"
-            )
-            l1loss_mean = flow.nn.L1Loss(
-                x_var, of_target, reduction="mean", name="of_l1loss_mean"
-            )
-            l1loss_sum = flow.nn.L1Loss(
-                x_var, of_target, reduction="sum", name="of_l1loss_sum"
-            )
+        l1loss = flow.nn.L1Loss(
+            x_var, of_target, reduction="none", name="of_l1loss"
+        )
+        l1loss_mean = flow.nn.L1Loss(
+            x_var, of_target, reduction="mean", name="of_l1loss_mean"
+        )
+        l1loss_sum = flow.nn.L1Loss(
+            x_var, of_target, reduction="sum", name="of_l1loss_sum"
+        )
 
+        with flow.scope.placement(device_type, "0:0"):
             # We only test reduction="mean" diff
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
