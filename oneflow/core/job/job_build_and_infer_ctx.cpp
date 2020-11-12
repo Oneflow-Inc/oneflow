@@ -942,6 +942,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
+    JUST(DoPass("QuantAwareTraining"));
     JUST(DoPass("NonDistributedOptimizerPass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
@@ -956,7 +957,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
-    JUST(DoPass("QuantAwareTraining"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
   return Maybe<void>::Ok();

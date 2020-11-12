@@ -23,83 +23,34 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-typedef HashSet<std::string> QATList;
+using QATList = HashSet<std::string>;
 
 const QATList& Int8List() {
-  static QATList white_list = {"matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
-  return white_list;
-}
-
-const QATList& ProduceFloat32List() {
-  static QATList black_list = {};
-  return black_list;
+  static QATList int8_list = {"matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
+  return int8_list;
 }
 
 const QATList& TransparentList() {
-  static QATList gray_list = {"add_n",
-                              "bias_add",
-                              "multiply",
-                              "sigmoid",
-                              "tanh",
-                              "sqrt",
-                              "scalar_mul",
-                              "scalar_add",
-                              "broadcast_add",
-                              "broadcast_sub",
-                              "broadcast_mul",
-                              "broadcast_div",
-                              "layer_norm",
-                              "dropout",
-                              "softmax",
-                              "gelu",
-                              "normalization",
-                              "normalization_add_relu",
-                              "gather",
-                              "reshape",
-                              "relu",
-                              "transpose",
-                              "random_mask_like",
-                              "concat",
-                              "pad",
-                              "same_padding"};
-  return gray_list;
+  static QATList transparent_list = {
+      "reshape",
+  };
+  return transparent_list;
 }
+
+const std::string fake_quant_suffix = "-fake-quant";
+const std::string zp_suffix = "-fake-quant-zp";
+const std::string moving_max_suffix = "-fake-quant-moving-max";
+const std::string moving_min_suffix = "-fake-quant-moving-min";
+const std::string mul_bias_suffix = "-fake-quant-mul-bias";
+const std::string observer_suffix = "-fake-quant-observer";
 
 namespace {
-
-#define INSERT_CHECK(expr) CHECK(expr.second)
-
-template<typename MapT, typename KeyT>
-bool IsKeyFound(const MapT& m, const KeyT& k) {
-  return m.find(k) != m.end();
-}
-
-bool IsNodeInList(const QATList& amp_list, OpNode* node) {
-  if (node->op().op_conf().has_user_conf() == false) { return false; }
-  const std::string op_type = node->op().op_conf().user_conf().op_type_name();
-  return IsKeyFound(amp_list, op_type);
-}
-
-template<typename ContainerT, typename ElemT>
-std::string Container2Str(const ContainerT& container,
-                          std::function<std::string(const ElemT&)> elem2str) {
-  std::string ret;
-  bool is_first = true;
-  for (const ElemT& elem : container) {
-    if (is_first) {
-      is_first = false;
-    } else {
-      ret += ",\n";
-    }
-    ret += elem2str(elem);
-  }
-  return ret;
-}
 
 void VerifyQATList(const QATList& amp_list) {
   for (const auto& op_type : amp_list) {
@@ -108,80 +59,241 @@ void VerifyQATList(const QATList& amp_list) {
   }
 }
 
-std::string ReplaceSlashToDash4Lbn(std::string lbn) {
-  std::replace(lbn.begin(), lbn.end(), '/', '-');
-  return lbn;
+HashMap<std::string, std::string> scale_map;
+
+std::string GetScaleLbn(const std::string& lbn) {
+  assert(scale_map.find(lbn) != scale_map.end());
+  return scale_map[lbn];
 }
 
-void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
-                           std::function<bool(OpNode*)> IsCurNodeStartNode,
-                           std::function<bool(OpNode*)> IsCurNodeSatisfied,
-                           std::function<bool(OpNode*)> IsFatherNodeSatisfied,
-                           std::function<void(OpNode*)> NodeHandler) {
-  auto start_nodes = reversed ? graph.sink_nodes() : graph.source_nodes();
-  std::function<void(OpNode*, std::function<void(OpNode*)>)> NodeOnInEdge =
-      reversed ? &OpNode::ForEachNodeOnOutEdge : &OpNode::ForEachNodeOnInEdge;
-  std::function<void(OpNode*, std::function<void(OpNode*)>)> NodeOnOutEdge =
-      reversed ? &OpNode::ForEachNodeOnInEdge : &OpNode::ForEachNodeOnOutEdge;
-  graph.DfsTopoForEachNode(start_nodes, NodeOnInEdge, NodeOnOutEdge, [&](OpNode* node) {
-    if (IsCurNodeStartNode(node)) {
-      NodeHandler(node);
-      return;
+bool IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn,
+                    std::string* conv_weight_scale_lbn) {
+  const auto* dst_node = edge->dst_node();
+  if (dst_node->op().op_conf().user_conf().op_type_name() != "bias_add") { return false; }
+  for (const OpEdge* edge : dst_node->in_edges()) {
+    const auto* src_node = edge->src_node();
+    if (src_node->op().op_conf().user_conf().op_type_name() == "conv2d") {
+      for (const OpEdge* edge2 : src_node->in_edges()) {
+        assert(edge2->lbis().size() == 1);
+        const auto lbi = edge2->lbis().front();
+        const auto ibn = edge2->lbi2ibns().at(lbi);
+        assert(ibn.size() == 1);
+        if (ibn[0] == "in_0") {
+          // Get scale lbn from lbn
+          *conv_input_scale_lbn =
+              GetScaleLbn(edge2->lbis()[0].op_name() + "/" + edge2->lbis()[0].blob_name());
+        } else if (ibn[0] == "weight_0") {
+          *conv_weight_scale_lbn =
+              GetScaleLbn(edge2->lbis()[0].op_name() + "/" + edge2->lbis()[0].blob_name());
+        } else {
+          LOG(INFO) << "incorrect name: " << ibn[0];
+        }
+      }
+      return true;
     }
-    if (IsCurNodeSatisfied(node)) {
-      bool is_one_father_of_node_satisfied = false;
-      NodeOnInEdge(node, [&](OpNode* father_node) {
-        if (is_one_father_of_node_satisfied) { return; }
-        if (IsFatherNodeSatisfied(father_node)) { is_one_father_of_node_satisfied = true; }
-      });
-      if (is_one_father_of_node_satisfied) { NodeHandler(node); }
-    }
-  });
+  }
+  return false;
 }
 
-class QuantAwareTraining final : public OpGraphPass {
+bool IsWeightEdge(const OpEdge* edge) {
+  return edge->src_node()->op().op_conf().has_variable_conf();
+}
+
+bool IsBnInputEdge(const OpEdge* edge) {
+  LOG(INFO) << edge->dst_node()->op().op_conf().DebugString();
+  return edge->dst_node()->op().op_conf().user_conf().op_type_name() == "normalization";
+}
+
+std::string OpTypeName4OpNode(const OpNode* node) {
+  return node->op().op_conf().user_conf().op_type_name();
+}
+
+using OpConfMap = HashMap<std::string, OperatorConf>;
+
+OperatorConf Get1DZeroVariableOpConf(std::string name, OpConfMap* inserted_ops) {
+  OperatorConf variable_op_conf{};
+  variable_op_conf.set_name(name);
+  VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
+  variable_conf->set_out("out");
+  *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
+  variable_conf->set_data_type(DataType::kFloat);
+  variable_conf->mutable_split_axis()->clear_value();
+  variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(0);
+  (*inserted_ops)[name] = variable_op_conf;
+  return variable_op_conf;
+}
+
+OpNode* GetInferenceOutputNode(const OpGraph& op_graph, OpNode* node) {
+  OpNode* cur_node = node;
+  if (node->op().op_conf().user_conf().op_type_name() == "conv2d") {
+    assert(node->out_edges().size() == 1);
+    OpNode* next_node = node->SoleOutEdge()->dst_node();
+    if (OpTypeName4OpNode(next_node) == "bias_add") {
+      cur_node = next_node;
+      next_node = next_node->SoleOutEdge()->dst_node();
+    }
+    if (OpTypeName4OpNode(next_node) == "normalization") {
+      cur_node = next_node;
+      next_node = next_node->SoleOutEdge()->dst_node();
+    }
+    if (OpTypeName4OpNode(next_node) == "relu") { cur_node = next_node; }
+  }
+  LOG(INFO) << "For node: " << node->op().op_name();
+  LOG(INFO) << "output node is: " << cur_node->op().op_name();
+  return cur_node;
+}
+
+user_op::UserOpConfWrapper MultiplyOp(const std::string& name, const std::string& x,
+                                      const std::string& y, OpConfMap* inserted_ops) {
+  const auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
+                              .Op("multiply")
+                              .Input("x", x)
+                              .Input("y", y)
+                              .Output("out")
+                              .Build();
+  (*inserted_ops)[name] = op_wrapper.op_conf();
+  return op_wrapper;
+}
+
+user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::string& input,
+                                          OpConfMap* inserted_ops) {
+  const auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
+                              .Op("generate_quantize_scale_for_weight")
+                              .Input("weight", input)
+                              .Output("scale")
+                              .Output("zero_point")
+                              .Build();
+  (*inserted_ops)[name] = op_wrapper.op_conf();
+  return op_wrapper;
+}
+
+user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const std::string& input,
+                                                OpConfMap* inserted_ops) {
+  const std::string moving_max_name = name + moving_max_suffix;
+  const std::string moving_min_name = name + moving_min_suffix;
+  const auto moving_max_var = Get1DZeroVariableOpConf(moving_max_name, inserted_ops);
+  const auto moving_min_var = Get1DZeroVariableOpConf(moving_min_name, inserted_ops);
+  const auto op_wrapper =
+      user_op::UserOpConfWrapperBuilder(name)
+          .Op("generate_quantize_scale_for_activation")
+          .Input("activation", input)
+          .Input("moving_max",
+                 GenLogicalBlobName(moving_max_var.name(), moving_max_var.variable_conf().out()))
+          .Input("moving_min",
+                 GenLogicalBlobName(moving_min_var.name(), moving_min_var.variable_conf().out()))
+          .Output("scale")
+          .Output("zero_point")
+          .Build();
+  (*inserted_ops)[name] = op_wrapper.op_conf();
+  return op_wrapper;
+}
+
+user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::string& input,
+                                       const std::string& scale, const std::string& zero_point,
+                                       OpConfMap* inserted_ops) {
+  const auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
+                              .Op("fake_quantization")
+                              .Input("in", input)
+                              .Input("scale", scale)
+                              .Input("zero_point", zero_point)
+                              .Output("out")
+                              .Build();
+  (*inserted_ops)[name] = op_wrapper.op_conf();
+  return op_wrapper;
+}
+
+void GetScaleAndZeroPointLbn4Edge(OpEdge* edge, std::string* scale, std::string* zero_point,
+                                  OpConfMap* inserted_ops) {
+  std::string lbn = GenLogicalBlobName(edge->lbis().front());
+  std::string conv_input_scale_lbn;
+  std::string conv_weight_scale_lbn;
+  if (IsConvBiasEdge(edge, &conv_input_scale_lbn, &conv_weight_scale_lbn)) {
+    LOG(INFO) << conv_input_scale_lbn;
+    LOG(INFO) << conv_weight_scale_lbn;
+    // mul scale
+    const std::string mul_scale_op_name = ReplaceSlashToDash4Lbn(lbn) + mul_bias_suffix;
+    assert(inserted_ops->find(mul_scale_op_name) == inserted_ops->end());
+    const auto mul_scale_op =
+        MultiplyOp(mul_scale_op_name, conv_input_scale_lbn, conv_weight_scale_lbn, inserted_ops);
+
+    *scale = mul_scale_op.output("out", 0);
+  } else {
+    const std::string observer_op_name = ReplaceSlashToDash4Lbn(lbn) + observer_suffix;
+    if (IsWeightEdge(edge)) {
+      const auto observer_op = MinMaxObserver(observer_op_name, lbn, inserted_ops);
+      *scale = observer_op.output("scale", 0);
+    } else {
+      const auto observer_op = MovingMinMaxObserver(observer_op_name, lbn, inserted_ops);
+      *scale = observer_op.output("scale", 0);
+    }
+  }
+  const std::string zp_var_name = ReplaceSlashToDash4Lbn(lbn) + zp_suffix;
+  const auto zp_var = Get1DZeroVariableOpConf(zp_var_name, inserted_ops);
+  *zero_point = GenLogicalBlobName(zp_var.name(), zp_var.variable_conf().out());
+}
+
+void ReplaceInputLbn4DstNodeOfEdge(OpEdge* edge, const std::string& new_lbn,
+                                   OpConfCache* op_conf_cache) {
+  OpNode* dst_node = edge->dst_node();
+  LogicalBlobId cur_lbi = edge->lbis().front();
+  CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
+  const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
+
+  OperatorConf dst_op_conf = op_conf_cache->GetLatest(dst_node->op().op_conf());
+  ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, new_lbn);
+  op_conf_cache->Put(dst_op_conf);
+}
+
+class QuantAwareTraining final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(QuantAwareTraining);
-  QuantAwareTraining()
-      : int8_list_(Int8List()),
-        fp32_list_(ProduceFloat32List()),
-        transparent_list_(TransparentList()) {}
+  QuantAwareTraining() : int8_list_(Int8List()), transparent_list_(TransparentList()) {}
   ~QuantAwareTraining() = default;
 
-  bool IsEnabled() const override { return true; }
+  bool IsEnabled(const JobPassCtx& ctx) const { return true; }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 
  private:
   void InsertFakeQuantOp(const OpGraph& op_graph, const QATList& int8_list,
                          HashSet<OpNode*> downstream_white, JobBuilder* job_builder) const;
 
   const QATList& int8_list_;
-  const QATList& fp32_list_;
   const QATList& transparent_list_;
 };
 
-Maybe<void> QuantAwareTraining::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
+  if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+  const OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
   VerifyQATList(int8_list_);
-  VerifyQATList(fp32_list_);
   VerifyQATList(transparent_list_);
 
   std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {
     return node->op().op_name();
   };
-  HashSet<OpNode*> downstream_white;
+  HashSet<OpNode*> white_set;
   DfsTopoGraphTraversal(
-      op_graph, false, [](OpNode* node) { return false; },
+      op_graph, false, [this](OpNode* node) { return IsNodeInList(int8_list_, node); },
+      [&](OpNode* node) { return IsNodeInList(transparent_list_, node); },
+      [&](OpNode* node) { return IsKeyFound(white_set, node); },
       [&](OpNode* node) {
-        return IsNodeInList(int8_list_, node) || IsNodeInList(transparent_list_, node);
-      },
-      [&](OpNode* node) {
-        return IsNodeInList(int8_list_, node) || IsKeyFound(downstream_white, node);
-      },
-      [&](OpNode* node) {
-        INSERT_CHECK(downstream_white.insert(node));
+        INSERT_CHECK(white_set.insert(node));
+        if (node->op().op_conf().user_conf().op_type_name() == "conv2d") {
+          assert(node->out_edges().size() == 1);
+          OpNode* next_node = node->SoleOutEdge()->dst_node();
+          if (OpTypeName4OpNode(next_node) == "bias_add") {
+            INSERT_CHECK(white_set.insert(next_node));
+            next_node = next_node->SoleOutEdge()->dst_node();
+          }
+          if (OpTypeName4OpNode(next_node) == "normalization") {
+            INSERT_CHECK(white_set.insert(next_node));
+            next_node = next_node->SoleOutEdge()->dst_node();
+          }
+          if (OpTypeName4OpNode(next_node) == "relu") { INSERT_CHECK(white_set.insert(next_node)); }
+        }
         VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name() << " to downstream_white";
       });
 
@@ -189,51 +301,64 @@ Maybe<void> QuantAwareTraining::Apply(const OpGraph& op_graph, JobBuilder* job_b
   // downstream_white if node in int8_list_, insert fake quant op on its `GetInferenceOutputNode`'s
   // output
 
-  VLOG(3) << "downstream_white include: "
-            << Container2Str<HashSet<OpNode*>, OpNode*>(downstream_white, OpName4Node);
+  VLOG(3) << "white_set include: "
+          << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
-  InsertFakeQuantOp(op_graph, int8_list_, downstream_white, job_builder);
+  InsertFakeQuantOp(op_graph, int8_list_, white_set, &job_builder);
   return Maybe<void>::Ok();
 }
 
-OpNode* GetInferenceOutputNode(const OpGraph& op_graph, OpNode& node) {
-  if (node.op().op_conf().user_conf().op_type_name() == "conv2d") {
-    if (node.out_edges().size() == 1) {
-      OpNode* dst_node = node.SoleOutEdge()->dst_node();
-      if (dst_node->op().op_conf().user_conf().op_type_name() == "relu") { return dst_node; }
-    }
-  }
-  return &node;
-}
-
 void QuantAwareTraining::InsertFakeQuantOp(const OpGraph& op_graph, const QATList& int8_list,
-                                           HashSet<OpNode*> downstream_white,
+                                           HashSet<OpNode*> white_set,
                                            JobBuilder* job_builder) const {
   HashSet<OpEdge*> white_set_edges;
   auto EdgeName4Edge = [](OpEdge* const& edge) {
     return std::string("edge of\t") + edge->src_node()->op().op_name() + "\tto\t"
            + edge->dst_node()->op().op_name();
   };
+  auto AddWhiteSetEdge = [&white_set_edges, &EdgeName4Edge](OpEdge* edge) {
+    VLOG(3) << "insert " << EdgeName4Edge(edge);
+    assert(edge->lbis().size() == 1);
+    const std::string lbn = GenLogicalBlobName(edge->lbis().front());
+    scale_map[lbn] = ReplaceSlashToDash4Lbn(lbn) + observer_suffix + "/scale_0";
+    LOG(INFO) << "set " << lbn << " to " << scale_map[lbn];
+    INSERT_CHECK(white_set_edges.insert(edge));
+  };
+  auto PropagateScale = [](OpNode* node) {
+    assert(node->in_edges().size() == 1);
+    assert(node->SoleInEdge()->lbis().size() == 1);
+    for (OpEdge* edge : node->out_edges()) {
+      assert(edge->lbis().size() == 1);
+      const std::string node_input_lbn = GenLogicalBlobName(node->SoleInEdge()->lbis().front());
+      const std::string lbn = GenLogicalBlobName(edge->lbis().front());
+      if (scale_map.find(node_input_lbn) != scale_map.end()) {
+        scale_map[lbn] = scale_map[node_input_lbn];
+      }
+    }
+  };
+
   {
     op_graph.ForEachNode([&](OpNode* node) {
-      if (IsNodeInList(int8_list, node)) {
+      if (IsKeyFound(white_set, node)) {
         for (OpEdge* edge : node->in_edges()) {
-          if (!IsKeyFound(downstream_white, edge->src_node())) {
-            VLOG(3) << "insert " << EdgeName4Edge(edge);
-            INSERT_CHECK(white_set_edges.insert(edge));
-          }
+          if (!IsKeyFound(white_set, edge->src_node())) { AddWhiteSetEdge(edge); }
         }
-        OpNode* inference_node = GetInferenceOutputNode(op_graph, *node);
-        for (OpEdge* edge : inference_node->out_edges()) {
-          VLOG(3) << "insert " << EdgeName4Edge(edge);
-          INSERT_CHECK(white_set_edges.insert(edge));
+        if (IsNodeInList(int8_list, node)) {
+          OpNode* inference_node = GetInferenceOutputNode(op_graph, node);
+          for (OpEdge* edge : inference_node->out_edges()) { AddWhiteSetEdge(edge); }
+        } else if (IsNodeInList(transparent_list_, node)) {
+          PropagateScale(node);
+        } else {
+          // bias_add/relu/bn in conv -> bias_add -> bn -> relu
+          // do nothing
         }
       }
     });
     VLOG(3) << "white_set_edges: "
-              << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
+            << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
   }
 
+  // group edges by lbn so that we can use `src_node`
   HashMap<std::string, std::vector<OpEdge*>> edges_group_by_lbn;
   {
     for (OpEdge* edge : white_set_edges) {
@@ -243,7 +368,7 @@ void QuantAwareTraining::InsertFakeQuantOp(const OpGraph& op_graph, const QATLis
     }
   }
 
-  HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
+  OpConfCache op_conf_cache;
   for (auto& pair : edges_group_by_lbn) {
     const std::string& lbn = pair.first;
     const OpNode* src_node = pair.second.front()->src_node();
@@ -251,50 +376,31 @@ void QuantAwareTraining::InsertFakeQuantOp(const OpGraph& op_graph, const QATLis
     const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(lbn));
     if (blob_desc.data_type() != DataType::kFloat) { continue; }
 
-    const std::string cast_suffix = "-fake-quant";
-    const auto cast_op =
-        user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
-            .Op("identity")
-            .Input("in", lbn)
-            .Output("out")
-            // .Attr<DataType>("dtype", cast_data_type)
-            .Build();
-
-    bool cast_is_consumed = false;
+    OpConfMap inserted_ops;
     for (OpEdge* edge : pair.second) {
-      CHECK(src_node == edge->src_node());
-      OpNode* dst_node = edge->dst_node();
-      LogicalBlobId cur_lbi = edge->lbis().front();
-      CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
-      CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
-      const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
+      if (IsBnInputEdge(edge)) { continue; }
+      std::string scale;
+      std::string zero_point;
+      GetScaleAndZeroPointLbn4Edge(edge, &scale, &zero_point, &inserted_ops);
+      const std::string fake_quant_op_name = ReplaceSlashToDash4Lbn(lbn) + fake_quant_suffix;
+      const auto fake_quant_op =
+          FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, &inserted_ops);
 
-      cast_is_consumed = true;
+      const std::string fake_quant_op_output_name = fake_quant_op.output("out", 0);
 
-      const std::string& dst_op_name = dst_node->op().op_name();
-      if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
-        INSERT_CHECK(
-            dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf())));
-      }
-      OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
-      std::string new_lbn = cast_op.op_name() + "/out_0";
-      CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, new_lbn));
+      ReplaceInputLbn4DstNodeOfEdge(edge, fake_quant_op_output_name, &op_conf_cache);
     }
 
-    if (cast_is_consumed) {
-      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
-                          std::vector<OperatorConf>{cast_op.op_conf()});
-      VLOG(3) << "Insert fake quant op: " << cast_op.op_name() << " between " << lbn;
+    for (const auto& pair : inserted_ops) {
+      VLOG(3) << "Insert op: " << pair.second.DebugString() << " between " << lbn;
+      job_builder->AddOps(src_node->parallel_desc().parallel_conf(), {pair.second});
     }
   }
 
-  std::vector<OperatorConf> dst_op_confs;
-  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
-  // make sure an op_conf can only be udpated once, cuz later update will override before
-  job_builder->MutOpsOnlyOnce(dst_op_confs);
+  job_builder->MutOpsOnlyOnce(op_conf_cache.op_confs());
 }
 
-REGISTER_FUNCTION_PASS("QuantAwareTraining", QuantAwareTraining);
+REGISTER_JOB_PASS("QuantAwareTraining", QuantAwareTraining);
 
 }  // namespace
 

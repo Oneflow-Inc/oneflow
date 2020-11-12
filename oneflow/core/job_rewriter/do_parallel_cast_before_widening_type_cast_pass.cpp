@@ -15,29 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 namespace {
-
-class OpConfCache {
-  std::map<std::string, OperatorConf> _op_confs_to_update;
-
- public:
-  OperatorConf GetLatest(const OperatorConf& op_conf) {
-    if (_op_confs_to_update.find(op_conf.name()) != _op_confs_to_update.end()) {
-      return _op_confs_to_update[op_conf.name()];
-    }
-    return op_conf;
-  }
-  void Put(const OperatorConf& op_conf) { _op_confs_to_update[op_conf.name()] = op_conf; }
-  std::vector<OperatorConf> op_confs() {
-    std::vector<OperatorConf> ret;
-    for (const auto& x : _op_confs_to_update) { ret.push_back(x.second); }
-    return ret;
-  }
-};
 
 class DoParallelCastBeforeWideningTypeCast final : public JobPass {
  public:
