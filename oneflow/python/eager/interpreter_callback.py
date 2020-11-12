@@ -24,6 +24,7 @@ from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 
 
 def MakeScopeSymbol(job_conf_str, parallel_conf_str, is_mirrored):
@@ -38,9 +39,15 @@ def MakeParallelDescSymbol(parallel_conf_str):
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
     symbol_id = None
 
+    # Temporary transformation
+    parallel_conf_cfg = placement_cfg.ParallelConf()
+    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+    for device_name in parallel_conf.device_name:
+        parallel_conf_cfg.add_device_name(device_name)
+
     def BuildInstruction(builder):
         nonlocal symbol_id
-        symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
+        symbol_id = builder.GetParallelDescSymbol(parallel_conf_cfg).symbol_id
 
     vm_util.LogicalRun(BuildInstruction)
     return symbol_id
@@ -67,7 +74,14 @@ def InterpretCompletedOp(op_attribute_str, parallel_conf_str):
 
 
 def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
-    return op_executor.Interpret(op_attribute, parallel_conf_str, blob_register)
+    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+
+    # Temporary transformation
+    parallel_conf_cfg = placement_cfg.ParallelConf()
+    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+    for device_name in parallel_conf.device_name:
+        parallel_conf_cfg.add_device_name(device_name)
+    return op_executor.Interpret(op_attribute, parallel_conf_cfg, blob_register)
 
 
 def _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register):

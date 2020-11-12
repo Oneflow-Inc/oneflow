@@ -27,9 +27,9 @@ import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 from google.protobuf import text_format
 
 import oneflow
@@ -42,10 +42,7 @@ def Interpret(op_attribute, parallel_conf, blob_register):
         return MirroredCast(op_attribute, blob_register)
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
         return MirroredCast(op_attribute, blob_register)
-    if type(parallel_conf) is str:
-        parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
-    else:
-        assert isinstance(parallel_conf, placement_pb.ParallelConf)
+    assert isinstance(parallel_conf, placement_cfg.ParallelConf)
     if op_attribute.op_conf.HasField("distribute_split_conf"):
         return DistributeSplitOrClone(op_attribute, parallel_conf, blob_register)
     if op_attribute.op_conf.HasField("distribute_clone_conf"):
