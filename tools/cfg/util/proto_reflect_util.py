@@ -228,48 +228,6 @@ class ProtoReflectionUtil:
         else:
             return (field.message_type.full_name).replace(".", "_")
 
-    def other_file_declared_namespaces_and_enum_name(self, module):
-        enum_defined_in_this_module = set()
-        for cls in self.module_nested_message_types(module):
-            enum_defined_in_this_module.add(cls)
-        enum_defined_in_other_module = set()
-        for cls in self.module_nested_message_types(module):
-            for field in self.message_type_fields(cls):
-                if (
-                    field.enum_type is not None
-                    and field.enum_type not in enum_defined_in_this_module
-                ):
-                    enum_defined_in_other_module.add(field.enum_type)
-        for enum in enum_defined_in_other_module:
-            package = enum.file.package
-            if package is not None:
-                yield package.split("."), enum.full_name[len(package) + 1 :].replace(
-                    ".", "_"
-                )
-            else:
-                yield [], "enum", enum.full_name.replace(".", "_")
-
-    def other_file_declared_namespaces_and_class_name(self, module):
-        cls_defined_in_this_module = set()
-        for cls in self.module_nested_message_types(module):
-            cls_defined_in_this_module.add(cls)
-        cls_defined_in_other_module = set()
-        for cls in self.module_nested_message_types(module):
-            for field in self.message_type_fields(cls):
-                if (
-                    field.message_type is not None
-                    and field.message_type not in cls_defined_in_this_module
-                ):
-                    cls_defined_in_other_module.add(field.message_type)
-        for cls in cls_defined_in_other_module:
-            package = cls.file.package
-            if package is not None:
-                yield package.split("."), cls.full_name[len(package) + 1 :].replace(
-                    ".", "_"
-                )
-            else:
-                yield [], "class", cls.full_name.replace(".", "_")
-
     def field_message_type_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package
         if package:
