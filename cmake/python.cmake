@@ -52,26 +52,6 @@ if (NOT Python_NumPy_INCLUDE_DIRS)
 endif()
 message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
-find_package(Python3 COMPONENTS Development)
-if (Python3_Development_FOUND AND Python3_LIBRARIES)
-  set(Python_LIBRARIES ${Python3_LIBRARIES})
-endif()
-if (NOT Python_LIBRARIES)
-  message(STATUS "Getting python library from sysconfig..")
-  execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['stdlib'])"
-    OUTPUT_VARIABLE Python_LIBRARIES
-    RESULT_VARIABLE ret_code)
-  string(STRIP "${Python_LIBRARIES}" Python_LIBRARIES)
-  if ((NOT (ret_code EQUAL "0")))
-    set(Python_LIBRARIES "")
-  endif()
-endif()
-if (NOT Python_LIBRARIES)
-  message(FATAL_ERROR "Cannot find python library")
-endif()
-message(STATUS "Found python library ${Python_LIBRARIES}")
-
 # PYTHON_EXECUTABLE will be used by pybind11
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 include(pybind11)
