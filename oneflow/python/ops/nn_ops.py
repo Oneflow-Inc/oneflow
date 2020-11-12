@@ -2655,13 +2655,27 @@ def l1_loss(
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the L1 Loss between each element in `input` and `target`. 
+    r"""This operator computes the L1 Loss between each element in `input` and `target`. 
 
     The equation is: 
 
+    if reduction = "none": 
+    
     .. math:: 
 
         output = |Target - Input|
+
+    if reduction = "mean": 
+    
+    .. math:: 
+
+        output = \frac{1}{n}\sum_{i=1}^n|Target_i - Input_i|
+
+    if reduction = "sum": 
+    
+    .. math:: 
+
+        output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob.  
