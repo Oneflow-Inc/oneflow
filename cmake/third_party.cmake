@@ -161,6 +161,7 @@ set(oneflow_third_party_dependencies
   flatbuffers
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
+  llvm-project
 )
 
 
@@ -184,6 +185,7 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
+    ${LLVM_PROJECT_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)
