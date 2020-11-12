@@ -192,10 +192,18 @@ def _TestAssignmentBetweenMemory(test_case, dtype):
 
 class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
     def test_save_correctness_1node_legacy_api(test_case):
         _TestSaveCorrectness(test_case, get_simple_model, flow.float, True)
 
     @flow.unittest.skip_unless_1n4d()
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "legacy model io doesn't work in eager mode",
+    )
     def test_load_correctness_1node_legacy_api(test_case):
         _TestLoadCorrectness(test_case, get_simple_model, flow.float, True)
 
