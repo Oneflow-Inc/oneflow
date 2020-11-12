@@ -383,7 +383,6 @@ def _GetCpu0VariableBlobFromNumpy(
             dtype=dtype,
             initializer=initializer_util.zeros_initializer(dtype=dtype),
             trainable=False,
-            need_root_path=False,
         )
         current_parallel_desc_sym = oneflow.current_scope().device_parallel_desc_symbol
         device_tag = current_parallel_desc_sym.device_tag

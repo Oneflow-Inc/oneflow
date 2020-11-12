@@ -235,6 +235,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(large_slice_param.size);
   SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(small_slice_param.dims);
   SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(small_slice_param.size);
+  // Calculate the length of continuous part
   int cnt = 1;
   for (int i = NDIM - 1; i >= 0; i--) {
     if (large_slice_param.step[i] == 1) { cnt *= large_slice_param.size[i]; }

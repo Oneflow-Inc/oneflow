@@ -306,6 +306,8 @@ class Session(object):
             interface_op_name
         ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         if oneflow.eager_execution_enabled():
+            # In lazy mode, we update `interface_op_name2op_conf_` with 
+            # the latest op_conf in another function after compiler.Compile
             self.interface_op_name2op_conf_[interface_op_name] = op_conf
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):

@@ -20,6 +20,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -285,7 +286,6 @@ def GenerateVariableOpConf(
     model_name=None,
     random_seed=None,
     distribute=distribute_util.broadcast(),
-    need_root_path=True,
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -294,14 +294,14 @@ def GenerateVariableOpConf(
     assert dtype is not None
     op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
-    if need_root_path:
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        root_path = None
+    else:
         root_path = (
             compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
         )
         dir_path = os.path.join(root_path, name)
         file_path = os.path.join(dir_path, "out")
-    else:
-        root_path = None
     if root_path and os.path.isfile(file_path):
         op_conf.variable_conf.initialize_with_snapshot.path = dir_path
         op_conf.variable_conf.initialize_with_snapshot.key = "out"
