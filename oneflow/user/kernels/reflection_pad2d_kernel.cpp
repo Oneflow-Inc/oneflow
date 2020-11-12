@@ -33,7 +33,7 @@ void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_da
 }
 
 // Fill ShapeView into dim vector
-DimVector shapeview_to_dimvector(const ShapeView& tensor_shape) {
+DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
   int64_t ndims = tensor_shape.NumAxes();
   DimVector shape_vec(ndims);
   for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = tensor_shape.At(i); }
@@ -94,7 +94,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     // elements index vector of diagonal elements
     std::vector<int64_t> index_vector;
 
-    DimVector y_vector = shapeview_to_dimvector(y->shape());
+    DimVector y_vector = ShapeViewToDimVector(y->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
     FOR_RANGE(int, i, 0, y->shape().elem_cnt()) {
       // Traverse one-dimensional array y
@@ -104,8 +104,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       int64_t x_w = coord_y[channel_w_idx] - padding_w;
       if (x_h < 0 || x_h >= x_shape.At(channel_h_idx) || x_w < 0
           || x_w >= x_shape.At(channel_w_idx)) {
-        // Indicates that the element is no longer in the original x range (the data to be padding
-        // outside)
+        // Indicates that the element is no longer in the original x range (the data to be padding outside)
         int64_t dest_coords[4];
         int64_t dest_index;
         // Determine whether it is a diagonal element
