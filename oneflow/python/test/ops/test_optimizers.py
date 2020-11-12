@@ -917,5 +917,6 @@ class TestOptimizers(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_flow_job_fused_adam_model_update(*arg)
 
+
 if __name__ == "__main__":
     unittest.main()

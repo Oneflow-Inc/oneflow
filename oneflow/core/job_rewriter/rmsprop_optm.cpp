@@ -62,11 +62,11 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
 
   if (centered) {
-      OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
-      job_builder->AddOps(parallel_conf, {mean_gradient_var});
-      rmsprop_update_op_builder.Input("mean_gradient", GenVariableOutputLbn(mean_gradient_var));
-   }
-   
+    OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
+    job_builder->AddOps(parallel_conf, {mean_gradient_var});
+    rmsprop_update_op_builder.Input("mean_gradient", GenVariableOutputLbn(mean_gradient_var));
+  }
+
   user_op::UserOpConfWrapper rmsprop_update_op = rmsprop_update_op_builder.Build();
   job_builder->AddOps(parallel_conf, {rmsprop_update_op.op_conf()});
 }

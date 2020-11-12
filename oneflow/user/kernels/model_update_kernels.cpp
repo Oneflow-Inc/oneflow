@@ -577,8 +577,6 @@ REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kCPU)
 REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
 #endif  // WITH_CUDA
 
-
-
 template<DeviceType device_type, typename T, typename G>
 class RmsPropUpdateKernel final : public user_op::OpKernel {
  public:
@@ -611,18 +609,18 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
       mean_gradient_ptr = mean_gradient->mut_dptr<T>();
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, mean_square->mut_dptr<T>(),
-        mean_gradient_ptr, centered, epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(),
-        scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2,
+        mean_square->mut_dptr<T>(), mean_gradient_ptr, centered, epsilon, weight_decay, decay_rate,
+        learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                                \
-  REGISTER_USER_KERNEL("rmsprop_update")                                                    \
-      .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                  \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)    \
+#define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                             \
+  REGISTER_USER_KERNEL("rmsprop_update")                                                 \
+      .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
@@ -632,7 +630,6 @@ REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
-
 
 template<DeviceType device_type, typename T>
 class LarsTmpBufferManager final {
@@ -700,9 +697,9 @@ class LarsUpdateKernel final : public user_op::OpKernel {
     }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
-        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), train_step->dptr<int64_t>(),
-        momentum->mut_dptr<T>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), tlm.DataTmpPtr(), 
-        tlm.ModelDiffPtr());
+        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(),
+        train_step->dptr<int64_t>(), momentum->mut_dptr<T>(), scale_by_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -716,12 +713,12 @@ user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_LARS_UPDATE_KERNEL(device, dtype, gtype)                                       \
-  REGISTER_USER_KERNEL("lars_update")                                                           \
-      .SetCreateFn<LarsUpdateKernel<device, dtype, gtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)        \
-                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value))  \
+#define REGISTER_LARS_UPDATE_KERNEL(device, dtype, gtype)                                      \
+  REGISTER_USER_KERNEL("lars_update")                                                          \
+      .SetCreateFn<LarsUpdateKernel<device, dtype, gtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
       .SetInferTmpSizeFn(LarsGenInferTmpSizeFn<device, dtype>());
 
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);
