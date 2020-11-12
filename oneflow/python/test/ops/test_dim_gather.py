@@ -52,21 +52,6 @@ def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
             offset += size_at_axis
         return offset
 
-    def _np_dim_gather(input, dim, index):
-        output = np.zeros(index.shape)
-        output = _flatten_array(output)
-        input1d = _flatten_array(input)
-        for idxoffset in range(0, index.size):
-            index1d = _flatten_array(index)
-            x = index1d[idxoffset]
-            coor_index = _offset2coordinate(idxoffset, index.shape)
-            coor_index[dim] = x
-
-            input_offset = _coordinate2offset(coor_index, input.shape)
-            output[idxoffset] = input1d[input_offset]
-        ret = np.resize(np.array(output), index.shape)
-        return np.array(ret)
-
     def _np_dim_scatter_add(src, dim, index, outshape):
         output = np.zeros(outshape)
         output1d = _flatten_array(output)
@@ -87,7 +72,7 @@ def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
     else:
         input = np.random.randint(0, 100, input_shape)
     index = np.random.randint(0, input_shape[dim], index_shape)
-    output = _np_dim_gather(input, dim, index)
+    output = np.take_along_axis(input, index, dim)
     grad = _np_dim_scatter_add(np.ones_like(output), dim, index, input_shape)
 
     ret = {"input": input, "index": index, "dim": dim, "output": output, "grad": grad}
