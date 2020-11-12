@@ -15,6 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
@@ -67,6 +68,12 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_in_top_K(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestInTopk(flow.unittest.TestCase):
+    def test_in_top_K(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

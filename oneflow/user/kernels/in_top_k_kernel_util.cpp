@@ -23,15 +23,13 @@ struct InTopkKernelUtil<DeviceType::kCPU, T, K> {
                      const K* predictions, const int k, int8_t* out) {
     FOR_RANGE(int32_t, batch_idx, 0, targets_num) {
       T target = targets[batch_idx];
-
       bool cannot_say =
           (target >= classes_num) || !std::isfinite(predictions[batch_idx * classes_num + target]);
-
       int32_t more_probable_classes = 0;
       if (!cannot_say) {
-        const T target_prediction = predictions[batch_idx * classes_num + target];
+        const K target_prediction = predictions[batch_idx * classes_num + target];
         FOR_RANGE(int32_t, class_idx, 0, classes_num) {
-          T pred = predictions[batch_idx * classes_num + class_idx];
+          K pred = predictions[batch_idx * classes_num + class_idx];
 
           if (!std::isfinite(pred)) {
             cannot_say = true;
