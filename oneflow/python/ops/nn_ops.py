@@ -2666,7 +2666,7 @@ def l1_loss(
     Args:
         input (remote_blob_util.BlobDef): The input Blob.  
         target (remote_blob_util.BlobDef): The target value. 
-        reduction (str): The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean".
+        reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
