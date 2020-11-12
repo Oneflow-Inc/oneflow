@@ -71,7 +71,7 @@ REGISTER_USER_OP("dim_gather")
       OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
       if (indices_batch_axis->has_value()) {
         CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-        CHECK_LE_OR_RETURN(
+        CHECK_LT_OR_RETURN(
             indices_batch_axis->value(),
             ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
       }
@@ -84,7 +84,7 @@ REGISTER_USER_OP("dim_gather")
       int64_t index_num_axes = index_tensor.shape().NumAxes();
       const int32_t dim = ctx->Attr<int32_t>("dim");
 
-      FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
+      FOR_RANGE(int64_t, i, 0, index_num_axes) {
         if (i != dim) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("index", 0), i)
@@ -153,13 +153,19 @@ REGISTER_USER_OP("dim_scatter_add_like")
       like_arg_modifier->set_use_header_only(true);
       like_arg_modifier->set_requires_grad(false);
     })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("index", 0)
+                      == *ctx->BatchAxis4ArgNameAndIndex("input", 0));
+      ctx->BatchAxis4ArgNameAndIndex("output", 0)->clear_value();
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
       int64_t index_num_axes = index_tensor.shape().NumAxes();
       const int32_t dim = ctx->Attr<int32_t>("dim");
 
-      FOR_RANGE(int64_t, i, 0, index_num_axes - 1) {
+      FOR_RANGE(int64_t, i, 0, index_num_axes) {
         if (i != dim) {
           ctx->NewBuilder()
               .Split(user_op::OpArg("index", 0), i)
