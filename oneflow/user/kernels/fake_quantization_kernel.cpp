@@ -60,12 +60,10 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     const user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
 
     const T *in_ptr = in->dptr<T>();
     const T *scale_ptr = scale->dptr<T>();
-    const T *zero_point_ptr = zero_point->dptr<T>();
     T *out_ptr = out->mut_dptr<T>();
 
     int64_t outer_num = 1;
@@ -75,7 +73,7 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
       inner_num = in->shape().Count(1);
     }
 
-    if (quantize_scheme == "symmetric") {
+    if (zero_point == nullptr) {  // quantize_scheme == "symmetric"
       FOR_RANGE(int64_t, c, 0, outer_num) {
         FakeQuantizationPerLayerSymmetric(in_ptr, scale_ptr[c], quantize_to_bit, inner_num,
                                           out_ptr);
@@ -83,6 +81,7 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
         out_ptr += inner_num;
       }
     } else {  // quantize_scheme == "affine"
+      const T *zero_point_ptr = zero_point->dptr<T>();
       FOR_RANGE(int64_t, c, 0, outer_num) {
         FakeQuantizationPerLayerAffine(in_ptr, scale_ptr[c], zero_point_ptr[c], quantize_to_bit,
                                        inner_num, out_ptr);
