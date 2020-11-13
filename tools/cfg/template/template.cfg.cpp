@@ -795,6 +795,12 @@ void {{ util.class_name(cls) }}::InitFromProto(const PbMessage& proto_{{ util.cl
   BuildFromProto(proto_{{ util.class_name(cls).lower() }});
 }
   
+void {{ util.class_name(cls) }}::InitFromString(const ::std::string& cfg_{{ util.class_name(cls).lower() }}_str) {
+  {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }} proto_{{ util.class_name(cls).lower() }};
+  ::google::protobuf::TextFormat::ParseFromString(cfg_{{ util.class_name(cls).lower() }}_str, &proto_{{ util.class_name(cls).lower() }});
+  InitFromProto(proto_{{ util.class_name(cls).lower() }});
+}
+
 void* {{ util.class_name(cls) }}::MutableFieldPtr4FieldNumber(int field_number) {
   switch (field_number) {
 {% for field in util.message_type_fields(cls) %}

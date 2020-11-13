@@ -310,6 +310,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   ~{{ util.class_name(cls) }}();
 
   void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override;
+  void InitFromString(const ::std::string& cfg_{{ util.class_name(cls).lower() }}_str);
   
   void* MutableFieldPtr4FieldNumber(int field_number) override;
 

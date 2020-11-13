@@ -192,6 +192,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
   {
     pybind11::class_<{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}, std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}>> registry(m, "{{ util.class_name(cls) }}");
     registry.def(pybind11::init<>());
+    registry.def("InitFromString", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::InitFromString);
     registry.def("Clear", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::Clear);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const Const{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const {{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
