@@ -162,6 +162,7 @@ def compare_with_tensorflow(
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skip("skip_for_ci")
 class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_padding_valid(test_case):
         arg_dict = OrderedDict()
