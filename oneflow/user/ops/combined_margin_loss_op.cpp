@@ -76,6 +76,7 @@ REGISTER_USER_OP("combined_margin_loss_grad")
       const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       const user_op::TensorDesc* theta = ctx->TensorDesc4ArgNameAndIndex("theta", 0);
       CHECK_EQ_OR_RETURN(label->shape().At(0), dy->shape().At(0));
+      CHECK_EQ_OR_RETURN(label->shape().At(0), theta->shape().At(0));
       CHECK_GE_OR_RETURN(dy->shape().NumAxes(), 2);
       *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *dy;
       return Maybe<void>::Ok();

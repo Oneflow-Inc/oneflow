@@ -34,32 +34,42 @@ __device__ int64_t GetOffset(const int64_t batch_idx, const int64_t num_classes,
 }
 
 template<typename T, typename K>
-__global__ void GpuForward(const int64_t num_instances, const int64_t num_classes,
-                           const int64_t lower_bound, const T m1, const T m2, const T m3,
-                           const T* in, const K* label, T* out, T* theta) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    const int64_t idx = GetOffset<K>(i, num_classes, lower_bound, label);
-    T theta_val = 0;
-    if (idx != -1) {
-      const T cos_theta = in[idx];
-      theta_val = AcosFunctor<T>::Forward(cos_theta);
-      out[idx] = CosFunctor<T>::Forward(theta_val * m1 + m2) - m3;
+__global__ void GpuForward(const int64_t n, const int64_t num_classes, const int64_t lower_bound,
+                           const T m1, const T m2, const T m3, const T* in, const K* labels, T* out,
+                           T* theta) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const int32_t row_id = i / num_classes;
+    const int32_t col_id = i - row_id * num_classes;
+    const T in_data = in[i];
+    T out_data = in_data;
+    K label = labels[row_id] - lower_bound;
+    if (label == col_id) {
+      const T theta_data = AcosFunctor<T>::Forward(in_data);
+      out_data = CosFunctor<T>::Forward(theta_data * m1 + m2) - m3;
+      theta[row_id] = theta_data;
+    } else if (label < 0 && col_id == 0) {
+      theta[row_id] = 0;
     }
-    theta[i] = theta_val;
+    out[i] = out_data;
   }
 }
 
 template<typename T, typename K>
-__global__ void GpuBackward(const int64_t num_instances, const int64_t num_classes,
-                            const int64_t lower_bound, const T m1, const T m2, const T m3,
-                            const T* dy, const K* label, const T* theta, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
-    const int64_t idx = GetOffset<K>(i, num_classes, lower_bound, label);
-    if (idx != -1) {
-      const T theta_val = theta[i];
-      dx[idx] = dy[idx] * SinFunctor<T>::Forward(theta_val * m1 + m2) * m1
-                / SinFunctor<T>::Forward(theta_val);
+__global__ void GpuBackward(const int64_t n, const int64_t num_classes, const int64_t lower_bound,
+                            const T m1, const T m2, const T m3, const T* dy, const K* labels,
+                            const T* theta, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const int32_t row_id = i / num_classes;
+    const int32_t col_id = i - row_id * num_classes;
+    K label = labels[row_id] - lower_bound;
+    const T dy_data = dy[i];
+    const T theta_data = theta[row_id];
+    T dx_data = dy_data;
+    if (label == col_id) {
+      dx_data = dy_data * SinFunctor<T>::Forward(theta_data * m1 + m2) * m1
+                / SinFunctor<T>::Forward(theta_data);
     }
+    dx[i] = dx_data;
   }
 }
 
@@ -122,12 +132,11 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
       CHECK_EQ(x->shape().Count(1), kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
     }
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<void>(), x->dptr<void>(),
-                             x->shape().elem_cnt() * GetSizeOfDataType(x->data_type()));
-    GpuForward<<<BlocksNum4ThreadsNum(x->shape().At(0)), kCudaThreadsNumPerBlock, 0,
+    GpuForward<<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
                  ctx->device_ctx()->cuda_stream()>>>(
-        x->shape().At(0), x->shape().Count(1), lower_bound, static_cast<T>(m1), static_cast<T>(m2),
-        static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(), theta->mut_dptr<T>());
+        x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
+        static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(),
+        theta->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -170,11 +179,9 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
       CHECK_EQ(dy->shape().Count(1), kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
     }
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), dx->mut_dptr<void>(), dy->dptr<void>(),
-                             dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
-    GpuBackward<<<BlocksNum4ThreadsNum(dy->shape().At(0)), kCudaThreadsNumPerBlock, 0,
+    GpuBackward<<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
                   ctx->device_ctx()->cuda_stream()>>>(
-        dy->shape().At(0), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
+        dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
         static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(), theta->dptr<T>(),
         dx->mut_dptr<T>());
   }
