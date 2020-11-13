@@ -22,28 +22,61 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
 
-@oneflow_export("nn.generate_quantize_scale_for_weight")
-def generate_quantize_scale_for_weight(
-    weight: remote_blob_util.BlobDef,
+@oneflow_export("quantization.MinMaxObserver")
+def min_max_observer(
+    input: remote_blob_util.BlobDef,
     quantize_to_bit: int = 8,
-    quantizer_type: str = "symmetric",
-    per_layer_quantization: bool = True,
+    quantize_scheme: str = "symmetric",
+    per_layer_quantize: bool = True,
     name: Optional[str] = None,
 ) -> Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]:
+    r"""Calculate the quantization scale and zero_point of the input `Blob`.
 
+    Args:
+        input (remote_blob_util.BlobDef): A `Blob`.
+        quantize_to_bit (Optional[int], optional): Optional, int value. Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
+        quantize_scheme (Optional[str], optional): Optional, str value. "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        per_layer_quantize (Optional[bool], optional): Optional, bool value. True or False, means per-layer / per-channel quantize. Defaults to True.
+        name (Optional[str], optional):  This operator's name(optional). Defaults to None.
+
+    Returns:
+        Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]: The scale and zero_point of input `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function(type="predict", function_config=flow.FunctionConfig())
+        def QuantizeJob(
+            input: tp.Numpy.Placeholder(input_shape, dtype=type_name_to_flow_type[dtype])
+        ): tp.Numpy
+            with flow.scope.placement(device_type, "0:0"):
+                scale, zero_point = flow.quantization.MinMaxObserver(
+                    input, quantize_to_bit, quantize_scheme, per_layer_quantize
+                )
+            return scale, zero_point
+
+        check_point = flow.train.CheckPoint()
+        check_point.init()
+        input = (np.random.random(input_shape) - 0.5).astype(type_name_to_np_type[dtype])
+        scale, zero_point = QuantizeJob(input)
+
+    """
     scale, zero_point = (
         flow.user_op_builder(
-            name
-            if name is not None
-            else id_util.UniqueStr("Generate_Quantize_Scale_For_Weight_")
+            name if name is not None else id_util.UniqueStr("MinMaxObserver_")
         )
-        .Op("generate_quantize_scale_for_weight")
-        .Input("weight", [weight])
+        .Op("min_max_observer")
+        .Input("in", [input])
         .Output("scale")
         .Output("zero_point")
         .Attr("quantize_to_bit", quantize_to_bit)
-        .Attr("quantizer_type", quantizer_type)
-        .Attr("per_layer_quantization", per_layer_quantization)
+        .Attr("quantize_scheme", quantize_scheme)
+        .Attr("per_layer_quantize", per_layer_quantize)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -52,13 +85,13 @@ def generate_quantize_scale_for_weight(
     return scale, zero_point
 
 
-@oneflow_export("nn.generate_quantize_scale_for_activation")
-def generate_quantize_scale_for_activation(
-    activation: remote_blob_util.BlobDef,
+@oneflow_export("quantization.MovingAverageMinMaxObserver")
+def moving_average_min_max_observer(
+    input: remote_blob_util.BlobDef,
     moving_max: remote_blob_util.BlobDef,
     moving_min: remote_blob_util.BlobDef,
     quantize_to_bit: int = 8,
-    quantizer_type: str = "symmetric",
+    quantize_scheme: str = "symmetric",
     momentum: float = 0.95,
     name: Optional[str] = None,
 ) -> Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]:
@@ -67,16 +100,16 @@ def generate_quantize_scale_for_activation(
         flow.user_op_builder(
             name
             if name is not None
-            else id_util.UniqueStr("Generate_Quantize_Scale_For_Activation_")
+            else id_util.UniqueStr("MovingAverageMinMaxObserver_")
         )
-        .Op("generate_quantize_scale_for_activation")
-        .Input("activation", [activation])
+        .Op("moving_average_min_max_observer")
+        .Input("in", [input])
         .Input("moving_max", [moving_max])
         .Input("moving_min", [moving_min])
         .Output("scale")
         .Output("zero_point")
         .Attr("quantize_to_bit", quantize_to_bit)
-        .Attr("quantizer_type", quantizer_type)
+        .Attr("quantize_scheme", quantize_scheme)
         .Attr("momentum", momentum)
         .Build()
         .InferAndTryRun()
@@ -86,13 +119,13 @@ def generate_quantize_scale_for_activation(
     return scale, zero_point
 
 
-@oneflow_export("nn.fake_quantization")
+@oneflow_export("quantization.FakeQuantize")
 def fake_quantization(
     input: remote_blob_util.BlobDef,
     scale: remote_blob_util.BlobDef,
     zero_point: remote_blob_util.BlobDef,
     quantize_to_bit: int = 8,
-    quantizer_type: str = "symmetric",
+    quantize_scheme: str = "symmetric",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
@@ -106,7 +139,7 @@ def fake_quantization(
         .Input("zero_point", [zero_point])
         .Output("out")
         .Attr("quantize_to_bit", quantize_to_bit)
-        .Attr("quantizer_type", quantizer_type)
+        .Attr("quantize_scheme", quantize_scheme)
         .Build()
         .InferAndTryRun()
         .SoleOutputBlob()
