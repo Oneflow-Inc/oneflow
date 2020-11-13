@@ -2242,7 +2242,7 @@ def dim_gather(
         name (Optional[str], optional): The name of the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The elements gathered from `input` will be retnred as the output Blob.
+        remote_blob_util.BlobDef: The elements gathered from `input` will be returned as the output Blob.
     
     For example:
 
