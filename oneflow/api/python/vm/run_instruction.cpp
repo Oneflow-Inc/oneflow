@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace py = pybind11;
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("vm", m) {
   using namespace oneflow;
   m.def("RunLogicalInstruction", &RunLogicalInstruction, py::call_guard<py::gil_scoped_release>());
   m.def("RunPhysicalInstruction", &RunPhysicalInstruction,
