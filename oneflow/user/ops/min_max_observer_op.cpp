@@ -19,41 +19,37 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("generate_quantize_scale_for_weight")
-    .Input("weight")
+REGISTER_USER_OP("min_max_observer")
+    .Input("in")
     .Output("scale")
     .Output("zero_point")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
-    .Attr<std::string>("quantizer_type", "symmetric")
-    // NOTE(Liang Depeng): "true" or "false": per-layer or per-channel quantization
-    .Attr<bool>("per_layer_quantization", true)
+    .Attr<std::string>("quantize_scheme", "symmetric")
+    // NOTE(Liang Depeng): "true" or "false": per-layer or per-channel quantize.
+    .Attr<bool>("per_layer_quantize", true)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);
-      // NOTE(Liang Depeng): support weights for 1/2D convolution and fully-connected layers.
-      //                     And assume weight shape is (Cout, Cin, K, K) or (Cout, Cin) for 2D
-      //                     convolution or fully-connected.
-      CHECK_GE_OR_RETURN(weight_shape->NumAxes(), 2);
-      CHECK_LE_OR_RETURN(weight_shape->NumAxes(), 4);
+      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
 
-      if (ctx->Attr<bool>("per_layer_quantization") == true) {
+      if (ctx->Attr<bool>("per_layer_quantize") == true) {
         *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
         *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
       } else {
-        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({weight_shape->At(0)});
-        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({weight_shape->At(0)});
+        // NOTE(Liang Depeng): For now per-channel quantize only support axis 0
+        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({in_shape->At(0)});
+        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({in_shape->At(0)});
       }
 
-      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
-      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
+      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* weight = GetInputArgModifierFn("weight", 0);
-      CHECK(weight != nullptr);
-      weight->set_requires_grad(false);
+      user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
+      CHECK(in != nullptr);
+      in->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       const auto ClearBatchAxis = [ctx](const std::string& name) {
@@ -66,7 +62,7 @@ REGISTER_USER_OP("generate_quantize_scale_for_weight")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // NOTE(Liang Depeng): weight needs to be broadcast in order to accurately calculate the
+      // NOTE(Liang Depeng): input needs to be broadcast in order to accurately calculate the
       // global scale and zero_point
       return Maybe<void>::Ok();
     })
@@ -76,8 +72,8 @@ REGISTER_USER_OP("generate_quantize_scale_for_weight")
       CHECK_GT_OR_RETURN(quantize_to_bit, 1);
       CHECK_LE_OR_RETURN(quantize_to_bit, 8);
 
-      std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");
-      CHECK_OR_RETURN(quantizer_type == "symmetric" || quantizer_type == "affine");
+      std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
+      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
       return Maybe<void>::Ok();
     });
 

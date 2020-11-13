@@ -20,20 +20,20 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void GenQuantScalePerLayerSymmetric(const T *activation, const int32_t quantize_to_bit,
+void GenQuantScalePerLayerSymmetric(const T *in, const int32_t quantize_to_bit,
                                     const int64_t num_elements, const float momentum, T *moving_max,
                                     T *moving_min, T *scale, T *zero_point) {
-  T activation_max = *std::max_element(activation, activation + num_elements);
-  T activation_min = *std::min_element(activation, activation + num_elements);
+  T in_max = *std::max_element(in, in + num_elements);
+  T in_min = *std::min_element(in, in + num_elements);
 
-  activation_max = std::max(std::abs(activation_max), std::abs(activation_min));
+  in_max = std::max(std::abs(in_max), std::abs(in_min));
 
   T moving_max_val = *moving_max;
 
   if (moving_max_val == 0) {
-    *moving_max = activation_max;
+    *moving_max = in_max;
   } else {
-    *moving_max = moving_max_val * momentum + activation_max * (1 - momentum);
+    *moving_max = moving_max_val * momentum + in_max * (1 - momentum);
   }
 
   // NOTE(Liang Depeng): symmetric quantization only use moving_max to calculate the scale
@@ -45,24 +45,24 @@ void GenQuantScalePerLayerSymmetric(const T *activation, const int32_t quantize_
 }
 
 template<typename T>
-void GenQuantScalePerLayerAffine(const T *activation, const int32_t quantize_to_bit,
+void GenQuantScalePerLayerAffine(const T *in, const int32_t quantize_to_bit,
                                  const int64_t num_elements, const float momentum, T *moving_max,
                                  T *moving_min, T *scale, T *zero_point) {
-  T activation_max = *std::max_element(activation, activation + num_elements);
-  T activation_min = *std::min_element(activation, activation + num_elements);
+  T in_max = *std::max_element(in, in + num_elements);
+  T in_min = *std::min_element(in, in + num_elements);
 
   T moving_max_val = *moving_max;
   if (moving_max_val == 0) {
-    *moving_max = activation_max;
+    *moving_max = in_max;
   } else {
-    *moving_max = moving_max_val * momentum + activation_max * (1 - momentum);
+    *moving_max = moving_max_val * momentum + in_max * (1 - momentum);
   }
 
   T moving_min_val = *moving_min;
   if (moving_min_val == 0) {
-    *moving_min = activation_min;
+    *moving_min = in_min;
   } else {
-    *moving_min = moving_min_val * momentum + activation_min * (1 - momentum);
+    *moving_min = moving_min_val * momentum + in_min * (1 - momentum);
   }
 
   T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
@@ -71,50 +71,50 @@ void GenQuantScalePerLayerAffine(const T *activation, const int32_t quantize_to_
 }
 
 template<typename T>
-class CpuGenerateQuantizeScaleForActivationKernel final : public user_op::OpKernel {
+class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
  public:
-  CpuGenerateQuantizeScaleForActivationKernel() = default;
-  ~CpuGenerateQuantizeScaleForActivationKernel() = default;
+  CpuMovingAverageMinMaxObserverKernel() = default;
+  ~CpuMovingAverageMinMaxObserverKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *activation = ctx->Tensor4ArgNameAndIndex("activation", 0);
+    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor *moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
     user_op::Tensor *moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
     user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
-    const std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
+    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
     const float momentum = ctx->Attr<float>("momentum");
 
-    const T *activation_ptr = activation->dptr<T>();
+    const T *in_ptr = in->dptr<T>();
     T *moving_max_ptr = moving_max->mut_dptr<T>();
     T *moving_min_ptr = moving_min->mut_dptr<T>();
     T *scale_ptr = scale->mut_dptr<T>();
     T *zero_point_ptr = zero_point->mut_dptr<T>();
 
-    int64_t num_elements = activation->shape().elem_cnt();
+    int64_t num_elements = in->shape().elem_cnt();
 
-    if (quantizer_type == "symmetric") {
-      GenQuantScalePerLayerSymmetric(activation_ptr, quantize_to_bit, num_elements, momentum,
+    if (quantize_scheme == "symmetric") {
+      GenQuantScalePerLayerSymmetric(in_ptr, quantize_to_bit, num_elements, momentum,
                                      moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
-    } else {  // quantizer_type == "affine"
-      GenQuantScalePerLayerAffine(activation_ptr, quantize_to_bit, num_elements, momentum,
-                                  moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
+    } else {  // quantize_scheme == "affine"
+      GenQuantScalePerLayerAffine(in_ptr, quantize_to_bit, num_elements, momentum, moving_max_ptr,
+                                  moving_min_ptr, scale_ptr, zero_point_ptr);
     }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GENERATE_QUANTIZE_SCALE_FOR_ACTIVATION_KERNEL(dtype)    \
-  REGISTER_USER_KERNEL("generate_quantize_scale_for_activation")         \
-      .SetCreateFn<CpuGenerateQuantizeScaleForActivationKernel<dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)     \
-                       & (user_op::HobDataType("activation", 0) == GetDataType<dtype>::value))
+#define REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(dtype)       \
+  REGISTER_USER_KERNEL("moving_average_min_max_observer")            \
+      .SetCreateFn<CpuMovingAverageMinMaxObserverKernel<dtype>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU) \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
-REGISTER_GENERATE_QUANTIZE_SCALE_FOR_ACTIVATION_KERNEL(float);
-REGISTER_GENERATE_QUANTIZE_SCALE_FOR_ACTIVATION_KERNEL(double);
+REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(float);
+REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(double);
 
 }  // namespace oneflow

@@ -133,39 +133,39 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
          (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
 
 template<typename T>
-class GpuGenerateQuantizeScaleForActivationKernel final : public user_op::OpKernel {
+class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
  public:
-  GpuGenerateQuantizeScaleForActivationKernel() = default;
-  ~GpuGenerateQuantizeScaleForActivationKernel() = default;
+  GpuMovingAverageMinMaxObserverKernel() = default;
+  ~GpuMovingAverageMinMaxObserverKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *activation = ctx->Tensor4ArgNameAndIndex("activation", 0);
+    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor *moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
     user_op::Tensor *moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
     user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
+    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
     const float momentum = ctx->Attr<float>("momentum");
 
-    int64_t elements = activation->shape().elem_cnt();
+    int64_t elements = in->shape().elem_cnt();
     T *max_ptr = tmp_buffer->mut_dptr<T>();
     T *min_ptr = max_ptr + 1;
 
     LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), 1, 0, 1, max_ptr, min_ptr);
     LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
-                       kCudaThreadsNumPerBlock * 2 * sizeof(T), activation->dptr<T>(), elements,
-                       max_ptr, min_ptr);
+                       kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
+                       min_ptr);
 
-    if (quantizer_type == "symmetric") {
+    if (quantize_scheme == "symmetric") {
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
                          static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
                          moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(), scale->mut_dptr<T>(),
                          zero_point->mut_dptr<T>());
-    } else {  // quantizer_type == "affine"
+    } else {  // quantize_scheme == "affine"
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
                          static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
                          moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(), scale->mut_dptr<T>(),
@@ -176,14 +176,14 @@ class GpuGenerateQuantizeScaleForActivationKernel final : public user_op::OpKern
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GENERATE_QUANTIZE_SCALE_FOR_ACTIVATION_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("generate_quantize_scale_for_activation")                               \
-      .SetCreateFn<GpuGenerateQuantizeScaleForActivationKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                           \
-                       & (user_op::HobDataType("activation", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("moving_average_min_max_observer")                              \
+      .SetCreateFn<GpuMovingAverageMinMaxObserverKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t { return 2 * sizeof(dtype); })
 
-REGISTER_GENERATE_QUANTIZE_SCALE_FOR_ACTIVATION_KERNEL(float);
-REGISTER_GENERATE_QUANTIZE_SCALE_FOR_ACTIVATION_KERNEL(double);
+REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(float);
+REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(double);
 
 }  // namespace oneflow

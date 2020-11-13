@@ -152,71 +152,71 @@ __global__ void CalScaleZeroPointAffine(const T *max_ptr, const T *min_ptr, cons
          (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
 
 template<typename T>
-class GpuGenerateQuantizeScaleForWeightKernel final : public user_op::OpKernel {
+class GpuMinMaxObserverKernel final : public user_op::OpKernel {
  public:
-  GpuGenerateQuantizeScaleForWeightKernel() = default;
-  ~GpuGenerateQuantizeScaleForWeightKernel() = default;
+  GpuMinMaxObserverKernel() = default;
+  ~GpuMinMaxObserverKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    user_op::Tensor *weight_scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
+    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
-    const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
+    const bool per_layer_quantize = ctx->Attr<bool>("per_layer_quantize");
 
-    const int64_t elements = weight->shape().elem_cnt();
-    const int64_t channel = weight_scale->shape().At(0);
+    const int64_t elements = in->shape().elem_cnt();
+    const int64_t channel = scale->shape().At(0);
     const int64_t panel_size = elements / channel;
     T *max_ptr = tmp_buffer->mut_dptr<T>();
     T *min_ptr = max_ptr + channel;
 
     LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), channel, 0, channel, max_ptr, min_ptr);
 
-    if (per_layer_quantization) {
+    if (per_layer_quantize) {
       LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
-                         kCudaThreadsNumPerBlock * 2 * sizeof(T), weight->dptr<T>(), elements,
-                         max_ptr, min_ptr);
-    } else {  // per-channel quantization
+                         kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
+                         min_ptr);
+    } else {  // per-channel quantize
       // NOTE(Liang Depeng): each block of threads will be responsible for
       //                     computing the max and min values of the whole channel.
       LAUNCH_CUDA_KERNEL((ReduceMaxMinPerChannel<T>), ctx->device_ctx(),
                          channel * kCudaThreadsNumPerBlock, kCudaThreadsNumPerBlock * 2 * sizeof(T),
-                         weight->dptr<T>(), elements, channel, panel_size, max_ptr, min_ptr);
+                         in->dptr<T>(), elements, channel, panel_size, max_ptr, min_ptr);
     }
 
-    if (quantizer_type == "symmetric") {
+    if (quantize_scheme == "symmetric") {
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), channel, 0, max_ptr,
                          min_ptr, channel, static_cast<double>(quantize_to_bit),
-                         weight_scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
-    } else {  // quantizer_type == "affine"
+                         scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+    } else {  // quantize_scheme == "affine"
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), channel, 0, max_ptr,
                          min_ptr, channel, static_cast<double>(quantize_to_bit),
-                         weight_scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+                         scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
     }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GENERATE_QUANTIZE_SCALE_FOR_WEIGHT_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("generate_quantize_scale_for_weight")                               \
-      .SetCreateFn<GpuGenerateQuantizeScaleForWeightKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                       \
-                       & (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t {                        \
-        size_t tmp_buffer_size = 1;                                                        \
-        if (ctx->Attr<bool>("per_layer_quantization") == false) {                          \
-          const Shape *weight_shape = ctx->Shape4ArgNameAndIndex("weight", 0);             \
-          tmp_buffer_size = weight_shape->At(0);                                           \
-        }                                                                                  \
-        return 2 * tmp_buffer_size * sizeof(dtype);                                        \
+#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("min_max_observer")                                             \
+      .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t {                    \
+        size_t tmp_buffer_size = 1;                                                    \
+        if (ctx->Attr<bool>("per_layer_quantize") == false) {                          \
+          const Shape *in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                 \
+          tmp_buffer_size = in_shape->At(0);                                           \
+        }                                                                              \
+        return 2 * tmp_buffer_size * sizeof(dtype);                                    \
       })
 
-REGISTER_GENERATE_QUANTIZE_SCALE_FOR_WEIGHT_KERNEL(float);
-REGISTER_GENERATE_QUANTIZE_SCALE_FOR_WEIGHT_KERNEL(double);
+REGISTER_MIN_MAX_OBSERVER_KERNEL(float);
+REGISTER_MIN_MAX_OBSERVER_KERNEL(double);
 
 }  // namespace oneflow
