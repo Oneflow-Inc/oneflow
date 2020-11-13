@@ -19,8 +19,8 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("generate_quantize_scale_for_activation")
-    .Input("activation")
+REGISTER_USER_OP("moving_average_min_max_observer")
+    .Input("in")
     .Input("moving_max")  // NOTE(Liang Depeng): needs to be initialized as 0
     .Input("moving_min")  // NOTE(Liang Depeng): needs to be initialized as 0
     .Output("scale")
@@ -28,28 +28,28 @@ REGISTER_USER_OP("generate_quantize_scale_for_activation")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
-    .Attr<std::string>("quantizer_type", "symmetric")
-    // NOTE(Liang Depeng): smoothing parameter for exponential moving averages operation
+    .Attr<std::string>("quantize_scheme", "symmetric")
+    // NOTE(Liang Depeng): smoothing parameter for exponential moving average operation
     .Attr<float>("momentum", 0.95)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* moving_max_shape = ctx->Shape4ArgNameAndIndex("moving_max", 0);
       Shape* moving_min_shape = ctx->Shape4ArgNameAndIndex("moving_min", 0);
-      // NOTE(Liang Depeng): activation only support per-layer quantization
-      // TODO(Liang Depeng): depthwise convolution support per-channel quantization
+      // NOTE(Liang Depeng): for now only support per-layer quantize
+      // TODO(Liang Depeng): depthwise convolution support per-channel quantize
       CHECK_OR_RETURN(moving_max_shape->NumAxes() == 1 && moving_max_shape->At(0) == 1);
       CHECK_OR_RETURN(moving_min_shape->NumAxes() == 1 && moving_min_shape->At(0) == 1);
 
       *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
       *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
-      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("activation", 0);
-      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("activation", 0);
+      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* activation = GetInputArgModifierFn("activation", 0);
-      CHECK(activation != nullptr);
-      activation->set_requires_grad(false);
+      user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
+      CHECK(in != nullptr);
+      in->set_requires_grad(false);
 
       user_op::InputArgModifier* moving_max = GetInputArgModifierFn("moving_max", 0);
       CHECK(moving_max != nullptr);
@@ -82,8 +82,8 @@ REGISTER_USER_OP("generate_quantize_scale_for_activation")
       CHECK_GT_OR_RETURN(quantize_to_bit, 1);
       CHECK_LE_OR_RETURN(quantize_to_bit, 8);
 
-      std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");
-      CHECK_OR_RETURN(quantizer_type == "symmetric" || quantizer_type == "affine");
+      std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
+      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
       return Maybe<void>::Ok();
     });
 

@@ -27,13 +27,13 @@ REGISTER_USER_OP("fake_quantization")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
-    .Attr<std::string>("quantizer_type", "symmetric")
+    .Attr<std::string>("quantize_scheme", "symmetric")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       const Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
       const Shape* zero_point_shape = ctx->Shape4ArgNameAndIndex("zero_point", 0);
 
-      std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
+      std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
 
       // NOTE(Liang Depeng): scale_shape->elem_cnt() > 1 means per-channel quantization for weights.
       if (scale_shape->elem_cnt() > 1) {
@@ -93,8 +93,8 @@ REGISTER_USER_OP("fake_quantization")
       CHECK_GT_OR_RETURN(quantize_to_bit, 1);
       CHECK_LE_OR_RETURN(quantize_to_bit, 8);
 
-      const std::string quantizer_type = op_conf.attr<std::string>("quantizer_type");
-      CHECK_OR_RETURN(quantizer_type == "symmetric" || quantizer_type == "affine");
+      const std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
+      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
       return Maybe<void>::Ok();
     });
 
