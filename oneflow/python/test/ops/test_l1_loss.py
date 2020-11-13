@@ -69,12 +69,10 @@ def _compare_l1loss_with_np(
             diff = prediction[i] - label[i]
             prediction_grad[i] = np.sign(diff)
 
-        grad = prediction_grad.reshape(original_shape)
         grad_mean = prediction_grad.reshape(original_shape) / elemcnt
-        grad_sum = np.sum(prediction_grad)
+        grad_sum = prediction_grad.reshape(original_shape)
 
         grad_dict = {
-            "np_grad": grad,
             "np_grad_mean": grad_mean,
             "np_grad_sum": grad_sum,
         }
