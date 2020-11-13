@@ -52,7 +52,7 @@ class CheckPoint(object):
         """
         if not config_util.api_legacy_model_io_enabled():
             print(
-                "'checkpoint.save()' is deprecated. Please use the new checkpoint API"
+                "'checkpoint.save()' is deprecated. Please use 'flow.save(flow.get_all_variables(), path)' instead."
             )
             new_check_point.Save(new_check_point.GetAllVariables(), path)
             return
@@ -79,7 +79,7 @@ class CheckPoint(object):
         """
         if not config_util.api_legacy_model_io_enabled():
             print(
-                "'checkpoint.load()' is deprecated. Please use the new checkpoint API"
+                "'checkpoint.load()' is deprecated. Please use 'flow.load_variables(path)' instead."
             )
             new_check_point.LoadVariables(new_check_point.Load(path))
             return

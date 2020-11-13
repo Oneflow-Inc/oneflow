@@ -203,6 +203,9 @@ ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
 def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
+    """
+    Get all variables of all jobs as a dict.
+    """
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
     variables = {}
@@ -489,6 +492,13 @@ def _FeedValueToVariable(
 def LoadVariables(
     value_dict: Dict[str, ValueContainer], ignore_mismatch: bool = False,
 ):
+    """
+    Load value in `value_dict` into oneflow variables.
+    For example, if `value_dict` is {'x', np.ones(x_shape)},
+    the value of variable "x" will all ones.
+    If `ignore_mismatch` is False, an exception will be raised when
+    there is a name in `value_dict` not belonging to any variable.
+    """
     for name, value in value_dict.items():
         if name in GetAllVariables():
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
