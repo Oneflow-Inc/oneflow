@@ -84,6 +84,8 @@ class TestArgmax(flow.unittest.TestCase):
     def test_argmax(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)
+        for arg in gen_arg_list_for_test_axis():
+            compare_with_tensorflow(*arg)
 
 
 if __name__ == "__main__":

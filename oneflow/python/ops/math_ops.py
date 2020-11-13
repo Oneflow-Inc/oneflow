@@ -1406,8 +1406,7 @@ def elem_cnt(
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("math.top_k")
-def top_k(
+def _top_k_at_last_dim(
     input: remote_blob_util.BlobDef,
     k: int = 1,
     sorted: bool = True,
@@ -1456,6 +1455,27 @@ def top_k(
     )
 
 
+@oneflow_export("math.top_k")
+def top_k(
+        input: remote_blob_util.BlobDef,
+        axis: int = -1,
+        k: int = 1,
+        sorted: bool = True,
+        name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    name = name if name is not None else id_util.UniqueStr("TopK_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    if axis == num_axes - 1:
+        return _top_k_at_last_dim(input, k, sorted, name)
+    else:
+        assert(axis < num_axes)
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, False, name + "transpose")
+        x = _top_k_at_last_dim(x, k, sorted, name)
+        return flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
+
+
 def _argmax_at_last_dim(
     input: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
@@ -1501,7 +1521,7 @@ def _argmax_at_last_dim(
 
 
 @oneflow_export("math.argmax")
-def argsort(
+def argmax(
         input: remote_blob_util.BlobDef,
         axis: int = -1,
         name: Optional[str] = None,

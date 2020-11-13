@@ -27,7 +27,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
+def compare_with_tensorflow(device_type, in_shape, axis, k, data_type, sorted):
     assert device_type in ["gpu", "cpu"]
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
@@ -43,7 +43,7 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
         )
     ):
         with flow.scope.placement(device_type, "0:0"):
-            return flow.math.top_k(input, k, sorted)
+            return flow.math.top_k(input, axis, k, sorted)
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
@@ -52,7 +52,7 @@ def compare_with_tensorflow(device_type, in_shape, k, data_type, sorted):
     if k <= in_shape[-1]:
         _, tf_out = tf.math.top_k(input, k, sorted)
     else:
-        tf_out = tf.argsort(input, axis=-1, direction="DESCENDING", stable=True)
+        tf_out = tf.argsort(input, axis, direction="DESCENDING", stable=True)
 
     assert np.array_equal(of_out, tf_out.numpy())
 
@@ -61,6 +61,19 @@ def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(100,), (100, 100), (10, 500), (10, 10, 500)]
+    arg_dict["axis"] = [-1]
+    arg_dict["k"] = [1, 50, 200]
+    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["sorted"] = [True]
+
+    return GenArgList(arg_dict)
+
+
+def gen_arg_list_for_test_axis():
+    arg_dict = OrderedDict()
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["in_shape"] = [(10, 10, 500)]
+    arg_dict["axis"] = [-2, -1, 0, 1, 2]
     arg_dict["k"] = [1, 50, 200]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     arg_dict["sorted"] = [True]
@@ -72,6 +85,8 @@ def gen_arg_list():
 class TestTopK(flow.unittest.TestCase):
     def test_top_k(test_case):
         for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+        for arg in gen_arg_list_for_test_axis():
             compare_with_tensorflow(*arg)
 
 
