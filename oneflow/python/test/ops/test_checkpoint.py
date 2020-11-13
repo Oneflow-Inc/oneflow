@@ -186,7 +186,7 @@ def _TestLoadNumpy(test_case, dtype):
     flow.config.gpu_device_num(4)
 
     model = get_checkpoint_ready_model(get_reduce_sum_model, dtype)
-    var_x = flow.get_all_variables()['x']
+    var_x = flow.get_all_variables()["x"]
     new_val_np = np.random.random(var_x.shape).astype(np.float32)
     flow.load_variables({"x": new_val_np})
     flow_res = model()
@@ -268,7 +268,6 @@ class TestCheckpoint(flow.unittest.TestCase):
     )
     def test_round_trip(test_case):
         _TestRoundTrip(test_case, get_large_model, flow.float)
-
 
     @flow.unittest.skip_unless_1n4d()
     def test_load_numpy(test_case):

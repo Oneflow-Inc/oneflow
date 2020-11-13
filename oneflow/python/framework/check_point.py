@@ -197,7 +197,7 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-Value = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
+ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
 
 
 @oneflow_export("get_all_variables")
@@ -254,39 +254,42 @@ def _GetScopeSymbolIdFromEagerBlob(blob):
 
 
 def _ReadSlice(
-    blob: Value
+    container: ValueContainer,
 ) -> Iterable[Tuple[Sequence[int], Sequence[int], np.ndarray]]:
     """
-    Return a generator which iterates over the input blob and yields
+    Return a generator which iterates over the input blob or array and yields
     (start_nd_idx, stop_nd_idx, slice_np_array)
     """
-    if isinstance(blob, EagerBlobTrait):
+    if isinstance(container, EagerBlobTrait):
 
-        def ReadFromBlob(blob, start_nd_idx, stop_nd_idx, length):
-            return _LogicalSlice(blob, start_nd_idx, stop_nd_idx)
+        def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx, length):
+            return _LogicalSlice(eager_blob, start_nd_idx, stop_nd_idx)
 
-        yield from _ForEverySlice(blob, ReadFromBlob)
-    elif isinstance(blob, FileBackendVariableBlob):
-        np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
-        with open(blob.file_path, "rb") as f:
+        yield from _ForEverySlice(container, ReadFromEagerBlob)
+    elif isinstance(container, FileBackendVariableBlob):
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(container.dtype)
+        )
+        with open(container.file_path, "rb") as f:
 
-            def ReadFromFile(blob, start_nd_idx, stop_nd_idx, length):
+            def ReadFromFile(_, start_nd_idx, stop_nd_idx, length):
                 slice = f.read(length * np_dtype.itemsize)
                 return np.frombuffer(slice, dtype=np_dtype,).reshape(
                     np.array(stop_nd_idx) - np.array(start_nd_idx)
                 )
 
-            yield from _ForEverySlice(blob, ReadFromFile)
-    elif isinstance(blob, np.ndarray):
-        def ReadFromNpArray(blob, start_nd_idx, stop_nd_idx, length):
+            yield from _ForEverySlice(container, ReadFromFile)
+    elif isinstance(container, np.ndarray):
+
+        def ReadFromNpArray(array, start_nd_idx, stop_nd_idx, length):
             slice_objs = []
             for start, stop in zip(start_nd_idx, stop_nd_idx):
                 slice_objs.append(slice(start, stop))
-            return blob[tuple(slice_objs)]
+            return array[tuple(slice_objs)]
 
-        yield from _ForEverySlice(blob, ReadFromNpArray)
+        yield from _ForEverySlice(container, ReadFromNpArray)
     else:
-        raise RuntimeError("Unknown value_blob type: {}".format(type(blob).__name__))
+        raise RuntimeError("Unknown type: {}".format(type(container).__name__))
 
 
 @oneflow_export("save")
@@ -452,32 +455,29 @@ def _LogicalSliceAssign(
 
 
 def _FeedValueToVariable(
-    var_blob: remote_blob_util.EagerConsistentBlob,
-    value_blob: Value
+    var_blob: remote_blob_util.EagerConsistentBlob, value: ValueContainer
 ) -> None:
     """
-    Feed the value of `value_blob` to the variable `var_blob`
+    Feed the value of `value` to the variable `var_blob`
     """
     assert isinstance(
-        value_blob, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
-    ), "Unknown value_blob type: {}".format(type(value_blob).__name__)
+        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
+    ), "Unknown value type: {}".format(type(value).__name__)
 
-    if isinstance(value_blob, FileBackendVariableBlob):
-        if not value_blob.has_meta_info_:
-            value_blob = FileBackendVariableBlob(
-                value_blob.var_dir_, var_blob.dtype, var_blob.shape
+    if isinstance(value, FileBackendVariableBlob):
+        if not value.has_meta_info_:
+            value = FileBackendVariableBlob(
+                value.var_dir_, var_blob.dtype, var_blob.shape
             )
-    assert var_blob.shape == value_blob.shape, "{} vs {}".format(
-        var_blob.shape, value_blob.shape
-    )
-    if isinstance(value_blob, np.ndarray):
-        value_flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(value_blob.dtype)
+    assert var_blob.shape == value.shape, "{} vs {}".format(var_blob.shape, value.shape)
+    if isinstance(value, np.ndarray):
+        value_flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(value.dtype)
     else:
-        value_flow_dtype = value_blob.dtype
+        value_flow_dtype = value.dtype
     assert var_blob.dtype == value_flow_dtype, "{} vs {}".format(
-                    var_blob.dtype, value_flow_dtype
+        var_blob.dtype, value_flow_dtype
     )
-    for start, stop, slice in _ReadSlice(value_blob):
+    for start, stop, slice in _ReadSlice(value):
         slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
         _LogicalSliceAssign(
             var_blob, slice_value_blob, start, stop,
@@ -487,13 +487,12 @@ def _FeedValueToVariable(
 @oneflow_export("load_variables")
 @session_ctx.try_init_default_session
 def LoadVariables(
-    value_dict: Dict[str, Value],
-    ignore_mismatch: bool = False,
+    value_dict: Dict[str, ValueContainer], ignore_mismatch: bool = False,
 ):
-    for name, value_blob in value_dict.items():
+    for name, value in value_dict.items():
         if name in GetAllVariables():
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
-            _FeedValueToVariable(var_blob, value_blob)
+            _FeedValueToVariable(var_blob, value)
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
@@ -501,7 +500,7 @@ def LoadVariables(
 
 
 def _ForEverySlice(
-    blob: Value,
+    container: ValueContainer,
     f: Union[
         Callable[[EagerBlobTrait, Sequence[int], Sequence[int], int], Any],
         Callable[[FileBackendVariableBlob, Sequence[int], Sequence[int], int], Any],
@@ -509,40 +508,44 @@ def _ForEverySlice(
     ],
 ):
     """
-    Slice blob into slices whose size < SLICE_BYTES. For every slice,
+    Slice container into slices whose size < SLICE_BYTES. For every slice,
     yield start_nd_idx, stop_nd_idx and f(slice)
     """
     assert isinstance(
-        blob, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
-    ), "Unknown value_blob type: {}".format(type(value_blob).__name__)
-    assert blob.shape is not None
+        container, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
+    ), "Unknown type: {}".format(type(container).__name__)
+    assert container.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
     SLICE_BYTES = 20 * 1024 * 1024
-    if isinstance(blob, np.ndarray):
-        np_dtype = blob.dtype
+    if isinstance(container, np.ndarray):
+        np_dtype = container.dtype
     else:
-        np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(container.dtype)
+        )
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
-    size = np.prod(blob.shape).astype(np.int).item()
+    size = np.prod(container.shape).astype(np.int).item()
     cnt = 1
-    for axis in reversed(range(len(blob.shape))):
-        cnt *= blob.shape[axis]
+    for axis in reversed(range(len(container.shape))):
+        cnt *= container.shape[axis]
         if cnt > SLICE_LEN:
             break
-    unit_size = np.prod(blob.shape[axis + 1 :]).astype(np.int).item()
+    unit_size = np.prod(container.shape[axis + 1 :]).astype(np.int).item()
     max_unit_num = SLICE_LEN // unit_size
     while start_idx < size:
-        remainder = blob.shape[axis]
+        remainder = container.shape[axis]
         while remainder > 0:
             unit_num = max_unit_num if remainder >= max_unit_num else remainder
             length = unit_num * unit_size
             remainder -= unit_num
             stop_idx = start_idx + length
-            start_nd_idx = np.unravel_index(start_idx, blob.shape)
-            stop_nd_idx = np.unravel_index(stop_idx - 1, blob.shape)
+            start_nd_idx = np.unravel_index(start_idx, container.shape)
+            stop_nd_idx = np.unravel_index(stop_idx - 1, container.shape)
             stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
-            yield start_nd_idx, stop_nd_idx, f(blob, start_nd_idx, stop_nd_idx, length)
+            yield start_nd_idx, stop_nd_idx, f(
+                container, start_nd_idx, stop_nd_idx, length
+            )
             start_idx = stop_idx
 
 
