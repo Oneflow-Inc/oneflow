@@ -129,17 +129,21 @@ def fake_quantization(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    out = (
+    builder = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Fake_Quantization_")
         )
         .Op("fake_quantization")
         .Input("in", [input])
         .Input("scale", [scale])
-        .Input("zero_point", [zero_point])
-        .Output("out")
+    )
+
+    if quantize_scheme == "affine":
+        builder = builder.Input("zero_point", [zero_point])
+
+    out = (
+        builder.Output("out")
         .Attr("quantize_to_bit", quantize_to_bit)
-        .Attr("quantize_scheme", quantize_scheme)
         .Build()
         .InferAndTryRun()
         .SoleOutputBlob()
