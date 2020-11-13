@@ -21,45 +21,15 @@ import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+from .transpose_util import get_perm_when_transpose_axis_to_last_dim
+from .transpose_util import get_inversed_perm
 
 
-@oneflow_export("sort")
-def sort(
+def _sort_in_last_dim(
     input: remote_blob_util.BlobDef,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator sorts the input Blob. 
-
-    Args:
-        input (remote_blob_util.BlobDef): A Blob
-        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        remote_blob_util.BlobDef: The sorted Blob
-
-    For example: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def sort_Job(x: tp.Numpy.Placeholder((5, ))
-        ) -> tp.Numpy:
-            return flow.sort(input=x, 
-                            direction='ASCENDING')
-
-        x = np.array([10, 2, 9, 3, 7]).astype("float32")
-        out = sort_Job(x)
-
-        # out [ 2.  3.  7.  9. 10.]
-
-    """
     assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
@@ -71,6 +41,57 @@ def sort(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("sort")
+def sort(
+        input: remote_blob_util.BlobDef,
+        axis: int = -1,
+        direction: str = "ASCENDING",
+        name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator sorts the input Blob at specified axis.
+
+    Args:
+        input (remote_blob_util.BlobDef): A Blob
+        axis (int, optional): dimension to be sorted. Defaults to the last dim (-1)
+        direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The sorted Blob
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def sort_Job(x: tp.Numpy.Placeholder((5, ))
+        ) -> tp.Numpy:
+            return flow.sort(input=x)
+
+        x = np.array([10, 2, 9, 3, 7]).astype("float32")
+        out = sort_Job(x)
+
+        # out [ 2.  3.  7.  9. 10.]
+
+    """
+    assert direction in ["ASCENDING", "DESCENDING"]
+    num_axes = len(input.static_shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    if axis == num_axes - 1:
+        return _sort_in_last_dim(input, direction, name)
+    else:
+        assert(axis < num_axes)
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, False, name + "transpose")
+        x = _sort_in_last_dim(x, direction, name)
+        return flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
 
 
 @oneflow_export("argsort")
