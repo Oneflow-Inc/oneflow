@@ -431,8 +431,6 @@ void OpGraph::InitEdges() {
     for (const auto& ibn : op_node->op().input_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
-      LOG(INFO) << "push " << ibn;
-      LOG(INFO) << "to " << lbi.DebugString();
       (*consumer_lbi2ibns)[lbi].push_back(ibn);
     }
     for (const auto& pair : producer_op_name2lbis) {
@@ -441,7 +439,6 @@ void OpGraph::InitEdges() {
       const auto it = producer_op_name2lbi2obn.find(pair.first);
       CHECK(it != producer_op_name2lbi2obn.end()) << "producer_op_name: " << pair.first;
       const auto& lbi2obn = it->second;
-      LOG(INFO) << "lbi: " << lbis->at(0).DebugString();
       OpNode* producer = lbi2producer.at(lbis->at(0));
       Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
