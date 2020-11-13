@@ -25,7 +25,7 @@ from .transpose_util import get_perm_when_transpose_axis_to_last_dim
 from .transpose_util import get_inversed_perm
 
 
-def _sort_in_last_dim(
+def _sort_at_last_dim(
     input: remote_blob_util.BlobDef,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
@@ -86,17 +86,16 @@ def sort(
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
     if axis == num_axes - 1:
-        return _sort_in_last_dim(input, direction, name)
+        return _sort_at_last_dim(input, direction, name)
     else:
         assert(axis < num_axes)
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
         x = flow.transpose(input, perm, False, False, name + "transpose")
-        x = _sort_in_last_dim(x, direction, name)
+        x = _sort_at_last_dim(x, direction, name)
         return flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
 
 
-@oneflow_export("argsort")
-def argsort(
+def _argsort_at_last_dim(
     input: remote_blob_util.BlobDef,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
@@ -145,3 +144,24 @@ def argsort(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("argsort")
+def argsort(
+        input: remote_blob_util.BlobDef,
+        axis: int = -1,
+        direction: str = "ASCENDING",
+        name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    assert direction in ["ASCENDING", "DESCENDING"]
+    name = name if name is not None else id_util.UniqueStr("ArgSort_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    if axis == num_axes - 1:
+        return _argsort_at_last_dim(input, direction, name)
+    else:
+        assert(axis < num_axes)
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, False, name + "transpose")
+        x = _argsort_at_last_dim(x, direction, name)
+        return flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
