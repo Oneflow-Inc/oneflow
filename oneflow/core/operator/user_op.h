@@ -34,6 +34,10 @@ class UserOp final : public Operator {
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext*, const SbpSignature* sbp_signature,
                                 std::function<void(OpContext*)> EnrollOpCtx) const override;
+  double GetComputeComplexity(
+      SbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const override;
 
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 

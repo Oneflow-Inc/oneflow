@@ -186,10 +186,10 @@ class Operator {
 
   // Compute time complexity for given blob description and sbp signature.
   // Use OpNode to repalce the HashMap from logical blob id to blob description pointer.
-  virtual double Complexity4SbpBlobdesc(
-      SbpSignature* sbp_signature_,
-      std::function<const BlobDesc&(const LogicalBlobId& lbi)> logical_blob_desc4lbi_,
-      const ParallelDesc& parallel_desc, double CostRatio) const;
+  virtual double GetComputeComplexity(
+      SbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const;
 
   ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
 
