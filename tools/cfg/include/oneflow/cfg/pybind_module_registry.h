@@ -33,7 +33,7 @@ class Pybind11ModuleRegistry {
  public:
   Pybind11ModuleRegistry() = default;
   ~Pybind11ModuleRegistry() = default;
-
+  
   void Register(std::string module_path, std::function<void(pybind11::module&)> BuildModule);
   void ImportAll(pybind11::module& m);
 
