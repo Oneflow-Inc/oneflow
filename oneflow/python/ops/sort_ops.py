@@ -82,7 +82,8 @@ def sort(
 
     """
     assert direction in ["ASCENDING", "DESCENDING"]
-    num_axes = len(input.static_shape)
+    name = name if name is not None else id_util.UniqueStr("Sort_")
+    num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
     if axis == num_axes - 1:
         return _sort_in_last_dim(input, direction, name)

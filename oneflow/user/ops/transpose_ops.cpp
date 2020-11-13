@@ -42,7 +42,7 @@ REGISTER_USER_OP("transpose")
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
       CHECK_EQ_OR_RETURN(perm.size(), in_shape.NumAxes());
       CheckIsPerm(perm);
-      if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
+      // if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
       *out_tensor_desc = *in_tensor_desc;
       FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
       return Maybe<void>::Ok();
