@@ -1,3 +1,4 @@
+#include <google/protobuf/text_format.h>
 #include "{{ util.module_cfg_header_name(module) }}"
 
 {% for package in util.module_package_list(module) %}
@@ -587,6 +588,11 @@ Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(): data_(::std:
 Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
   BuildFromProto(proto_{{ util.class_name(cls).lower() }});
 }
+Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(const ::std::string cfg_{{ util.class_name(cls).lower() }}_str) {
+  {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }} proto_{{ util.class_name(cls).lower() }};
+  ::google::protobuf::TextFormat::ParseFromString(cfg_{{ util.class_name(cls).lower() }}_str, &proto_{{ util.class_name(cls).lower() }});
+  BuildFromProto(proto_{{ util.class_name(cls).lower() }});
+}
 Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&) = default;
 Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept = default;
 Const{{ util.class_name(cls) }}::~Const{{ util.class_name(cls) }}() = default;
@@ -787,6 +793,7 @@ void Const{{ util.class_name(cls) }}::BuildFromProto(const PbMessage& proto_{{ u
 {{ util.class_name(cls) }}::{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
   InitFromProto(proto_{{ util.class_name(cls).lower() }});
 }
+{{ util.class_name(cls) }}::{{ util.class_name(cls) }}(const ::std::string cfg_{{ util.class_name(cls).lower() }}_str) : Const{{ util.class_name(cls) }}(cfg_{{ util.class_name(cls).lower() }}_str) {}
 {{ util.class_name(cls) }}::{{ util.class_name(cls) }}() = default;
 
 {{ util.class_name(cls) }}::~{{ util.class_name(cls) }}() = default;

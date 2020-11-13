@@ -213,6 +213,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept;
   Const{{ util.class_name(cls) }}();
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
+  Const{{ util.class_name(cls) }}(const ::std::string cfg_{{ util.class_name(cls).lower() }}_str);
   ~Const{{ util.class_name(cls) }}() override;
 
   using PbMessage = ::google::protobuf::Message;
@@ -306,6 +307,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
   {{ util.class_name(cls) }}();
   {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
+  {{ util.class_name(cls) }}(const ::std::string cfg_{{ util.class_name(cls).lower() }}_str);
 
   ~{{ util.class_name(cls) }}();
 
