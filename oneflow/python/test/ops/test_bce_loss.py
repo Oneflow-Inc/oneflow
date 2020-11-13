@@ -66,15 +66,18 @@ def _compare_bceloss_with_np(
     def np_bce_loss_diff(np_input, np_target, np_weight):
         # Use numpy to compute diff
         elemcnt = np_target.size
-        np_bce_grad_sum = -(np_weight) * (
-            np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
-        )
+
+        # TODO: If you want to get the grad when the reduction = "sum", you can use the follow code
+
+        # np_bce_grad_sum = -(np_weight) * (
+        # np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
+        # )
+
         np_bce_grad_mean = -(np_weight / elemcnt) * (
             np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
         )
 
         return {
-            "np_bce_grad_sum": np_bce_grad_sum,
             "np_bce_grad_mean": np_bce_grad_mean,
         }
 
@@ -162,22 +165,18 @@ def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
 @flow.unittest.skip_unless_1n1d()
 class Testl1loss1n1d(flow.unittest.TestCase):
     def test_bceloss_cpu(test_case):
-        shape = (3, 16)
-        device_type = "cpu"
-        machine_ids = "0:0"
-        device_counts = 1
-        arg_dict = _gen_arg_dict(shape, device_type, machine_ids, device_counts)
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16), device_type="cpu", machine_ids="0:0", device_counts=1
+        )
 
         for arg in GenArgList(arg_dict):
             _compare_bceloss_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_bceloss_gpu(test_case):
-        shape = (3, 16, 32)
-        device_type = "gpu"
-        machine_ids = "0:0"
-        device_counts = 1
-        arg_dict = _gen_arg_dict(shape, device_type, machine_ids, device_counts)
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16, 32), device_type="gpu", machine_ids="0:0", device_counts=1
+        )
         for arg in GenArgList(arg_dict):
             _compare_bceloss_with_np(*arg)
 
@@ -186,11 +185,9 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 class Testrange1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_bceloss_gpu_1n2d(test_case):
-        shape = (3, 16, 16)
-        device_type = "gpu"
-        machine_ids = "0:0-1"
-        device_counts = 2
-        arg_dict = _gen_arg_dict(shape, device_type, machine_ids, device_counts)
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16, 16), device_type="gpu", machine_ids="0:0-1", device_counts=2
+        )
         for arg in GenArgList(arg_dict):
             _compare_bceloss_with_np(*arg)
 
