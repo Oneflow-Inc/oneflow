@@ -76,6 +76,9 @@ def get_large_model(dtype):
     return large
 
 
+get_reduce_sum_model = get_large_model
+
+
 def get_checkpoint_ready_model(model_getter, dtype):
     model = model_getter(dtype)
     if flow.eager_execution_enabled():
@@ -178,6 +181,19 @@ def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
+def _TestLoadNumpy(test_case, dtype):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+
+    model = get_checkpoint_ready_model(get_reduce_sum_model, dtype)
+    var_x = flow.get_all_variables()['x']
+    new_val_np = np.random.random(var_x.shape).astype(np.float32)
+    flow.load_variables({"x": new_val_np})
+    flow_res = model()
+    np_res = new_val_np.mean()
+    test_case.assertTrue(np.allclose(flow_res, np_res))
+
+
 def _TestAssignmentBetweenMemory(test_case, dtype):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -252,6 +268,11 @@ class TestCheckpoint(flow.unittest.TestCase):
     )
     def test_round_trip(test_case):
         _TestRoundTrip(test_case, get_large_model, flow.float)
+
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_load_numpy(test_case):
+        _TestLoadNumpy(test_case, flow.float)
 
 
 if __name__ == "__main__":

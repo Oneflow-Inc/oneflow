@@ -197,6 +197,9 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
+Value = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
+
+
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
 def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
@@ -250,8 +253,8 @@ def _GetScopeSymbolIdFromEagerBlob(blob):
     return scope_symbol_id
 
 
-def _ReadSliceFromBlob(
-    blob: Union[EagerBlobTrait, FileBackendVariableBlob]
+def _ReadSlice(
+    blob: Value
 ) -> Iterable[Tuple[Sequence[int], Sequence[int], np.ndarray]]:
     """
     Return a generator which iterates over the input blob and yields
@@ -259,10 +262,10 @@ def _ReadSliceFromBlob(
     """
     if isinstance(blob, EagerBlobTrait):
 
-        def ReadSlice(blob, start_nd_idx, stop_nd_idx, length):
+        def ReadFromBlob(blob, start_nd_idx, stop_nd_idx, length):
             return _LogicalSlice(blob, start_nd_idx, stop_nd_idx)
 
-        yield from _ForEverySlice(blob, ReadSlice)
+        yield from _ForEverySlice(blob, ReadFromBlob)
     elif isinstance(blob, FileBackendVariableBlob):
         np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
         with open(blob.file_path, "rb") as f:
@@ -274,6 +277,14 @@ def _ReadSliceFromBlob(
                 )
 
             yield from _ForEverySlice(blob, ReadFromFile)
+    elif isinstance(blob, np.ndarray):
+        def ReadFromNpArray(blob, start_nd_idx, stop_nd_idx, length):
+            slice_objs = []
+            for start, stop in zip(start_nd_idx, stop_nd_idx):
+                slice_objs.append(slice(start, stop))
+            return blob[tuple(slice_objs)]
+
+        yield from _ForEverySlice(blob, ReadFromNpArray)
     else:
         raise RuntimeError("Unknown value_blob type: {}".format(type(blob).__name__))
 
@@ -306,7 +317,7 @@ def Save(
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
         with open(param_path, "wb") as f:
-            for _, _, slice in _ReadSliceFromBlob(var):
+            for _, _, slice in _ReadSlice(var):
                 f.write(slice.tobytes())
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
@@ -442,13 +453,13 @@ def _LogicalSliceAssign(
 
 def _FeedValueToVariable(
     var_blob: remote_blob_util.EagerConsistentBlob,
-    value_blob: Union[EagerBlobTrait, FileBackendVariableBlob],
+    value_blob: Value
 ) -> None:
     """
     Feed the value of `value_blob` to the variable `var_blob`
     """
     assert isinstance(
-        value_blob, (EagerBlobTrait, FileBackendVariableBlob)
+        value_blob, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
     ), "Unknown value_blob type: {}".format(type(value_blob).__name__)
 
     if isinstance(value_blob, FileBackendVariableBlob):
@@ -459,10 +470,14 @@ def _FeedValueToVariable(
     assert var_blob.shape == value_blob.shape, "{} vs {}".format(
         var_blob.shape, value_blob.shape
     )
-    assert var_blob.dtype == value_blob.dtype, "{} vs {}".format(
-        var_blob.dtype, value_blob.dtype
+    if isinstance(value_blob, np.ndarray):
+        value_flow_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(value_blob.dtype)
+    else:
+        value_flow_dtype = value_blob.dtype
+    assert var_blob.dtype == value_flow_dtype, "{} vs {}".format(
+                    var_blob.dtype, value_flow_dtype
     )
-    for start, stop, slice in _ReadSliceFromBlob(value_blob):
+    for start, stop, slice in _ReadSlice(value_blob):
         slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
         _LogicalSliceAssign(
             var_blob, slice_value_blob, start, stop,
@@ -472,7 +487,7 @@ def _FeedValueToVariable(
 @oneflow_export("load_variables")
 @session_ctx.try_init_default_session
 def LoadVariables(
-    value_dict: Dict[str, Union[EagerBlobTrait, FileBackendVariableBlob]],
+    value_dict: Dict[str, Value],
     ignore_mismatch: bool = False,
 ):
     for name, value_blob in value_dict.items():
@@ -486,20 +501,27 @@ def LoadVariables(
 
 
 def _ForEverySlice(
-    blob: Union[EagerBlobTrait, FileBackendVariableBlob],
+    blob: Value,
     f: Union[
         Callable[[EagerBlobTrait, Sequence[int], Sequence[int], int], Any],
         Callable[[FileBackendVariableBlob, Sequence[int], Sequence[int], int], Any],
+        Callable[[np.ndarray, Sequence[int], Sequence[int], int], Any],
     ],
 ):
     """
     Slice blob into slices whose size < SLICE_BYTES. For every slice,
     yield start_nd_idx, stop_nd_idx and f(slice)
     """
+    assert isinstance(
+        blob, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
+    ), "Unknown value_blob type: {}".format(type(value_blob).__name__)
     assert blob.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
     SLICE_BYTES = 20 * 1024 * 1024
-    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
+    if isinstance(blob, np.ndarray):
+        np_dtype = blob.dtype
+    else:
+        np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(blob.dtype))
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
     size = np.prod(blob.shape).astype(np.int).item()
