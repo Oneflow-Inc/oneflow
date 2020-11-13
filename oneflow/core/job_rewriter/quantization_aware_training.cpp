@@ -203,7 +203,7 @@ user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::strin
                               .Input("in", input)
                               .Input("scale", scale)
                               .Input("zero_point", zero_point)
-                              // affine is always correct 
+                              // affine is always correct
                               .Attr<std::string>("quantizer_type", "affine")
                               .Output("out")
                               .Build();
