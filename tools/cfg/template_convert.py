@@ -110,7 +110,7 @@ def render_template(proto_file_list, generated_file_list):
 
         proto_module = ""
         for key in sys.modules.keys():
-            if key.endswith(proto_py_file_name):
+            if key.split(".")[-1] == proto_py_file_name:
                 proto_module = sys.modules[key]
                 break
 
