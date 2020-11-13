@@ -19,7 +19,7 @@ import oneflow.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
-from typing import List
+from typing import Dict
 import os
 
 
@@ -57,25 +57,36 @@ def _compare_bceloss_with_np(
         np_bce_mean = np.mean(np_bce)
         np_bce_sum = np.sum(np_bce)
 
-        return [np_bce, np_bce_mean, np_bce_sum]
+        return {
+            "np_bce_loss": np_bce,
+            "np_bce_loss_mean": np_bce_mean,
+            "np_bce_loss_sum": np_bce_sum,
+        }
 
     def np_bce_loss_diff(np_input, np_target, np_weight):
         # Use numpy to compute diff
         elemcnt = np_target.size
         elemcnt = np.reshape(elemcnt, -1)
-        diff = -(np_weight / elemcnt) * (
+        np_bce_grad_sum = -(np_weight) * (
             np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
         )
-        return diff
+        np_bce_grad_mean = -(np_weight / elemcnt) * (
+            np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
+        )
 
-    np_out_bceloss = np_bceloss(input, target, weight)
+        return {
+            "np_bce_grad_sum": np_bce_grad_sum,
+            "np_bce_grad_mean": np_bce_grad_mean,
+        }
+
+    np_out_bceloss_dict = np_bceloss(input, target, weight)
 
     # Compute diff
-    np_diff = np_bce_loss_diff(input, target, weight)
+    np_grad_dict = np_bce_loss_diff(input, target, weight)
 
     def assert_prediction_grad(blob: tp.Numpy):
         # Evaluate the gradient
-        assert np.allclose(blob, np_diff)
+        assert np.allclose(blob, np_grad_dict["np_bce_grad_mean"])
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -84,51 +95,57 @@ def _compare_bceloss_with_np(
         of_input: tp.Numpy.Placeholder(shape=input.shape),
         of_target: tp.Numpy.Placeholder(shape=target.shape),
         of_weight: tp.Numpy.Placeholder(shape=weight.shape),
-    ) -> List[tp.Numpy]:
-        v = flow.get_variable(
-            shape=target.shape,
-            dtype=flow.float32,
-            initializer=flow.constant_initializer(1),
-            name="v",
-        )
+    ) -> Dict[str, tp.Numpy]:
+        with flow.scope.placement(device_type, "0:0"):
+            v = flow.get_variable(
+                shape=target.shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(1),
+                name="v",
+            )
 
-        x_var = of_input + v
+            x_var = of_input + v
 
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        with flow.scope.placement(device_type, machine_ids):
-            bceloss = flow.nn.BCELoss(
-                x_var, of_target, of_weight, reduction="none", name="of_mseloss"
-            )
-            bceloss_mean = flow.nn.BCELoss(
-                x_var,
-                of_target,
-                of_weight,
-                reduction="mean",
-                name="of_mseloss_reduce_mean",
-            )
-            bceloss_sum = flow.nn.BCELoss(
-                x_var,
-                of_target,
-                of_weight,
-                reduction="sum",
-                name="of_mseloss_reduce_sum",
-            )
-            # Because our gradient is use "mean" mode to compute
-            out = bceloss_mean
-
+        bceloss = flow.nn.BCELoss(
+            x_var, of_target, of_weight, reduction="none", name="of_mseloss"
+        )
+        bceloss_mean = flow.nn.BCELoss(
+            x_var,
+            of_target,
+            of_weight,
+            reduction="mean",
+            name="of_mseloss_reduce_mean",
+        )
+        bceloss_sum = flow.nn.BCELoss(
+            x_var, of_target, of_weight, reduction="sum", name="of_mseloss_reduce_sum",
+        )
+        # Because our gradient is use "mean" mode to compute
+        with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(out)
+            ).minimize(bceloss_mean)
 
-        return [bceloss, bceloss_mean, bceloss_sum]
+        return {
+            "of_bce_loss": bceloss,
+            "of_bce_loss_mean": bceloss_mean,
+            "of_bce_loss_sum": bceloss_sum,
+        }
 
-    of_out_bceloss = oneflow_bceloss(input, target, weight)
+    of_out_bceloss_dict = oneflow_bceloss(input, target, weight)
 
-    assert np.allclose(of_out_bceloss[0], np_out_bceloss[0])
-
-    for i in range(1, len(np_out_bceloss)):
-        assert np.allclose(of_out_bceloss[i][0], np_out_bceloss[i])
+    assert np.allclose(
+        of_out_bceloss_dict["of_bce_loss"], np_out_bceloss_dict["np_bce_loss"]
+    )
+    assert np.allclose(
+        of_out_bceloss_dict["of_bce_loss_mean"][0],
+        np_out_bceloss_dict["np_bce_loss_mean"],
+    )
+    assert np.allclose(
+        of_out_bceloss_dict["of_bce_loss_sum"][0],
+        np_out_bceloss_dict["np_bce_loss_sum"],
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
