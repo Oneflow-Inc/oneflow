@@ -19,7 +19,7 @@ from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.job.placement_pb2 as placement_pb
-import oneflow.core.job.scope_pb2 as scope_pb
+import oneflow_api.oneflow.core.job.scope as scope_cfg
 import collections
 import re
 
@@ -29,13 +29,13 @@ class ScopeSymbol(Symbol):
         Symbol.__init__(self, symbol_id, scope_proto)
         self.parent_scope_symbol_ = parent_scope_symbol
         self.job_desc_symbol_ = symbol_storage.GetSymbol4Id(
-            scope_proto.job_desc_symbol_id
+            scope_proto.job_desc_symbol_id()
         )
         self.device_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
-            scope_proto.device_parallel_desc_symbol_id
+            scope_proto.device_parallel_desc_symbol_id()
         )
         self.host_parallel_desc_symbol_ = symbol_storage.GetSymbol4Id(
-            scope_proto.host_parallel_desc_symbol_id
+            scope_proto.host_parallel_desc_symbol_id()
         )
         self.auto_increment_id_ = 0
 
@@ -68,8 +68,10 @@ class ScopeSymbol(Symbol):
         parallel_conf = MakeParallelConf("cpu", machine_device_ids)
         host_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
         scope_proto = self._CloneScopeProto()
-        scope_proto.device_parallel_desc_symbol_id = device_parallel_desc_sym.symbol_id
-        scope_proto.host_parallel_desc_symbol_id = host_parallel_desc_sym.symbol_id
+        scope_proto.set_device_parallel_desc_symbol_id(
+            device_parallel_desc_sym.symbol_id
+        )
+        scope_proto.set_host_parallel_desc_symbol_id(host_parallel_desc_sym.symbol_id)
         return builder.GetScopeSymbol(scope_proto, self)
 
     def BuildWithNewParallelConf(self, builder, parallel_conf):
@@ -81,40 +83,40 @@ class ScopeSymbol(Symbol):
     def BuildWithNewIsMirrored(self, builder, is_mirrored):
         scope_proto = self._CloneScopeProto()
         if is_mirrored:
-            scope_proto.opt_mirrored_parallel_conf.mirrored_parallel.SetInParent()
+            scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
         else:
-            scope_proto.opt_mirrored_parallel_conf.ClearField("mirrored_parallel")
+            scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
         return builder.GetScopeSymbol(scope_proto, self)
 
     def BuildWithNewScopeName(self, builder, scope_name):
         scope_proto = self._CloneScopeProto()
-        scope_proto.scope_op_name_prefixes.append(scope_name)
+        scope_proto.add_scope_op_name_prefixes(scope_name)
         return builder.GetScopeSymbol(scope_proto, self)
 
     def _CloneScopeProto(self):
-        scope_proto = scope_pb.ScopeProto()
+        scope_proto = scope_cfg.ScopeProto()
         scope_proto.CopyFrom(self.data)
-        scope_proto.ClearField("symbol_id")
+        scope_proto.clear_symbol_id()
         return scope_proto
 
 
 def BuildInitialScope(
     builder, session_id, job_conf, device_tag, machine_device_ids, is_mirrored
 ):
-    scope_proto = scope_pb.ScopeProto()
-    scope_proto.session_id = session_id
+    scope_proto = scope_cfg.ScopeProto()
+    scope_proto.set_session_id(session_id)
     job_conf_sym = builder.GetJobConfSymbol(job_conf)
-    scope_proto.job_desc_symbol_id = job_conf_sym.symbol_id
+    scope_proto.set_job_desc_symbol_id(job_conf_sym.symbol_id)
     parallel_conf = MakeParallelConf(device_tag, machine_device_ids)
     device_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
-    scope_proto.device_parallel_desc_symbol_id = device_parallel_desc_sym.symbol_id
+    scope_proto.set_device_parallel_desc_symbol_id(device_parallel_desc_sym.symbol_id)
     parallel_conf = MakeParallelConf("cpu", machine_device_ids)
     host_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
-    scope_proto.host_parallel_desc_symbol_id = host_parallel_desc_sym.symbol_id
+    scope_proto.set_host_parallel_desc_symbol_id(host_parallel_desc_sym.symbol_id)
     if is_mirrored:
-        scope_proto.opt_mirrored_parallel_conf.mirrored_parallel.SetInParent()
+        scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
     else:
-        scope_proto.opt_mirrored_parallel_conf.ClearField("mirrored_parallel")
+        scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
     return builder.GetScopeSymbol(scope_proto, None)
 
 
