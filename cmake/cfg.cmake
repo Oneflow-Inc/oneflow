@@ -1,23 +1,71 @@
 execute_process( 
   COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
-  OUTPUT_VARIABLE cfg_head_dir_and_convert_srcs
-  RESULT_VARIABLE ret_code
-  )
+    --get_message_type=cfg_include_dir
+  OUTPUT_VARIABLE CFG_INCLUDE_DIR)
 
-string(REPLACE "\n" ";" cfg_head_dir_and_convert_srcs ${cfg_head_dir_and_convert_srcs})
-list(GET cfg_head_dir_and_convert_srcs 0  CFG_INCLUDE_DIR)
-list(GET cfg_head_dir_and_convert_srcs 1  TEMPLATE_CONVERT_PYTHON_SCRIPT)
-list(REMOVE_AT cfg_head_dir_and_convert_srcs 0 1)
+execute_process( 
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+    --get_message_type=template_convert_python_script
+  OUTPUT_VARIABLE TEMPLATE_CONVERT_PYTHON_SCRIPT)
 
-set(PYBIND_REGISTRY_CC ${cfg_head_dir_and_convert_srcs})
+execute_process( 
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+    --get_message_type=copy_pyproto_python_script
+  OUTPUT_VARIABLE COPY_PYPROTO_PYTHON_SCRIPT)
+
+execute_process( 
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+    --get_message_type=pybind_registry_cc
+  OUTPUT_VARIABLE PYBIND_REGISTRY_CC)
+
 include_directories(${CFG_INCLUDE_DIR})
-
 
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
+      oneflow/core/vm/instruction.proto
+      oneflow/core/eager/eager_symbol.proto
+      oneflow/core/job/job_conf.proto
+      oneflow/core/job/placement.proto
+      oneflow/core/operator/op_conf.proto
+      oneflow/core/common/shape.proto
+      oneflow/core/record/image.proto
+      oneflow/core/record/record.proto
+      oneflow/core/job/resource.proto
+      oneflow/core/register/logical_blob_id.proto
+      oneflow/core/register/tensor_slice_view.proto
+      oneflow/core/common/range.proto
+      oneflow/core/framework/user_op_conf.proto
+      oneflow/core/framework/user_op_attr.proto
+      oneflow/core/job/sbp_parallel.proto
+      oneflow/core/graph/boxing/collective_boxing.proto
+      oneflow/core/register/blob_desc.proto
+      oneflow/core/register/pod.proto
+      oneflow/core/job/scope.proto
+      oneflow/core/job/mirrored_parallel.proto
+      oneflow/core/operator/op_attribute.proto
+      oneflow/core/register/batch_axis_signature.proto
+      oneflow/core/operator/arg_modifier_signature.proto
+      oneflow/core/job/blob_lifetime_signature.proto
+      oneflow/core/job/parallel_signature.proto
+      oneflow/core/eager/eager_instruction.proto
+      oneflow/core/job/cluster_instruction.proto
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
+  )
+
+  set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
+  set(cfg_workspace_dir "${PROJECT_BINARY_DIR}/cfg_workspace")
+
+  add_custom_target(copy_and_render_pyproto ALL
+    COMMAND ${CMAKE_COMMAND} -E remove_directory "${of_cfg_proto_python_dir}"
+    COMMAND ${Python_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
+      --src_proto_files="${ALL_CFG_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
+    COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+      --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
+      --project_build_dir=${PROJECT_BINARY_DIR} --cfg_workspace_dir=${cfg_workspace_dir}
+      --proto_file_list="${ALL_CFG_CONVERT_PROTO}"
+    DEPENDS ${Python_EXECUTABLE} of_protoobj
   )
 
   foreach(FIL ${ALL_CFG_CONVERT_PROTO})
@@ -25,28 +73,20 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
-    set(PY_REL_FIL ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2.py)
-    set(PY_REL_MOD ${of_proto_python_dir}/${REL_DIR}/${FIL_WE}_pb2)
     set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
-    set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pybind.cpp)
-
+    set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
+    
+    # rule to make target ${CFG_HPP_FIL} for of_cfgobj
     add_custom_command(
-      OUTPUT "${CFG_HPP_FIL}"
-             "${CFG_CPP_FIL}"
-             "${CFG_PYBIND_FIL}"
-      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-      ARGS --dst_hpp_path ${CFG_HPP_FIL} --dst_cpp_path ${CFG_CPP_FIL}
-           --dst_pybind_path ${CFG_PYBIND_FIL}
-           --proto_py_path ${PY_REL_MOD}  --of_proto_python_dir ${of_proto_python_dir}
-
-      DEPENDS ${Python_EXECUTABLE} ${PY_REL_FIL} ${of_all_rel_pybinds}
-      COMMENT "Running Pybind11 Compiler on ${FIL}"
+      OUTPUT
+        "${CFG_CPP_FIL}"
+      DEPENDS copy_and_render_pyproto
       VERBATIM)
 
-    list(APPEND ${HDRS} "${CFG_HPP_FIL}")
-    list(APPEND ${SRCS} "${CFG_CPP_FIL}")
-    list(APPEND ${PYBIND_SRCS} "${CFG_PYBIND_FIL}")
+    list(APPEND ${HDRS} ${CFG_HPP_FIL})
+    list(APPEND ${SRCS} ${CFG_CPP_FIL})
+    list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
   endforeach()
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)

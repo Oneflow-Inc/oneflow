@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
-import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
@@ -48,11 +47,14 @@ from contextlib import contextmanager
 from typing import Callable
 import inspect
 import oneflow
+import oneflow_api
+import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import traceback
 
 
 class Session(object):
     def __init__(self):
+        self.id_ = oneflow_api.NewSessionId()
         self.job_name2function_desc_ = {}
         self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
@@ -72,10 +74,15 @@ class Session(object):
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
-        self.instruction_list_ = instr_util.InstructionListProto()
+        self.instruction_list_ = instr_cfg.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
+        self.eager_config_proto_ctx_ = None
+
+    @property
+    def id(self):
+        return self.id_
 
     @property
     def status(self):
@@ -153,7 +160,7 @@ class Session(object):
         return self.job_name2function_desc_[job_name]
 
     def _UpdateFunctionFlagName2DefaultVal(self):
-        items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
+        items = c_api_util.GetFunctionConfigDef().attr_name2attr_def.items()
         self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
 
     def TryInit(self):
@@ -177,6 +184,10 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
+        else:
+            self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
+                str(self.config_proto)
+            )
         return self
 
     def TryClose(self):
@@ -194,6 +205,8 @@ class Session(object):
         c_api_util.DestroyLazyGlobalSession()
         self.status_ = SessionStatus.CLOSED
         self.resource_ = None
+        if self.eager_config_proto_ctx_:
+            del self.eager_config_proto_ctx_
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -423,6 +436,7 @@ def _GetDefaultConfigProto():
         config_proto.resource.gpu_device_num = 0
     config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
     config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
+    config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
 
 

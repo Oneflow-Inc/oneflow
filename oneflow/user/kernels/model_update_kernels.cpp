@@ -210,7 +210,14 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
 template<DeviceType device_type, typename T, typename G>
 class MomentumUpdateKernel final : public user_op::OpKernel {
  public:
-  MomentumUpdateKernel() = default;
+  explicit MomentumUpdateKernel(user_op::KernelCreateContext* ctx) {
+    scale_ = ctx->Attr<double>("scale");
+    l1_ = ctx->Attr<float>("l1");
+    l2_ = ctx->Attr<float>("l2");
+    beta_ = ctx->Attr<float>("beta");
+    weight_decay_ = ctx->Attr<float>("weight_decay");
+    has_scale_by_ptr_ = ctx->user_op_conf().has_input("scale_by_tensor", 0);
+  };
   ~MomentumUpdateKernel() override = default;
 
  private:
@@ -219,29 +226,32 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
-    const auto scale = ctx->Attr<double>("scale");
-    const auto l1 = ctx->Attr<float>("l1");
-    const auto l2 = ctx->Attr<float>("l2");
-    const auto beta = ctx->Attr<float>("beta");
-    const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    if (has_scale_by_ptr_) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
-        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
+        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
         model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+
+ private:
+  double scale_;
+  float l1_;
+  float l2_;
+  float beta_;
+  float weight_decay_;
+  bool has_scale_by_ptr_;
 };
 
 #define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                            \
   REGISTER_USER_KERNEL("momentum_update")                                                \
-      .SetCreateFn<MomentumUpdateKernel<device, dtype, gtype>>()                         \
+      .SetCreateWithCtxFn<MomentumUpdateKernel<device, dtype, gtype>>()                  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
@@ -338,7 +348,6 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
-    const auto do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
     if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
@@ -347,19 +356,10 @@ class AdamUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
-    T* beta1_t_ptr = nullptr;
-    T* beta2_t_ptr = nullptr;
-    if (do_bias_correction) {
-      user_op::Tensor* beta1_t = ctx->Tensor4ArgNameAndIndex("beta1_t", 0);
-      beta1_t_ptr = beta1_t->mut_dptr<T>();
-      user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
-      beta2_t_ptr = beta2_t->mut_dptr<T>();
-    }
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, do_bias_correction, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
-        beta1_t_ptr, beta2_t_ptr);
+        epsilon, weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -403,15 +403,6 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
-    const auto do_bias_correction = ctx->Attr<bool>("do_bias_correction");
-    T* beta1_t_ptr = nullptr;
-    T* beta2_t_ptr = nullptr;
-    if (do_bias_correction) {
-      user_op::Tensor* beta1_t = ctx->Tensor4ArgNameAndIndex("beta1_t", 0);
-      beta1_t_ptr = beta1_t->mut_dptr<T>();
-      user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
-      beta2_t_ptr = beta2_t->mut_dptr<T>();
-    }
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
@@ -431,12 +422,12 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
 
-    MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, do_bias_correction, num_indices,
-                          feature_size, kernel_state->lower(), kernel_state->upper(),
+    MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, num_indices, feature_size,
+                          kernel_state->lower(), kernel_state->upper(),
                           buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
                           buffer_manager.UniqueDiffIndicesPtr(),
                           buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
-                          m->mut_dptr<T>(), v->mut_dptr<T>(), beta1_t_ptr, beta2_t_ptr);
+                          m->mut_dptr<T>(), v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -555,6 +546,35 @@ REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
+
+template<DeviceType device_type>
+class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
+ public:
+  AdamBiasCorrectionLearningRateKernel() = default;
+  ~AdamBiasCorrectionLearningRateKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const auto beta1 = ctx->Attr<float>("beta1");
+    const auto beta2 = ctx->Attr<float>("beta2");
+    AdamBiasCorrectionLearningRateKernelUtil<device_type>::AdamBiasCorrectionLearningRate(
+        ctx->device_ctx(), beta1, beta2, learning_rate->dptr<float>(), train_step->dptr<int64_t>(),
+        out->mut_dptr<float>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(device) \
+  REGISTER_USER_KERNEL("adam_bias_correction_learning_rate")       \
+      .SetCreateFn<AdamBiasCorrectionLearningRateKernel<device>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device));
+REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
 #endif  // WITH_CUDA
 
 }  // namespace

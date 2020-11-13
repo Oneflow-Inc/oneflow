@@ -26,13 +26,25 @@ endif()
 
 project(oneflow C CXX)
 
+set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+
+# Modules
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
+include(util)
+include(proto2cpp)
+include(swig)
+
 if (NOT DEFINED USE_CXX11_ABI)
-  if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
-    set(USE_CXX11_ABI OFF)
-  else()
-    set(USE_CXX11_ABI ON)
+  check_cxx11_abi(CXX11_ABI_AVAILABLE)
+  set(USE_CXX11_ABI ${CXX11_ABI_AVAILABLE})
+elseif(USE_CXX11_ABI)
+  check_cxx11_abi(CXX11_ABI_AVAILABLE)
+  if (NOT CXX11_ABI_AVAILABLE)
+    message(FATAL_ERROR "cxx11 abi is not available for current compiler")
   endif()
 endif()
+message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
@@ -50,20 +62,11 @@ enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
-
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
   CACHE PATH "Where the third party headers and libs are put")
 
 set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
   CACHE PATH "Where the third party submodules are")
-
-# Modules
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
-include(util)
-include(proto2cpp)
-include(swig)
 
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)
@@ -107,11 +110,28 @@ if (BUILD_CUDA)
     #  half is not fully supported when __CUDA_ARCH__ < 530
     #  list(APPEND __cuda_nvcc_gencodes "arch=compute_30,code=sm_30")
     #  list(APPEND __cuda_nvcc_gencodes "arch=compute_52,code=sm_52")
+    # cubin
+    # Tesla P100
     list(APPEND __cuda_nvcc_gencodes "arch=compute_60,code=sm_60")
+    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
     list(APPEND __cuda_nvcc_gencodes "arch=compute_61,code=sm_61")
+    # V100, TITAN V
     list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=sm_70")
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
       list(APPEND __cuda_nvcc_gencodes "arch=compute_75,code=sm_75")
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      # A100
+      list(APPEND __cuda_nvcc_gencodes "arch=compute_80,code=sm_80")
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+      # GeForce RTX 30xx
+      list(APPEND __cuda_nvcc_gencodes "arch=compute_86,code=sm_86")
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      list(APPEND __cuda_nvcc_gencodes "arch=compute_80,code=compute_80")
+    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
       list(APPEND __cuda_nvcc_gencodes "arch=compute_75,code=compute_75")
     else()
       list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=compute_70")
