@@ -23,49 +23,17 @@ import os
 
 
 def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
-    def _flatten_array(input_array):
-        output_array = list()
-        for x in np.nditer(input_array):
-            output_array.append(x.tolist())
-        return output_array
-
-    def _offset2coordinate(offset, tensor_shape):
-        coordinate = []
-        tmp = offset
-        for i in range(len(tensor_shape) - 1, -1, -1):
-            axis_size = tensor_shape[i]
-            coor = tmp % axis_size
-            coordinate.insert(0, int(coor))
-            tmp = (tmp - coor) / axis_size
-
-        return coordinate
-
-    def _coordinate2offset(coordinate, tensor_shape):
-        if len(coordinate) != len(tensor_shape):
-            raise "wrong coordinate or shape"
-        offset = 0
-        for i, coor in enumerate(coordinate):
-            size_at_axis = coor
-            for j in range(i + 1, len(tensor_shape)):
-                size_at_axis *= tensor_shape[j]
-
-            offset += size_at_axis
-        return offset
-
     def _np_dim_scatter_add(src, dim, index, outshape):
         output = np.zeros(outshape)
-        output1d = _flatten_array(output)
-        index1d = _flatten_array(index)
-        src1d = _flatten_array(src)
         for srcidx in range(0, src.size):
-            outcoord = _offset2coordinate(srcidx, src.shape)
-            outcoord[dim] = index1d[srcidx]
-
-            output_offset = _coordinate2offset(outcoord, outshape)
-            output1d[output_offset] += src1d[srcidx]
-
-        ret = np.resize(np.array(output1d), outshape)
-        return ret
+            outcoord = np.unravel_index(srcidx, src.shape)
+            outcoord = [*outcoord]
+            outcoord[dim] = index[np.unravel_index(srcidx, index.shape)]
+            output_offset = np.ravel_multi_index(outcoord, outshape)
+            output[np.unravel_index(output_offset, outshape)] += src[
+                np.unravel_index(srcidx, src.shape)
+            ]
+        return output
 
     if is_float:
         input = np.random.random(input_shape)
