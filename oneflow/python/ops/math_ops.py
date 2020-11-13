@@ -28,6 +28,8 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
+from .transpose_util import get_perm_when_transpose_axis_to_last_dim
+from .transpose_util import get_inversed_perm
 
 
 @oneflow_export("math.add")
@@ -1454,8 +1456,7 @@ def top_k(
     )
 
 
-@oneflow_export("math.argmax")
-def argmax(
+def _argmax_at_last_dim(
     input: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """The op computes the index with the largest value of a Blob.
@@ -1497,6 +1498,25 @@ def argmax(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.argmax")
+def argsort(
+        input: remote_blob_util.BlobDef,
+        axis: int = -1,
+        name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    name = name if name is not None else id_util.UniqueStr("ArgMax_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    if axis == num_axes - 1:
+        return _argmax_at_last_dim(input, name)
+    else:
+        assert(axis < num_axes)
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, False, name + "transpose")
+        x = _argmax_at_last_dim(x, name)
+        return flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
 
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
