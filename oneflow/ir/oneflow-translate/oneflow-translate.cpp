@@ -1,4 +1,4 @@
-//===- standalone-translate.cpp ---------------------------------*- C++ -*-===//
+//===- oneflow-translate.cpp ---------------------------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,12 +15,12 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
 
-#include "Standalone/StandaloneDialect.h"
+#include "OneFlow/OneFlowDialect.h"
 
 int main(int argc, char **argv) {
   mlir::registerAllTranslations();
 
-  // TODO: Register standalone translations here.
+  // TODO: Register oneflow translations here.
 
   return failed(
       mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));

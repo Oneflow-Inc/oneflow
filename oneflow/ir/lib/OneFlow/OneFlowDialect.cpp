@@ -1,4 +1,4 @@
-//===- StandaloneDialect.cpp - Standalone dialect ---------------*- C++ -*-===//
+//===- OneFlowDialect.cpp - OneFlow dialect ---------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Standalone/StandaloneDialect.h"
-#include "Standalone/StandaloneOps.h"
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
 
 using namespace mlir;
-using namespace mlir::standalone;
+using namespace mlir::oneflow;
 
 //===----------------------------------------------------------------------===//
-// Standalone dialect.
+// OneFlow dialect.
 //===----------------------------------------------------------------------===//
 
-void StandaloneDialect::initialize() {
+void OneFlowDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "Standalone/StandaloneOps.cpp.inc"
+#include "OneFlow/OneFlowOps.cpp.inc"
       >();
 }

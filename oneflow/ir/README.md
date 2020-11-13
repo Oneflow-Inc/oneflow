@@ -1,6 +1,6 @@
 # An out-of-tree MLIR dialect
 
-This is an example of an out-of-tree [MLIR](https://mlir.llvm.org/) dialect along with a standalone `opt`-like tool to operate on that dialect.
+This is an example of an out-of-tree [MLIR](https://mlir.llvm.org/) dialect along with a oneflow `opt`-like tool to operate on that dialect.
 
 ## Building
 
@@ -8,7 +8,7 @@ This setup assumes that you have built LLVM and MLIR in `$BUILD_DIR` and install
 ```sh
 mkdir build && cd build
 cmake -G Ninja .. -DMLIR_DIR=$PREFIX/lib/cmake/mlir -DLLVM_EXTERNAL_LIT=$BUILD_DIR/bin/llvm-lit
-cmake --build . --target check-standalone
+cmake --build . --target check-oneflow
 ```
 To build the documentation from the TableGen description of the dialect operations, run
 ```sh

@@ -7,14 +7,14 @@ configure_lit_site_cfg(
 
 set(STANDALONE_TEST_DEPENDS
         FileCheck count not
-        standalone-opt
-        standalone-translate
+        oneflow-opt
+        oneflow-translate
         )
 
-add_lit_testsuite(check-standalone "Running the standalone regression tests"
+add_lit_testsuite(check-oneflow "Running the oneflow regression tests"
         ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${STANDALONE_TEST_DEPENDS}
         )
-set_target_properties(check-standalone PROPERTIES FOLDER "Tests")
+set_target_properties(check-oneflow PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(STANDALONE ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${STANDALONE_TEST_DEPENDS})
