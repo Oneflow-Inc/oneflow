@@ -1096,48 +1096,61 @@ def ConstantInitializerImpl(
         op_conf_util.ConstantInitializerConf, op_conf_util.ConstantIntInitializerConf
     ],
     random_seed: int,
-    var_blob_shape
+    var_blob_shape,
 ):
     return lambda length: [initializer_conf.value] * length
 
 
 @register_initializer("random_normal_conf")
 def RandomNormalInitializerImpl(
-    initializer_conf: op_conf_util.RandomNormalInitializerConf, random_seed: int, var_blob_shape
+    initializer_conf: op_conf_util.RandomNormalInitializerConf,
+    random_seed: int,
+    var_blob_shape,
 ):
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.normal(
         loc=initializer_conf.mean, scale=initializer_conf.std, size=length
     )
 
+
 @register_initializer("random_uniform_conf")
 @register_initializer("random_int_uniform_conf")
 def RandomUniformInitializerImpl(
-    initializer_conf : Union[
-        op_conf_util.RandomUniformInitializerConf, op_conf_util.RandomUniformIntInitializerConf
+    initializer_conf: Union[
+        op_conf_util.RandomUniformInitializerConf,
+        op_conf_util.RandomUniformIntInitializerConf,
     ],
     random_seed: int,
-    var_blob_shape
+    var_blob_shape,
 ):
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.uniform(
-        min = initializer_conf.min, max = initializer_conf.max, size = length
+        min=initializer_conf.min, max=initializer_conf.max, size=length
     )
+
 
 def RngTruncatedNormal(mean, std, size, random_seed, rng):
     truncated_value = 2 * std
     data = []
     while len(data) < length:
-        data.extend(filter(lambda value: abs(value - mean) < truncated_value, data), rng.normal(mean, std, size = length - len(data)))
+        data.extend(
+            filter(lambda value: abs(value - mean) < truncated_value, data),
+            rng.normal(mean, std, size=length - len(data)),
+        )
     return data
-    
+
+
 @register_initializer("truncated_normal_conf")
 def TruncatedNormalInitializerImpl(
-    initializer_conf:op_conf_util.TruncatedNormalInitializerConf, random_seed: int, var_blob_shape):
+    initializer_conf: op_conf_util.TruncatedNormalInitializerConf,
+    random_seed: int,
+    var_blob_shape,
+):
     rng = np.random.default_rng(random_seed)
-    return lambda length, random_seed:RngTruncatedNormal(
+    return lambda length, random_seed: RngTruncatedNormal(
         initializer_conf.mean, initializer_conf.std, length, random_seed, rng,
     )
+
 
 def GenInitialFan(initializer_conf, var_blob_shape):
     variance_norm = initializer_conf.variance_norm
@@ -1163,28 +1176,40 @@ def GenInitialFan(initializer_conf, var_blob_shape):
         raise Exception("UNIMPLEMENTED")
     return fan
 
+
 @register_initializer("xavier_conf")
-def XavierInitializerImpl(initializer_conf:op_conf_util.XavierInitializerConf, random_seed:int, var_blob_shape):
+def XavierInitializerImpl(
+    initializer_conf: op_conf_util.XavierInitializerConf,
+    random_seed: int,
+    var_blob_shape,
+):
     scale = cmath.sqrt(3 / GenInitialFan(initializer_conf, var_blob_shape))
     rng = np.random.default_rng(random_seed)
-    return lambda length: rng.uniform(
-        min = -scale, max = scale, size = length,
-        )
+    return lambda length: rng.uniform(min=-scale, max=scale, size=length,)
+
 
 @register_initializer("msra_conf")
-def MsraInitializerImpl(initializer_conf:op_conf_util.MsraInitializerConf, random_seed:int, var_blob_shape):
+def MsraInitializerImpl(
+    initializer_conf: op_conf_util.MsraInitializerConf, random_seed: int, var_blob_shape
+):
     std = cmath.sqrt(2 / GenInitialFan(initializer_conf, var_blob_shape))
     rng = np.random.default_rng(random_seed)
-    return lambda length: rng.normal(
-        loc= 0, scale = std, size=length,
-    )
+    return lambda length: rng.normal(loc=0, scale=std, size=length,)
+
+
 @register_initializer("variance_scaling_conf")
-def VarianceScalingInitializerImpl(initializer_conf:op_conf_util.VarianceScalingInitializerConf, random_seed: int, var_blob_shape):
+def VarianceScalingInitializerImpl(
+    initializer_conf: op_conf_util.VarianceScalingInitializerConf,
+    random_seed: int,
+    var_blob_shape,
+):
     scale = initializer_conf.scale / GenInitialFan(initializer_conf, var_blob_shape)
     distribution = initializer_conf.distribution
-    if distribution == kTruncatedNormal :
+    if distribution == kTruncatedNormal:
         stddev = cmath.sqrt(scale) / (0.87962566103423978)
-        return lambda length, random_seed:RngTruncatedNormal(0, stddev, length, random_seed,)
+        return lambda length, random_seed: RngTruncatedNormal(
+            0, stddev, length, random_seed,
+        )
     elif distribution == kRandomNormal:
         rng = np.random.default_rng(random_seed)
         stddev = cmath.sqrt(scale)
@@ -1192,12 +1217,14 @@ def VarianceScalingInitializerImpl(initializer_conf:op_conf_util.VarianceScaling
     else:
         limit = cmath.sqrt(3.0 * scale)
         rng = np.random.default_rng(random_seed)
-        return lambda length: rng.uniform(min = -limit, max = limit, size = length)
+        return lambda length: rng.uniform(min=-limit, max=limit, size=length)
+
 
 def RangeInitializer(outer_size, idx_dim_size, inner_size, start, stride, length):
     i, j, k = 0, 0, 0
     start = 0
-    stride = 1 
+    stride = 1
+
     def generator(length):
         nonlocal outer_size, idx_dim_size, inner_size, i, j, k
         res = []
@@ -1212,34 +1239,39 @@ def RangeInitializer(outer_size, idx_dim_size, inner_size, start, stride, length
                 j = 0
                 i += 1
         return res
+
     return generator
-        
+
+
 @register_initializer("range_conf")
-def RangeInitializerImpl(initializer_conf:op_conf_util.RangeInitializerConf, random_seed:int, var_blob_shape):
+def RangeInitializerImpl(
+    initializer_conf: op_conf_util.RangeInitializerConf,
+    random_seed: int,
+    var_blob_shape,
+):
     num_axis = len(var_blob_shape)
     axis = initializer_conf.axis
-    assert num_axis > 0 
-    if initializer_conf.axis < 0 :
+    assert num_axis > 0
+    if initializer_conf.axis < 0:
         axis = num_axis + axis
     else:
         axis = initializer_conf.axis
     assert axis >= 0
     assert axis < num_axis
     return RangeInitializer(
-        np.prod(var_blob_shape[0:axis]).astype(np.int).item(), 
-        var_blob_shape[axis], 
-        np.prod(var_blob_shape[axis + 1:]).astype(np.int).item(), 
-        initializer_conf.start, 
+        np.prod(var_blob_shape[0:axis]).astype(np.int).item(),
+        var_blob_shape[axis],
+        np.prod(var_blob_shape[axis + 1 :]).astype(np.int).item(),
+        initializer_conf.start,
         initializer_conf.stride,
         length,
-        )
+    )
+
 
 @register_initializer("int_sequence_conf")
-def IntSequenceInitializerImpl(initializer_conf:op_conf_util.IntRangeInitializerConf, random_seed: int, var_blob_shape):
+def IntSequenceInitializerImpl(
+    initializer_conf: op_conf_util.IntRangeInitializerConf,
+    random_seed: int,
+    var_blob_shape,
+):
     return RangeInitializerImpl(initializer_conf, random_seed, var_blob_shape)
-    
-
-
-
-
-

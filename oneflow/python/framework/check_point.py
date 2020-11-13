@@ -496,7 +496,9 @@ def Init():
             )
             LoadVariables({op_name: Load(var_dir)})
             continue
-        g = initializer_util.GetInitializer(var_conf.initializer, var_conf.random_seed, var_blob.shape)
+        g = initializer_util.GetInitializer(
+            var_conf.initializer, var_conf.random_seed, var_blob.shape
+        )
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
             np_dtype = np.dtype(
