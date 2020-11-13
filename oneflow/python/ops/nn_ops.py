@@ -2680,8 +2680,8 @@ def bce_loss(
     Args:
         input (remote_blob_util.BlobDef): The input Blob. 
         target (remote_blob_util.BlobDef): The target value. 
-        weight (remote_blob_util, optional): The manual rescaling weight to the loss, the default scale factor is 1. Defaults to None.
-        reduction (str, optional): The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean".
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
