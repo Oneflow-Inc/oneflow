@@ -76,9 +76,9 @@ class Session(object):
         # as parallel conf may be updated in some passes
         # (like non_distributed_optimizer_pass)
         self.interface_op_name2op_attr_ = {}
-        self.interface_op_name2parallel_conf_ = {}
         self.interface_op_name2op_conf_ = {}
         self.interface_op_name2job_name_ = {}
+        self.lazy_interface_op_name2parallel_conf_ = {}
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
@@ -201,7 +201,7 @@ class Session(object):
                 for op_conf in job.net.op:
                     if c_api_util.IsInterfaceOpConf(op_conf):
                         self.interface_op_name2op_conf_[op_conf.name] = op_conf
-                        self.interface_op_name2parallel_conf_[
+                        self.lazy_interface_op_name2parallel_conf_[
                             op_conf.name
                         ] = op_name2parallel_conf[op_conf.name]
 
@@ -325,8 +325,8 @@ class Session(object):
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
 
-    def ParallelConf4InterfaceOpName(self, interface_op_name):
-        return self.interface_op_name2parallel_conf_[interface_op_name]
+    def ParallelConf4LazyInterfaceOpName(self, interface_op_name):
+        return self.lazy_interface_op_name2parallel_conf_[interface_op_name]
 
     def OpConf4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_conf_[interface_op_name]

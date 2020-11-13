@@ -389,7 +389,7 @@ class InstructionsBuilder(object):
         assert len(op_attribute.output_bns) == 1
         obn = op_attribute.output_bns[0]
 
-        parallel_conf = sess.ParallelConf4InterfaceOpName(interface_op_name)
+        parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
         blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
         op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
             blob_parallel_desc_sym, op_attribute, obn
