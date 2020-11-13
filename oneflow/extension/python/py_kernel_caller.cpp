@@ -246,11 +246,4 @@ void PyKernel::Compute(user_op::KernelComputeContext* ctx) const { PyCompute(ctx
 
 void PyGradKernel::Compute(user_op::KernelComputeContext* ctx) const { PyCompute(ctx, "backward"); }
 
-REGISTER_USER_KERNEL("py_op").SetCreateFn<PyKernel>().SetIsMatchedHob(
-    ((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
-
-REGISTER_USER_KERNEL("py_op_grad")
-    .SetCreateFn<PyGradKernel>()
-    .SetIsMatchedHob(((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
-
 }  // namespace oneflow

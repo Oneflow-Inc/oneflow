@@ -68,7 +68,7 @@ def get_lflags():
 
 
 @oneflow_export("experimental.op_lib")
-class CustomOp(object):
+class OpLib(object):
     def __init__(self, op_type_name, lib_path=""):
         self.op_type_name = op_type_name
         self.api = None

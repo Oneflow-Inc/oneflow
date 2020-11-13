@@ -60,13 +60,11 @@ def make_grad_job(y_shape, dy_shape, dtype=flow.float32):
     return sigmoid_grad_job
 
 
-@unittest.skipIf(
-    flow.unittest.env.eager_execution_enabled(),
-    "eager mode has not support op load yet",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestUserSigmoid(flow.unittest.TestCase):
     def test_user_sigmoid(test_case):
+        flow.clear_default_session()
+
         def make_py_job(input_shape, dtype=flow.float32):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_job(x: oft.Numpy.Placeholder(input_shape, dtype=dtype)):
@@ -88,6 +86,8 @@ class TestUserSigmoid(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(py_sig, numpy_sig, rtol=1e-03, atol=1e-05))
 
     def test_user_sigmoid_grad(test_case):
+        flow.clear_default_session()
+
         def make_py_grad_job(y_shape, dy_shape, dtype=flow.float32):
             @flow.global_function(function_config=func_config)
             def sigmoid_py_grad_job(
