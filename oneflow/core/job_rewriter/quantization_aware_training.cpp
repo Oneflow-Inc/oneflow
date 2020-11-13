@@ -74,19 +74,16 @@ bool IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn,
   for (const OpEdge* edge : dst_node->in_edges()) {
     const auto* src_node = edge->src_node();
     if (src_node->op().op_conf().user_conf().op_type_name() == "conv2d") {
-      for (const OpEdge* edge2 : src_node->in_edges()) {
-        assert(edge2->lbis().size() == 1);
-        const auto lbi = edge2->lbis().front();
-        const auto ibn = edge2->lbi2ibns().at(lbi);
+      for (const OpEdge* in_edge : src_node->in_edges()) {
+        assert(in_edge->lbis().size() == 1);
+        const auto lbi = in_edge->lbis().front();
+        const auto ibn = in_edge->lbi2ibns().at(lbi);
         assert(ibn.size() == 1);
         assert(ibn[0] == "in_0" || ibn[0] == "weight_0");
         if (ibn[0] == "in_0") {
-          // Get scale lbn from lbn
-          *conv_input_scale_lbn =
-              GetScaleLbn(edge2->lbis()[0].op_name() + "/" + edge2->lbis()[0].blob_name());
+          *conv_input_scale_lbn = GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0]));
         } else if (ibn[0] == "weight_0") {
-          *conv_weight_scale_lbn =
-              GetScaleLbn(edge2->lbis()[0].op_name() + "/" + edge2->lbis()[0].blob_name());
+          *conv_weight_scale_lbn = GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0]));
         }
       }
       return true;
@@ -100,7 +97,8 @@ bool IsWeightEdge(const OpEdge* edge) {
 }
 
 bool IsBnInputEdge(const OpEdge* edge) {
-  // TODO: refactor it following amp
+  // Skip the inputs of bn for now.
+  // In the complete qat pass, bn will be merged into conv.
   return edge->dst_node()->op().op_conf().user_conf().op_type_name() == "normalization";
 }
 
@@ -289,32 +287,29 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
     return node->op().op_name();
   };
   HashSet<OpNode*> white_set;
-  DfsTopoGraphTraversal(
-      op_graph, false, [this](OpNode* node) { return IsNodeInList(int8_list_, node); },
-      [&](OpNode* node) { return IsNodeInList(transparent_list_, node); },
-      [&](OpNode* node) { return IsKeyFound(white_set, node); },
-      [&](OpNode* node) {
-        INSERT_CHECK(white_set.insert(node));
-        if (node->op().op_conf().user_conf().op_type_name() == "conv2d") {
-          assert(node->out_edges().size() == 1);
-          OpNode* next_node = node->SoleOutEdge()->dst_node();
-          if (OpTypeName4OpNode(next_node) == "bias_add") {
-            INSERT_CHECK(white_set.insert(next_node));
-            // TODO: mark these special nodes
-            next_node = next_node->SoleOutEdge()->dst_node();
-          }
-          if (OpTypeName4OpNode(next_node) == "normalization") {
-            INSERT_CHECK(white_set.insert(next_node));
-            next_node = next_node->SoleOutEdge()->dst_node();
-          }
-          if (OpTypeName4OpNode(next_node) == "relu") { INSERT_CHECK(white_set.insert(next_node)); }
-        }
-        VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name() << " to downstream_white";
-      });
-
-  // if node in int8_list_, insert fake quant op on its input which produced by node not in
-  // downstream_white if node in int8_list_, insert fake quant op on its `GetInferenceOutputNode`'s
-  // output
+  DfsTopoGraphTraversal(op_graph, false,
+                        [this](OpNode* node) { return IsNodeInList(int8_list_, node); },
+                        [&](OpNode* node) { return IsNodeInList(transparent_list_, node); },
+                        [&](OpNode* node) { return IsKeyFound(white_set, node); },
+                        [&](OpNode* node) {
+                          INSERT_CHECK(white_set.insert(node));
+                          if (node->op().op_conf().user_conf().op_type_name() == "conv2d") {
+                            assert(node->out_edges().size() == 1);
+                            OpNode* next_node = node->SoleOutEdge()->dst_node();
+                            if (OpTypeName4OpNode(next_node) == "bias_add") {
+                              INSERT_CHECK(white_set.insert(next_node));
+                              // TODO: mark these special nodes
+                              next_node = next_node->SoleOutEdge()->dst_node();
+                            }
+                            if (OpTypeName4OpNode(next_node) == "normalization") {
+                              INSERT_CHECK(white_set.insert(next_node));
+                              next_node = next_node->SoleOutEdge()->dst_node();
+                            }
+                            if (OpTypeName4OpNode(next_node) == "relu") {
+                              INSERT_CHECK(white_set.insert(next_node));
+                            }
+                          }
+                        });
 
   VLOG(3) << "white_set include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
