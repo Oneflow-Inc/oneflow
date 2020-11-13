@@ -89,14 +89,13 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
     const user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
 
     const int64_t elements = in->shape().elem_cnt();
     const int64_t panel_size = in->shape().Count(1);
     const int64_t scale_size = scale->shape().elem_cnt();
 
-    if (quantize_scheme == "symmetric") {
+    if (zero_point == nullptr) {  // quantize_scheme == "symmetric"
       RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
                       scale->dptr<T>(), scale_size, elements, panel_size, quantize_to_bit,
                       out->mut_dptr<T>());
