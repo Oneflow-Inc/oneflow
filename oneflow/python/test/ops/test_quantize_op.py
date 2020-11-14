@@ -212,27 +212,8 @@ def _run_test_moving_average_min_max_observer(
         )
     ):
         with flow.scope.placement(device_type, "0:0"):
-            moving_max = flow.get_variable(
-                "moving_max",
-                shape=(1,),
-                dtype=activation.dtype,
-                initializer=flow.zeros_initializer(activation.dtype),
-                trainable=False,
-            )
-            moving_min = flow.get_variable(
-                "moving_min",
-                shape=(1,),
-                dtype=activation.dtype,
-                initializer=flow.zeros_initializer(activation.dtype),
-                trainable=False,
-            )
             scale, zero_point = flow.quantization.MovingAverageMinMaxObserver(
-                activation,
-                moving_max,
-                moving_min,
-                quantize_to_bit,
-                quantize_scheme,
-                momentum,
+                activation, quantize_to_bit, quantize_scheme, momentum,
             )
             return scale, zero_point
 

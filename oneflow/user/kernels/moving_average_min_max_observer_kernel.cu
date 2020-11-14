@@ -97,6 +97,21 @@ __global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double 
 }
 
 template<typename T>
+__global__ void CalFreezeScaleZeroPointSymmetric(const int64_t elements,
+                                                 const double quantize_to_bit, const float momentum,
+                                                 const T *moving_max_ptr, T *scale, T *zero_point) {
+  int64_t tid = threadIdx.x;
+  int64_t gid = (blockDim.x * blockIdx.x) + tid;
+
+  while (gid < elements) {
+    T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+    scale[gid] = moving_max_ptr[gid] / denominator;
+    zero_point[gid] = 0;
+    gid += gridDim.x * blockDim.x;
+  }
+}
+
+template<typename T>
 __global__ void CalScaleZeroPointAffine(const int64_t elements, const double quantize_to_bit,
                                         const float momentum, const T *max_ptr, const T *min_ptr,
                                         T *moving_max_ptr, T *moving_min_ptr, T *scale,
@@ -126,6 +141,25 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
   }
 }
 
+template<typename T>
+__global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const double quantize_to_bit,
+                                              const float momentum, const T *moving_max_ptr,
+                                              const T *moving_min_ptr, T *scale, T *zero_point) {
+  int64_t tid = threadIdx.x;
+  int64_t gid = (blockDim.x * blockIdx.x) + tid;
+
+  while (gid < elements) {
+    T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+
+    T min = moving_min_ptr[gid];
+    T s = (moving_max_ptr[gid] - min) / denominator;
+
+    scale[gid] = s;
+    zero_point[gid] = -min / s;
+    gid += gridDim.x * blockDim.x;
+  }
+}
+
 }  // namespace
 
 #define LAUNCH_CUDA_KERNEL(func, device_ctx_ptr, thread_num, shared_mem_size, ...)     \
@@ -141,12 +175,15 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
     const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor *current_train_step =
+        ctx->Tensor4ArgNameAndIndex("current_train_step", 0);
     user_op::Tensor *moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
     user_op::Tensor *moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
     user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
+    const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
     const float momentum = ctx->Attr<float>("momentum");
@@ -155,22 +192,43 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     T *max_ptr = tmp_buffer->mut_dptr<T>();
     T *min_ptr = max_ptr + 1;
 
-    LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), 1, 0, 1, max_ptr, min_ptr);
-    LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
-                       kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
-                       min_ptr);
+    int64_t *host_current_train_step_ptr = new int64_t[current_train_step->shape().elem_cnt()];
+    OF_CUDA_CHECK(cudaMemcpy(host_current_train_step_ptr, current_train_step->dptr<int64_t>(),
+                             current_train_step->shape().elem_cnt() * sizeof(int64_t),
+                             cudaMemcpyDefault));
+
+    if (*host_current_train_step_ptr <= stop_update_after_iters) {
+      LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), 1, 0, 1, max_ptr, min_ptr);
+      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
+                         kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
+                         min_ptr);
+    }
 
     if (quantize_scheme == "symmetric") {
-      LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
-                         static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
-                         moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(), scale->mut_dptr<T>(),
-                         zero_point->mut_dptr<T>());
+      if (*host_current_train_step_ptr <= stop_update_after_iters) {
+        LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
+                           static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
+                           moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
+                           scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+      } else {
+        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
+                           static_cast<double>(quantize_to_bit), momentum, moving_max->dptr<T>(),
+                           scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+      }
     } else {  // quantize_scheme == "affine"
-      LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
-                         static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
-                         moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(), scale->mut_dptr<T>(),
-                         zero_point->mut_dptr<T>());
+      if (*host_current_train_step_ptr <= stop_update_after_iters) {
+        LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
+                           static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
+                           moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
+                           scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+      } else {
+        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
+                           static_cast<double>(quantize_to_bit), momentum, moving_max->dptr<T>(),
+                           moving_min->dptr<T>(), scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+      }
     }
+
+    delete[] host_current_train_step_ptr;
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

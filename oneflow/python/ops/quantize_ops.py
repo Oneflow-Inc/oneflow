@@ -88,26 +88,49 @@ def min_max_observer(
 @oneflow_export("quantization.MovingAverageMinMaxObserver")
 def moving_average_min_max_observer(
     input: remote_blob_util.BlobDef,
-    moving_max: remote_blob_util.BlobDef,
-    moving_min: remote_blob_util.BlobDef,
     quantize_to_bit: int = 8,
     quantize_scheme: str = "symmetric",
     momentum: float = 0.95,
     name: Optional[str] = None,
 ) -> Tuple[remote_blob_util.BlobDef, remote_blob_util.BlobDef]:
 
-    scale, zero_point = (
-        flow.user_op_builder(
-            name
-            if name is not None
-            else id_util.UniqueStr("MovingAverageMinMaxObserver_")
+    op_name = (
+        name if name is not None else id_util.UniqueStr("MovingAverageMinMaxObserver_")
+    )
+
+    with flow.scope.namespace(op_name):
+        moving_max = flow.get_variable(
+            "moving_max",
+            shape=(1,),
+            dtype=input.dtype,
+            initializer=flow.zeros_initializer(input.dtype),
+            trainable=False,
         )
+        moving_min = flow.get_variable(
+            "moving_min",
+            shape=(1,),
+            dtype=input.dtype,
+            initializer=flow.zeros_initializer(input.dtype),
+            trainable=False,
+        )
+        current_train_step = flow.get_variable(
+            "current_train_step",
+            shape=(1,),
+            dtype=flow.int64,
+            initializer=flow.zeros_initializer(flow.int64),
+            trainable=False,
+        )
+    stop_update_after_iters = 1
+    scale, zero_point = (
+        flow.user_op_builder(op_name)
         .Op("moving_average_min_max_observer")
         .Input("in", [input])
+        .Input("current_train_step", [current_train_step])
         .Input("moving_max", [moving_max])
         .Input("moving_min", [moving_min])
         .Output("scale")
         .Output("zero_point")
+        .Attr("stop_update_after_iters", stop_update_after_iters)
         .Attr("quantize_to_bit", quantize_to_bit)
         .Attr("quantize_scheme", quantize_scheme)
         .Attr("momentum", momentum)

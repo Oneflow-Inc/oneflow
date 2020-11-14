@@ -21,10 +21,12 @@ namespace {
 
 REGISTER_USER_OP("moving_average_min_max_observer")
     .Input("in")
+    .Input("current_train_step")
     .Input("moving_max")  // NOTE(Liang Depeng): needs to be initialized as 0
     .Input("moving_min")  // NOTE(Liang Depeng): needs to be initialized as 0
     .Output("scale")
     .Output("zero_point")
+    .Attr<int64_t>("stop_update_after_iters")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
@@ -34,10 +36,14 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* moving_max_shape = ctx->Shape4ArgNameAndIndex("moving_max", 0);
       Shape* moving_min_shape = ctx->Shape4ArgNameAndIndex("moving_min", 0);
+      Shape* current_train_step = ctx->Shape4ArgNameAndIndex("current_train_step", 0);
+
       // NOTE(Liang Depeng): for now only support per-layer quantize
       // TODO(Liang Depeng): depthwise convolution support per-channel quantize
       CHECK_OR_RETURN(moving_max_shape->NumAxes() == 1 && moving_max_shape->At(0) == 1);
       CHECK_OR_RETURN(moving_min_shape->NumAxes() == 1 && moving_min_shape->At(0) == 1);
+
+      CHECK_OR_RETURN(current_train_step->NumAxes() == 1 && current_train_step->At(0) == 1);
 
       *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
       *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
@@ -50,6 +56,11 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
       CHECK(in != nullptr);
       in->set_requires_grad(false);
+
+      user_op::InputArgModifier* current_train_step =
+          GetInputArgModifierFn("current_train_step", 0);
+      CHECK(current_train_step != nullptr);
+      current_train_step->set_requires_grad(false);
 
       user_op::InputArgModifier* moving_max = GetInputArgModifierFn("moving_max", 0);
       CHECK(moving_max != nullptr);
@@ -84,6 +95,10 @@ REGISTER_USER_OP("moving_average_min_max_observer")
 
       std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
       CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
+
+      int64_t stop_update_after_iters = op_conf.attr<int64_t>("stop_update_after_iters");
+      CHECK_GT_OR_RETURN(stop_update_after_iters, 0);
+
       return Maybe<void>::Ok();
     });
 
