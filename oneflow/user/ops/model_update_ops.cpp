@@ -115,7 +115,6 @@ Maybe<void> InferIndexedSlicesMomentumUpdateTensorDesc(user_op::InferContext* ct
 
 Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const DataType data_type = model->data_type();
   const Shape& shape = model->shape();
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
@@ -129,23 +128,11 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarTensorDesc(scale_by_tensor, model->data_type()));
   }
-  if (ctx->Attr<bool>("do_bias_correction")) {
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
-    const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-    const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-    JUST(CheckScalarTensorDesc(beta1_t, data_type));
-    JUST(CheckScalarTensorDesc(beta2_t, data_type));
-  } else {
-    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta1_t", 0));
-    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta2_t", 0));
-  }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const DataType data_type = model->data_type();
   const user_op::TensorDesc* model_diff_indices =
       ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
   const user_op::TensorDesc* model_diff_values =
@@ -153,17 +140,6 @@ Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
-  if (ctx->Attr<bool>("do_bias_correction")) {
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta1_t", 0));
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("beta2_t", 0));
-    const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-    const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-    JUST(CheckScalarTensorDesc(beta1_t, data_type));
-    JUST(CheckScalarTensorDesc(beta2_t, data_type));
-  } else {
-    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta1_t", 0));
-    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("beta2_t", 0));
-  }
   return Maybe<void>::Ok();
 }
 
@@ -208,10 +184,6 @@ void AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifie
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
-  if (conf.attr<bool>("do_bias_correction")) {
-    SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0);
-    SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0);
-  }
 }
 
 void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
@@ -228,10 +200,10 @@ REGISTER_USER_OP("sgd_update")
     .Input("model_diff")
     .Input("learning_rate")
     .OptionalInput("scale_by_tensor")
-    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
-    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<double>("scale", 1.0)
+    .Attr<float>("l1", 0.0)
+    .Attr<float>("l2", 0.0)
+    .Attr<float>("weight_decay", 0.0)
     .SetTensorDescInferFn(InferSGDUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -289,11 +261,11 @@ REGISTER_USER_OP("momentum_update")
     .Input("learning_rate")
     .Input("momentum")
     .OptionalInput("scale_by_tensor")
-    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
-    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("beta", UserOpAttrType::kAtFloat, 0.9)
-    .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<double>("scale", 1.0)
+    .Attr<float>("l1", 0.0)
+    .Attr<float>("l2", 0.0)
+    .Attr<float>("beta", 0.9)
+    .Attr<float>("weight_decay", 0.0)
     .SetTensorDescInferFn(InferMomentumUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -320,7 +292,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model_diff_values")
     .Input("learning_rate")
     .Input("momentum")
-    .Attr<float>("beta", UserOpAttrType::kAtFloat, 0.9)
+    .Attr<float>("beta", 0.9)
     .SetTensorDescInferFn(InferIndexedSlicesMomentumUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -359,16 +331,13 @@ REGISTER_USER_OP("adam_update")
     .OptionalInput("scale_by_tensor")
     .Input("m")
     .Input("v")
-    .OptionalInput("beta1_t")
-    .OptionalInput("beta2_t")
-    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
-    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("beta1", UserOpAttrType::kAtFloat, 0.9)
-    .Attr<float>("beta2", UserOpAttrType::kAtFloat, 0.999)
-    .Attr<float>("epsilon", UserOpAttrType::kAtFloat, 1e-8)
-    .Attr<bool>("do_bias_correction", UserOpAttrType::kAtBool, false)
-    .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<double>("scale", 1.0)
+    .Attr<float>("l1", 0.0)
+    .Attr<float>("l2", 0.0)
+    .Attr<float>("beta1", 0.9)
+    .Attr<float>("beta2", 0.999)
+    .Attr<float>("epsilon", 1e-8)
+    .Attr<float>("weight_decay", 0.0)
     .SetTensorDescInferFn(InferAdamUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -393,12 +362,9 @@ REGISTER_USER_OP("indexed_slices_adam_update")
     .Input("learning_rate")
     .Input("m")
     .Input("v")
-    .OptionalInput("beta1_t")
-    .OptionalInput("beta2_t")
-    .Attr<float>("beta1", UserOpAttrType::kAtFloat, 0.9)
-    .Attr<float>("beta2", UserOpAttrType::kAtFloat, 0.999)
-    .Attr<float>("epsilon", UserOpAttrType::kAtFloat, 1e-8)
-    .Attr<bool>("do_bias_correction", UserOpAttrType::kAtBool, false)
+    .Attr<float>("beta1", 0.9)
+    .Attr<float>("beta2", 0.999)
+    .Attr<float>("epsilon", 1e-8)
     .SetTensorDescInferFn(InferIndexedSlicesAdamUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -408,10 +374,6 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       std::vector<user_op::OpArg> broadcast_args;
       broadcast_args.emplace_back("learning_rate", 0);
       broadcast_args.emplace_back("model_diff_indices", 0);
-      if (ctx->Attr<bool>("do_bias_correction")) {
-        broadcast_args.emplace_back("beta1_t", 0);
-        broadcast_args.emplace_back("beta2_t", 0);
-      }
       ctx->NewBuilder()
           .Broadcast(broadcast_args)
           .Broadcast(user_op::OpArg("model_diff_values", 0))
@@ -442,17 +404,34 @@ REGISTER_USER_OP("lamb_update")
     .Input("model_diff")
     .Input("learning_rate")
     .OptionalInput("scale_by_tensor")
-    .Attr("beta1", UserOpAttrType::kAtFloat)
-    .Attr("beta2", UserOpAttrType::kAtFloat)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .Attr<double>("scale", UserOpAttrType::kAtDouble, 1.0)
-    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0.0)
-    .Attr<float>("weight_decay", UserOpAttrType::kAtFloat, 0.0)
+    .Attr<float>("beta1")
+    .Attr<float>("beta2")
+    .Attr<float>("epsilon")
+    .Attr<double>("scale", 1.0)
+    .Attr<float>("l1", 0.0)
+    .Attr<float>("l2", 0.0)
+    .Attr<float>("weight_decay", 0.0)
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     // every bn has sbp broadcast signature
     .SetInputArgModifyFn(LambInputArgModifyFn);
+
+REGISTER_USER_OP("adam_bias_correction_learning_rate")
+    .Input("learning_rate")
+    .Input("train_step")
+    .Output("out")
+    .Attr<float>("beta1", 0.9)
+    .Attr<float>("beta2", 0.999)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) =
+          *ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
+      return Maybe<void>::Ok();
+    });
+// every bn has sbp broadcast signature
 
 }  // namespace
 

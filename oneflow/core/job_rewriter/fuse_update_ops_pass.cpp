@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -42,15 +42,22 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 };
 
-class FuseUpdateOpsPass final : public OpGraphPass {
+class FuseUpdateOpsPass final : public JobPass {
  public:
   FuseUpdateOpsPass() = default;
   ~FuseUpdateOpsPass() override = default;
 
-  bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().enable_fuse_model_update_ops();
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().job_conf().enable_fuse_model_update_ops();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -155,17 +162,11 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       fused_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
           .Attr<float>("beta", user_op_conf.attr<float>("beta"));
     } else if (user_op_conf.op_type_name() == "adam_update") {
-      const bool do_bias_correction = user_op_conf.attr<bool>("do_bias_correction");
       fused_op_builder.Input("m", user_op_conf.input("m", 0))
           .Input("v", user_op_conf.input("v", 0))
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
-          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
-          .Attr<bool>("do_bias_correction", do_bias_correction);
-      if (do_bias_correction) {
-        fused_op_builder.Input("beta1_t", user_op_conf.input("beta1_t", 0))
-            .Input("beta2_t", user_op_conf.input("beta2_t", 0));
-      }
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
     } else {
       UNIMPLEMENTED();
     }
@@ -178,6 +179,6 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("FuseUpdateOpsPass", FuseUpdateOpsPass);
+REGISTER_JOB_PASS("FuseUpdateOpsPass", FuseUpdateOpsPass);
 
 }  // namespace oneflow

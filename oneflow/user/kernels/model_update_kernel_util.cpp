@@ -133,24 +133,16 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDAT
 template<typename T, typename G>
 struct AdamUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, bool do_bias_correction, float weight_decay,
-                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
-                     T* model, T* m, T* v, T* beta1_t, T* beta2_t);
+                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     const T* scale_by_ptr, const G* model_diff, T* model, T* m, T* v);
 };
 
 template<typename T, typename G>
 void AdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1, float beta2, float epsilon,
-    bool do_bias_correction, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
-    const G* model_diff, T* model, T* m, T* v, T* beta1_t, T* beta2_t) {
-  float lr;
-  if (do_bias_correction) {
-    lr = *learning_rate * std::sqrt(1 - *beta2_t) / (1 - *beta1_t);
-    *beta1_t *= beta1;
-    *beta2_t *= beta2;
-  } else {
-    lr = *learning_rate;
-  }
+    float weight_decay, const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+    T* model, T* m, T* v) {
+  const float lr = *learning_rate;
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   FOR_RANGE(int64_t, i, 0, n) {
     AdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, scale, l1, l2, beta1, beta2,
@@ -163,19 +155,11 @@ template struct AdamUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
-  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon,
-                     bool do_bias_correction, int64_t num_instance, int64_t feature_size,
-                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const K* indices, const T* values, T* model, T* m,
-                     T* v, T* beta1_t, T* beta2_t) {
-    float lr;
-    if (do_bias_correction) {
-      lr = *learning_rate * std::sqrt(1 - *beta2_t) / (1 - *beta1_t);
-      *beta1_t *= beta1;
-      *beta2_t *= beta2;
-    } else {
-      lr = *learning_rate;
-    }
+  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, int64_t num_instance,
+                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
+                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
+                     const T* values, T* model, T* m, T* v) {
+    const float lr = *learning_rate;
     const int64_t n = *num_unique_instance * feature_size;
     FOR_RANGE(int64_t, i, 0, n) {
       const IDX indices_idx = i / feature_size;
@@ -233,5 +217,21 @@ void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 
 template struct LambUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct LambUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
+template<>
+struct AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kCPU> {
+  static void AdamBiasCorrectionLearningRate(DeviceCtx* ctx, float beta1, float beta2,
+                                             const float* learning_rate, const int64_t* train_step,
+                                             float* out);
+};
+
+void AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kCPU>::AdamBiasCorrectionLearningRate(
+    DeviceCtx* ctx, float beta1, float beta2, const float* learning_rate, const int64_t* train_step,
+    float* out) {
+  const auto exponent = static_cast<double>(*train_step + 1);
+  const float beta1_power = static_cast<float>(std::pow(beta1, exponent));
+  const float beta2_power = static_cast<float>(std::pow(beta2, exponent));
+  *out = *learning_rate * sqrt(1 - beta2_power) / (1 - beta1_power);
+}
 
 }  // namespace oneflow
