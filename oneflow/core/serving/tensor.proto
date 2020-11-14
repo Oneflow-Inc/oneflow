@@ -1,0 +1,18 @@
+syntax = "proto2";
+package oneflow.serving;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/record/record.proto";
+
+message TensorProto {
+  required ShapeProto shape = 1;
+  required DataType data_type = 2;
+  oneof data {
+    BytesList bytes_list = 11;
+    FloatList float_list = 12;
+    DoubleList double_list = 13;
+    Int32List int32_list = 14;
+    Int64List int64_list = 15;
+  }
+}

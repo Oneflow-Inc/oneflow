@@ -118,9 +118,15 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.proto$")
+  if(("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.proto$") AND 
+     (NOT "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\_service.proto$"))
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\_service.proto$")
+    list(APPEND of_all_grpc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -201,7 +207,14 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${PROJECT_SOURCE_DIR}
                                ${of_all_rel_protos})
 
-oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
+foreach(grpc_name ${of_all_grpc})
+  file(RELATIVE_PATH grpc_rel_name ${PROJECT_SOURCE_DIR} ${grpc_name})
+  list(APPEND of_all_rel_grpcs ${grpc_rel_name})
+endforeach()
+
+GRPC_GENERATE_PYTHON(GRPC_SRCS ${PROJECT_SOURCE_DIR} ${of_all_rel_grpcs})
+
+oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS} ${GRPC_SRCS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 add_dependencies(of_protoobj make_pyproto_dir)
 

@@ -1,0 +1,14 @@
+syntax = "proto2";
+package oneflow;
+
+message ModelConfig {
+  required string name = 1;
+  required string path = 2;
+  // Indicate the functions will be loaded from saved model, if empty all
+  // functions in saved model will be loaded.
+  repeated string function_whitelist = 3;
+}
+
+message ModelServerConfig {
+  repeated ModelConfig model_config_list = 1;
+}

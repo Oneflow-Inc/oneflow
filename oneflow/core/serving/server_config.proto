@@ -1,0 +1,12 @@
+syntax = "proto2";
+package oneflow;
+
+message ServerConfig {
+  // Port to listen on for gRPC API
+  required int32 port = 1;
+  // Port to listen on for HTTP/REST API. Default is 0 which indicate that 
+  // HTTP/REST API will not be available. Can't be set to the same port as gRPC port.
+  optional int32 rest_api_port = 2 [default = 0];
+  // 
+  optional string model_config_file = 3;
+}

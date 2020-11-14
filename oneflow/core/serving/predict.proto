@@ -1,0 +1,18 @@
+syntax = "proto2";
+package oneflow.serving;
+
+import "oneflow/core/serving/model_spec.proto";
+import "oneflow/core/serving/tensor.proto";
+
+message PredictRequest {
+  required ModelSpec model_spec = 1;
+  map<string, TensorProto> inputs = 2;
+  // Only tensors specified here will be run/fetched and returned, with the
+  // exception that when none is specified, all tensors specified in the
+  // named signature will be run/fetched and returned.
+  repeated string outputs = 3;
+}
+
+message PredictResponse {
+  map<string, TensorProto> outputs = 1;
+}
