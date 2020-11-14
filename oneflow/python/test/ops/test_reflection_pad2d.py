@@ -199,10 +199,10 @@ def _gen_arg_dict(
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
     arg_dict["samples"].append(
-        gen_numpy_test_sample((1, 1, 2, 2), [0, 0, 1, 1], "NCHW")
+        gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1], "NCHW")
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((3, 3, 3, 2), [0, 0, 2, 1], "NHWC")
+        gen_numpy_test_sample((4, 3, 3, 2), [0, 0, 2, 1], "NHWC")
     )
     arg_dict["samples"].append(
         gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 2], "NCHW")
