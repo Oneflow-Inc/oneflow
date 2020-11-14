@@ -2695,7 +2695,6 @@ def mse_loss(
         @flow.global_function()
         def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
                         target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
-            # It's equal to `Torch.nn.MSELoss(reduction="mean")
             out = flow.nn.MSELoss(input, target, reduction="mean")
             return out
 
@@ -2714,7 +2713,6 @@ def mse_loss(
         @flow.global_function()
         def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
                         target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
-            # It's equal to `Torch.nn.MSELoss(reduction="sum")
             out = flow.nn.MSELoss(input, target, reduction="sum")
             
             return out
