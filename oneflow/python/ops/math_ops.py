@@ -1537,7 +1537,10 @@ def argmax(
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
         x = flow.transpose(input, perm, False, False, name + "transpose")
         x = _argmax_at_last_dim(x, name)
-        return flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
+        x = flow.expand_dims(x, -1)
+        x = flow.transpose(x, get_inversed_perm(perm), False, False, name + "inverse_transpose")
+        x = flow.squeeze(x, [axis])
+        return x
 
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
