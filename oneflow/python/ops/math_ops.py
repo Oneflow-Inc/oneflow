@@ -1412,10 +1412,32 @@ def _top_k_at_last_dim(
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Finds the indices of the k largest entries for the last dimension, the difference between other framework is that oneflow only return the indices. 
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
+        .Op("top_k")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("k", k)
+        .Attr("sorted", sorted)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.top_k")
+def top_k(
+        input: remote_blob_util.BlobDef,
+        axis: int = -1,
+        k: int = 1,
+        sorted: bool = True,
+        name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Finds the indices of the k largest entries at specific dimension, the difference between other framework is that oneflow only return the indices. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         k (int, optional): Number of top elements to look for along the last dimension. Defaults to 1.
         sorted (bool, optional): If true the resulting k elements will be sorted by the values in descending order. Defaults to True.
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -1442,27 +1464,6 @@ def _top_k_at_last_dim(
         # out [2 3]
 
     """
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
-        .Op("top_k")
-        .Input("in", [input])
-        .Output("out")
-        .Attr("k", k)
-        .Attr("sorted", sorted)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-@oneflow_export("math.top_k")
-def top_k(
-        input: remote_blob_util.BlobDef,
-        axis: int = -1,
-        k: int = 1,
-        sorted: bool = True,
-        name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
     name = name if name is not None else id_util.UniqueStr("TopK_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes

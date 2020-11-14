@@ -21,6 +21,8 @@ import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
+from oneflow.python.ops.transpose_util import get_inversed_perm
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -49,8 +51,12 @@ def compare_with_tensorflow(device_type, in_shape, axis, k, data_type, sorted):
     # OneFlow
     of_out = TopKJob([input]).get().numpy_list()[0]
     # TensorFlow
-    if k <= in_shape[-1]:
-        _, tf_out = tf.math.top_k(input, k, sorted)
+    if k <= in_shape[axis]:
+        perm = get_perm_when_transpose_axis_to_last_dim(len(in_shape), axis)
+        x = tf.transpose(input, perm)
+        _, indices = tf.math.top_k(x, k, sorted)
+        tf_out = tf.transpose(indices, get_inversed_perm(perm))
+
     else:
         tf_out = tf.argsort(input, axis, direction="DESCENDING", stable=True)
 
