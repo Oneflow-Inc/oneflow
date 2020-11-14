@@ -80,16 +80,16 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
                                reduced_memory_copy_nd_desc);
 
-    int64_t padding_h, padding_w, channel_h_idx, channel_w_idx;
+    int64_t padding_h, padding_w, h_idx, w_idx;
     if (data_format == "NCHW") {
-      channel_h_idx = 2;
-      channel_w_idx = 3;
+      h_idx = 2;
+      w_idx = 3;
     } else {
-      channel_h_idx = 1;
-      channel_w_idx = 2;
+      h_idx = 1;
+      w_idx = 2;
     }
-    padding_h = padding[channel_h_idx];
-    padding_w = padding[channel_w_idx];
+    padding_h = padding[h_idx];
+    padding_w = padding[w_idx];
     const ShapeView& x_shape = x->shape();
     // elements index vector of diagonal elements
     std::vector<int64_t> index_vector;
@@ -100,10 +100,10 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       // Traverse one-dimensional array y
       int64_t coord_y[ndims];
       index_helper.OffsetToNdIndex(i, coord_y);
-      int64_t x_h = coord_y[channel_h_idx] - padding_h;
-      int64_t x_w = coord_y[channel_w_idx] - padding_w;
-      if (x_h < 0 || x_h >= x_shape.At(channel_h_idx) || x_w < 0
-          || x_w >= x_shape.At(channel_w_idx)) {
+      int64_t x_h = coord_y[h_idx] - padding_h;
+      int64_t x_w = coord_y[w_idx] - padding_w;
+      if (x_h < 0 || x_h >= x_shape.At(h_idx) || x_w < 0
+          || x_w >= x_shape.At(w_idx)) {
         // Indicates that the element is no longer in the original x range (the data to be padding
         // outside)
         int64_t dest_coords[4];
@@ -114,10 +114,10 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
           int64_t dest_w;
           if (x_w < 0) {
             // left part
-            dest_w = 2 * padding_w - coord_y[channel_w_idx];
+            dest_w = 2 * padding_w - coord_y[w_idx];
           } else {
             // right pary
-            dest_w = 2 * (padding_w + x_shape.At(channel_w_idx) - 1) - coord_y[channel_w_idx];
+            dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
           }
           dest_coords[0] = coord_y[0];
           dest_coords[1] = coord_y[1];
@@ -131,15 +131,15 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
           dest_index = index_helper.NdIndexToOffset(dest_coords);
           Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i,
                               y->mut_dptr<T>() + dest_index, sizeof_dtype);
-        } else if (x_w >= 0 && x_w < x_shape.At(channel_w_idx)) {
+        } else if (x_w >= 0 && x_w < x_shape.At(w_idx)) {
           // Within the upper and lower range lines, non-diagonal elements
           int64_t dest_h;
           if (x_h < 0) {
             // upper part
-            dest_h = 2 * padding_h - coord_y[channel_h_idx];
+            dest_h = 2 * padding_h - coord_y[h_idx];
           } else {
             // lower part
-            dest_h = 2 * (padding_h + x_shape.At(channel_h_idx) - 1) - coord_y[channel_h_idx];
+            dest_h = 2 * (padding_h + x_shape.At(h_idx) - 1) - coord_y[h_idx];
           }
           dest_coords[0] = coord_y[0];
           dest_coords[3] = coord_y[3];
@@ -167,12 +167,12 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       int64_t dest_w;
       int64_t dest_index;
       int64_t dest_coords[4];
-      if (coord_y[channel_w_idx] < padding_w) {
+      if (coord_y[w_idx] < padding_w) {
         // left part
-        dest_w = 2 * padding_w - coord_y[channel_w_idx];
+        dest_w = 2 * padding_w - coord_y[w_idx];
       } else {
         // right part
-        dest_w = 2 * (padding_w + x_shape.At(channel_w_idx) - 1) - coord_y[channel_w_idx];
+        dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
       }
       dest_coords[0] = coord_y[0];
       dest_coords[1] = coord_y[1];
