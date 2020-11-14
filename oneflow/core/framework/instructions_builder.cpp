@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/job/scope.cfg.h"
 
 namespace oneflow {
 
@@ -24,25 +28,102 @@ void SetSoleMirroredOperand(vm::cfg::OperandProto* operand, int64_t symbol_id) {
   operand->mutable_sole_mirrored_object();
 }
 
-void InitSymbolOperand(vm::cfg::InstructionOperandProto* instr_operand, int64_t symbol_id) {
+void SetInitSymbolOperand(vm::cfg::InstructionOperandProto* instr_operand, int64_t symbol_id) {
   SetSoleMirroredOperand(instr_operand->mutable_init_symbol_operand(), symbol_id);
+}
+
+void SetInt64Operand(vm::cfg::InstructionOperandProto* instr_operand, int64_t symbol_id) {
+  instr_operand->set_int64_operand(symbol_id);
+}
+
+Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
+                           vm::cfg::InstructionListProto* instruction_list) {
+  int64_t symbol_id = JUST(id_generator->NewSymbolId());
+  auto* instruction = instruction_list->mutable_instruction()->Add();
+  instruction->set_instr_type_name("NewSymbol");
+  SetInt64Operand(instruction->mutable_operand()->Add(), symbol_id);
+  return symbol_id;
+}
+
+template<typename T>
+const char* GetInstrTypeName();
+
+template<>
+const char* GetInstrTypeName<cfg::JobConfigProto>() {
+  return "InitJobDescSymbol";
+}
+template<>
+const char* GetInstrTypeName<cfg::ParallelConf>() {
+  return "NewParallelDescSymbol";
+}
+template<>
+const char* GetInstrTypeName<cfg::ScopeProto>() {
+  return "InitScopeSymbol";
+}
+
+template<typename T>
+T* MutEagerSymbolConf(eager::cfg::EagerSymbol*);
+
+template<>
+cfg::JobConfigProto* MutEagerSymbolConf<cfg::JobConfigProto>(
+    eager::cfg::EagerSymbol* eager_symbol) {
+  return eager_symbol->mutable_job_conf_symbol();
+}
+
+template<>
+cfg::ParallelConf* MutEagerSymbolConf<cfg::ParallelConf>(eager::cfg::EagerSymbol* eager_symbol) {
+  return eager_symbol->mutable_parallel_conf_symbol();
+}
+
+template<>
+cfg::ScopeProto* MutEagerSymbolConf<cfg::ScopeProto>(eager::cfg::EagerSymbol* eager_symbol) {
+  return eager_symbol->mutable_scope_symbol();
 }
 
 }  // namespace
 
-Maybe<int64_t> InstructionsBuilder::CreateScopeSymbolId(const cfg::ScopeProto& scope_proto) {
-  int64_t symbol_id = JUST(mut_id_generator()->NewSymbolId());
+namespace detail {
+
+template<typename T>
+Maybe<int64_t> CreateSymbolIdHelper<T>::Call(vm::IdGenerator* id_generator,
+                                             vm::cfg::InstructionListProto* instruction_list,
+                                             eager::cfg::EagerSymbolList* eager_symbol_list,
+                                             const T& conf) {
+  int64_t symbol_id = JUST(NewSymbolId(id_generator, instruction_list));
   {
-    auto* instruction = mut_instruction_list()->mutable_instruction()->Add();
-    instruction->set_instr_type_name("InitScopeSymbol");
-    InitSymbolOperand(instruction->mutable_operand()->Add(), symbol_id);
+    auto* instruction = instruction_list->mutable_instruction()->Add();
+    instruction->set_instr_type_name(GetInstrTypeName<T>());
+    SetInitSymbolOperand(instruction->mutable_operand()->Add(), symbol_id);
   }
   {
-    auto* eager_symbol = mut_eager_symbol_list()->mutable_eager_symbol()->Add();
+    auto* eager_symbol = eager_symbol_list->mutable_eager_symbol()->Add();
     eager_symbol->set_symbol_id(symbol_id);
-    eager_symbol->mutable_scope_symbol()->CopyFrom(scope_proto);
+    MutEagerSymbolConf<T>(eager_symbol)->CopyFrom(conf);
   }
   return symbol_id;
 }
+
+template struct CreateSymbolIdHelper<cfg::JobConfigProto>;
+template struct CreateSymbolIdHelper<cfg::ScopeProto>;
+
+template<>
+Maybe<int64_t> CreateSymbolIdHelper<cfg::ParallelConf>::Call(
+    vm::IdGenerator* id_generator, vm::cfg::InstructionListProto* instruction_list,
+    eager::cfg::EagerSymbolList* eager_symbol_list, const cfg::ParallelConf& conf) {
+  int64_t symbol_id = JUST(id_generator->NewSymbolId());
+  {
+    auto* instruction = instruction_list->mutable_instruction()->Add();
+    instruction->set_instr_type_name(GetInstrTypeName<cfg::ParallelConf>());
+    SetInt64Operand(instruction->mutable_operand()->Add(), symbol_id);
+  }
+  {
+    auto* eager_symbol = eager_symbol_list->mutable_eager_symbol()->Add();
+    eager_symbol->set_symbol_id(symbol_id);
+    MutEagerSymbolConf<cfg::ParallelConf>(eager_symbol)->CopyFrom(conf);
+  }
+  return symbol_id;
+}
+
+}  // namespace detail
 
 }  // namespace oneflow

@@ -68,7 +68,7 @@ class SymbolStorage final {
   const std::shared_ptr<T>& GetPtr(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
     const auto& iter = symbol_id2symbol_.find(symbol_id);
-    CHECK(iter != symbol_id2symbol_.end());
+    CHECK(iter != symbol_id2symbol_.end()) << "symbol_id: " << symbol_id;
     return iter->second;
   }
 

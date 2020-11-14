@@ -24,18 +24,24 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, bool (&HasSymbolId)(const T& symbol_data)>
-class SymbolIdCache final {
- public:
-  SymbolIdCache(const SymbolIdCache&) = delete;
-  SymbolIdCache(SymbolIdCache&&) = delete;
+namespace symbol {
 
-  SymbolIdCache() = default;
-  ~SymbolIdCache() = default;
+// Remove check util HasSymbolIdTraits after field ScopeProto.symbol_id removed.
+template<typename T>
+struct HasSymbolIdTraits;
+
+template<typename T>
+class IdCache final {
+ public:
+  IdCache(const IdCache&) = delete;
+  IdCache(IdCache&&) = delete;
+
+  IdCache() = default;
+  ~IdCache() = default;
 
   template<typename CreateT>
   Maybe<int64_t> FindOrCreate(const T& symbol_data, const CreateT& Create) {
-    CHECK_OR_RETURN(!HasSymbolId(symbol_data));
+    CHECK_OR_RETURN(!HasSymbolIdTraits<T>::HasSymbolId(symbol_data));
     {
       std::unique_lock<std::mutex> lock(mutex_);
       const auto& iter = symbol_data2id_.find(symbol_data);
@@ -54,14 +60,22 @@ class SymbolIdCache final {
   std::map<T, int64_t> symbol_data2id_;
 };
 
-inline bool JobConfigProtoHasSymbolId(const cfg::JobConfigProto&) { return false; }
-using JobConfSymbolIdCache = SymbolIdCache<cfg::JobConfigProto, JobConfigProtoHasSymbolId>;
+template<>
+struct HasSymbolIdTraits<cfg::JobConfigProto> {
+  static bool HasSymbolId(const cfg::JobConfigProto&) { return false; }
+};
 
-inline bool ParallelConfHasSymbolId(const cfg::ParallelConf&) { return false; }
-using ParallelConfSymbolIdCache = SymbolIdCache<cfg::ParallelConf, ParallelConfHasSymbolId>;
+template<>
+struct HasSymbolIdTraits<cfg::ParallelConf> {
+  static bool HasSymbolId(const cfg::ParallelConf&) { return false; }
+};
 
-inline bool ScopeProtoHasSymbolId(const cfg::ScopeProto& scope) { return scope.has_symbol_id(); }
-using ScopeSymbolIdCache = SymbolIdCache<cfg::ScopeProto, ScopeProtoHasSymbolId>;
+template<>
+struct HasSymbolIdTraits<cfg::ScopeProto> {
+  static bool HasSymbolId(const cfg::ScopeProto& scope) { return scope.has_symbol_id(); }
+};
+
+}  // namespace symbol
 
 }  // namespace oneflow
 
