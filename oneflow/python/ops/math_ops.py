@@ -1479,10 +1479,28 @@ def top_k(
 def _argmax_at_last_dim(
     input: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    """The op computes the index with the largest value of a Blob.
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
+        .Op("argmax")
+        .Input("in", [input])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.argmax")
+def argmax(
+        input: remote_blob_util.BlobDef,
+        axis: int = -1,
+        name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """The op computes the index with the largest value of a Blob at specified axis.
 
     Args:
         input (remote_blob_util.BlobDef): Input Blob
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1509,23 +1527,6 @@ def _argmax_at_last_dim(
         # out [2 1]
 
     """
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
-        .Op("argmax")
-        .Input("in", [input])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-@oneflow_export("math.argmax")
-def argmax(
-        input: remote_blob_util.BlobDef,
-        axis: int = -1,
-        name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
     name = name if name is not None else id_util.UniqueStr("ArgMax_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
