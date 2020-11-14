@@ -20,24 +20,28 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void GenQuantScalePerLayerSymmetric(const T *in, const int32_t quantize_to_bit,
-                                    const int64_t num_elements, const float momentum, T *moving_max,
-                                    T *moving_min, T *scale, T *zero_point) {
-  T in_max = *std::max_element(in, in + num_elements);
-  T in_min = *std::min_element(in, in + num_elements);
+void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_step,
+                                    const int64_t stop_update_after_iters,
+                                    const int32_t quantize_to_bit, const int64_t num_elements,
+                                    const float momentum, T *moving_max, T *moving_min, T *scale,
+                                    T *zero_point) {
+  if (current_train_step <= stop_update_after_iters) {
+    T in_max = *std::max_element(in, in + num_elements);
+    T in_min = *std::min_element(in, in + num_elements);
 
-  in_max = std::max(std::abs(in_max), std::abs(in_min));
+    in_max = std::max(std::abs(in_max), std::abs(in_min));
 
-  T moving_max_val = *moving_max;
+    T moving_max_val = *moving_max;
 
-  if (moving_max_val == 0) {
-    *moving_max = in_max;
-  } else {
-    *moving_max = moving_max_val * momentum + in_max * (1 - momentum);
+    if (moving_max_val == 0) {
+      *moving_max = in_max;
+    } else {
+      *moving_max = moving_max_val * momentum + in_max * (1 - momentum);
+    }
+
+    // NOTE(Liang Depeng): symmetric quantization only use moving_max to calculate the scale
+    *moving_min = *moving_max;
   }
-
-  // NOTE(Liang Depeng): symmetric quantization only use moving_max to calculate the scale
-  *moving_min = *moving_max;
 
   T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
   *scale = (*moving_max) / denominator;
@@ -45,24 +49,28 @@ void GenQuantScalePerLayerSymmetric(const T *in, const int32_t quantize_to_bit,
 }
 
 template<typename T>
-void GenQuantScalePerLayerAffine(const T *in, const int32_t quantize_to_bit,
-                                 const int64_t num_elements, const float momentum, T *moving_max,
-                                 T *moving_min, T *scale, T *zero_point) {
-  T in_max = *std::max_element(in, in + num_elements);
-  T in_min = *std::min_element(in, in + num_elements);
+void GenQuantScalePerLayerAffine(const T *in, const int64_t current_train_step,
+                                 const int64_t stop_update_after_iters,
+                                 const int32_t quantize_to_bit, const int64_t num_elements,
+                                 const float momentum, T *moving_max, T *moving_min, T *scale,
+                                 T *zero_point) {
+  if (current_train_step <= stop_update_after_iters) {
+    T in_max = *std::max_element(in, in + num_elements);
+    T in_min = *std::min_element(in, in + num_elements);
 
-  T moving_max_val = *moving_max;
-  if (moving_max_val == 0) {
-    *moving_max = in_max;
-  } else {
-    *moving_max = moving_max_val * momentum + in_max * (1 - momentum);
-  }
+    T moving_max_val = *moving_max;
+    if (moving_max_val == 0) {
+      *moving_max = in_max;
+    } else {
+      *moving_max = moving_max_val * momentum + in_max * (1 - momentum);
+    }
 
-  T moving_min_val = *moving_min;
-  if (moving_min_val == 0) {
-    *moving_min = in_min;
-  } else {
-    *moving_min = moving_min_val * momentum + in_min * (1 - momentum);
+    T moving_min_val = *moving_min;
+    if (moving_min_val == 0) {
+      *moving_min = in_min;
+    } else {
+      *moving_min = moving_min_val * momentum + in_min * (1 - momentum);
+    }
   }
 
   T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
@@ -79,6 +87,8 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
     const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor *current_train_step =
+        ctx->Tensor4ArgNameAndIndex("current_train_step", 0);
     user_op::Tensor *moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
     user_op::Tensor *moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
     user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
@@ -87,8 +97,10 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
     const float momentum = ctx->Attr<float>("momentum");
+    const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
 
     const T *in_ptr = in->dptr<T>();
+    const int64_t *current_train_step_ptr = current_train_step->dptr<int64_t>();
     T *moving_max_ptr = moving_max->mut_dptr<T>();
     T *moving_min_ptr = moving_min->mut_dptr<T>();
     T *scale_ptr = scale->mut_dptr<T>();
@@ -97,10 +109,12 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     int64_t num_elements = in->shape().elem_cnt();
 
     if (quantize_scheme == "symmetric") {
-      GenQuantScalePerLayerSymmetric(in_ptr, quantize_to_bit, num_elements, momentum,
-                                     moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
+      GenQuantScalePerLayerSymmetric(in_ptr, *current_train_step_ptr, stop_update_after_iters,
+                                     quantize_to_bit, num_elements, momentum, moving_max_ptr,
+                                     moving_min_ptr, scale_ptr, zero_point_ptr);
     } else {  // quantize_scheme == "affine"
-      GenQuantScalePerLayerAffine(in_ptr, quantize_to_bit, num_elements, momentum, moving_max_ptr,
+      GenQuantScalePerLayerAffine(in_ptr, *current_train_step_ptr, stop_update_after_iters,
+                                  quantize_to_bit, num_elements, momentum, moving_max_ptr,
                                   moving_min_ptr, scale_ptr, zero_point_ptr);
     }
   }
