@@ -64,6 +64,7 @@ def gen_arg_list():
 
     return GenArgList(arg_dict)
 
+
 def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]

@@ -1427,11 +1427,11 @@ def _top_k_at_last_dim(
 
 @oneflow_export("math.top_k")
 def top_k(
-        input: remote_blob_util.BlobDef,
-        axis: int = -1,
-        k: int = 1,
-        sorted: bool = True,
-        name: Optional[str] = None,
+    input: remote_blob_util.BlobDef,
+    axis: int = -1,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices. 
 
@@ -1467,14 +1467,16 @@ def top_k(
     name = name if name is not None else id_util.UniqueStr("TopK_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert(axis < num_axes)
+    assert axis < num_axes
     if axis == num_axes - 1:
         return _top_k_at_last_dim(input, k, sorted, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
         x = flow.transpose(input, perm, False, True, name + "transpose")
         x = _top_k_at_last_dim(x, k, sorted, name)
-        return flow.transpose(x, get_inversed_perm(perm), False, True, name + "inverse_transpose")
+        return flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "inverse_transpose"
+        )
 
 
 def _argmax_at_last_dim(
@@ -1493,9 +1495,7 @@ def _argmax_at_last_dim(
 
 @oneflow_export("math.argmax")
 def argmax(
-        input: remote_blob_util.BlobDef,
-        axis: int = -1,
-        name: Optional[str] = None,
+    input: remote_blob_util.BlobDef, axis: int = -1, name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """The op computes the index with the largest value of a Blob at specified axis.
 
@@ -1531,7 +1531,7 @@ def argmax(
     name = name if name is not None else id_util.UniqueStr("ArgMax_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert(axis < num_axes)
+    assert axis < num_axes
     if axis == num_axes - 1:
         return _argmax_at_last_dim(input, name)
     else:
@@ -1539,7 +1539,9 @@ def argmax(
         x = flow.transpose(input, perm, False, True, name + "transpose")
         x = _argmax_at_last_dim(x, name)
         x = flow.expand_dims(x, -1, name + "expand_dims")
-        x = flow.transpose(x, get_inversed_perm(perm), False, True, name + "inverse_transpose")
+        x = flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "inverse_transpose"
+        )
         x = flow.squeeze(x, [axis], name + "squeeze")
         return x
 

@@ -70,6 +70,7 @@ def gen_arg_list():
 
     return GenArgList(arg_dict)
 
+
 def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["gpu", "cpu"]
@@ -78,6 +79,7 @@ def gen_arg_list_for_test_axis():
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
 
     return GenArgList(arg_dict)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestArgmax(flow.unittest.TestCase):
