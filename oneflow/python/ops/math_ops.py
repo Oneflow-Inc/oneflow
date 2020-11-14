@@ -28,8 +28,8 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
-from .transpose_util import get_perm_when_transpose_axis_to_last_dim
-from .transpose_util import get_inversed_perm
+from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
+from oneflow.python.ops.transpose_util import get_inversed_perm
 
 
 @oneflow_export("math.add")
@@ -1433,7 +1433,7 @@ def top_k(
         sorted: bool = True,
         name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Finds the indices of the k largest entries at specific dimension, the difference between other framework is that oneflow only return the indices. 
+    """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob
