@@ -2646,3 +2646,198 @@ def leaky_relu(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.unfold1d")
+def unfold1d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    dilation_rate: Union[int, Sequence[int]],
+    padding: Union[str, Sequence[Sequence[int]]],
+    data_format: str = "NCW",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Performs the unfold on the input `Blob`.
+
+    Args:
+        input (remote_blob_util.BlobDef): A 3-D `Blob` of the format specified by data_format.
+        ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The size of the window for each dimension of the input `Blob`.
+        strides (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The stride of the sliding window for each dimension of the input `Blob`.
+        dilation_rate (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The dilation_rate of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'`.
+        data_format (str, optional):  '`NWC'` or '`NCW'`. Defaults to '`NWC'`.
+        name (Optional[str], optional):  This operator's name(optional). Defaults to None.
+
+    Raises:
+        NotImplementedError: not implement unfold1d currently
+
+    Returns:
+        remote_blob_util.BlobDef: A `Blob` of format specified by data_format. The unfold output `Blob`.
+    """
+    raise NotImplementedError
+
+
+@oneflow_export("nn.unfold2d")
+def unfold2d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, IntPair],
+    strides: Union[int, IntPair],
+    dilation_rate: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    data_format: str = "NCHW",
+    ceil_mode: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Performs the unfold on the input. 
+
+    Args:
+        input (remote_blob_util.BlobDef): A 4-D `Blob` of shape [batch, height, width, channels].
+        ksize (Union[int, IntPair]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
+        strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
+        dilation_rate (Union[int, IntPair]): An int or list of ints that has length 1, 2. The dilation_rate of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]. The padding algorithm.
+        data_format (str, optional): '`NHWC'` or '`NCHW'`. Defaults to "NCHW".
+        name (Optional[str], optional):  This operator's name(optional). Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef:  A `Blob` with the same type as '`value'`. The unfold output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def unfold2d_Job(x: tp.Numpy.Placeholder((1, 32, 128, 128))
+        ) -> tp.Numpy:
+            unfold_out = flow.nn.unfold2d(
+                input=x,
+                ksize=3,
+                strides=2,
+                dilation_rate=1,
+                padding='SAME',
+                data_format='NCHW'
+            )
+
+            return unfold_out
+
+
+        x = np.random.randn(1, 32, 128, 128).astype(np.float32)
+        out = unfold2d_Job(x)
+
+        # out.shape (1, 32, 64, 64)
+
+    """
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Unfold2D_")
+        )
+        .Op("unfold_2d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
+    kernel_size = _GetSequence(ksize, 2, "ksize")
+    op.Attr("kernel_size", kernel_size)
+    strides = _GetSequence(strides, 2, "strides")
+    op.Attr("strides", strides)
+    dilation_rate = _GetSequence(dilation_rate, 2, "dilation_rate")
+    op.Attr("dilation_rate", dilation_rate)
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    assert len(pads_list) == len(input.shape) - 2
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("nn.unfold3d")
+def unfold3d(
+    input: remote_blob_util.BlobDef,
+    ksize: Union[int, Sequence[int]],
+    strides: Union[int, Sequence[int]],
+    dilation_rate: Union[int, Sequence[int]],
+    padding: Union[str, Sequence[Sequence[int]]],
+    data_format: str = "NCDHW",
+    ceil_mode: bool = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Performs the unfold on the input. 
+
+    Args:
+        input (remote_blob_util.BlobDef): A 5-D `Blob` of shape [batch, height, width, channels].
+        ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
+        strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
+        dilation_rate (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The dilation_rate of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER or Sequence[Sequence[int]]'`.
+        data_format (str, optional):  '`NDHWC'` or '`NCDHW'`. Defaults to "NCDHW".
+        name (Optional[str], optional):  This operator's name(optional).Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A `Blob` with the same type as value. The unfold output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def unfold3d_Job(x: tp.Numpy.Placeholder((1, 32, 10, 128, 128))
+        ) -> tp.Numpy:
+            unfold_out = flow.nn.unfold3d(
+                input=x,
+                ksize=3,
+                strides=2,
+                dilation_rate=1,
+                padding='SAME',
+                data_format='NCDHW'
+            )
+
+            return unfold_out
+
+
+        x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
+        out = unfold3d_Job(x)
+
+        # out.shape (1, 32, 5, 64, 64)
+
+    """
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Unfold3D_")
+        )
+        .Op("unfold_3d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NDHWC", "NCDHW"]
+    channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
+    op.Attr("data_format", channel_pos)
+    kernel_size = _GetSequence(ksize, 3, "ksize")
+    op.Attr("kernel_size", kernel_size)
+    strides = _GetSequence(strides, 3, "strides")
+    op.Attr("strides", strides)
+    dilation_rate = _GetSequence(dilation_rate, 3, "dilation_rate")
+    op.Attr("dilation_rate", dilation_rate)
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
+    assert len(pads_list) == len(input.shape) - 2
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("ceil_mode", ceil_mode)
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
