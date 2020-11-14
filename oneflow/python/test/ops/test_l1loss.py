@@ -19,7 +19,7 @@ import oneflow.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
-from typing import List, Dict
+from typing import Dict
 import os
 
 
@@ -34,7 +34,6 @@ def _compare_l1loss_with_np(
     func_config = flow.FunctionConfig()
 
     flow.clear_default_session()
-    flow.env.init()
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
@@ -60,7 +59,6 @@ def _compare_l1loss_with_np(
         # Use numpy to compute diff
         original_shape = np_target.shape
         elemcnt = np_target.size
-        elemcnt = np.reshape(elemcnt, -1)
         prediction = np_input.reshape(-1)
         label = np_target.reshape(-1)
         prediction_grad = np.zeros((elemcnt)).astype(prediction.dtype)

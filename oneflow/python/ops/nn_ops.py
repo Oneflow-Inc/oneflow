@@ -2750,7 +2750,7 @@ def l1_loss(
     )
 
     if name is None:
-        name = "L1Loss_"
+        name = "L1Loss"
 
     l1_value = flow.math.abs(
         flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
