@@ -29,8 +29,7 @@ def get_perm_when_transpose_axis_to_last_dim(
     axis: int,
 ) -> tuple:
     axis = axis if axis >= 0 else axis + num_axes
-    if axis == num_axes - 1:
-        return tuple(range(num_axes))
+    assert(axis < num_axes)
     perm = [dim if dim < axis else dim + 1 for dim in range(num_axes - 1)]
     perm.append(axis)
     return tuple(perm)
