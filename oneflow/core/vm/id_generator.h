@@ -43,6 +43,17 @@ class LogicalIdGenerator : public IdGenerator {
   Maybe<int64_t> NewObjectId() override;
 };
 
+class PhysicalIdGenerator : public IdGenerator {
+ public:
+  PhysicalIdGenerator(const PhysicalIdGenerator&) = delete;
+  PhysicalIdGenerator(PhysicalIdGenerator&&) = delete;
+  PhysicalIdGenerator() = default;
+  ~PhysicalIdGenerator() override = default;
+
+  Maybe<int64_t> NewSymbolId() override;
+  Maybe<int64_t> NewObjectId() override;
+};
+
 }  // namespace vm
 }  // namespace oneflow
 

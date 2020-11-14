@@ -25,6 +25,17 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace detail {
+
+template<typename T>
+struct CreateSymbolIdHelper {
+  static Maybe<int64_t> Call(vm::IdGenerator* id_generator,
+                             vm::cfg::InstructionListProto* instruction_list,
+                             eager::cfg::EagerSymbolList* eager_symbol_list, const T& conf);
+};
+
+}  // namespace detail
+
 class InstructionsBuilder {
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
@@ -41,20 +52,21 @@ class InstructionsBuilder {
         eager_symbol_list_(symbol_list) {}
   ~InstructionsBuilder() = default;
 
-  const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list() const {
-    return instruction_list_;
-  }
-  const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list() const {
-    return eager_symbol_list_;
-  }
+  const vm::cfg::InstructionListProto& instruction_list() const { return *instruction_list_; }
+  const eager::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
 
-  Maybe<int64_t> FindOrCreateScopeSymbolId(const cfg::ScopeProto& scope_proto) {
-    return Global<ScopeSymbolIdCache>::Get()->FindOrCreate(
-        scope_proto, [&] { return CreateScopeSymbolId(scope_proto); });
+  template<typename T>
+  Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
+    auto* id_cache = Global<symbol::IdCache<T>>::Get();
+    return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
 
  private:
-  Maybe<int64_t> CreateScopeSymbolId(const cfg::ScopeProto& scope_proto);
+  template<typename T>
+  Maybe<int64_t> CreateSymbolId(const T& conf) {
+    return detail::CreateSymbolIdHelper<T>::Call(mut_id_generator(), mut_instruction_list(),
+                                                 mut_eager_symbol_list(), conf);
+  }
 
   vm::cfg::InstructionListProto* mut_instruction_list() { return instruction_list_.get(); }
   eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_.get(); }
