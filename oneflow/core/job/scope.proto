@@ -5,6 +5,7 @@ import "oneflow/core/job/mirrored_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
 
 message ScopeProto {
+  // TODO(lixinqi): remove field `symbol_id`, because it breaks the cache
   optional int64 symbol_id = 10;
   required int64 job_desc_symbol_id = 20;
   required int64 device_parallel_desc_symbol_id = 30;
@@ -15,4 +16,9 @@ message ScopeProto {
   optional int64 parent_scope_symbol_id = 70;
   required int64 session_id = 80;
   map<string, AttrValue> attr_name2attr_value = 90;
+
+  // map<string, bool> should be regarded as set<string>. it's value should be always true
+  // TODO(lixinqi): Reimplement op_collection_names in FlexValue
+  // Each key in op_collection_names represents a op collection
+  map<string, bool> op_collection_names = 100;
 }
