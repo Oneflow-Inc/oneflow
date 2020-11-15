@@ -22,7 +22,6 @@ import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
-import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
@@ -41,6 +40,7 @@ import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
 import oneflow
+import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 
 oneflow_api = oneflow.oneflow_api
 
@@ -421,14 +421,13 @@ class InstructionsBuilder(object):
         return symbol
 
     def GetParallelDescSymbol(self, parallel_conf):
-        device_tag = parallel_conf.device_tag
         serialized_parallel_conf = parallel_conf.SerializeToString()
         if symbol_storage.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
             return symbol_storage.GetSymbol4SerializedParallelConf(
                 serialized_parallel_conf
             )
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
-        symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf, device_tag)
+        symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf)
         symbol_storage.SetSymbol4Id(symbol_id, symbol)
         symbol_storage.SetSymbol4SerializedParallelConf(
             serialized_parallel_conf, symbol
