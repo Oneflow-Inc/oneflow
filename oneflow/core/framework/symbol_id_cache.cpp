@@ -18,8 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-COMMAND(Global<JobConfSymbolIdCache>::SetAllocated(new JobConfSymbolIdCache()));
-COMMAND(Global<ParallelConfSymbolIdCache>::SetAllocated(new ParallelConfSymbolIdCache()));
-COMMAND(Global<ScopeSymbolIdCache>::SetAllocated(new ScopeSymbolIdCache()));
+namespace symbol {
+
+COMMAND(Global<IdCache<cfg::JobConfigProto>>::SetAllocated(new IdCache<cfg::JobConfigProto>()));
+COMMAND(Global<IdCache<cfg::ParallelConf>>::SetAllocated(new IdCache<cfg::ParallelConf>()));
+COMMAND(Global<IdCache<cfg::ScopeProto>>::SetAllocated(new IdCache<cfg::ScopeProto>()));
+
+}  // namespace symbol
 
 }  // namespace oneflow

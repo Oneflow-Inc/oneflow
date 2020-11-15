@@ -69,6 +69,18 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
   return vm::Run(instruction_list_proto);
 }
 
+Maybe<void> EagerOneflow::RunPhysicalInstruction(
+    const vm::cfg::InstructionListProto& instruction_list_proto,
+    const eager::cfg::EagerSymbolList& eager_symbol_list) {
+  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
+  instruction_list_proto.ToProto(
+      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
+  eager_symbol_list.ToProto(
+      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
+  return RunPhysicalInstruction(
+      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
+}
+
 Maybe<void> EagerOneflow::RunPhysicalInstruction(const std::string& instruction_list_proto_str,
                                                  const std::string& eager_symbol_list_str) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
