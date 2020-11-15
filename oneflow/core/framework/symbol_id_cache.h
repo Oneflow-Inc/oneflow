@@ -39,8 +39,7 @@ class IdCache final {
   IdCache() = default;
   ~IdCache() = default;
 
-  template<typename CreateT>
-  Maybe<int64_t> FindOrCreate(const T& symbol_data, const CreateT& Create) {
+  Maybe<int64_t> FindOrCreate(const T& symbol_data, const std::function<Maybe<int64_t>()>& Create) {
     CHECK_OR_RETURN(!HasSymbolIdTraits<T>::HasSymbolId(symbol_data));
     {
       std::unique_lock<std::mutex> lock(mutex_);
