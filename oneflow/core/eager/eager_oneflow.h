@@ -21,6 +21,17 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.cfg.h"
 
 namespace oneflow {
+
+namespace vm {
+
+namespace cfg {
+
+class InstructionListProto;
+
+}  // namespace cfg
+
+}  // namespace vm
+
 namespace eager {
 
 class EagerOneflow final {
