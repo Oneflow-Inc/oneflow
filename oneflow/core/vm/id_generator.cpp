@@ -30,5 +30,13 @@ Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
   return IdUtil::NewLogicalObjectId();
 }
 
+Maybe<int64_t> PhysicalIdGenerator::NewSymbolId() {
+  return IdUtil::NewPhysicalSymbolId(JUST(GlobalMaybe<MachineCtx>())->this_machine_id());
+}
+
+Maybe<int64_t> PhysicalIdGenerator::NewObjectId() {
+  return IdUtil::NewPhysicalObjectId(JUST(GlobalMaybe<MachineCtx>())->this_machine_id());
+}
+
 }  // namespace vm
 }  // namespace oneflow
