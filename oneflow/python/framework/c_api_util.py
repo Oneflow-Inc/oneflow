@@ -575,18 +575,20 @@ def GetFunctionConfigDef():
 
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
-    instructions = str(text_format.MessageToString(vm_instruction_list))
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunLogicalInstruction(instructions, symbols)
+    error_str = oneflow_internal.RunLogicalInstruction(
+        str(vm_instruction_list), symbols
+    )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
 
 
 def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
-    instructions = str(text_format.MessageToString(vm_instruction_list))
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunPhysicalInstruction(instructions, symbols)
+    error_str = oneflow_internal.RunPhysicalInstruction(
+        str(vm_instruction_list), symbols
+    )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)

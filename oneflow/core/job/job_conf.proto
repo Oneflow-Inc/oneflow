@@ -127,7 +127,7 @@ message JobConfigProto {
 
   optional int64 concurrency_width = 1000 [default = 128];
 
-  map<string, UserOpAttrVal> flag_name2flag_value = 2000;
+  map<string, AttrValue> flag_name2flag_value = 2000;
 
   optional int64 logical_object_id = 3000;
 

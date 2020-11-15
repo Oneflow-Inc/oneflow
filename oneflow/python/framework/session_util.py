@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
-import oneflow.core.vm.instruction_pb2 as instr_util
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
@@ -49,6 +48,7 @@ from typing import Callable
 import inspect
 import oneflow
 import oneflow_api
+import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import traceback
 
 
@@ -75,7 +75,7 @@ class Session(object):
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
         self._UpdateFunctionFlagName2DefaultVal()
-        self.instruction_list_ = instr_util.InstructionListProto()
+        self.instruction_list_ = instr_cfg.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
@@ -161,7 +161,7 @@ class Session(object):
         return self.job_name2function_desc_[job_name]
 
     def _UpdateFunctionFlagName2DefaultVal(self):
-        items = c_api_util.GetFunctionConfigDef().flag_name2flag_def.items()
+        items = c_api_util.GetFunctionConfigDef().attr_name2attr_def.items()
         self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
 
     def TryInit(self):
