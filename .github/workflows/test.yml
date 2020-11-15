@@ -1,7 +1,7 @@
 name: Build and Test CI
 on:
   pull_request:
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [review_requested]
     branches:
       - '*'
     paths-ignore:
@@ -26,7 +26,7 @@ jobs:
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need CI')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-bot')
     steps:
     - uses: actions/checkout@v2
     - name: Mirror dependencies to aliyun
@@ -42,7 +42,7 @@ jobs:
     needs: [check_license_and_format, mirror_third_party]
     name: CUDA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need CI')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-bot')
     env:
       ci_tmp_dir: /home/ci-user/ci-tmp
       wheelhouse_dir: "/home/ci-user/ci-tmp/wheelhouse"
@@ -123,7 +123,7 @@ jobs:
     needs: [check_license_and_format, build_and_test_cuda, mirror_third_party]
     name: XLA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need CI')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-bot')
     env:
       ci_tmp_dir: /home/ci-user/ci-tmp-xla
       wheelhouse_dir: "/home/ci-user/ci-tmp-xla/wheelhouse"
@@ -159,7 +159,7 @@ jobs:
     needs: [check_license_and_format, build_and_test_cuda]
     name: CPU-only
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need CI')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-bot')
     env:
       ci_tmp_dir: /home/ci-user/ci-tmp-cpu
       wheelhouse_dir: "/home/ci-user/ci-tmp-cpu/wheelhouse"
