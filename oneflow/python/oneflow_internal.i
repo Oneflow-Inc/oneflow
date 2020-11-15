@@ -23,7 +23,6 @@
 }
 %include "oneflow/core/job/foreign_job_instance.h"
 %include "oneflow/core/job/foreign_watcher.h"
-%include "oneflow/core/job/foreign_callback.h"
 %include "oneflow/python/oneflow_internal.h"
 %include "oneflow/python/oneflow_internal.e.h.expanded.h"
 
