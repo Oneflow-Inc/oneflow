@@ -156,8 +156,8 @@ def compare_with_tensorflow(
     assert np.allclose(
         global_storage["weight_diff"].numpy().transpose(weight_data_transpose),
         tf_weight_diff.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
+        rtol=5e-3,
+        atol=5e-3,
     )
 
 
