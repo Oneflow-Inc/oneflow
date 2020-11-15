@@ -17,7 +17,7 @@ jobs:
   check_license_and_format:
     name: License and format
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-bot')
     steps:
     - uses: actions/checkout@v2
     - name: Check license and format (please run 'make of_format' if failed)
