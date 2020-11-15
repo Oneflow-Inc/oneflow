@@ -57,17 +57,15 @@ class TmpBufferManager final {
     const size_t index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
-    const size_t rand_value_bytes = GetCudaAlignedSize(device_num_class * sizeof(unsigned int));
     cub_tmp_storage_bytes_ = GetCubSortPairTempStorageSize<K>(device_num_class);
 
     label_buffer_offset_ = 0;
     index_buffer_offset_ = label_buffer_offset_ + label_buffer_bytes;
     sorted_label_buffer_offset_ = index_buffer_offset_ + index_buffer_bytes;
     sorted_index_buffer_offset_ = sorted_label_buffer_offset_ + sorted_label_buffer_bytes;
-    rand_value_offset_ = sorted_index_buffer_offset_ + sorted_index_buffer_bytes;
-    cub_tmp_storage_offset_ = rand_value_offset_ + rand_value_bytes;
+    cub_tmp_storage_offset_ = sorted_index_buffer_offset_ + sorted_index_buffer_bytes;
     total_buffer_size_ = label_buffer_bytes + index_buffer_bytes + sorted_label_buffer_bytes
-                         + sorted_index_buffer_bytes + rand_value_bytes + cub_tmp_storage_bytes_;
+                         + sorted_index_buffer_bytes + cub_tmp_storage_bytes_;
   }
   ~TmpBufferManager() = default;
 
@@ -88,10 +86,6 @@ class TmpBufferManager final {
   K* SortedIndexBufferPtr() const {
     CHECK(ptr_ != nullptr);
     return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + sorted_index_buffer_offset_);
-  }
-  unsigned int* RandValuePtr() const {
-    CHECK(ptr_ != nullptr);
-    return reinterpret_cast<unsigned int*>(reinterpret_cast<char*>(ptr_) + rand_value_offset_);
   }
   K* LabelMapPtr() const { return LabelBufferPtr(); }
   void* CubTmpStoragePtr() const {
