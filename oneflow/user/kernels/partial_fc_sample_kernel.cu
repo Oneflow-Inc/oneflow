@@ -19,7 +19,11 @@ limitations under the License.
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
 #include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
+#ifdef WITH_CUDA
 #include <cub/cub.cuh>
+#include <curand.h>
+#include <curand_kernel.h>
+#endif
 
 namespace oneflow {
 namespace user_op {
@@ -107,38 +111,76 @@ class TmpBufferManager final {
   void* ptr_;
 };
 
+int GetThreadNum(const cudaDeviceProp& prop) {
+  switch (prop.major) {
+    case 3:  // Kepler
+      return 2 * 192;
+    case 5:  // Maxwell
+      return 2 * 128;
+    case 6:  // Pascal
+      if ((prop.minor == 1) || (prop.minor == 2)) {
+        return 2 * 128;
+      } else {
+        return 2 * 64;
+      }
+    case 7:  // Volta and Turing
+      return 2 * 64;
+    default: return 2 * 64;
+  }
+}
+
+__global__ void SetupKernel(int64_t seed, curandState* state) {
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
+                       + (static_cast<size_t>(id) >> 2U));
+  curand_init(local_seed, 0, 0, &state[id]);
+}
+
+template<typename K>
+__global__ void GenerateGpu(curandState* state, const int64_t n, const int64_t max_val, K* buffer) {
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandState localState = state[id];
+  CUDA_1D_KERNEL_LOOP(i, n) { buffer[i] = static_cast<K>(curand(state) % max_val); }
+  state[id] = localState;
+}
+
 class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelState {
  public:
   DistributedPartialFcSampleOpKernelState(DeviceCtx* ctx, int64_t lower, int64_t upper,
                                           int64_t num_sample_per_rank)
       : lower_(lower), upper_(upper), num_sample_per_rank_(num_sample_per_rank) {
     CHECK_NOTNULL(ctx);
-    OF_CURAND_CHECK(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
-    OF_CURAND_CHECK(
-        curandSetPseudoRandomGeneratorSeed(curand_generator_, static_cast<int64_t>(1111L)));
-    OF_CURAND_CHECK(curandSetStream(curand_generator_, ctx->cuda_stream()));
+
+    cudaDeviceProp prop;
+    OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
+    block_num_ = prop.multiProcessorCount;
+    thread_num_ = GetThreadNum(prop);
+    OF_CUDA_CHECK(cudaMalloc(&curand_states_, block_num_ * thread_num_ * sizeof(curandState)));
+    SetupKernel<<<block_num_, thread_num_>>>(111L, curand_states_);
   }
-  ~DistributedPartialFcSampleOpKernelState() override = default;
+  ~DistributedPartialFcSampleOpKernelState() { OF_CUDA_CHECK(cudaFree(curand_states_)); };
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
   int64_t num_sample_per_rank() const { return num_sample_per_rank_; }
-  curandGenerator_t& gen() { return curand_generator_; }
+
+  template<typename K>
+  void GenRandomIndexs(const int64_t n, const int64_t max_val, K* buffer) {
+    GenerateGpu<K><<<block_num_, thread_num_>>>(curand_states_, n, max_val, buffer);
+  }
 
  private:
   const int64_t lower_;
   const int64_t upper_;
   const int64_t num_sample_per_rank_;
-  curandGenerator_t curand_generator_;
+  curandState* curand_states_;
+  int32_t block_num_;
+  int32_t thread_num_;
 };
 
 template<typename K>
-__global__ void InitBuffer(const int64_t n, const unsigned int* rand_value, K* label_buffer,
-                           K* index_buffer) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    label_buffer[i] = i;
-    index_buffer[i] = static_cast<K>(rand_value[i] % n);
-  }
+__global__ void InitBuffer(const int64_t n, K* label_buffer) {
+  CUDA_1D_KERNEL_LOOP(i, n) { label_buffer[i] = i; }
 }
 
 template<typename K>
@@ -211,13 +253,12 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     CHECK_EQ(weight->shape().At(0), kernel_state->upper() - kernel_state->lower());
     const int64_t upper_bound = kernel_state->upper();
     const int64_t lower_bound = kernel_state->lower();
-    OF_CURAND_CHECK(
-        curandGenerate(kernel_state->gen(), buffer_manager.RandValuePtr(), num_classes));
+
+    kernel_state->GenRandomIndexs<K>(num_classes, num_classes, buffer_manager.IndexBufferPtr());
+
     const int64_t num_sample = kernel_state->num_sample_per_rank();
     InitBuffer<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
-                 ctx->device_ctx()->cuda_stream()>>>(num_classes, buffer_manager.RandValuePtr(),
-                                                     buffer_manager.LabelBufferPtr(),
-                                                     buffer_manager.IndexBufferPtr());
+                 ctx->device_ctx()->cuda_stream()>>>(num_classes, buffer_manager.LabelBufferPtr());
     IndexSetPos<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                   ctx->device_ctx()->cuda_stream()>>>(
         batch_size, lower_bound, num_classes, label->dptr<K>(), buffer_manager.IndexBufferPtr());
@@ -227,7 +268,6 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
                     buffer_manager.SortedIndexBufferPtr(), buffer_manager.SortedLabelBufferPtr());
     // check num_sample > num_pos
     // get sampled_label
-
     GetSampleLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
                                                          buffer_manager.SortedLabelBufferPtr(),
