@@ -26,9 +26,7 @@ from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 
 
-def compare_with_np(
-    device_type, label_type, num_classes, num_sample, batch_size, indexed_slice_update
-):
+def compare_with_np(device_type, label_type, num_classes, num_sample, batch_size):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     if device_type == "cpu":
@@ -149,14 +147,23 @@ flow.clear_default_session()
 
 @flow.unittest.skip_unless_1n4d()
 class TestPartialFc(flow.unittest.TestCase):
-    def test_partial_fc(test_case):
+    def test_partial_fc1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["label_type"] = ["int32"]
         arg_dict["num_classes"] = [85744]
         arg_dict["device_num_sample"] = [8600]
         arg_dict["batch_size"] = [512]
-        arg_dict["indexed_slice_update"] = [False]
+        for arg in GenArgList(arg_dict):
+            compare_with_np(*arg)
+
+    def test_partial_fc2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["label_type"] = ["int32"]
+        arg_dict["num_classes"] = [200]
+        arg_dict["device_num_sample"] = [64]
+        arg_dict["batch_size"] = [32]
         for arg in GenArgList(arg_dict):
             compare_with_np(*arg)
 
