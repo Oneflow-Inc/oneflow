@@ -16,8 +16,10 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -44,12 +46,19 @@ std::string MakeOutputOpConf(const std::string& output_op_name, const LogicalBlo
   return GenLogicalBlobName(output_op_name, "out");
 }
 
-class AddInputOutputOpsPass final : public OpGraphPass {
+class AddInputOutputOpsPass final : public JobPass {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(AddInputOutputOpsPass);
   AddInputOutputOpsPass() = default;
   ~AddInputOutputOpsPass() override = default;
-  bool IsEnabled() const override { return true; }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  bool IsEnabled(const JobPassCtx& ctx) const { return true; }
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -147,6 +156,6 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("AddInputOutputOpsPass", AddInputOutputOpsPass);
+REGISTER_JOB_PASS("AddInputOutputOpsPass", AddInputOutputOpsPass);
 
 }  // namespace oneflow
