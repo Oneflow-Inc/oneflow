@@ -1467,7 +1467,7 @@ def top_k(
     name = name if name is not None else id_util.UniqueStr("TopK_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert axis < num_axes, "axis out of range"
+    assert 0 <= axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _top_k_at_last_dim(input, k, sorted, name)
     else:
@@ -1531,7 +1531,7 @@ def argmax(
     name = name if name is not None else id_util.UniqueStr("ArgMax_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert axis < num_axes, "axis out of range"
+    assert 0 <= axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _argmax_at_last_dim(input, name)
     else:
