@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_SYMBOL_ID_CACHE_H_
 
 #include <mutex>
+#include <functional>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
