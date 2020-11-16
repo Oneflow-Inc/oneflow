@@ -278,6 +278,49 @@ __global__ void GetMappedLabel(const int64_t n, const K* sorted_label_index, con
   CUDA_1D_KERNEL_LOOP(i, n) { maped_label[sorted_label_index[i]] = label_map[i]; }
 }
 
+template<typename K>
+void SampleIndex(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
+                 const int64_t lower_bound, const TmpBufferManager<K>& buffer_manager,
+                 const K* label_ptr) {
+  InitBuffer<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      num_classes, buffer_manager.LabelBufferPtr());
+  IndexSetPos<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      batch_size, lower_bound, num_classes, label_ptr, buffer_manager.IndexBufferPtr());
+  SortPairs<K, K>(ctx->cuda_stream(), num_classes, buffer_manager.GetCubTmpStorageSize(),
+                  buffer_manager.IndexBufferPtr(), buffer_manager.LabelBufferPtr(),
+                  buffer_manager.CubTmpStoragePtr(), buffer_manager.SortedIndexBufferPtr(),
+                  buffer_manager.SortedLabelBufferPtr());
+}
+
+template<typename K>
+void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
+              const int64_t lower_bound, const int64_t parallel_num, const int64_t num_sample,
+              const TmpBufferManager<K>& buffer_manager, const K* label_ptr, K* maped_label_ptr) {
+  InitBuffer<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      batch_size, buffer_manager.LabelIndexPtr());
+  SortPairs<K, K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(), label_ptr,
+                  buffer_manager.LabelIndexPtr(), buffer_manager.CubTmpStoragePtr(),
+                  buffer_manager.SortedLabelPtr(), buffer_manager.SortedLabelIndexPtr());
+  size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
+  GetUniqueFlags<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                   ctx->cuda_stream()>>>(batch_size, buffer_manager.SortedLabelPtr(),
+                                         buffer_manager.NotEqualToPreviousPtr());
+  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum(
+      buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.NotEqualToPreviousPtr(),
+      buffer_manager.LabelIndexPtr(), batch_size, ctx->cuda_stream())));
+  GetParallelStartIdx<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                        ctx->cuda_stream()>>>(
+      batch_size, parallel_num, num_classes, buffer_manager.SortedLabelPtr(),
+      buffer_manager.LabelIndexPtr(), buffer_manager.ParallelStartIdx(),
+      buffer_manager.ParallelStartMap());
+  GetLabelMap<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      batch_size, parallel_num, num_sample, buffer_manager.ParallelStartIdx(),
+      buffer_manager.ParallelStartMap(), buffer_manager.LabelIndexPtr());
+  GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                   ctx->cuda_stream()>>>(batch_size, buffer_manager.SortedLabelIndexPtr(),
+                                         buffer_manager.LabelIndexPtr(), maped_label_ptr);
+}
+
 }  // namespace
 
 template<typename T, typename K>
@@ -325,20 +368,11 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(weight->shape().At(0), kernel_state->upper() - kernel_state->lower());
     const int64_t lower_bound = kernel_state->lower();
-
-    kernel_state->GenRandomIndexs<K>(num_classes, num_classes, buffer_manager.IndexBufferPtr());
-
     const int64_t num_sample = kernel_state->num_sample_per_rank();
-    InitBuffer<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
-                 ctx->device_ctx()->cuda_stream()>>>(num_classes, buffer_manager.LabelBufferPtr());
-    IndexSetPos<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                  ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, lower_bound, num_classes, label->dptr<K>(), buffer_manager.IndexBufferPtr());
-    SortPairs<K, K>(ctx->device_ctx()->cuda_stream(), num_classes,
-                    buffer_manager.GetCubTmpStorageSize(), buffer_manager.IndexBufferPtr(),
-                    buffer_manager.LabelBufferPtr(), buffer_manager.CubTmpStoragePtr(),
-                    buffer_manager.SortedIndexBufferPtr(), buffer_manager.SortedLabelBufferPtr());
-    // check num_sample > num_pos
+    kernel_state->GenRandomIndexs<K>(num_classes, num_classes, buffer_manager.IndexBufferPtr());
+    SampleIndex<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, buffer_manager,
+                   label->dptr<K>());
+
     // get sampled_label
     GetSampleLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
@@ -351,40 +385,10 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
         0);
 
     // get mapped label
-    // init LabelIndex
-    InitBuffer<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                 ctx->device_ctx()->cuda_stream()>>>(batch_size, buffer_manager.LabelIndexPtr());
-    // sort labels
-    SortPairs<K, K>(ctx->device_ctx()->cuda_stream(), batch_size,
-                    buffer_manager.GetCubTmpStorageSize(), label->dptr<K>(),
-                    buffer_manager.LabelIndexPtr(), buffer_manager.CubTmpStoragePtr(),
-                    buffer_manager.SortedLabelPtr(), buffer_manager.SortedLabelIndexPtr());
-
-    size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
-    GetUniqueFlags<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                     ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, buffer_manager.SortedLabelPtr(), buffer_manager.NotEqualToPreviousPtr());
-    OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum(
-        buffer_manager.CubTmpStoragePtr(), temp_storage_bytes,
-        buffer_manager.NotEqualToPreviousPtr(), buffer_manager.LabelIndexPtr(),
-        static_cast<int>(batch_size), ctx->device_ctx()->cuda_stream())));
-
-    GetParallelStartIdx<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, parallel_num, num_classes, buffer_manager.SortedLabelPtr(),
-        buffer_manager.LabelIndexPtr(), buffer_manager.ParallelStartIdx(),
-        buffer_manager.ParallelStartMap());
-
-    GetLabelMap<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                  ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, parallel_num, num_sample, buffer_manager.ParallelStartIdx(),
-        buffer_manager.ParallelStartMap(), buffer_manager.LabelIndexPtr());
-
-    GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                     ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, buffer_manager.SortedLabelIndexPtr(), buffer_manager.LabelIndexPtr(),
-        maped_label->mut_dptr<K>());
+    MapLabel<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, parallel_num, num_sample,
+                buffer_manager, label->dptr<K>(), maped_label->mut_dptr<K>());
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
