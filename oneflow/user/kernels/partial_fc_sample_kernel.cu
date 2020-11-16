@@ -61,14 +61,16 @@ template<typename K>
 class TmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
-  TmpBufferManager(void* ptr, const int64_t device_num_class) : ptr_(ptr) {
+  TmpBufferManager(void* ptr, const int64_t device_num_class, const int64_t batch_size,
+                   const int64_t parallel_num)
+      : ptr_(ptr) {
     const size_t label_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     cub_tmp_storage_bytes_ = std::max(GetCubSortPairTempStorageSize<K>(device_num_class),
-                                      GetCubScanTempStorageSize<K>(512));
-
+                                      GetCubScanTempStorageSize<K>(batch_size));
+    parallel_num_ = parallel_num;
     label_buffer_offset_ = 0;
     index_buffer_offset_ = label_buffer_offset_ + label_buffer_bytes;
     sorted_label_buffer_offset_ = index_buffer_offset_ + index_buffer_bytes;
@@ -111,7 +113,7 @@ class TmpBufferManager final {
   K* SortedLabelIndexPtr() const { return SortedIndexBufferPtr(); }
 
   K* ParallelStartIdx() const { return LabelBufferPtr(); }
-  K* ParallelStartMap() const { return LabelBufferPtr() + 5; }
+  K* ParallelStartMap() const { return LabelBufferPtr() + parallel_num_ + 1; }
 
  private:
   size_t label_buffer_offset_;
@@ -122,6 +124,7 @@ class TmpBufferManager final {
   size_t cub_tmp_storage_offset_;
   size_t cub_tmp_storage_bytes_;
   size_t total_buffer_size_;
+  int64_t parallel_num_;
   void* ptr_;
 };
 
@@ -314,12 +317,13 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
 
     const int64_t batch_size = label->shape().At(0);
     const int64_t num_classes = weight->shape().At(0);
-    TmpBufferManager<K> buffer_manager(tmp_buffer->mut_dptr(), num_classes);
+    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    TmpBufferManager<K> buffer_manager(tmp_buffer->mut_dptr(), num_classes, batch_size,
+                                       parallel_num);
 
     auto* kernel_state = dynamic_cast<DistributedPartialFcSampleOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(weight->shape().At(0), kernel_state->upper() - kernel_state->lower());
-    const int64_t upper_bound = kernel_state->upper();
     const int64_t lower_bound = kernel_state->lower();
 
     kernel_state->GenRandomIndexs<K>(num_classes, num_classes, buffer_manager.IndexBufferPtr());
@@ -340,9 +344,6 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
                                                          buffer_manager.SortedLabelBufferPtr(),
                                                          sampled_label->mut_dptr<K>());
-    // Memcpy<DeviceType::kGPU>(ctx->device_ctx(), sampled_label->mut_dptr<void>(),
-    //                         buffer_manager.SortedLabelBufferPtr(),
-    //                         num_sample * GetSizeOfDataType(sampled_label->data_type()));
     // get sampled weight
     GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(
         ctx->device_ctx(), buffer_manager.SortedLabelBufferPtr(), num_sample, weight->dptr<T>(),
@@ -368,23 +369,16 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
         buffer_manager.NotEqualToPreviousPtr(), buffer_manager.LabelIndexPtr(),
         static_cast<int>(batch_size), ctx->device_ctx()->cuda_stream())));
 
-    // NotEqualToPreviousAdjacentIterator<K, K>
-    // unique_counting_iter(buffer_manager.NotEqualToPreviousPtr(), 0);
-    // OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
-    //    buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, unique_counting_iter,
-    //    buffer_manager.LabelIndexPtr(), batch_size, ctx->device_ctx()->cuda_stream())));
-
     GetParallelStartIdx<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                           ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, ctx->parallel_ctx().parallel_num(), num_classes,
-        buffer_manager.SortedLabelPtr(), buffer_manager.LabelIndexPtr(),
-        buffer_manager.ParallelStartIdx(), buffer_manager.ParallelStartMap());
+        batch_size, parallel_num, num_classes, buffer_manager.SortedLabelPtr(),
+        buffer_manager.LabelIndexPtr(), buffer_manager.ParallelStartIdx(),
+        buffer_manager.ParallelStartMap());
 
     GetLabelMap<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                   ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, ctx->parallel_ctx().parallel_num(), num_sample,
-        buffer_manager.ParallelStartIdx(), buffer_manager.ParallelStartMap(),
-        buffer_manager.LabelIndexPtr());
+        batch_size, parallel_num, num_sample, buffer_manager.ParallelStartIdx(),
+        buffer_manager.ParallelStartMap(), buffer_manager.LabelIndexPtr());
 
     GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(
@@ -403,7 +397,10 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
         const int64_t num_classes = ctx->TensorDesc4ArgNameAndIndex("weight", 0)->shape().At(0); \
-        TmpBufferManager<OF_PP_PAIR_FIRST(ltype_pair)> buffer_manager(nullptr, num_classes);     \
+        const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("label", 0)->shape().At(0);   \
+        const int64_t parallel_num = ctx->parallel_ctx().parallel_num();                         \
+        TmpBufferManager<OF_PP_PAIR_FIRST(ltype_pair)> buffer_manager(nullptr, num_classes,      \
+                                                                      batch_size, parallel_num); \
         return buffer_manager.GetTotalBufferSize();                                              \
       });
 
