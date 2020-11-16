@@ -3,8 +3,6 @@ name: Check PR
 on:
   pull_request:
     types: [opened, labeled, unlabeled]
-  pull_request_target:
-    types: [opened, labeled, unlabeled]
 
 jobs:
   check_labels:
