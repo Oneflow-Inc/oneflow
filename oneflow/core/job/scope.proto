@@ -16,9 +16,5 @@ message ScopeProto {
   optional int64 parent_scope_symbol_id = 70;
   required int64 session_id = 80;
   map<string, AttrValue> attr_name2attr_value = 90;
-
-  // map<string, bool> should be regarded as set<string>. it's value should be always true
-  // TODO(lixinqi): Reimplement op_collection_names in FlexValue
-  // Each key in op_collection_names represents a op collection
-  map<string, bool> op_collection_names = 100;
+  optional string calculation_pass_name = 100 [default = "forward_pass"];
 }

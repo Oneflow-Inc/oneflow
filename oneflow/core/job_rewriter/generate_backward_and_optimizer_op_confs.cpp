@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/interpreter.h"
@@ -112,8 +113,8 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
-Maybe<JobBuilder> WithOpCollectionScope(const std::string& op_collection, Job* job,
-                                        const std::function<Maybe<void>()>& Handler) {
+Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* job,
+                                           const std::function<Maybe<void>()>& Handler) {
   HashSet<std::string> exists_op_names;
   for (const auto& op_conf : job->net().op()) {
     CHECK_OR_RETURN(exists_op_names.emplace(op_conf.name()).second);
@@ -134,8 +135,7 @@ Maybe<JobBuilder> WithOpCollectionScope(const std::string& op_collection, Job* j
     new_scope.InitFromProto(old_scope.scope_proto());
     // TODO(lixinqi): delete this line after ScopeProto::symbol_id removed
     new_scope.clear_symbol_id();
-    new_scope.set_parent_scope_symbol_id(old_scope_symbol_id);
-    (*new_scope.mutable_op_collection_names())[op_collection] = true;
+    new_scope.set_calculation_pass_name(pass_name);
     int64_t symbol_id = 0;
     JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
       symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(new_scope));
@@ -155,22 +155,22 @@ Maybe<JobBuilder> WithOpCollectionScope(const std::string& op_collection, Job* j
   return new_job_builder;
 }
 
-Maybe<JobBuilder> WithOptimizerOpCollectionScope(Job* job,
-                                                 const std::function<Maybe<void>()>& Handler) {
-  return WithOpCollectionScope(kOpCollectionOptimizer, job, Handler);
-}
-
 Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   auto job_builder = std::make_shared<JobBuilder>(job);
+  const JobBuilder* old_job_builder = job_builder.get();
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  JUST(AutoGrad(op_graph, job_builder.get(), &lbi2diff_lbi));
+  job_builder = JUST(WithCalculationPassScope(kBackwardPass, job, [&]() -> Maybe<void> {
+    CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
+    JUST(AutoGrad(op_graph, job_builder.get(), &lbi2diff_lbi));
+    return Maybe<void>::Ok();
+  }));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
-  auto* old_job_builder = job_builder.get();
-  job_builder = JUST(WithOptimizerOpCollectionScope(job, [&]() -> Maybe<void> {
+  old_job_builder = job_builder.get();
+  job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
