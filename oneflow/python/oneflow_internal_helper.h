@@ -53,12 +53,6 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
   Global<ForeignWatcher>::SetAllocated(watcher);
@@ -269,18 +263,6 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   return JUST(scope.GetParallelDescSymbolId(op_conf));
-}
-
-Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
-                                  const std::string& eager_symbol_list_str) {
-  return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list_str,
-                                                                   eager_symbol_list_str);
-}
-
-Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
-                                   const std::string& eager_symbol_list_str) {
-  return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list_str,
-                                                                    eager_symbol_list_str);
 }
 
 Maybe<long long> CurrentMachineId() {
