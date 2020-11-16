@@ -2279,13 +2279,13 @@ def deconv2d(
     r"""2d transposed convolution.
 
     Args:
-        value (Optional[remote_blob_util.BlobDef], optional):   4-d `Blob`. Defaults to None.
+        value (Optional[remote_blob_util.BlobDef], optional): The input 4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
         output_shape (Optional[remote_blob_util.BlobDef], optional): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
         strides (Optional[Union[int, Sequence[int]]], optional): `int` or `int list`. Defaults to None.
         padding (str, optional):  `'VALID'` or `'SAME'`. Defaults to "VALID".
-        data_format (str, optional): `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
-        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+        data_format (str, optional): The data format, includes `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
         input (Optional[remote_blob_util.BlobDef], optional): Alias for value. Defaults to None.
         filters (Optional[remote_blob_util.BlobDef], optional): Alias for filter. Defaults to None.
         dilations (Optional[Union[int, Sequence[int]]], optional): The dilation factor for each dimension of input. Defaults to None.
@@ -2485,7 +2485,6 @@ def deconv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
-        .Attr("filters", channels)
         .Attr("padding_before", padding_before)
         .Attr("data_format", channel_pos)
         .Attr("kernel_size", kernel_size)
@@ -2510,8 +2509,29 @@ def deconv2d_torch(
     input=None,
     filters=None,
     dilations=None,
-):
+) -> remote_blob_util.BlobDef:
+    r"""The 2d transposed convolution in Pytorch version.
 
+    Args:
+        value ([type], optional): The input 4-d `Blob`. Defaults to None.
+        filter ([type], optional): Filter of transposed convolution. Defaults to None.
+        output_padding ([type], optional): Additional padding to one side of each dimension in the output. Defaults to None.
+        strides ([type], optional): The stride for the convolution. Defaults to None.
+        padding_needed ([type], optional): Additional padding to input, it needs to be divisible by 2. Defaults to None.
+        data_format (str, optional): The data format, includes `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
+        name ([type], optional): The name for the operation. Defaults to None.
+        input ([type], optional): Alias for value. Defaults to None.
+        filters ([type], optional): Alias for filter. Defaults to None.
+        dilations ([type], optional): The dilation factor for each dimension of input. Defaults to None.
+
+    Raises:
+        ValueError: dilations length must be 2 when passed as a list.
+        ValueError: dilations must be an int or a list.
+        ValueError: data_format must be "NHWC" or "NCHW".
+
+    Returns:
+        remote_blob_util.BlobDef: A `Blob` with the same type as `value`.
+    """
     assert (value is not None) ^ (
         input is not None
     ), "only one of `input` and `value` could be not None"
