@@ -169,20 +169,20 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   JUST(AutoGrad(op_graph, job_builder.get(), &lbi2diff_lbi));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
-  AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-  AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-  JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
-  ScaleModelDiffByLossScale(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-  const NormalModelUpdateOpUserConf& model_update_conf =
-      job->job_conf().train_conf().model_update_conf();
-  RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-  if (model_update_conf.has_clip_conf()) {
-    ClipGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi,
-                 model_update_conf.clip_conf());
-  }
   auto* old_job_builder = job_builder.get();
   job_builder = JUST(WithOptimizerOpCollectionScope(job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
+    AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
+    ScaleModelDiffByLossScale(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    const NormalModelUpdateOpUserConf& model_update_conf =
+        job->job_conf().train_conf().model_update_conf();
+    RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    if (model_update_conf.has_clip_conf()) {
+      ClipGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi,
+                   model_update_conf.clip_conf());
+    }
     AddOptimizerOpConf(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi);
     return Maybe<void>::Ok();
   }));
