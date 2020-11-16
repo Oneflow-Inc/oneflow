@@ -17,11 +17,9 @@ include "mlir/IR/OpBase.td"
 
 def OneFlow_Dialect : Dialect {
     let name = "oneflow";
-    let summary = "A oneflow out-of-tree MLIR dialect.";
+    let summary = "OneFlow MLIR dialect.";
     let description = [{
-        This dialect is an example of an out-of-tree MLIR dialect designed to
-        illustrate the basic setup required to develop MLIR-based tools without
-        working inside of the LLVM source tree.
+        This dialect is the IR of OneFlow.
     }];
     let cppNamespace = "::mlir::oneflow";
 }
