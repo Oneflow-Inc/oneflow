@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
@@ -82,8 +83,8 @@ class AddSspVariableProxyPass final : public JobPass {
       for (const auto& ibn : op.input_bns()) {
         if (op.BnInOp2Lbi(ibn) != old_var_out_lbi) { continue; }
         int64_t scope_symbol_id = op.op_conf().scope_symbol_id();
-        bool in_optimizer_op_collection = JUST(IsInOptimizerOpCollection(scope_symbol_id));
-        const auto* lbn = (in_optimizer_op_collection ? &ref_lbn : &value_lbn);
+        bool in_optimizer_pass = JUST(IsInOptimizerPass(scope_symbol_id));
+        const auto* lbn = (in_optimizer_pass ? &ref_lbn : &value_lbn);
         ReplaceInputLbnInOpCustomizedConf(new_op_conf, ibn, *lbn);
       }
       job_builder->MutOpsOnlyOnce(new_op_confs);
@@ -92,10 +93,9 @@ class AddSspVariableProxyPass final : public JobPass {
     return Maybe<void>::Ok();
   }
 
-  Maybe<bool> IsInOptimizerOpCollection(int64_t scope_symbol_id) const {
+  Maybe<bool> IsInOptimizerPass(int64_t scope_symbol_id) const {
     const auto& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
-    const auto& op_collection = scope.scope_proto().op_collection_names();
-    return op_collection.count(kOpCollectionOptimizer) > 0;
+    return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
   }
 
   Maybe<void> AddSspVarProxyOp(const LogicalBlobId& old_var_out_lbi, const Scope& scope,
