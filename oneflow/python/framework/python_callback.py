@@ -87,7 +87,7 @@ class PythonCallback(oneflow_api.ForeignCallback):
 
     def MakeParallelDescSymbol(self, parallel_conf):
         try:
-            return interpreter_callback.MakeParallelDescSymbol(str(parallel_conf_str))
+            return interpreter_callback.MakeParallelDescSymbol(str(parallel_conf))
         except Exception as e:
             print(traceback.format_exc())
             raise e
