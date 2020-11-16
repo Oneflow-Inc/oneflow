@@ -2447,7 +2447,7 @@ def deconv2d(
         padding_before = [0] * NDims
         input = (
             flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Conv2d_")
+                name if name is not None else id_util.UniqueStr("Deconv2d_")
             )
             .Op("deconv2d")
             .Input("in", [input])
@@ -2574,6 +2574,9 @@ def deconv2d_torch(
     for pad in padding_needed:
         assert pad % 2 == 0
         padding_before.append(pad // 2)
+
+    if output_padding is None: 
+        output_padding = (0, 0)
 
     return (
         flow.user_op_builder(
