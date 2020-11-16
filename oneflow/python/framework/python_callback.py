@@ -55,9 +55,7 @@ class PythonCallback(oneflow_api.ForeignCallback):
 
     def EagerInterpretCompletedOp(self, op_attribute, parallel_conf):
         try:
-            interpreter_callback.InterpretCompletedOp(
-                str(op_attribute), str(parallel_conf)
-            )
+            interpreter_callback.InterpretCompletedOp(str(op_attribute), parallel_conf)
         except Exception as e:
             print(traceback.format_exc())
             raise e
@@ -87,7 +85,7 @@ class PythonCallback(oneflow_api.ForeignCallback):
 
     def MakeParallelDescSymbol(self, parallel_conf):
         try:
-            return interpreter_callback.MakeParallelDescSymbol(str(parallel_conf))
+            return interpreter_callback.MakeParallelDescSymbol(parallel_conf)
         except Exception as e:
             print(traceback.format_exc())
             raise e

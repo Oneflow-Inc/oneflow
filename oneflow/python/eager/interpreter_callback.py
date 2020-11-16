@@ -35,19 +35,12 @@ def MakeScopeSymbol(job_conf_str, parallel_conf_str, is_mirrored):
     ).symbol_id
 
 
-def MakeParallelDescSymbol(parallel_conf_str):
-    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+def MakeParallelDescSymbol(parallel_conf):
     symbol_id = None
-
-    # Temporary transformation
-    parallel_conf_cfg = placement_cfg.ParallelConf()
-    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-    for device_name in parallel_conf.device_name:
-        parallel_conf_cfg.add_device_name(device_name)
 
     def BuildInstruction(builder):
         nonlocal symbol_id
-        symbol_id = builder.GetParallelDescSymbol(parallel_conf_cfg).symbol_id
+        symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
 
     vm_util.LogicalRun(BuildInstruction)
     return symbol_id
@@ -66,22 +59,15 @@ def MirroredCast(op_attribute_str, parallel_conf_str):
     )
 
 
-def InterpretCompletedOp(op_attribute_str, parallel_conf_str):
+def InterpretCompletedOp(op_attribute_str, parallel_conf):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register)
+    _InterpretCompletedOp(op_attribute, parallel_conf, blob_register)
     gradient_util.ReleaseUnusedBlobObject(op_attribute, blob_register)
 
 
-def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
-    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
-
-    # Temporary transformation
-    parallel_conf_cfg = placement_cfg.ParallelConf()
-    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-    for device_name in parallel_conf.device_name:
-        parallel_conf_cfg.add_device_name(device_name)
-    return op_executor.Interpret(op_attribute, parallel_conf_cfg, blob_register)
+def _InterpretCompletedOp(op_attribute, parallel_conf, blob_register):
+    return op_executor.Interpret(op_attribute, parallel_conf, blob_register)
 
 
 def _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register):
