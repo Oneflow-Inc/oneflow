@@ -32,6 +32,7 @@ from test_util import GenArgList
 import unittest
 from collections import OrderedDict
 from typing import List
+import os 
 
 
 def compare_range_with_np_CPU(device_type, machine_ids, device_counts):
@@ -144,6 +145,7 @@ class Testrange1n1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_range_with_np_CPU(*arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_range_gpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
@@ -155,6 +157,7 @@ class Testrange1n1d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 class Testrange1n2d(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_range_gpu_1n2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
