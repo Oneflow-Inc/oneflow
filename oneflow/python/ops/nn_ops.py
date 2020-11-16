@@ -2277,7 +2277,7 @@ def deconv2d(
     dilations: Optional[Union[int, Sequence[int]]] = None,
 ) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution.
-    
+
     Args:
         value (Optional[remote_blob_util.BlobDef], optional): The input 4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
@@ -2485,6 +2485,7 @@ def deconv2d(
         .Input("in", [input])
         .Input("weight", [filters])
         .Output("out")
+        .Attr("filters", channels)
         .Attr("padding_before", padding_before)
         .Attr("data_format", channel_pos)
         .Attr("kernel_size", kernel_size)
