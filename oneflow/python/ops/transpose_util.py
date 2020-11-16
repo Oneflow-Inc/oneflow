@@ -25,7 +25,7 @@ def is_perm(perm: Sequence[int],) -> bool:
 # get the perm when you want to transpose specified axis to the last dimension
 def get_perm_when_transpose_axis_to_last_dim(num_axes: int, axis: int,) -> tuple:
     axis = axis if axis >= 0 else axis + num_axes
-    assert axis < num_axes
+    assert 0 <= axis < num_axes, "axis out of range"
     perm = [dim if dim < axis else dim + 1 for dim in range(num_axes - 1)]
     perm.append(axis)
     return tuple(perm)
