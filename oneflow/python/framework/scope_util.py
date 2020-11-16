@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import traceback
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.eager.vm_util as vm_util
+import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 
@@ -73,9 +73,9 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
 
 
 def InitScopeStack():
-    job_conf = job_conf_pb.JobConfigProto()
-    job_conf.predict_conf.SetInParent()
-    job_conf.job_name = ""
+    job_conf = job_conf_cfg.JobConfigProto()
+    job_conf.mutable_predict_conf()
+    job_conf.set_job_name("")
     scope = MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
     global scope_stack_
     scope_stack_ = [scope]
