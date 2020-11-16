@@ -2324,7 +2324,7 @@ def deconv2d(
                 regularizer=weight_regularizer,
             )
             return flow.nn.conv2d_transpose(value=input,
-                                            output_shape=(1, 16, 64, 128),
+                                            output_shape=(1, 32, 64, 128),
                                             filter=weight,
                                             strides=strides,
                                             padding=padding,
