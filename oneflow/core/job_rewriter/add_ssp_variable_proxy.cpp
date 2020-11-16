@@ -81,14 +81,21 @@ class AddSspVariableProxyPass final : public JobPass {
       auto* new_op_conf = &new_op_confs.at(0);
       for (const auto& ibn : op.input_bns()) {
         if (op.BnInOp2Lbi(ibn) != old_var_out_lbi) { continue; }
-        // TODO(lixinqi): variable should be always consumed mutablely by optimizer
-        const auto* lbn = (op.InputBlobModifier4Ibn(ibn).is_mutable() ? &ref_lbn : &value_lbn);
+        int64_t scope_symbol_id = op.op_conf().scope_symbol_id();
+        bool in_optimizer_op_collection = JUST(IsInOptimizerOpCollection(scope_symbol_id));
+        const auto* lbn = (in_optimizer_op_collection ? &ref_lbn : &value_lbn);
         ReplaceInputLbnInOpCustomizedConf(new_op_conf, ibn, *lbn);
       }
       job_builder->MutOpsOnlyOnce(new_op_confs);
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
+  }
+
+  Maybe<bool> IsInOptimizerOpCollection(int64_t scope_symbol_id) const {
+    const auto& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    const auto& op_collection = scope.scope_proto().op_collection_names();
+    return op_collection.count(kOpCollectionOptimizer) > 0;
   }
 
   Maybe<void> AddSspVarProxyOp(const LogicalBlobId& old_var_out_lbi, const Scope& scope,
