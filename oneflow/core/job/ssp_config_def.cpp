@@ -19,17 +19,15 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_ssp", false, "enable ssp");
+REGISTER_FUNCTION_CONFIG_DEF()
+    .Bool("enable_ssp", false, "enable ssp")
+    .String("ssp_partition_strategy", "naive_sequantial",
+            "ssp partition strategy, Avaiable strategies: naive_sequantial | disable")
+    .ListInt64("ssp_partition_scope_ids", {}, "type: list[int64]. ssp partition scope symbol ids");
 
-REGISTER_FUNCTION_CONFIG_DEF().String(
-    "ssp_partition_strategy", "naive_sequantial",
-    "ssp partition strategy, Avaiable strategies: naive_sequantial | disable");
-REGISTER_FUNCTION_CONFIG_DEF().ListInt64("ssp_partition_scope_ids", {},
-                                         "type: list[int64]. ssp partition scope symbol ids");
-
-REGISTER_SCOPE_CONFIG_DEF().Int64("ssp_num_stages", -1, "total number of ssp stages");
-
-REGISTER_SCOPE_CONFIG_DEF().Int64("ssp_stage_id", -1, "current ssp stage id ");
+REGISTER_SCOPE_CONFIG_DEF()
+    .Int64("ssp_num_stages", -1, "total number of ssp stages")
+    .Int64("ssp_stage_id", -1, "current ssp stage id ");
 
 }  // namespace
 
