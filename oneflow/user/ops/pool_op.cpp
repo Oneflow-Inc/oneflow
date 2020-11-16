@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/utils/pool_util.h"
+#include <numeric>
 
 namespace oneflow {
 
@@ -62,6 +63,17 @@ Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
 Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
   *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
+}
+
+double GetComputaionCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
+  if (ctx->SbpParallel4ArgNameAndIndex("y", 0)->has_split_parallel()) {
+    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  }
+  return logical_computation_cost;
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
@@ -123,7 +135,8 @@ REGISTER_USER_OP("avg_pool_1d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP("avg_pool_1d_grad")
     .Input("x")
@@ -139,7 +152,8 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
 
@@ -155,7 +169,8 @@ REGISTER_USER_OP("avg_pool_2d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP("avg_pool_2d_grad")
     .Input("x")
@@ -171,7 +186,8 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
 
@@ -187,7 +203,8 @@ REGISTER_USER_OP("avg_pool_3d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP("avg_pool_3d_grad")
     .Input("x")
@@ -203,7 +220,8 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
 
@@ -219,7 +237,8 @@ REGISTER_USER_OP("max_pool_1d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP("max_pool_1d_grad")
     .Input("x")
@@ -235,7 +254,8 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
 
@@ -251,7 +271,8 @@ REGISTER_USER_OP("max_pool_2d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP("max_pool_2d_grad")
     .Input("x")
@@ -267,7 +288,8 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
 
@@ -283,7 +305,8 @@ REGISTER_USER_OP("max_pool_3d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP("max_pool_3d_grad")
     .Input("x")
@@ -299,7 +322,8 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(GetComputaionCostFn);
 
 REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
 

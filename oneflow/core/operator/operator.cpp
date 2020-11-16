@@ -709,6 +709,7 @@ double Operator::GetComputeComplexity(
     SbpSignature* sbp_signature,
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
+  // Can we remove mutable here without introducing any compiling bug?
   auto sbp_bn_in_op2sbp_parallel = sbp_signature->mutable_bn_in_op2sbp_parallel();
   double complexity_ = 0;
   auto ComputeComplexity4Blobs = [&](const PbRpf<std::string>& bns) {

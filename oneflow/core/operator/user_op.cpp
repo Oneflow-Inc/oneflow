@@ -185,6 +185,7 @@ class UserOpInferContext : public user_op::InferContext {
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
+// Store information for computing computation cost
 class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
@@ -239,10 +240,17 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_is_tensor_list();
   }
+  const SbpParallel* SbpParallel4ArgNameAndIndex(const std::string& arg_name, int32_t index) override{
+    auto sbp_map_ = sbp_signature_->bn_in_op2sbp_parallel();
+    auto it = sbp_map_.find(GenRepeatedBn(arg_name, index));
+    if (it == sbp_map_.end()) { return nullptr; };
+    return &it->second;
+  }
 
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; };
+  const SbpSignature* GetSbpSignature() const override { return sbp_signature_; }
 
  private:
   ArgVec inputs_;
@@ -561,6 +569,7 @@ double UserOp::GetComputeComplexity(
   if (val_->compute_complexity_fn) {
     UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
         op_conf(), parallel_desc, sbp_signature, logical_blob_desc4bn);
+    return val_->compute_complexity_fn(&user_op_compute_complexity_fn_context);
   } else {
     return Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc);
   }
