@@ -19,11 +19,9 @@ limitations under the License.
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
 #include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
-#ifdef WITH_CUDA
 #include <cub/cub.cuh>
 #include <curand.h>
 #include <curand_kernel.h>
-#endif
 
 namespace oneflow {
 namespace user_op {
@@ -49,23 +47,14 @@ void SortPairs(cudaStream_t stream, int64_t n, size_t temp_storage_bytes, const 
 }
 
 template<typename K>
-size_t GetCubSelectFlaggedTmpStorageSize(int64_t n) {
-  size_t cub_select_temp_store_size = 0;
-  OF_CUDA_CHECK(cub::DeviceSelect::Flagged(nullptr, cub_select_temp_store_size,
-                                           static_cast<K*>(NULL), static_cast<int8_t*>(NULL),
-                                           static_cast<K*>(NULL), static_cast<int32_t*>(NULL), n));
-  CHECK_GE(cub_select_temp_store_size, 0);
-  CHECK_LT(cub_select_temp_store_size, GetMaxVal<int64_t>());
-  return GetCudaAlignedSize(static_cast<int64_t>(cub_select_temp_store_size));
-}
-
-template<typename K>
-void GetFlaggedLabel(cudaStream_t stream, int64_t n, size_t temp_storage_bytes,
-                     const K* sorted_label, int8_t* unique_flags, K* selected_label,
-                     int32_t* num_selected_out, void* temp_storage) {
-  OF_CUDA_CHECK(cub::DeviceSelect::Flagged(temp_storage, temp_storage_bytes, sorted_label,
-                                           unique_flags, selected_label, num_selected_out, n,
-                                           stream));
+int64_t GetCubScanTempStorageSize(int64_t n) {
+  void* d_temp_storage = NULL;
+  size_t cub_scan_temp_store_size = 0;
+  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum(d_temp_storage, cub_scan_temp_store_size,
+                                               static_cast<K*>(NULL), static_cast<K*>(NULL), n)));
+  CHECK_GE(cub_scan_temp_store_size, 0);
+  CHECK_LT(cub_scan_temp_store_size, GetMaxVal<int64_t>());
+  return GetCudaAlignedSize(static_cast<int64_t>(cub_scan_temp_store_size));
 }
 
 template<typename K>
@@ -77,7 +66,8 @@ class TmpBufferManager final {
     const size_t index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
     const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
-    cub_tmp_storage_bytes_ = GetCubSortPairTempStorageSize<K>(device_num_class);
+    cub_tmp_storage_bytes_ = std::max(GetCubSortPairTempStorageSize<K>(device_num_class),
+                                      GetCubScanTempStorageSize<K>(512));
 
     label_buffer_offset_ = 0;
     index_buffer_offset_ = label_buffer_offset_ + label_buffer_bytes;
@@ -114,11 +104,14 @@ class TmpBufferManager final {
 
   K* SortedLabelPtr() const { return SortedLabelBufferPtr(); }
 
-  K* UniqueLabelPtr() const { return LabelBufferPtr(); }
+  K* NotEqualToPreviousPtr() const { return LabelBufferPtr(); }
 
   K* LabelIndexPtr() const { return IndexBufferPtr(); }
 
   K* SortedLabelIndexPtr() const { return SortedIndexBufferPtr(); }
+
+  K* ParallelStartIdx() const { return LabelBufferPtr(); }
+  K* ParallelStartMap() const { return LabelBufferPtr() + 5; }
 
  private:
   size_t label_buffer_offset_;
@@ -220,14 +213,14 @@ __global__ void GetSampleLabel(const int64_t n, const int64_t offset, const K* l
 }
 
 template<typename K>
-__global__ void GetUniqueFlags(const int64_t n, const K* sorted_label, int8_t* unique_flags) {
+__global__ void GetUniqueFlags(const int64_t n, const K* sorted_label, K* unique_flags) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    int8_t flag = 1;
+    K flag = 1;
     if (i > 0) {
       if (sorted_label[i] != sorted_label[i - 1]) {
-        flag = static_cast<int8_t>(1);
+        flag = static_cast<K>(1);
       } else {
-        flag = static_cast<int8_t>(0);
+        flag = static_cast<K>(0);
       }
     }
     unique_flags[i] = flag;
@@ -236,43 +229,43 @@ __global__ void GetUniqueFlags(const int64_t n, const K* sorted_label, int8_t* u
 
 template<typename K>
 __global__ void GetParallelStartIdx(const int64_t n, const int64_t parallel_num,
-                                    const int64_t num_class_per_rank, const K* unique_label,
-                                    K* num_unique, K* parallel_start_idx) {
-  CUDA_1D_KERNEL_LOOP(i, num_unique[0]) {
+                                    const int64_t num_class_per_rank, const K* label,
+                                    const K* label_map, K* parallel_start_idx,
+                                    K* parallel_start_map) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
     if (i > 0) {
-      const K cur_label = unique_label[i];
-      const K pre_label = unique_label[i - 1];
+      const K cur_label = label[i];
+      const K pre_label = label[i - 1];
+      if (cur_label != pre_label) {
 #pragma unroll
-      for (int32_t j = 1; j < parallel_num; j++) {
-        int32_t lower_bound = j * num_class_per_rank;
-        int32_t upper_bound = (j + 1) * num_class_per_rank;
-        if (cur_label >= lower_bound && pre_label < lower_bound) { parallel_start_idx[j] = i; }
+        for (int32_t j = 1; j < parallel_num; j++) {
+          int32_t lower_bound = j * num_class_per_rank;
+          if (cur_label >= lower_bound && pre_label < lower_bound) {
+            parallel_start_idx[j] = i;
+            parallel_start_map[j] = label_map[i];
+          }
+        }
       }
     }
   }
-  if (threadIdx.x == 0) { parallel_start_idx[0] = 0; }
+  if (threadIdx.x == 0) {
+    parallel_start_idx[0] = 0;
+    parallel_start_map[0] = label_map[0];
+    parallel_start_idx[parallel_num] = n;
+  }
 }
 
 template<typename K>
 __global__ void GetLabelMap(const int64_t n, const int64_t parallel_num,
-                            const int64_t num_class_per_rank, const int64_t num_sample_per_rank,
-                            const K* sorted_label, K* label_map) {
-  int counter = 0;
-  label_map[0] = 0;
-  for (int32_t i = 1; i < n; i++) {
-    const K cur_label = sorted_label[i];
-    const K pre_label = sorted_label[i - 1];
-    if (cur_label != pre_label) {
-      counter += 1;
+                            const int64_t num_sample_per_rank, const K* parallel_start_idx,
+                            const K* parallel_start_map, K* label_map) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
 #pragma unroll
-      for (int32_t j = 1; j < parallel_num; j++) {
-        int32_t lower_bound = j * num_class_per_rank;
-        if (cur_label >= lower_bound && pre_label < lower_bound) {
-          counter = j * num_sample_per_rank;
-        }
+    for (int32_t j = 0; j < parallel_num; j++) {
+      if (i >= parallel_start_idx[j] && i < parallel_start_idx[j + 1]) {
+        label_map[i] = label_map[i] - parallel_start_map[j] + j * num_sample_per_rank;
       }
     }
-    label_map[i] = counter;
   }
 }
 
@@ -366,9 +359,33 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
                     buffer_manager.LabelIndexPtr(), buffer_manager.CubTmpStoragePtr(),
                     buffer_manager.SortedLabelPtr(), buffer_manager.SortedLabelIndexPtr());
 
-    GetLabelMap<<<1, 1, 0, ctx->device_ctx()->cuda_stream()>>>(
-        batch_size, ctx->parallel_ctx().parallel_num(), num_classes, num_sample,
-        buffer_manager.SortedLabelPtr(), buffer_manager.LabelIndexPtr());
+    size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
+    GetUniqueFlags<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                     ctx->device_ctx()->cuda_stream()>>>(
+        batch_size, buffer_manager.SortedLabelPtr(), buffer_manager.NotEqualToPreviousPtr());
+    OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum(
+        buffer_manager.CubTmpStoragePtr(), temp_storage_bytes,
+        buffer_manager.NotEqualToPreviousPtr(), buffer_manager.LabelIndexPtr(),
+        static_cast<int>(batch_size), ctx->device_ctx()->cuda_stream())));
+
+    // NotEqualToPreviousAdjacentIterator<K, K>
+    // unique_counting_iter(buffer_manager.NotEqualToPreviousPtr(), 0);
+    // OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
+    //    buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, unique_counting_iter,
+    //    buffer_manager.LabelIndexPtr(), batch_size, ctx->device_ctx()->cuda_stream())));
+
+    GetParallelStartIdx<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                          ctx->device_ctx()->cuda_stream()>>>(
+        batch_size, ctx->parallel_ctx().parallel_num(), num_classes,
+        buffer_manager.SortedLabelPtr(), buffer_manager.LabelIndexPtr(),
+        buffer_manager.ParallelStartIdx(), buffer_manager.ParallelStartMap());
+
+    GetLabelMap<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                  ctx->device_ctx()->cuda_stream()>>>(
+        batch_size, ctx->parallel_ctx().parallel_num(), num_sample,
+        buffer_manager.ParallelStartIdx(), buffer_manager.ParallelStartMap(),
+        buffer_manager.LabelIndexPtr());
+
     GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(
         batch_size, buffer_manager.SortedLabelIndexPtr(), buffer_manager.LabelIndexPtr(),
