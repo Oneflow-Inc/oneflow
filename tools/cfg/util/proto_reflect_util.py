@@ -228,6 +228,63 @@ class ProtoReflectionUtil:
         else:
             return (field.message_type.full_name).replace(".", "_")
 
+    def other_file_declared_namespaces_and_enum_name(self, module):
+        enum_defined_in_this_module = set()
+        for cls in self.module_nested_message_types(module):
+            enum_defined_in_this_module.add(cls)
+        enum_defined_in_other_module = set()
+
+        def TryAddEnum(field):
+            if (
+                field.enum_type is not None
+                and field.enum_type not in enum_defined_in_this_module
+            ):
+                enum_defined_in_other_module.add(field.enum_type)
+
+        for cls in self.module_nested_message_types(module):
+            for field in self.message_type_fields(cls):
+                if self.field_has_map_label(field):
+                    TryAddEnum(field.message_type.fields_by_name["key"])
+                    TryAddEnum(field.message_type.fields_by_name["value"])
+                else:
+                    TryAddEnum(field)
+        for enum in enum_defined_in_other_module:
+            package = enum.file.package
+            if package != "":
+                yield package.split("."), enum.full_name[len(package) + 1 :].replace(
+                    ".", "_"
+                )
+            else:
+                yield [], enum.full_name.replace(".", "_")
+
+    def other_file_declared_namespaces_and_class_name(self, module):
+        cls_defined_in_this_module = set()
+        for cls in self.module_nested_message_types(module):
+            cls_defined_in_this_module.add(cls)
+        cls_defined_in_other_module = set()
+
+        def TryAddClass(field):
+            if (
+                field.message_type is not None
+                and field.message_type not in cls_defined_in_this_module
+            ):
+                cls_defined_in_other_module.add(field.message_type)
+
+        for cls in self.module_nested_message_types(module):
+            for field in self.message_type_fields(cls):
+                if self.field_has_map_label(field):
+                    TryAddClass(field.message_type.fields_by_name["value"])
+                else:
+                    TryAddClass(field)
+        for cls in cls_defined_in_other_module:
+            package = cls.file.package
+            if package != "":
+                yield package.split("."), cls.full_name[len(package) + 1 :].replace(
+                    ".", "_"
+                )
+            else:
+                yield [], cls.full_name.replace(".", "_")
+
     def field_message_type_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package
         if package:
@@ -295,14 +352,11 @@ class ProtoReflectionUtil:
         else:
             return "::cfg"
 
-        if package:
-            return "::" + package.replace(".", "::") + "::cfg"
-        else:
-            return "::cfg"
-
     def field_enum_name_with_cfg_namespace(self, field):
+        if self.field_has_map_label(field):
+            field = field.message_type.fields_by_name["value"]
         package = field.enum_type.file.package
-        if package:
+        if package != "":
             return (
                 "::"
                 + package.replace(".", "::")
@@ -313,9 +367,16 @@ class ProtoReflectionUtil:
             return "::cfg::" + self.enum_name(field.enum_type)
 
     def field_enum_name_with_proto_namespace(self, field):
+        if self.field_has_map_label(field):
+            field = field.message_type.fields_by_name["value"]
         package = field.enum_type.file.package
-        if package:
-            return "::" + package.replace(".", "::") + self.enum_name(field.enum_type)
+        if package != "":
+            return (
+                "::"
+                + package.replace(".", "::")
+                + "::"
+                + self.enum_name(field.enum_type)
+            )
         else:
             return "::" + self.enum_name(field.enum_type)
 
