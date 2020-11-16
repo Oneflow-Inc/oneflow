@@ -1,8 +1,4 @@
 #include "{{ util.module_cfg_header_name(module) }}"
-{% for dependency in util.module_dependencies(module) %}
-#include "{{ util.module_cfg_header_name(dependency) }}"
-{% endfor %}
-#include "{{ util.module_proto_header_name(module) }}"
 
 {% for package in util.module_package_list(module) %}
 namespace {{ package }} {
@@ -28,7 +24,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::InitFromProt
 {%if util.field_is_message_type(field)%}
   *mutable_{{ util.field_name(field) }}() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());      
 {% elif util.field_is_enum_type(field) %}
-  set_{{ util.field_name(field) }}(static_cast<std::remove_reference<std::remove_const<decltype({{ util.field_name(field) }}())>::type>::type>(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
+  set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
 {% else %}
     set_{{ util.field_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
 {% endif %}{# message_type #}
@@ -58,7 +54,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::InitFromProt
 {% if util.field_map_value_type_is_message(field) %}
       mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_map_value_type_name_with_cfg_namespace(field) }}(pair.second);
 {% elif util.field_map_value_type_is_enum(field) %}
-      mut_{{ util.field_name(field) }}[pair.first] = static_cast<std::remove_const<std::remove_reference<decltype(mut_{{ util.field_name(field) }}[pair.first])>::type>::type>(pair.second);
+      mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_enum_cfg_namespace(field) }}::Proto{{ util.field_map_value_type_enum_name(field) }}ToCfg{{ util.field_map_value_type_enum_name(field) }}(pair.second);
 {% else %}
       mut_{{ util.field_name(field) }}[pair.first] = pair.second;
   {% endif %}{# map_value_type #}
@@ -75,7 +71,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::InitFromProt
 {% if util.field_is_message_type(field) %}
       *mutable_{{ util.field_name(field) }}() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
 {% elif util.field_is_enum_type(field) %}
-      set_{{ util.field_name(field) }}(static_cast<std::remove_const<std::remove_reference<decltype({{ util.field_name(field) }}())>::type>::type>(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
+      set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Proto{{ util.field_enum_name(field) }}ToCfg{{ util.field_enum_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}()));
 {% else %}
       set_{{ util.field_name(field) }}(proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}());
 {% endif %}{# message_type #}
@@ -99,7 +95,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::ToProto({{ u
     {{ util.field_name(field) }}().ToProto(&proto_{{ util.field_name(field).lower() }});
     proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(proto_{{ util.field_name(field).lower() }});
 {% elif util.field_is_enum_type(field) %}
-    proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}(static_cast<std::remove_const<std::remove_reference<decltype(proto_{{ util.class_name(cls).lower() }}->{{ util.field_name(field) }}())>::type>::type>({{ util.field_name(field) }}()));
+    proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
 {% else %}
     proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_name(field) }}());
 {% endif %}{# message_type #}
@@ -133,7 +129,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::ToProto({{ u
       pair.second.ToProto(&proto_{{ util.field_name(field).lower() }}_value);
       mut_{{ util.field_name(field) }}[pair.first] = proto_{{ util.field_name(field).lower() }}_value;
 {% elif util.field_map_value_type_is_enum(field) %}
-      mut_{{ util.field_name(field) }}[pair.first] = static_cast<std::remove_const<std::remove_reference<decltype(mut_{{ util.field_name(field) }}[pair.first])>::type>::type>(pair.second);
+      mut_{{ util.field_name(field) }}[pair.first] = {{ util.field_enum_cfg_namespace(field) }}::Cfg{{ util.field_map_value_type_enum_name(field) }}ToProto{{ util.field_map_value_type_enum_name(field) }}(pair.second);
 {% else %}
       mut_{{ util.field_name(field) }}[pair.first] = pair.second;
 {% endif %}{# map_value_type #}
@@ -153,7 +149,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::ToProto({{ u
       {{ util.field_name(field) }}().ToProto(&of_proto_{{ util.field_name(field).lower() }});
       proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->CopyFrom(of_proto_{{ util.field_name(field).lower() }});
 {% elif util.field_is_enum_type(field) %}
-      proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}(static_cast<decltype(proto_{{ util.class_name(cls).lower() }}->{{ util.field_name(field) }}())>({{ util.field_name(field) }}()));
+      proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_enum_cfg_namespace(field) }}::Cfg{{ util.field_enum_name(field) }}ToProto{{ util.field_enum_name(field) }}({{ util.field_name(field) }}()));
 {% else %}
       proto_{{ util.class_name(cls).lower() }}->set_{{ util.field_name(field) }}({{ util.field_name(field) }}());
 {% endif %}{# message_type #}
