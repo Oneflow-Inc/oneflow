@@ -1,9 +1,5 @@
 name: Build and Test CI
 on:
-  pull_request:
-    types: [review_requested]
-    branches:
-      - '*'
   pull_request_target:
     types: [review_requested]
     branches:
