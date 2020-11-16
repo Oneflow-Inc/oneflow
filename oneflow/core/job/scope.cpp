@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+const std::string kOpCollectionOptimizer = "optimizer";
+
 Scope::Scope(const ScopeProto& scope_proto) : scope_proto_(scope_proto) {
   CHECK_OK(Init()) << scope_proto_.DebugString();
 }

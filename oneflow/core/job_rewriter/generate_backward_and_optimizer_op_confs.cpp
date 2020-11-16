@@ -16,6 +16,10 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/interpreter.h"
+#include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 
@@ -108,28 +112,82 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
+Maybe<JobBuilder> WithOpCollectionScope(const std::string& op_collection, Job* job,
+                                        const std::function<Maybe<void>()>& Handler) {
+  HashSet<std::string> exists_op_names;
+  for (const auto& op_conf : job->net().op()) {
+    CHECK_OR_RETURN(exists_op_names.emplace(op_conf.name()).second);
+  }
+  JUST(Handler());
+  // using a new JobBuilder to avoid bugs caused by MutOnlyOnce
+  auto new_job_builder = std::make_shared<JobBuilder>(job);
+  HashMap<int64_t, std::vector<const OperatorConf*>> scope_id2op_names;
+  for (const auto& op_conf : job->net().op()) {
+    if (exists_op_names.count(op_conf.name()) > 0) { continue; }
+    CHECK(op_conf.has_scope_symbol_id());
+    scope_id2op_names[op_conf.scope_symbol_id()].push_back(&op_conf);
+  }
+  const auto& GetNewScopeSymbolId = [&](int64_t old_scope_symbol_id) -> Maybe<int64_t> {
+    const auto& old_scope =
+        JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(old_scope_symbol_id));
+    cfg::ScopeProto new_scope;
+    new_scope.InitFromProto(old_scope.scope_proto());
+    // TODO(lixinqi): delete this line after ScopeProto::symbol_id removed
+    new_scope.clear_symbol_id();
+    new_scope.set_parent_scope_symbol_id(old_scope_symbol_id);
+    (*new_scope.mutable_op_collection_names())[op_collection] = true;
+    int64_t symbol_id = 0;
+    JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
+      symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(new_scope));
+      return Maybe<void>::Ok();
+    }));
+    return symbol_id;
+  };
+  for (const auto& pair : scope_id2op_names) {
+    int64_t new_scope_symbol_id = JUST(GetNewScopeSymbolId(pair.first));
+    std::vector<OperatorConf> op_confs(pair.second.size());
+    for (int i = 0; i < pair.second.size(); ++i) {
+      op_confs.at(i).CopyFrom(*pair.second.at(i));
+      op_confs.at(i).set_scope_symbol_id(new_scope_symbol_id);
+    }
+    new_job_builder->MutOpsOnlyOnce(op_confs);
+  }
+  return new_job_builder;
+}
+
+Maybe<JobBuilder> WithOptimizerOpCollectionScope(Job* job,
+                                                 const std::function<Maybe<void>()>& Handler) {
+  return WithOpCollectionScope(kOpCollectionOptimizer, job, Handler);
+}
+
 Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
-  JobBuilder job_builder(job);
+  auto job_builder = std::make_shared<JobBuilder>(job);
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  JUST(AutoGrad(op_graph, &job_builder, &lbi2diff_lbi));
+  JUST(AutoGrad(op_graph, job_builder.get(), &lbi2diff_lbi));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
-  AddDiffStaticShapeCast(op_graph, &job_builder, &model_lbi2model_diff_lbi);
-  AddDiffParallelCast(op_graph, &job_builder, &model_lbi2model_diff_lbi);
-  JUST(ScaleModelDiffByLossInstanceNum(op_graph, &job_builder, &model_lbi2model_diff_lbi));
-  ScaleModelDiffByLossScale(op_graph, &job_builder, &model_lbi2model_diff_lbi);
-  const NormalModelUpdateOpUserConf& model_update_conf =
-      job->job_conf().train_conf().model_update_conf();
-  RegularizeGradient(op_graph, &job_builder, &model_lbi2model_diff_lbi);
-  if (model_update_conf.has_clip_conf()) {
-    ClipGradient(op_graph, &job_builder, &model_lbi2model_diff_lbi, model_update_conf.clip_conf());
-  }
-  AddOptimizerOpConf(ctx, op_graph, &job_builder, model_lbi2model_diff_lbi);
-  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, &job_builder);
-  UpdateOpSbpSignatureHint(op_graph, &job_builder);
+  auto* old_job_builder = job_builder.get();
+  job_builder = JUST(WithOptimizerOpCollectionScope(job, [&]() -> Maybe<void> {
+    CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
+    AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
+    ScaleModelDiffByLossScale(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    const NormalModelUpdateOpUserConf& model_update_conf =
+        job->job_conf().train_conf().model_update_conf();
+    RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    if (model_update_conf.has_clip_conf()) {
+      ClipGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi,
+                   model_update_conf.clip_conf());
+    }
+    AddOptimizerOpConf(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi);
+    return Maybe<void>::Ok();
+  }));
+  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());
+  UpdateOpSbpSignatureHint(op_graph, job_builder.get());
   return Maybe<void>::Ok();
 }
 
