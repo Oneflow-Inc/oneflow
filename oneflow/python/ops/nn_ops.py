@@ -2383,11 +2383,13 @@ def deconv2d(
         kernel_size = filters.shape[2:4]
         output_shape = output_shape[2:4]
         channels = filters.shape[1]
+        assert output_shape[1] == channels
     elif data_format.upper() == "NHWC":
         input_shape = input.shape[1:3]
         kernel_size = filters.shape[-3:-1]
         output_shape = output_shape[1:3]
         channels = filters.shape[3]
+        assert output_shape[3] == channels
         assert dilations == [1, 1], ValueError(
             "dialtions must be 1 when data format is NHWC "
         )
