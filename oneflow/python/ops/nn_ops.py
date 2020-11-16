@@ -2535,9 +2535,15 @@ def deconv2d_torch(
 
     .. math:: 
 
-        H_{out} = (H_{in}-1)*stride[0] - padding\_needed[0] + dilation[0]*(kernel\_size[0]-1)+output\_padding[0] + 1
+        & H_{out} = (H_{in}-1)*stride[0] - padding\_needed[0] 
+        
+        & + dilation[0]*(kernel\_size[0]-1)+output\_padding[0] + 1
 
-        W_{out} = (W_{in}-1)*stride[1] - padding\_needed[1] + dilation[1]*(kernel\_size[1]-1)+output\_padding[1] + 1
+        & 
+        
+        & W_{out} = (W_{in}-1)*stride[1] - padding\_needed[1] 
+        
+        & + dilation[1]*(kernel\_size[1]-1)+output\_padding[1] + 1
 
     Args:
         value ([type], optional): The input 4-d `Blob`. Defaults to None.
