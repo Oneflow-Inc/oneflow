@@ -32,7 +32,6 @@ def _compare_mseloss_with_np(
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
-    flow.env.init()
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
@@ -54,11 +53,12 @@ def _compare_mseloss_with_np(
     def np_mseloss_grad(np_input, np_target):
         elem_cnt = np_input.size
         np_mse_grad_mean = (-2 * (np_target - np_input)) / elem_cnt
-        np_mse_grad_sum = -2 * (np_target - np_input)
+
+        # TODO: if you want to get the grad when the reduction="sum", you can use the follow code
+        # np_mse_grad_sum = -2 * (np_target - np_input)
 
         return {
             "np_mse_grad_mean": np_mse_grad_mean,
-            "np_mse_grad_sum": np_mse_grad_sum,
         }
 
     # Use Numpy to compute mseloss
@@ -120,26 +120,32 @@ def _compare_mseloss_with_np(
     )
 
 
+def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
+    # Generate a dict to pass parameter to test case
+    arg_dict = OrderedDict()
+    arg_dict["input_shape"] = [shape]
+    arg_dict["target_shape"] = [shape]
+    arg_dict["device_type"] = [device_type]
+    arg_dict["machine_ids"] = [machine_ids]
+    arg_dict["device_counts"] = [device_counts]
+    return arg_dict
+
+
 @flow.unittest.skip_unless_1n1d()
 class Testl1loss1n1d(flow.unittest.TestCase):
     def test_mseloss_cpu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["input"] = [(3, 1)]
-        arg_dict["target"] = [(3, 1)]
-        arg_dict["device_type"] = ["cpu"]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16), device_type="cpu", machine_ids="0:0", device_counts=1
+        )
+
         for arg in GenArgList(arg_dict):
             _compare_mseloss_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_mseloss_gpu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["input"] = [(3, 16, 32)]
-        arg_dict["target"] = [(3, 16, 32)]
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16, 32), device_type="gpu", machine_ids="0:0", device_counts=1
+        )
         for arg in GenArgList(arg_dict):
             _compare_mseloss_with_np(*arg)
 
@@ -148,12 +154,9 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 class Testrange1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_mseloss_gpu_1n2d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["input"] = [(3, 16, 16)]
-        arg_dict["target"] = [(3, 16, 16)]
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["device_counts"] = [2]
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16, 16), device_type="gpu", machine_ids="0:0-1", device_counts=2
+        )
         for arg in GenArgList(arg_dict):
             _compare_mseloss_with_np(*arg)
 
