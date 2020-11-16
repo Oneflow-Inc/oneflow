@@ -64,8 +64,6 @@ class Scope final {
   std::shared_ptr<ParallelDesc> host_parallel_desc_;
 };
 
-extern const std::string kOpCollectionOptimizer;
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_SCOPE_H_
