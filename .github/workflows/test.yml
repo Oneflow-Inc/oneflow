@@ -4,9 +4,10 @@ on:
     types: [review_requested]
     branches:
       - '*'
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
+  pull_request_target:
+    types: [review_requested]
+    branches:
+      - '*'
   workflow_dispatch:
     inputs:
       placeholder:
