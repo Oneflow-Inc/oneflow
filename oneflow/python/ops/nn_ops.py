@@ -2278,6 +2278,24 @@ def deconv2d(
 ) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution.
 
+    The output shape equation is: 
+
+    if padding == "VALID": 
+
+    .. math:: 
+
+        H_{out} = (H_{in}-1)*stride[0] + kernel\_size[0]
+
+        W_{out} = (W_{in}-1)*stride[1] + kernel\_size[1]
+
+    if padding == "SAME": 
+
+    .. math:: 
+
+        H_{out} = H_{in}*stride[0]
+
+        W_{out} = W_{in}*stride[1]
+
     Args:
         value (Optional[remote_blob_util.BlobDef], optional): The input 4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
