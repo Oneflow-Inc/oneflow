@@ -22,6 +22,7 @@ limitations under the License.
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  using namespace oneflow;
-  m.def("RegisterPyKernel", &RegisterPyKernel);
+  m.def("RegisterPyKernelCaller", &::oneflow::pyext::RegisterPyKernelCaller);
+  m.def("RegisterPyKernels",
+        [](py::object py_kernels) { ::oneflow::pyext::RegisterPyKernels(py_kernels.ptr()); });
 }

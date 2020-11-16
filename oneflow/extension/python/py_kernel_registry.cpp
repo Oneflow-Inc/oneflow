@@ -14,10 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/extension/python/py_kernel_registry.h"
+#include "oneflow/extension/python/py_compute.h"
 #include "oneflow/extension/python/py_kernel_caller.h"
 
 namespace oneflow {
-void RegisterPyKernel(const std::string& op_type_name) {
+namespace pyext {
+
+void RegisterPyKernelCaller(const std::string& op_type_name) {
   // register python op kernel
   auto reg = user_op::UserOpRegistryMgr::Get()
                  .CheckAndGetOpKernelRegistry(op_type_name)
@@ -33,5 +36,9 @@ void RegisterPyKernel(const std::string& op_type_name) {
                                         & (user_op::HobDeviceSubTag() == "py")));
   user_op::UserOpRegistryMgr::Get().Register(grad_reg.Finish().GetResult());
 }
+
+void RegisterPyKernels(PyObject* py_kernels) { PyRegisterKernels(py_kernels); }
+
+}  // namespace pyext
 
 }  // namespace oneflow

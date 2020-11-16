@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_CALLER_H_
+#define ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_CALLER_H_
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -37,3 +39,5 @@ class PyGradKernel final : public user_op::OpKernel {
 };
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_CALLER_H_

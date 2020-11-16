@@ -13,8 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_REGISTRY_H_
+#define ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_REGISTRY_H_
+
 #include <string>
+#include <Python.h>
 
 namespace oneflow {
-void RegisterPyKernel(const std::string& op_type_name);
-}
+namespace pyext {
+void RegisterPyKernelCaller(const std::string& op_type_name);
+void RegisterPyKernels(PyObject* py_kernels);
+}  // namespace pyext
+}  // namespace oneflow
+
+#endif  // ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_REGISTRY_H_

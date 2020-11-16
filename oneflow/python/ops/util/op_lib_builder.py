@@ -67,35 +67,52 @@ def get_lflags():
     )
 
 
+class PythonKernelRegistry(object):
+    """A helper class to store python kernel module
+    """
+
+    def __init__(self):
+        self.kernels_ = {}
+
+    def Register(self, op_type_name, module):
+        self.kernels_[op_type_name] = module
+
+
+_python_kernel_reg = PythonKernelRegistry()
+oneflow_api.RegisterPyKernels(_python_kernel_reg.kernels_)
+
+
 @oneflow_export("experimental.op_lib")
 class OpLib(object):
     def __init__(self, op_type_name, lib_path=""):
-        self.op_type_name = op_type_name
+        self.op_type_name_ = op_type_name
         self.api = None
-        self.so_path = ""
-        self.objs = []
-        self.has_api = False
-        self.has_def = False
-        self.has_py_kernel = False
-        self.has_cpu_kernel = False
-        self.has_gpu_kernel = False
-        self.got_so = False
+        self.so_path_ = ""
+        self.objs_ = []
+        self.has_api_ = False
+        self.has_def_ = False
+        self.has_py_kernel_ = False
+        self.has_cpu_kernel_ = False
+        self.has_gpu_kernel_ = False
+        self.got_so_ = False
 
         lib_path = os.path.normpath(lib_path)
         pwd_path = os.getcwd()
         if lib_path != "" and lib_path != pwd_path:
-            lib_folder = os.path.join(lib_path, self.op_type_name)
-            pwd_folder = os.path.join(pwd_path, self.op_type_name)
+            lib_folder = os.path.join(lib_path, self.op_type_name_)
+            pwd_folder = os.path.join(pwd_path, self.op_type_name_)
             if os.path.exists(pwd_folder):
                 shutil.rmtree(pwd_folder)
             shutil.copytree(lib_folder, pwd_folder)
 
-        self.src_prefix = os.path.join(pwd_path, self.op_type_name, self.op_type_name)
+        self.src_prefix_ = os.path.join(
+            pwd_path, self.op_type_name_, self.op_type_name_
+        )
 
-        out_path = os.path.join(pwd_path, self.op_type_name, "out")
+        out_path = os.path.join(pwd_path, self.op_type_name_, "out")
         if not os.path.exists(out_path):
             os.makedirs(out_path)
-        self.out_prefix = os.path.join(out_path, self.op_type_name)
+        self.out_prefix_ = os.path.join(out_path, self.op_type_name_)
 
     def AddOpDef(self):
         flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
@@ -103,25 +120,32 @@ class OpLib(object):
             "g++",
             flags,
             get_lflags(),
-            f"{self.src_prefix}_op.cpp",
-            f"{self.out_prefix}_op.o",
+            f"{self.src_prefix_}_op.cpp",
+            f"{self.out_prefix_}_op.o",
         )
-        self.objs.append(f"{self.out_prefix}_op.o")
-        self.has_def = True
+        self.objs_.append(f"{self.out_prefix_}_op.o")
+        self.has_def_ = True
         return self
 
     def AddPythonAPI(self):
+        assert os.path.exists(f"{self.src_prefix_}_py_api.py")
         spec = importlib.util.spec_from_file_location(
-            self.op_type_name, f"{self.src_prefix}_py_api.py"
+            self.op_type_name_, f"{self.src_prefix_}_py_api.py"
         )
         self.api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.api)
         return self
 
     def AddPythonKernel(self):
-        assert os.path.exists(f"{self.src_prefix}_py_kernel.py")
-        oneflow_api.RegisterPyKernel(self.op_type_name)
-        self.has_py_kernel = True
+        assert os.path.exists(f"{self.src_prefix_}_py_kernel.py")
+        spec = importlib.util.spec_from_file_location(
+            self.op_type_name_, f"{self.src_prefix_}_py_kernel.py"
+        )
+        kernel = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(kernel)
+        _python_kernel_reg.Register(self.op_type_name_, kernel)
+        oneflow_api.RegisterPyKernelCaller(self.op_type_name_)
+        self.has_py_kernel_ = True
         return self
 
     def AddCPPKernel(self):
@@ -130,21 +154,21 @@ class OpLib(object):
             "g++",
             flags,
             "",
-            f"{self.src_prefix}_cpp_kernel.cpp",
-            f"{self.out_prefix}_cpp_kernel.o",
+            f"{self.src_prefix_}_cpp_kernel.cpp",
+            f"{self.out_prefix_}_cpp_kernel.o",
         )
-        self.objs.append(f"{self.out_prefix}_cpp_kernel.o")
-        self.has_cpu_kernel = True
+        self.objs_.append(f"{self.out_prefix_}_cpp_kernel.o")
+        self.has_cpu_kernel_ = True
         return self
 
     def AddGPUKernel(self):
         raise NotImplementedError
 
     def BuildAndLoad(self):
-        if len(self.objs) > 0:
+        if len(self.objs_) > 0:
             flags = "-std=c++11 -shared -fPIC " + get_cflags()
-            compile("g++", flags, get_lflags(), self.objs, f"{self.out_prefix}.so")
-            self.got_so = True
-            self.so_path = self.out_prefix + ".so"
+            compile("g++", flags, get_lflags(), self.objs_, f"{self.out_prefix_}.so")
+            self.got_so_ = True
+            self.so_path_ = self.out_prefix_ + ".so"
 
-        oneflow.config.load_library_now(self.so_path)
+        oneflow.config.load_library_now(self.so_path_)
