@@ -20,7 +20,7 @@ from test_util import GenArgList
 import unittest
 from collections import OrderedDict
 from typing import Dict
-import os 
+import os
 
 
 def _compare_mseloss_with_np(
