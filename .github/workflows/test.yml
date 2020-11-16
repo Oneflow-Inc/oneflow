@@ -32,6 +32,7 @@ jobs:
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       run: |
         if [ -z "$OSS_ACCESS_KEY_ID" ]
+        then
           exit 0
         fi 
         python3 -m pip install setuptools wheel
