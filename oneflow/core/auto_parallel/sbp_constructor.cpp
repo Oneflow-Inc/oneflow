@@ -350,7 +350,8 @@ void SbpConstructor::InitializeComputationCost(
 
     // look through sbp signature in this sbp node
     sbp_node->Cost.resize(sbp_node->SbpSignatureList.size());
-    auto logical_blob_desc4lbi_ = [&](const LogicalBlobId& lbi) -> const BlobDesc& {
+    auto logical_blob_desc4bn = [&](const std::string& bn) -> const BlobDesc& {
+      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
@@ -362,8 +363,10 @@ void SbpConstructor::InitializeComputationCost(
       //   const SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[obn];
       //   sbp_node->Cost[sbp_id] += ComputeComputationCost(sbp, logical_blob_desc, parallel_desc);
       // }
-      sbp_node->Cost[sbp_id] = op_node->op().Complexity4SbpBlobdesc(
-          sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4lbi_, parallel_desc, CostRatio);
+      sbp_node->Cost[sbp_id] =
+          CostRatio
+          * op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
+                                               logical_blob_desc4bn, parallel_desc);
     }
   });
 }

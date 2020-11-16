@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
 
 namespace oneflow {
 
@@ -181,6 +182,73 @@ class UserOpInferContext : public user_op::InferContext {
   const ParallelContext* parallel_ctx_;
   const SbpSignature* sbp_signature_;
   const JobDesc& job_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+};
+
+class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpComputeComplexityFnContext(
+      const OperatorConf& op_conf, const ParallelDesc& parallel_desc,
+      const SbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn)
+      : user_op::ComputeComplexityFnContext(user_op::UserOpConfWrapper(op_conf)),
+        parallel_desc_(parallel_desc),
+        sbp_signature_(sbp_signature) {
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          const BlobDesc& blob = logical_blob_desc4bn(GenRepeatedBn(arg_name, i));
+          auto key = std::make_pair(arg_name, i);
+          arg2tensor_desc_.emplace(key, GenTensorDescFromBlobDesc(&blob));
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
+      }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
+  }
+  ~UserOpComputeComplexityFnContext() = default;
+
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return &(it->second);
+  }
+  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_shape();
+  }
+  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_data_type();
+  }
+  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_is_dynamic();
+  }
+  bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_is_tensor_list();
+  }
+
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
+  const ParallelDesc& parallel_desc() const override { return parallel_desc_; };
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  const ParallelDesc parallel_desc_;
+  const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
 };
 
@@ -484,6 +552,18 @@ Maybe<void> UserOp::InferOutBlobDescs(
         *infer_ctx.IsTensorList4ArgNameAndIndex(pair.first, pair.second));
   }
   return Maybe<void>::Ok();
+}
+
+double UserOp::GetComputeComplexity(
+    SbpSignature* sbp_signature,
+    std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+    const ParallelDesc& parallel_desc) const {
+  if (val_->compute_complexity_fn) {
+    UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
+        op_conf(), parallel_desc, sbp_signature, logical_blob_desc4bn);
+  } else {
+    return Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc);
+  }
 }
 
 LogicalBlobId UserOp::lbi4ibn(const std::string& input_bn) const {
