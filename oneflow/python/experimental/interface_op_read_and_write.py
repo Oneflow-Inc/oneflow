@@ -35,25 +35,17 @@ def _GetInterfaceBlobObject(builder, op_name):
     if c_api_util.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().var_name2var_blob[op_name].blob_object
     blob_object = builder.MakeLazyRefBlobObject(op_name)
-    blob_cache_util.TryDisableBlobCache(blob_object)
     return blob_object
 
 
-def ReleaseLazyRefBlob():
-    lazy_blob_cache.clear()
-
-
 def GetEagerInterfaceBlob(op_name):
-    if op_name in lazy_blob_cache:
-        return lazy_blob_cache[op_name]
-
     flow.sync_default_session()
 
     sess = session_ctx.GetDefaultSession()
-    job_name = sess.JobName4InterfaceOpName(op_name)
+    def CreateBlob():
+        job_name = sess.JobName4InterfaceOpName(op_name)
 
-    def AsyncGetInterfaceBlob(Yield):
-        def build(builder):
+        def Build(builder, Yield):
             blob_object = _GetInterfaceBlobObject(builder, op_name)
             lbi = logical_blob_id_util.LogicalBlobId()
             lbi.op_name = op_name
@@ -71,11 +63,13 @@ def GetEagerInterfaceBlob(op_name):
 
             Yield(remote_blob)
 
-        vm_util.LogicalRun(build)
+        def AsyncGetInterfaceBlob(Yield):
+            vm_util.LogicalRun(lambda builder: Build(builder, Yield))
 
-    blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
-    lazy_blob_cache[op_name] = blob
-    return blob
+        blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
+        return blob
+
+    return sess.FindOrCreateLazyBlob(op_name, CreateBlob)
 
 
 @oneflow_export("experimental.get_interface_blob_value")

@@ -1096,7 +1096,7 @@ def ConstantInitializerImpl(
     ],
     random_seed: int,
 ):
-    return lambda length: [initializer_conf.value] * length
+    return lambda length: np.full((length,), initializer_conf.value)
 
 
 @register_initializer("random_normal_conf")

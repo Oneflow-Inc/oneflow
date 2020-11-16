@@ -200,6 +200,10 @@ class FileBackendVariableBlob:
 ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
 
 
+def _ElemCnt(shape):
+    return np.prod(shape).astype(np.int).item()
+
+
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
 def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
@@ -229,7 +233,7 @@ def Load(
     path: str,
 ) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
     """
-    Load variable(s) from disk.
+    Load variable(s) from file system.
     """
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     single_var = _LoadSingleVariable(path)
@@ -265,32 +269,33 @@ def _ReadSlice(
     """
     if isinstance(container, EagerBlobTrait):
 
-        def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx, length):
+        def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx):
             return _LogicalSlice(eager_blob, start_nd_idx, stop_nd_idx)
 
-        yield from _ForEverySlice(container, ReadFromEagerBlob)
+        yield from _ForEachSlice(container, ReadFromEagerBlob)
     elif isinstance(container, FileBackendVariableBlob):
         np_dtype = np.dtype(
             dtype_util.convert_oneflow_dtype_to_numpy_dtype(container.dtype)
         )
         with open(container.file_path, "rb") as f:
 
-            def ReadFromFile(_, start_nd_idx, stop_nd_idx, length):
+            def ReadFromFile(_, start_nd_idx, stop_nd_idx):
+                length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
                 slice = f.read(length * np_dtype.itemsize)
                 return np.frombuffer(slice, dtype=np_dtype,).reshape(
                     np.array(stop_nd_idx) - np.array(start_nd_idx)
                 )
 
-            yield from _ForEverySlice(container, ReadFromFile)
+            yield from _ForEachSlice(container, ReadFromFile)
     elif isinstance(container, np.ndarray):
 
-        def ReadFromNpArray(array, start_nd_idx, stop_nd_idx, length):
+        def ReadFromNpArray(array, start_nd_idx, stop_nd_idx):
             slice_objs = []
             for start, stop in zip(start_nd_idx, stop_nd_idx):
                 slice_objs.append(slice(start, stop))
             return array[tuple(slice_objs)]
 
-        yield from _ForEverySlice(container, ReadFromNpArray)
+        yield from _ForEachSlice(container, ReadFromNpArray)
     else:
         raise RuntimeError("Unknown type: {}".format(type(container).__name__))
 
@@ -499,8 +504,9 @@ def LoadVariables(
     If `ignore_mismatch` is False, an exception will be raised when
     there is a name in `value_dict` not belonging to any variable.
     """
+    all_vars = GetAllVariables()
     for name, value in value_dict.items():
-        if name in GetAllVariables():
+        if name in all_vars:
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
             _FeedValueToVariable(var_blob, value)
         else:
@@ -509,12 +515,12 @@ def LoadVariables(
     oneflow_api.eager.Sync()
 
 
-def _ForEverySlice(
+def _ForEachSlice(
     container: ValueContainer,
     f: Union[
-        Callable[[EagerBlobTrait, Sequence[int], Sequence[int], int], Any],
-        Callable[[FileBackendVariableBlob, Sequence[int], Sequence[int], int], Any],
-        Callable[[np.ndarray, Sequence[int], Sequence[int], int], Any],
+        Callable[[EagerBlobTrait, Sequence[int], Sequence[int]], Any],
+        Callable[[FileBackendVariableBlob, Sequence[int], Sequence[int]], Any],
+        Callable[[np.ndarray, Sequence[int], Sequence[int]], Any],
     ],
 ):
     """
@@ -526,7 +532,7 @@ def _ForEverySlice(
     ), "Unknown type: {}".format(type(container).__name__)
     assert container.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
-    SLICE_BYTES = 20 * 1024 * 1024
+    SLICE_BYTES = 32 * 1024 * 1024
     if isinstance(container, np.ndarray):
         np_dtype = container.dtype
     else:
@@ -535,13 +541,13 @@ def _ForEverySlice(
         )
     SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
     start_idx = 0
-    size = np.prod(container.shape).astype(np.int).item()
+    size = _ElemCnt(container.shape)
     cnt = 1
     for axis in reversed(range(len(container.shape))):
         cnt *= container.shape[axis]
         if cnt > SLICE_LEN:
             break
-    unit_size = np.prod(container.shape[axis + 1 :]).astype(np.int).item()
+    unit_size = _ElemCnt(container.shape[axis+1:])
     max_unit_num = SLICE_LEN // unit_size
     while start_idx < size:
         remainder = container.shape[axis]
@@ -554,7 +560,7 @@ def _ForEverySlice(
             stop_nd_idx = np.unravel_index(stop_idx - 1, container.shape)
             stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
             yield start_nd_idx, stop_nd_idx, f(
-                container, start_nd_idx, stop_nd_idx, length
+                container, start_nd_idx, stop_nd_idx
             )
             start_idx = stop_idx
 
@@ -563,22 +569,29 @@ def Init() -> None:
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
         var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
+        if not (var_conf.HasField('initializer') or var_conf.HasField('initialize_with_snapshot')):
+            continue
         if var_conf.HasField("initialize_with_snapshot"):
             initialize_with_snapshot_conf = var_conf.initialize_with_snapshot
+            if initialize_with_snapshot_conf.HasField('key'):
+                snapshot_key = op_name
+            else:
+                snapshot_key = initialize_with_snapshot_conf.key
             var_dir = os.path.dirname(
                 os.path.join(
                     initialize_with_snapshot_conf.path,
-                    initialize_with_snapshot_conf.key,
+                    snapshot_key,
                 )
             )
             LoadVariables({op_name: Load(var_dir)})
             continue
         g = initializer_util.GetInitializer(var_conf.initializer, var_conf.random_seed)
 
-        def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx, length):
+        def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
             np_dtype = np.dtype(
                 dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
             )
+            length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
             vals = (
                 np.array(g(length))
                 .astype(np_dtype)
@@ -591,6 +604,6 @@ def Init() -> None:
             )
 
         # we just want to run f on every slice without caring about the return value
-        for _ in _ForEverySlice(var_blob, GenerateValueAndAssign):
+        for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
             pass
     oneflow_api.eager.Sync()
