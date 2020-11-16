@@ -2312,8 +2312,8 @@ def deconv2d(
             input_shape = input.shape
             weight_initializer = flow.truncated_normal(0.1)
             weight_regularizer = flow.regularizers.l2(0.0005)
-            weight_shape = (filters,
-                            input_shape[1],
+            weight_shape = (input_shape[1],
+                            filters,
                             kernel_size[0],
                             kernel_size[1])
 
@@ -2324,7 +2324,7 @@ def deconv2d(
                 regularizer=weight_regularizer,
             )
             return flow.nn.conv2d_transpose(value=input,
-                                            output_shape=(1, 32, 64, 64),
+                                            output_shape=(1, 16, 64, 128),
                                             filter=weight,
                                             strides=strides,
                                             padding=padding,
@@ -2332,7 +2332,7 @@ def deconv2d(
 
 
         @flow.global_function()
-        def deconv2d_Job(x: tp.Numpy.Placeholder((1, 32, 32, 32),)
+        def deconv2d_Job(x: tp.Numpy.Placeholder((1, 16, 32, 64),)
         ) -> tp.Numpy:
             deconv = deconv2d(x,
                             filters=32,
@@ -2343,10 +2343,10 @@ def deconv2d(
             return deconv
 
 
-        x = np.random.randn(1, 32, 32, 32).astype(np.float32)
+        x = np.random.randn(1, 16, 32, 64).astype(np.float32)
         out = deconv2d_Job(x)
 
-        # out.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 128)
 
     """
     assert (value is not None) ^ (
