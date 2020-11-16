@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_DIALECT
-#define STANDALONE_DIALECT
+#ifndef ONEFLOW_DIALECT
+#define ONEFLOW_DIALECT
 
 include "mlir/IR/OpBase.td"
 
@@ -31,4 +31,4 @@ def OneFlow_Dialect : Dialect {
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits>;
 
-#endif // STANDALONE_DIALECT
+#endif // ONEFLOW_DIALECT

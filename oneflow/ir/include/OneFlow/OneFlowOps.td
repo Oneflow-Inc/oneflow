@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_OPS
-#define STANDALONE_OPS
+#ifndef ONEFLOW_OPS
+#define ONEFLOW_OPS
 
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -39,4 +39,4 @@ def OneFlow_FooOp : OneFlow_Op<"foo", [NoSideEffect,
     }];
 }
 
-#endif // STANDALONE_OPS
+#endif // ONEFLOW_OPS

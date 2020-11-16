@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_STANDALONEOPS_H
-#define STANDALONE_STANDALONEOPS_H
+#ifndef ONEFLOW_ONEFLOWOPS_H
+#define ONEFLOW_ONEFLOWOPS_H
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -16,4 +16,4 @@
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 
-#endif // STANDALONE_STANDALONEOPS_H
+#endif // ONEFLOW_ONEFLOWOPS_H

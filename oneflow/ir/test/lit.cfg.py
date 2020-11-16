@@ -16,7 +16,7 @@ from lit.llvm.subst import FindTool
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
-config.name = 'STANDALONE'
+config.name = 'ONEFLOW'
 
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_STANDALONEDIALECT_H
-#define STANDALONE_STANDALONEDIALECT_H
+#ifndef ONEFLOW_ONEFLOWDIALECT_H
+#define ONEFLOW_ONEFLOWDIALECT_H
 
 #include "mlir/IR/Dialect.h"
 
 #include "OneFlow/OneFlowOpsDialect.h.inc"
 
-#endif // STANDALONE_STANDALONEDIALECT_H
+#endif // ONEFLOW_ONEFLOWDIALECT_H
