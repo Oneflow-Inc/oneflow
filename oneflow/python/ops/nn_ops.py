@@ -2277,7 +2277,7 @@ def deconv2d(
     dilations: Optional[Union[int, Sequence[int]]] = None,
 ) -> remote_blob_util.BlobDef:
     r"""2d transposed convolution.
-
+    
     Args:
         value (Optional[remote_blob_util.BlobDef], optional): The input 4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
@@ -2339,7 +2339,7 @@ def deconv2d(
                             kernel_size=[3, 3],
                             strides=2,
                             padding='SAME',
-                            name="Convlayer")
+                            name="DeConvlayer")
             return deconv
 
 
@@ -2512,6 +2512,14 @@ def deconv2d_torch(
 ) -> remote_blob_util.BlobDef:
     r"""The 2d transposed convolution in Pytorch version.
 
+    The output shape equation is: 
+
+    .. math:: 
+
+        H_{out} = (H_{in}-1)*stride[0] - padding\_needed[0] + dilation[0]*(kernel\_size[0]-1)+output\_padding[0] + 1
+
+        W_{out} = (W_{in}-1)*stride[1] - padding\_needed[1] + dilation[1]*(kernel\_size[1]-1)+output\_padding[1] + 1
+
     Args:
         value ([type], optional): The input 4-d `Blob`. Defaults to None.
         filter ([type], optional): Filter of transposed convolution. Defaults to None.
@@ -2531,6 +2539,54 @@ def deconv2d_torch(
 
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as `value`.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        def deconv2d(input, filters, kernel_size, strides, padding, name):
+            input_shape = input.shape
+            weight_initializer = flow.truncated_normal(0.1)
+            weight_regularizer = flow.regularizers.l2(0.0005)
+            weight_shape = (input_shape[1],
+                            filters,
+                            kernel_size[0],
+                            kernel_size[1])
+
+            weight = flow.get_variable(
+                name + "-weight",
+                shape=weight_shape,
+                initializer=weight_initializer,
+                regularizer=weight_regularizer,
+            )
+            return flow.nn.torch_conv2d_transpose(value=input, 
+                                                filter=weight, 
+                                                padding_needed=[2, 2], 
+                                                strides=strides, 
+                                                output_padding=[1, 1])
+
+        @flow.global_function()
+        def deconv2d_Job(x: tp.Numpy.Placeholder((1, 16, 32, 64),)
+        ) -> tp.Numpy:
+            deconv = deconv2d(x,
+                            filters=32,
+                            kernel_size=[3, 3],
+                            strides=2,
+                            padding='SAME',
+                            name="DeConvlayer")
+            return deconv
+
+
+        x = np.random.randn(1, 16, 32, 64).astype(np.float32)
+        out = deconv2d_Job(x)
+
+        # out.shape (1, 32, 64, 129)
+
     """
     assert (value is not None) ^ (
         input is not None
