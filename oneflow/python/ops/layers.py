@@ -92,7 +92,7 @@ def dense(
         x = np.random.randn(1, 256).astype(np.float32)
         out = dense_Job(x)
 
-        # output.shape (1, 512)
+        # out.shape (1, 512)
 
     """
     in_shape = inputs.shape
@@ -243,7 +243,7 @@ def conv1d(
         x = np.random.randn(1, 64, 32).astype(np.float32)
         out = conv1d_Job(x)
 
-        # output.shape (1, 128, 32)
+        # out.shape (1, 128, 32)
 
     """
 
@@ -439,7 +439,7 @@ def conv2d(
         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
         out = conv2d_Job(x)
 
-        # output.shape (1, 128, 32, 32)
+        # out.shape (1, 128, 32, 32)
 
     """
 
@@ -632,7 +632,11 @@ def conv3d(
             )
             return conv3d
 
-        # output.shape (1, 128, 16, 16, 16)
+
+        x = np.random.randn(1, 64, 16, 16, 16).astype(np.float32)
+        out = conv3d_Job(x)
+
+        # out.shape (1, 128, 16, 16, 16)
 
     """
     need_transpose = 0
@@ -799,7 +803,7 @@ def layer_norm(
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
         out = layer_norm_Job(x)
 
-        # output.shape (1, 64, 128, 128)
+        # out.shape (1, 64, 128, 128)
 
     """
     if center is False and scale is False:
@@ -977,6 +981,73 @@ def layer_norm_param_grad(
     return normalized_diff, beta_diff, gamma_diff
 
 
+def _get_batch_normalization_variables(
+    name,
+    center,
+    scale,
+    params_shape,
+    params_dtype,
+    trainable,
+    beta_initializer,
+    beta_regularizer,
+    gamma_initializer,
+    gamma_regularizer,
+    moving_mean_initializer,
+    moving_variance_initializer,
+):
+    with flow.scope.namespace(name):
+        if center:
+            beta = flow.get_variable(
+                name="beta",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
+                regularizer=beta_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+        else:
+            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
+
+        if scale:
+            gamma = flow.get_variable(
+                name="gamma",
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
+                regularizer=gamma_regularizer,
+                trainable=trainable,
+                distribute=distribute_util.broadcast(),
+                reuse=False,
+            )
+        else:
+            gamma = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name="gamma"
+            )
+
+        moving_mean = flow.get_variable(
+            name="moving_mean",
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            trainable=False,
+            distribute=distribute_util.broadcast(),
+            reuse=False,
+        )
+
+        moving_variance = flow.get_variable(
+            name="moving_variance",
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_variance_initializer or flow.ones_initializer(),
+            trainable=False,
+            distribute=distribute_util.broadcast(),
+            reuse=False,
+        )
+    return beta, gamma, moving_mean, moving_variance
+
+
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
     inputs: remote_blob_util.BlobDef,
@@ -1003,8 +1074,8 @@ def batch_normalization(
 
     Args:
         inputs (remote_blob_util.BlobDef): Input `Blob`.
-        axis (int, optional): An int specifies the aixs that should be normalized . Default is -1, which normalizes the last axis.
-        momentum (float, optional):  A float specifies the momontum for the moving average. Defaults to 0.99.
+        axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
+        momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
         center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
         scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
@@ -1056,7 +1127,7 @@ def batch_normalization(
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
         out = batch_norm_Job(x)
 
-        # output.shape (1, 128, 64, 64)
+        # out.shape (1, 128, 64, 64)
 
     """
     if axis < 0:
@@ -1070,56 +1141,20 @@ def batch_normalization(
     if not flow.current_global_function_desc().IsTrainable() or not trainable:
         training = False
 
-    with flow.scope.namespace(name):
-        if center:
-            beta = flow.get_variable(
-                name="beta",
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=beta_initializer or flow.zeros_initializer(),
-                regularizer=beta_regularizer,
-                trainable=trainable,
-                distribute=distribute_util.broadcast(),
-                reuse=False,
-            )
-        else:
-            beta = flow.constant(0, dtype=params_dtype, shape=params_shape, name="beta")
-
-        if scale:
-            gamma = flow.get_variable(
-                name="gamma",
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=gamma_initializer or flow.ones_initializer(),
-                regularizer=gamma_regularizer,
-                trainable=trainable,
-                distribute=distribute_util.broadcast(),
-                reuse=False,
-            )
-        else:
-            gamma = flow.constant(
-                1, dtype=params_dtype, shape=params_shape, name="gamma"
-            )
-
-        moving_mean = flow.get_variable(
-            name="moving_mean",
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_mean_initializer or flow.zeros_initializer(),
-            trainable=False,
-            distribute=distribute_util.broadcast(),
-            reuse=False,
-        )
-
-        moving_variance = flow.get_variable(
-            name="moving_variance",
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_variance_initializer or flow.ones_initializer(),
-            trainable=False,
-            distribute=distribute_util.broadcast(),
-            reuse=False,
-        )
+    beta, gamma, moving_mean, moving_variance = _get_batch_normalization_variables(
+        name,
+        center,
+        scale,
+        params_shape,
+        params_dtype,
+        trainable,
+        beta_initializer,
+        beta_regularizer,
+        gamma_initializer,
+        gamma_regularizer,
+        moving_mean_initializer,
+        moving_variance_initializer,
+    )
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if training:
@@ -1182,6 +1217,188 @@ def batch_normalization(
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
+@oneflow_export("layers.batch_normalization_add_relu")
+def batch_normalization_add_relu(
+    inputs: remote_blob_util.BlobDef,
+    addend: Optional[remote_blob_util.BlobDef] = None,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = "BatchNorm",
+) -> remote_blob_util.BlobDef:
+    r"""Fused flow.layers.batch_normalization + flow.math.add + flow.math.relu
+
+    Args:
+        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        addend (remote_blob_util.BlobDef): `Blob` add to batch_normalization output.
+        axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
+        momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
+        epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
+        center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
+        scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
+        beta_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
+        gamma_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
+        beta_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
+        gamma_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
+        moving_mean_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
+        moving_variance_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
+        trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+        training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
+        name (Optional[str], optional): This layer's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef:  A `Blob` with same shape of input.
+
+    Raises:
+        ValueError: If axis is out of dimension of input.
+
+    """
+    if not flow.current_global_function_desc().IsTrainable() or not trainable:
+        training = False
+
+    if (
+        not training
+        or flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
+        out = flow.layers.batch_normalization(
+            inputs,
+            axis=axis,
+            momentum=momentum,
+            epsilon=epsilon,
+            center=center,
+            scale=scale,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            beta_regularizer=beta_regularizer,
+            gamma_regularizer=gamma_regularizer,
+            moving_mean_initializer=moving_mean_initializer,
+            moving_variance_initializer=moving_variance_initializer,
+            trainable=trainable,
+            training=training,
+            name=name,
+        )
+        with flow.scope.namespace("BatchNormAddRelu"):
+            if addend is not None:
+                out = out + addend
+            return flow.math.relu(out)
+
+    if axis < 0:
+        axis += len(inputs.shape)
+    assert 0 <= axis < len(inputs.shape)
+
+    params_shape = [inputs.shape[axis]]
+    # Float32 required to avoid precision-loss when using fp16 input/output
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+
+    beta, gamma, moving_mean, moving_variance = _get_batch_normalization_variables(
+        name,
+        center,
+        scale,
+        params_shape,
+        params_dtype,
+        trainable,
+        beta_initializer,
+        beta_regularizer,
+        gamma_initializer,
+        gamma_regularizer,
+        moving_mean_initializer,
+        moving_variance_initializer,
+    )
+
+    builder = (
+        flow.user_op_builder(name)
+        .Op("normalization_add_relu")
+        .Input("x", [inputs])
+        .Input("moving_mean", [moving_mean])
+        .Input("moving_variance", [moving_variance])
+        .Input("gamma", [gamma])
+        .Input("beta", [beta])
+        .Output("y")
+        .Output("mean")
+        .Output("inv_variance")
+        .Output("reserve_space")
+        .Attr("axis", axis)
+        .Attr("epsilon", epsilon)
+        .Attr("momentum", momentum)
+    )
+    if addend is not None:
+        builder = builder.Input("addend", [addend])
+    return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("layers.batch_normalization_relu")
+def batch_normalization_relu(
+    inputs: remote_blob_util.BlobDef,
+    axis: int = -1,
+    momentum: float = 0.99,
+    epsilon: float = 0.001,
+    center: bool = True,
+    scale: bool = True,
+    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
+    trainable: bool = True,
+    training: bool = True,
+    name: str = "BatchNorm",
+) -> remote_blob_util.BlobDef:
+    r"""Fused flow.layers.batch_normalization + flow.math.relu
+
+Args:
+    inputs (remote_blob_util.BlobDef): Input `Blob`.
+    axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
+    momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
+    epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
+    center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
+    scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
+    beta_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
+    gamma_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
+    beta_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
+    gamma_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
+    moving_mean_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
+    moving_variance_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
+    trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
+    training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
+    name (Optional[str], optional): This layer's name. Defaults to None.
+
+Returns:
+    remote_blob_util.BlobDef:  A `Blob` with same shape of input.
+
+Raises:
+    ValueError: If axis is out of dimension of input.
+
+"""
+    return flow.layers.batch_normalization_add_relu(
+        inputs,
+        axis=axis,
+        momentum=momentum,
+        epsilon=epsilon,
+        center=center,
+        scale=scale,
+        beta_initializer=beta_initializer,
+        gamma_initializer=gamma_initializer,
+        beta_regularizer=beta_regularizer,
+        gamma_regularizer=gamma_regularizer,
+        moving_mean_initializer=moving_mean_initializer,
+        moving_variance_initializer=moving_variance_initializer,
+        trainable=trainable,
+        training=training,
+        name=name,
+    )
+
+
 @oneflow_export("layers.upsample_2d")
 def upsample(
     x: remote_blob_util.BlobDef,
@@ -1230,7 +1447,7 @@ def upsample(
         x = np.random.randn(1, 32, 32, 32).astype(np.float32)
         out = upsample_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     if isinstance(size, int):

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -529,6 +530,14 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
                                ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
                                conv_state->dilation_rate_3d_.data(),
                                conv_state->padding_before_3d_.data(), GetImgMutDptr<T>(dx, i));
+    }
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), dx->data_type());
+      CHECK_EQ(add_to_output->shape(), dx->shape());
+      KernelUtil<DeviceType::kCPU, T>::Addition(
+          ctx->device_ctx(), add_to_output->shape().elem_cnt(), dx->mut_dptr<T>(), dx->dptr<T>(),
+          add_to_output->dptr<T>());
     }
   }
 };

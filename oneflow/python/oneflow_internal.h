@@ -17,11 +17,6 @@ limitations under the License.
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
 
-void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback, std::string* error_str) {
-  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
-      error_str);
-}
-
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
 }
@@ -49,8 +44,6 @@ void EnableEagerEnvironment(bool enable_eager_execution) {
   *Global<bool, EagerExecution>::Get() = enable_eager_execution;
 }
 
-bool EagerExecutionEnabled() { return oneflow::EagerExecutionEnabled(); }
-
 bool IsEnvInited() {
   using namespace oneflow;
   return Global<EnvGlobalObjectsScope>::Get() != nullptr;
@@ -69,21 +62,21 @@ bool IsSessionInited() {
   return Global<SessionGlobalObjectsScope>::Get() != nullptr;
 }
 
-void InitGlobalSession(const std::string& config_proto_str, std::string* error_str) {
+void InitLazyGlobalSession(const std::string& config_proto_str, std::string* error_str) {
   using namespace oneflow;
-  return InitGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
+  return InitLazyGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
 }
 
-void DestroyGlobalSession(std::string* error_str) {
-  return oneflow::DestroyGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void DestroyLazyGlobalSession(std::string* error_str) {
+  return oneflow::DestroyLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StartGlobalSession(std::string* error_str) {
-  return oneflow::StartGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void StartLazyGlobalSession(std::string* error_str) {
+  return oneflow::StartLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
-void StopGlobalSession(std::string* error_str) {
-  return oneflow::StopGlobalSession().GetDataAndSerializedErrorProto(error_str);
+void StopLazyGlobalSession(std::string* error_str) {
+  return oneflow::StopLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
@@ -127,7 +120,7 @@ std::string InferOpConf(const std::string& serialized_op_conf,
 }
 
 bool IsInterfaceOpTypeCase(int64_t op_type_case) {
-  return oneflow::IsClassRegistered<oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
+  return oneflow::IsClassRegistered<int32_t, oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 long GetOpParallelSymbolId(const std::string& serialized_op_conf, std::string* error_str) {
@@ -139,18 +132,6 @@ std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
                                        std::string* error_str) {
   return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-void RunLogicalInstruction(const std::string& vm_instruction_list,
-                           const std::string& eager_symbol_list_str, std::string* error_str) {
-  return oneflow::RunLogicalInstruction(vm_instruction_list, eager_symbol_list_str)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
-void RunPhysicalInstruction(const std::string& vm_instruction_list,
-                            const std::string& eager_symbol_list_str, std::string* error_str) {
-  return oneflow::RunPhysicalInstruction(vm_instruction_list, eager_symbol_list_str)
-      .GetDataAndSerializedErrorProto(error_str);
 }
 
 long CurrentMachineId(std::string* error_str) {

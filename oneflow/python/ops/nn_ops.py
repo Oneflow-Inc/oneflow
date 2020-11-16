@@ -272,7 +272,7 @@ def conv1d(
         x = np.random.randn(1, 64, 32).astype(np.float32)
         out = conv1d_Job(x)
 
-        # output.shape (1, 32, 32)
+        # out.shape (1, 32, 32)
 
     """
     assert len(input.shape) == 3
@@ -445,7 +445,7 @@ def conv2d(
         x = np.random.randn(1, 64, 32, 32).astype(np.float32)
         out = conv2d_Job(x)
 
-        # output.shape (1, 128, 16, 16)
+        # out.shape (1, 128, 16, 16)
 
     """
     assert len(input.shape) == 4
@@ -662,7 +662,7 @@ def conv3d(
         x = np.random.randn(1, 64, 10, 16, 16).astype(np.float32)
         out = conv3d_Job(x)
 
-        # output.shape (1, 128, 10, 16, 16)
+        # out.shape (1, 128, 10, 16, 16)
 
     """
 
@@ -813,8 +813,9 @@ def batch_normalization(
     axis: int = 1,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This op does not fully align with tf.nn.batch_normalization. mean, variable, offset and scale
-          are always 1D. Users need to specify "axis" to 1 for NCHW data format.
+    r"""This op does not fully align with tf.nn.batch_normalization. 
+    
+    The `mean`, `variable`, `offset` and `scale` are always 1D. Users need to specify `axis` to 1 for NCHW data format.
 
     Args:
         x (remote_blob_util.BlobDef): Input `Blob` of arbitrary dimensionality.
@@ -858,7 +859,7 @@ def batch_normalization(
         x = np.array([[1, 2, 3, 4, 5]]).astype(np.float32)
         out = batch_norm_Job(x)
 
-        # output [[-1.41421  -0.707105  0.        0.707105  1.41421 ]]
+        # out [[-1.41421  -0.707105  0.        0.707105  1.41421 ]]
 
     """
 
@@ -922,6 +923,120 @@ def batch_normalization(
             .Attr("momentum", 0.0)
         )
         return builder.Build().InferAndTryRun().RemoteBlobList()[0]
+    else:
+        raise NotImplementedError
+
+
+@oneflow_export("nn.layer_norm")
+def layer_norm(
+    inputs: remote_blob_util.BlobDef,
+    gamma: Optional[remote_blob_util.BlobDef] = None,
+    beta: Optional[remote_blob_util.BlobDef] = None,
+    begin_norm_axis: int = 1,
+    begin_params_axis: int = -1,
+    epsilon: float = 1e-5,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Layer Normalization.
+
+    Args:
+        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        gamma (Optional[remote_blob_util.BlobDef]).
+        beta (Optional[remote_blob_util.BlobDef]).
+        begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
+        begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
+        epsilon (float, optional): A small float is added to avoid division by zero. Defaults to 1e-5.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def layer_norm_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            layer_norm = flow.nn.layer_norm(
+                x,
+                name="LayerNorm1"
+            )
+            return layer_norm
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = layer_norm_Job(x)
+
+        # out.shape (1, 64, 128, 128)
+
+    """
+    param_shape = inputs.shape[begin_params_axis:]
+
+    if name is None:
+        name = id_util.UniqueStr("LayerNorm_")
+
+    if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
+        if begin_norm_axis < 0:
+            begin_norm_axis = begin_norm_axis + len(inputs.shape)
+
+        reduce_axis = []
+        for dim in range(len(inputs.shape)):
+            if dim >= begin_norm_axis:
+                reduce_axis.append(dim)
+        mean, variance = flow.nn.moments(inputs, reduce_axis, keepdims=True)
+
+        axis = begin_norm_axis
+        normalized = flow.nn.batch_normalization(
+            x=inputs,
+            mean=mean,
+            variance=variance,
+            variance_epsilon=epsilon,
+            axis=axis,
+            name=name,
+        )
+        nd_params_shape = [1] * (len(inputs.shape) - len(param_shape)) + list(
+            param_shape
+        )
+        affined = normalized
+        if gamma:
+            gamma = flow.reshape(gamma, nd_params_shape)
+            affined *= gamma
+        if beta:
+            beta = flow.reshape(beta, nd_params_shape)
+            affined += beta
+        return affined
+    elif flow.current_scope().device_parallel_desc_symbol.device_tag == "gpu":
+        op_builder = (
+            flow.user_op_builder(name)
+            .Op("layer_norm")
+            .Input("x", [inputs])
+            .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+        )
+        scale = False
+        center = False
+        if beta is not None:
+            center = True
+            op_builder.Input("beta", [beta])
+        if gamma is not None:
+            scale = True
+            op_builder.Input("gamma", [gamma])
+            op_builder.Output("normalized")
+        op_builder.Attr("center", center)
+        op_builder.Attr("scale", scale)
+        op_builder.Attr("begin_norm_axis", begin_norm_axis)
+        op_builder.Attr("begin_params_axis", begin_params_axis)
+        op_builder.Attr("epsilon", epsilon)
+
+        y = op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
+        return y
     else:
         raise NotImplementedError
 
@@ -1003,7 +1118,7 @@ def tf_conv2d(
         x = np.random.randn(1, 64, 32, 32).astype(np.float32)
         out = conv2d_Job(x)
 
-        # output.shape (1, 128, 16, 16)
+        # out.shape (1, 128, 16, 16)
 
     """
     if padding.upper() == "SAME":
@@ -1020,7 +1135,7 @@ def bias_add(
     data_format: Optional[str] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator adds a bias to Blob 
+    r"""This operator adds a bias to Blob. 
 
     Args:
         value (remote_blob_util.BlobDef):  A `Blob`.
@@ -1061,7 +1176,7 @@ def bias_add(
         x = np.random.randn(1, 64, 128, 128).astype(np.float32)
         out = bias_add_Job(x)
 
-        # output.shape (1, 64, 128, 128)
+        # out.shape (1, 64, 128, 128)
 
     """
     # TODO: name unused, fix it
@@ -1212,7 +1327,7 @@ def max_pool2d(
         x = np.random.randn(1, 32, 128, 128).astype(np.float32)
         out = maxpool2d_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     op = (
@@ -1289,7 +1404,7 @@ def avg_pool2d(
         x = np.random.randn(1, 32, 128, 128).astype(np.float32)
         out = avgpool2d_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     op = (
@@ -1367,7 +1482,7 @@ def max_pool3d(
         x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
         out = maxpool3d_Job(x)
 
-        # output.shape (1, 32, 5, 64, 64)
+        # out.shape (1, 32, 5, 64, 64)
 
     """
     op = (
@@ -1445,7 +1560,7 @@ def avg_pool3d(
         x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
         out = avgpool3d_Job(x)
 
-        # output.shape (1, 32, 5, 64, 64)
+        # out.shape (1, 32, 5, 64, 64)
 
     """
     op = (
@@ -1498,7 +1613,7 @@ def softmax(
     axis: Optional[int] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""Computes softmax activations. Analogous to `tf.nn.softmax <https://www.tensorflow.org/api_docs/python/tf/nn/softmax>`_
+    r"""Computes softmax activations. 
 
     For each element, we apply: 
 
@@ -1536,7 +1651,7 @@ def softmax(
         x = np.array([[1, 2, 1, 5, 4]]).astype(np.float32)
         out = softmax_Job(x)
 
-        # output [[0.01259415 0.03423444 0.01259415 0.68761706 0.2529602 ]]
+        # out [[0.01259415 0.03423444 0.01259415 0.68761706 0.2529602 ]]
 
     """
     if axis is None:
@@ -1653,7 +1768,7 @@ def sparse_cross_entropy(
         labels = np.array([0, 1, 1, 0, 1]).astype(np.int32)
         loss = sparse_cross_entropy_Job(x, labels)
 
-        # output [1.2039728  0.5108256  0.6931472  2.3025851  0.22314353]
+        # out [1.2039728  0.5108256  0.6931472  2.3025851  0.22314353]
 
     """
     assert labels is not None
@@ -1724,7 +1839,6 @@ def softmax_cross_entropy_with_logits(
         def softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
                                     labels: tp.Numpy.Placeholder((3, 3), dtype=flow.float32)
         ) -> tp.Numpy:
-            input = flow.nn.softmax(input)
             loss = flow.nn.softmax_cross_entropy_with_logits(labels=labels,
                                                             logits=input)
             return loss
@@ -1738,7 +1852,7 @@ def softmax_cross_entropy_with_logits(
                         [0.8, 0.1, 0.1]]).astype(np.float32)
         loss = softmax_cross_entropy_Job(x, labels)
 
-        # output [0.73441553 1.1240788  1.4488925 ]
+        # out [0.73441553 1.1240788  1.4488925 ]
 
     """
 
@@ -1800,7 +1914,6 @@ def sparse_softmax_cross_entropy_with_logits(
         def sparse_softmax_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),
                                              labels: tp.Numpy.Placeholder((3, ), dtype=flow.int32)
         ) -> tp.Numpy:
-            input = flow.nn.softmax(input)
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels=labels,
                                                                     logits=input)
             return loss
@@ -1812,7 +1925,7 @@ def sparse_softmax_cross_entropy_with_logits(
         labels = np.array([0, 1, 2]).astype(np.int32)
         loss = sparse_softmax_cross_entropy_Job(x, labels)
 
-        # output [0.65784633 1.2842525  0.5557927 ]
+        # out [0.65784633 1.2842525  0.5557927 ]
 
     """
     assert labels is not None
@@ -1893,7 +2006,6 @@ def sigmoid_cross_entropy_with_logits(
         def sigmoid_cross_entropy_Job(input: tp.Numpy.Placeholder((3, 2), dtype=flow.float32),
                                     labels: tp.Numpy.Placeholder((3, 2), dtype=flow.float32)
         ) -> tp.Numpy:
-            input = flow.math.sigmoid(input)
             loss = flow.nn.sigmoid_cross_entropy_with_logits(labels=labels,
                                                             logits=input)
             return loss
@@ -1907,9 +2019,9 @@ def sigmoid_cross_entropy_with_logits(
                         [0.2, 0.8]]).astype(np.float32)
         loss = sigmoid_cross_entropy_Job(x, labels)
 
-        # output [[0.612735   0.90472794]
-        #         [0.89778364 0.6990613 ]
-        #         [0.97783387 0.51372755]]
+        # out [[0.612735   0.90472794]
+        #      [0.89778364 0.6990613 ]
+        #      [0.97783387 0.51372755]]
 
 
     """
@@ -1993,11 +2105,11 @@ def random_mask_like(
         like = np.ones(shape=(5, 5)).astype(np.float32)
         random_mask = random_mask_like_Job(like)
 
-        # output [[0 0 0 0 0]
-        #         [1 1 1 0 0]
-        #         [1 0 1 1 0]
-        #         [0 0 0 0 1]
-        #         [1 0 1 1 1]]
+        # out [[0 0 0 0 0]
+        #      [1 1 1 0 0]
+        #      [1 0 1 1 0]
+        #      [0 0 0 0 1]
+        #      [1 0 1 1 1]]
 
     """
     assert rate is not None and rate >= 0.0 and rate < 1.0
@@ -2164,7 +2276,7 @@ def deconv2d(
     filters: Optional[remote_blob_util.BlobDef] = None,
     dilations: Optional[Union[int, Sequence[int]]] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""2d transposed convolution
+    r"""2d transposed convolution.
 
     Args:
         value (Optional[remote_blob_util.BlobDef], optional):   4-d `Blob`. Defaults to None.
@@ -2234,7 +2346,7 @@ def deconv2d(
         x = np.random.randn(1, 32, 32, 32).astype(np.float32)
         out = deconv2d_Job(x)
 
-        # output.shape (1, 32, 64, 64)
+        # out.shape (1, 32, 64, 64)
 
     """
     assert (value is not None) ^ (
@@ -2486,7 +2598,7 @@ def deconv2d_torch(
 def leaky_relu(
     x: remote_blob_util.BlobDef, alpha: float = 0.2, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""Leaky ReLU activation value, Analogous to `tf.nn.leaky_relu <https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu>`_
+    r"""Leaky ReLU activation. 
 
     .. math::
         out = max(x, alpha*x)
@@ -2519,7 +2631,7 @@ def leaky_relu(
         x = np.array([-10, -5, 0, 5, 10]).astype(np.float32)
         out = leaky_relu_Job(x)
 
-        # output [-2. -1.  0.  5. 10.]
+        # out [-2. -1.  0.  5. 10.]
 
     """
     return (

@@ -31,10 +31,10 @@ namespace oneflow {
 namespace {
 
 void CheckFunctionConfig(const JobConfigProto& job_conf) {
-  const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
+  const auto& attr_name2attr_def = GlobalFunctionConfigDef().attr_name2attr_def();
   for (const auto& pair : job_conf.flag_name2flag_value()) {
-    const auto& iter = flag_name2flag_def.find(pair.first);
-    CHECK(iter != flag_name2flag_def.end());
+    const auto& iter = attr_name2attr_def.find(pair.first);
+    CHECK(iter != attr_name2attr_def.end());
     CHECK_EQ(iter->second.default_val().value_case(), pair.second.value_case());
   }
 }
@@ -84,17 +84,17 @@ void JobDesc::Init() {
   CheckFunctionConfig(job_conf_);
 }
 
-const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
+const AttrValue& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
   const auto& iter = job_conf_.flag_name2flag_value().find(field_name);
   if (iter != job_conf_.flag_name2flag_value().end()) { return iter->second; }
-  const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
-  const auto& def_iter = flag_name2flag_def.find(field_name);
-  CHECK(def_iter != flag_name2flag_def.end());
+  const auto& attr_name2attr_def = GlobalFunctionConfigDef().attr_name2attr_def();
+  const auto& def_iter = attr_name2attr_def.find(field_name);
+  CHECK(def_iter != attr_name2attr_def.end());
   return def_iter->second.default_val();
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
+  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {

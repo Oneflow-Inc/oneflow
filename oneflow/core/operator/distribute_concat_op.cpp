@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/eager/eager_symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
@@ -30,8 +29,6 @@ class DistributeConcatOp final : public Operator {
   ~DistributeConcatOp() = default;
 
   void InitFromOpConf() override;
-
-  const PbMessage& GetCustomizedConf() const override;
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext*) const override;
@@ -60,10 +57,6 @@ void DistributeConcatOp::InitFromOpConf() {
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
-}
-
-const PbMessage& DistributeConcatOp::GetCustomizedConf() const {
-  return op_conf().distribute_concat_conf();
 }
 
 Maybe<void> DistributeConcatOp::InferBlobDescs(

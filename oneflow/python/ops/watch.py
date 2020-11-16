@@ -44,11 +44,87 @@ def Watch(
     blob_watched: remote_blob_util.BlobDef,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
-    r"""Register callback for a blob. The callback will be called after the computation produce the blob finishes.
+    r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob. 
 
     Args:
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
+    
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def watch_Job() -> None:
+            init = flow.constant_initializer(2.5)
+            variable = flow.get_variable(
+                "variable-weight",
+                shape=(5, ),
+                initializer=init,
+                trainable=True
+            )
+            flow.watch(variable, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        watch_Job()
+
+        # out [2.5 2.5 2.5 2.5 2.5]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+        def watch_handler(y: tp.Numpy):
+            print("out", y)
+
+
+        @flow.global_function()
+        def watch_Job(x: tp.Numpy.Placeholder((1, 3, 2, 2))
+        ) -> None:
+            initializer = flow.truncated_normal(0.1)
+            conv2d = flow.layers.conv2d(
+                x,
+                filters=3,
+                kernel_size=1,
+                strides=1,
+                padding='SAME',
+                kernel_initializer=initializer,
+                name="Conv2d"
+            )
+
+            flow.watch(conv2d, watch_handler)
+
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        x = np.ones(shape=(1, 3, 2, 2)).astype(np.float32)
+        watch_Job(x)
+
+        # out [[[[ 0.03757111  0.03757111]
+        #        [ 0.03757111  0.03757111]]
+
+        #       [[-0.36131713 -0.36131713]
+        #        [-0.36131713 -0.36131713]]
+
+        #       [[-0.12266113 -0.12266113]
+        #        [-0.12266113 -0.12266113]]]]
+
     """
     api = enable_if.unique([EagerWatch, LazyWatch])
     return api(blob_watched, handler_or_prompt)
@@ -99,6 +175,155 @@ def WatchDiff(
     Args:
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+
+        BATCH_SIZE = 20
+
+        def watch_diff_handler(blob: tp.Numpy):
+            print("watch_diff_handler:", blob, blob.shape, blob.dtype)
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            with flow.scope.placement("gpu", "0:0"):
+                reshape = flow.reshape(images, [images.shape[0], -1])
+                hidden = flow.layers.dense(
+                    reshape,
+                    512,
+                    activation=flow.nn.relu,
+                    kernel_initializer=initializer,
+                    name="hidden",
+                )
+                logits = flow.layers.dense(
+                    hidden, 10, kernel_initializer=initializer, name="output"
+                )
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
+
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(loss)
+            flow.watch_diff(logits, watch_diff_handler)
+            return loss
+
+
+        if __name__ == "__main__": 
+            checkpoint = flow.train.CheckPoint()
+            checkpoint.init()
+            (train_images, train_labels), (test_images, test_labels) = flow.data.load_mnist(
+                    BATCH_SIZE
+            )
+            for i, (images, labels) in enumerate(zip(train_images, train_labels)):
+                loss = train_job(images, labels)
+    
+        
+        # watch_diff_handler: [[-1.88834548e-01  2.71021971e-03  2.28271242e-02  7.17673637e-03
+        #                       4.10183379e-03  8.93106461e-02  2.23669074e-02  3.86103359e-03
+        #                       3.12465224e-02  5.23346756e-03] .....
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        BATCH_SIZE = 20
+
+        def watch_diff_handler(blob: tp.Numpy):
+            print("watch_diff_handler:", blob)
+
+
+        @flow.global_function(type="train")
+        def watch_matmul_diff_job(
+            images: tp.Numpy.Placeholder((3, 3), dtype=flow.float),
+        ) -> None:
+            with flow.scope.placement("cpu", "0:0"):
+                weight_initializer = flow.constant_initializer(2)
+                weight_shape = (3, BATCH_SIZE)
+                weight = flow.get_variable(
+                    "matmultest-weight",
+                    shape=weight_shape,
+                    initializer=weight_initializer)
+                output = flow.linalg.matmul(images, weight)
+
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(output)
+            flow.watch_diff(weight, watch_diff_handler)
+
+
+        if __name__ == "__main__":
+            check_point = flow.train.CheckPoint()
+            check_point.init()
+
+            x = np.array([[1, 1, 1], 
+                        [1, 1, 1], 
+                        [1, 1, 1]]).astype(np.float32)
+            watch_matmul_diff_job(x)
+
+        # watch_diff_handler: [[3. 3. 3.]
+        #                      [3. 3. 3.]
+        #                      [3. 3. 3.]]
+
+    Example 3: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        def watch_diff_handler(blob: tp.Numpy):
+            print("watch_diff_handler:", blob, blob.shape, blob.dtype)
+
+
+        @flow.global_function(type="train")
+        def watch_conv_diff_job(
+            images: tp.Numpy.Placeholder((1, 1, 4, 4), dtype=flow.float),
+        ) -> None:
+            with flow.scope.placement("gpu", "0:0"):
+                weight_shape = (1, 1, 3, 3)
+                weight_initializer = flow.truncated_normal(0.1)
+                weight = flow.get_variable(
+                    name="conv-weight",
+                    shape=weight_shape,
+                    initializer=weight_initializer
+                )
+                output = flow.nn.conv2d(images, weight, strides=1, padding="VALID")
+            
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(output)
+            flow.watch_diff(weight, watch_diff_handler)
+
+
+        if __name__ == "__main__":
+            check_point = flow.train.CheckPoint()
+            check_point.init()
+
+            x = np.array([[[[ 1.,  2.,  3.,  4.],
+                            [ 5.,  6.,  7.,  8.],
+                            [ 9., 10., 11., 12.],
+                            [13., 14., 15., 16.]]]]).astype(np.float32)
+
+            watch_conv_diff_job(x)
+        
+        # watch_diff_handler: [[[[14. 18. 22.]
+        #                        [30. 34. 38.]
+        #                        [46. 50. 54.]]]]
+
     """
     api = enable_if.unique([EagerWatchDiff, LazyWatchDiff])
     return api(blob_watched, handler_or_prompt)

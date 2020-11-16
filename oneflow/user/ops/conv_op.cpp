@@ -240,13 +240,13 @@ REGISTER_USER_OP("conv1d")
     .OptionalInput("bias")
     .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
-    .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
+    .Attr<int32_t>("filters")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
@@ -258,13 +258,13 @@ REGISTER_USER_OP("conv2d")
     .OptionalInput("bias")
     .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
-    .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
+    .Attr<int32_t>("filters")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
@@ -276,13 +276,13 @@ REGISTER_USER_OP("conv3d")
     .OptionalInput("bias")
     .OptionalInput("bias_multiplier")  // cudnn conv doesn't need this
     .Output("out")
-    .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
+    .Attr<int32_t>("filters")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
@@ -296,14 +296,15 @@ REGISTER_USER_OP("conv_data_grad")
     .Input("dy")
     .Input("filter")
     .Input("x_like")
+    .OptionalInput("_add_to_output")
     .Output("dx")
-    .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr("groups", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("num_spatial_dims")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups")
     .SetCheckAttrFn(CheckAttr<0>)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
@@ -320,7 +321,12 @@ REGISTER_USER_OP("conv_data_grad")
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
-
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        const user_op::TensorDesc* add_to_output =
+            ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->data_type(), x_like->data_type());
+        CHECK_EQ_OR_RETURN(add_to_output->shape(), x_like->shape());
+      }
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx = *x_like;
       return Maybe<void>::Ok();
@@ -335,12 +341,14 @@ REGISTER_USER_OP("conv_data_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("dy", 0), 0)
-          .Broadcast(user_op::OpArg("filter", 0))
-          .Split(user_op::OpArg("x_like", 0), 0)
-          .Split(user_op::OpArg("dx", 0), 0)
-          .Build();
+      std::vector<user_op::OpArg> split_args;
+      split_args.emplace_back("dy", 0);
+      split_args.emplace_back("x_like", 0);
+      split_args.emplace_back("dx", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        split_args.emplace_back("_add_to_output", 0);
+      }
+      ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
       return Maybe<void>::Ok();
     });
 
@@ -348,13 +356,13 @@ REGISTER_USER_OP("conv_filter_grad")
     .Input("dy")
     .Input("x")
     .Output("filter_diff")
-    .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr("groups", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("num_spatial_dims")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups")
     .SetCheckAttrFn(CheckAttr<0>)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
@@ -394,6 +402,7 @@ REGISTER_USER_OP("conv_filter_grad")
       user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
       *filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
       *filter_diff->mut_data_type() = x->data_type();
+      filter_diff->set_is_dynamic(false);
 
       return Maybe<void>::Ok();
     })
@@ -417,8 +426,8 @@ REGISTER_USER_OP("conv_filter_grad")
 REGISTER_USER_OP("conv_bias_grad")
     .Input("dy")
     .Output("bias_diff")
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("num_spatial_dims", UserOpAttrType::kAtInt32)
+    .Attr<std::string>("data_format")
+    .Attr<int32_t>("num_spatial_dims")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       std::string data_format = conf.attr<std::string>("data_format");

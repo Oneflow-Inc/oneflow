@@ -19,14 +19,38 @@ namespace oneflow {
 
 namespace {
 
-void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+OperatorConf GenerateRmspropHelperVariableOpConf(const VariableOp& op, const std::string& name,
+                                                 const float initial_value) {
+  OperatorConf helper_variable_op(op.op_conf());
+  helper_variable_op.set_name(op.op_name() + "-" + name);
+  helper_variable_op.mutable_variable_conf()->set_out("out");
+  InitializerConf constant_initializer;
+  constant_initializer.mutable_constant_conf()->set_value(initial_value);
+  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
+  helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
+  return helper_variable_op;
+}
+
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
+                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
+                             const LogicalBlobId& diff_lbi_of_var_out) {
+  OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(op, "mean_square", 0.f));
+
   OperatorConf mdupdt_op;
   mdupdt_op.set_name(op.op_name() + "_optimizer");
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder,
-                        mdupdt_op.mutable_rmsprop_model_update_conf());
+  auto* mdupdt_op_conf = mdupdt_op.mutable_rmsprop_model_update_conf();
+  *(mdupdt_op_conf->mutable_user_conf()) =
+      GlobalJobDesc().job_conf().train_conf().model_update_conf();
+  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
+  mdupdt_op_conf->set_mean_square(mean_square_var.name() + "/out");
   mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {mdupdt_op});
+  if (GlobalJobDesc().job_conf().train_conf().model_update_conf().rmsprop_conf().centered()) {
+    OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
+    mdupdt_op_conf->set_mean_gradient(mean_gradient_var.name() + "/out");
+    job_builder->AddOps(parallel_conf, {mean_square_var, mean_gradient_var, mdupdt_op});
+  } else {
+    job_builder->AddOps(parallel_conf, {mean_square_var, mdupdt_op});
+  }
 }
 
 }  // namespace

@@ -82,6 +82,7 @@ message JobConfigProto {
   optional XrtConfig xrt_config = 103;
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
+  optional bool enable_fuse_model_update_ops = 105 [default = false];
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
@@ -90,7 +91,9 @@ message JobConfigProto {
   optional int32 cudnn_conv_force_bwd_filter_algo = 204;
   optional bool cudnn_conv_heuristic_search_algo = 205 [default = true];
   optional bool cudnn_conv_use_deterministic_algo_only = 206 [default = false];
-  
+  optional bool enable_cudnn_fused_normalization_add_relu = 207;
+  optional bool enable_fuse_add_to_output = 208 [default = false];
+
   optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
   optional bool enable_inplace_in_reduce_struct = 302 [default = true];
@@ -109,7 +112,7 @@ message JobConfigProto {
 
   optional int64 concurrency_width = 1000 [default = 128];
 
-  map<string, UserOpAttrVal> flag_name2flag_value = 2000;
+  map<string, AttrValue> flag_name2flag_value = 2000;
 
   optional int64 logical_object_id = 3000;
 }

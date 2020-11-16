@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_XRT_XLA_XLA_ALLOCATOR_H_
 #define ONEFLOW_XRT_XLA_XLA_ALLOCATOR_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/xrt/xla/memory/device_buffer_allocator.h"
 
 #include "tensorflow/compiler/xla/statusor.h"
@@ -28,14 +29,16 @@ namespace mola {
 
 namespace se = tensorflow::se;
 using uint64 = tensorflow::uint64;
+using int64 = tensorflow::int64;
 
 class XlaAllocator : public se::DeviceMemoryAllocator {
  public:
   explicit XlaAllocator(const se::Platform *platform, DeviceBufferAllocator *allocator);
   virtual ~XlaAllocator();
-
+  using se::DeviceMemoryAllocator::Allocate;
   xla::StatusOr<se::OwningDeviceMemory> Allocate(int device_ordinal, uint64 size,
-                                                 bool retry_on_failure) override;
+                                                 bool retry_on_failure,
+                                                 int64 /*memory_space*/) override;
   tensorflow::Status Deallocate(int device_ordinal, se::DeviceMemoryBase mem) override;
 
   bool AllowsAsynchronousDeallocation() const override { return true; }
@@ -47,6 +50,10 @@ class XlaAllocator : public se::DeviceMemoryAllocator {
 
   void PopulateDeviceMemory(const std::vector<se::DeviceMemoryBase> &device_buffers,
                             const std::vector<int64_t> &allocation_indices);
+  stream_executor::port::StatusOr<stream_executor::Stream *> GetStream(
+      int device_ordinal) override {
+    UNIMPLEMENTED();
+  };
 
  private:
   DeviceBufferAllocator *allocator_;

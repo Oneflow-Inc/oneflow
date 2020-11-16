@@ -30,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
@@ -71,10 +70,12 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
+  session_id_ = config_proto.session_id();
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
+  Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
@@ -89,7 +90,6 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
     Global<LazyJobBuildAndInferCtxMgr>::New();
-    Global<LbiDiffWatcherInfo>::New();
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
@@ -101,7 +101,6 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
-    Global<LbiDiffWatcherInfo>::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<InterUserJobInfo>::Delete();
     Global<CriticalSectionDesc>::Delete();
@@ -112,6 +111,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
+  Global<const IOConf>::SessionDelete(session_id_);
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource());
 }

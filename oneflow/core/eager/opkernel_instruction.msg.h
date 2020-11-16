@@ -38,9 +38,13 @@ FLAT_MSG_VIEW_BEGIN(CallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, opkernel);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_node_signature);
 
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, input_blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_const_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, const_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, const_input_blob);
+
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_mut_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, mut_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, mut_input_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, obn);
@@ -57,9 +61,13 @@ FLAT_MSG_VIEW_BEGIN(StatelessCallOpKernelInstrOperand);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, op_node_signature);
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, shared_opkernel);
 
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_ibn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, ibn);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, input_blob);
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_const_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, const_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::ConstOperand, const_input_blob);
+
+  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_mut_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, mut_ibn);
+  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::MutOperand, mut_input_blob);
 
   FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, begin_obn);
   FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(vm::SymbolOperand, obn);

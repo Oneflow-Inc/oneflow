@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 const AMPList& AutoMixedPrecisionLists::WhiteList() {
-  static AMPList white_list = {"matmul", "batch_matmul", "conv2d"};
+  static AMPList white_list = {"matmul", "batch_matmul", "conv2d", "amp_white_identity"};
   return white_list;
 }
 
@@ -29,11 +29,13 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
-  static AMPList gray_list = {"add_n",         "avg_pool_1d",   "avg_pool_2d",   "avg_pool_3d",
-                              "bias_add",      "multiply",      "sigmoid",       "tanh",
-                              "sqrt",          "scalar_mul",    "scalar_add",    "broadcast_add",
-                              "broadcast_sub", "broadcast_mul", "broadcast_div", "layer_norm",
-                              "dropout",       "softmax",       "gelu",          "normalization"};
+  static AMPList gray_list = {"add_n",         "avg_pool_1d",   "avg_pool_2d",
+                              "avg_pool_3d",   "bias_add",      "multiply",
+                              "sigmoid",       "tanh",          "sqrt",
+                              "scalar_mul",    "scalar_add",    "broadcast_add",
+                              "broadcast_sub", "broadcast_mul", "broadcast_div",
+                              "layer_norm",    "dropout",       "softmax",
+                              "gelu",          "normalization", "normalization_add_relu"};
   return gray_list;
 }
 

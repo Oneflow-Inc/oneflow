@@ -13,21 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 namespace {
 
-class PruneCastToStaticShapeOpsPass final : public OpGraphPass {
+class PruneCastToStaticShapeOpsPass final : public JobPass {
  public:
   PruneCastToStaticShapeOpsPass() = default;
   ~PruneCastToStaticShapeOpsPass() override = default;
-  bool IsEnabled() const override {
-    return GlobalJobDesc().IsTrain() && GlobalJobDesc().prune_cast_to_static_shape_ops();
+
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().IsTrain() && ctx.job_desc().prune_cast_to_static_shape_ops();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
@@ -57,12 +65,11 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
         op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
       }
       OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-      PbMessage* conf =
-          MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == cast_out_lbi) {
-          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(cast_out_lbi),
-                                            GenLogicalBlobName(cast_in_lbi));
+          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn,
+                                                                  GenLogicalBlobName(cast_in_lbi));
+          CHECK_EQ(GenLogicalBlobName(cast_out_lbi), old_val);
         }
       }
     }
@@ -74,6 +81,6 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("PruneCastToStaticShapeOpsPass", PruneCastToStaticShapeOpsPass);
+REGISTER_JOB_PASS("PruneCastToStaticShapeOpsPass", PruneCastToStaticShapeOpsPass);
 
 }  // namespace oneflow

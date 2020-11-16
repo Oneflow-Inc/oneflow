@@ -82,6 +82,8 @@ class CudaAsyncMemoryCopier final : public MemoryCopier {
   ~CudaAsyncMemoryCopier() override = default;
 
  private:
+  void Copy(DeviceCtx* ctx, void* dst, const void* src,
+            const MemoryCopyNdDesc& desc) const override;
   void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const override;
   void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src, size_t src_pitch,
               size_t width, size_t height) const override;
@@ -106,8 +108,8 @@ class DefaultMemoryCopierCreator final {
   const Func func_;
 };
 
-#define REGISTER_DEFAULT_MEMORY_COPIER(device_type, func)         \
-  REGISTER_CLASS_CREATOR(device_type, DefaultMemoryCopierCreator, \
+#define REGISTER_DEFAULT_MEMORY_COPIER(device_type, func)                  \
+  REGISTER_CLASS_CREATOR(int32_t, device_type, DefaultMemoryCopierCreator, \
                          ([] { return new DefaultMemoryCopierCreator(func); }))
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type);
