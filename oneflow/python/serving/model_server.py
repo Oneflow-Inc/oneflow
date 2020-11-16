@@ -28,6 +28,19 @@ import logging
 from oneflow.python.oneflow_export import oneflow_export
 
 
+# TODO list:
+# -- support multi model serving: place loaded model and related session in independent subprocess
+# -- support more prediction service and model service (get model meta or status, reload model)
+# -- support stream request and stream response for big-size inputs and outputs
+# -- version policy of model
+# -- aiohttp server
+# -- complete async server
+# -- fix proto
+# -- update and change SimpleSession interface
+# -- batching util
+# -- hot update model, two ways: 1) watch model config file changing and reload; 
+#    2) through ReloadConfig request
+
 # TODO: consider big tensor using stream request and stream response
 # because of the limit "Received message larger than max (4946900 vs. 4194304)"
 class PredictionService(prediction_grpc.PredictionServiceServicer):
