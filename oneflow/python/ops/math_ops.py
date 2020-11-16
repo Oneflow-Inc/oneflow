@@ -1467,15 +1467,15 @@ def top_k(
     name = name if name is not None else id_util.UniqueStr("TopK_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert axis < num_axes
+    assert axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _top_k_at_last_dim(input, k, sorted, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-        x = flow.transpose(input, perm, False, True, name + "transpose")
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
         x = _top_k_at_last_dim(x, k, sorted, name)
         return flow.transpose(
-            x, get_inversed_perm(perm), False, True, name + "inverse_transpose"
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
         )
 
 
@@ -1531,18 +1531,18 @@ def argmax(
     name = name if name is not None else id_util.UniqueStr("ArgMax_")
     num_axes = len(input.shape)
     axis = axis if axis >= 0 else axis + num_axes
-    assert axis < num_axes
+    assert axis < num_axes, "axis out of range"
     if axis == num_axes - 1:
         return _argmax_at_last_dim(input, name)
     else:
         perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-        x = flow.transpose(input, perm, False, True, name + "transpose")
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
         x = _argmax_at_last_dim(x, name)
-        x = flow.expand_dims(x, -1, name + "expand_dims")
+        x = flow.expand_dims(x, -1, name + "_expand_dims")
         x = flow.transpose(
-            x, get_inversed_perm(perm), False, True, name + "inverse_transpose"
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
         )
-        x = flow.squeeze(x, [axis], name + "squeeze")
+        x = flow.squeeze(x, [axis], name + "_squeeze")
         return x
 
 
