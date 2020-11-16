@@ -20,6 +20,7 @@ from test_util import GenArgList
 import unittest
 from collections import OrderedDict
 from typing import Dict
+import os 
 
 
 def _compare_mseloss_with_np(
@@ -131,6 +132,7 @@ class Testl1loss1n1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_mseloss_with_np(*arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_mseloss_gpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["input"] = [(3, 16, 32)]
@@ -144,6 +146,7 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 class Testrange1n2d(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_mseloss_gpu_1n2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["input"] = [(3, 16, 16)]
