@@ -32,7 +32,7 @@ from test_util import GenArgList
 import unittest
 from collections import OrderedDict
 from typing import List
-import os 
+import os
 
 
 def compare_range_with_np_CPU(device_type, machine_ids, device_counts):
