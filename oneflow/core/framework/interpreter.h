@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INTERPRETER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INTERPRETER_H_
 
+#include <functional>
 #include "oneflow/core/vm/id_generator.h"
 
 namespace oneflow {
