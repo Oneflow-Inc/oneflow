@@ -16,175 +16,15 @@ limitations under the License.
 #include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/mem_instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
-#include "oneflow/core/vm/mem_buffer_object.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
 
 namespace oneflow {
 namespace vm {
-
-namespace {
-
-#ifdef WITH_CUDA
-
-class CudaMallocHostInstructionType final : public InstructionType {
- public:
-  CudaMallocHostInstructionType() = default;
-  ~CudaMallocHostInstructionType() override = default;
-
-  using stream_type = HostStreamType;
-
-  void Infer(Instruction* instruction) const override {
-    MemBufferObjectType* mem_buffer_object_type = nullptr;
-    size_t size = 0;
-    int64_t device_id = 0;
-    {
-      FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      size = view->size();
-      RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->mem_buffer());
-      mem_buffer_object_type = rw_mutexed_object->Init<MemBufferObjectType>();
-      device_id = instruction->stream().device_id();
-    }
-    mem_buffer_object_type->set_size(size);
-    auto* mem_case = mem_buffer_object_type->mut_mem_case();
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
-  }
-  void Compute(Instruction* instruction) const override {
-    const MemBufferObjectType* buffer_type = nullptr;
-    MemBufferObjectValue* buffer_value = nullptr;
-    char* dptr = nullptr;
-    {
-      FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      const auto& operand = view->mem_buffer();
-      buffer_type = CHECK_JUST(instruction->mut_operand_type(operand)->Get<MemBufferObjectType>());
-      buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
-    }
-    OF_CUDA_CHECK(cudaMallocHost(&dptr, buffer_type->size()));
-    buffer_value->reset_data(dptr);
-  }
-};
-COMMAND(RegisterInstructionType<CudaMallocHostInstructionType>("CudaMallocHost"));
-
-#endif  // WITH_CUDA
-
-class MallocInstructionType final : public InstructionType {
- public:
-  MallocInstructionType() = default;
-  ~MallocInstructionType() override = default;
-
-  using stream_type = HostStreamType;
-
-  void Infer(Instruction* instruction) const override {
-    MemBufferObjectType* mem_buffer_object_type = nullptr;
-    size_t size = 0;
-    {
-      FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      size = view->size();
-      const auto& operand = view->mem_buffer();
-      RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(operand);
-      mem_buffer_object_type = rw_mutexed_object->Init<MemBufferObjectType>();
-    }
-    mem_buffer_object_type->set_size(size);
-    mem_buffer_object_type->mut_mem_case()->mutable_host_mem();
-  }
-  void Compute(Instruction* instruction) const override {
-    const MemBufferObjectType* buffer_type = nullptr;
-    MemBufferObjectValue* buffer_value = nullptr;
-    char* dptr = nullptr;
-    {
-      FlatMsgView<MallocInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      const auto& operand = view->mem_buffer();
-      buffer_type = CHECK_JUST(instruction->mut_operand_type(operand)->Get<MemBufferObjectType>());
-      buffer_value = instruction->mut_operand_value(operand)->Init<MemBufferObjectValue>();
-    }
-    dptr = reinterpret_cast<char*>(std::malloc(buffer_type->size()));
-    buffer_value->reset_data(dptr);
-  }
-};
-COMMAND(RegisterInstructionType<MallocInstructionType>("Malloc"));
-
-#ifdef WITH_CUDA
-
-class CudaFreeHostInstructionType final : public InstructionType {
- public:
-  CudaFreeHostInstructionType() = default;
-  ~CudaFreeHostInstructionType() override = default;
-
-  using stream_type = HostStreamType;
-
-  void Infer(Instruction* instruction) const override {
-    RwMutexedObject* type_rw_mutexed_object = nullptr;
-    {
-      FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      const auto& operand = view->mem_buffer();
-      type_rw_mutexed_object = instruction->mut_operand_type(operand);
-      const auto& buffer_type = *CHECK_JUST(type_rw_mutexed_object->Get<MemBufferObjectType>());
-      CHECK(buffer_type.mem_case().has_host_mem());
-      CHECK(buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
-    }
-    type_rw_mutexed_object->reset_object();
-  }
-  void Compute(Instruction* instruction) const override {
-    RwMutexedObject* value_rw_mutexed_object = nullptr;
-    {
-      FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      const auto& operand = view->mem_buffer();
-      value_rw_mutexed_object = instruction->mut_operand_value(operand);
-    }
-    OF_CUDA_CHECK(cudaFreeHost(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data()));
-    value_rw_mutexed_object->reset_object();
-  }
-};
-COMMAND(RegisterInstructionType<CudaFreeHostInstructionType>("CudaFreeHost"));
-
-#endif  // WITH_CUDA
-
-class FreeInstructionType final : public InstructionType {
- public:
-  FreeInstructionType() = default;
-  ~FreeInstructionType() override = default;
-
-  using stream_type = HostStreamType;
-
-  void Infer(Instruction* instruction) const override {
-    RwMutexedObject* type_rw_mutexed_object = nullptr;
-    {
-      FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      const auto& operand = view->mem_buffer();
-      type_rw_mutexed_object = instruction->mut_operand_type(operand);
-      const auto& buffer_type = *CHECK_JUST(type_rw_mutexed_object->Get<MemBufferObjectType>());
-      CHECK(buffer_type.mem_case().has_host_mem());
-      CHECK(!buffer_type.mem_case().host_mem().has_cuda_pinned_mem());
-    }
-    type_rw_mutexed_object->reset_object();
-  }
-  void Compute(Instruction* instruction) const override {
-    RwMutexedObject* value_rw_mutexed_object = nullptr;
-    {
-      FlatMsgView<FreeInstruction> view;
-      CHECK(view.Match(instruction->instr_msg().operand()));
-      const auto& operand = view->mem_buffer();
-      value_rw_mutexed_object = instruction->mut_operand_value(operand);
-    }
-    std::free(value_rw_mutexed_object->Mut<MemBufferObjectValue>()->mut_data());
-    value_rw_mutexed_object->reset_object();
-  }
-};
-COMMAND(RegisterInstructionType<FreeInstructionType>("Free"));
-
-}  // namespace
 
 void HostStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
@@ -219,7 +59,6 @@ ObjectMsgPtr<StreamDesc> HostStreamType::MakeStreamDesc(const Resource& resource
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
-  ret->set_start_global_device_id(this_machine_id);
   return ret;
 }
 

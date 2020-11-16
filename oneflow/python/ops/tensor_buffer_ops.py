@@ -31,15 +31,46 @@ def tensor_buffer_to_tensor(
     instance_shape: Sequence[int],
     name: Optional[str] = None,
 ) -> BlobDef:
-    r"""Converts the Blob type to TensorBuffer.
+    r"""This operator converts the Blob's type from TensorBuffer to Tensor. 
+    Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
+    to `Tensor`. 
+
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorBuffer. 
+
 
     Args:
-        x: Input `Blob`.
-        dtype: The destination dtype.
-        instance_shape: The shape of each TensorBuffer.
-        name: Name for the operator.
+        x (BlobDef): Input `Blob`.
+        dtype (dtype_util.dtype): The data dtype.
+        instance_shape (Sequence[int]): The shape of each TensorBuffer instance.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`.
+        BlobDef: A `Blob`.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensor_buffer_to_tensor_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
+        ) -> tp.Numpy:
+            x = flow.tensor_to_tensor_buffer(x, 
+                                            instance_dims=2)
+            return flow.tensor_buffer_to_tensor(x, 
+                                                instance_shape=(64, 64), 
+                                                dtype=flow.float)
+
+        x = np.random.randn(4, 16, 64, 64).astype(np.float32)
+        out = tensor_buffer_to_tensor_Job(x)
+
+        # out.shape (4, 16, 64, 64)
+    
     """
     if name is None:
         name = id_util.UniqueStr("TensorBufferToTensor_")
@@ -60,14 +91,43 @@ def tensor_buffer_to_tensor(
 def tensor_to_tensor_buffer(
     x: BlobDef, instance_dims: int, name: Optional[str] = None,
 ) -> BlobDef:
-    r"""Converts the TensorBuffer Blob to dense Tensor.
+    r"""This operator converts the Blob's type from Tensor to TensorBuffer. 
+
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorBuffer. 
+
 
     Args:
-        x: Input `Blob`.
-        instance_dims: The number of dimensions to convert to TensorBuffer.
-        name: Name for the operator.
+        x (BlobDef): Input `Blob`.
+        instance_dims (int): The dimensions of dynamic tensor instance. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
-        A `Blob`.
+        BlobDef: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensor_buffer_to_tensor_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
+        ) -> tp.Numpy:
+            x = flow.tensor_to_tensor_buffer(x, 
+                                            instance_dims=2)
+            return flow.tensor_buffer_to_tensor(x, 
+                                                instance_shape=(64, 64), 
+                                                dtype=flow.float)
+
+        x = np.random.randn(4, 16, 64, 64).astype(np.float32)
+        out = tensor_buffer_to_tensor_Job(x)
+
+        # out.shape (4, 16, 64, 64)
+
     """
     if name is None:
         name = id_util.UniqueStr("TensorToTensorBuffer_")

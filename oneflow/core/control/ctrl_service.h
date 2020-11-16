@@ -82,13 +82,13 @@ class CtrlService final {
     template<CtrlMethod ctrl_method>
     grpc::Status CallMethod(grpc::ClientContext* context, const CtrlRequest<ctrl_method>& request,
                             CtrlResponse<ctrl_method>* response) {
-      return grpc::BlockingUnaryCall(channel_.get(),
-                                     rpcmethods_.at(static_cast<size_t>(ctrl_method)), context,
-                                     request, response);
+      return grpc::internal::BlockingUnaryCall(channel_.get(),
+                                               rpcmethods_.at(static_cast<size_t>(ctrl_method)),
+                                               context, request, response);
     }
 
    private:
-    std::array<const grpc::RpcMethod, kCtrlMethodNum> rpcmethods_;
+    std::array<const grpc::internal::RpcMethod, kCtrlMethodNum> rpcmethods_;
 
     std::shared_ptr<grpc::ChannelInterface> channel_;
   };

@@ -114,31 +114,31 @@ def IsSessionInited():
     return oneflow_internal.IsSessionInited()
 
 
-def InitGlobalSession(config_proto):
+def InitLazyGlobalSession(config_proto):
     assert type(config_proto) is job_set_pb.ConfigProto
     config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitGlobalSession(config_proto_str)
+    error_str = oneflow_internal.InitLazyGlobalSession(config_proto_str)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
 
 
-def DestroyGlobalSession():
-    error_str = oneflow_internal.DestroyGlobalSession()
+def DestroyLazyGlobalSession():
+    error_str = oneflow_internal.DestroyLazyGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
 
 
-def StartGlobalSession():
-    error_str = oneflow_internal.StartGlobalSession()
+def StartLazyGlobalSession():
+    error_str = oneflow_internal.StartLazyGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
 
 
-def StopGlobalSession():
-    error_str = oneflow_internal.StopGlobalSession()
+def StopLazyGlobalSession():
+    error_str = oneflow_internal.StopLazyGlobalSession()
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
@@ -574,18 +574,20 @@ def GetFunctionConfigDef():
 
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
-    instructions = str(text_format.MessageToString(vm_instruction_list))
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunLogicalInstruction(instructions, symbols)
+    error_str = oneflow_internal.RunLogicalInstruction(
+        str(vm_instruction_list), symbols
+    )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
 
 
 def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
-    instructions = str(text_format.MessageToString(vm_instruction_list))
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunPhysicalInstruction(instructions, symbols)
+    error_str = oneflow_internal.RunPhysicalInstruction(
+        str(vm_instruction_list), symbols
+    )
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)

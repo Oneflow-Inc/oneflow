@@ -38,6 +38,10 @@ class OpArgBlobAttribute(object):
         )
 
     @property
+    def blob_desc(self):
+        return self.blob_desc_
+
+    @property
     def shape(self):
         return self.shape_
 
@@ -68,6 +72,13 @@ class OpArgBlobAttribute(object):
         batch_axis_sig = op_node_signature.batch_axis_signature.bn_in_op2batch_axis
         assert bn_in_op not in batch_axis_sig
         batch_axis_sig[bn_in_op].CopyFrom(self.batch_axis_)
+
+    def DumpToToInterfaceBlobConf(self, interface_blob_conf):
+        interface_blob_conf.shape.dim.extend(self.shape)
+        interface_blob_conf.data_type = self.blob_desc_.body.data_type
+        interface_blob_conf.is_dynamic = self.is_dynamic
+        interface_blob_conf.is_tensor_list = self.is_tensor_list
+        interface_blob_conf.batch_axis.CopyFrom(self.batch_axis)
 
 
 class OpArgParallelAttribute(object):
@@ -111,6 +122,12 @@ class OpArgParallelAttribute(object):
         )
         assert bn_in_op not in parallel_sig
         parallel_sig[bn_in_op] = self.parallel_desc_symbol.symbol_id
+
+    def DumpToToInterfaceBlobConf(self, interface_blob_conf):
+        if self.sbp_parallel.HasField("split_parallel"):
+            interface_blob_conf.split_axis.value = self.sbp_parallel.split_parallel.axis
+        else:
+            interface_blob_conf.ClearField("split_axis")
 
     def __hash__(self):
         return self.hash_

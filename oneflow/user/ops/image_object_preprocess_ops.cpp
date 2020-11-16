@@ -152,8 +152,8 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
 
 REGISTER_CPU_ONLY_USER_OP("image_normalize")
     .Input("in")
-    .Attr("std", UserOpAttrType::kAtListFloat)
-    .Attr("mean", UserOpAttrType::kAtListFloat)
+    .Attr<std::vector<float>>("std")
+    .Attr<std::vector<float>>("mean")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);

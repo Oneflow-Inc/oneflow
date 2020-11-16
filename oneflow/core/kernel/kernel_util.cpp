@@ -257,28 +257,17 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz, cudaMemcpyKind);
-  cudaMemcpyKind kind;
+  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz);
   if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
     func = &Memcpy<DeviceType::kCPU>;
-    kind = cudaMemcpyKind::cudaMemcpyHostToHost;
   } else {
 #ifdef WITH_CUDA
     func = &Memcpy<DeviceType::kGPU>;
-    if (src_mem_case.has_host_mem() && dst_mem_case.has_device_cuda_mem()) {
-      kind = cudaMemcpyKind::cudaMemcpyHostToDevice;
-    } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_host_mem()) {
-      kind = cudaMemcpyKind::cudaMemcpyDeviceToHost;
-    } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_device_cuda_mem()) {
-      kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-    } else {
-      UNIMPLEMENTED();
-    }
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
   }
-  func(ctx, dst, src, sz, kind);
+  func(ctx, dst, src, sz);
 }
 
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,

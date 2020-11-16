@@ -26,7 +26,7 @@ Maybe<void> CheckStepShape(const Shape* step) {
 }
 
 REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
-    .Attr("logdir", UserOpAttrType::kAtString)
+    .Attr<std::string>("logdir")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })

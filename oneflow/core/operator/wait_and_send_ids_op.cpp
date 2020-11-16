@@ -28,10 +28,6 @@ LogicalNode* WaitAndSendIdsOp::NewProperLogicalNode() const {
   return new WaitAndSendIdsLogicalNode();
 }
 
-const PbMessage& WaitAndSendIdsOp::GetCustomizedConf() const {
-  return op_conf().wait_and_send_ids_conf();
-}
-
 Maybe<void> WaitAndSendIdsOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

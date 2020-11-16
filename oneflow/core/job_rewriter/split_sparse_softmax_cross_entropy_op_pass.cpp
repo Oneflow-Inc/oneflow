@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -27,20 +27,25 @@ void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_
     OperatorConf new_conf = out_node->op().op_conf();
     if (new_conf.has_user_conf()
         && new_conf.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms_grad") {
-      ReplaceInputLbnInOpCustomizedConf(new_conf.mutable_user_conf(), "prob_0",
-                                        GenLogicalBlobName(out_node->op().BnInOp2Lbi("prob_0")),
-                                        new_prob_lbn);
+      CHECK_EQ(GenLogicalBlobName(out_node->op().BnInOp2Lbi("prob_0")),
+               ReplaceInputLbnInOpCustomizedConf(&new_conf, "prob_0", new_prob_lbn));
       job_builder->MutOpsOnlyOnce({new_conf});
     }
   }
 }
 
-class SplitSparseSoftmaxCrossEntropyOpPass final : public OpGraphPass {
+class SplitSparseSoftmaxCrossEntropyOpPass final : public JobPass {
  public:
   SplitSparseSoftmaxCrossEntropyOpPass() = default;
   ~SplitSparseSoftmaxCrossEntropyOpPass() override = default;
-  bool IsEnabled() const override { return true; }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
@@ -152,8 +157,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("SplitSparseSoftmaxCrossEntropyOpPass",
-                       SplitSparseSoftmaxCrossEntropyOpPass);
+REGISTER_JOB_PASS("SplitSparseSoftmaxCrossEntropyOpPass", SplitSparseSoftmaxCrossEntropyOpPass);
 
 }  // namespace
 

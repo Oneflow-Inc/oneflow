@@ -21,10 +21,10 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
   using namespace std::placeholders;
   order_ = order;
   if (GetDeviceType() == DeviceType::kCPU) {
-    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4, cudaMemcpyHostToHost);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4);
   } else {
 #ifdef WITH_CUDA
-    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4, cudaMemcpyDeviceToDevice);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4);
 #else
     UNIMPLEMENTED();
 #endif

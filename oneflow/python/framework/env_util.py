@@ -22,10 +22,12 @@ import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import traceback
 
 
 @oneflow_export("enable_eager_execution")
@@ -59,7 +61,7 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    session_ctx.GetDefaultSession().InitNormalModeScope()
+    scope_util.InitScopeStack()
     return True
 
 
@@ -151,19 +153,19 @@ def data_port(val):
 
 
 @oneflow_export("env.grpc_use_no_signal")
+@oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
-    r"""Set rpc use signal or not
+    r"""Set rpc use signal or not (deprecate)
 
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([grpc_use_no_signal, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def grpc_use_no_signal(val=True):
-    assert type(val) is bool
-    default_env_proto.grpc_use_no_signal = val
+    print(
+        "WARNING:",
+        "oneflow.env.grpc_use_no_signal is deprecated, users no longer need to set rpc use signal or not. \n",
+        traceback.format_stack()[-2],
+    )
+    return None
 
 
 @oneflow_export("env.log_dir")
@@ -258,7 +260,6 @@ def _DefaultEnvProto():
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
-    env_proto.grpc_use_no_signal = True
     return env_proto
 
 

@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job_rewriter/autograd.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
@@ -34,12 +34,6 @@ static const std::string kAutoMirroredBlobNamePrefix =
     "System-Mirrored-Blob-Auto-Converted-From-Consistent-Blob";
 
 namespace {
-
-void ResetOpConfIbn(OperatorConf* op_conf, const std::string& ibn, const std::string lbn) {
-  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
-  std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(*op_type_conf, ibn);
-  ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
-}
 
 void ResetOpConfName(OperatorConf* op_conf, const std::string& new_op_name) {
   op_conf->set_name(new_op_name);
@@ -155,10 +149,8 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
     const Operator& op, SbpSignature* sbp_sig_conf,
     HashMap<std::string, bool>* ibn2disable_boxing) const {
   auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
-  PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf_without_split_hint.get(),
-                                                      op_conf_without_split_hint->op_type_case());
   for (const std::string& ibn : op.input_bns()) {
-    std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.GetCustomizedConf(), ibn);
+    std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.op_conf(), ibn);
     SbpParallel sbp_parallel;
     bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
     bool has_disable_boxing_hint =
@@ -167,7 +159,8 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
-      ReplaceInputLbnInOpCustomizedConf(op_type_conf, ibn, lbn_may_with_hint, lbn);
+      CHECK_EQ_OR_RETURN(lbn_may_with_hint, ReplaceInputLbnInOpCustomizedConf(
+                                                op_conf_without_split_hint.get(), ibn, lbn));
     }
   }
   return op_conf_without_split_hint;
@@ -437,6 +430,25 @@ Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> JobBuildAndInferCtx::AddLbiAndDiffWatcherUuidPair(
+    const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) {
+  const auto& job_name = job_->job_conf().job_name();
+  auto* job_helper = job_->mutable_helper();
+  auto* job_name2pairs =
+      job_helper->mutable_lbi_diff_watcher_info()->mutable_job_name2lbi_and_watcher_uuids();
+  LbiAndDiffWatcherUuidPairList* pairs = &(*job_name2pairs)[job_name];
+  auto PairFoundCond = [&](const LbiAndDiffWatcherUuidPair& x) {
+    return x.lbi() == lbi_uuid_pair.lbi() && x.watcher_uuid() == lbi_uuid_pair.watcher_uuid();
+  };
+  auto found_iter = std::find_if(pairs->lbi_and_uuid_pair().begin(),
+                                 pairs->lbi_and_uuid_pair().end(), PairFoundCond);
+  CHECK_OR_RETURN(found_iter == pairs->lbi_and_uuid_pair().end())
+      << "diff blob has been watched. (logical_blob_name: "
+      << GenLogicalBlobName(lbi_uuid_pair.lbi()) << ", job_name: " << job_name << ")";
+  *pairs->mutable_lbi_and_uuid_pair()->Add() = lbi_uuid_pair;
+  return Maybe<void>::Ok();
+}
+
 Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
@@ -449,12 +461,12 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   auto GetSubOpName = [&](int index) { return GetMirroredOpName(op_conf.name(), index); };
   OperatorConf sub_op_conf(op_conf);
   int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
-  std::shared_ptr<OpAttribute> last_op_attribute;
+  auto last_op_attribute = std::make_shared<OpAttribute>();
   FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
     ResetOpConfName(&sub_op_conf, GetSubOpName(i));
     for (const auto& ibn : op->input_bns()) {
       const auto& lbi = *JUST(GetSubLbi(op->BnInOp2Lbi(ibn), i));
-      ResetOpConfIbn(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
+      ReplaceInputLbnInOpCustomizedConf(&sub_op_conf, ibn, GenLogicalBlobName(lbi));
     }
     const ParallelConf& parallel_conf = GetMirroredOpParallelConf(parallel_desc, i);
     bool is_mirrored_parallel_view = GetIsMirroredParallelView();
@@ -920,8 +932,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     CHECK_OR_RETURN(job().job_conf().train_conf().has_primary_lr());
   }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  JobPassCtx job_pass_ctx(GlobalJobDesc());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return FunctionPass(pass_name)(mut_job());
+    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
@@ -929,7 +942,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
-    JUST(DoPass("TieUpChainHeadersUnReachableFromAnyVariableOps"));
     JUST(DoPass("NonDistributedOptimizerPass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
@@ -942,6 +954,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
     JUST(DoPass("PruneParallelCastOpsPass"));
+    JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
@@ -953,8 +966,9 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  JobPassCtx job_pass_ctx(GlobalJobDesc());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return FunctionPass(pass_name)(mut_job());
+    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
   JUST(DoPass("AutoTrainStep"));
   JUST(DoPass("AutoLearningRate"));

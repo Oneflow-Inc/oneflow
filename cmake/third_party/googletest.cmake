@@ -9,7 +9,8 @@ set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
 set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
 
-set(googletest_URL ${THIRD_PARTY_SUBMODULE_DIR}/googletest/src/googletest)
+set(googletest_URL https://github.com/google/googletest/archive/release-1.8.0.tar.gz)
+use_mirror(VARIABLE googletest_URL URL ${googletest_URL})
 
 if(WIN32)
     set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
@@ -43,6 +44,7 @@ if(THIRD_PARTY)
 ExternalProject_Add(googletest
     PREFIX googletest
     URL ${googletest_URL}
+    URL_MD5 16877098823401d1bf2ed7891d7dce36
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""

@@ -28,6 +28,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
 
@@ -108,6 +109,6 @@ def _GetReturnOpConfAndOutLbiAndScope(remote_blob, allow_cpu_return_op=True):
         return old_scope.BuildWithNewParallelConf(builder, parallel_conf)
 
     sess = session_ctx.GetDefaultSession()
-    scope = sess.MakeScope(BuildScope)
+    scope = scope_util.MakeScope(BuildScope)
 
     return op_conf, lbi, scope

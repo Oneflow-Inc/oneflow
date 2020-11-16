@@ -28,10 +28,6 @@ LogicalNode* CallbackNotifyOp::NewProperLogicalNode() const {
   return new CallbackNotifyLogicalNode();
 }
 
-const PbMessage& CallbackNotifyOp::GetCustomizedConf() const {
-  return op_conf().callback_notify_conf();
-}
-
 Maybe<void> CallbackNotifyOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

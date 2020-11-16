@@ -25,9 +25,9 @@ namespace oneflow {
 namespace data {
 
 COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COCOImage>(ctx) {
-  std::shared_ptr<const COCOMeta> meta(
-      new COCOMeta(ctx->Attr<std::string>("annotation_file"), ctx->Attr<std::string>("image_dir"),
-                   ctx->Attr<bool>("remove_images_without_annotations")));
+  std::shared_ptr<const COCOMeta> meta(new COCOMeta(
+      ctx->Attr<int64_t>("session_id"), ctx->Attr<std::string>("annotation_file"),
+      ctx->Attr<std::string>("image_dir"), ctx->Attr<bool>("remove_images_without_annotations")));
 
   std::unique_ptr<RandomAccessDataset<COCOImage>> coco_dataset_ptr(new COCODataset(ctx, meta));
   loader_.reset(new DistributedTrainingDataset<COCOImage>(
@@ -49,11 +49,11 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   StartLoadThread();
 }
 
-COCOMeta::COCOMeta(const std::string& annotation_file, const std::string& image_dir,
-                   bool remove_images_without_annotations)
+COCOMeta::COCOMeta(int64_t session_id, const std::string& annotation_file,
+                   const std::string& image_dir, bool remove_images_without_annotations)
     : image_dir_(image_dir) {
   // Read content of annotation file (json format) to json obj
-  PersistentInStream in_stream(DataFS(), annotation_file);
+  PersistentInStream in_stream(session_id, DataFS(session_id), annotation_file);
   std::string json_str;
   std::string line;
   while (in_stream.ReadLine(&line) == 0) { json_str += line; }

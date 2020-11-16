@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 
@@ -31,9 +31,9 @@ int64_t GetSoleOutBlobSize(const OpNode* node) {
 ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
                                                    const int64_t parallel_id) {
   std::string device_name;
-  device_name += std::to_string(pd.MachineIdForParallelId(parallel_id));
+  device_name += std::to_string(CHECK_JUST(pd.MachineId4ParallelId(parallel_id)));
   device_name += ":";
-  device_name += std::to_string(pd.DeviceIdForParallelId(parallel_id));
+  device_name += std::to_string(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
   if (pd.device_type() == DeviceType::kGPU) {
@@ -46,15 +46,23 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
   return parallel_conf;
 }
 
-class NonDistributedOptimizerPass final : public OpGraphPass {
+class NonDistributedOptimizerPass final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NonDistributedOptimizerPass);
   NonDistributedOptimizerPass() = default;
   ~NonDistributedOptimizerPass() = default;
-  bool IsEnabled() const override {
-    return GlobalJobDesc().IsTrain() && GlobalJobDesc().enable_non_distributed_optimizer();
+
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().IsTrain() && ctx.job_desc().enable_non_distributed_optimizer();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuilder* builder) const {
@@ -158,7 +166,7 @@ Maybe<void> NonDistributedOptimizerPass::Apply(const OpGraph& op_graph, JobBuild
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("NonDistributedOptimizerPass", NonDistributedOptimizerPass);
+REGISTER_JOB_PASS("NonDistributedOptimizerPass", NonDistributedOptimizerPass);
 
 }  // namespace
 

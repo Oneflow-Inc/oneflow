@@ -28,7 +28,6 @@ class AccTickOp final : public Operator {
   ~AccTickOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   LogicalNode* NewProperLogicalNode() const override { return new AccTickLogicalNode; }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -214,15 +214,45 @@ void HostMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
 
 #ifdef WITH_CUDA
 
+namespace {
+
+bool CanCurDevAccessPointer(const void* ptr) {
+  int device_id;
+  OF_CUDA_CHECK(cudaGetDevice(&device_id));
+  cudaPointerAttributes attributes;
+  OF_CUDA_CHECK(cudaPointerGetAttributes(&attributes, ptr));
+  return (attributes.type == cudaMemoryTypeDevice && attributes.device == device_id)
+         || (attributes.type == cudaMemoryTypeHost);
+}
+
+}  // namespace
+
 void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                                  const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  if (num_axes == 1) {
-    Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
-           desc.extent.At(0));
-  } else {
+  const bool use_nd_impl =
+      CanCurDevAccessPointer(dst) && CanCurDevAccessPointer(src) && (num_axes != 1);
+  if (use_nd_impl) {
     CopyND(ctx, dst, src, desc);
+  } else {
+    if (num_axes == 1) {
+      Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0),
+             (unsigned char*)src + desc.src_pos.At(0), desc.extent.At(0));
+    } else if (num_axes == 2) {
+      const size_t dst_pitch = desc.dst_shape.At(1);
+      const size_t src_pitch = desc.src_shape.At(1);
+      const size_t width = desc.extent.At(1);
+      const size_t height = desc.extent.At(0);
+      void* dst_2d = (unsigned char*)dst + desc.dst_pos.At(0) * dst_pitch + desc.dst_pos.At(1);
+      const void* src_2d =
+          (const unsigned char*)src + desc.src_pos.At(0) * src_pitch + desc.src_pos.At(1);
+      Copy2D(ctx, dst_2d, dst_pitch, src_2d, src_pitch, width, height);
+    } else if (num_axes == 3) {
+      Copy3D(ctx, dst, src, desc);
+    } else {
+      UNIMPLEMENTED();
+    }
   }
 }
 
@@ -276,7 +306,7 @@ REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemo
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
   return std::unique_ptr<DefaultMemoryCopierCreator>(
-             NewObj<DefaultMemoryCopierCreator>(device_type))
+             NewObj<int32_t, DefaultMemoryCopierCreator>(device_type))
       ->Create();
 }
 
