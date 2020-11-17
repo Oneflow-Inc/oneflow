@@ -705,7 +705,7 @@ std::shared_ptr<OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const
 
 // Compute time complexity for given blob description and sbp signature.
 // Use function to repalce the HashMap from logical blob id to blob description pointer.
-double Operator::GetComputeComplexity(
+Maybe<double> Operator::GetComputeComplexity(
     SbpSignature* sbp_signature,
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {

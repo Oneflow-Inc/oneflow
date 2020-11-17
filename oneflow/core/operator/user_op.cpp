@@ -240,6 +240,7 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_is_tensor_list();
   }
+
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
     const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
@@ -247,7 +248,6 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
     CHECK(bn2sbp.find(bn) != bn2sbp.end());
     return sbp_signature_->bn_in_op2sbp_parallel().at(bn);
   }
-
 
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
@@ -564,7 +564,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-double UserOp::GetComputeComplexity(
+Maybe<double> UserOp::GetComputeComplexity(
     SbpSignature* sbp_signature,
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
