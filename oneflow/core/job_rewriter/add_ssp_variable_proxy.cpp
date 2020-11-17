@@ -44,9 +44,28 @@ class AddSspVariableProxyPass final : public JobPass {
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+    HashMap<LogicalBlobId, std::pair<std::string, std::string>> var2ref_value_pair;
+    HashSet<OpNode*> var_consumers;
     JUST(ForEachTrainableVarOpNode(op_graph, [&](OpNode* op_node) -> Maybe<void> {
-      return ReplaceVarWithSspVarProxyOp(op_node, job_builder);
+      op_node->ForEachNodeOnOutEdge([&](OpNode* consumer) { var_consumers.insert(consumer); });
+      const auto& old_var_out_lbi = op_node->op().BnInOp2Lbi("out");
+      return AddSspVarProxyOp(op_node, job_builder, &var2ref_value_pair[old_var_out_lbi].first,
+                              &var2ref_value_pair[old_var_out_lbi].second);
     }));
+    {
+      const auto& NeedReplace = [&](const LogicalBlobId& var_lbi) -> bool {
+        return var2ref_value_pair.count(var_lbi) > 0;
+      };
+      const auto& Ref4Var = [&](const LogicalBlobId& var_lbi) -> const std::string& {
+        return var2ref_value_pair.at(var_lbi).first;
+      };
+      const auto& Val4Var = [&](const LogicalBlobId& var_lbi) -> const std::string& {
+        return var2ref_value_pair.at(var_lbi).second;
+      };
+      for (OpNode* op_node : var_consumers) {
+        JUST(ReplaceVarWithSspVarProxyOp(op_node, job_builder, NeedReplace, Ref4Var, Val4Var));
+      }
+    }
     return Maybe<void>::Ok();
   }
 
@@ -66,30 +85,33 @@ class AddSspVariableProxyPass final : public JobPass {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> ReplaceVarWithSspVarProxyOp(OpNode* op_node, JobBuilder* job_builder) const {
+  Maybe<void> AddSspVarProxyOp(OpNode* op_node, JobBuilder* job_builder, std::string* ref_lbn,
+                               std::string* value_lbn) const {
     const LogicalBlobId& old_var_out_lbi = op_node->op().BnInOp2Lbi("out");
-    std::string ref_lbn;
-    std::string value_lbn;
-    const Scope* scope = nullptr;
-    {
-      int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
-      scope = &JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
+    const Scope* scope = &JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    JUST(AddSspVarProxyOp(old_var_out_lbi, *scope, job_builder, ref_lbn, value_lbn));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> ReplaceVarWithSspVarProxyOp(
+      OpNode* op_node, JobBuilder* job_builder,
+      const std::function<bool(const LogicalBlobId&)>& NeedReplace,
+      const std::function<const std::string&(const LogicalBlobId&)>& Ref4Var,
+      const std::function<const std::string&(const LogicalBlobId&)>& Val4Var) const {
+    const auto& op = op_node->op();
+    std::unique_ptr<std::vector<OperatorConf>> new_op_confs;
+    for (const auto& ibn : op.input_bns()) {
+      const auto& lbi = op.BnInOp2Lbi(ibn);
+      if (!NeedReplace(lbi)) { continue; }
+      if (!new_op_confs) { new_op_confs.reset(new std::vector<OperatorConf>({op.op_conf()})); }
+      auto* new_op_conf = &new_op_confs->at(0);
+      int64_t scope_symbol_id = op.op_conf().scope_symbol_id();
+      bool in_optimizer_pass = JUST(IsInOptimizerPass(scope_symbol_id));
+      const auto* lbn = (in_optimizer_pass ? &Ref4Var(lbi) : &Val4Var(lbi));
+      ReplaceInputLbnInOpCustomizedConf(new_op_conf, ibn, *lbn);
     }
-    JUST(AddSspVarProxyOp(old_var_out_lbi, *scope, job_builder, &ref_lbn, &value_lbn));
-    JUST(op_node->ForEachOutNode([&](OpNode* consumer) -> Maybe<void> {
-      const auto& op = consumer->op();
-      std::vector<OperatorConf> new_op_confs({op.op_conf()});
-      auto* new_op_conf = &new_op_confs.at(0);
-      for (const auto& ibn : op.input_bns()) {
-        if (op.BnInOp2Lbi(ibn) != old_var_out_lbi) { continue; }
-        int64_t scope_symbol_id = op.op_conf().scope_symbol_id();
-        bool in_optimizer_pass = JUST(IsInOptimizerPass(scope_symbol_id));
-        const auto* lbn = (in_optimizer_pass ? &ref_lbn : &value_lbn);
-        ReplaceInputLbnInOpCustomizedConf(new_op_conf, ibn, *lbn);
-      }
-      job_builder->MutOpsOnlyOnce(new_op_confs);
-      return Maybe<void>::Ok();
-    }));
+    if (new_op_confs) { job_builder->MutOpsOnlyOnce(*new_op_confs); }
     return Maybe<void>::Ok();
   }
 
