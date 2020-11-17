@@ -240,12 +240,14 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_is_tensor_list();
   }
-  const SbpParallel* SbpParallel4ArgNameAndIndex(const std::string& arg_name, int32_t index) override{
-    auto sbp_map_ = sbp_signature_->bn_in_op2sbp_parallel();
-    auto it = sbp_map_.find(GenRepeatedBn(arg_name, index));
-    if (it == sbp_map_.end()) { return nullptr; };
-    return &it->second;
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
+    const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    CHECK(bn2sbp.find(bn) != bn2sbp.end());
+    return sbp_signature_->bn_in_op2sbp_parallel().at(bn);
   }
+
 
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
