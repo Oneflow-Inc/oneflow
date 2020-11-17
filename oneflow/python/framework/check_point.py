@@ -166,6 +166,7 @@ class FileBackendVariableBlob:
                 raise RuntimeError("both or neither of shape and dtype should be None")
             else:
                 pass
+
         if self.has_meta_info_:
             itemsize = np.dtype(
                 dtype_util.convert_oneflow_dtype_to_numpy_dtype(self.dtype_)
@@ -589,7 +590,9 @@ def Init() -> None:
             )
             LoadVariables({op_name: GetCheckpoint(var_dir)})
             continue
-        g = initializer_util.GetInitializer(var_conf.initializer, var_conf.random_seed)
+        g = initializer_util.GetInitializer(
+            var_conf.initializer, var_conf.random_seed, var_blob.shape
+        )
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
             np_dtype = np.dtype(
