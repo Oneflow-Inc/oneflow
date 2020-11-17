@@ -56,6 +56,7 @@ void TraceKernelForwardDataContentStart(
 void TraceKernelForwardDataContentEnd(const Kernel* kernel, const KernelCtx& ctx,
                                       const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
 #if defined(WITH_CUDA)
+  // The memory bandwidth profiler only works in lazy mode.
   if (profile_cuda_memory_bandwidth) {
     auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(ctx.device_ctx);
     if (cuda_device_ctx) {
