@@ -365,8 +365,8 @@ void SbpConstructor::InitializeComputationCost(
       // }
       sbp_node->Cost[sbp_id] =
           CostRatio
-          * op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
-                                               logical_blob_desc4bn, parallel_desc);
+          * CHECK_JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
+                                                          logical_blob_desc4bn, parallel_desc));
     }
   });
 }
