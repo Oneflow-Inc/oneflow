@@ -77,7 +77,7 @@ class TmpBufferManager final {
     const size_t index_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
-    cub_tmp_storage_bytes_ = std::max(GetCubSortPairTempStorageSize<K>(device_num_class),
+    cub_tmp_storage_bytes_ = std::max(GetCubSortPairTempStorageSize<K>(buffer_elem_cnt),
                                       GetCubScanTempStorageSize<K>(batch_size));
     label_buffer_offset_ = 0;
     index_buffer_offset_ = label_buffer_offset_ + label_buffer_bytes;

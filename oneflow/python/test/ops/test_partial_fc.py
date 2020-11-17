@@ -82,15 +82,15 @@ def compare_with_np(device_type, label_type, num_classes, num_sample, batch_size
     labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(
         type_name_to_np_type[label_type]
     )
+
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
     weight, maped_label, sampled_label, sampled_weight = PartialFcJob(labels).get()
-    print("sampled_label", sampled_label.numpy())
 
     gpu_num = 4
-    device_class_num = num_classes / gpu_num
-    device_num_sample = num_sample / gpu_num
+    device_class_num = num_classes // gpu_num
+    device_num_sample = num_sample // gpu_num
     global_sample_labels_list = []
     np_mapped_label = []
     label_map = {}
@@ -104,7 +104,6 @@ def compare_with_np(device_type, label_type, num_classes, num_sample, batch_size
         idx_start = int(i * device_num_sample)
         idx_end = int((i + 1) * device_num_sample)
         local_sample_labels = sampled_label[idx_start:idx_end]
-        # global_sample_labels = local_sample_labels + i * device_class_num
         global_sample_labels = local_sample_labels
         global_sample_labels_list.append(global_sample_labels)
 
@@ -113,7 +112,6 @@ def compare_with_np(device_type, label_type, num_classes, num_sample, batch_size
             == True
         )
         assert len(local_sample_labels) == len(np.unique(local_sample_labels))
-
         assert (
             np.array_equal(local_label, global_sample_labels[0 : len(local_label)])
             == True
@@ -136,8 +134,6 @@ def compare_with_np(device_type, label_type, num_classes, num_sample, batch_size
         np_weight_diff[global_sample_label[i]] = sampled_weight_diff[i]
 
     x_diff = test_global_storage.Get("x_diff")
-    print("x_diff", x_diff[x_diff != 0])
-    print("np_weight_diff", np_weight_diff[np_weight_diff != 0])
 
     assert np.array_equal(test_global_storage.Get("x_diff"), np_weight_diff) == True
 
@@ -152,7 +148,7 @@ class TestPartialFc(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu"]
         arg_dict["label_type"] = ["int32"]
         arg_dict["num_classes"] = [85744]
-        arg_dict["device_num_sample"] = [8600]
+        arg_dict["num_sample"] = [8600]
         arg_dict["batch_size"] = [512]
         for arg in GenArgList(arg_dict):
             compare_with_np(*arg)
@@ -162,7 +158,7 @@ class TestPartialFc(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu"]
         arg_dict["label_type"] = ["int32"]
         arg_dict["num_classes"] = [200]
-        arg_dict["device_num_sample"] = [64]
+        arg_dict["num_sample"] = [64]
         arg_dict["batch_size"] = [32]
         for arg in GenArgList(arg_dict):
             compare_with_np(*arg)
