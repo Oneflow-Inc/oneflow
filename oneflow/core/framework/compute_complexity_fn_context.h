@@ -39,7 +39,8 @@ class ComputeComplexityFnContext {
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
-  virtual const SbpParallel* SbpParallel4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
+  virtual const SbpParallel* SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                         int32_t index) = 0;
   virtual const SbpSignature* GetSbpSignature() const = 0;
 
   template<typename T>

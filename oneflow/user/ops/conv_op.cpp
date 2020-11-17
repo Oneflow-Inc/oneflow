@@ -119,6 +119,17 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
+  if (ctx->SbpParallel4ArgNameAndIndex("y", 0)->has_split_parallel()) {
+    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  }
+  return logical_computation_cost;
+}
+
 template<size_t NDims>
 Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
                       const user_op::UserOpConfWrapper& conf) {
