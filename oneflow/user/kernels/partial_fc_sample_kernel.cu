@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
 #include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
+#include "oneflow/core/common/not_equal_to_previous_adjacent_iterator.h"
 #include <cub/cub.cuh>
 #include <curand.h>
 #include <curand_kernel.h>
@@ -55,6 +56,14 @@ int64_t GetCubScanTempStorageSize(int64_t n) {
   CHECK_GE(cub_scan_temp_store_size, 0);
   CHECK_LT(cub_scan_temp_store_size, GetMaxVal<int64_t>());
   return GetCudaAlignedSize(static_cast<int64_t>(cub_scan_temp_store_size));
+}
+
+template<typename K>
+void GetUniqueCounter(cudaStream_t stream, int64_t n, size_t temp_storage_bytes, K* sorted_ptr,
+                      K* unique_counter, void* tmp_storage) {
+  NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(sorted_ptr, 0);
+  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
+      tmp_storage, temp_storage_bytes, unique_counting_iter, unique_counter, n, stream)));
 }
 
 template<typename K>
@@ -105,8 +114,6 @@ class TmpBufferManager final {
   }
 
   K* SortedLabelPtr() const { return SortedLabelBufferPtr(); }
-
-  K* NotEqualToPreviousPtr() const { return LabelBufferPtr(); }
 
   K* LabelIndexPtr() const { return IndexBufferPtr(); }
 
@@ -216,21 +223,6 @@ __global__ void GetSampleLabel(const int64_t n, const int64_t offset, const K* l
 }
 
 template<typename K>
-__global__ void GetUniqueFlags(const int64_t n, const K* sorted_label, K* unique_flags) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    K flag = 1;
-    if (i > 0) {
-      if (sorted_label[i] != sorted_label[i - 1]) {
-        flag = static_cast<K>(1);
-      } else {
-        flag = static_cast<K>(0);
-      }
-    }
-    unique_flags[i] = flag;
-  }
-}
-
-template<typename K>
 __global__ void GetParallelStartIdx(const int64_t n, const int64_t parallel_num,
                                     const int64_t num_class_per_rank, const K* label,
                                     const K* label_map, K* parallel_start_idx,
@@ -301,13 +293,10 @@ void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_siz
   SortPairs<K, K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(), label_ptr,
                   buffer_manager.LabelIndexPtr(), buffer_manager.CubTmpStoragePtr(),
                   buffer_manager.SortedLabelPtr(), buffer_manager.SortedLabelIndexPtr());
-  size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
-  GetUniqueFlags<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                   ctx->cuda_stream()>>>(batch_size, buffer_manager.SortedLabelPtr(),
-                                         buffer_manager.NotEqualToPreviousPtr());
-  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum(
-      buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.NotEqualToPreviousPtr(),
-      buffer_manager.LabelIndexPtr(), batch_size, ctx->cuda_stream())));
+  GetUniqueCounter<K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(),
+                      buffer_manager.SortedLabelPtr(), buffer_manager.LabelIndexPtr(),
+                      buffer_manager.CubTmpStoragePtr());
+
   GetParallelStartIdx<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                         ctx->cuda_stream()>>>(
       batch_size, parallel_num, num_classes, buffer_manager.SortedLabelPtr(),

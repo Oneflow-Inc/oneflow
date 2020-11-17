@@ -17,90 +17,11 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include <device_launch_parameters.h>
 #include "oneflow/core/common/permutation_iterator.h"
+#include "oneflow/core/common/not_equal_to_previous_adjacent_iterator.h"
 
 namespace oneflow {
 
 namespace {
-
-template<typename ValueType, typename UnderlyingT, typename OffsetT = ptrdiff_t>
-class NotEqualToPreviousAdjacentIterator {
- public:
-  typedef NotEqualToPreviousAdjacentIterator self_type;
-  typedef OffsetT difference_type;
-  typedef ValueType value_type;
-  typedef ValueType* pointer;
-  typedef ValueType reference;
-  typedef std::random_access_iterator_tag iterator_category;
-
- private:
-  const UnderlyingT* underlying;
-  OffsetT offset;
-
- public:
-  __host__ __device__ __forceinline__
-  NotEqualToPreviousAdjacentIterator(const UnderlyingT* underlying, OffsetT offset)
-      : underlying(underlying), offset(offset) {}
-
-  __host__ __device__ __forceinline__ self_type operator++(int) {
-    self_type ret = *this;
-    offset++;
-    return ret;
-  }
-
-  __host__ __device__ __forceinline__ self_type operator++() {
-    offset++;
-    return *this;
-  }
-
-  __host__ __device__ __forceinline__ reference operator*() const {
-    return offset == 0 ? 0 : (underlying[offset] == underlying[offset - 1] ? 0 : 1);
-  }
-
-  template<typename Distance>
-  __host__ __device__ __forceinline__ self_type operator+(Distance n) const {
-    self_type ret(underlying, offset + n);
-    return ret;
-  }
-
-  template<typename Distance>
-  __host__ __device__ __forceinline__ self_type& operator+=(Distance n) {
-    offset += n;
-    return *this;
-  }
-
-  template<typename Distance>
-  __host__ __device__ __forceinline__ self_type operator-(Distance n) const {
-    self_type ret(underlying, offset - n);
-    return ret;
-  }
-
-  template<typename Distance>
-  __host__ __device__ __forceinline__ self_type& operator-=(Distance n) {
-    offset -= n;
-    return *this;
-  }
-
-  __host__ __device__ __forceinline__ difference_type operator-(self_type other) const {
-    return offset - other.offset;
-  }
-
-  template<typename Distance>
-  __host__ __device__ __forceinline__ reference operator[](Distance n) const {
-    return *(*this + n);
-  }
-
-  __host__ __device__ __forceinline__ pointer operator->() { return nullptr; }
-
-  __host__ __device__ __forceinline__ bool operator==(const self_type& rhs) {
-    return (offset == rhs.offset) && ((underlying == rhs.underlying));
-  }
-
-  __host__ __device__ __forceinline__ bool operator!=(const self_type& rhs) {
-    return offset != rhs.offset || underlying != rhs.underlying;
-  }
-
-  friend std::ostream& operator<<(std::ostream& os, const self_type& itr) { return os; }
-};
 
 template<typename T>
 struct Buffer final {
