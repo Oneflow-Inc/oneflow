@@ -102,8 +102,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       index_helper.OffsetToNdIndex(i, coord_y);
       int64_t x_h = coord_y[h_idx] - padding_h;
       int64_t x_w = coord_y[w_idx] - padding_w;
-      if (x_h < 0 || x_h >= x_shape.At(h_idx) || x_w < 0
-          || x_w >= x_shape.At(w_idx)) {
+      if (x_h < 0 || x_h >= x_shape.At(h_idx) || x_w < 0 || x_w >= x_shape.At(w_idx)) {
         // Indicates that the element is no longer in the original x range (the data to be padding
         // outside)
         int64_t dest_coords[4];
