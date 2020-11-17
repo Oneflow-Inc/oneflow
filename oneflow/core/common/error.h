@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <sstream>
 #include <vector>
-#include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/error.cfg.h"
 
 namespace oneflow {
@@ -26,8 +25,6 @@ namespace oneflow {
 class Error final {
  public:
   Error(const std::shared_ptr<cfg::ErrorProto>& error_proto) : error_proto_(error_proto) {}
-  Error(const std::shared_ptr<ErrorProto>& error_proto)
-      : Error(std::make_shared<cfg::ErrorProto>(*error_proto)) {}
   Error(const Error&) = default;
   ~Error() = default;
 
