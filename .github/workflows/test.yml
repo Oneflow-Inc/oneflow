@@ -1,12 +1,9 @@
 name: Build and Test CI
 on:
   pull_request:
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [review_requested]
     branches:
       - '*'
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
   workflow_dispatch:
     inputs:
       placeholder:
@@ -16,8 +13,8 @@ jobs:
 
   check_license_and_format:
     name: License and format
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-18.04
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
     - uses: actions/checkout@v2
     - name: Check license and format (please run 'make of_format' if failed)
@@ -25,8 +22,8 @@ jobs:
 
   mirror_third_party:
     name: Mirror third party dependencies
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    runs-on: ubuntu-18.04
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
     - uses: actions/checkout@v2
     - name: Mirror dependencies to aliyun
@@ -34,6 +31,10 @@ jobs:
         OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       run: |
+        if [ -z "$OSS_ACCESS_KEY_ID" ]
+        then
+          exit 0
+        fi
         python3 -m pip install setuptools wheel
         python3 -m pip install oss2
         python3 tools/package_mirror.py -i cmake
@@ -42,7 +43,7 @@ jobs:
     needs: [check_license_and_format, mirror_third_party]
     name: CUDA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     env:
       ci_tmp_dir: /home/ci-user/ci-tmp
       wheelhouse_dir: "/home/ci-user/ci-tmp/wheelhouse"
@@ -123,7 +124,7 @@ jobs:
     needs: [check_license_and_format, build_and_test_cuda, mirror_third_party]
     name: XLA
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     env:
       ci_tmp_dir: /home/ci-user/ci-tmp-xla
       wheelhouse_dir: "/home/ci-user/ci-tmp-xla/wheelhouse"
@@ -159,7 +160,7 @@ jobs:
     needs: [check_license_and_format, build_and_test_cuda]
     name: CPU-only
     runs-on: [self-hosted, linux, gpu]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     env:
       ci_tmp_dir: /home/ci-user/ci-tmp-cpu
       wheelhouse_dir: "/home/ci-user/ci-tmp-cpu/wheelhouse"
