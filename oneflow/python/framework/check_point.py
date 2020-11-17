@@ -84,12 +84,12 @@ class SimpleCheckPointManager(object):
     def initialize_or_restore(self) -> None:
         name = self.latest_checkpoint()
         if name:
-            LoadVariables(Load(self._GetSnapshotPath(name)))
+            LoadVariables(GetCheckpoint(self._GetSnapshotPath(name)))
         else:
             self.save()
 
     def save(self) -> None:
-        Save(GetAllVariables(), self._GetSnapshotPath(self._NextSnapshotName()))
+        SaveVarDict(GetAllVariables(), self._GetSnapshotPath(self._NextSnapshotName()))
 
     def _NextSnapshotName(self) -> str:
         return self._prefix + datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -227,9 +227,9 @@ def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
     return None
 
 
-@oneflow_export("load")
+@oneflow_export("checkpoint.get")
 @session_ctx.try_init_default_session
-def Load(
+def GetCheckpoint(
     path: str,
 ) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
     """
@@ -300,14 +300,20 @@ def _ReadSlice(
         raise RuntimeError("Unknown type: {}".format(type(container).__name__))
 
 
-@oneflow_export("save")
+@oneflow_export("checkpoint.save")
 @session_ctx.try_init_default_session
-def Save(
-    var_dict: Dict[str, Union[FileBackendVariableBlob, EagerBlobTrait]], path: str
+def SaveVarDict(
+    path: str,
+    var_dict: Optional[
+        Dict[str, Union[FileBackendVariableBlob, EagerBlobTrait]]
+    ] = None,
 ) -> None:
     """
     Save `var_dict` to `path`
     """
+
+    if var_dict is None:
+        var_dict = GetAllVariables()
 
     def IsFileOrNonEmptyDir(path):
         if os.path.isfile(path):
@@ -547,7 +553,7 @@ def _ForEachSlice(
         cnt *= container.shape[axis]
         if cnt > SLICE_LEN:
             break
-    unit_size = _ElemCnt(container.shape[axis+1:])
+    unit_size = _ElemCnt(container.shape[axis + 1 :])
     max_unit_num = SLICE_LEN // unit_size
     while start_idx < size:
         remainder = container.shape[axis]
@@ -559,9 +565,7 @@ def _ForEachSlice(
             start_nd_idx = np.unravel_index(start_idx, container.shape)
             stop_nd_idx = np.unravel_index(stop_idx - 1, container.shape)
             stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
-            yield start_nd_idx, stop_nd_idx, f(
-                container, start_nd_idx, stop_nd_idx
-            )
+            yield start_nd_idx, stop_nd_idx, f(container, start_nd_idx, stop_nd_idx)
             start_idx = stop_idx
 
 
@@ -569,21 +573,21 @@ def Init() -> None:
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
         var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
-        if not (var_conf.HasField('initializer') or var_conf.HasField('initialize_with_snapshot')):
+        if not (
+            var_conf.HasField("initializer")
+            or var_conf.HasField("initialize_with_snapshot")
+        ):
             continue
         if var_conf.HasField("initialize_with_snapshot"):
             initialize_with_snapshot_conf = var_conf.initialize_with_snapshot
-            if initialize_with_snapshot_conf.HasField('key'):
+            if initialize_with_snapshot_conf.HasField("key"):
                 snapshot_key = op_name
             else:
                 snapshot_key = initialize_with_snapshot_conf.key
             var_dir = os.path.dirname(
-                os.path.join(
-                    initialize_with_snapshot_conf.path,
-                    snapshot_key,
-                )
+                os.path.join(initialize_with_snapshot_conf.path, snapshot_key,)
             )
-            LoadVariables({op_name: Load(var_dir)})
+            LoadVariables({op_name: GetCheckpoint(var_dir)})
             continue
         g = initializer_util.GetInitializer(var_conf.initializer, var_conf.random_seed)
 

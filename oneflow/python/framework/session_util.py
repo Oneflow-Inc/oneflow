@@ -177,7 +177,6 @@ class Session(object):
             self.Init()
         return self
 
-
     def UpdateOpConfAndParallelConf4LazyInterfaceOp(self):
         for job in c_api_util.GetJobSet().job:
             op_name2parallel_conf = {}
@@ -190,7 +189,6 @@ class Session(object):
                     self.lazy_interface_op_name2parallel_conf_[
                         op_conf.name
                     ] = op_name2parallel_conf[op_conf.name]
-
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN

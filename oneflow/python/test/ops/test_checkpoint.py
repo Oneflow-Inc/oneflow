@@ -102,7 +102,7 @@ def _TestSaveCorrectness(test_case, model_getter, dtype, legacy_api):
             check_point = flow.train.CheckPoint()
             check_point.save(save_dir)
         else:
-            flow.save(flow.get_all_variables(), save_dir)
+            flow.checkpoint.save(save_dir)
         res1 = large1()
 
         flow.clear_default_session()
@@ -130,7 +130,7 @@ def _TestRoundTrip(test_case, model_getter, dtype):
 
         large1 = get_checkpoint_ready_model(model_getter, dtype)
 
-        flow.save(flow.get_all_variables(), save_dir)
+        flow.checkpoint.save(save_dir)
         res1 = large1()
 
         flow.clear_default_session()
@@ -138,7 +138,7 @@ def _TestRoundTrip(test_case, model_getter, dtype):
 
         large2 = get_checkpoint_ready_model(model_getter, dtype)
 
-        vars_in_file = flow.load(save_dir)
+        vars_in_file = flow.checkpoint.get(save_dir)
         flow.load_variables(vars_in_file)
         res2 = large2()
 
@@ -173,7 +173,7 @@ def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
             check_point = flow.train.CheckPoint()
             check_point.load(save_dir)
         else:
-            vars_in_file = flow.load(save_dir)
+            vars_in_file = flow.checkpoint.get(save_dir)
             flow.load_variables(vars_in_file)
 
         res2 = large2()

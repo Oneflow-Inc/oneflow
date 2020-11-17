@@ -42,6 +42,7 @@ def GetEagerInterfaceBlob(op_name):
     flow.sync_default_session()
 
     sess = session_ctx.GetDefaultSession()
+
     def CreateBlob():
         job_name = sess.JobName4InterfaceOpName(op_name)
 

@@ -41,7 +41,13 @@ class CheckPoint(object):
     """
 
     def __init__(self) -> None:
-        pass
+        if not config_util.api_legacy_model_io_enabled():
+            print(
+                "\033[1mWARNING: 'flow.train.CheckPoint' is deprecated. Please use the new API:\033[0m\n"
+                "flow.train.CheckPoint().save(path) => \033[1m\033[92mflow.checkpoint.save(path)\033[0m\n"
+                "flow.train.CheckPoint().load(path) => \033[1m\033[92mflow.load_variables(flow.checkpoint.get(path))\033[0m\n"
+                "flow.train.CheckPoint().init() is not needed any more.\n"
+            )
 
     @session_ctx.try_init_default_session
     def save(self, path: str) -> None:
@@ -51,10 +57,7 @@ class CheckPoint(object):
             path: A `string` of path to save checkpoint. 
         """
         if not config_util.api_legacy_model_io_enabled():
-            print(
-                "'checkpoint.save()' is deprecated. Please use 'flow.save(flow.get_all_variables(), path)' instead."
-            )
-            new_check_point.Save(new_check_point.GetAllVariables(), path)
+            new_check_point.SaveVarDict(path)
             return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
@@ -63,11 +66,6 @@ class CheckPoint(object):
     def init(self) -> None:
         r"""Initialize models by default initializer of op or Job.
         """
-        if not config_util.api_legacy_model_io_enabled():
-            print(
-                "'checkpoint.init()' is deprecated. It has no effect and will be removed in the future"
-            )
-            return
         enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
@@ -78,10 +76,7 @@ class CheckPoint(object):
             path: A `string` of path to load checkpoint.
         """
         if not config_util.api_legacy_model_io_enabled():
-            print(
-                "'checkpoint.load()' is deprecated. Please use 'flow.load_variables(path)' instead."
-            )
-            new_check_point.LoadVariables(new_check_point.Load(path))
+            new_check_point.LoadVariables(new_check_point.GetCheckpoint(path))
             return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
