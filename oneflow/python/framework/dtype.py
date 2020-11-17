@@ -29,29 +29,27 @@ class char(dtype):
     oneflow_proto_dtype = data_type_pb2.kChar
 
 
-@oneflow_export("float")
-class float(dtype):
-    oneflow_proto_dtype = data_type_pb2.kFloat
-
-
 @oneflow_export("float16")
 class float16(dtype):
     oneflow_proto_dtype = data_type_pb2.kFloat16
 
 
+@oneflow_export("float")
 @oneflow_export("float32")
 class float32(dtype):
     oneflow_proto_dtype = data_type_pb2.kFloat
 
 
+float = float32
+
+
+@oneflow_export("double")
 @oneflow_export("float64")
 class float64(dtype):
     oneflow_proto_dtype = data_type_pb2.kDouble
 
 
-@oneflow_export("double")
-class double(dtype):
-    oneflow_proto_dtype = data_type_pb2.kDouble
+double = float64
 
 
 @oneflow_export("int8")

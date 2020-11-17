@@ -126,18 +126,42 @@
 
 3. #### Build and Install OneFlow
 
-    - In the root directory of OneFlow source code, run:
+    - #### Option 1: Build in docker container (recommended)
+      - In the root directory of OneFlow source code, run:
 
-      ```
-      mkdir build
-      cd build
-      cmake ..
-      make -j$(nproc)
-      make pip_install
-      ```
+        ```
+        python3 docker/package/manylinux/build_wheel.py
+        ```
 
-    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
-    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
+        This should produces `.whl` files in the directory `wheelhouse`
+
+      - If you are in China, you might need to add these flags:
+
+        ```
+        --use_tuna --use_system_proxy --use_aliyun_mirror
+        ```
+
+      - You can choose CUDA/Python versions of wheel by adding:
+
+        ```
+        --cuda_version=10.1 --python_version=3.6,3.7
+        ```
+
+      - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
+
+    - #### Option 2: Build on bare metal
+      - In the root directory of OneFlow source code, run:
+
+        ```
+        mkdir build
+        cd build
+        cmake ..
+        make -j$(nproc)
+        make pip_install
+        ```
+
+      - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
+      - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 
 ### Troubleshooting
 

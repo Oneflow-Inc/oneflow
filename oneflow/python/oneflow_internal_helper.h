@@ -53,12 +53,6 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
   Global<ForeignWatcher>::SetAllocated(watcher);
@@ -239,7 +233,7 @@ Maybe<void> WriteInt8Calibration(const std::string& path) {
 }
 
 Maybe<long long> GetUserOpAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  return JUST(GetUserOpAttrTypeImpl(op_type_name, attr_name));
+  return JUST(GetAttrTypeImpl(op_type_name, attr_name));
 }
 
 Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
@@ -269,18 +263,6 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   return JUST(scope.GetParallelDescSymbolId(op_conf));
-}
-
-Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
-                                  const std::string& eager_symbol_list_str) {
-  return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list_str,
-                                                                   eager_symbol_list_str);
-}
-
-Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
-                                   const std::string& eager_symbol_list_str) {
-  return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list_str,
-                                                                    eager_symbol_list_str);
 }
 
 Maybe<long long> CurrentMachineId() {
