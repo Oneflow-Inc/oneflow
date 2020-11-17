@@ -44,7 +44,7 @@ from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
-import oneflow.python.framework.check_point as check_point
+import oneflow.python.framework.check_point_v2 as check_point_v2
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
@@ -209,7 +209,7 @@ class Session(object):
             # Get latest op_conf and parallel_conf after compiler.Compile
             self.UpdateOpConfAndParallelConf4LazyInterfaceOp()
             if not config_util.api_legacy_model_io_enabled():
-                check_point.Init()
+                check_point_v2.Init()
         else:
             self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
                 str(self.config_proto)
