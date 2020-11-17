@@ -55,7 +55,10 @@ def convert_hpp(
         if os.path.dirname(dst_hpp_path):
             os.makedirs(os.path.dirname(dst_hpp_path))
 
-    if not os.path.exists(dst_hpp_path) or not filecmp.cmp(tmp_hpp_path, dst_hpp_path):
+    if not os.path.exists(dst_hpp_path) or not filecmp.cmp(
+        tmp_hpp_path, dst_hpp_path, shallow=False
+    ):
+        print("\033[34mRendering %s\033[0m" % (rel_dst_hpp_path))
         copyfile(tmp_hpp_path, dst_hpp_path)
 
 
@@ -74,7 +77,10 @@ def convert_cpp(
         if os.path.dirname(dst_cpp_path):
             os.makedirs(os.path.dirname(dst_cpp_path))
 
-    if not os.path.exists(dst_cpp_path) or not filecmp.cmp(tmp_cpp_path, dst_cpp_path):
+    if not os.path.exists(dst_cpp_path) or not filecmp.cmp(
+        tmp_cpp_path, dst_cpp_path, shallow=False
+    ):
+        print("\033[34mRendering %s\033[0m" % (rel_dst_cpp_path))
         copyfile(tmp_cpp_path, dst_cpp_path)
 
 
@@ -94,8 +100,9 @@ def convert_pybind(
             os.makedirs(os.path.dirname(dst_pybind_path))
 
     if not os.path.exists(dst_pybind_path) or not filecmp.cmp(
-        tmp_pybind_path, dst_pybind_path
+        tmp_pybind_path, dst_pybind_path, shallow=False
     ):
+        print("\033[34mRendering %s\033[0m" % (rel_dst_pybind_path))
         copyfile(tmp_pybind_path, dst_pybind_path)
 
 
