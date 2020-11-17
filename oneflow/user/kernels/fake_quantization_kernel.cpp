@@ -23,7 +23,7 @@ template<typename T>
 void FakeQuantizationPerLayerSymmetric(const T *in_ptr, const T scale,
                                        const int32_t quantize_to_bit, const int64_t num_elements,
                                        T *out_ptr) {
-  T upper_bound = T(pow(2.0, quantize_to_bit - 1)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
   T lower_bound = -upper_bound;
   FOR_RANGE(int64_t, i, 0, num_elements) {
     T out = std::round(in_ptr[i] / scale);
@@ -37,7 +37,7 @@ template<typename T>
 void FakeQuantizationPerLayerAffine(const T *in_ptr, const T scale, const T zero_point,
                                     const int32_t quantize_to_bit, const int64_t num_elements,
                                     T *out_ptr) {
-  T upper_bound = T(pow(2.0, quantize_to_bit)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
   T lower_bound = 0;
   FOR_RANGE(int64_t, i, 0, num_elements) {
     T out = std::round(in_ptr[i] / scale + zero_point);
@@ -60,12 +60,10 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     const user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
 
     const T *in_ptr = in->dptr<T>();
     const T *scale_ptr = scale->dptr<T>();
-    const T *zero_point_ptr = zero_point->dptr<T>();
     T *out_ptr = out->mut_dptr<T>();
 
     int64_t outer_num = 1;
@@ -75,14 +73,15 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
       inner_num = in->shape().Count(1);
     }
 
-    if (quantizer_type == "symmetric") {
+    if (zero_point == nullptr) {  // quantize_scheme == "symmetric"
       FOR_RANGE(int64_t, c, 0, outer_num) {
         FakeQuantizationPerLayerSymmetric(in_ptr, scale_ptr[c], quantize_to_bit, inner_num,
                                           out_ptr);
         in_ptr += inner_num;
         out_ptr += inner_num;
       }
-    } else {  // quantizer_type == "affine"
+    } else {  // quantize_scheme == "affine"
+      const T *zero_point_ptr = zero_point->dptr<T>();
       FOR_RANGE(int64_t, c, 0, outer_num) {
         FakeQuantizationPerLayerAffine(in_ptr, scale_ptr[c], zero_point_ptr[c], quantize_to_bit,
                                        inner_num, out_ptr);

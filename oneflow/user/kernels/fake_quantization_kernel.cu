@@ -29,7 +29,7 @@ __global__ void FakeQuantizationSymmetric(const T *in_ptr, const T *scale_ptr,
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = T(pow(2.0, quantize_to_bit - 1)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
   T lower_bound = -upper_bound;
 
   while (gid < elements) {
@@ -55,7 +55,7 @@ __global__ void FakeQuantizationAffine(const T *in_ptr, const T *scale_ptr, cons
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = T(pow(2.0, quantize_to_bit)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
   T lower_bound = 0;
 
   while (gid < elements) {
@@ -89,18 +89,17 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
     const user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const std::string quantizer_type = ctx->Attr<std::string>("quantizer_type");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
 
     const int64_t elements = in->shape().elem_cnt();
     const int64_t panel_size = in->shape().Count(1);
     const int64_t scale_size = scale->shape().elem_cnt();
 
-    if (quantizer_type == "symmetric") {
+    if (zero_point == nullptr) {  // quantize_scheme == "symmetric"
       RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
                       scale->dptr<T>(), scale_size, elements, panel_size, quantize_to_bit,
                       out->mut_dptr<T>());
-    } else {  // quantizer_type == "affine"
+    } else {  // quantize_scheme == "affine"
       RUN_CUDA_KERNEL((FakeQuantizationAffine<T>), ctx->device_ctx(), elements, in->dptr<T>(),
                       scale->dptr<T>(), zero_point->dptr<T>(), scale_size, elements, panel_size,
                       quantize_to_bit, out->mut_dptr<T>());
