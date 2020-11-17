@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 import traceback
 
-import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.ofblob as ofblob
+import oneflow_api
 
 
 def GetIdForRegisteredCallback(cb):
@@ -34,9 +34,9 @@ def DeleteRegisteredCallback(cb):
     del unique_id2handler[id(cb)]
 
 
-class PythonCallback(oneflow_internal.ForeignCallback):
+class PythonCallback(oneflow_api.ForeignCallback):
     def __init__(self):
-        oneflow_internal.ForeignCallback.__init__(self)
+        oneflow_api.ForeignCallback.__init__(self)
 
     def OfBlobCall(self, unique_id, of_blob_ptr):
         try:
