@@ -173,7 +173,7 @@ def JobBuildAndInferCtx_Close():
 
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
-    serialized_job_conf = str(text_format.MessageToString(job_config_proto))
+    serialized_job_conf = str(job_config_proto)
     error_str = oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):

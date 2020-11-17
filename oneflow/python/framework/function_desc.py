@@ -15,7 +15,6 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
@@ -56,14 +55,14 @@ class FunctionDesc(object):
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name in self.job_config_proto.mutable_flag_name2flag_value():
             return True
-        return getattr(self.job_config_proto,"has_"+attr_name)()
+        return getattr(self.job_config_proto, "has_" + attr_name)()
 
     def __getattr__(self, attr_name):
         assert attr_name != "flag_name2flag_value"
         flag_name2flag_value = self.job_config_proto.mutable_flag_name2flag_value()
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name not in name2default:
-            assert getattr(self.job_config_proto,"has_"+attr_name)()
+            assert getattr(self.job_config_proto, "has_" + attr_name)()
             return getattr(self.job_config_proto, attr_name)()
         attr_value = name2default[attr_name]
         if attr_name in flag_name2flag_value:

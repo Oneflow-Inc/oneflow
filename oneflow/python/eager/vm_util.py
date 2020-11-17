@@ -42,6 +42,8 @@ from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
 import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
+from google.protobuf import text_format
+
 
 oneflow_api = oneflow.oneflow_api
 
@@ -1103,7 +1105,9 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.job_conf_symbol.CopyFrom(text_format.Parse(str(job_conf), job_conf_pb.JobConfigProto()))
+        eager_symbol.job_conf_symbol.CopyFrom(
+            text_format.Parse(str(job_conf), job_conf_pb.JobConfigProto())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):

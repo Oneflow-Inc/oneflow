@@ -294,7 +294,7 @@ def _GenerateVariableOpConf(
     op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
     root_path = (
-        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path()
     )
     dir_path = os.path.join(root_path, name)
     file_path = os.path.join(dir_path, "out")

@@ -79,7 +79,7 @@ class PythonCallback(oneflow_api.ForeignCallback):
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
             return interpreter_callback.MakeScopeSymbol(
-                str(job_conf), str(parallel_conf), is_mirrored
+                job_conf, str(parallel_conf), is_mirrored
             )
         except Exception as e:
             print(traceback.format_exc())
