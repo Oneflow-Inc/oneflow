@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
-#include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/common/not_equal_to_previous_adjacent_iterator.h"
 #include <cub/cub.cuh>
 #include <curand.h>
@@ -402,3 +402,4 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_GRAD_GPU
 
 }  // namespace user_op
 }  // namespace oneflow
+#endif

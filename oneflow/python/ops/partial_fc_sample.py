@@ -35,7 +35,9 @@ def distributed_partial_fc_sample(
     num_sample: int,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-
+    parallel_num = flow.current_scope().device_parallel_desc_symbol.parallel_num
+    assert num_sample % parallel_num == 0
+    assert weight.shape[0] % parallel_num == 0
     return (
         flow.user_op_builder(
             name
