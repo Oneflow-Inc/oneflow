@@ -29,7 +29,9 @@ bool CaseInsensitiveStringEquals(const std::string& lhs, const std::string& rhs)
 }
 
 bool StringToBool(const std::string& str) {
-  return CaseInsensitiveStringEquals(str, "1") || CaseInsensitiveStringEquals(str, "true");
+  return CaseInsensitiveStringEquals(str, "1") || CaseInsensitiveStringEquals(str, "true")
+         || CaseInsensitiveStringEquals(str, "yes") || CaseInsensitiveStringEquals(str, "on")
+         || CaseInsensitiveStringEquals(str, "y");
 }
 
 }  // namespace
