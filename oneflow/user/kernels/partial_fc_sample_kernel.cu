@@ -327,18 +327,16 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     SampleIndex<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, buffer_manager,
                    label->dptr<K>());
 
-    // get sampled_label
     GetSampleLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
                                                          buffer_manager.SortedLabelBufferPtr(),
                                                          sampled_label->mut_dptr<K>());
-    // get sampled weight
+
     GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(
         ctx->device_ctx(), buffer_manager.SortedLabelBufferPtr(), num_sample, weight->dptr<T>(),
         Shape({1, weight->shape().At(0), weight->shape().Count(1)}), sampled_weight->mut_dptr<T>(),
         0);
 
-    // get mapped label
     MapLabel<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, parallel_num, num_sample,
                 buffer_manager, label->dptr<K>(), maped_label->mut_dptr<K>());
   }
