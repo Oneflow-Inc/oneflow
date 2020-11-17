@@ -73,10 +73,11 @@ class TmpBufferManager final {
   TmpBufferManager(void* ptr, const int64_t device_num_class, const int64_t batch_size,
                    const int64_t parallel_num)
       : ptr_(ptr) {
-    const size_t label_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
-    const size_t index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
-    const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
-    const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(device_num_class * sizeof(K));
+    const int64_t buffer_elem_cnt = std::max(device_num_class, batch_size);
+    const size_t label_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    const size_t index_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     cub_tmp_storage_bytes_ = std::max(GetCubSortPairTempStorageSize<K>(device_num_class),
                                       GetCubScanTempStorageSize<K>(batch_size));
     parallel_num_ = parallel_num;
@@ -135,24 +136,6 @@ class TmpBufferManager final {
   void* ptr_;
 };
 
-int GetThreadNum(const cudaDeviceProp& prop) {
-  switch (prop.major) {
-    case 3:  // Kepler
-      return 2 * 192;
-    case 5:  // Maxwell
-      return 2 * 128;
-    case 6:  // Pascal
-      if ((prop.minor == 1) || (prop.minor == 2)) {
-        return 2 * 128;
-      } else {
-        return 2 * 64;
-      }
-    case 7:  // Volta and Turing
-      return 2 * 64;
-    default: return 2 * 64;
-  }
-}
-
 __global__ void SetupKernel(int64_t seed, curandState* state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
@@ -171,16 +154,14 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const int64_t m
 class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelState {
  public:
   DistributedPartialFcSampleOpKernelState(DeviceCtx* ctx, int64_t lower, int64_t upper,
-                                          int64_t num_sample_per_rank)
+                                          int64_t num_sample_per_rank, int64_t seed)
       : lower_(lower), upper_(upper), num_sample_per_rank_(num_sample_per_rank) {
     CHECK_NOTNULL(ctx);
-
-    cudaDeviceProp prop;
-    OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
-    block_num_ = prop.multiProcessorCount;
-    thread_num_ = GetThreadNum(prop);
-    OF_CUDA_CHECK(cudaMalloc(&curand_states_, block_num_ * thread_num_ * sizeof(curandState)));
-    SetupKernel<<<block_num_, thread_num_>>>(111L, curand_states_);
+    const int64_t num_classes = upper_ - lower_;
+    OF_CUDA_CHECK(cudaMalloc(&curand_states_, BlocksNum4ThreadsNum(num_classes)
+                                                  * kCudaThreadsNumPerBlock * sizeof(curandState)));
+    SetupKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
+                  ctx->cuda_stream()>>>(seed, curand_states_);
   }
   ~DistributedPartialFcSampleOpKernelState() { OF_CUDA_CHECK(cudaFree(curand_states_)); };
 
@@ -189,8 +170,9 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
   int64_t num_sample_per_rank() const { return num_sample_per_rank_; }
 
   template<typename K>
-  void GenRandomIndexs(const int64_t n, const int64_t max_val, K* buffer) {
-    GenerateGpu<K><<<block_num_, thread_num_>>>(curand_states_, n, max_val, buffer);
+  void GenRandomIndexs(DeviceCtx* ctx, const int64_t n, const int64_t max_val, K* buffer) {
+    GenerateGpu<K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        curand_states_, n, max_val, buffer);
   }
 
  private:
@@ -198,8 +180,6 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
   const int64_t upper_;
   const int64_t num_sample_per_rank_;
   curandState* curand_states_;
-  int32_t block_num_;
-  int32_t thread_num_;
 };
 
 template<typename K>
@@ -324,6 +304,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("weight", 0);
     const int64_t class_num = in_logical_desc->shape().At(0);
     const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
+    const int64_t seed = ctx->Attr<int64_t>("seed");
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t num_sample_per_rank = RoundUp(num_sample, parallel_num) / parallel_num;
     if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 0 && parallel_num > 1) {
@@ -331,10 +312,10 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
       BalancedSplitter bs(class_num, parallel_num);
       return std::make_shared<DistributedPartialFcSampleOpKernelState>(
           ctx->device_ctx(), bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-          bs.At(ctx->parallel_ctx().parallel_id()).end(), num_sample_per_rank);
+          bs.At(ctx->parallel_ctx().parallel_id()).end(), num_sample_per_rank, seed);
     } else {
       return std::make_shared<DistributedPartialFcSampleOpKernelState>(
-          ctx->device_ctx(), 0, class_num, num_sample_per_rank);
+          ctx->device_ctx(), 0, class_num, num_sample_per_rank, seed);
     }
   }
 
@@ -355,10 +336,11 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
 
     auto* kernel_state = dynamic_cast<DistributedPartialFcSampleOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
-    CHECK_EQ(weight->shape().At(0), kernel_state->upper() - kernel_state->lower());
+    CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
     const int64_t lower_bound = kernel_state->lower();
     const int64_t num_sample = kernel_state->num_sample_per_rank();
-    kernel_state->GenRandomIndexs<K>(num_classes, num_classes, buffer_manager.IndexBufferPtr());
+    kernel_state->GenRandomIndexs<K>(ctx->device_ctx(), num_classes, num_classes,
+                                     buffer_manager.IndexBufferPtr());
     SampleIndex<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, buffer_manager,
                    label->dptr<K>());
 

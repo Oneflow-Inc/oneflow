@@ -24,6 +24,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
     .Output("sampled_label")
     .Output("sampled_weight")
     .Attr<int64_t>("num_sample")
+    .Attr<int64_t>("seed", -1)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
