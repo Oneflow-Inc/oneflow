@@ -517,16 +517,12 @@ int Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::compare(const
 
 bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator==(const _{{ util.class_name(cls) }}_& other) const {
 {% for field in util.message_type_fields(cls) %}
-{% if util.field_has_required_or_optional_label(field) %}
+if util.field_has_required_or_optional_label(field) || (util.field_has_repeated_label(field) or util.field_has_map_label(field)) {
   if (!(has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}() && 
       {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
-    return false;
-  }
-{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
-  if (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) {
-    return false;
-  }
-{% endif %}{# field_label #}
+        return false
+      }
+}
 {% endfor %}{# fields #}
 {% for oneof in util.message_type_oneofs(cls) %}
   if (!({{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case())) {
