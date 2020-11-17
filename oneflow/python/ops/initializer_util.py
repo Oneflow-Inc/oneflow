@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import functools
 import math
-import cmath
 
 import numpy as np
 
@@ -1114,28 +1113,40 @@ def RandomNormalInitializerImpl(
 
 
 @register_initializer("random_uniform_conf")
-@register_initializer("random_int_uniform_conf")
 def RandomUniformInitializerImpl(
-    initializer_conf: Union[
-        op_conf_util.RandomUniformInitializerConf,
-        op_conf_util.RandomUniformIntInitializerConf,
-    ],
+    initializer_conf: op_conf_util.RandomUniformIntInitializerConf,
     random_seed: int,
     var_blob_shape,
 ):
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.uniform(
-        min=initializer_conf.min, max=initializer_conf.max, size=length
+        low=initializer_conf.min,
+        high=np.nextafter(initializer_conf.max, float("inf")),
+        size=length,
     )
 
 
-def RngTruncatedNormal(mean, std, size, random_seed, rng):
+@register_initializer("random_uniform_int_conf")
+def RandomUniformIntInitializerImpl(
+    initializer_conf: op_conf_util.RandomUniformIntInitializerConf,
+    random_seed: int,
+    var_blob_shape,
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.integers(
+        low=initializer_conf.min, high=initializer_conf.max, size=length
+    )
+
+
+def RngTruncatedNormal(mean, std, length, random_seed, rng):
     truncated_value = 2 * std
     data = []
     while len(data) < length:
         data.extend(
-            filter(lambda value: abs(value - mean) < truncated_value, data),
-            rng.normal(mean, std, size=length - len(data)),
+            filter(
+                lambda value: abs(value - mean) < truncated_value,
+                rng.normal(mean, std, size=length - len(data)),
+            )
         )
     return data
 
@@ -1147,7 +1158,7 @@ def TruncatedNormalInitializerImpl(
     var_blob_shape,
 ):
     rng = np.random.default_rng(random_seed)
-    return lambda length, random_seed: RngTruncatedNormal(
+    return lambda length: RngTruncatedNormal(
         initializer_conf.mean, initializer_conf.std, length, random_seed, rng,
     )
 
@@ -1155,25 +1166,21 @@ def TruncatedNormalInitializerImpl(
 def GenInitialFan(initializer_conf, var_blob_shape):
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
-    kFan_in = op_conf_util.kFanIn
-    kFan_out = op_conf_util.kFanOut
-    k_average = op_conf_util.kAverage
-    fan = 0
     fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
     fan_out = var_blob_shape[0]
     if data_format == "channel_first":
-        fan_out = np.prod(var_blob_shape[2:]).astype(np.int).item()
+        fan_out *= np.prod(var_blob_shape[2:]).astype(np.int).item()
     else:
-        fan_out = np.prod(var_blob_shape[1:-1]).astype(np.int).item()
+        fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int).item()
 
-    if variance_norm == k_average:
+    if variance_norm == op_conf_util.kAverage:
         fan = (fan_in + fan_out) / 2
-    elif variance_norm == kFan_in:
+    elif variance_norm == op_conf_util.kFanIn:
         fan = fan_in
-    elif variance_norm == kFan_out:
+    elif variance_norm == op_conf_util.kFanOut:
         fan = fan_out
     else:
-        raise Exception("UNIMPLEMENTED")
+        raise NotImplemented()
     return fan
 
 
@@ -1183,16 +1190,16 @@ def XavierInitializerImpl(
     random_seed: int,
     var_blob_shape,
 ):
-    scale = cmath.sqrt(3 / GenInitialFan(initializer_conf, var_blob_shape))
+    scale = math.sqrt(3 / GenInitialFan(initializer_conf, var_blob_shape))
     rng = np.random.default_rng(random_seed)
-    return lambda length: rng.uniform(min=-scale, max=scale, size=length,)
+    return lambda length: rng.uniform(low=-scale, high=scale, size=length,)
 
 
 @register_initializer("msra_conf")
 def MsraInitializerImpl(
     initializer_conf: op_conf_util.MsraInitializerConf, random_seed: int, var_blob_shape
 ):
-    std = cmath.sqrt(2 / GenInitialFan(initializer_conf, var_blob_shape))
+    std = math.sqrt(2 / GenInitialFan(initializer_conf, var_blob_shape))
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.normal(loc=0, scale=std, size=length,)
 
@@ -1205,32 +1212,29 @@ def VarianceScalingInitializerImpl(
 ):
     scale = initializer_conf.scale / GenInitialFan(initializer_conf, var_blob_shape)
     distribution = initializer_conf.distribution
-    if distribution == kTruncatedNormal:
-        stddev = cmath.sqrt(scale) / (0.87962566103423978)
-        return lambda length, random_seed: RngTruncatedNormal(
-            0, stddev, length, random_seed,
-        )
-    elif distribution == kRandomNormal:
-        rng = np.random.default_rng(random_seed)
-        stddev = cmath.sqrt(scale)
+    rng = np.random.default_rng(random_seed)
+    if distribution == op_conf_util.kTruncatedNormal:
+        stddev = math.sqrt(scale) / (0.87962566103423978)
+        return lambda length: RngTruncatedNormal(0, stddev, length, random_seed, rng)
+    elif distribution == op_conf_util.kRandomNormal:
+        stddev = math.sqrt(scale)
         return lambda length: rng.normal(0, stddev, size=length,)
+    elif distribution == op_conf_util.kRandomUniform:
+        limit = math.sqrt(3.0 * scale)
+        return lambda length: rng.uniform(low=-limit, high=limit, size=length)
     else:
-        limit = cmath.sqrt(3.0 * scale)
-        rng = np.random.default_rng(random_seed)
-        return lambda length: rng.uniform(min=-limit, max=limit, size=length)
+        raise NotImplemented()
 
 
 def RangeInitializer(outer_size, idx_dim_size, inner_size, start, stride, length):
     i, j, k = 0, 0, 0
-    start = 0
-    stride = 1
 
     def generator(length):
-        nonlocal outer_size, idx_dim_size, inner_size, i, j, k
-        res = []
-        for _ in range(length):
+        nonlocal i, j, k
+        res = [0] * length
+        for i in range(length):
             assert i < outer_size
-            res.append(start + j * stride)
+            res[i] = start + j * stride
             k += 1
             if k == inner_size:
                 k = 0
