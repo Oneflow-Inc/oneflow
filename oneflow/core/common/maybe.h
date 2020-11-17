@@ -49,24 +49,16 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is
     return data_or_error_.template Get<cfg::ErrorProto>();
   }
 
-  std::string GetSerializedError() const {
-    std::string str;
-    ErrorProto error;
-    this->error()->ToProto(&error);
-    google::protobuf::TextFormat::PrintToString(error, &str);
-    return str;
-  }
+  std::string GetSerializedError() const { return this->error()->DebugString(); }
 
   template<typename Type = T>
   Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
     static_assert(std::is_same<T, Type>::value, "error type for argument 1");
     if (IsOk()) {
-      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+      *error_str = cfg::ErrorProto().DebugString();
       return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     } else {
-      ErrorProto error;
-      this->error()->ToProto(&error);
-      google::protobuf::TextFormat::PrintToString(error, error_str);
+      *error_str = this->error()->DebugString();
       return default_for_error;
     }
   }
@@ -102,20 +94,14 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    std::string str;
-    ErrorProto error;
-    this->error()->ToProto(&error);
-    google::protobuf::TextFormat::PrintToString(error, &str);
-    return str;
+    return this->error()->DebugString();
   }
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
     if (IsOk()) {
-      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+      *error_str = cfg::ErrorProto().DebugString();
     } else {
-      ErrorProto error;
-      this->error()->ToProto(&error);
-      google::protobuf::TextFormat::PrintToString(error, error_str);
+      *error_str = this->error()->DebugString();
     }
   }
 
@@ -154,21 +140,15 @@ class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    std::string str;
-    ErrorProto error;
-    this->error()->ToProto(&error);
-    google::protobuf::TextFormat::PrintToString(error, &str);
-    return str;
+    return this->error()->DebugString();
   }
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
     if (IsOk()) {
-      google::protobuf::TextFormat::PrintToString(ErrorProto(), error_str);
+      *error_str = cfg::ErrorProto().DebugString();
       return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     } else {
-      ErrorProto error;
-      this->error()->ToProto(&error);
-      google::protobuf::TextFormat::PrintToString(error, error_str);
+      *error_str = this->error()->DebugString();
       return default_for_error;
     }
   }

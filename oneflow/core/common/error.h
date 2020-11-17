@@ -27,7 +27,7 @@ class Error final {
  public:
   Error(const std::shared_ptr<cfg::ErrorProto>& error_proto) : error_proto_(error_proto) {}
   Error(const std::shared_ptr<ErrorProto>& error_proto)
-      : Error(std::make_shared<cfg::ErrorProto>(*(error_proto.get()))) {}
+      : Error(std::make_shared<cfg::ErrorProto>(*error_proto)) {}
   Error(const Error&) = default;
   ~Error() = default;
 
