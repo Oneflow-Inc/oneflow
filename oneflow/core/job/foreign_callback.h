@@ -27,12 +27,13 @@ class ForeignCallback {
   ForeignCallback() = default;
   virtual ~ForeignCallback() = default;
 
-  virtual void EagerMirroredCast(std::shared_ptr<cfg::OpAttribute> op_attribute,
-                                 std::shared_ptr<cfg::ParallelConf> parallel_conf) const {
+  virtual void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+                                 const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }
-  virtual void EagerInterpretCompletedOp(std::shared_ptr<cfg::OpAttribute> op_attribute,
-                                         std::shared_ptr<cfg::ParallelConf> parallel_conf) const {
+  virtual void EagerInterpretCompletedOp(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }
 
@@ -41,14 +42,15 @@ class ForeignCallback {
   virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
 
   // return scope_symbol_id
-  virtual int64_t MakeScopeSymbol(std::shared_ptr<cfg::JobConfigProto> job_conf,
-                                  std::shared_ptr<cfg::ParallelConf> parallel_conf,
+  virtual int64_t MakeScopeSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                  const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
                                   bool is_mirrored) const {
     UNIMPLEMENTED();
     return 0;
   }
   // return parallel_desc_symbol_id
-  virtual int64_t MakeParallelDescSymbol(std::shared_ptr<cfg::ParallelConf> parallel_conf) const {
+  virtual int64_t MakeParallelDescSymbol(
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
     return 0;
   }
