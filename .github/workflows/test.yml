@@ -4,10 +4,6 @@ on:
     types: [review_requested]
     branches:
       - '*'
-  pull_request_target:
-    types: [review_requested]
-    branches:
-      - '*'
   workflow_dispatch:
     inputs:
       placeholder:
@@ -17,7 +13,7 @@ jobs:
 
   check_license_and_format:
     name: License and format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
     - uses: actions/checkout@v2
@@ -26,7 +22,7 @@ jobs:
 
   mirror_third_party:
     name: Mirror third party dependencies
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
     - uses: actions/checkout@v2
@@ -35,6 +31,10 @@ jobs:
         OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       run: |
+        if [ -z "$OSS_ACCESS_KEY_ID" ]
+        then
+          exit 0
+        fi
         python3 -m pip install setuptools wheel
         python3 -m pip install oss2
         python3 tools/package_mirror.py -i cmake
