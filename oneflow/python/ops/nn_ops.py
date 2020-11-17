@@ -2575,7 +2575,7 @@ def deconv2d_torch(
         assert pad % 2 == 0
         padding_before.append(pad // 2)
 
-    if output_padding is None: 
+    if output_padding is None:
         output_padding = (0, 0)
 
     return (
