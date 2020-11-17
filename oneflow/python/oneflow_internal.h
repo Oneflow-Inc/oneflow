@@ -97,6 +97,10 @@ std::string GetFunctionConfigDef(std::string* error_str) {
   return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
+std::string GetScopeConfigDef(std::string* error_str) {
+  return oneflow::GetScopeConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
+}
+
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
