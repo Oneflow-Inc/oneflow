@@ -49,10 +49,10 @@ void SortPairs(cudaStream_t stream, int64_t n, size_t temp_storage_bytes, const 
 
 template<typename K>
 int64_t GetCubScanTempStorageSize(int64_t n) {
-  void* d_temp_storage = NULL;
   size_t cub_scan_temp_store_size = 0;
-  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum(d_temp_storage, cub_scan_temp_store_size,
-                                               static_cast<K*>(NULL), static_cast<K*>(NULL), n)));
+  NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(nullptr, 0);
+  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
+      nullptr, cub_scan_temp_store_size, unique_counting_iter, nullptr, n)));
   CHECK_GE(cub_scan_temp_store_size, 0);
   CHECK_LT(cub_scan_temp_store_size, GetMaxVal<int64_t>());
   return GetCudaAlignedSize(static_cast<int64_t>(cub_scan_temp_store_size));
