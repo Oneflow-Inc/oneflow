@@ -30,7 +30,7 @@ print("lib_path:", lib_path)
 print("pwd_path:", os.getcwd())
 
 user_sigmoid_lib = flow.experimental.op_lib("user_sigmoid", lib_path)
-user_sigmoid_lib.AddPythonAPI().AddOpDef().AddPythonKernel().AddCPPKernel().BuildAndLoad()
+user_sigmoid_lib.py_api().cpp_def().py_kernel().build_load()
 
 
 def numpy_sigmoid(x):

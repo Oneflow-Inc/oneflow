@@ -114,20 +114,7 @@ class OpLib(object):
             os.makedirs(out_path)
         self.out_prefix_ = os.path.join(out_path, self.op_type_name_)
 
-    def AddOpDef(self):
-        flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
-        compile(
-            "g++",
-            flags,
-            get_lflags(),
-            f"{self.src_prefix_}_op.cpp",
-            f"{self.out_prefix_}_op.o",
-        )
-        self.objs_.append(f"{self.out_prefix_}_op.o")
-        self.has_def_ = True
-        return self
-
-    def AddPythonAPI(self):
+    def py_api(self):
         assert os.path.exists(f"{self.src_prefix_}_py_api.py")
         spec = importlib.util.spec_from_file_location(
             self.op_type_name_, f"{self.src_prefix_}_py_api.py"
@@ -136,7 +123,20 @@ class OpLib(object):
         spec.loader.exec_module(self.api)
         return self
 
-    def AddPythonKernel(self):
+    def cpp_def(self):
+        flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
+        compile(
+            "g++",
+            flags,
+            get_lflags(),
+            f"{self.src_prefix_}_cpp_def.cpp",
+            f"{self.out_prefix_}_cpp_def.o",
+        )
+        self.objs_.append(f"{self.out_prefix_}_cpp_def.o")
+        self.has_def_ = True
+        return self
+
+    def py_kernel(self):
         assert os.path.exists(f"{self.src_prefix_}_py_kernel.py")
         spec = importlib.util.spec_from_file_location(
             self.op_type_name_, f"{self.src_prefix_}_py_kernel.py"
@@ -148,7 +148,7 @@ class OpLib(object):
         self.has_py_kernel_ = True
         return self
 
-    def AddCPPKernel(self):
+    def cpp_kernel(self):
         flags = "-std=c++11 -c -fPIC -O2 " + get_cflags()
         compile(
             "g++",
@@ -161,10 +161,10 @@ class OpLib(object):
         self.has_cpu_kernel_ = True
         return self
 
-    def AddGPUKernel(self):
+    def gpu_kernel(self):
         raise NotImplementedError
 
-    def BuildAndLoad(self):
+    def build_load(self):
         if len(self.objs_) > 0:
             flags = "-std=c++11 -shared -fPIC " + get_cflags()
             compile("g++", flags, get_lflags(), self.objs_, f"{self.out_prefix_}.so")
