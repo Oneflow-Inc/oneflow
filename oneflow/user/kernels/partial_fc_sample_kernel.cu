@@ -118,6 +118,8 @@ class TmpBufferManager final {
 
   K* SortedLabelIndexPtr() const { return SortedIndexBufferPtr(); }
 
+  K* UniqueCounterPtr() const { return LabelIndexPtr(); }
+
  private:
   size_t label_buffer_offset_;
   size_t index_buffer_offset_;
@@ -209,8 +211,8 @@ __global__ void GetLabelMap(const int64_t n, const int64_t parallel_num,
       const K pre_label = sorted_label[i - 1];
       if (cur_label != pre_label) {
 #pragma unroll
-        for (int32_t j = 1; j < parallel_num; j++) {
-          int32_t lower_bound = j * num_class_per_rank;
+        for (int64_t j = 1; j < parallel_num; j++) {
+          int64_t lower_bound = j * num_class_per_rank;
           if (cur_label >= lower_bound && pre_label < lower_bound) {
             compute_buf[j] = cur_label_map;
           }
@@ -220,9 +222,9 @@ __global__ void GetLabelMap(const int64_t n, const int64_t parallel_num,
     if (threadIdx.x == 0) { compute_buf[0] = label_map[0]; }
     __syncthreads();
 #pragma unroll
-    for (int32_t j = 0; j < parallel_num; j++) {
-      int32_t lower_bound = j * num_class_per_rank;
-      int32_t upper_bound = (j + 1) * num_class_per_rank;
+    for (int64_t j = 0; j < parallel_num; j++) {
+      int64_t lower_bound = j * num_class_per_rank;
+      int64_t upper_bound = (j + 1) * num_class_per_rank;
       if (cur_label >= lower_bound && cur_label < upper_bound) {
         label_map[i] = cur_label_map - compute_buf[j] + j * num_sample_per_rank;
       }
@@ -231,9 +233,9 @@ __global__ void GetLabelMap(const int64_t n, const int64_t parallel_num,
 }
 
 template<typename K>
-__global__ void GetMappedLabel(const int64_t n, const K* sorted_label_index, const K* label_map,
+__global__ void GetMappedLabel(const int64_t n, const K* label_map_key, const K* label_map_value,
                                K* maped_label) {
-  CUDA_1D_KERNEL_LOOP(i, n) { maped_label[sorted_label_index[i]] = label_map[i]; }
+  CUDA_1D_KERNEL_LOOP(i, n) { maped_label[label_map_key[i]] = label_map_value[i]; }
 }
 
 template<typename K>
@@ -260,17 +262,16 @@ void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_siz
                   buffer_manager.LabelIndexPtr(), buffer_manager.CubTmpStoragePtr(),
                   buffer_manager.SortedLabelPtr(), buffer_manager.SortedLabelIndexPtr());
   GetUniqueCounter<K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(),
-                      buffer_manager.SortedLabelPtr(), buffer_manager.LabelIndexPtr(),
+                      buffer_manager.SortedLabelPtr(), buffer_manager.UniqueCounterPtr(),
                       buffer_manager.CubTmpStoragePtr());
-
   GetLabelMap<K>
       <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, parallel_num * sizeof(K),
          ctx->cuda_stream()>>>(batch_size, parallel_num, num_classes, num_sample,
-                               buffer_manager.SortedLabelPtr(), buffer_manager.LabelIndexPtr());
+                               buffer_manager.SortedLabelPtr(), buffer_manager.UniqueCounterPtr());
 
   GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                    ctx->cuda_stream()>>>(batch_size, buffer_manager.SortedLabelIndexPtr(),
-                                         buffer_manager.LabelIndexPtr(), maped_label_ptr);
+                                         buffer_manager.UniqueCounterPtr(), maped_label_ptr);
 }
 
 }  // namespace
