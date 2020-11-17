@@ -44,13 +44,6 @@ def RegisterWatcherOnlyOnce(watcher):
         raise JobBuildAndInferError(error)
 
 
-def RegisterForeignCallbackOnlyOnce(callback):
-    error_str = oneflow_internal.RegisterForeignCallbackOnlyOnce(callback)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
-
-
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
     ret, error_str = oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
     error = text_format.Parse(error_str, error_util.ErrorProto())
@@ -576,9 +569,7 @@ def GetFunctionConfigDef():
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunLogicalInstruction(
-        str(vm_instruction_list), symbols
-    )
+    error_str = oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, symbols)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
@@ -586,12 +577,8 @@ def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
 
 def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_internal.RunPhysicalInstruction(
-        str(vm_instruction_list), symbols
-    )
+    error_str = oneflow_api.vm.RunPhysicalInstruction(vm_instruction_list, symbols)
     error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
 
 
 def CurrentMachineId():
