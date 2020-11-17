@@ -70,7 +70,8 @@ double GetComputaionCostFn(user_op::ComputeComplexityFnContext* ctx) {
   double logical_computation_cost =
       std::accumulate(pool_size.begin(), pool_size.end(),
                       ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
-  if (ctx->SbpParallel4ArgNameAndIndex("y", 0)->has_split_parallel()) {
+  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+  if (sbp_parallel.has_split_parallel()) {
     return logical_computation_cost / ctx->parallel_desc().parallel_num();
   }
   return logical_computation_cost;
