@@ -53,7 +53,7 @@ jobs:
         curl -X POST -d "branches=master" -d "token=${READTHEDOCS_TOKEN}"  https://readthedocs.org/api/v2/webhook/oneflow/135376/
   pack_src:
     name: Pack source code
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
     - name: Pack OneFlow source code
