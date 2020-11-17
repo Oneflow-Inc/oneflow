@@ -4,18 +4,48 @@
 #include <memory>
 #include <vector>
 #include <map>
-{% for dependency in util.module_dependencies(module) %}
-#include "{{ util.module_cfg_header_name(dependency) }}"
-{% endfor %}
+#include <google/protobuf/message.h>
 #include "oneflow/cfg/repeated_field.h"
 #include "oneflow/cfg/map_field.h"
 #include "oneflow/cfg/message.h"
 #include "oneflow/cfg/shared_pair_iterator.h"
-#include "{{ util.module_proto_header_name(module) }}"
+
+// forward declare enum defined in other module
+{% for namespaces, cls in  util.other_file_declared_namespaces_and_enum_name(module) %}
+{% for ns in namespaces %}
+namespace {{ ns }} {
+{% endfor %}
+namespace cfg {
+enum {{ cls }} : unsigned int;
+}
+{% for namespace in namespaces %}
+}
+{% endfor %}
+{% endfor %}
+
+// forward declare class defined in other module
+{% for namespaces, cls in  util.other_file_declared_namespaces_and_class_name(module) %}
+{% for ns in namespaces %}
+namespace {{ ns }} {
+{% endfor %}
+namespace cfg {
+class Const{{ cls }};
+class {{ cls }};
+}
+{% for namespace in namespaces %}
+}
+{% endfor %}
+{% endfor %}
 
 {% for package in util.module_package_list(module) %}
 namespace {{ package }} {
 {% endfor %}
+
+// forward declare proto class;
+{% for cls in util.module_nested_message_types(module) %}
+class {{ util.class_name(cls) }};
+{% endfor %}
+
 namespace cfg {
 
 {% for cls in util.module_nested_message_types(module) %}
@@ -24,24 +54,18 @@ namespace cfg {
 class {{ util.class_name(cls) }};
 class Const{{ util.class_name(cls) }};
 {% for enm in util.message_type_enums(cls) %}
-enum {{ util.enum_name(enm) }} {
+enum {{ util.enum_name(enm) }} : unsigned int {
 {% for value in util.enum_values(enm) %}
   {{ util.enum_value_name(value) }} = {{ util.enum_value_number(value) }},
 {% endfor %}
 };
-inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}& cfg_enum) {
-  return {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}(int(cfg_enum));
-}
 
-inline {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
-  return {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}(int(proto_enum));
-}
 {% endfor %}{# oneof enum #}
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
 
 {% for enm in util.module_enum_types(module) %}
-enum {{ util.enum_name(enm) }} {
+enum {{ util.enum_name(enm) }} : unsigned int {
 {% for value in util.enum_values(enm) %}
   {{ util.enum_value_name(value) }} = {{ util.enum_value_number(value) }},
 {% endfor %}
@@ -57,13 +81,6 @@ inline ::std::string {{ util.enum_name(enm) }}_Name({{ util.enum_name(enm) }} va
   }
 }
 
-inline {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }} Cfg{{ util.enum_name(enm) }}ToProto{{ util.enum_name(enm) }}(const {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}& cfg_enum) {
-  return {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}(int(cfg_enum));
-}
-
-inline {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }} Proto{{ util.enum_name(enm) }}ToCfg{{ util.enum_name(enm) }}(const {{ util.module_package_namespace(module) }}::{{ util.enum_name(enm) }}& proto_enum) {
-  return {{ util.module_package_cfg_namespace(module) }}::{{ util.enum_name(enm) }}(int(proto_enum));
-}
 {% endfor %}{# enm #}
 
 {% for cls in util.module_nested_message_types(module) %}
@@ -86,7 +103,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 {% for oneof in util.message_type_oneofs(cls) %}
 
  // oneof enum {{ util.oneof_name(oneof) }}
- enum {{ util.oneof_enum_name(oneof) }} {
+ enum {{ util.oneof_enum_name(oneof) }} : unsigned int {
   {{ util.oneof_name(oneof).upper() }}_NOT_SET = 0,
   {% for field in util.oneof_type_fields(oneof) %}
   {{ util.oneof_type_field_enum_value_name(field) }} = {{ util.field_number(field) }},
