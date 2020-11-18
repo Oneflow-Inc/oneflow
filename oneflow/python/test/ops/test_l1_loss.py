@@ -163,7 +163,7 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class Testrange1n2d(flow.unittest.TestCase):
+class Testl1loss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_l1loss_gpu_1n2d(test_case):
         arg_dict = OrderedDict()
