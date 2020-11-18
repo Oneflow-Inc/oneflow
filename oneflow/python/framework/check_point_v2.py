@@ -173,7 +173,7 @@ def _GetOpNameFromLbn(lbn):
 def _GetScopeSymbolIdFromEagerBlob(blob):
     name = _GetOpNameFromLbn(blob.logical_blob_name)
     sess = session_ctx.GetDefaultSession()
-    op_conf = sess.OpConf4InterfaceOpName(name)
+    op_conf = sess.OpAttribute4InterfaceOpName(name).op_conf
     scope_symbol_id = op_conf.scope_symbol_id
     return scope_symbol_id
 
@@ -490,7 +490,7 @@ def _ForEachSlice(
 def Init() -> None:
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
-        var_conf = sess.OpConf4InterfaceOpName(op_name).variable_conf
+        var_conf = sess.OpAttribute4InterfaceOpName(op_name).op_conf.variable_conf
         if not (
             var_conf.HasField("initializer")
             or var_conf.HasField("initialize_with_snapshot")

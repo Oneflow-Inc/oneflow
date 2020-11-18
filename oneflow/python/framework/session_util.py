@@ -76,9 +76,7 @@ class Session(object):
         # as parallel conf may be updated in some passes
         # (like non_distributed_optimizer_pass)
         self.interface_op_name2op_attr_ = {}
-        self.interface_op_name2op_conf_ = {}
         self.interface_op_name2job_name_ = {}
-        self.lazy_interface_op_name2parallel_conf_ = {}
         self.op_name2lazy_blob_cache_ = {}
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
@@ -177,18 +175,18 @@ class Session(object):
             self.Init()
         return self
 
-    def UpdateOpConfAndParallelConf4LazyInterfaceOp(self):
+    def _UpdateOpAttrAndJobName4LazyInterfaceOp(self):
+        for op_attr in c_api_util.GetOpAttributes().op_attribute:
+            print(op_attr)
+            op_conf = op_attr.op_conf
+            if c_api_util.IsInterfaceOpConf(op_conf):
+                self.interface_op_name2op_attr_[op_conf.name] = op_attr
         for job in c_api_util.GetJobSet().job:
-            op_name2parallel_conf = {}
-            for placement_group in job.placement.placement_group:
-                for op_name in placement_group.op_set.op_name:
-                    op_name2parallel_conf[op_name] = placement_group.parallel_conf
             for op_conf in job.net.op:
                 if c_api_util.IsInterfaceOpConf(op_conf):
-                    self.interface_op_name2op_conf_[op_conf.name] = op_conf
-                    self.lazy_interface_op_name2parallel_conf_[
+                    self.interface_op_name2job_name_[
                         op_conf.name
-                    ] = op_name2parallel_conf[op_conf.name]
+                    ] = job.job_conf.job_name
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
@@ -206,8 +204,8 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
-            # Get latest op_conf and parallel_conf after compiler.Compile
-            self.UpdateOpConfAndParallelConf4LazyInterfaceOp()
+            # Get latest op_attr and job_name after compiler.Compile
+            self._UpdateOpAttrAndJobName4LazyInterfaceOp()
             if not config_util.api_legacy_model_io_enabled():
                 check_point_v2.Init()
         else:
@@ -324,25 +322,18 @@ class Session(object):
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute, op_conf):
-        self.interface_op_name2op_attr_[interface_op_name] = op_attribute
-        self.interface_op_name2job_name_[
-            interface_op_name
-        ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         if oneflow.eager_execution_enabled():
-            self.interface_op_name2op_conf_[interface_op_name] = op_conf
+            self.interface_op_name2op_attr_[interface_op_name] = op_attribute
+            self.interface_op_name2job_name_[
+                interface_op_name
+            ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         else:
-            # In lazy mode, we update `interface_op_name2op_conf_` with
+            # In lazy mode, we update `interface_op_name2op_attr_` with
             # the latest op_conf in another function after compiler.Compile
             pass
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
-
-    def ParallelConf4LazyInterfaceOpName(self, interface_op_name):
-        return self.lazy_interface_op_name2parallel_conf_[interface_op_name]
-
-    def OpConf4InterfaceOpName(self, interface_op_name):
-        return self.interface_op_name2op_conf_[interface_op_name]
 
     def JobName4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2job_name_[interface_op_name]
