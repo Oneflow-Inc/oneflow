@@ -38,6 +38,12 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     user_op::UserOpConfWrapper cur_op(op_conf);
     const std::string& op_name = cur_op.op_name();
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
+    const BlobDesc& in_desc = op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("in", 0)));
+    const int64_t num_classes = in_desc.shape().At(0);
+    const BlobDesc& indices_desc =
+        op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
+    const int64_t max_dim_size = indices_desc.shape().elem_cnt() * parallel_num;
+
     OperatorConf distribute_split_ids_op_conf{};
     distribute_split_ids_op_conf.set_name(op_name + "-distribute_split_ids");
     auto* distribute_split_ids_conf = distribute_split_ids_op_conf.mutable_distribute_split_conf();
@@ -62,44 +68,65 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {distribute_split_data_op_conf});
 
     std::vector<std::vector<std::string>> sparse_ids(parallel_num);
+
+    const ParallelDesc parallel_desc(op_node->parallel_desc().parallel_conf());
     FOR_RANGE(int32_t, i, 0, parallel_num) {
+      const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(i));
+      const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(i));
       ParallelConf parallel_conf;
       parallel_conf.set_device_tag("gpu");
-      parallel_conf.add_device_name("0:" + std::to_string(i));
-      auto unique_op = user_op::UserOpConfWrapperBuilder(op_name + "-unique_" + std::to_string(i))
-                           .Op("identity")
-                           .Input("in", GenLogicalBlobName(distribute_split_ids_op_conf.name(),
-                                                           distribute_split_ids_conf->out(i)))
-                           .Output("out")
-                           .Build();
-      job_builder.AddOps(parallel_conf, {unique_op.op_conf()});
+      parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
 
-      auto partition_op0 =
-          user_op::UserOpConfWrapperBuilder(op_name + "-partition0_" + std::to_string(i))
-              .Op("identity")
-              .Input("in", unique_op.output("out", 0))
-              .Output("out")
-              .Build();
-      job_builder.AddOps(parallel_conf, {partition_op0.op_conf()});
-      sparse_ids.at(0).push_back(partition_op0.output("out", 0));
+      OperatorConf unique_with_counts_op_conf{};
+      unique_with_counts_op_conf.set_name(op_name + "-unique_" + std::to_string(i));
+      auto* unique_with_counts_conf = unique_with_counts_op_conf.mutable_unique_with_counts_conf();
+      unique_with_counts_conf->set_x(GenLogicalBlobName(distribute_split_ids_op_conf.name(),
+                                                        distribute_split_ids_conf->out(i)));
+      unique_with_counts_conf->set_y("y");
+      unique_with_counts_conf->set_idx("idx");
+      unique_with_counts_conf->set_count("count");
+      unique_with_counts_conf->set_num_unique("num_unique");
 
-      auto partition_op1 =
-          user_op::UserOpConfWrapperBuilder(op_name + "-partition1_" + std::to_string(i))
-              .Op("identity")
-              .Input("in", unique_op.output("out", 0))
-              .Output("out")
-              .Build();
-      job_builder.AddOps(parallel_conf, {partition_op1.op_conf()});
-      sparse_ids.at(1).push_back(partition_op1.output("out", 0));
+      job_builder.AddOps(parallel_conf, {unique_with_counts_op_conf});
+
+      user_op::UserOpConfWrapperBuilder partition_op_builder(op_name + "-partition_"
+                                                             + std::to_string(i));
+      partition_op_builder.Op("partition")
+          .Input("in", GenLogicalBlobName(unique_with_counts_op_conf.name(),
+                                          unique_with_counts_conf->y()))
+          .Input("in_num_unique", GenLogicalBlobName(unique_with_counts_op_conf.name(),
+                                                     unique_with_counts_conf->num_unique()))
+          .Attr<int64_t>("parallel_num", parallel_num)
+          .Attr<int64_t>("num_classes", num_classes);
+      partition_op_builder.Output("out", parallel_num).Output("num_unique", parallel_num);
+      auto partition_op = partition_op_builder.Build();
+      job_builder.AddOps(parallel_conf, {partition_op.op_conf()});
+
+      FOR_RANGE(int32_t, j, 0, parallel_num) {
+        OperatorConf sync_dynamic_resize_op_conf{};
+        sync_dynamic_resize_op_conf.set_name(op_name + "-dynamic_resize_" + std::to_string(j)
+                                             + std::to_string(i));
+        auto* sync_dynamic_resize_conf =
+            sync_dynamic_resize_op_conf.mutable_sync_dynamic_resize_conf();
+        sync_dynamic_resize_conf->set_in(partition_op.output("out", j));
+        sync_dynamic_resize_conf->set_size(partition_op.output("num_unique", j));
+        sync_dynamic_resize_conf->set_out("out");
+        job_builder.AddOps(parallel_conf, {sync_dynamic_resize_op_conf});
+
+        sparse_ids.at(j).push_back(GenLogicalBlobName(sync_dynamic_resize_op_conf.name(),
+                                                      sync_dynamic_resize_conf->out()));
+      }
     }
     std::vector<std::vector<std::string>> gathered_out(parallel_num);
     FOR_RANGE(int32_t, i, 0, parallel_num) {
+      const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(i));
+      const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(i));
       ParallelConf parallel_conf;
       parallel_conf.set_device_tag("gpu");
-      parallel_conf.add_device_name("0:" + std::to_string(i));
+      parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
       user_op::UserOpConfWrapperBuilder concat_op_builder(op_name + "-concat_" + std::to_string(i));
       concat_op_builder.Op("concat").Output("out").Attr<int64_t>("axis", 0).Attr<int64_t>(
-          "max_dim_size", 10);
+          "max_dim_size", max_dim_size);
       FOR_RANGE(int32_t, j, 0, parallel_num) {
         concat_op_builder.Input("in", sparse_ids.at(i).at(j));
       }
@@ -135,9 +162,11 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     }
     std::vector<std::string> out_list;
     FOR_RANGE(int32_t, i, 0, parallel_num) {
+      const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(i));
+      const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(i));
       ParallelConf parallel_conf;
       parallel_conf.set_device_tag("gpu");
-      parallel_conf.add_device_name("0:" + std::to_string(i));
+      parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
       auto concat_gather_op =
           user_op::UserOpConfWrapperBuilder(op_name + "-concat_gather_" + std::to_string(i))
               .Op("concat")
@@ -145,7 +174,7 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
               .Input("in", gathered_out.at(i).at(1))
               .Output("out")
               .Attr<int64_t>("axis", 0)
-              .Attr<int64_t>("max_dim_size", 10)
+              .Attr<int64_t>("max_dim_size", max_dim_size)
               .Build();
       out_list.push_back(concat_gather_op.output("out", 0));
       job_builder.AddOps(parallel_conf, {concat_gather_op.op_conf()});
