@@ -41,7 +41,46 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
   return shape_vec;
 }
 
-}  // namespace
+template <typename T_IN>
+void TraverseDiagonalElements(const int64_t  w_idx, NdIndexOffsetHelper<int64_t, 4> &index_helper, const std::vector<int64_t> &index_vector,
+      const user_op::Tensor* x, user_op::Tensor* y, user_op::KernelComputeContext* ctx, DeviceType device_type){
+      printf("================================Enter TraverseDiagonalElements==============================\n");
+      const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
+      const std::string data_format = ctx->Attr<std::string>("data_format");
+      const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+      int64_t padding_w;
+      padding_w = padding[w_idx];
+
+      FOR_RANGE(int, i, 0, index_vector.size()) {
+      int64_t coord_y[4];
+      index_helper.OffsetToNdIndex(index_vector[i], coord_y);
+      int64_t dest_w;
+      int64_t dest_index;
+      int64_t dest_coords[4];
+      if (coord_y[w_idx] < padding_w) {
+        // left part
+        dest_w = 2 * padding_w - coord_y[w_idx];
+      } else {
+        // right part
+        dest_w = 2 * (padding_w + x->shape().At(w_idx) - 1) - coord_y[w_idx];
+      }
+      dest_coords[0] = coord_y[0];
+      dest_coords[1] = coord_y[1];
+      if (data_format == "NCHW") {
+        dest_coords[2] = coord_y[2];
+        dest_coords[3] = dest_w;
+      } else {
+        dest_coords[2] = dest_w;
+        dest_coords[3] = coord_y[3];
+      }
+      dest_index = index_helper.NdIndexToOffset(dest_coords);
+      Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T_IN>() + index_vector[i],
+                          y->mut_dptr<T_IN>() + dest_index, sizeof_dtype);
+    }
+  }
+
+
+// }  // namespace
 
 template<DeviceType device_type, typename T>
 class ReflectionPad2dKernel final : public user_op::OpKernel {
@@ -159,33 +198,36 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       }
     }
 
-    // Traverse the diagonal elements around index_vector and assign values
-    FOR_RANGE(int, i, 0, index_vector.size()) {
-      int64_t coord_y[ndims];
-      index_helper.OffsetToNdIndex(index_vector[i], coord_y);
-      int64_t dest_w;
-      int64_t dest_index;
-      int64_t dest_coords[4];
-      if (coord_y[w_idx] < padding_w) {
-        // left part
-        dest_w = 2 * padding_w - coord_y[w_idx];
-      } else {
-        // right part
-        dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
-      }
-      dest_coords[0] = coord_y[0];
-      dest_coords[1] = coord_y[1];
-      if (data_format == "NCHW") {
-        dest_coords[2] = coord_y[2];
-        dest_coords[3] = dest_w;
-      } else {
-        dest_coords[2] = dest_w;
-        dest_coords[3] = coord_y[3];
-      }
-      dest_index = index_helper.NdIndexToOffset(dest_coords);
-      Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + index_vector[i],
-                          y->mut_dptr<T>() + dest_index, sizeof_dtype);
-    }
+    TraverseDiagonalElements<T>(w_idx, index_helper, index_vector, x, y, ctx, device_type);
+
+    // // Traverse the diagonal elements around index_vector and assign values
+    // FOR_RANGE(int, i, 0, index_vector.size()) {
+    //   int64_t coord_y[ndims];
+    //   index_helper.OffsetToNdIndex(index_vector[i], coord_y);
+    //   int64_t dest_w;
+    //   int64_t dest_index;
+    //   int64_t dest_coords[4];
+    //   if (coord_y[w_idx] < padding_w) {
+    //     // left part
+    //     dest_w = 2 * padding_w - coord_y[w_idx];
+    //   } else {
+    //     // right part
+    //     dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
+    //   }
+    //   dest_coords[0] = coord_y[0];
+    //   dest_coords[1] = coord_y[1];
+    //   if (data_format == "NCHW") {
+    //     dest_coords[2] = coord_y[2];
+    //     dest_coords[3] = dest_w;
+    //   } else {
+    //     dest_coords[2] = dest_w;
+    //     dest_coords[3] = coord_y[3];
+    //   }
+    //   dest_index = index_helper.NdIndexToOffset(dest_coords);
+    //   Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + index_vector[i],
+    //                       y->mut_dptr<T>() + dest_index, sizeof_dtype);
+    // }
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
