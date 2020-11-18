@@ -28,9 +28,7 @@ void LogError(const Error& error) {
 
 }  // namespace
 
-Error::operator std::string() const {
-  return error_proto_->DebugString();
-}
+Error::operator std::string() const { return error_proto_->DebugString(); }
 
 Error Error::Ok() { return std::make_shared<cfg::ErrorProto>(); }
 
