@@ -2209,6 +2209,95 @@ def masked_fill(
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
 
 
+@oneflow_export("dim_gather")
+def dim_gather(
+    input: remote_blob_util.BlobDef,
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r""" This operator gathers elements from `input` according to `index` along with the axis `dim`.
+
+    Take a 3-D blob as example, the output is specified by:
+
+    .. code-block:: python
+
+        output[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+        output[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+        output[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+
+
+    The shape of `input` and `index` should be the same except in the `dim` dimension. 
+    
+    That is, if `input` is a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, x_i, x_{i+1}, \dots, x_n)`,
+    and `dim = i`, then `index` must be a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, k, x_{i+1}, \dots, x_n)` 
+    where :math:`k \geq 1`.
+
+    The return Blob `output` will have the same shape with `index`.
+
+    Args:
+        input (remote_blob_util.BlobDef): The input blob
+        dim (int): The axis along which to index
+        index (remote_blob_util.BlobDef): The index blob of elements to gather
+        name (Optional[str], optional): The name of the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The elements gathered from `input` will be returned as the output Blob.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def dim_gather_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float64), 
+                        index:tp.Numpy.Placeholder((2, 2), dtype=flow.int32))->tp.Numpy:
+            return flow.dim_gather(input, 1, index)
+
+        input = np.array([[1, 2], [3, 4]]).astype(np.float64)
+        index = np.array([[1, 0], [0, 1]]).astype(np.int32)
+
+        out = dim_gather_Job(input, index)       
+        # output 
+        # [[2. 1.]
+        #  [3. 4.]]
+
+    """
+    if len(input.shape) != len(index.shape):
+        raise ValueError("Dimensions of input and index should equal")
+
+    for i in range(0, len(input.shape)):
+        if dim == i:
+            continue
+        else:
+            if input.shape[i] != index.shape[i]:
+                raise ValueError(
+                    "Dimensions of input and index should be same except at dim"
+                )
+
+    if dim >= len(index.shape):
+        raise ValueError(
+            "Value of dim is out of range(dim should be less than len(index.shape))"
+        )
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimGather_")
+        )
+        .Op("dim_gather")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("amp_white_identity")
 def amp_white_identity(
     x: remote_blob_util.BlobDef, name: Optional[str] = None

@@ -28,9 +28,9 @@ namespace oneflow {
 namespace vm {
 
 TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num,
-                                             int64_t machine_id) {
+                                             int64_t machine_num) {
   Resource resource;
-  resource.set_machine_num(machine_id);
+  resource.set_machine_num(machine_num);
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
   Global<ResourceDesc, ForSession>::New(resource);

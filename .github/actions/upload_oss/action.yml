@@ -11,6 +11,10 @@ runs:
   using: "composite"
   steps:
     - run: |
+        if [ -z "$OSS_ACCESS_KEY_ID" ]
+        then
+          exit 0
+        fi
         if [ ! -f "$HOME/ossutil64" ]; then
           curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
         fi
