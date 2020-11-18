@@ -41,6 +41,41 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
   return shape_vec;
 }
 
+// Fill input elements(x) to output body(y)
+template<DeviceType device_type, typename T>
+void FillBodyElements(const int64_t ndims, const user_op::Tensor* x, user_op::Tensor* y,
+                      const int64_t sizeof_dtype, user_op::KernelComputeContext* ctx,
+                      bool is_backward) {
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  MemoryCopyNdDesc memory_copy_nd_desc;
+  DimVector src_shape_vec(ndims);
+  DimVector dst_shape_vec(ndims);
+
+  GetDimVectorInBytes(x->shape(), sizeof_dtype, src_shape_vec);
+  GetDimVectorInBytes(y->shape(), sizeof_dtype, dst_shape_vec);
+  memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
+  memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
+  if (is_backward == true) {
+    DimVector dst_pos_vec(ndims, 0);
+    DimVector src_pos_vec(padding.cbegin(), padding.cend());
+    src_pos_vec[ndims - 1] *= sizeof_dtype;
+    memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
+    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
+    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
+  } else {
+    DimVector src_pos_vec(ndims, 0);
+    DimVector dst_pos_vec(padding.cbegin(), padding.cend());
+    dst_pos_vec[ndims - 1] *= sizeof_dtype;
+    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
+    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
+    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
+  }
+  MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
+  std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
+  device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
+                             reduced_memory_copy_nd_desc);
+}
+
 // Padding the diagonal elements around index_vector and assign values
 template<DeviceType device_type, typename T>
 void PaddingDiagonalElements(const int64_t w_idx, NdIndexOffsetHelper<int64_t, 4>& index_helper,
@@ -96,28 +131,9 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = x->shape().NumAxes();
     const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
-
     CHECK_EQ(padding.size(), ndims);
 
-    MemoryCopyNdDesc memory_copy_nd_desc;
-    DimVector src_shape_vec(ndims);
-    DimVector dst_shape_vec(ndims);
-
-    GetDimVectorInBytes(x->shape(), sizeof_dtype, src_shape_vec);
-    GetDimVectorInBytes(y->shape(), sizeof_dtype, dst_shape_vec);
-    memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
-    memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
-
-    DimVector src_pos_vec(ndims, 0);
-    DimVector dst_pos_vec(padding.cbegin(), padding.cend());
-    dst_pos_vec[ndims - 1] *= sizeof_dtype;
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
-                               reduced_memory_copy_nd_desc);
+    FillBodyElements<device_type, T>(ndims, x, y, sizeof_dtype, ctx, false);
 
     int64_t padding_h, padding_w, h_idx, w_idx;
     if (data_format == "NCHW") {
@@ -135,6 +151,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
 
     DimVector y_vector = ShapeViewToDimVector(y->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+
     FOR_RANGE(int, i, 0, y->shape().elem_cnt()) {
       // Traverse one-dimensional array y
       int64_t coord_y[ndims];
@@ -198,7 +215,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       }
     }
 
-    PaddingDiagonalElements<device_type, T>(w_idx, index_helper, index_vector, x, y, ctx)
+    PaddingDiagonalElements<device_type, T>(w_idx, index_helper, index_vector, x, y, ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -234,32 +251,11 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = dy->shape().NumAxes();
-    const int64_t size_of_data_type = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
+    const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
     CHECK_EQ(padding.size(), ndims);
 
-    MemoryCopyNdDesc memory_copy_nd_desc;
-    DimVector src_shape_vec(ndims);
-    DimVector dst_shape_vec(ndims);
-
-    GetDimVectorInBytes(dy->shape(), size_of_data_type, src_shape_vec);
-    GetDimVectorInBytes(dx->shape(), size_of_data_type, dst_shape_vec);
-
-    memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
-    memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
-
-    DimVector dst_pos_vec(ndims, 0);
-    DimVector src_pos_vec(padding.cbegin(), padding.cend());
-    src_pos_vec[ndims - 1] *= size_of_data_type;
-
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
-    MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-    std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-    device_memory_copier->Copy(ctx->device_ctx(), dx->mut_dptr<T>(), dy->dptr<T>(),
-                               reduced_memory_copy_nd_desc);
+    FillBodyElements<device_type, T>(ndims, dy, dx, sizeof_dtype, ctx, true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
