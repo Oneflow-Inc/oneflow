@@ -2646,3 +2646,42 @@ def leaky_relu(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.MarginRankingLoss")
+def margin_ranking_loss(
+    input1: remote_blob_util.BlobDef, 
+    input2: remote_blob_util.BlobDef, 
+    target: remote_blob_util.BlobDef, 
+    margin: float, 
+    reduction: str = 'mean', 
+    name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    """Compute the margin ranking loss
+
+    Args:
+        input1 (remote_blob_util.BlobDef): [description]
+        input2 (remote_blob_util.BlobDef): [description]
+        target (remote_blob_util.BlobDef): [description]
+        margin (float): [description]
+        reduction (str, optional): [description]. Defaults to 'mean'.
+        name (Optional[str], optional): [description]. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: [description]
+    """
+
+    # TODO: Add check 
+
+    margin_loss = flow.math.multiply(-1, flow.math.subtract(input1, input2))
+    margin_loss = flow.math.multiply(target, margin_loss)
+    margin_loss = flow.math.add(margin, margin_loss)
+
+    clipped_margin_loss = flow.clip(margin_loss, min_value=0.0)
+
+    if reduction == "none":
+        return clipped_margin_loss
+    elif reduction == "mean":
+        return flow.math.reduce_mean(clipped_margin_loss)
+    else: 
+        return flow.math.reduce_sum(clipped_margin_loss)
