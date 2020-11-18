@@ -63,6 +63,8 @@ class CheckPoint(object):
     def init(self) -> None:
         r"""Initialize models by default initializer of op or Job.
         """
+        if not config_util.api_legacy_model_io_enabled():
+            return
         enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
