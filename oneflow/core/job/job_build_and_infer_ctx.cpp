@@ -943,6 +943,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoMixedPrecision"));
 #endif
     JUST(DoPass("NonDistributedOptimizerPass"));
+    JUST(DoPass("GatherDispatchPass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
