@@ -19,7 +19,7 @@ import oneflow.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
-from typing import List, Dict
+from typing import Dict
 import os
 
 
@@ -31,14 +31,16 @@ def _compare_l1loss_with_np(
 
     assert device_type in ["cpu", "gpu"]
 
+    func_config = flow.FunctionConfig()
+
     flow.clear_default_session()
-    flow.env.init()
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
 
-    func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     def np_l1loss(np_input, np_target):
         np_l1 = np.abs(np_target - np_input)
@@ -57,7 +59,6 @@ def _compare_l1loss_with_np(
         # Use numpy to compute diff
         original_shape = np_target.shape
         elemcnt = np_target.size
-        elemcnt = np.reshape(elemcnt, -1)
         prediction = np_input.reshape(-1)
         label = np_target.reshape(-1)
         prediction_grad = np.zeros((elemcnt)).astype(prediction.dtype)
@@ -66,14 +67,13 @@ def _compare_l1loss_with_np(
             diff = prediction[i] - label[i]
             prediction_grad[i] = np.sign(diff)
 
-        grad = prediction_grad.reshape(original_shape)
         grad_mean = prediction_grad.reshape(original_shape) / elemcnt
-        grad_sum = np.sum(prediction_grad)
+
+        # TODO: if you want to get the grad when the reduction = "sum", you can use the follow code
+        # grad_sum = prediction_grad.reshape(original_shape)
 
         grad_dict = {
-            "np_grad": grad,
             "np_grad_mean": grad_mean,
-            "np_grad_sum": grad_sum,
         }
 
         return grad_dict
@@ -92,28 +92,28 @@ def _compare_l1loss_with_np(
         of_input: tp.Numpy.Placeholder(shape=input.shape),
         of_target: tp.Numpy.Placeholder(shape=target.shape),
     ) -> Dict[str, tp.Numpy]:
-        v = flow.get_variable(
-            shape=target.shape,
-            dtype=flow.float32,
-            initializer=flow.constant_initializer(0),
-            name="v",
-        )
 
-        x_var = of_input + v
+        with flow.scope.placement(device_type, "0:0"):
+            v = flow.get_variable(
+                shape=target.shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+                name="v",
+            )
+
+            x_var = of_input + v
         # watch the diff
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        with flow.scope.placement(device_type, machine_ids):
-            l1loss = flow.nn.L1Loss(
-                x_var, of_target, reduction="none", name="of_l1loss"
-            )
-            l1loss_mean = flow.nn.L1Loss(
-                x_var, of_target, reduction="mean", name="of_l1loss_mean"
-            )
-            l1loss_sum = flow.nn.L1Loss(
-                x_var, of_target, reduction="sum", name="of_l1loss_sum"
-            )
+        l1loss = flow.nn.L1Loss(x_var, of_target, reduction="none", name="of_l1loss")
+        l1loss_mean = flow.nn.L1Loss(
+            x_var, of_target, reduction="mean", name="of_l1loss_mean"
+        )
+        l1loss_sum = flow.nn.L1Loss(
+            x_var, of_target, reduction="sum", name="of_l1loss_sum"
+        )
 
+        with flow.scope.placement(device_type, "0:0"):
             # We only test reduction="mean" diff
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
@@ -138,26 +138,31 @@ def _compare_l1loss_with_np(
     )
 
 
+def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
+    # Generate a dict to pass parameter to test case
+    arg_dict = OrderedDict()
+    arg_dict["input_shape"] = [shape]
+    arg_dict["target_shape"] = [shape]
+    arg_dict["device_type"] = [device_type]
+    arg_dict["machine_ids"] = [machine_ids]
+    arg_dict["device_counts"] = [device_counts]
+    return arg_dict
+
+
 @flow.unittest.skip_unless_1n1d()
 class Testl1loss1n1d(flow.unittest.TestCase):
     def test_l1loss_cpu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(16, 3)]
-        arg_dict["target_shape"] = [(16, 3)]
-        arg_dict["device_type"] = ["cpu"]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
+        arg_dict = _gen_arg_dict(
+            shape=(16, 3), device_type="cpu", machine_ids="0:0", device_counts=1
+        )
         for arg in GenArgList(arg_dict):
             _compare_l1loss_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_l1loss_gpu(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(3, 16, 32)]
-        arg_dict["target_shape"] = [(3, 16, 32)]
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["machine_ids"] = ["0:0"]
-        arg_dict["device_counts"] = [1]
+        arg_dict = _gen_arg_dict(
+            shape=(3, 16, 32), device_type="gpu", machine_ids="0:0", device_counts=1
+        )
         for arg in GenArgList(arg_dict):
             _compare_l1loss_with_np(*arg)
 
@@ -166,12 +171,9 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 class Testl1loss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_l1loss_gpu_1n2d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(3, 32, 16)]
-        arg_dict["target_shape"] = [(3, 32, 16)]
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["device_counts"] = [2]
+        arg_dict = _gen_arg_dict(
+            shape=(3, 32, 16), device_type="gpu", machine_ids="0:0-1", device_counts=2
+        )
         for arg in GenArgList(arg_dict):
             _compare_l1loss_with_np(*arg)
 
