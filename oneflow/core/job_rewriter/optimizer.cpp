@@ -106,7 +106,4 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
                                          const LogicalBlobId& diff_lbi_of_var_out, \
                                          JobBuilder* job_builder, T* mdupdt_op_conf)
 
-INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(RMSPropModelUpdateOpConf);
-INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(LARSModelUpdateOpConf);
-
 }  // namespace oneflow

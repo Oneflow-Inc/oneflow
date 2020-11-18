@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/math_unary_elementwise_func.h"
 
 namespace oneflow {
 
@@ -193,7 +194,7 @@ struct RmsPropCentUpdateFunctor {
     mean_gradient_val = (1 - decay_rate) * model_diff_t + decay_rate * mean_gradient_val;
     *mean_gradient = mean_gradient_val;
     denom_t = mean_square_val - mean_gradient_val * mean_gradient_val;
-    *model = model_val - learning_rate * model_diff_t / std::sqrt(denom_t + epsilon);
+    *model = model_val - learning_rate * model_diff_t * RsqrtFunctor<T>::Forward(denom_t + epsilon);
   }
 };
 
@@ -210,16 +211,16 @@ struct RmsPropNotCentUpdateFunctor {
     *mean_square = mean_square_val;
     T denom_t;
     denom_t = *mean_square;
-    *model = model_val - learning_rate * model_diff_t / std::sqrt(denom_t + epsilon);
+    *model = model_val - learning_rate * model_diff_t * RsqrtFunctor<T>::Forward(denom_t + epsilon);
   }
 };
 
 template<DeviceType device_type, typename T, typename G>
 struct RmsPropUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, T* mean_square,
-                     T* mean_gradient, bool centered, float epsilon, float weight_decay,
-                     float decay_rate, const float* learning_rate, const T* scale_by_ptr,
-                     const G* model_diff, T* model);
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
+                     float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model, T* mean_square, T* mean_gradient);
 };
 
 template<typename T>
@@ -229,8 +230,9 @@ struct LarsUpdateFunctor {
                   const T local_learning_rate) const {
     const T model_val = *model;
     T reg_diff = *model_diff_tmp + *model * weight_decay;
-    *momentum = *momentum * momentum_beta - local_learning_rate * reg_diff;
-    *model = model_val + *momentum;
+    T next_momentum = *momentum * momentum_beta - local_learning_rate * reg_diff;
+    *momentum = next_momentum;
+    *model = model_val + next_momentum;
   }
 };
 
@@ -238,9 +240,8 @@ template<DeviceType device_type, typename T, typename G>
 struct LarsUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const int64_t* train_step, T* momentum,
-                     const T* scale_by_ptr, const G* model_diff, T* model, T* data_tmp,
-                     T* model_diff_tmp);
+                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
+                     const G* model_diff, T* momentum, T* model, T* data_tmp, T* model_diff_tmp);
 };
 
 #endif

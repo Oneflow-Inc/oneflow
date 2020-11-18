@@ -236,17 +236,17 @@ void AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kCPU>::AdamBiasCorrect
 
 template<typename T, typename G>
 struct RmsPropUpdateKernelUtil<DeviceType::kCPU, T, G> {
-  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, T* mean_square,
-                     T* mean_gradient, bool centered, float epsilon, float weight_decay,
-                     float decay_rate, const float* learning_rate, const T* scale_by_ptr,
-                     const G* model_diff, T* model);
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
+                     float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model, T* mean_square, T* mean_gradient);
 };
 
 template<typename T, typename G>
 void RmsPropUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
-    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, T* mean_square, T* mean_gradient,
-    bool centered, float epsilon, float weight_decay, float decay_rate, const float* learning_rate,
-    const T* scale_by_ptr, const G* model_diff, T* model) {
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered, float epsilon,
+    float weight_decay, float decay_rate, const float* learning_rate, const T* scale_by_ptr,
+    const G* model_diff, T* model, T* mean_square, T* mean_gradient) {
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   if (centered) {
     FOR_RANGE(int64_t, i, 0, n) {
@@ -270,16 +270,15 @@ template<typename T, typename G>
 struct LarsUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const int64_t* train_step, T* momentum,
-                     const T* scale_by_ptr, const G* model_diff, T* model, T* data_tmp,
-                     T* model_diff_tmp);
+                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
+                     const G* model_diff, T* momentum, T* model, T* data_tmp, T* model_diff_tmp);
 };
 
 template<typename T, typename G>
 void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
     float lars_coefficient, float weight_decay, const float* learning_rate,
-    const int64_t* train_step, T* momentum, const T* scale_by_ptr, const G* model_diff, T* model,
+    const int64_t* train_step, const T* scale_by_ptr, const G* model_diff, T* momentum, T* model,
     T* data_tmp, T* model_diff_tmp) {
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   T model_norm = data_tmp[0];

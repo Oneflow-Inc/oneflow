@@ -499,13 +499,23 @@ REGISTER_USER_OP("rmsprop_update")
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+      bool centered = ctx->Attr<bool>("centered");
       FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Broadcast(ctx->inputs())
-            .Split(user_op::OpArg("model", 0), axis)
-            .Split(user_op::OpArg("model_diff", 0), axis)
-            .Split(user_op::OpArg("mean_square", 0), axis)
-            .Build();
+        if (centered) {
+          ctx->NewBuilder()
+              .Broadcast(ctx->inputs())
+              .Split(user_op::OpArg("model", 0), axis)
+              .Split(user_op::OpArg("model_diff", 0), axis)
+              .Split(user_op::OpArg("mean_square", 0), axis)
+              .Build();
+        } else {
+          ctx->NewBuilder()
+              .Broadcast(ctx->inputs())
+              .Split(user_op::OpArg("model", 0), axis)
+              .Split(user_op::OpArg("model_diff", 0), axis)
+              .Split(user_op::OpArg("mean_square", 0), axis)
+              .Build();
+        }
       }
       return Maybe<void>::Ok();
     })

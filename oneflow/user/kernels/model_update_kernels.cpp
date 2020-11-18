@@ -609,9 +609,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
       mean_gradient_ptr = mean_gradient->mut_dptr<T>();
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2,
-        mean_square->mut_dptr<T>(), mean_gradient_ptr, centered, epsilon, weight_decay, decay_rate,
-        learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
+        epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(), scale_by_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -698,7 +698,7 @@ class LarsUpdateKernel final : public user_op::OpKernel {
     LarsUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
         epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(),
-        train_step->dptr<int64_t>(), momentum->mut_dptr<T>(), scale_by_ptr, model_diff->dptr<G>(),
+        train_step->dptr<int64_t>(), scale_by_ptr, model_diff->dptr<G>(), momentum->mut_dptr<T>(),
         model->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }

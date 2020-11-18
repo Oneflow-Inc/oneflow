@@ -360,27 +360,6 @@ message NormalModelUpdateOpConf {
   optional float weight_decay = 7 [default = 0.0];
 }
 
-message RMSPropModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string model_diff = 2;
-  required string mean_square = 3;
-  optional string mean_gradient = 4;
-  required string model = 5;
-  required string train_step = 6;
-  required string learning_rate = 7;
-  optional float weight_decay = 8 [default = 0.0];
-}
-
-message LARSModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string momentum = 2;
-  required string model_diff = 3;
-  required string model = 5;
-  required string train_step = 6;
-  required string learning_rate = 7;
-  optional float weight_decay = 8 [default = 0.0];
-}
-
 message AccumulateOpConf {
 }
 
@@ -914,8 +893,6 @@ message OperatorConf {
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
-    RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
-    LARSModelUpdateOpConf lars_model_update_conf = 130;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
