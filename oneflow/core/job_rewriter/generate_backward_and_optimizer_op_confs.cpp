@@ -123,14 +123,15 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
   // using a new JobBuilder to avoid bugs caused by MutOnlyOnce
   auto new_job_builder = std::make_shared<JobBuilder>(job);
   HashMap<int64_t, std::vector<const OperatorConf*>> scope_id2op_names;
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
   for (const auto& op_conf : job->net().op()) {
     if (exists_op_names.count(op_conf.name()) > 0) { continue; }
-    CHECK(op_conf.has_scope_symbol_id());
+    CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+    OF_RETURN_IF_ERROR(scope_storage.MaybeGet(op_conf.scope_symbol_id())) << op_conf.DebugString();
     scope_id2op_names[op_conf.scope_symbol_id()].push_back(&op_conf);
   }
   const auto& GetNewScopeSymbolId = [&](int64_t old_scope_symbol_id) -> Maybe<int64_t> {
-    const auto& old_scope =
-        JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(old_scope_symbol_id));
+    const auto& old_scope = JUST(scope_storage.MaybeGet(old_scope_symbol_id));
     cfg::ScopeProto new_scope;
     new_scope.InitFromProto(old_scope.scope_proto());
     // TODO(lixinqi): delete this line after ScopeProto::symbol_id removed
