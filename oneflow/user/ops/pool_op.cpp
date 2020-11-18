@@ -65,6 +65,9 @@ Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splited because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
   double logical_computation_cost =
