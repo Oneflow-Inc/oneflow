@@ -519,8 +519,7 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator==(c
 return true
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}
-&& (has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}() && 
-{{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())
+&& (has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}() && {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())
 {% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
 && {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()
 {% endif %}{# field_label #}
@@ -528,9 +527,7 @@ return true
 {% for oneof in util.message_type_oneofs(cls) %}
 && {{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()
 {% for field in util.oneof_type_fields(oneof) %}
-{% if {{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }} %} 
-&& {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()
-{% endif %}{# field_oneof #}
+&& (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) ? ({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) : true)
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
 ;
