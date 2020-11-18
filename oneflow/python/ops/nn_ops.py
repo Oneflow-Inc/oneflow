@@ -2650,12 +2650,12 @@ def leaky_relu(
 
 @oneflow_export("nn.MarginRankingLoss")
 def margin_ranking_loss(
-    input1: remote_blob_util.BlobDef, 
-    input2: remote_blob_util.BlobDef, 
-    target: remote_blob_util.BlobDef, 
-    margin: float=0.0, 
-    reduction: str = 'mean', 
-    name: Optional[str] = None
+    input1: remote_blob_util.BlobDef,
+    input2: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    margin: float = 0.0,
+    reduction: str = "mean",
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """Compute the margin ranking loss
 
@@ -2670,8 +2670,10 @@ def margin_ranking_loss(
     Returns:
         remote_blob_util.BlobDef: [description]
     """
-    assert (input1.shape == input2.shape), "The shape of `input1`, `input2` must be the same. "
-    
+    assert (
+        input1.shape == input2.shape
+    ), "The shape of `input1`, `input2` must be the same. "
+
     # TODO: Should we add a check of target?
 
     assert reduction in [
@@ -2682,7 +2684,7 @@ def margin_ranking_loss(
         reduction
     )
 
-    if name is None: 
+    if name is None:
         name = "MarginRankingLoss_"
 
     _margin_loss = flow.math.negative(flow.math.subtract(input1, input2))
@@ -2694,8 +2696,6 @@ def margin_ranking_loss(
     if reduction == "none":
         return _clipped_margin_loss
     elif reduction == "mean":
-        return flow.math.reduce_mean(_clipped_margin_loss, name=name+"_reduce_mean")
-    else: 
-        return flow.math.reduce_sum(_clipped_margin_loss, name=name+"_reduce_sum")
-
-        
+        return flow.math.reduce_mean(_clipped_margin_loss, name=name + "_reduce_mean")
+    else:
+        return flow.math.reduce_sum(_clipped_margin_loss, name=name + "_reduce_sum")

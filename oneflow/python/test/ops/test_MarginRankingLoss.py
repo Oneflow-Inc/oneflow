@@ -1,9 +1,12 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +24,13 @@ import os
 
 
 def _compare_margin_ranking_loss_with_np(
-    input1_shape, input2_shape, target_shape, margin, device_type, machine_ids, device_counts
+    input1_shape,
+    input2_shape,
+    target_shape,
+    margin,
+    device_type,
+    machine_ids,
+    device_counts,
 ):
     input1 = np.random.random(size=input1_shape).astype(np.float32)
     input2 = np.random.random(size=input2_shape).astype(np.float32)
@@ -38,7 +47,8 @@ def _compare_margin_ranking_loss_with_np(
     func_config = flow.FunctionConfig()
 
     def np_margin_ranking_loss(np_input1, np_input2, np_target, np_margin):
-        np_margin_loss = np.maximum(0, -target*(np_input1-np_input2) + np_margin)
+        np_target = np.broadcast_to(np_target, shape=(np_input1.shape))
+        np_margin_loss = np.maximum(0, -(np_input1 - np_input2) * np_target + np_margin)
         np_margin_loss_mean = np.mean(np_margin_loss)
         np_margin_loss_sum = np.sum(np_margin_loss)
 
@@ -49,6 +59,33 @@ def _compare_margin_ranking_loss_with_np(
         }
 
     np_out_marginloss_dict = np_margin_ranking_loss(input1, input2, target, margin)
+
+    def np_margin_ranking_diff(np_out, np_target):
+        # Use numpy to compute diff
+        # Here we only test the input_1 gradient
+        # If loss > 0, the grad is: -target, else the grad is 0
+        elem_cnt = np_out.size
+        row, col = np_out.shape
+        np_diff = np.zeros(shape=np_out.shape)
+        # TODO: Optimize the backward logic
+        for i in range(row):
+            for j in range(col):
+                if np_out[i][j] > 0:
+                    np_diff[i][j] = -np_target[i]
+
+        return {
+            "np_margin_ranking_grad_mean": np_diff / elem_cnt,
+        }
+
+    np_grad_dict = np_margin_ranking_diff(
+        np_out_marginloss_dict["np_margin_ranking_loss"], target
+    )
+
+    def assert_prediction_grad(blob: tp.Numpy):
+        # Evaluate the gradient
+        # Here we only test the input_1 gradient
+        # If loss > 0, the grad is: -target, else the grad is 0
+        assert np.allclose(blob, np_grad_dict["np_margin_ranking_grad_mean"])
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -67,14 +104,31 @@ def _compare_margin_ranking_loss_with_np(
             )
             x_var = of_input1 + v
 
-        # flow.watch_diff(x_var, assert_prediction_grad)
+        flow.watch_diff(x_var, assert_prediction_grad)
 
-        marginloss = flow.nn.MarginRankingLoss(of_input1, of_input2, of_target, margin=margin, reduction="none", name="of_marginloss")
+        marginloss = flow.nn.MarginRankingLoss(
+            of_input1,
+            of_input2,
+            of_target,
+            margin=margin,
+            reduction="none",
+            name="of_marginloss",
+        )
         marginloss_mean = flow.nn.MarginRankingLoss(
-            x_var, of_input2, of_target, margin=margin, reduction="mean", name="of_marginloss_reduce_mean"
+            x_var,
+            of_input2,
+            of_target,
+            margin=margin,
+            reduction="mean",
+            name="of_marginloss_reduce_mean",
         )
         marginloss_sum = flow.nn.MarginRankingLoss(
-            of_input1, of_input2, of_target, margin=margin, reduction="sum", name="of_marginloss_reduce_sum"
+            of_input1,
+            of_input2,
+            of_target,
+            margin=margin,
+            reduction="sum",
+            name="of_marginloss_reduce_sum",
         )
 
         with flow.scope.placement(device_type, "0:0"):
@@ -91,22 +145,25 @@ def _compare_margin_ranking_loss_with_np(
     of_out_marginloss_dict = oneflow_marginloss(input1, input2, target)
 
     assert np.allclose(
-        of_out_marginloss_dict["of_margin_ranking_loss"], np_out_marginloss_dict["np_margin_ranking_loss"]
+        of_out_marginloss_dict["of_margin_ranking_loss"],
+        np_out_marginloss_dict["np_margin_ranking_loss"],
     )
     assert np.allclose(
-        of_out_marginloss_dict["of_margin_ranking_loss_mean"], np_out_marginloss_dict["np_margin_ranking_loss_mean"]
+        of_out_marginloss_dict["of_margin_ranking_loss_mean"],
+        np_out_marginloss_dict["np_margin_ranking_loss_mean"],
     )
     assert np.allclose(
-        of_out_marginloss_dict["of_margin_ranking_loss_sum"], np_out_marginloss_dict["np_margin_ranking_loss_sum"]
+        of_out_marginloss_dict["of_margin_ranking_loss_sum"],
+        np_out_marginloss_dict["np_margin_ranking_loss_sum"],
     )
 
 
-def _gen_arg_dict(shape, margin, device_type, machine_ids, device_counts):
+def _gen_arg_dict(shape, target_shape, margin, device_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input1_shape"] = [shape]
     arg_dict["input2_shape"] = [shape]
-    arg_dict["target_shape"] = [shape]
+    arg_dict["target_shape"] = [target_shape]
     arg_dict["margin"] = [margin]
     arg_dict["device_type"] = [device_type]
     arg_dict["machine_ids"] = [machine_ids]
@@ -118,7 +175,12 @@ def _gen_arg_dict(shape, margin, device_type, machine_ids, device_counts):
 class Testmarginloss1n1d(flow.unittest.TestCase):
     def test_margin_ranking_loss_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16), margin=0.3, device_type="cpu", machine_ids="0:0", device_counts=1
+            shape=(3, 5),
+            target_shape=(3, 1),
+            margin=0.3,
+            device_type="cpu",
+            machine_ids="0:0",
+            device_counts=1,
         )
 
         for arg in GenArgList(arg_dict):
@@ -127,7 +189,12 @@ class Testmarginloss1n1d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_margin_ranking_loss_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16), margin=0.3, device_type="gpu", machine_ids="0:0", device_counts=1
+            shape=(4, 5),
+            target_shape=(4, 1),
+            margin=0.3,
+            device_type="gpu",
+            machine_ids="0:0",
+            device_counts=1,
         )
         for arg in GenArgList(arg_dict):
             _compare_margin_ranking_loss_with_np(*arg)
@@ -138,7 +205,12 @@ class Testmarginloss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_margin_ranking_loss_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16), margin=0.3, device_type="gpu", machine_ids="0:0-1", device_counts=2
+            shape=(3, 3),
+            target_shape=(3, 1),
+            margin=0.3,
+            device_type="gpu",
+            machine_ids="0:0-1",
+            device_counts=2,
         )
         for arg in GenArgList(arg_dict):
             _compare_margin_ranking_loss_with_np(*arg)
