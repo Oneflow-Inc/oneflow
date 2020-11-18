@@ -2699,3 +2699,48 @@ def margin_ranking_loss(
         return flow.math.reduce_mean(_clipped_margin_loss, name=name + "_reduce_mean")
     else:
         return flow.math.reduce_sum(_clipped_margin_loss, name=name + "_reduce_sum")
+
+
+@oneflow_export("nn.TripletMarginLoss")
+def triplet_margin_loss(
+    input1: remote_blob_util.BlobDef,
+    input2: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    margin: float = 0.0,
+    p: float = 2., 
+    eps: float=1e-6, 
+    swap: bool=False, 
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    assert (
+        input1.shape == input2.shape
+    ), "The shape of `input1`, `input2` must be the same. "
+
+    # TODO: Should we add a check of target?
+
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    def _p_norm(x, p=2.): 
+        """Compute the p-norm 
+
+        The equation is: 
+
+        .. math:: 
+
+            out = \sqrt[P]{\sum_{i=0}^{n}(abs(x)^P)} 
+
+        Args:
+            x ([type]): [description]
+            p ([type], optional): [description]. Defaults to 2..
+        """
+        
+        # TODO: ADD P NORM
+        
+    
