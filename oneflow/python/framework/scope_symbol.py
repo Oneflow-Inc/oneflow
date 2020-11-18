@@ -94,7 +94,6 @@ class ScopeSymbol(Symbol):
     def _CloneScopeProto(self):
         scope_proto = scope_pb.ScopeProto()
         scope_proto.CopyFrom(self.data)
-        scope_proto.ClearField("symbol_id")
         return scope_proto
 
 
