@@ -45,6 +45,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+
 # CUDA
     - name: <CUDA> Set environment variables
       run: |
@@ -150,7 +151,6 @@ jobs:
     - name: <XLA> Test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
 
