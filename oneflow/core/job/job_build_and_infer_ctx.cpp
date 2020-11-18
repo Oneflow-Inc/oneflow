@@ -832,6 +832,13 @@ ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelD
 
 Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
     const LogicalBlobId& lbi) {
+  int64_t scope_symbol_id = 0;
+  {
+    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+    const auto& op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
+    scope_symbol_id = op_conf.scope_symbol_id();
+    OF_RETURN_IF_ERROR(scope_storage.MaybeGet(scope_symbol_id)) << op_conf.DebugString();
+  }
   const std::string& lbn = GenLogicalBlobName(lbi);
   const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
   if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
@@ -850,6 +857,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     lbi_vec->push_back(sub_lbi);
   };
   OperatorConf op_conf;
+  op_conf.set_scope_symbol_id(scope_symbol_id);
   op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   if (sbp.has_broadcast_parallel()) {
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
