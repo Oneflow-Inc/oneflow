@@ -2653,16 +2653,16 @@ def margin_ranking_loss(
     input1: remote_blob_util.BlobDef, 
     input2: remote_blob_util.BlobDef, 
     target: remote_blob_util.BlobDef, 
-    margin: float, 
+    margin: float=0.0, 
     reduction: str = 'mean', 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     """Compute the margin ranking loss
 
     Args:
-        input1 (remote_blob_util.BlobDef): [description]
-        input2 (remote_blob_util.BlobDef): [description]
-        target (remote_blob_util.BlobDef): [description]
+        input1 (remote_blob_util.BlobDef): The ranking score of input1 Blob. 
+        input2 (remote_blob_util.BlobDef): The ranking score of input2 Blob. 
+        target (remote_blob_util.BlobDef): 
         margin (float): [description]
         reduction (str, optional): [description]. Defaults to 'mean'.
         name (Optional[str], optional): [description]. Defaults to None.
@@ -2670,18 +2670,32 @@ def margin_ranking_loss(
     Returns:
         remote_blob_util.BlobDef: [description]
     """
+    assert (input1.shape == input2.shape), "The shape of `input1`, `input2` must be the same. "
+    
+    # TODO: Should we add a check of target?
 
-    # TODO: Add check 
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
 
-    margin_loss = flow.math.multiply(-1, flow.math.subtract(input1, input2))
-    margin_loss = flow.math.multiply(target, margin_loss)
-    margin_loss = flow.math.add(margin, margin_loss)
+    if name is None: 
+        name = "MarginRankingLoss_"
 
-    clipped_margin_loss = flow.clip(margin_loss, min_value=0.0)
+    _margin_loss = flow.math.negative(flow.math.subtract(input1, input2))
+    _margin_loss = flow.math.multiply(target, _margin_loss)
+    _margin_loss = flow.math.add(margin, _margin_loss)
+
+    _clipped_margin_loss = flow.clip(_margin_loss, min_value=0.0)
 
     if reduction == "none":
-        return clipped_margin_loss
+        return _clipped_margin_loss
     elif reduction == "mean":
-        return flow.math.reduce_mean(clipped_margin_loss)
+        return flow.math.reduce_mean(_clipped_margin_loss, name=name+"_reduce_mean")
     else: 
-        return flow.math.reduce_sum(clipped_margin_loss)
+        return flow.math.reduce_sum(_clipped_margin_loss, name=name+"_reduce_sum")
+
+        
