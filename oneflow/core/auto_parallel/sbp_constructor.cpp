@@ -56,21 +56,6 @@ bool IsSbpSignatureEqual(const SbpSignature& one, const SbpSignature& two) {
 
 }  // namespace
 
-// void SbpConstructor::stealSbpFromGraph(
-//     OpGraph& op_graph, HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
-//     HashMap<std::string, bool>& op_name2is_fixed, Algorithm::SbpGraph<SbpSignature>& sbp_graph) {
-//   op_graph.ForEachNode([&](OpNode* op_node) {
-//     // if this op node is mirrored, skip it.
-//     // generate sbp node in cost model and link it with corresponding op node
-//     if (!op_name2is_fixed[op_node->op().op_name()]) {
-//       auto sbp_node = op_name2sbp_node[op_node->op().op_name()];
-//       if (sbp_node->SbpSignatureObjList.size() == 1) {
-//         sbp_node->SbpSignatureObjList[0] = op_node->sbp_signature();
-//       }
-//     }
-//   });
-// }
-
 void SbpConstructor::constructSbpGraph(OpGraph& op_graph, const Job& job) {
   // Seek out mirrored parallel opnode from job parallel view;
   // JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
@@ -106,7 +91,6 @@ void SbpConstructor::constructSbpGraph(OpGraph& op_graph, const Job& job) {
   std::cout << "Elimination Number: " << sbp_graph.NodeAndEdgeEliminations() << std::endl;
   // Use greedy strategy on the shrink graph
   sbp_graph.GreedyStrategy();
-  // for (int i = 0; i < 5; i++)
   sbp_graph.FinalizeSbp();
   std::cout << "After searching using greedy strategy: ";
   double FinalCost = sbp_graph.ComputeCost();
@@ -233,9 +217,6 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_paral
   return 2 * n_logical_blob_size;
 }
 
-// test debug
-void break_point_here() { std::cout << "break point here" << std::endl; }
-
 }  // namespace
 
 // Should customize a function to compute computation cost for each kind of op
@@ -355,14 +336,6 @@ void SbpConstructor::InitializeComputationCost(
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
-      // auto sbp_bn_in_op2sbp_parallel =
-      //     sbp_node->SbpSignatureList[sbp_id]->mutable_bn_in_op2sbp_parallel();
-      // for (const std::string& obn : op_node->op().output_bns()) {
-      //   const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      //   const BlobDesc& logical_blob_desc = op_node->LogicalBlobDesc4Lbi(lbi);
-      //   const SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[obn];
-      //   sbp_node->Cost[sbp_id] += ComputeComputationCost(sbp, logical_blob_desc, parallel_desc);
-      // }
       sbp_node->Cost[sbp_id] =
           CostRatio
           * CHECK_JUST(op_node->op().GetComputeComplexity(sbp_node->SbpSignatureList[sbp_id],
@@ -392,26 +365,6 @@ void SbpConstructor::StealSbpFromOpGraph(
   });
 }
 
-// test debug
-void SbpConstructor::print_op_sbp_blobdesc(OpNode* op_node) {
-  // test debug
-  // if (op_node->op().op_name().compare("Resnet-res4_5_branch2a_bn-gamma_optimizer") == 0) {
-  // break_point_here();
-  // }
-  std::cout << op_node->op().op_name() << ":" << std::endl;
-  for (const auto& ibn : op_node->op().input_bns()) {
-    auto producer_node = op_node->MutSrcNode4Ibn(ibn);
-    std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
-    const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-    if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
-    if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
-    if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
-    auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
-    int elem_cnt_ = blob_desc->shape().elem_cnt();
-    std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
-  }
-}
-
 // Update Sbp Signature in each operator
 Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
     OpGraph& op_graph, const Job& job,
@@ -435,8 +388,6 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    // test debug
-    // print_op_sbp_blobdesc(op_node);
     // They should be run after we choose one sbp signature for each node
     // Is blob parallel description related to sbp-parallel of blobs? If not, just remove it
     op_node->InferBlobParallelDesc();
@@ -449,8 +400,6 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
         [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
           return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
-    // test debug
-    // print_op_sbp_blobdesc(op_node);
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
@@ -467,25 +416,6 @@ Maybe<void> SbpConstructor::InferLogicalBlobDesc(
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    // // Infer ParallelSignature, might be removed. It's already infer before this.
-    // JUST(op_node->mut_op()->InferParallelSignatureIf());
-    // // Infer batch_axis for producer, might be removed
-    // const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
-    //   const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
-    //   // We might want to use ProducerOpNode4Lbi here. But it will return itself.
-    //   const auto* producer = op_node->MutSrcNode4InputLbi(lbi);
-    //   // We can use check eq (producer, *op_node) for ProducerOpNode4Lbi
-    //   CHECK_NOTNULL_OR_RETURN(producer);
-    //   return producer->op().BatchAxis4BnInOp(*JUST(producer->op().obn4lbi(lbi)));
-    // };
-    // const auto& LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-    //   const auto& ibns = op_node->op().input_bns();
-    //   CHECK(std::find(ibns.begin(), ibns.end(), ibn) != ibns.end());
-    //   return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
-    // };
-    // JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
-    // Remove infering mirrored_signature
-
     // skip inferring if is fixed.
     if (op_name2is_fixed[op_node->op().op_name()]) return Maybe<void>::Ok();
     // Infer sbp_signature
@@ -574,8 +504,6 @@ void SbpConstructor::InferOpNodeSbpSignature(
   // Assemble sbp candidates, compute cost and copy cost.
   CHECK_JUST(InferOpSbpSignature(op_node->op(), sbp_sig_conf, op_node->parallel_desc(),
                                  ibn2sbp_infer_hint, BatchAxis4BnInOp, op_name2sbp_node));
-  // Init them after you decide a sbpSignature
-  // op_node->InitLbi2SbpParallel();
 }
 
 // get Sbp Signature for current op

@@ -42,11 +42,6 @@ class SbpConstructor {
   };
   ~SbpConstructor() = default;
 
-  //   void stealSbpFromGraph(
-  //     OpGraph& op_graph, HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>&
-  //     op_name2sbp_node, HashMap<std::string, bool>& op_name2is_fixed,
-  //     Algorithm::SbpGraph<SbpSignature>& sbp_graph);
-
   void constructSbpGraph(OpGraph& op_graph, const Job& job);
 
   bool OpNodeIsMirrored(OpNode* op_node) const;
@@ -73,9 +68,6 @@ class SbpConstructor {
   Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
 
   void SplitLogicalInputBlobDesc(OpNode* op_node) const;
-
-  // test debug
-  void print_op_sbp_blobdesc(OpNode* op_node);
 
   // get Sbp Signature for current op
   // get the way to compute order value in this code
