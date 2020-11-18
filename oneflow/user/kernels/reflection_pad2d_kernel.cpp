@@ -209,7 +209,7 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     const int64_t ndims = x->shape().NumAxes();
     const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding.size(), ndims);
-    int64_t padding_h, padding_w, h_idx, w_idx;
+    int64_t h_idx, w_idx;
     if (data_format == "NCHW") {
       h_idx = 2;
       w_idx = 3;
