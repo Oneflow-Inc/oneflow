@@ -2648,44 +2648,94 @@ def leaky_relu(
     )
 
 
-@oneflow_export("nn.BCELoss")
-def bce_loss(
+@oneflow_export("nn.L1Loss")
+def l1_loss(
     input: remote_blob_util.BlobDef,
     target: remote_blob_util.BlobDef,
-    weight: remote_blob_util = None,
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator computes the binary cross entropy loss. 
+    r"""This operator computes the L1 Loss between each element in `input` and `target`. 
+
     The equation is: 
 
     if reduction = "none": 
     
     .. math:: 
-        
-        out = -(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+
+        output = |Target - Input|
 
     if reduction = "mean": 
     
     .. math:: 
-        
-        out = -\frac{1}{n}\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+
+        output = \frac{1}{n}\sum_{i=1}^n|Target_i - Input_i|
 
     if reduction = "sum": 
     
     .. math:: 
-        
-        out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+        output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
-        input (remote_blob_util.BlobDef): The input Blob. 
+        input (remote_blob_util.BlobDef): The input Blob.  
         target (remote_blob_util.BlobDef): The target value. 
-        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
-        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, reduction="mean", name="l1")
+
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [2.6666667]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, reduction="sum", name="l1")
+
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [24.]
+
     """
     assert (
         input.shape == target.shape
@@ -2700,26 +2750,16 @@ def bce_loss(
     )
 
     if name is None:
-        name = "BCELoss"
+        name = "L1Loss"
 
-    _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
-    _cross_entropy_loss = flow.math.negative(
-        target * flow.math.log(_sigmiod_value)
-        + (1 - target) * flow.math.log(1 - _sigmiod_value)
+    l1_value = flow.math.abs(
+        flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
     )
 
-    if weight is not None:
-        assert (
-            weight.shape == input.shape
-        ), "The weight shape must be the same as Input shape"
-        _weighted_loss = weight * _cross_entropy_loss
-    else:
-        _weighted_loss = _cross_entropy_loss
-
     if reduction == "mean":
-        return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
+        return flow.math.reduce_mean(l1_value, name=name + "_reduce_mean")
     elif reduction == "sum":
-        return flow.math.reduce_sum(_weighted_loss, name=name + "_reduce_sum")
+        return flow.math.reduce_sum(l1_value, name=name + "_reduce_sum")
     else:
         # Do no reduction
-        return _weighted_loss
+        return l1_value
