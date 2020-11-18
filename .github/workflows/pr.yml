@@ -9,8 +9,6 @@ jobs:
     runs-on: ubuntu-18.04
     name: Labels
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
       - name: Check PR type labels
         if:
           ! (
@@ -20,7 +18,6 @@ jobs:
               contains(github.event.pull_request.labels.*.name, 'feature') ||
               contains(github.event.pull_request.labels.*.name, 'documentation'
           )
-        uses: OneFlow-Inc/verify-pr-label-action@master
         run: |
           echo "requires one of these labels -- bug, enhancement, purge, feature, documentation"
           exit 1
@@ -38,7 +35,6 @@ jobs:
               contains(github.event.pull_request.labels.*.name, 'tooling') ||
               contains(github.event.pull_request.labels.*.name, 'onnx' )
           )
-        uses: OneFlow-Inc/verify-pr-label-action@master
         run: |
           echo "requires one of these labels -- op, system, eager, build, xla, python, ci, test, tooling, onnx"
           exit 1
