@@ -259,12 +259,15 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name("0:0");
-    std::shared_ptr<cfg::JobConfigProto> cfg_job_conf =
-        std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
-    std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf =
-        std::make_shared<cfg::ParallelConf>(parallel_conf);
-    int64_t scope_symbol_id =
-        Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    int64_t scope_symbol_id = 0;
+    {
+      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
+      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
+          std::make_shared<cfg::ParallelConf>(parallel_conf);
+      scope_symbol_id =
+          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
 
