@@ -115,6 +115,83 @@ void PaddingDiagonalElements(const int64_t w_idx, NdIndexOffsetHelper<int64_t, 4
   }
 }
 
+// Padding body elements
+template<DeviceType device_type, typename T>
+void PaddingBodyElements(const int64_t h_idx, const int64_t w_idx,
+                         NdIndexOffsetHelper<int64_t, 4>& index_helper,
+                         std::vector<int64_t>& index_vector, const user_op::Tensor* x,
+                         user_op::Tensor* y, user_op::KernelComputeContext* ctx) {
+  const int64_t ndims = x->shape().NumAxes();
+  const ShapeView& x_shape = x->shape();
+  const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
+  const std::string data_format = ctx->Attr<std::string>("data_format");
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  const int64_t padding_h = padding[h_idx];
+  const int64_t padding_w = padding[w_idx];
+  FOR_RANGE(int, i, 0, y->shape().elem_cnt()) {
+    // Traverse one-dimensional array y
+    int64_t coord_y[ndims];
+    index_helper.OffsetToNdIndex(i, coord_y);
+    int64_t x_h = coord_y[h_idx] - padding_h;
+    int64_t x_w = coord_y[w_idx] - padding_w;
+    if (x_h < 0 || x_h >= x_shape.At(h_idx) || x_w < 0 || x_w >= x_shape.At(w_idx)) {
+      // Indicates that the element is no longer in the original x range (the data to be padding
+      // outside)
+      int64_t dest_coords[4];
+      int64_t dest_index;
+      // Determine whether it is a diagonal element
+      if ((x_h >= 0 && x_h < x_shape.At(2))) {
+        // Within the left and right range lines, non-diagonal elements
+        int64_t dest_w;
+        if (x_w < 0) {
+          // left part
+          dest_w = 2 * padding_w - coord_y[w_idx];
+        } else {
+          // right pary
+          dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
+        }
+        dest_coords[0] = coord_y[0];
+        dest_coords[1] = coord_y[1];
+        if (data_format == "NCHW") {
+          dest_coords[2] = coord_y[2];
+          dest_coords[3] = dest_w;
+        } else {
+          dest_coords[2] = dest_w;
+          dest_coords[3] = coord_y[3];
+        }
+        dest_index = index_helper.NdIndexToOffset(dest_coords);
+        Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i, y->mut_dptr<T>() + dest_index,
+                            sizeof_dtype);
+      } else if (x_w >= 0 && x_w < x_shape.At(w_idx)) {
+        // Within the upper and lower range lines, non-diagonal elements
+        int64_t dest_h;
+        if (x_h < 0) {
+          // upper part
+          dest_h = 2 * padding_h - coord_y[h_idx];
+        } else {
+          // lower part
+          dest_h = 2 * (padding_h + x_shape.At(h_idx) - 1) - coord_y[h_idx];
+        }
+        dest_coords[0] = coord_y[0];
+        dest_coords[3] = coord_y[3];
+        if (data_format == "NCHW") {
+          dest_coords[1] = coord_y[1];
+          dest_coords[2] = dest_h;
+        } else {
+          dest_coords[1] = dest_h;
+          dest_coords[2] = coord_y[2];
+        }
+        dest_index = index_helper.NdIndexToOffset(dest_coords);
+        Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i, y->mut_dptr<T>() + dest_index,
+                            sizeof_dtype);
+      } else {
+        // Diagonal element
+        index_vector.push_back(i);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 template<DeviceType device_type, typename T>
@@ -132,9 +209,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     const int64_t ndims = x->shape().NumAxes();
     const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding.size(), ndims);
-
-    FillBodyElements<device_type, T>(ndims, x, y, sizeof_dtype, ctx, false);
-
     int64_t padding_h, padding_w, h_idx, w_idx;
     if (data_format == "NCHW") {
       h_idx = 2;
@@ -143,78 +217,16 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       h_idx = 1;
       w_idx = 2;
     }
-    padding_h = padding[h_idx];
-    padding_w = padding[w_idx];
-    const ShapeView& x_shape = x->shape();
+
+    // fill(copy) body elements form x to y
+    FillBodyElements<device_type, T>(ndims, x, y, sizeof_dtype, ctx, false);
     // elements index vector of diagonal elements
     std::vector<int64_t> index_vector;
-
     DimVector y_vector = ShapeViewToDimVector(y->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-
-    FOR_RANGE(int, i, 0, y->shape().elem_cnt()) {
-      // Traverse one-dimensional array y
-      int64_t coord_y[ndims];
-      index_helper.OffsetToNdIndex(i, coord_y);
-      int64_t x_h = coord_y[h_idx] - padding_h;
-      int64_t x_w = coord_y[w_idx] - padding_w;
-      if (x_h < 0 || x_h >= x_shape.At(h_idx) || x_w < 0 || x_w >= x_shape.At(w_idx)) {
-        // Indicates that the element is no longer in the original x range (the data to be padding
-        // outside)
-        int64_t dest_coords[4];
-        int64_t dest_index;
-        // Determine whether it is a diagonal element
-        if ((x_h >= 0 && x_h < x_shape.At(2))) {
-          // Within the left and right range lines, non-diagonal elements
-          int64_t dest_w;
-          if (x_w < 0) {
-            // left part
-            dest_w = 2 * padding_w - coord_y[w_idx];
-          } else {
-            // right pary
-            dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
-          }
-          dest_coords[0] = coord_y[0];
-          dest_coords[1] = coord_y[1];
-          if (data_format == "NCHW") {
-            dest_coords[2] = coord_y[2];
-            dest_coords[3] = dest_w;
-          } else {
-            dest_coords[2] = dest_w;
-            dest_coords[3] = coord_y[3];
-          }
-          dest_index = index_helper.NdIndexToOffset(dest_coords);
-          Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i,
-                              y->mut_dptr<T>() + dest_index, sizeof_dtype);
-        } else if (x_w >= 0 && x_w < x_shape.At(w_idx)) {
-          // Within the upper and lower range lines, non-diagonal elements
-          int64_t dest_h;
-          if (x_h < 0) {
-            // upper part
-            dest_h = 2 * padding_h - coord_y[h_idx];
-          } else {
-            // lower part
-            dest_h = 2 * (padding_h + x_shape.At(h_idx) - 1) - coord_y[h_idx];
-          }
-          dest_coords[0] = coord_y[0];
-          dest_coords[3] = coord_y[3];
-          if (data_format == "NCHW") {
-            dest_coords[1] = coord_y[1];
-            dest_coords[2] = dest_h;
-          } else {
-            dest_coords[1] = dest_h;
-            dest_coords[2] = coord_y[2];
-          }
-          dest_index = index_helper.NdIndexToOffset(dest_coords);
-          Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i,
-                              y->mut_dptr<T>() + dest_index, sizeof_dtype);
-        } else {
-          // Diagonal element
-          index_vector.push_back(i);
-        }
-      }
-    }
-
+    // reflection padding body
+    PaddingBodyElements<device_type, T>(h_idx, w_idx, index_helper, index_vector, x, y, ctx);
+    // reflection padding diagonal
     PaddingDiagonalElements<device_type, T>(w_idx, index_helper, index_vector, x, y, ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
