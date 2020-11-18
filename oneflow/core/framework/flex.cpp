@@ -204,7 +204,7 @@ const Shape& NativeFlexValue::GetShape() const {
 
 const std::string& NativeFlexValue::GetString() const {
   CHECK_EQ(value_case_, NativeFlexValueProto::kStringVal);
-  const std::string* ptr = reinterpret_cast<const std::string*>(&shape_val_buffer_[0]);
+  const std::string* ptr = reinterpret_cast<const std::string*>(&string_val_buffer_[0]);
   return *ptr;
 }
 
