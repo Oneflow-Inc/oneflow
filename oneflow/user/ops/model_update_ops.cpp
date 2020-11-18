@@ -507,6 +507,7 @@ REGISTER_USER_OP("rmsprop_update")
               .Split(user_op::OpArg("model", 0), axis)
               .Split(user_op::OpArg("model_diff", 0), axis)
               .Split(user_op::OpArg("mean_square", 0), axis)
+              .Split(user_op::OpArg("mean_gradient", 0), axis)
               .Build();
         } else {
           ctx->NewBuilder()
