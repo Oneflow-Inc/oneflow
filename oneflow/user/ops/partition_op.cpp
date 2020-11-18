@@ -20,15 +20,21 @@ namespace oneflow {
 
 REGISTER_USER_OP("partition")
     .Input("in")
+    .Input("in_num_unique")
     .OutputWithMinimum("out", 2)
+    .OutputWithMinimum("num_unique", 2)
     .Attr<int64_t>("parallel_num")
-    .Attr<int64_t>("num_class")
+    .Attr<int64_t>("num_classes")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc* in_num_unique_desc =
+          ctx->TensorDesc4ArgNameAndIndex("in_num_unique", 0);
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
         *out_i_desc = *in_desc;
         out_i_desc->set_is_dynamic(true);
+        user_op::TensorDesc* num_unique_desc = ctx->TensorDesc4ArgNameAndIndex("num_unique", i);
+        *num_unique_desc = *in_num_unique_desc;
       }
       return Maybe<void>::Ok();
     });
