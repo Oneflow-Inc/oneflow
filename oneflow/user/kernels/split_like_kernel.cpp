@@ -24,17 +24,21 @@ template<DeviceType device_type, typename T>
 class SplitLikeKernel final : public user_op::OpKernel {
  public:
   SplitLikeKernel() = default;
-  ~SplitLikeKernel() = default;
+  ~SplitLikeKernel() override = default;
 
  private:
   void InferShape(user_op::KernelInferContext* ctx) const override {
-    const int64_t axis = ctx->Attr<int64_t>("axis");
+    const auto axis = ctx->Attr<int64_t>("axis");
     const ShapeView& in_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
     int64_t total_dim_size = 0;
+    const int64_t like_num_axes = ctx->ShapeView4ArgNameAndIndex("like", 0).NumAxes();
+    const int64_t in_num_axes = in_shape_view.NumAxes();
+    CHECK_LE(like_num_axes, in_num_axes);
+    CHECK_LT(axis, like_num_axes);
     FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
       const ShapeView& like_shape_view = ctx->ShapeView4ArgNameAndIndex("like", i);
-      CHECK_EQ(like_shape_view.NumAxes(), in_shape_view.NumAxes());
-      FOR_RANGE(int64_t, j, 0, like_shape_view.NumAxes()) {
+      CHECK_EQ(like_shape_view.NumAxes(), like_num_axes);
+      FOR_RANGE(int64_t, j, 0, like_num_axes) {
         if (j == axis) {
           total_dim_size += like_shape_view.At(j);
         } else {
@@ -44,7 +48,12 @@ class SplitLikeKernel final : public user_op::OpKernel {
       if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
         auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
         CHECK_NOTNULL(mut_shape_view);
-        mut_shape_view->set_shape(like_shape_view);
+        DimVector out_i_dim_vec;
+        like_shape_view.ToDimVector(&out_i_dim_vec);
+        FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
+          out_i_dim_vec.push_back(in_shape_view.At(j));
+        }
+        mut_shape_view->set_shape(Shape(out_i_dim_vec));
       }
     }
     CHECK_EQ(total_dim_size, in_shape_view.At(axis));
@@ -52,7 +61,7 @@ class SplitLikeKernel final : public user_op::OpKernel {
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const int64_t axis = ctx->Attr<int64_t>("axis");
+    const auto axis = ctx->Attr<int64_t>("axis");
     const int64_t in_cols = in_tensor->shape().Count(axis);
     const int64_t rows = in_tensor->shape().elem_cnt() / in_cols;
     CHECK_GT(rows, 0);
