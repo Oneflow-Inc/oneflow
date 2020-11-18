@@ -119,15 +119,31 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/*
+Example for conv2d:
+
+ComputationCost
+= ((k*k + k*k-1)*c + c-1 + bias?1:0) * out_channel * out_width * out_height * batch_size
+= (2*k*k*c - 1 + bias?1:0) * out_channel * out_width * out_height * batch_size
+≈ 2*k*k*c * out_channel * out_width * out_height * batch_size
+*/
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
-  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
-  double logical_computation_cost =
-      std::accumulate(pool_size.begin(), pool_size.end(),
-                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
-  if (ctx->SbpParallel4ArgNameAndIndex("y", 0)->has_split_parallel()) {
-    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  const std::string data_format = ctx->Attr<std::string>("data_format");
+  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const size_t c_dim = data_format == "channels_first" ? 1 : in->shape().NumAxes() - 1;
+  const int32_t c = in->shape().At(c_dim);
+  const user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  double cost =
+      std::accumulate(kernel_size.begin(), kernel_size.end(), 1.0, std::multiplies<double>());
+  cost = cost * 2 * c;
+  cost *= std::accumulate(out->shape().dim_vec().begin(), out->shape().dim_vec().end(), 1.0,
+                          std::multiplies<double>());
+
+  if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
   }
-  return logical_computation_cost;
+  return cost;
 }
 
 template<size_t NDims>
@@ -261,7 +277,8 @@ REGISTER_USER_OP("conv1d")
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
-    .SetGetSbpFn(GetSbpSignatures4Conv);
+    .SetGetSbpFn(GetSbpSignatures4Conv)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("conv2d")
     .Input("in")
@@ -279,7 +296,8 @@ REGISTER_USER_OP("conv2d")
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
-    .SetGetSbpFn(GetSbpSignatures4Conv);
+    .SetGetSbpFn(GetSbpSignatures4Conv)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("conv3d")
     .Input("in")
@@ -297,7 +315,8 @@ REGISTER_USER_OP("conv3d")
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
     .SetBatchAxisInferFn(InferBatchAxis4Conv)
-    .SetGetSbpFn(GetSbpSignatures4Conv);
+    .SetGetSbpFn(GetSbpSignatures4Conv)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("conv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
 REGISTER_USER_OP_GRAD("conv2d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
@@ -361,6 +380,19 @@ REGISTER_USER_OP("conv_data_grad")
       }
       ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
       return Maybe<void>::Ok();
+    })
+    .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
+      const user_op::TensorDesc* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+      double cost = std::accumulate(filter->shape().dim_vec().begin(),
+                                    filter->shape().dim_vec().end(), 2.0, std::multiplies<double>())
+                    * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(),
+                                      1.0, std::multiplies<double>());
+      if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+        return cost / ctx->parallel_desc().parallel_num();
+      }
+      return cost;
     });
 
 REGISTER_USER_OP("conv_filter_grad")
@@ -432,6 +464,20 @@ REGISTER_USER_OP("conv_filter_grad")
           .PartialSum(user_op::OpArg("filter_diff", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
+      const user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+      double cost =
+          std::accumulate(filter_diff->shape().dim_vec().begin(),
+                          filter_diff->shape().dim_vec().end(), 2.0, std::multiplies<double>())
+          * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
+                            std::multiplies<double>());
+      if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+        return cost / ctx->parallel_desc().parallel_num();
+      }
+      return cost;
     });
 
 REGISTER_USER_OP("conv_bias_grad")
@@ -479,6 +525,22 @@ REGISTER_USER_OP("conv_bias_grad")
           .PartialSum(user_op::OpArg("bias_diff", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetComputeComplexityFn([](user_op::ComputeComplexityFnContext* ctx) -> Maybe<double> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const std::string data_format = ctx->Attr<std::string>("data_format");
+      int32_t c;
+      if (data_format == "channels_first") {
+        c = dy->shape().At(1);
+      } else {
+        c = dy->shape().At(dy->shape().NumAxes() - 1);
+      }
+      double cost = std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(),
+                                    2.0 * c, std::multiplies<double>());
+      if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+        return cost / ctx->parallel_desc().parallel_num();
+      }
+      return cost;
     });
 
 }  // namespace oneflow
