@@ -47,7 +47,7 @@ jobs:
     steps:
 
 # CUDA
-    - name: <CUDA> Set environment variables
+    - name: (CUDA) Set environment variables
       run: |
         echo "ci_tmp_dir=$HOME/ci-tmp" >> $GITHUB_ENV
         echo "wheelhouse_dir=$HOME/ci-tmp/wheelhouse" >> $GITHUB_ENV
@@ -56,7 +56,7 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - name: <CUDA> Build OneFlow
+    - name: (CUDA) Build OneFlow
       uses: ./.github/actions/whl
       with:
         tmp_dir: ${ci_tmp_dir}
@@ -70,7 +70,7 @@ jobs:
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
-    - name: <CUDA> Exe test
+    - name: (CUDA) Exe test
       run: |
         set -x
         docker run --shm-size=8g --rm \
@@ -79,35 +79,35 @@ jobs:
           -w ${bin_dir} \
           oneflow-test:$USER \
           ./oneflow_testexe
-    - name: <CUDA> Op test (distributed)
+    - name: (CUDA) Op test (distributed)
       run: |
         python3 ci/test/distributed_run.py --make_dotssh
         python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
           --build_docker_img \
           --oneflow_wheel_path=${wheelhouse_dir} \
           --oneflow_worker_bin=${bin_dir}/oneflow_worker
-    - name: <CUDA> Op test
+    - name: (CUDA) Op test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: <CUDA> Op test (eager)
+    - name: (CUDA) Op test (eager)
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           --env ONEFLOW_TEST_ENABLE_EAGER=1 \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
-    - name: <CUDA> Model test
+    - name: (CUDA) Model test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-    - name: <CUDA> Benchmark
+    - name: (CUDA) Benchmark
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
-    - name: <CUDA> Benchmark FP16
+    - name: (CUDA) Benchmark FP16
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
@@ -124,7 +124,7 @@ jobs:
           bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
 # XLA
-    - name: <XLA> Set environment variables
+    - name: (XLA) Set environment variables
       run: |
         echo "ci_tmp_dir=$HOME/ci-tmp-xla" >> $GITHUB_ENV
         echo "wheelhouse_dir=$HOME/ci-tmp-xla/wheelhouse" >> $GITHUB_ENV
@@ -132,7 +132,7 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - name: <XLA> Build OneFlow
+    - name: (XLA) Build OneFlow
       uses: ./.github/actions/whl
       with:
         cuda_version: 10.1
@@ -148,14 +148,14 @@ jobs:
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
-    - name: <XLA> Test
+    - name: (XLA) Test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
 
 # CPU
-    - name: <CPU> Set environment variables
+    - name: (CPU) Set environment variables
       run: |
         echo "ci_tmp_dir=$HOME/ci-tmp-cpu" >> $GITHUB_ENV
         echo "wheelhouse_dir=$HOME/ci-tmp-cpu/wheelhouse" >> $GITHUB_ENV
@@ -163,7 +163,7 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - name: <CPU> Build OneFlow
+    - name: (CPU) Build OneFlow
       uses: ./.github/actions/whl
       with:
         extra_flags: --cpu
@@ -178,20 +178,20 @@ jobs:
     - name: Build docker image for testing
       run: |
         bash docker/ci/test/build.sh
-    - name: <CPU> Op test
+    - name: (CPU) Op test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: <CPU> Op test (eager)
+    - name: (CPU) Op test (eager)
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
           --env ONEFLOW_TEST_ENABLE_EAGER=1 \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-    - name: <CPU> Model test
+    - name: (CPU) Model test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           --env ONEFLOW_TEST_CPU_ONLY=1 \
