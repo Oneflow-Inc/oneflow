@@ -60,7 +60,7 @@ jobs:
       uses: ./.github/actions/whl
       with:
         tmp_dir: ${ci_tmp_dir}
-        extra_flags: --extra_oneflow_cmake_args "-DFOR_CI=ON"
+        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
     - name: Upload wheel
       uses: ./.github/actions/upload_oss
       with:
@@ -137,7 +137,7 @@ jobs:
       uses: ./.github/actions/whl
       with:
         cuda_version: 10.1
-        extra_flags: --extra_oneflow_cmake_args "-DFOR_CI=ON" --xla
+        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
         tmp_dir: ${ci_tmp_dir}
     - name: Upload wheel
       uses: ./.github/actions/upload_oss
@@ -167,7 +167,7 @@ jobs:
     - name: (CPU) Build OneFlow
       uses: ./.github/actions/whl
       with:
-        extra_flags: --extra_oneflow_cmake_args "-DFOR_CI=ON" --cpu
+        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
         tmp_dir: ${ci_tmp_dir}
     - name: Upload wheel
       uses: ./.github/actions/upload_oss
