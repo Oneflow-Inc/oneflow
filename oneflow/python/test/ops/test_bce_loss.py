@@ -160,7 +160,7 @@ def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testl1loss1n1d(flow.unittest.TestCase):
+class Testbceloss1n1d(flow.unittest.TestCase):
     def test_bceloss_cpu(test_case):
         shape = (3, 16)
         device_type = "cpu"
@@ -183,7 +183,7 @@ class Testl1loss1n1d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class Testrange1n2d(flow.unittest.TestCase):
+class Testbceloss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_bceloss_gpu_1n2d(test_case):
         shape = (3, 16, 16)
