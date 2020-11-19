@@ -99,7 +99,7 @@ def _compare_margin_ranking_loss_with_np(
             v = flow.get_variable(
                 shape=input1.shape,
                 dtype=flow.float32,
-                initializer=flow.ones_initializer(),
+                initializer=flow.constant_initializer(0),
                 name="x_var",
             )
             x_var = of_input1 + v
