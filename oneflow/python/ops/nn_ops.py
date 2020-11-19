@@ -2657,18 +2657,70 @@ def margin_ranking_loss(
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Compute the margin ranking loss
+    r"""This operator computes the Margin Ranking loss. 
+
+    The equation is: 
+
+    if reduction = "none": 
+    
+    .. math:: 
+
+        out = \max\ (0, -y*(x_1-x_2)+margin)
+
+    if reduction = "mean": 
+    
+    .. math:: 
+
+        out = \frac{1}{n}\sum_{i=1}^n\max\ (0, -y*(x_1-x_2)+margin)
+
+    if reduction = "sum": 
+    
+    .. math:: 
+
+        out = \sum_{i=1}^n\max\ (0, -y*(x_1-x_2)+margin)
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def margin_ranking_loss_job(input1: tp.Numpy.Placeholder(shape=(3, 3)),
+                                    input2: tp.Numpy.Placeholder(shape=(3, 3)),
+                                    target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy:
+            out = flow.nn.MarginRankingLoss(input1, input2, target, margin=1.0)
+            return out 
+
+        np_input1 = np.array([[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]).astype(np.float32)
+
+        np_input2 = np.array([[2, 2, 2],
+                            [2, 2, 2],
+                            [2, 2, 2]]).astype(np.float32)
+
+        np_target = np.array([[3, 3, 3],
+                            [3, 3, 3],
+                            [3, 3, 3]]).astype(np.float32)
+
+        out = margin_ranking_loss_job(np_input1, np_input2, np_target)
+
+        # output [0.5555556]
 
     Args:
         input1 (remote_blob_util.BlobDef): The ranking score of input1 Blob. 
         input2 (remote_blob_util.BlobDef): The ranking score of input2 Blob. 
-        target (remote_blob_util.BlobDef): 
-        margin (float): [description]
-        reduction (str, optional): [description]. Defaults to 'mean'.
-        name (Optional[str], optional): [description]. Defaults to None.
+        target (remote_blob_util.BlobDef): The target Blob. 
+        margin (float): The margin value. Defaults to 0.0. 
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: [description]
+        remote_blob_util.BlobDef: The result Blob. 
     """
     assert (
         input1.shape == input2.shape
@@ -2706,13 +2758,82 @@ def triplet_margin_loss(
     anchor: remote_blob_util.BlobDef,
     positive: remote_blob_util.BlobDef,
     negative: remote_blob_util.BlobDef,
-    margin: float = 0.0,
+    margin: float = 1.0,
     p: float = 2.0, 
     eps: float=1e-6, 
     swap: bool=False, 
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator computes the Triplet Margin Loss. 
+
+    The equation is: 
+
+    if reduction = "none": 
+    
+    .. math:: 
+
+        output = \max\{\left\lVert a_i - p_i \right\rVert_p - \left\lVert a_i - n_i \right\rVert_p + {\rm margin}, 0\}
+
+    if reduction = "mean": 
+    
+    .. math:: 
+
+        output = \frac{1}{n}\sum_{i=1}^n\max\{\left\lVert a_i - p_i \right\rVert_p - \left\lVert a_i - n_i \right\rVert_p + {\rm margin}, 0\}
+
+    if reduction = "sum": 
+    
+    .. math:: 
+
+        output = \sum_{i=1}^n\max\{\left\lVert a_i - p_i \right\rVert_p - \left\lVert a_i - n_i \right\rVert_p + {\rm margin}, 0\}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def triplet_loss_job(anchor: tp.Numpy.Placeholder(shape=(3, 3)),
+                            pos: tp.Numpy.Placeholder(shape=(3, 3)),
+                            neg: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy:
+            out = flow.nn.TripletMarginLoss(anchor, pos, neg, margin=1.0, p=2.0)
+            return out 
+
+        np_anchor = np.array([[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]).astype(np.float32)
+
+        np_pos = np.array([[2, 2, 2],
+                        [2, 2, 2],
+                        [2, 2, 2]]).astype(np.float32)
+
+        np_neg = np.array([[3, 3, 3],
+                        [3, 3, 3],
+                        [3, 3, 3]]).astype(np.float32)
+
+        out = triplet_loss_job(np_anchor, np_pos, np_neg)
+
+        # output [1.8449262]
+
+    Args:
+        anchor (remote_blob_util.BlobDef): The anchor Blob. 
+        positive (remote_blob_util.BlobDef): The positive sample Blob. 
+        negative (remote_blob_util.BlobDef): The negative sample Blob. 
+        margin (float, optional): The margin value. Defaults to 1.0.
+        p (float, optional): The norm degree for computing distance. Defaults to 2.0.
+        eps (float, optional): A small value use in norm computation. Defaults to 1e-6.
+        swap (bool, optional): Whether to swap the distance. 
+        For more details you can check the Paper `Learning shallow convolutional feature descriptors with triplet losses`. Defaults to False.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
     assert reduction in [
         "none",
         "mean",
