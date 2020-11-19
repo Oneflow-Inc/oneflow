@@ -43,7 +43,7 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     const BlobDesc& indices_desc =
         op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
     const int64_t max_dim_size = indices_desc.shape().elem_cnt() * parallel_num;
-
+    LOG(ERROR) << " num_classes " << num_classes << " parallel_num " << parallel_num;
     OperatorConf distribute_split_ids_op_conf{};
     distribute_split_ids_op_conf.set_name(op_name + "-distribute_split_ids");
     auto* distribute_split_ids_conf = distribute_split_ids_op_conf.mutable_distribute_split_conf();
@@ -68,6 +68,7 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {distribute_split_data_op_conf});
 
     std::vector<std::vector<std::string>> sparse_ids(parallel_num);
+    std::vector<std::string> map_ids;
 
     const ParallelDesc parallel_desc(op_node->parallel_desc().parallel_conf());
     FOR_RANGE(int32_t, i, 0, parallel_num) {
@@ -88,6 +89,9 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
       unique_with_counts_conf->set_num_unique("num_unique");
 
       job_builder.AddOps(parallel_conf, {unique_with_counts_op_conf});
+
+      map_ids.push_back(
+          GenLogicalBlobName(unique_with_counts_op_conf.name(), unique_with_counts_conf->idx()));
 
       user_op::UserOpConfWrapperBuilder partition_op_builder(op_name + "-partition_"
                                                              + std::to_string(i));
@@ -111,6 +115,7 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
         sync_dynamic_resize_conf->set_in(partition_op.output("out", j));
         sync_dynamic_resize_conf->set_size(partition_op.output("num_unique", j));
         sync_dynamic_resize_conf->set_out("out");
+        sync_dynamic_resize_conf->set_axis(0);
         job_builder.AddOps(parallel_conf, {sync_dynamic_resize_op_conf});
 
         sparse_ids.at(j).push_back(GenLogicalBlobName(sync_dynamic_resize_op_conf.name(),
@@ -143,22 +148,21 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
                            .Build();
       job_builder.AddOps(parallel_conf, {gather_op.op_conf()});
 
-      // user_op::UserOpConfWrapperBuilder split_like_op_builder(op_name + "-split_like_"
-      //                                                        + std::to_string(i));
-      // split_like_op_builder.Op("split_like")
-      //    .Input("in", gather_op.output("out", 0))
-      //    .Attr<int64_t>("axis", 0)
-      //    .Output("out", parallel_num);
-      //
-      // FOR_RANGE(int32_t, j, 0, parallel_num) {
-      //  split_like_op_builder.Input("like", sparse_ids.at(i).at(j));
-      //}
-      // auto split_like_op = split_like_op_builder.Build();
-      // job_builder.AddOps(parallel_conf, {split_like_op.op_conf()});
-      // gathered_out.at(0).push_back(split_like_op.output("out", 0));
-      // gathered_out.at(1).push_back(split_like_op.output("out", 1));
-      gathered_out.at(0).push_back(gather_op.output("out", 0));
-      gathered_out.at(1).push_back(gather_op.output("out", 0));
+      user_op::UserOpConfWrapperBuilder split_like_op_builder(op_name + "-split_like_"
+                                                              + std::to_string(i));
+      split_like_op_builder.Op("split_like")
+          .Input("in", gather_op.output("out", 0))
+          .Attr<int64_t>("axis", 0)
+          .Output("out", parallel_num);
+
+      FOR_RANGE(int32_t, j, 0, parallel_num) {
+        split_like_op_builder.Input("like", sparse_ids.at(i).at(j));
+      }
+      auto split_like_op = split_like_op_builder.Build();
+      job_builder.AddOps(parallel_conf, {split_like_op.op_conf()});
+      FOR_RANGE(int32_t, j, 0, parallel_num) {
+        gathered_out.at(j).push_back(split_like_op.output("out", j));
+      }
     }
     std::vector<std::string> out_list;
     FOR_RANGE(int32_t, i, 0, parallel_num) {
@@ -167,17 +171,26 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
       ParallelConf parallel_conf;
       parallel_conf.set_device_tag("gpu");
       parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
-      auto concat_gather_op =
-          user_op::UserOpConfWrapperBuilder(op_name + "-concat_gather_" + std::to_string(i))
-              .Op("concat")
-              .Input("in", gathered_out.at(i).at(0))
-              .Input("in", gathered_out.at(i).at(1))
-              .Output("out")
-              .Attr<int64_t>("axis", 0)
-              .Attr<int64_t>("max_dim_size", max_dim_size)
-              .Build();
-      out_list.push_back(concat_gather_op.output("out", 0));
+      auto concat_gather_op_builder =
+          user_op::UserOpConfWrapperBuilder(op_name + "-concat_gather_" + std::to_string(i));
+      concat_gather_op_builder.Op("concat").Output("out").Attr<int64_t>("axis", 0).Attr<int64_t>(
+          "max_dim_size", max_dim_size);
+      FOR_RANGE(int32_t, j, 0, parallel_num) {
+        concat_gather_op_builder.Input("in", gathered_out.at(i).at(j));
+      }
+      auto concat_gather_op = concat_gather_op_builder.Build();
       job_builder.AddOps(parallel_conf, {concat_gather_op.op_conf()});
+
+      auto gather_map_op =
+          user_op::UserOpConfWrapperBuilder(op_name + "-gather_map_" + std::to_string(i))
+              .Op("gather")
+              .Input("in", concat_gather_op.output("out", 0))
+              .Input("indices", map_ids.at(i))
+              .Attr<int64_t>("axis", 0)
+              .Output("out")
+              .Build();
+      job_builder.AddOps(parallel_conf, {gather_map_op.op_conf()});
+      out_list.push_back(gather_map_op.output("out", 0));
     }
     OperatorConf distribute_concat_op_conf{};
     distribute_concat_op_conf.set_name(op_name);
@@ -186,15 +199,6 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     distribute_concat_conf->set_axis(0);
     distribute_concat_conf->set_out("out_0");
     job_builder.MutOpsOnlyOnce({distribute_concat_op_conf});
-    // job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {distribute_concat_op_conf});
-    // job_builder->DelOps({cur_op.op_conf()});
-    // auto end_op = user_op::UserOpConfWrapperBuilder(op_name)
-    //                  .Op("identity")
-    //                  .Input("in", GenLogicalBlobName(distribute_concat_op_conf.name(),
-    //                                                  distribute_concat_conf->out()))
-    //                  .Output("out")
-    //                  .Build();
-    // job_builder.MutOpsOnlyOnce({end_op.op_conf()});
     LOG(INFO) << "debugstr" << job_builder.job().DebugString();
   });
   return Maybe<void>::Ok();
