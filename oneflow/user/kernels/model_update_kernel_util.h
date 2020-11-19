@@ -178,8 +178,8 @@ struct AdamBiasCorrectionLearningRateKernelUtil {
                                              float* out);
 };
 
-template<typename T, typename G>
-struct RmsPropCentUpdateFunctor {
+template<typename T, typename G, bool centered>
+struct RmsPropUpdateFunctor {
   OF_DEVICE_FUNC
   void operator()(const G* model_diff, T* model, int64_t n, T scale, float l1, float l2,
                   T* mean_square, T* mean_gradient, float epsilon, float weight_decay,
@@ -190,27 +190,14 @@ struct RmsPropCentUpdateFunctor {
     mean_square_val = (1 - decay_rate) * model_diff_t * model_diff_t + decay_rate * mean_square_val;
     *mean_square = mean_square_val;
     T denom_t;
-    T mean_gradient_val = *mean_gradient;
-    mean_gradient_val = (1 - decay_rate) * model_diff_t + decay_rate * mean_gradient_val;
-    *mean_gradient = mean_gradient_val;
-    denom_t = mean_square_val - mean_gradient_val * mean_gradient_val;
-    *model = model_val - learning_rate * model_diff_t * RsqrtFunctor<T>::Forward(denom_t + epsilon);
-  }
-};
-
-template<typename T, typename G>
-struct RmsPropNotCentUpdateFunctor {
-  OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, int64_t n, T scale, float l1, float l2,
-                  T* mean_square, T* mean_gradient, float epsilon, float weight_decay,
-                  float decay_rate, const float learning_rate) const {
-    const T model_val = *model;
-    T model_diff_t = CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, *model, scale, l1, l2);
-    T mean_square_val = *mean_square;
-    mean_square_val = (1 - decay_rate) * model_diff_t * model_diff_t + decay_rate * mean_square_val;
-    *mean_square = mean_square_val;
-    T denom_t;
-    denom_t = *mean_square;
+    if (centered) {
+      T mean_gradient_val = *mean_gradient;
+      mean_gradient_val = (1 - decay_rate) * model_diff_t + decay_rate * mean_gradient_val;
+      *mean_gradient = mean_gradient_val;
+      denom_t = mean_square_val - mean_gradient_val * mean_gradient_val;
+    } else {
+      denom_t = *mean_square;
+    }
     *model = model_val - learning_rate * model_diff_t * RsqrtFunctor<T>::Forward(denom_t + epsilon);
   }
 };
@@ -218,9 +205,9 @@ struct RmsPropNotCentUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct RmsPropUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
-                     float epsilon, float weight_decay, float decay_rate, const float* learning_rate, 
-                     const T* scale_by_ptr, const G* model_diff, T* model, T* mean_square, T* mean_gradient);
-                    
+                     float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model, T* mean_square, T* mean_gradient);
 };
 
 template<typename T>
@@ -239,9 +226,9 @@ struct LarsUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct LarsUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
-                     float epsilon, float lars_coefficient, float weight_decay, const float* learning_rate, 
-                     const int64_t* train_step, const T* scale_by_ptr, const G* model_diff, T* model, 
-                     T* momentum, T* data_tmp, T* model_diff_tmp);
+                     float epsilon, float lars_coefficient, float weight_decay,
+                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
+                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
 };
 
 #endif
