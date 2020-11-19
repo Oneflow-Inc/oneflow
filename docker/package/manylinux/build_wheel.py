@@ -320,6 +320,9 @@ gcc --version
         except subprocess.CalledProcessError as e:
             print("failed: ", e.cmd, e.args)
             print("clean: ", cache_dir)
-            assert cache_dir != None
-            force_rm_dir(cache_dir)
-            build()
+            if cache_dir:
+                print("start retrying...")
+                force_rm_dir(cache_dir)
+                build()
+            else:
+                raise ValueError("something went wrong, please look at error above")
