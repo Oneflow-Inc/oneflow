@@ -69,7 +69,7 @@ def add(
         x = np.array([1, 2, 3]).astype(np.float32)
         y = np.array([1, 1, 1]).astype(np.float32)
         out = addJob(x, y) 
-        
+
         # out [2., 3., 4.]
 
     """
@@ -302,7 +302,7 @@ def divide(
         out = divideJob(x, y)
 
         # out [2.5, 4., 4.5]
-        
+
     """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -365,7 +365,7 @@ def floor_mod(
         x = np.array([16, 9, 5]).astype(np.float32)
         y = np.array([6, 4, 3]).astype(np.float32)
         out = modJob(x, y)
-        
+
         # out [4., 1., 2.]
 
     """
@@ -559,7 +559,7 @@ def tanh(
 
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         out = tanhJob(x)
-        
+
         # out [-0.46211714, 0., 0.46211714]
 
     """
@@ -722,6 +722,26 @@ def sigmoid(
     )
 
 
+@oneflow_export("math.sigmoid_grad")
+def sigmoid_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SigmoidGrad_")
+        )
+        .Op("sigmoid_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(
     data: remote_blob_util.BlobDef,
@@ -766,7 +786,7 @@ def unsorted_segment_sum(
         # out [[ 4.  6.]
         #      [12. 14.]
         #      [20. 22.]]
-        
+
         # Example 2
         import oneflow as flow
         import numpy as np
@@ -786,7 +806,7 @@ def unsorted_segment_sum(
 
         #  out [[10. 12. 14. 16.]
         #       [ 5.  6.  7.  8.]]
-        
+
     """
     return (
         flow.user_op_builder(
@@ -849,7 +869,7 @@ def unsorted_segment_sum_like(
 
         # out [[10. 12. 14. 16.]
         #      [ 5.  6.  7.  8.]]
-        
+
     """
     return (
         flow.user_op_builder(
@@ -875,11 +895,11 @@ def unsorted_batch_segment_sum(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data. 
-    
+
     For example, the segment id is like:
 
     .. code-block:: python
-    
+
         [[0 0 0 1 2 2 3 3], 
          [0 0 1 1 2 3 3 3]]
 
@@ -891,11 +911,11 @@ def unsorted_batch_segment_sum(
 
     Returns:
         remote_blob_util.BlobDef: A Blob.
-    
+
     For example:
 
     .. code-block:: python
-    
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -947,7 +967,7 @@ def cast(
 
     Returns:
         remote_blob_util.BlobDef: A Blob
-    
+
     For example:
 
     .. code-block:: python
@@ -997,7 +1017,7 @@ def equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1035,7 +1055,7 @@ def not_equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1073,7 +1093,7 @@ def less(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1111,7 +1131,7 @@ def less_equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1187,7 +1207,7 @@ def greater_equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1205,7 +1225,7 @@ def greater_equal(
         x = np.array([1, 1, 4]).astype(np.float32)
         y = np.array([1, 2, 3]).astype(np.float32)
         out = greater_equal_Job(x, y)
-    
+
         # out [1 0 1]
 
     """
@@ -1230,7 +1250,7 @@ def logical_and(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1248,9 +1268,9 @@ def logical_and(
         x = np.array([1, 0, 1]).astype(np.float32)
         y = np.array([0, 0, 1]).astype(np.float32)
         out = logical_and_Job(x, y)
-    
+
         # out [0 0 1]
-    
+
     """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
@@ -1268,7 +1288,7 @@ def broadcast_min(
 
     Returns:
         remote_blob_util.BlobDef: A Blob, has the same type of x. 
-    
+
     For example:
 
     .. code-block:: python
@@ -1286,7 +1306,7 @@ def broadcast_min(
         x = np.array([2, 3, 4]).astype(np.float32)
         y = np.array([4, 2, 1]).astype(np.float32)
         out = minimum_Job(x, y)
-    
+
         # out [2. 2. 1.]
 
     """
@@ -1306,7 +1326,7 @@ def broadcast_max(
 
     Returns:
         remote_blob_util.BlobDef: A Blob, has the same type of x. 
-    
+
     For example:
 
     .. code-block:: python
@@ -1365,7 +1385,7 @@ def elem_cnt(
 
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 = 12
-        
+
         # out [12]
 
         # Example 2:
@@ -1380,7 +1400,7 @@ def elem_cnt(
 
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 x 5 = 60
-        
+
         # out [60]
 
     """
@@ -1506,7 +1526,7 @@ def argmax(
 
     Returns:
         remote_blob_util.BlobDef: A Blob(dtype=int32) contains the index with the largest value of `input`
-    
+
     For example:
 
     .. code-block:: python
@@ -1561,7 +1581,7 @@ def broadcast_to_compatible_with(
 
     Returns:
         remote_blob_util.BlobDef: A 'Blob' with the biggest shape
-    
+
     For example:
 
     .. code-block:: python
@@ -1614,7 +1634,7 @@ def clip_by_value(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This op clips Blob values to a specified min value and max value.
-    
+
     The equation is:
 
     .. math::
@@ -1631,7 +1651,7 @@ def clip_by_value(
 
     Returns:
         remote_blob_util.BlobDef: A clipped Blob
-    
+
     For example:
 
     .. code-block:: python
@@ -1700,7 +1720,7 @@ def l2_normalize(
     r"""Use L2 norm to normalizes along dimension `axis`
 
     The equation is: 
-    
+
     .. math::
         out = \frac{x}{\sqrt{\Sigma{x^2}+\epsilon}}
 
@@ -1712,7 +1732,7 @@ def l2_normalize(
 
     Returns:
         remote_blob_util.BlobDef: The normalized Blob
-    
+
     For example:
 
     .. code-block:: python
@@ -1729,7 +1749,7 @@ def l2_normalize(
         x = np.array([1, 2, 3, 4], dtype=np.float32)
 
         out = l2_normalize_Job(x)
-        
+
         # out [0.18257418 0.36514837 0.5477226  0.73029673]
 
     """
@@ -1843,23 +1863,23 @@ def tril(
     x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Compute lower triangle of an matrix.
-    
+
     Args:
         x (remote_blob_util.BlobDef): Input Blob.
         diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
                         otherwise, offset downward.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-    
+
     Attention:
         The dimension of x must greater or equal to 2.
-    
+
     Returns:
         remote_blob_util.BlobDef: The lower triangle blob of input.
-    
+
     For example:
 
     .. code-block:: python
-    
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -1870,7 +1890,7 @@ def tril(
         x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
                       dtype=np.float32)
         out = tril_Job(x).get()
-        
+
         # output [[1, 0, 0, 0],
                   [1, 2, 0, 0],
                   [1, 2, 3, 0],
