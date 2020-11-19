@@ -22,48 +22,55 @@ limitations under the License.
 
 namespace py = pybind11;
 
+namespace oneflow {
+
+class PyForeignCallback : public ForeignCallback {
+ public:
+  // Inherit the constructors
+  using ForeignCallback::ForeignCallback;
+
+  // Trampoline (need one for each virtual function)
+  void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+                         const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
+    PYBIND11_OVERRIDE(void,              /* Return type */
+                      ForeignCallback,   /* Parent class */
+                      EagerMirroredCast, /* Name of function in C++ (must match Python name) */
+                      op_attribute, parallel_conf /* Argument(s) */
+    );
+  }
+
+  void EagerInterpretCompletedOp(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
+    PYBIND11_OVERRIDE(void, ForeignCallback, EagerInterpretCompletedOp, op_attribute,
+                      parallel_conf);
+  }
+
+  void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const override {
+    PYBIND11_OVERRIDE(void, ForeignCallback, OfBlobCall, unique_id, ofblob_ptr);
+  }
+
+  void RemoveForeignCallback(int64_t unique_id) const override {
+    PYBIND11_OVERRIDE(void, ForeignCallback, RemoveForeignCallback, unique_id);
+  }
+
+  int64_t MakeScopeSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                          const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+                          bool is_mirrored) const override {
+    PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeScopeSymbol, job_conf, parallel_conf,
+                      is_mirrored);
+  }
+
+  int64_t MakeParallelDescSymbol(
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
+    PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeParallelDescSymbol, parallel_conf);
+  }
+};
+
+}  // namespace oneflow
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
-
-  class PyForeignCallback : public ForeignCallback {
-   public:
-    // Inherit the constructors
-    using ForeignCallback::ForeignCallback;
-
-    // Trampoline (need one for each virtual function)
-    void EagerMirroredCast(const std::string& op_attribute_str,
-                           const std::string& parallel_conf_str) const override {
-      PYBIND11_OVERRIDE(void,              /* Return type */
-                        ForeignCallback,   /* Parent class */
-                        EagerMirroredCast, /* Name of function in C++ (must match Python name) */
-                        op_attribute_str, parallel_conf_str /* Argument(s) */
-      );
-    }
-
-    void EagerInterpretCompletedOp(const std::string& op_attribute_str,
-                                   const std::string& parallel_conf_str) const override {
-      PYBIND11_OVERRIDE(void, ForeignCallback, EagerInterpretCompletedOp, op_attribute_str,
-                        parallel_conf_str);
-    }
-
-    void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const override {
-      PYBIND11_OVERRIDE(void, ForeignCallback, OfBlobCall, unique_id, ofblob_ptr);
-    }
-
-    void RemoveForeignCallback(int64_t unique_id) const override {
-      PYBIND11_OVERRIDE(void, ForeignCallback, RemoveForeignCallback, unique_id);
-    }
-
-    int64_t MakeScopeSymbol(const std::string& job_conf, const std::string& parallel_conf,
-                            bool is_mirrored) const override {
-      PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeScopeSymbol, job_conf, parallel_conf,
-                        is_mirrored);
-    }
-
-    int64_t MakeParallelDescSymbol(const std::string& parallel_conf) const override {
-      PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeParallelDescSymbol, parallel_conf);
-    }
-  };
 
   py::class_<ForeignCallback, PyForeignCallback>(m, "ForeignCallback")
       .def(py::init<>())
