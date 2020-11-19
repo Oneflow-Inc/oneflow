@@ -59,19 +59,14 @@ void TraceKernelForwardDataContentEnd(const Kernel* kernel, const KernelCtx& ctx
   // The memory bandwidth profiler only works in lazy mode.
   if (profile_cuda_memory_bandwidth) {
     auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(ctx.device_ctx);
+    cudaEvent_t start_event = cuda_memory_bandwidth_profile_start_event;
+    cudaEvent_t end_event = cuda_memory_bandwidth_profile_end_event;
+    cuda_memory_bandwidth_profile_start_event = nullptr;
+    cuda_memory_bandwidth_profile_end_event = nullptr;
     if (cuda_device_ctx) {
-      CHECK_NOTNULL(cuda_memory_bandwidth_profile_start_event);
-      CHECK_NOTNULL(cuda_memory_bandwidth_profile_end_event);
-      OF_CUDA_CHECK(
-          cudaEventRecord(cuda_memory_bandwidth_profile_end_event, cuda_device_ctx->cuda_stream()));
-      OF_CUDA_CHECK(cudaStreamSynchronize(cuda_device_ctx->cuda_stream()));
-      float elapsed_ms;
-      OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, cuda_memory_bandwidth_profile_start_event,
-                                         cuda_memory_bandwidth_profile_end_event));
-      OF_CUDA_CHECK(cudaEventDestroy(cuda_memory_bandwidth_profile_start_event));
-      OF_CUDA_CHECK(cudaEventDestroy(cuda_memory_bandwidth_profile_end_event));
-      cuda_memory_bandwidth_profile_start_event = nullptr;
-      cuda_memory_bandwidth_profile_end_event = nullptr;
+      CHECK_NOTNULL(start_event);
+      CHECK_NOTNULL(end_event);
+      OF_CUDA_CHECK(cudaEventRecord(end_event, cuda_device_ctx->cuda_stream()));
       int64_t memory_size = 0;
       for (const auto& bn : kernel->op_attribute().input_bns()) {
         const Blob* blob = BnInOp2Blob(bn);
@@ -81,11 +76,18 @@ void TraceKernelForwardDataContentEnd(const Kernel* kernel, const KernelCtx& ctx
         const Blob* blob = BnInOp2Blob(bn);
         if (blob) { memory_size += blob->ByteSizeOfBlobBody(); }
       }
-      double bandwidth =
-          static_cast<double>(memory_size) / (1024.0 * 1024.0 * 1024.0) / (elapsed_ms / 1000);
-      LOG(INFO) << "PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: " << kernel->op_conf().name()
-                << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size
-                << " bandwidth(GB/s): " << bandwidth;
+      const std::string op_name = kernel->op_conf().name();
+      ctx.device_ctx->AddCallBack([start_event, end_event, memory_size, op_name]() {
+        float elapsed_ms;
+        OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, start_event, end_event));
+        OF_CUDA_CHECK(cudaEventDestroy(start_event));
+        OF_CUDA_CHECK(cudaEventDestroy(end_event));
+        double bandwidth =
+            static_cast<double>(memory_size) / (1024.0 * 1024.0 * 1024.0) / (elapsed_ms / 1000);
+        LOG(INFO) << "PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: " << op_name
+                  << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size
+                  << " bandwidth(GB/s): " << bandwidth;
+      });
     }
   }
 #endif  // WITH_CUDA
