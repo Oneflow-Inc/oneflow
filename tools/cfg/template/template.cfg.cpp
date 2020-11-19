@@ -516,41 +516,48 @@ int Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::compare(const
 }
 
 bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator==(const _{{ util.class_name(cls) }}_& other) const {
-return true
+  return true
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}
-&& (has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}() && {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())
+    && has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}() 
+    && {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()
 {% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
-&& {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()
+    && {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()
 {% endif %}{# field_label #}
 {% endfor %}{# fields #}
 {% for oneof in util.message_type_oneofs(cls) %}
-&& {{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()
+    && {{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()
 {% for field in util.oneof_type_fields(oneof) %}
-&& (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) ? ({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) : true)
+    && (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) ? 
+      ({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) : true)
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
-;
+  ;
 }
 
 bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator<(const _{{ util.class_name(cls) }}_& other) const {
   return false
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}
-|| !(has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}()) ? has_{{ util.field_name(field) }}() < other.has_{{ util.field_name(field) }}() : false
-|| !({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) ? {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
+    || !(has_{{ util.field_name(field) }}() == other.has_{{ util.field_name(field) }}()) ? 
+    has_{{ util.field_name(field) }}() < other.has_{{ util.field_name(field) }}() : false
+    || !({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) ? 
+    {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
 {% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
-|| !({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) ? {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
+    || !({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) ? 
+    {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
 {% endif %}{# field_label #}
 {% endfor %}{# fields #}
 {% for oneof in util.message_type_oneofs(cls) %}
-|| !({{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()) ? {{ util.oneof_name(oneof) }}_case() < other.{{ util.oneof_name(oneof) }}_case() : false
+    || !({{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()) ? 
+    {{ util.oneof_name(oneof) }}_case() < other.{{ util.oneof_name(oneof) }}_case() : false
 {% for field in util.oneof_type_fields(oneof) %}
-|| (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) && (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()))) ? 
-{{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
+    || (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) && 
+      (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()))) ? 
+    {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
-;
+  ;
 }
 
 using _{{ util.class_name(cls) }}_ =  Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_;
