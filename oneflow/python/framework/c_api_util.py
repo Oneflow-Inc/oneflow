@@ -634,3 +634,7 @@ def GetStructureGraph():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return structure_graph
+
+
+def LoadLibraryNow(lib_path):
+    oneflow_internal.LoadLibraryNow(lib_path)
