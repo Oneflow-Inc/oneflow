@@ -72,8 +72,8 @@ class Session(object):
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
-        # parallel conf in op attribute is not always correct
-        # as parallel conf may be updated in some passes
+        # parallel desc symbol id in op attribute does not always correct
+        # for lazy ops as parallel conf may be updated in some passes
         # (like non_distributed_optimizer_pass)
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
@@ -176,7 +176,7 @@ class Session(object):
             self.Init()
         return self
 
-    def _UpdateOpAttrAndJobName4LazyInterfaceOp(self):
+    def _UpdateInfo4LazyInterfaceOp(self):
         for op_attr in c_api_util.GetOpAttributes().op_attribute:
             op_conf = op_attr.op_conf
             if c_api_util.IsInterfaceOpConf(op_conf):
@@ -212,7 +212,7 @@ class Session(object):
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
             # Get latest op_attr and job_name after compiler.Compile
-            self._UpdateOpAttrAndJobName4LazyInterfaceOp()
+            self._UpdateInfo4LazyInterfaceOp()
             if not config_util.api_legacy_model_io_enabled():
                 check_point_v2.Init()
         else:
@@ -328,7 +328,7 @@ class Session(object):
         assert var_name not in self.job_name2var_name2var_blob_[job_name]
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
-    def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute, op_conf):
+    def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
         if oneflow.eager_execution_enabled():
             self.interface_op_name2op_attr_[interface_op_name] = op_attribute
             self.interface_op_name2job_name_[

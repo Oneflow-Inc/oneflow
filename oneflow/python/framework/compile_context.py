@@ -67,7 +67,7 @@ def CurJobAddConsistentOp(op_conf, scope_symbol=None):
     op_attr = c_api_util.CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf)
     if c_api_util.IsInterfaceOpConf(op_conf):
         sess = session_ctx.GetDefaultSession()
-        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr, op_conf)
+        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr)
     return op_attr
 
 
@@ -82,5 +82,5 @@ def CurJobAddMirroredOp(op_conf, scope_symbol=None):
     op_attr = c_api_util.CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf)
     if c_api_util.IsInterfaceOpConf(op_conf):
         sess = session_ctx.GetDefaultSession()
-        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr, op_conf)
+        sess.AddInfo4InterfaceOpName(op_conf.name, op_attr)
     return op_attr

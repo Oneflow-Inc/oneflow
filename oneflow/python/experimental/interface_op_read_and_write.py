@@ -28,9 +28,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
 
 
-lazy_blob_cache = {}
-
-
 def _GetInterfaceBlobObject(builder, op_name):
     if c_api_util.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().var_name2var_blob[op_name].blob_object

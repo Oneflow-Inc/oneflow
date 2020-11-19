@@ -315,7 +315,7 @@ def _GetCpu0VariableBlobFromNumpy(
     """
     Add a variable on cpu 0, and feed the value of `np_array`
 
-    Note: dtype argument cannot be replaced with
+    Note: dtype argument cannot be eliminated by
     convert_numpy_dtype_to_oneflow_dtype(np_array.dtype),
     because np.int8 == np.char and
     numpy_dtype_to_oneflow_dtype(oneflow_dtype_to_numpy_dtype(flow.int8))

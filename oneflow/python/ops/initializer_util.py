@@ -1081,10 +1081,7 @@ def GetInitializer(initializer_conf, random_seed, var_blob_shape):
         if initializer_conf.HasField(m):
             f = _init_map[m]
             break
-    if f is None:
-        print("No initializer, use constant 3 instead")
-        f = lambda a, b, c: lambda length: [3] * length
-    # assert f is not None, initializer_conf
+    assert f is not None, initializer_conf
     return f(getattr(initializer_conf, m), random_seed, var_blob_shape)
 
 
@@ -1138,7 +1135,7 @@ def RandomUniformIntInitializerImpl(
     )
 
 
-def RngTruncatedNormal(mean, std, length, random_seed, rng):
+def RngTruncatedNormal(mean, std, length, rng):
     truncated_value = 2 * std
     data = []
     while len(data) < length:
@@ -1159,7 +1156,7 @@ def TruncatedNormalInitializerImpl(
 ):
     rng = np.random.default_rng(random_seed)
     return lambda length: RngTruncatedNormal(
-        initializer_conf.mean, initializer_conf.std, length, random_seed, rng,
+        initializer_conf.mean, initializer_conf.std, length, rng,
     )
 
 
@@ -1194,8 +1191,8 @@ def VarianceScalingInitializerImpl(
     distribution = initializer_conf.distribution
     rng = np.random.default_rng(random_seed)
     if distribution == op_conf_util.kTruncatedNormal:
-        stddev = math.sqrt(scale) / (0.87962566103423978)
-        return lambda length: RngTruncatedNormal(0, stddev, length, random_seed, rng)
+        stddev = math.sqrt(scale) / 0.87962566103423978
+        return lambda length: RngTruncatedNormal(0, stddev, length, rng)
     elif distribution == op_conf_util.kRandomNormal:
         stddev = math.sqrt(scale)
         return lambda length: rng.normal(0, stddev, size=length,)
