@@ -49,50 +49,47 @@ class SymbolStorage final {
   SymbolStorage() = default;
   ~SymbolStorage() = default;
 
-  bool Has(int64_t logical_object_id) const {
+  bool Has(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    return logical_object_id2data_.find(logical_object_id) != logical_object_id2data_.end();
+    return symbol_id2symbol_.find(symbol_id) != symbol_id2symbol_.end();
   }
 
-  Maybe<const T&> MaybeGet(int64_t logical_object_id) const {
-    return *JUST(MaybeGetPtr(logical_object_id));
-  }
+  Maybe<const T&> MaybeGet(int64_t symbol_id) const { return *JUST(MaybeGetPtr(symbol_id)); }
 
-  const T& Get(int64_t logical_object_id) const { return *GetPtr(logical_object_id); }
+  const T& Get(int64_t symbol_id) const { return *GetPtr(symbol_id); }
 
-  Maybe<T> MaybeGetPtr(int64_t logical_object_id) const {
+  Maybe<T> MaybeGetPtr(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    const auto& iter = logical_object_id2data_.find(logical_object_id);
-    CHECK_OR_RETURN(iter != logical_object_id2data_.end())
-        << "logical_object_id: " << logical_object_id;
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    CHECK_OR_RETURN(iter != symbol_id2symbol_.end()) << "symbol_id: " << symbol_id;
     return iter->second;
   }
 
-  const std::shared_ptr<T>& GetPtr(int64_t logical_object_id) const {
+  const std::shared_ptr<T>& GetPtr(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    const auto& iter = logical_object_id2data_.find(logical_object_id);
-    CHECK(iter != logical_object_id2data_.end());
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    CHECK(iter != symbol_id2symbol_.end()) << "symbol_id: " << symbol_id;
     return iter->second;
   }
 
-  void Add(int64_t logical_object_id, const typename ConstructArgType4Symbol<T>::type& data) {
-    CHECK_GT(logical_object_id, 0);
+  void Add(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+    CHECK_GT(symbol_id, 0);
     const auto& ptr = std::make_shared<T>(data);
     std::unique_lock<std::mutex> lock(mutex_);
-    CHECK(logical_object_id2data_.emplace(logical_object_id, ptr).second);
+    CHECK(symbol_id2symbol_.emplace(symbol_id, ptr).second);
   }
-  void Clear(int64_t logical_object_id) {
+  void Clear(int64_t symbol_id) {
     std::unique_lock<std::mutex> lock(mutex_);
-    logical_object_id2data_.erase(logical_object_id);
+    symbol_id2symbol_.erase(symbol_id);
   }
   void ClearAll() {
     std::unique_lock<std::mutex> lock(mutex_);
-    logical_object_id2data_.clear();
+    symbol_id2symbol_.clear();
   }
 
  private:
   mutable std::mutex mutex_;
-  HashMap<int64_t, std::shared_ptr<T>> logical_object_id2data_;
+  HashMap<int64_t, std::shared_ptr<T>> symbol_id2symbol_;
 };
 
 }  // namespace vm
