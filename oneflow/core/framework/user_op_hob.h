@@ -87,6 +87,7 @@ class HobStringContextGetter final {
 };
 
 HobStringContextGetter<KernelRegContext> HobDeviceTag();
+HobStringContextGetter<KernelRegContext> HobDeviceSubTag();
 
 }  // namespace user_op
 
