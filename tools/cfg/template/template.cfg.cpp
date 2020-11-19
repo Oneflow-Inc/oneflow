@@ -329,7 +329,17 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::has_{{ util.
 void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::clear_{{ util.field_name(field) }}() {
   if (has_{{ util.field_name(field) }}()) {
 {% if util.field_is_message_type(field) %}
-    {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_->Clear();
+    {
+      using Shared_ptr = ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>;
+      Shared_ptr* __attribute__((__may_alias__)) ptr = reinterpret_cast<Shared_ptr*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_));
+      ptr->~Shared_ptr();
+    }
+{% elif util.field_is_string_type(field) %}
+    {
+      using String = ::std::string;
+      String* ptr = reinterpret_cast<String*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)[0]);
+      ptr->~String();
+    }
 {% else %}
     {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_ = {{ util.field_scalar_type_name(field) }}();
 {% endif %}{# field message type #}
@@ -340,7 +350,11 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::clear_{{ uti
 const {{ util.field_type_name_with_cfg_namespace(field) }}& Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::{{ util.field_name(field) }}() const {
   if (has_{{ util.field_name(field) }}()) {
   {% if util.field_is_message_type(field) %}
-    return *({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_.get());
+    const ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>* __attribute__((__may_alias__)) ptr = reinterpret_cast<const ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_));
+    return *(*ptr);
+  {% elif util.field_is_string_type(field) %}
+    const ::std::string* ptr = reinterpret_cast<const ::std::string*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)[0]);
+    return *ptr;
   {% else %}
     return {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_;
   {% endif %}
@@ -358,27 +372,42 @@ const {{ util.field_type_name_with_cfg_namespace(field) }}& Const{{ util.class_n
 {{ util.field_type_name_with_cfg_namespace(field) }}* Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::mutable_{{ util.field_name(field) }}() {
   if(!has_{{ util.field_name(field) }}()) {
     clear_{{ util.field_oneof_name(field) }}();
-  }
-  if(!{{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_) {
-    {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_ = ::std::make_shared<{{ util.field_type_name_with_cfg_namespace(field) }}>();
+    new (&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)) ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>(new {{ util.field_type_name_with_cfg_namespace(field) }}());
   }
   {{ util.field_oneof_name(field) }}_case_ = {{ util.oneof_type_field_enum_value_name(field) }};
-  return  {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_.get();
+  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>* __attribute__((__may_alias__)) ptr = reinterpret_cast<::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_));
+  return  (*ptr).get();
 }
 {% else %}
 void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::set_{{ util.field_name(field) }}(const {{util.field_type_name_with_cfg_namespace(field) }}& value) {
   if(!has_{{ util.field_name(field) }}()) {
     clear_{{ util.field_oneof_name(field) }}();
+  {% if util.field_is_string_type(field) %}
+    new (&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)) std::string();
+  {% endif %}
   }
   {{ util.field_oneof_name(field) }}_case_ = {{ util.oneof_type_field_enum_value_name(field) }};
+  {% if util.field_is_string_type(field) %}
+  std::string* ptr = reinterpret_cast<std::string*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)[0]);
+  *ptr = value;
+  {% else %}
   {{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_ = value;
+  {% endif %}
 }
 {{ util.field_type_name_with_cfg_namespace(field) }}* Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::mutable_{{ util.field_name(field) }}() {
   if(!has_{{ util.field_name(field) }}()) {
     clear_{{ util.field_oneof_name(field) }}();
+  {% if util.field_is_string_type(field) %}
+    new (&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)) std::string();
+  {% endif %}
   }
+  {% if util.field_is_string_type(field) %}
+  ::std::string* ptr = reinterpret_cast<::std::string*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_)[0]);
+  return ptr;
+  {% else %}
   {{ util.field_oneof_name(field) }}_case_ = {{ util.oneof_type_field_enum_value_name(field) }};
   return  &{{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_;
+  {% endif %}
 }
 {% endif %}{# field message type #}
 {% elif util.field_has_map_label(field) %}
@@ -400,8 +429,6 @@ const {{ util.field_map_container_name(field) }}& Const{{ util.class_name(cls) }
 }
 
 {{ util.field_map_container_name(field) }} * Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::mutable_{{ util.field_name(field) }}() {
-  // {{ util.field_map_container_name(field) }} * p = &{{ util.field_name(field) }}_;
-  // return p;
   if (!{{ util.field_name(field) }}_) {
     {{ util.field_name(field) }}_ = ::std::make_shared<{{ util.field_map_container_name(field) }}>();
   }
@@ -447,7 +474,17 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::clear_{{util
 {% for field in util.oneof_type_fields(oneof) %}
     case {{ util.oneof_type_field_enum_value_name(field) }}: {
 {% if util.field_is_message_type(field) %}
-      {{ util.oneof_name(oneof) }}_.{{ util.field_name(field) }}_->Clear();
+      {
+        using Shared_ptr = ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>;
+        Shared_ptr* __attribute__((__may_alias__)) ptr = reinterpret_cast<Shared_ptr*>(&({{ util.field_oneof_name(field) }}_.{{ util.field_name(field) }}_));
+        ptr->~Shared_ptr();
+      }
+{% elif util.field_is_string_type(field) %}
+      {
+        using String = ::std::string;
+        String* ptr = reinterpret_cast<String*>(&({{ util.oneof_name(oneof) }}_.{{ util.field_name(field) }}_)[0]);
+        ptr->~String();
+      }
 {% else %}
       {{ util.oneof_name(oneof) }}_.{{ util.field_name(field) }}_ = {{ util.field_scalar_type_name(field) }}();
 {% endif %}{# message_type #}
