@@ -1860,3 +1860,91 @@ def tril(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("range")
+def range(
+    start, limit=None, delta=1, dtype=None, name="range"
+) -> remote_blob_util.BlobDef:
+    r"""This operator is similar to python `range`, the difference is that `oneflow.range` generates 
+    a Blob. 
+
+    Args:
+        start ([type]): The start of interval. Its type should be `int`. 
+        limit ([type], optional): The limit of interval. Its type should be `int`.
+        delta (int, optional): The numerical spacing between elements. Defaults to 1.
+        dtype ([type], optional): The output's data type. Currently we only support `oneflow.int64`. Defaults to None.
+        name (str, optional): The name for the operation. Defaults to "range".
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def range_job()->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):   
+                out = flow.range(10, dtype=flow.int64)
+            
+            return out
+
+        out = range_job()
+
+        # out [0 1 2 3 4 5 6 7 8 9]
+    
+    Example2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def range_job()->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):   
+                out = flow.range(1, 10, 3, dtype=flow.int64)
+            
+            return out
+
+        out = range_job()
+
+        # out [1 4 7]
+
+    """
+    # Ensure the dtype is not None
+    assert dtype is not None, "Please specified data type"
+
+    if limit is None:
+        # If limit is None, We start from zero.
+        start, limit = 0, start
+
+    assert limit > start, "Limit should be larger than start"
+    assert delta <= limit - start, "Delta is ilegal"
+
+    # Ensure start, limit, delta's dtype is int, We will Add dtype hierarchy in Later version.
+    assert type(start) == int, "Params `start`'s type should be int"
+    assert type(limit) == int, "Params `limit`'s type should be int"
+    assert type(delta) == int, "Params `delta`'s type should be int"
+
+    # Build User OP
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Range_"))
+        .Op("range")
+        .Attr("start", start)
+        .Attr("delta", delta)
+        .Attr("limit", limit)
+        .Attr("dtype", dtype)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
