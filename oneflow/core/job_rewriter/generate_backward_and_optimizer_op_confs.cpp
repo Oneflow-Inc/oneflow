@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -136,12 +137,19 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     new_scope.InitFromProto(old_scope.scope_proto());
     // TODO(lixinqi): delete this line after ScopeProto::symbol_id removed
     new_scope.clear_symbol_id();
+    new_scope.set_parent_scope_symbol_id(old_scope_symbol_id);
     new_scope.set_calculation_pass_name(pass_name);
     int64_t symbol_id = 0;
     JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
       symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(new_scope));
       return Maybe<void>::Ok();
     }));
+    // Remove this urgly code after most python code migrated into cpp code
+    {
+      ScopeProto scope_proto;
+      new_scope.ToProto(&scope_proto);
+      Global<ForeignCallback>::Get()->AddScopeToPyStorage(symbol_id, scope_proto.DebugString());
+    }
     return symbol_id;
   };
   for (const auto& pair : scope_id2op_names) {
