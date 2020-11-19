@@ -528,8 +528,8 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator==(c
 {% for oneof in util.message_type_oneofs(cls) %}
     && {{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()
 {% for field in util.oneof_type_fields(oneof) %}
-    && (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) ? 
-      ({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()) : true)
+    && {{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }} ? 
+      {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}() : true
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
   ;
@@ -553,7 +553,7 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator<(co
     {{ util.oneof_name(oneof) }}_case() < other.{{ util.oneof_name(oneof) }}_case() : false
 {% for field in util.oneof_type_fields(oneof) %}
     || (({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }}) && 
-      (!({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}()))) ? 
+      !({{ util.field_name(field) }}() == other.{{ util.field_name(field) }}())) ? 
     {{ util.field_name(field) }}() < other.{{ util.field_name(field) }}() : false
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
