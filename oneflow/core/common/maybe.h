@@ -187,41 +187,48 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
+// fix CUDA 11.1 compiler crashes
+#if defined(__CUDACC__)
+#define MAYBE_CONST_AUTO_REF const auto
+#else
+#define MAYBE_CONST_AUTO_REF const auto&
+#endif  // defined(__CUDACC__)
+
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
-#define JUST(...)                                                     \
-  ({                                                                  \
-    const auto& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                              \
-      auto* stack_frame = maybe.error()->add_stack_frame();           \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                    \
-      stack_frame->set_function(__FUNCTION__);                        \
-      return maybe.error();                                           \
-    }                                                                 \
-    maybe;                                                            \
-  })                                                                  \
+#define JUST(...)                                                              \
+  ({                                                                           \
+    MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+    if (!maybe.IsOk()) {                                                       \
+      auto* stack_frame = maybe.error()->add_stack_frame();                    \
+      stack_frame->set_location(MAYBE_FAILED_LOC);                             \
+      stack_frame->set_function(__FUNCTION__);                                 \
+      return maybe.error();                                                    \
+    }                                                                          \
+    maybe;                                                                     \
+  })                                                                           \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-#define CHECK_JUST(...)                                               \
-  ({                                                                  \
-    const auto& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                              \
-      auto* stack_frame = maybe.error()->add_stack_frame();           \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                    \
-      stack_frame->set_function(__FUNCTION__);                        \
-      LOG(FATAL) << maybe.GetSerializedError();                       \
-    }                                                                 \
-    maybe;                                                            \
-  })                                                                  \
+#define CHECK_JUST(...)                                                        \
+  ({                                                                           \
+    MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+    if (!maybe.IsOk()) {                                                       \
+      auto* stack_frame = maybe.error()->add_stack_frame();                    \
+      stack_frame->set_location(MAYBE_FAILED_LOC);                             \
+      stack_frame->set_function(__FUNCTION__);                                 \
+      LOG(FATAL) << maybe.GetSerializedError();                                \
+    }                                                                          \
+    maybe;                                                                     \
+  })                                                                           \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
 
-#define OF_RETURN_IF_ERROR(...)                                                \
-  const auto& maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-  if (!maybe_##__LINE__.IsOk()) {                                              \
-    auto* stack_frame = maybe_##__LINE__.error()->add_stack_frame();           \
-    stack_frame->set_location(MAYBE_FAILED_LOC);                               \
-    stack_frame->set_function(__FUNCTION__);                                   \
-    return maybe_##__LINE__.error();                                           \
+#define OF_RETURN_IF_ERROR(...)                                                         \
+  MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+  if (!maybe_##__LINE__.IsOk()) {                                                       \
+    auto* stack_frame = maybe_##__LINE__.error()->add_stack_frame();                    \
+    stack_frame->set_location(MAYBE_FAILED_LOC);                                        \
+    stack_frame->set_function(__FUNCTION__);                                            \
+    return maybe_##__LINE__.error();                                                    \
   }
 
 #else

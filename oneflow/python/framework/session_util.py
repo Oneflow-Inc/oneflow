@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
-import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
@@ -49,6 +48,7 @@ from typing import Callable
 import inspect
 import oneflow
 import oneflow_api
+import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import traceback
 
 
