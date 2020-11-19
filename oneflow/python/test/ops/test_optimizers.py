@@ -808,114 +808,114 @@ class TestOptimizers(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow_rmsprop(*arg)
 
-    # def test_adam(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["beta1"] = [0.9]
-    #     arg_dict["beta2"] = [0.99]
-    #     arg_dict["epsilon"] = [1e-9]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow_adam(*arg)
+    def test_adam(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.99]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_adam(*arg)
 
-    # def test_lazy_adam(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["beta1"] = [0.9]
-    #     arg_dict["beta2"] = [0.99]
-    #     arg_dict["epsilon"] = [1e-9]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_lazy_adam(*arg)
+    def test_lazy_adam(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.99]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_lazy_adam(*arg)
 
-    # def test_adamw(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["beta1"] = [0.9]
-    #     arg_dict["beta2"] = [0.99]
-    #     arg_dict["epsilon"] = [1e-9]
-    #     arg_dict["weight_decay"] = [0.9]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_adamw(*arg)
+    def test_adamw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.99]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["weight_decay"] = [0.9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_adamw(*arg)
 
-    # def test_lars(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["momentum_beta"] = [0.9]
-    #     arg_dict["epsilon"] = [1e-9]
-    #     arg_dict["lars_coefficient"] = [0.0001]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_lars(*arg)
+    def test_lars(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["momentum_beta"] = [0.9]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["lars_coefficient"] = [0.0001]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_lars(*arg)
 
-    # def test_sgd(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["momentum"] = [0.9, 0.0]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow_sgd(*arg)
+    def test_sgd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["momentum"] = [0.9, 0.0]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_sgd(*arg)
 
-    # def test_indexed_slices_sgd(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu", "cpu"]
-    #     arg_dict["model_shape"] = [(200, 2)]
-    #     arg_dict["ids"] = [(10, 4)]
-    #     arg_dict["grad_shape"] = [(10, 4, 2)]
-    #     arg_dict["momentum_beta"] = [0, 0.9]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["mul_scalar"] = [1, 2]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_indexed_slices_sgd(*arg)
+    def test_indexed_slices_sgd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["model_shape"] = [(200, 2)]
+        arg_dict["ids"] = [(10, 4)]
+        arg_dict["grad_shape"] = [(10, 4, 2)]
+        arg_dict["momentum_beta"] = [0, 0.9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        arg_dict["mul_scalar"] = [1, 2]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_indexed_slices_sgd(*arg)
 
-    # def test_indexed_slices_adam(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu", "cpu"]
-    #     arg_dict["model_shape"] = [(200, 2)]
-    #     arg_dict["ids"] = [(10, 4)]
-    #     arg_dict["grad_shape"] = [(10, 4, 2)]
-    #     arg_dict["beta1"] = [0.9]
-    #     arg_dict["beta2"] = [0.99]
-    #     arg_dict["epsilon"] = [1e-9]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["mul_scalar"] = [1, 2]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_indexed_slices_adam(*arg)
+    def test_indexed_slices_adam(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["model_shape"] = [(200, 2)]
+        arg_dict["ids"] = [(10, 4)]
+        arg_dict["grad_shape"] = [(10, 4, 2)]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.99]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        arg_dict["mul_scalar"] = [1, 2]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_indexed_slices_adam(*arg)
 
-    # def test_fused_sgd(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["momentum"] = [0.9, 0.0]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_flow_job_fused_sgd_model_update(*arg)
+    def test_fused_sgd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["momentum"] = [0.9, 0.0]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_flow_job_fused_sgd_model_update(*arg)
 
-    # def test_fused_adam(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu", "gpu"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["beta1"] = [0.9]
-    #     arg_dict["beta2"] = [0.99]
-    #     arg_dict["epsilon"] = [1e-9]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_flow_job_fused_adam_model_update(*arg)
+    def test_fused_adam(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.99]
+        arg_dict["epsilon"] = [1e-9]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_flow_job_fused_adam_model_update(*arg)
 
 
 if __name__ == "__main__":
