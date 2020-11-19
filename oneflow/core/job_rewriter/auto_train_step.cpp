@@ -61,8 +61,15 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
 
   JobBuilder job_builder(job);
   const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
+  int64_t scope_symbol_id = 0;
+  {
+    const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+        std::make_shared<cfg::JobConfigProto>(job->job_conf());
+    const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
+        std::make_shared<cfg::ParallelConf>(parallel_conf);
+    scope_symbol_id =
+        Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  }
 
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
                            .Op("scalar_add")
