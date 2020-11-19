@@ -74,21 +74,27 @@ bool IsInSameWorkStream(const TaskNode* lhs, const TaskNode* rhs) {
          && lhs->device_type() == rhs->device_type();
 }
 
-void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, int64_t this_chain_id) {
+void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
   CHECK_NE(this_chain_id, -1);
+  CHECK_EQ(this_node->chain_id(), -1);
   // bfs search all node can be merged in this chain
+  HashSet<TaskNode*> visited_nodes;
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);
+  visited_nodes.insert(this_node);
   while (!queued_nodes.empty()) {
     TaskNode* cur_node = queued_nodes.front();
     queued_nodes.pop();
 
+    CHECK_EQ(cur_node->chain_id(), -1);
     cur_node->set_chain_id(this_chain_id);
 
     cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
-      if (IsTheNodeCanBeMergedInChain(next_node) && IsInSameWorkStream(cur_node, next_node)) {
+      if (visited_nodes.find(next_node) == visited_nodes.end()
+          && IsTheNodeCanBeMergedInChain(next_node) && IsInSameWorkStream(this_node, next_node)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
+          visited_nodes.insert(next_node);
         } else {
           CHECK_EQ(next_node->chain_id(), this_chain_id);
         }
@@ -350,15 +356,15 @@ void TaskGraph::MergeChain() {
     // skip if this node has been set in a chain.
     if (this_node->chain_id() != -1) { continue; }
 
-    int64_t this_chain_id = chain_id;
+    CHECK_EQ(this_node->chain_id(), -1);
+    if (IsTheNodeCanBeMergedInChain(this_node)) {
+      TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
+    } else {
+      this_node->set_chain_id(chain_id);
+    }
+
     ++chain_id;
-
-    // skip if this node cannot be merged
-    if (!IsTheNodeCanBeMergedInChain(this_node)) { continue; }
-
-    TraverseConnectedSubGraphMergeInThisChain(this_node, this_chain_id);
   }
-  LOG(INFO) << "ccdebuglog : total chain num = " << chain_id;
   for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
 }
 
