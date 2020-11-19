@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from __future__ import absolute_import
+*/
+#ifndef ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_REGISTRY_H_
+#define ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_REGISTRY_H_
 
-from oneflow.python.oneflow_export import oneflow_export
+#include <string>
+#include <Python.h>
 
+namespace oneflow {
+namespace pyext {
+void RegisterPyKernelCaller(const std::string& op_type_name);
+void RegisterPyKernels(PyObject* py_kernels);
+}  // namespace pyext
+}  // namespace oneflow
 
-@oneflow_export("util.unique_str")
-def UniqueStr(prefix):
-    return "%s%d" % (prefix, UniqueId())
-
-
-def UniqueId():
-    global _unique_id
-    ret = _unique_id
-    _unique_id += 1
-    return ret
-
-
-_unique_id = 0
+#endif  // ONEFLOW_EXTENSION_PYTHON_PY_KERNEL_REGISTRY_H_
