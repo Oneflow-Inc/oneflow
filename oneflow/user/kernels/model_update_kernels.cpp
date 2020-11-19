@@ -697,9 +697,10 @@ class LarsUpdateKernel final : public user_op::OpKernel {
     }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
-        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(),
-        train_step->dptr<int64_t>(), scale_by_ptr, model_diff->dptr<G>(), momentum->mut_dptr<T>(),
-        model->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), train_step->dptr<int64_t>(), 
+        scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(), 
+        tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+       
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
