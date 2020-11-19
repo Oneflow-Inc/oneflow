@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
@@ -54,6 +55,43 @@ bool IsConnectToTickOp(const TaskNode* node) {
   const Operator* op = comp_task_node->logical_node()->SoleOp().get();
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
   return false;
+}
+
+bool IsTheNodeCanBeMergedInChain(const TaskNode* node) {
+  // ONLY the node which is NormalForward and in GPU and NOT variable and NOT set chain id can be
+  // merged.
+  if (node->chain_id() != -1) { return false; }
+  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
+  if (fw_comp_node == nullptr) { return false; }
+  if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
+  if (dynamic_cast<const VariableOp*>(op) != nullptr) { return false; }
+  return true;
+}
+
+bool IsInSameWorkStream(const TaskNode* lhs, const TaskNode* rhs) {
+  return lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() == rhs->thrd_id()
+         && lhs->GlobalWorkStreamId() == rhs->GlobalWorkStreamId()
+         && lhs->device_type() == rhs->device_type();
+}
+
+void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, int64_t this_chain_id) {
+  // bfs search all node can be merged in this chain
+  std::queue<TaskNode*> queued_nodes;
+  queued_nodes.push(this_node);
+  while (!queued_nodes.empty()) {
+    TaskNode* cur_node = queued_nodes.front();
+    queued_nodes.pop();
+
+    cur_node->set_chain_id(this_chain_id);
+
+    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
+      if (IsTheNodeCanBeMergedInChain(next_node) && IsInSameWorkStream(cur_node, next_node)) {
+        queued_nodes.push(next_node);
+      }
+    });
+  }
 }
 
 std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
@@ -214,7 +252,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
       });
 
-  MergeChainAndSetOrderInGraphForEachNode();
+  SetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
@@ -289,17 +327,40 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain(); }
+void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
+  MergeChain();
+  BuildCtrlRegstDescInSameChain();
+}
 
-void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
-  ChainGraph chain_graph(*this);
+void TaskGraph::SetOrderInGraphForEachNode() {
   int64_t order_in_graph = 0;
   AcyclicTopoForEachNode([&](TaskNode* task_node) {
-    task_node->set_chain_id(chain_graph.ChainId4TaskNode(task_node));
     task_node->set_order_in_graph(order_in_graph);
     ordered_task_nodes_.emplace_back(task_node);
     ++order_in_graph;
   });
+}
+
+void TaskGraph::MergeChain() {
+  for (auto* node : ordered_task_nodes_) {
+    node->set_chain_id(-1);  // init with -1
+  }
+  int64_t chain_id = 0;
+  for (auto* this_node : ordered_task_nodes_) {
+    // skip if this node has been set in a chain.
+    if (this_node->chain_id() != -1) { continue; }
+
+    int64_t this_chain_id = chain_id;
+    ++chain_id;
+    this_node->set_chain_id(this_chain_id);
+
+    // skip if this node cannot be merged
+    if (!IsTheNodeCanBeMergedInChain(this_node)) { continue; }
+
+    TraverseConnectedSubGraphMergeInThisChain(this_node, this_chain_id);
+  }
+  LOG(INFO) << "ccdebuglog : total chain num = " << chain_id;
+  for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
