@@ -20,15 +20,19 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const int64_t axis = ctx->Attr<int64_t>("axis");
+  const auto axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   int64_t dynamic_dim_size = 0;
   int64_t static_dim_size = 0;
+  const int64_t in_num_axes = ctx->TensorDesc4ArgNameAndIndex("in", 0)->shape().NumAxes();
+  const int64_t like_num_axes = ctx->TensorDesc4ArgNameAndIndex("like", 0)->shape().NumAxes();
+  CHECK_LE_OR_RETURN(like_num_axes, in_num_axes);
+  CHECK_LT_OR_RETURN(axis, like_num_axes);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc* like_i_desc = ctx->TensorDesc4ArgNameAndIndex("like", i);
     user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
-    CHECK_EQ_OR_RETURN(like_i_desc->shape().NumAxes(), in_desc->shape().NumAxes());
-    FOR_RANGE(int64_t, j, 0, in_desc->shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(like_i_desc->shape().NumAxes(), like_num_axes);
+    FOR_RANGE(int64_t, j, 0, like_num_axes) {
       if (j == axis) {
         if (like_i_desc->is_dynamic()) {
           dynamic_dim_size += like_i_desc->shape().At(j);
@@ -39,7 +43,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
         CHECK_EQ_OR_RETURN(in_desc->shape().At(j), like_i_desc->shape().At(j));
       }
     }
-    *out_i_desc->mut_shape() = like_i_desc->shape();
+    DimVector out_i_dim_vec = like_i_desc->shape().dim_vec();
+    FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
+      out_i_dim_vec.push_back(in_desc->shape().At(j));
+    }
+    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
     *out_i_desc->mut_data_type() = in_desc->data_type();
     out_i_desc->set_is_dynamic(like_i_desc->is_dynamic());
   }
@@ -69,16 +77,31 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
 }
 
 Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
-  const int64_t axis = ctx->Attr<int64_t>("axis");
-  const user_op::TensorDesc& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  FOR_RANGE(int64_t, i, 0, in_desc.shape().NumAxes()) {
+  const auto axis = ctx->Attr<int64_t>("axis");
+  const int64_t in_num_axes =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+  const int64_t like_num_axes =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, like_num_axes) {
     if (i == axis) { continue; }
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   std::vector<user_op::OpArg> like_arg_vec;
   const size_t like_arg_size = ctx->outputs().size();
   like_arg_vec.reserve(like_arg_size);
-  FOR_RANGE(int32_t, i, 0, like_arg_size) { like_arg_vec.push_back(user_op::OpArg("like", i)); }
+  FOR_RANGE(int32_t, i, 0, like_arg_size) { like_arg_vec.emplace_back("like", i); }
+  FOR_RANGE(int64_t, i, like_num_axes, in_num_axes) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), i)
+        .Broadcast(like_arg_vec)
+        .Split(ctx->outputs(), i)
+        .Build();
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), i)
+        .PartialSum(like_arg_vec)
+        .Split(ctx->outputs(), i)
+        .Build();
+  }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("in", 0))
       .PartialSum(like_arg_vec)

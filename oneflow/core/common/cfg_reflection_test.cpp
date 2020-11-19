@@ -362,5 +362,12 @@ TEST(CfgReflection, AddValInCfgRf) {
   ASSERT_EQ(cfg_foo.repeated_int32().Get(0), 8888);
 }
 
+TEST(Cfg, ResizeRepeated) {
+  cfg::ReflectionTestBar bar;
+  auto* first = bar.mutable_repeated_foo()->Add();
+  for (int i = 0; i < 100; ++i) { bar.mutable_repeated_foo(); }
+  ASSERT_TRUE(bar.mutable_repeated_foo(0) == first);
+}
+
 }  // namespace test
 }  // namespace oneflow
