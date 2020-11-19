@@ -32,6 +32,28 @@ def get_placement():
     return flow.scope.placement("gpu", machine_device_ids)
 
 
+def get_simple_momentum_training_model(dtype):
+    assert dtype == flow.float32
+
+    @flow.global_function(type="train")
+    def model(x: tp.Numpy.Placeholder((4, 5))) -> tp.Numpy:
+        with get_placement():
+            w = flow.get_variable(
+                name="w",
+                shape=(5, 6),
+                dtype=flow.float32,
+                initializer=flow.random_normal_initializer(mean=10, stddev=1),
+                distribute=flow.distribute.split(0),
+            )
+            y = flow.matmul(x, w)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [0.01]), momentum=0.9
+            ).minimize(y)
+            return y
+
+    return model
+
+
 def get_simple_model(dtype):
     @flow.global_function()
     def add() -> tp.Numpy:
@@ -66,7 +88,7 @@ def get_large_model(dtype):
         with get_placement():
             x = flow.get_variable(
                 name="x",
-                shape=(10, 8801, 820, 4),
+                shape=(10, 2801, 820, 4),
                 dtype=dtype,
                 initializer=flow.random_normal_initializer(mean=10, stddev=1),
                 distribute=flow.distribute.split(0),
@@ -194,6 +216,32 @@ def _TestLoadNumpy(test_case, dtype):
     test_case.assertTrue(np.allclose(flow_res, np_res))
 
 
+def _TestResumeTraining(test_case):
+    with tempfile.TemporaryDirectory() as save_dir:
+        x = np.random.random((4, 5)).astype(np.float32)
+
+        flow.clear_default_session()
+        flow.config.gpu_device_num(2)
+        model = get_checkpoint_ready_model(
+            get_simple_momentum_training_model, flow.float32
+        )
+        model(x)
+        flow.checkpoint.save(save_dir)
+        model(x)
+        w1 = flow.get_all_variables()["w"].numpy()
+
+        flow.clear_default_session()
+        flow.config.gpu_device_num(2)
+        model = get_checkpoint_ready_model(
+            get_simple_momentum_training_model, flow.float32
+        )
+        flow.load_variables(flow.checkpoint.get(save_dir))
+        model(x)
+        w2 = flow.get_all_variables()["w"].numpy()
+
+        test_case.assertTrue(np.array_equal(w1, w2))
+
+
 def _TestAssignmentBetweenMemory(test_case, dtype):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -272,6 +320,10 @@ class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_load_numpy(test_case):
         _TestLoadNumpy(test_case, flow.float)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_resume_training(test_case):
+        _TestResumeTraining(test_case)
 
 
 if __name__ == "__main__":
