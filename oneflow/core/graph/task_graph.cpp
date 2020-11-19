@@ -58,9 +58,7 @@ bool IsConnectToTickOp(const TaskNode* node) {
 }
 
 bool IsTheNodeCanBeMergedInChain(const TaskNode* node) {
-  // ONLY the node which is NormalForward and in GPU and NOT variable and NOT set chain id can be
-  // merged.
-  if (node->chain_id() != -1) { return false; }
+  // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
   if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
@@ -77,6 +75,7 @@ bool IsInSameWorkStream(const TaskNode* lhs, const TaskNode* rhs) {
 }
 
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, int64_t this_chain_id) {
+  CHECK_NE(this_chain_id, -1);
   // bfs search all node can be merged in this chain
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);
@@ -88,7 +87,11 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, int64_t this
 
     cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
       if (IsTheNodeCanBeMergedInChain(next_node) && IsInSameWorkStream(cur_node, next_node)) {
-        queued_nodes.push(next_node);
+        if (next_node->chain_id() == -1) {
+          queued_nodes.push(next_node);
+        } else {
+          CHECK_EQ(next_node->chain_id(), this_chain_id);
+        }
       }
     });
   }
@@ -342,9 +345,6 @@ void TaskGraph::SetOrderInGraphForEachNode() {
 }
 
 void TaskGraph::MergeChain() {
-  for (auto* node : ordered_task_nodes_) {
-    node->set_chain_id(-1);  // init with -1
-  }
   int64_t chain_id = 0;
   for (auto* this_node : ordered_task_nodes_) {
     // skip if this node has been set in a chain.
@@ -352,7 +352,6 @@ void TaskGraph::MergeChain() {
 
     int64_t this_chain_id = chain_id;
     ++chain_id;
-    this_node->set_chain_id(this_chain_id);
 
     // skip if this node cannot be merged
     if (!IsTheNodeCanBeMergedInChain(this_node)) { continue; }
