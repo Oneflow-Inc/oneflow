@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from __future__ import absolute_import
+*/
+#include "oneflow/extension/python/py_kernel_caller.h"
+#include "oneflow/extension/python/py_compute.h"
 
-from oneflow.python.oneflow_export import oneflow_export
+namespace oneflow {
+void PyKernel::Compute(user_op::KernelComputeContext* ctx) const {
+  ::oneflow::pyext::PyCompute(ctx, "forward");
+}
 
+void PyGradKernel::Compute(user_op::KernelComputeContext* ctx) const {
+  ::oneflow::pyext::PyCompute(ctx, "backward");
+}
 
-@oneflow_export("util.unique_str")
-def UniqueStr(prefix):
-    return "%s%d" % (prefix, UniqueId())
-
-
-def UniqueId():
-    global _unique_id
-    ret = _unique_id
-    _unique_id += 1
-    return ret
-
-
-_unique_id = 0
+}  // namespace oneflow
