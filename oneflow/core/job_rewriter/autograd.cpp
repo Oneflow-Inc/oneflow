@@ -203,8 +203,15 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     cast_from_mirrored->set_out("out");
     cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
     const auto& parallel_conf = job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi);
-    int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), true);
+    int64_t scope_symbol_id = 0;
+    {
+      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
+      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
+          std::make_shared<cfg::ParallelConf>(parallel_conf);
+      scope_symbol_id =
+          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
+    }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
     total_loss_instance_num_lbi->set_op_name(op_conf.name());
@@ -252,8 +259,15 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name("0:0");
-    int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-        job_builder->job().job_conf().DebugString(), parallel_conf.DebugString(), false);
+    int64_t scope_symbol_id = 0;
+    {
+      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
+      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
+          std::make_shared<cfg::ParallelConf>(parallel_conf);
+      scope_symbol_id =
+          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
 
@@ -438,8 +452,15 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   }
   ParallelConf global_norm_parallel_conf =
       all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job_builder->job().job_conf().DebugString(), global_norm_parallel_conf.DebugString(), false);
+  int64_t scope_symbol_id = 0;
+  {
+    const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+        std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
+    const std::shared_ptr<cfg::ParallelConf> cfg_global_norm_parallel_conf =
+        std::make_shared<cfg::ParallelConf>(global_norm_parallel_conf);
+    scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+        cfg_job_conf, cfg_global_norm_parallel_conf, false);
+  }
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
