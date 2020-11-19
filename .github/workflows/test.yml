@@ -51,7 +51,7 @@ jobs:
       run: |
         echo "ci_tmp_dir=$HOME/ci-tmp-xla" >> $GITHUB_ENV
         echo "wheelhouse_dir=$HOME/ci-tmp-xla/wheelhouse" >> $GITHUB_ENV
-        echo "bin_dir=$HOME/ci-tmp-xla/manylinux2014-build-cache/10.1/build-oneflow/bin" >> $GITHUB_ENV
+        echo "bin_dir=$HOME/ci-tmp-xla/manylinux2014-build-cache/10.1-xla/build-oneflow/bin" >> $GITHUB_ENV
     - name: Fix permissions
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
