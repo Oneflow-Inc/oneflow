@@ -77,6 +77,7 @@ class Session(object):
         # (like non_distributed_optimizer_pass)
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
+        self.lazy_interface_op_name2parallel_conf_ = {}
         self.op_name2lazy_blob_cache_ = {}
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
@@ -177,16 +178,22 @@ class Session(object):
 
     def _UpdateOpAttrAndJobName4LazyInterfaceOp(self):
         for op_attr in c_api_util.GetOpAttributes().op_attribute:
-            print(op_attr)
             op_conf = op_attr.op_conf
             if c_api_util.IsInterfaceOpConf(op_conf):
                 self.interface_op_name2op_attr_[op_conf.name] = op_attr
         for job in c_api_util.GetJobSet().job:
+            op_name2parallel_conf = {}
+            for placement_group in job.placement.placement_group:
+                for op_name in placement_group.op_set.op_name:
+                    op_name2parallel_conf[op_name] = placement_group.parallel_conf
             for op_conf in job.net.op:
                 if c_api_util.IsInterfaceOpConf(op_conf):
                     self.interface_op_name2job_name_[
                         op_conf.name
                     ] = job.job_conf.job_name
+                    self.lazy_interface_op_name2parallel_conf_[
+                        op_conf.name
+                    ] = op_name2parallel_conf[op_conf.name]
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
@@ -328,12 +335,15 @@ class Session(object):
                 interface_op_name
             ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
         else:
-            # In lazy mode, we update `interface_op_name2op_attr_` with
-            # the latest op_conf in another function after compiler.Compile
+            # In lazy mode, we update fields with
+            # the latest info in another function after compiler.Compile
             pass
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
+
+    def ParallelConf4LazyInterfaceOpName(self, interface_op_name):
+        return self.lazy_interface_op_name2parallel_conf_[interface_op_name]
 
     def JobName4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2job_name_[interface_op_name]
