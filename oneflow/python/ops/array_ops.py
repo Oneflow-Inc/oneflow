@@ -2312,3 +2312,25 @@ def amp_white_identity(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("dim_scatter")
+def dim_scatter(
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    src: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatter_")
+        )
+        .Op("dim_scatter")
+        .Input("input", [src])
+        .Input("index", [index])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
