@@ -29,10 +29,11 @@ REGISTER_USER_OP("partition")
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* in_num_unique_desc =
           ctx->TensorDesc4ArgNameAndIndex("in_num_unique", 0);
-      FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+      const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");
+      // CHECK_EQ_OR_RETURN(parallel_num, ctx->outputs().size());
+      FOR_RANGE(int32_t, i, 0, parallel_num) {
         user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
         *out_i_desc = *in_desc;
-        out_i_desc->set_is_dynamic(true);
         user_op::TensorDesc* num_unique_desc = ctx->TensorDesc4ArgNameAndIndex("num_unique", i);
         *num_unique_desc = *in_num_unique_desc;
       }
