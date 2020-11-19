@@ -113,6 +113,14 @@ class TestTranspose(flow.unittest.TestCase):
         x = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]]).astype(np.float32)
         transpose_batchaxis_non_change_job(x)
 
+    def test_transpose_dim6(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(2, 3, 4, 5, 6, 7)]
+        arg_dict["perm"] = [(2, 0, 1, 3, 5, 4)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
 
 if __name__ == "__main__":
     unittest.main()
