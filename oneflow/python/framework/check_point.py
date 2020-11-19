@@ -176,7 +176,10 @@ class SimpleCheckPointManager(object):
 
     def list_checkpoints(self) -> List[str]:
         def is_snapshot(name):
-            return name.startswith(self._prefix)
+            if not name.startswith(self._prefix):
+                return False
+            snapshot_done = os.path.join(self._GetSnapshotPath(name), "snapshot_done")
+            return os.path.exists(snapshot_done) and os.path.isfile(snapshot_done)
 
         return sorted([f for f in os.listdir(self._root_path) if is_snapshot(f)])
 

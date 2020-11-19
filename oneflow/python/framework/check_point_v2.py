@@ -256,6 +256,10 @@ def SaveVarDict(
                 f.write(slice.tobytes())
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
+    # write a empty file 'snapshot_done', indicating that
+    # the save process finishes normally
+    with open(os.path.join(path, "snapshot_done"), "w"):
+        pass
 
 
 def _LogicalSlice(
