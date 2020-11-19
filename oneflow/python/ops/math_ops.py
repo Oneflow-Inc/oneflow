@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-from typing import Union, Optional, Sequence
+from typing import Union, Optional, Sequence, List, Tuple
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -1844,21 +1844,22 @@ def tril(
 
 @oneflow_export("math.polyval")
 def polyval(
-    coeffs: Sequence, x: remote_blob_util.BlobDef, name: Optional[str] = None
+    coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Computes the elementwise value of a polynomial.
 
     Args:
-        coeffs (Sequence): The coefficients of the polynomial.
+        coeffs (Union[List, Tuple]): The coefficients of the polynomial.
         x (remote_blob_util.BlobDef): A Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A Blob, has the same type of x.
+        remote_blob_util.BlobDef: A Blob, has the same data type of x.
     
     For example:
 
     .. code-block:: python
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -1874,10 +1875,11 @@ def polyval(
         out = polyval_Job(x)
         
         # output [ 2. 8. 16.]
+
     """
     if name is None:
         name = id_util.UniqueStr("Polyval_")
-    if not isinstance(coeffs, list):
+    if not isinstance(coeffs, (list, tuple)):
         raise ValueError(
             "Argument coeffs must be list type " "found {}".format(type(coeffs))
         )
