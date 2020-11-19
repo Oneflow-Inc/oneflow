@@ -54,6 +54,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       PYBIND11_OVERRIDE(void, ForeignCallback, RemoveForeignCallback, unique_id);
     }
 
+    // TODO(lixinqi): remove this urgly api after python code migrated into cpp code
+    void AddScopeToPyStorage(int64_t scope_symbol_id,
+                             const std::string& scope_proto_str) const override {
+      PYBIND11_OVERRIDE(void, ForeignCallback, AddScopeToPyStorage, scope_symbol_id,
+                        scope_proto_str);
+    }
+
     int64_t MakeScopeSymbol(const std::string& job_conf, const std::string& parallel_conf,
                             bool is_mirrored) const override {
       PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeScopeSymbol, job_conf, parallel_conf,

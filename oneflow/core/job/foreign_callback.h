@@ -36,6 +36,12 @@ class ForeignCallback {
 
   virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
 
+  // TODO(lixinqi): remove this urgly api after python code migrated into cpp code
+  virtual void AddScopeToPyStorage(int64_t scope_symbol_id,
+                                   const std::string& scope_proto_str) const {
+    UNIMPLEMENTED();
+  }
+
   // return scope_symbol_id
   virtual int64_t MakeScopeSymbol(const std::string& job_conf, const std::string& parallel_conf,
                                   bool is_mirrored) const {
