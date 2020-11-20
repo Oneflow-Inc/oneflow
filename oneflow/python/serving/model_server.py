@@ -38,7 +38,7 @@ from oneflow.python.oneflow_export import oneflow_export
 # -- fix proto
 # -- update and change SimpleSession interface
 # -- batching util
-# -- hot update model, two ways: 1) watch model config file changing and reload; 
+# -- hot update model, two ways: 1) watch model config file changing and reload;
 #    2) through ReloadConfig request
 
 # TODO: consider big tensor using stream request and stream response
