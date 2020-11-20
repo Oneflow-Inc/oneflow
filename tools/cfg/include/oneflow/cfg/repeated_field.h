@@ -82,7 +82,7 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
   using _ConstRepeatedField_<T>::data_;
   using _ConstRepeatedField_<T>::__SharedPtr__;
 
-  _RepeatedField_() = default;
+  _RepeatedField_() : _ConstRepeatedField_<T>::_ConstRepeatedField_() {}
   _RepeatedField_(const std::shared_ptr<std::vector<T>>& data): _ConstRepeatedField_<T>(data) {}
   _RepeatedField_(const _RepeatedField_& other) {
     CopyFrom(other);

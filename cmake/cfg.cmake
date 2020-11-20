@@ -18,8 +18,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
-      oneflow/core/common/demo.proto
-      oneflow/core/common/test.proto
   )
 
   foreach(FIL ${ALL_CFG_CONVERT_PROTO})
