@@ -913,9 +913,9 @@ class Optimizer:
         self,
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[int] = None,
-        loss_scale_policy: Optional[LossScalePolicy] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         if loss_scale_factor is not None:
             assert loss_scale_policy is None
@@ -1109,9 +1109,14 @@ class Adam(Optimizer):
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.beta1 = beta1
         self.beta2 = beta2
