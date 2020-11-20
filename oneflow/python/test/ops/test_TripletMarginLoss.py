@@ -83,12 +83,24 @@ def _compare_triplet_margin_loss_with_np(
 
         def _compute_per_diff(x1, x2, p, eps=1e-6):
             # Add epsilon to avoid divided by zero
-            sum_val = np.sum(np.power((x1 - x2 + eps), p), axis=1, keepdims=True)
+            _abs_index = np.where(x1 - x2 > 0, 1, -1)
+            # When element == 0, its grad = 0
+            _abs_index_support = np.where(x1 - x2 == 0, 1, 0)
+            _abs_grad = _abs_index + _abs_index_support
+
+            _abs_val = np.abs(x1 - x2 + eps)
+            _power_abs_val = np.power(_abs_val, p)
+            _sum_val = np.sum(_power_abs_val, axis=1, keepdims=True)
+
             # Add epsilon to avoid divided by zero
-            sqrt_sum_val = np.power(sum_val + eps, -1.0 / p)
-            grad = np.multiply(sqrt_sum_val, (x1 - x2))
-            # We compute the reduction = "mean" grad
-            return grad / x1.shape[0]
+            _sqrt_sum_val = np.power(_sum_val + eps, 1.0 / p - 1)
+
+            _power_val = np.power(_abs_val, p - 1)
+
+            _grad = np.multiply(_sqrt_sum_val, _power_val)
+            # Multiply the abs grad
+            _grad *= _abs_grad
+            return _grad / x1.shape[0]
 
         d = _compute_distance(anchor, pos, neg)
         # Because We use max(x, 0), the value less than 0, the corresponding grad is 0
@@ -113,7 +125,7 @@ def _compare_triplet_margin_loss_with_np(
 
     def assert_prediction_grad(blob: tp.Numpy):
         # Evaluate the gradient
-        assert np.allclose(blob, np_grad_dict["np_triplet_loss_grad_mean"])
+        assert np.allclose(blob, np_grad_dict["np_triplet_loss_grad_mean"], rtol=1e-3)
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -214,7 +226,7 @@ class Test_triplet_loss_1n1d(flow.unittest.TestCase):
         arg_dict = _gen_arg_dict(
             shape=(3, 3),
             margin=1,
-            p=2.0,
+            p=1.5,
             swap=False,
             device_type="cpu",
             machine_ids="0:0",
