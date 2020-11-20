@@ -56,10 +56,11 @@ def _compare_triplet_margin_loss_with_np(
         np_d_2 = np.power(np.sum(np_d_2_norm, axis=-1), 1./p)
 
         if swap:
-            np_dist_swap = np.sum(np.square(np_pos - np_neg+1e-6), axis=-1)
+            np_dist_swap = np.power(np.abs((np_pos-np_neg+1e-6)), p)
+            np_dist_swap = np.power(np.sum(np_dist_swap, axis=-1), 1./p)
             np_d_2 = np.minimum(np_d_2, np_dist_swap)
         
-        np_triplet_margin_loss = (margin + np_d_1 - np_d_2)
+        np_triplet_margin_loss = np.maximum((margin + np_d_1 - np_d_2), 0)
         np_triplet_margin_loss_mean = np.mean(np_triplet_margin_loss)
         np_triplet_margin_loss_sum = np.sum(np_triplet_margin_loss)
 
@@ -71,32 +72,51 @@ def _compare_triplet_margin_loss_with_np(
 
     np_out_tripletloss_dict = np_triplet_margin_loss(anchor, pos, neg, margin, p, swap)
 
-    # def np_margin_ranking_diff(np_out, np_target):
-    #     # Use numpy to compute diff
-    #     # Here we only test the input_1 gradient
-    #     # If loss > 0, the grad is: -target, else the grad is 0
-    #     elem_cnt = np_out.size
-    #     row, col = np_out.shape
-    #     np_diff = np.zeros(shape=np_out.shape)
-    #     # TODO: Optimize the backward logic
-    #     for i in range(row):
-    #         for j in range(col):
-    #             if np_out[i][j] > 0:
-    #                 np_diff[i][j] = -np_target[i]
+    def np_triplet_loss_diff(anchor, pos, neg, margin, p):
 
-    #     return {
-    #         "np_margin_ranking_grad_mean": np_diff / elem_cnt,
-    #     }
+        def _compute_distance(x1, x2, x3): 
+            d_1_norm = np.power(np.abs((x1-x2+1e-6)), p)
+            d_2_norm = np.power(np.abs((x1-x3+1e-6)), p)
+            d_1 = np.power(np.sum(d_1_norm, axis=-1), 1./p)
+            d_2 = np.power(np.sum(d_2_norm, axis=-1), 1./p)
 
-    # np_grad_dict = np_margin_ranking_diff(
-    #     np_out_marginloss_dict["np_margin_ranking_loss"], target
-    # )
+            return d_1 - d_2 + margin
 
-    # def assert_prediction_grad(blob: tp.Numpy):
-    #     # Evaluate the gradient
-    #     # Here we only test the input_1 gradient
-    #     # If loss > 0, the grad is: -target, else the grad is 0
-    #     assert np.allclose(blob, np_grad_dict["np_margin_ranking_grad_mean"])
+        def _compute_per_diff(x1, x2, p, eps=1e-6): 
+            # Add epsilon to avoid divided by zero
+            sum_val = np.sum(np.power((x1-x2+eps), p), axis=1, keepdims=True)
+            # Add epsilon to avoid divided by zero
+            sqrt_sum_val = np.power(sum_val+eps, -1.0/p)
+            grad = np.multiply(sqrt_sum_val, (x1-x2))
+            # We compute the reduction = "mean" grad
+            return grad / x1.shape[0]
+
+        d = _compute_distance(anchor, pos, neg)
+        # Because We use max(x, 0), the value less than 0, the corresponding grad is 0
+        # So Here we compute the index that its grad need to be place to 0
+        zero_index = np.where(d<-1e-6)
+
+        anchor_grad_1 = _compute_per_diff(anchor, pos, p)
+        anchor_grad_2 = _compute_per_diff(anchor, neg, p)
+
+        total_grad = anchor_grad_1 - anchor_grad_2
+        
+        for i in zero_index: 
+            total_grad[i] = 0
+
+        grad_dict = {
+            "np_triplet_loss_grad_mean": total_grad,
+        }
+
+        return grad_dict
+
+    np_grad_dict = np_triplet_loss_diff(
+        anchor, pos, neg, margin, p
+    )
+
+    def assert_prediction_grad(blob: tp.Numpy):
+        # Evaluate the gradient
+        assert np.allclose(blob, np_grad_dict["np_triplet_loss_grad_mean"])
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -115,8 +135,7 @@ def _compare_triplet_margin_loss_with_np(
             )
             x_anchor = of_anchor + v
 
-        # TODO: add watch diff
-        # flow.watch_diff(x_var, assert_prediction_grad)
+        flow.watch_diff(x_anchor, assert_prediction_grad)
 
         triplet_marginloss = flow.nn.TripletMarginLoss(
             x_anchor,
@@ -167,9 +186,6 @@ def _compare_triplet_margin_loss_with_np(
         np_out_tripletloss_dict["np_triplet_margin_loss"],
     )
 
-    print("Of loss is: ", of_out_tripletloss_dict["of_triplet_margin_loss_mean"])
-    print("np loss is: ", np_out_tripletloss_dict["np_triplet_margin_loss_mean"])
-
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss_mean"],
         np_out_tripletloss_dict["np_triplet_margin_loss_mean"],
@@ -199,7 +215,7 @@ def _gen_arg_dict(shape, margin, p, swap, device_type, machine_ids, device_count
 class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_triplet_margin_loss_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 5),
+            shape=(3, 3),
             margin=1, 
             p=2.0, 
             swap=False, 
