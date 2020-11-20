@@ -431,18 +431,10 @@ __global__ void RmsPropUpdateGpu(int64_t n, T scale, float l1, float l2, T* mean
                                  float decay_rate, const float* learning_rate,
                                  const T* scale_by_ptr, const G* model_diff, T* model) {
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-  if (centered) {
-    CUDA_1D_KERNEL_LOOP(i, n) {
-      RmsPropUpdateFunctor<T, G, true>()(model_diff + i, model + i, n, scale, l1, l2,
-                                         mean_square + i, mean_gradient + i, epsilon, weight_decay,
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    RmsPropUpdateFunctor<T, G, centered>()(model_diff + i, model + i, n, scale, l1, l2, mean_square + i,
+                                         (centered ? mean_gradient + i : nullptr), epsilon, weight_decay,
                                          decay_rate, *learning_rate);
-    }
-  } else {
-    CUDA_1D_KERNEL_LOOP(i, n) {
-      RmsPropUpdateFunctor<T, G, false>()(model_diff + i, model + i, n, scale, l1, l2,
-                                          mean_square + i, mean_gradient + i, epsilon, weight_decay,
-                                          decay_rate, *learning_rate);
-    }
   }
 }
 

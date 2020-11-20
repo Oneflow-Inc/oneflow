@@ -257,7 +257,7 @@ void RmsPropUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   } else {
     FOR_RANGE(int64_t, i, 0, n) {
       RmsPropUpdateFunctor<T, G, false>()(model_diff + i, model + i, n, scale, l1, l2,
-                                          mean_square + i, mean_gradient + i, epsilon, weight_decay,
+                                          mean_square + i, nullptr, epsilon, weight_decay,
                                           decay_rate, *learning_rate);
     }
   }
