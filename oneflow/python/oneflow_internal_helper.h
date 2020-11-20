@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -52,12 +53,6 @@ limitations under the License.
 #endif  // WITH_TENSORRT
 
 namespace oneflow {
-
-Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
@@ -279,18 +274,6 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
-Maybe<void> RunLogicalInstruction(const std::string& instruction_list_str,
-                                  const std::string& eager_symbol_list_str) {
-  return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list_str,
-                                                                   eager_symbol_list_str);
-}
-
-Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_str,
-                                   const std::string& eager_symbol_list_str) {
-  return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list_str,
-                                                                    eager_symbol_list_str);
-}
-
 Maybe<long long> CurrentMachineId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return Global<MachineCtx>::Get()->this_machine_id();
@@ -315,5 +298,7 @@ Maybe<long long> NewPhysicalSymbolId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
+
+Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
 
 }  // namespace oneflow

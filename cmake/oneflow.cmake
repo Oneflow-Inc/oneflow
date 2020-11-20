@@ -45,12 +45,9 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src 
-  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
-  "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
-  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
-  "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*"
-)
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if (NOT WITH_XLA)
@@ -137,6 +134,16 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.cpp$")
+    list(APPEND of_pyext_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/extension/python/.*\\.h$")
+    list(APPEND of_pyext_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -238,6 +245,11 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
+oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
+target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+target_link_libraries(of_pyext_obj of_ccobj)
+add_dependencies(of_pyext_obj of_ccobj)
+
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj)
 elseif(UNIX)
@@ -262,7 +274,7 @@ set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj)
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")

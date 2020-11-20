@@ -17,11 +17,6 @@ limitations under the License.
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
 
-void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback, std::string* error_str) {
-  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(
-      error_str);
-}
-
 void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
 }
@@ -142,18 +137,6 @@ std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
                                        std::string* error_str) {
   return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-void RunLogicalInstruction(const std::string& vm_instruction_list,
-                           const std::string& eager_symbol_list_str, std::string* error_str) {
-  return oneflow::RunLogicalInstruction(vm_instruction_list, eager_symbol_list_str)
-      .GetDataAndSerializedErrorProto(error_str);
-}
-
-void RunPhysicalInstruction(const std::string& vm_instruction_list,
-                            const std::string& eager_symbol_list_str, std::string* error_str) {
-  return oneflow::RunPhysicalInstruction(vm_instruction_list, eager_symbol_list_str)
-      .GetDataAndSerializedErrorProto(error_str);
 }
 
 long CurrentMachineId(std::string* error_str) {
@@ -296,4 +279,8 @@ void CacheInt8Calibration(std::string* error_str) {
 
 void WriteInt8Calibration(const std::string& path, std::string* error_str) {
   oneflow::WriteInt8Calibration(path).GetDataAndSerializedErrorProto(error_str);
+}
+
+void LoadLibraryNow(const std::string& lib_path, std::string* error_str) {
+  oneflow::LoadLibraryNow(lib_path).GetDataAndSerializedErrorProto(error_str);
 }
