@@ -21,7 +21,7 @@ template<typename T>
 class MultiCountNotFiniteCpuKernel final : public user_op::OpKernel {
  public:
   MultiCountNotFiniteCpuKernel() = default;
-  ~MultiCountNotFiniteCpuKernel() = default;
+  ~MultiCountNotFiniteCpuKernel() override  = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {

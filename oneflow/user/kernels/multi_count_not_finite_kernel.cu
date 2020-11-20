@@ -66,7 +66,7 @@ template<typename T>
 class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
  public:
   MultiCountNotFiniteGpuKernel() = default;
-  ~MultiCountNotFiniteGpuKernel() = default;
+  ~MultiCountNotFiniteGpuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
