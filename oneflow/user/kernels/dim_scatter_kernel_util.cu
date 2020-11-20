@@ -21,12 +21,13 @@ namespace oneflow {
 namespace user_op {
 
 template<typename IN_T, typename IDX_T>
-__global__ void DoCUDAScatterDimAdd(const DimOpIndexNdHelper<IDX_T> input_nd_helper,
+__global__ void DoCUDADimScatterAdd(const DimOpIndexNdHelper<IDX_T> input_nd_helper,
                                     const DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim,
                                     int64_t elem_cnt, int32_t dim, const IDX_T* index,
                                     const IN_T* input, IN_T* output) {
-  DoDimScatterAdd<IN_T, IDX_T>(input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input,
-                               output);
+  DoDimScatterBinOp<IN_T, IDX_T>(input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,
+    input, output,
+    DeviceBinOp<IN_T>::Add);
 }
 
 template<typename IN_T, typename IDX_T>
@@ -34,7 +35,7 @@ struct DimScatterAddFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
-    RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+    RUN_CUDA_KERNEL((DoCUDADimScatterAdd<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);
   }
 };
@@ -45,7 +46,40 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
   void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const float16* input, float16* output) {
-    RUN_CUDA_KERNEL((DoCUDAScatterDimAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+    RUN_CUDA_KERNEL((DoCUDADimScatterAdd<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+                    input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,
+                    reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));
+  }
+};
+
+
+template<typename IN_T, typename IDX_T>
+__global__ void DoCUDADimScatterUpdate(const DimOpIndexNdHelper<IDX_T> input_nd_helper,
+                                    const DimOpIndexNdHelper<IDX_T> output_nd_helper, int ndim,
+                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
+                                    const IN_T* input, IN_T* output) {
+  DoDimScatterBinOp<IN_T, IDX_T>(input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,
+    input, output,
+    DeviceBinOp<IN_T>::Update);
+}
+
+template<typename IN_T, typename IDX_T>
+struct DimScatterUpdateFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
+                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
+    RUN_CUDA_KERNEL((DoCUDADimScatterUpdate<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+                    input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);
+  }
+};
+
+// float16 special case of DimScatterAddFunctor template
+template<typename IDX_T>
+struct DimScatterUpdateFunctor<DeviceType::kGPU, float16, IDX_T> final {
+  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
+                  int32_t dim, const IDX_T* index, const float16* input, float16* output) {
+    RUN_CUDA_KERNEL((DoCUDADimScatterUpdate<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
                     input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index,
                     reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));
   }
@@ -53,7 +87,8 @@ struct DimScatterAddFunctor<DeviceType::kGPU, float16, IDX_T> final {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR, (DeviceType::kGPU),
                                  DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ, INDEX_DATA_TYPE_SEQ);
-
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_SCATTER_UPDATE_FUNCTOR, (DeviceType::kGPU),
+                                 DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ, INDEX_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 

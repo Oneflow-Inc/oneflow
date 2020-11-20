@@ -38,16 +38,24 @@ namespace user_op {
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
+template <typename T>
+using BinaryOpFn = void(*)(const T* x, T* y);
+
 template<typename T>
-struct DeviceAdd {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
+struct DeviceBinOp {
+  OF_DEVICE_FUNC static void Add(const T* x, T* y) {
 #ifdef __CUDA_ARCH__
     gpu_atomic_add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
 #else
     *y += *x;
 #endif
-  };
+  }
+
+  OF_DEVICE_FUNC static void Update(const T* x, T* y) {
+    *y = *x;
+  }
 };
+
 
 }  // namespace user_op
 }  // namespace oneflow
