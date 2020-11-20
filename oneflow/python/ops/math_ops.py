@@ -28,6 +28,8 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
+from oneflow.python.ops.transpose_util import get_inversed_perm
 
 
 @oneflow_export("math.add")
@@ -1424,17 +1426,38 @@ def elem_cnt(
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("math.top_k")
-def top_k(
+def _top_k_at_last_dim(
     input: remote_blob_util.BlobDef,
     k: int = 1,
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Finds the indices of the k largest entries for the last dimension, the difference between other framework is that oneflow only return the indices. 
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
+        .Op("top_k")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("k", k)
+        .Attr("sorted", sorted)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.top_k")
+def top_k(
+    input: remote_blob_util.BlobDef,
+    axis: int = -1,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         k (int, optional): Number of top elements to look for along the last dimension. Defaults to 1.
         sorted (bool, optional): If true the resulting k elements will be sorted by the values in descending order. Defaults to True.
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -1461,13 +1484,29 @@ def top_k(
         # out [2 3]
 
     """
+    name = name if name is not None else id_util.UniqueStr("TopK_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    assert 0 <= axis < num_axes, "axis out of range"
+    if axis == num_axes - 1:
+        return _top_k_at_last_dim(input, k, sorted, name)
+    else:
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
+        x = _top_k_at_last_dim(x, k, sorted, name)
+        return flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
+
+
+def _argmax_at_last_dim(
+    input: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
-        .Op("top_k")
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
+        .Op("argmax")
         .Input("in", [input])
         .Output("out")
-        .Attr("k", k)
-        .Attr("sorted", sorted)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -1476,12 +1515,13 @@ def top_k(
 
 @oneflow_export("math.argmax")
 def argmax(
-    input: remote_blob_util.BlobDef, name: Optional[str] = None
+    input: remote_blob_util.BlobDef, axis: int = -1, name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """The op computes the index with the largest value of a Blob.
+    """The op computes the index with the largest value of a Blob at specified axis.
 
     Args:
         input (remote_blob_util.BlobDef): Input Blob
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1508,15 +1548,22 @@ def argmax(
         # out [2 1]
 
     """
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
-        .Op("argmax")
-        .Input("in", [input])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    name = name if name is not None else id_util.UniqueStr("ArgMax_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    assert 0 <= axis < num_axes, "axis out of range"
+    if axis == num_axes - 1:
+        return _argmax_at_last_dim(input, name)
+    else:
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
+        x = _argmax_at_last_dim(x, name)
+        x = flow.expand_dims(x, -1, name + "_expand_dims")
+        x = flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
+        x = flow.squeeze(x, [axis], name + "_squeeze")
+        return x
 
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
