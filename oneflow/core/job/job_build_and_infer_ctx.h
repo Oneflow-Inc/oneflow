@@ -78,7 +78,7 @@ class JobBuildAndInferCtx {
                                                  int64_t parallel_id) const = 0;
   virtual bool GetIsMirroredParallelView() const = 0;
   virtual Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
-      const LogicalBlobId& lbn) = 0;
+      int64_t scope_symbol_id, const LogicalBlobId& lbn) = 0;
 
   Job* mut_job() const { return job_; }
   int64_t job_id() const { return job_id_; }
@@ -128,7 +128,8 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckAllInputsConvertableToMirroredBlob(const Operator& op) const;
   Maybe<void> AddLossConsistentBlobName(const std::string& lbn);
   Maybe<void> AddLossMirroredBlobName(const std::string& lbn);
-  Maybe<const LogicalBlobId*> GetSubLbi(const LogicalBlobId& lbi, int32_t index);
+  Maybe<const LogicalBlobId*> GetSubLbi(int64_t scope_symbol_id, const LogicalBlobId& lbi,
+                                        int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
   void InferBlobBackwardSignature(Operator* op);
   void InferBlobBackwardSignature(const Operator& op,
@@ -167,7 +168,7 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   bool GetIsMirroredParallelView() const override { return false; }
   Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
-      const LogicalBlobId& lbn) override;
+      int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
 };
 
 class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
@@ -185,7 +186,7 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   bool GetIsMirroredParallelView() const override { return true; }
   Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
-      const LogicalBlobId& lbn) override;
+      int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
 
   HashSet<std::string> executed_op_names_;
 };

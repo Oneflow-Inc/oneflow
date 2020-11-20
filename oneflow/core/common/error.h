@@ -28,6 +28,10 @@ class Error final {
   Error(const Error&) = default;
   ~Error() = default;
 
+  // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
+  // "Bar") << "invalid value"` because operator<<() need r-value reference
+  Error&& AddStackFrame(const std::string& location, const std::string& function);
+
   static Error Ok();
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
@@ -66,7 +70,8 @@ class Error final {
   static Error GradientFunctionNotFound();
 
   std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
-  ErrorProto* operator->() const { return error_proto_.get(); }
+  const ErrorProto* operator->() const { return error_proto_.get(); }
+  ErrorProto* operator->() { return error_proto_.get(); }
   operator std::string() const;
   void Assign(const Error& other) { error_proto_ = other.error_proto_; }
 
@@ -74,11 +79,17 @@ class Error final {
   std::shared_ptr<ErrorProto> error_proto_;
 };
 
+// r-value reference is used to supporting expressions like `Error() << "invalid value"`
 template<typename T>
 Error&& operator<<(Error&& error, const T& x) {
   std::ostringstream ss;
   ss << x;
-  error->set_msg(error->msg() + ss.str());
+  if (error->stack_frame().empty()) {
+    error->set_msg(error->msg() + ss.str());
+  } else {
+    auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
+    stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
+  }
   return std::move(error);
 }
 
@@ -87,9 +98,6 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   error.Assign(other);
   return std::move(error);
 }
-
-// for LOG(ERROR)
-Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error);
 
 }  // namespace oneflow
 
