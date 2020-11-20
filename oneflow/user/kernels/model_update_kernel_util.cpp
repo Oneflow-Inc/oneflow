@@ -234,4 +234,81 @@ void AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kCPU>::AdamBiasCorrect
   *out = *learning_rate * sqrt(1 - beta2_power) / (1 - beta1_power);
 }
 
+template<typename T, typename G>
+struct RmsPropUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
+                     float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model, T* mean_square, T* mean_gradient);
+};
+
+template<typename T, typename G>
+void RmsPropUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered, float epsilon,
+    float weight_decay, float decay_rate, const float* learning_rate, const T* scale_by_ptr,
+    const G* model_diff, T* model, T* mean_square, T* mean_gradient) {
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  if (centered) {
+    FOR_RANGE(int64_t, i, 0, n) {
+      RmsPropUpdateFunctor<T, G, true>()(model_diff + i, model + i, n, scale, l1, l2,
+                                         mean_square + i, mean_gradient + i, epsilon, weight_decay,
+                                         decay_rate, *learning_rate);
+    }
+  } else {
+    FOR_RANGE(int64_t, i, 0, n) {
+      RmsPropUpdateFunctor<T, G, false>()(model_diff + i, model + i, n, scale, l1, l2,
+                                          mean_square + i, nullptr, epsilon, weight_decay,
+                                          decay_rate, *learning_rate);
+    }
+  }
+}
+
+template struct RmsPropUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct RmsPropUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
+template<typename T, typename G>
+struct LarsUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
+                     float epsilon, float lars_coefficient, float weight_decay,
+                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
+                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
+};
+
+template<typename T, typename G>
+void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
+    float lars_coefficient, float weight_decay, const float* learning_rate,
+    const int64_t* train_step, const T* scale_by_ptr, const G* model_diff, T* model, T* momentum,
+    T* data_tmp, T* model_diff_tmp) {
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  T model_norm = data_tmp[0];
+  T model_diff_norm = data_tmp[1];
+  FOR_RANGE(int64_t, i, 0, n) {
+    model_diff_tmp[i] =
+        CastScaleRegularizeGradientFunctor<T, G>()(model_diff[i], model[i], scale, l1, l2);
+  }
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &model_norm);
+  KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1,
+                                       &model_diff_norm);
+
+  model_norm = std::sqrt(model_norm / n);
+  model_diff_norm = std::sqrt(model_diff_norm / n);
+  T local_learning_rate = 0;
+  if (*train_step == 0) {
+    local_learning_rate =
+        *learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm);
+  } else {
+    local_learning_rate = *learning_rate * lars_coefficient * model_norm
+                          / (epsilon + model_diff_norm + weight_decay * model_norm);
+  }
+
+  FOR_RANGE(int64_t, i, 0, n) {
+    LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
+                           local_learning_rate);
+  }
+}
+
+template struct LarsUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct LarsUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
 }  // namespace oneflow
