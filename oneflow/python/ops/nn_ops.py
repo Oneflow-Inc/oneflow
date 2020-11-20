@@ -2859,8 +2859,8 @@ def triplet_margin_loss(
             out = \sqrt[P]{\sum_{i=0}^{n}(abs(x)^P)} 
 
         Args:
-            x ([type]): [description]
-            p ([type], optional): [description]. Defaults to 2..
+            x ([type]): The input Blob. 
+            p ([type], optional): The norm degree. Defaults to 2..
         """
         # In order to avoid the `nan` case.
         _abs_val = flow.math.abs(x, name=name + "_abs")
