@@ -118,7 +118,7 @@ __global__ void UnfoldCFirstBackward(const int64_t elem_cnt,
           if (d >= 0 && h >= 0 && w >= 0 && d < in_depth && h < in_height && w < in_width) {
             const int64_t input_index = (d * in_height + h) * in_width + w;
             const int64_t output_index = out_row_index * out_cols + out_col_index;
-            input_diff[input_index] = output_diff[output_index];
+            input_diff[input_index] += output_diff[output_index];
           }
           ++out_row_index;
         }
@@ -201,7 +201,7 @@ struct UnfoldGpuKernelUtil {
 
     const T* output_diff = out_diff_blob->dptr<T>();
     T* input_diff = in_diff_blob->mut_dptr<T>();
-    cudaMemset(input_diff, T(0), out.elem_cnt() * sizeof(T));
+    cudaMemset(input_diff, T(0), in.elem_cnt() * sizeof(T));
     RUN_CUDA_KERNEL((UnfoldCFirstBackward<T>), device_ctx, out_5d.elem_cnt(), out_5d.elem_cnt(),
                     in.At(2), in.At(3), in.At(4),
                     out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
@@ -378,7 +378,6 @@ class Unfold3DGradGpuKernel final : public user_op::OpKernel {
 
 REGISTER_UNFOLD_GPU_KERNEL(float)
 REGISTER_UNFOLD_GPU_KERNEL(double)
-REGISTER_UNFOLD_GPU_KERNEL(float16)
 
 }  // namespace oneflow
 

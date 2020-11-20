@@ -194,6 +194,7 @@ REGISTER_USER_OP("unfold_3d")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .Attr<bool>("ceil_mode")
+    .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
