@@ -72,8 +72,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     const std::string& op_type_name = op.op_conf().user_conf().op_type_name();
     const auto* op_reg_result = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
     CHECK(op_reg_result != nullptr) << "op_type_name " << op_type_name << " not register";
-    if (op_reg_result->same_output_regst_num > 0) {
-      mem_block_num = op_reg_result->same_output_regst_num;
+    if (op_reg_result->same_output_regst_num_getter) {
+      user_op::UserOpConfWrapper user_op_conf(op.op_conf());
+      mem_block_num = CHECK_JUST((*op_reg_result->same_output_regst_num_getter)(user_op_conf));
     }
   }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
