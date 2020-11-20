@@ -877,16 +877,51 @@ class NaturalExpScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+class LossScalePolicy:
+    def SetLossScaleFieldsInTrainConf(self, train_conf):
+        raise NotImplementedError()
+
+
+@oneflow_export("optimizer.loss_scale.static_loss_scale")
+class StaticLossScalePolicy(LossScalePolicy):
+    def __init__(self, loss_scale_factor: float):
+        self.loss_scale_factor = loss_scale_factor
+
+    def SetLossScaleFieldsInTrainConf(self, train_conf):
+        train_conf.loss_scale_factor = self.loss_scale_factor
+
+
+@oneflow_export("optimizer.loss_scale.dynamic_loss_scale")
+class DynamicLossScalePolicy(LossScalePolicy):
+    def __init__(
+        self, initial_loss_scale=(2 ** 15), increment_period=2000, multiplier=2.0
+    ):
+        self.initial_loss_scale = initial_loss_scale
+        self.increment_period = increment_period
+        self.multiplier = multiplier
+
+    def SetLossScaleFieldsInTrainConf(self, train_conf):
+        train_conf.dynamic_loss_scale_policy.initial_loss_scale = (
+            self.initial_loss_scale
+        )
+        train_conf.dynamic_loss_scale_policy.increment_period = self.increment_period
+        train_conf.dynamic_loss_scale_policy.multiplier = self.multiplier
+
+
 class Optimizer:
     def __init__(
         self,
         lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[int] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
     ):
+        if loss_scale_factor is not None:
+            assert loss_scale_policy is None
+            self.loss_scale_policy = StaticLossScalePolicy(loss_scale_factor)
+        self.loss_scale_policy = loss_scale_policy
         self.lr_scheduler = lr_scheduler
-        self.loss_scale_factor = loss_scale_factor
         self.grad_clipping = grad_clipping
         self.train_step_lbn = train_step_lbn
 
@@ -902,8 +937,8 @@ class Optimizer:
             update_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
         if self.train_step_lbn is not None:
             train_conf.train_step_lbn = self.train_step_lbn
-        if self.loss_scale_factor is not None:
-            update_conf.loss_scale_factor = self.loss_scale_factor
+        if self.loss_scale_policy is not None:
+            self.loss_scale_policy.SetLossScaleFieldsInTrainConf(train_conf)
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
