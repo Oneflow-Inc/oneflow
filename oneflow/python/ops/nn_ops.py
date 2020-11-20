@@ -2759,9 +2759,9 @@ def triplet_margin_loss(
     positive: remote_blob_util.BlobDef,
     negative: remote_blob_util.BlobDef,
     margin: float = 1.0,
-    p: float = 2.0, 
-    eps: float=1e-6, 
-    swap: bool=False, 
+    p: float = 2.0,
+    eps: float = 1e-6,
+    swap: bool = False,
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -2842,12 +2842,14 @@ def triplet_margin_loss(
         reduction
     )
 
-    assert swap == False, "For now we only support `swap=True`, OneFlow still have backward error in minimum"
+    assert (
+        swap == False
+    ), "For now we only support `swap=True`, OneFlow still have backward error in minimum"
 
     if name is None:
         name = "TripletMarginLoss_"
 
-    def _p_norm(x, p=2.0, name="p_norm"): 
+    def _p_norm(x, p=2.0, name="p_norm"):
         r"""Compute the p-norm 
 
         The equation is: 
@@ -2860,27 +2862,36 @@ def triplet_margin_loss(
             x ([type]): [description]
             p ([type], optional): [description]. Defaults to 2..
         """
-        # In order to avoid the `nan` case. 
-        _abs_val = flow.math.abs(x, name=name+"_abs")
-        
-        if p == 2.0: 
+        # In order to avoid the `nan` case.
+        _abs_val = flow.math.abs(x, name=name + "_abs")
+
+        if p == 2.0:
             # Use Square to compute the p2-norm
-            _norm = flow.math.square(_abs_val, name=name+"_square")
-            _norm = flow.math.reduce_sum(_norm, axis=-1, name=name+"_sum")
-            _norm_val = flow.math.sqrt(_norm, name=name+"_sqrt")
-        else: 
-            _p_constant = flow.constant_like(like=_abs_val, value=p, dtype=flow.float32, name=name+"_p_constant")
-            _norm = flow.math.pow(_abs_val, _p_constant, name=name+"_pow1")
-            _norm = flow.math.reduce_sum(_norm, axis=-1, name=name+"_sum")
-            _p_reciprocal_constant = flow.constant_like(like=_norm, value=1.0/p, dtype=flow.float32, name=name+"_p_reciprocal_constant")
-            _norm_val = flow.math.pow(_norm, _p_reciprocal_constant, name=name+"_norm_val")
-            
+            _norm = flow.math.square(_abs_val, name=name + "_square")
+            _norm = flow.math.reduce_sum(_norm, axis=-1, name=name + "_sum")
+            _norm_val = flow.math.sqrt(_norm, name=name + "_sqrt")
+        else:
+            _p_constant = flow.constant_like(
+                like=_abs_val, value=p, dtype=flow.float32, name=name + "_p_constant"
+            )
+            _norm = flow.math.pow(_abs_val, _p_constant, name=name + "_pow1")
+            _norm = flow.math.reduce_sum(_norm, axis=-1, name=name + "_sum")
+            _p_reciprocal_constant = flow.constant_like(
+                like=_norm,
+                value=1.0 / p,
+                dtype=flow.float32,
+                name=name + "_p_reciprocal_constant",
+            )
+            _norm_val = flow.math.pow(
+                _norm, _p_reciprocal_constant, name=name + "_norm_val"
+            )
+
         return _norm_val
 
     # Compute the distance
 
-    _distance_1 = _p_norm(anchor - positive + eps, p=p, name=name+"_distance_1")
-    _distance_2 = _p_norm(anchor - negative + eps, p=p, name=name+"_distance_2")
+    _distance_1 = _p_norm(anchor - positive + eps, p=p, name=name + "_distance_1")
+    _distance_2 = _p_norm(anchor - negative + eps, p=p, name=name + "_distance_2")
 
     if swap:
         _distance_swap = _p_norm(positive - negative + eps, p=p)
@@ -2891,8 +2902,8 @@ def triplet_margin_loss(
     _triplet_loss = flow.clip(margin + _distance_1 - _distance_2, min_value=0.0)
 
     if reduction == "mean":
-        return flow.math.reduce_mean(_triplet_loss, name=name+"_reduce_mean")
+        return flow.math.reduce_mean(_triplet_loss, name=name + "_reduce_mean")
     elif reduction == "sum":
-        return flow.math.reduce_sum(_triplet_loss, name=name+"_reduce_sum")
+        return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
     else:
         return _triplet_loss

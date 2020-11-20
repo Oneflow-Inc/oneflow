@@ -28,8 +28,8 @@ def _compare_triplet_margin_loss_with_np(
     pos_shape,
     neg_shape,
     margin,
-    p, 
-    swap, 
+    p,
+    swap,
     device_type,
     machine_ids,
     device_counts,
@@ -49,17 +49,17 @@ def _compare_triplet_margin_loss_with_np(
     func_config = flow.FunctionConfig()
 
     def np_triplet_margin_loss(np_anchor, np_pos, np_neg, np_margin, np_p, swap):
-        np_d_1_norm = np.power(np.abs((np_anchor-np_pos+1e-6)), np_p)
-        np_d_2_norm = np.power(np.abs((np_anchor-np_neg+1e-6)), np_p)
+        np_d_1_norm = np.power(np.abs((np_anchor - np_pos + 1e-6)), np_p)
+        np_d_2_norm = np.power(np.abs((np_anchor - np_neg + 1e-6)), np_p)
 
-        np_d_1 = np.power(np.sum(np_d_1_norm, axis=-1), 1./p)
-        np_d_2 = np.power(np.sum(np_d_2_norm, axis=-1), 1./p)
+        np_d_1 = np.power(np.sum(np_d_1_norm, axis=-1), 1.0 / p)
+        np_d_2 = np.power(np.sum(np_d_2_norm, axis=-1), 1.0 / p)
 
         if swap:
-            np_dist_swap = np.power(np.abs((np_pos-np_neg+1e-6)), p)
-            np_dist_swap = np.power(np.sum(np_dist_swap, axis=-1), 1./p)
+            np_dist_swap = np.power(np.abs((np_pos - np_neg + 1e-6)), p)
+            np_dist_swap = np.power(np.sum(np_dist_swap, axis=-1), 1.0 / p)
             np_d_2 = np.minimum(np_d_2, np_dist_swap)
-        
+
         np_triplet_margin_loss = np.maximum((margin + np_d_1 - np_d_2), 0)
         np_triplet_margin_loss_mean = np.mean(np_triplet_margin_loss)
         np_triplet_margin_loss_sum = np.sum(np_triplet_margin_loss)
@@ -73,35 +73,34 @@ def _compare_triplet_margin_loss_with_np(
     np_out_tripletloss_dict = np_triplet_margin_loss(anchor, pos, neg, margin, p, swap)
 
     def np_triplet_loss_diff(anchor, pos, neg, margin, p):
-
-        def _compute_distance(x1, x2, x3): 
-            d_1_norm = np.power(np.abs((x1-x2+1e-6)), p)
-            d_2_norm = np.power(np.abs((x1-x3+1e-6)), p)
-            d_1 = np.power(np.sum(d_1_norm, axis=-1), 1./p)
-            d_2 = np.power(np.sum(d_2_norm, axis=-1), 1./p)
+        def _compute_distance(x1, x2, x3):
+            d_1_norm = np.power(np.abs((x1 - x2 + 1e-6)), p)
+            d_2_norm = np.power(np.abs((x1 - x3 + 1e-6)), p)
+            d_1 = np.power(np.sum(d_1_norm, axis=-1), 1.0 / p)
+            d_2 = np.power(np.sum(d_2_norm, axis=-1), 1.0 / p)
 
             return d_1 - d_2 + margin
 
-        def _compute_per_diff(x1, x2, p, eps=1e-6): 
+        def _compute_per_diff(x1, x2, p, eps=1e-6):
             # Add epsilon to avoid divided by zero
-            sum_val = np.sum(np.power((x1-x2+eps), p), axis=1, keepdims=True)
+            sum_val = np.sum(np.power((x1 - x2 + eps), p), axis=1, keepdims=True)
             # Add epsilon to avoid divided by zero
-            sqrt_sum_val = np.power(sum_val+eps, -1.0/p)
-            grad = np.multiply(sqrt_sum_val, (x1-x2))
+            sqrt_sum_val = np.power(sum_val + eps, -1.0 / p)
+            grad = np.multiply(sqrt_sum_val, (x1 - x2))
             # We compute the reduction = "mean" grad
             return grad / x1.shape[0]
 
         d = _compute_distance(anchor, pos, neg)
         # Because We use max(x, 0), the value less than 0, the corresponding grad is 0
         # So Here we compute the index that its grad need to be place to 0
-        zero_index = np.where(d<-1e-6)
+        zero_index = np.where(d < -1e-6)
 
         anchor_grad_1 = _compute_per_diff(anchor, pos, p)
         anchor_grad_2 = _compute_per_diff(anchor, neg, p)
 
         total_grad = anchor_grad_1 - anchor_grad_2
-        
-        for i in zero_index: 
+
+        for i in zero_index:
             total_grad[i] = 0
 
         grad_dict = {
@@ -110,9 +109,7 @@ def _compare_triplet_margin_loss_with_np(
 
         return grad_dict
 
-    np_grad_dict = np_triplet_loss_diff(
-        anchor, pos, neg, margin, p
-    )
+    np_grad_dict = np_triplet_loss_diff(anchor, pos, neg, margin, p)
 
     def assert_prediction_grad(blob: tp.Numpy):
         # Evaluate the gradient
@@ -142,8 +139,8 @@ def _compare_triplet_margin_loss_with_np(
             of_pos,
             of_neg,
             margin=margin,
-            p=p, 
-            swap=swap, 
+            p=p,
+            swap=swap,
             reduction="none",
             name="of_tripletmarginloss",
         )
@@ -152,8 +149,8 @@ def _compare_triplet_margin_loss_with_np(
             of_pos,
             of_neg,
             margin=margin,
-            p=p, 
-            swap=swap, 
+            p=p,
+            swap=swap,
             reduction="mean",
             name="of_tripletmarginloss_mean",
         )
@@ -162,8 +159,8 @@ def _compare_triplet_margin_loss_with_np(
             of_pos,
             of_neg,
             margin=margin,
-            p=p, 
-            swap=swap, 
+            p=p,
+            swap=swap,
             reduction="sum",
             name="of_tripletmarginloss_sum",
         )
@@ -216,9 +213,9 @@ class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_triplet_margin_loss_cpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 3),
-            margin=1, 
-            p=2.0, 
-            swap=False, 
+            margin=1,
+            p=2.0,
+            swap=False,
             device_type="cpu",
             machine_ids="0:0",
             device_counts=1,
@@ -231,9 +228,9 @@ class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_margin_ranking_loss_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 6),
-            margin=1, 
-            p=2.0, 
-            swap=False, 
+            margin=1,
+            p=2.0,
+            swap=False,
             device_type="gpu",
             machine_ids="0:0",
             device_counts=1,
@@ -248,9 +245,9 @@ class Testmarginloss1n2d(flow.unittest.TestCase):
     def test_margin_ranking_loss_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(6, 6),
-            margin=1, 
-            p=2.0, 
-            swap=False, 
+            margin=1,
+            p=2.0,
+            swap=False,
             device_type="gpu",
             machine_ids="0:0-1",
             device_counts=2,
