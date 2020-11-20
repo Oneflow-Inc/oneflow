@@ -30,8 +30,8 @@ class PyForeignCallback : public ForeignCallback {
   using ForeignCallback::ForeignCallback;
 
   // Trampoline (need one for each virtual function)
-  void EagerMirroredCast(std::shared_ptr<cfg::OpAttribute> op_attribute,
-                         std::shared_ptr<cfg::ParallelConf> parallel_conf) const override {
+  void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+                         const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
     PYBIND11_OVERRIDE(void,              /* Return type */
                       ForeignCallback,   /* Parent class */
                       EagerMirroredCast, /* Name of function in C++ (must match Python name) */
@@ -39,8 +39,9 @@ class PyForeignCallback : public ForeignCallback {
     );
   }
 
-  void EagerInterpretCompletedOp(std::shared_ptr<cfg::OpAttribute> op_attribute,
-                                 std::shared_ptr<cfg::ParallelConf> parallel_conf) const override {
+  void EagerInterpretCompletedOp(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
     PYBIND11_OVERRIDE(void, ForeignCallback, EagerInterpretCompletedOp, op_attribute,
                       parallel_conf);
   }
@@ -53,14 +54,15 @@ class PyForeignCallback : public ForeignCallback {
     PYBIND11_OVERRIDE(void, ForeignCallback, RemoveForeignCallback, unique_id);
   }
 
-  int64_t MakeScopeSymbol(std::shared_ptr<cfg::JobConfigProto> job_conf,
-                          std::shared_ptr<cfg::ParallelConf> parallel_conf,
+  int64_t MakeScopeSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                          const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
                           bool is_mirrored) const override {
     PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeScopeSymbol, job_conf, parallel_conf,
                       is_mirrored);
   }
 
-  int64_t MakeParallelDescSymbol(std::shared_ptr<cfg::ParallelConf> parallel_conf) const override {
+  int64_t MakeParallelDescSymbol(
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
     PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeParallelDescSymbol, parallel_conf);
   }
 };

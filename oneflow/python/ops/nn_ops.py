@@ -2646,3 +2646,120 @@ def leaky_relu(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.L1Loss")
+def l1_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the L1 Loss between each element in `input` and `target`. 
+
+    The equation is: 
+
+    if reduction = "none": 
+    
+    .. math:: 
+
+        output = |Target - Input|
+
+    if reduction = "mean": 
+    
+    .. math:: 
+
+        output = \frac{1}{n}\sum_{i=1}^n|Target_i - Input_i|
+
+    if reduction = "sum": 
+    
+    .. math:: 
+
+        output = \sum_{i=1}^n|Target_i - Input_i|
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob.  
+        target (remote_blob_util.BlobDef): The target value. 
+        reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, reduction="mean", name="l1")
+
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [2.6666667]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, reduction="sum", name="l1")
+
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [24.]
+
+    """
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = "L1Loss"
+
+    l1_value = flow.math.abs(
+        flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
+    )
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(l1_value, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(l1_value, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return l1_value
