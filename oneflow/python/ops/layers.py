@@ -42,7 +42,7 @@ def dense(
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""Fully-connected layer. 
-    
+
     The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
 
     Args:
@@ -65,7 +65,7 @@ def dense(
         ValueError: The dimension of input `Blob` must be less than 2.
         VauleError: Model distribute must be in auto, broadcast, split.
         ValueError: The input must be a 2D `Blob` when the model distribute is split.
-    
+
     For example: 
 
     .. code-block:: python 
@@ -181,7 +181,7 @@ def conv1d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""1D convolution layer. 
-    
+
     This layer computes a 1-D convolution with 3D input Blob and filters. 
 
     Args:
@@ -214,7 +214,7 @@ def conv1d(
 
     Returns:
         remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).
-    
+
     For example: 
 
     .. code-block:: python 
@@ -375,7 +375,7 @@ def conv2d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""2D convolution layer. 
-    
+
     This layer computes a 2D convolution with 4D input Blob and filters. 
 
     Args:
@@ -410,7 +410,7 @@ def conv2d(
 
     Returns:
         remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
-    
+
     For example: 
 
     .. code-block:: python 
@@ -572,7 +572,7 @@ def conv3d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""3D convolution layer. 
-    
+
     This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
@@ -607,7 +607,7 @@ def conv3d(
 
     Returns:
         remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
-    
+
     For example: 
 
     .. code-block:: python 
@@ -1067,9 +1067,9 @@ def batch_normalization(
     name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
     r"""The BatchNormalization Layer. 
-    
+
     This layer can be used in conv or dense layer.
-    
+
     The input data will be normalized by the mean and variance of the current batch data
 
     Args:
@@ -1423,7 +1423,7 @@ def upsample(
 
     Returns:
         [type]: remote_blob_util.BlobDef:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
-    
+
     For example: 
 
     .. code-block:: python 
