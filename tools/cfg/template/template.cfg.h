@@ -205,10 +205,14 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
    protected:
     void clear_{{util.oneof_name(oneof)}}();
     void {{util.oneof_name(oneof)}}_copy_from(const _{{ util.class_name(cls) }}_& other);
-    struct {{ util.oneof_camel_name(oneof) }}Struct {
+    union {{ util.oneof_camel_name(oneof) }}Union {
+      // 64-bit aligned
+      uint64_t __{{util.oneof_name(oneof)}}_for_padding_64bit__;
   {% for field in util.oneof_type_fields(oneof) %}
   {% if util.field_is_message_type(field) %}
-      ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> {{ util.field_name(field) }}_;
+      char {{ util.field_name(field) }}_[sizeof(::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}>)];
+  {% elif util.field_is_string_type(field) %}
+      char {{ util.field_name(field) }}_[sizeof(::std::string)];
   {% else %}
       {{ util.field_scalar_type_name(field) }} {{ util.field_name(field) }}_;
   {% endif %}{# field message type #}
