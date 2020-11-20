@@ -84,7 +84,7 @@ class JobDesc final {
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;
-  int32_t loss_scale_factor() const;
+  float loss_scale_factor() const;
 
  private:
   void Init();

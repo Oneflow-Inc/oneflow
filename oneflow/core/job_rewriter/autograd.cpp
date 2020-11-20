@@ -141,8 +141,8 @@ void GenerateOriginDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
   constant_like_conf->set_like(GenLogicalBlobName(lbi));
   constant_like_conf->set_out("out");
   {
-    int32_t origin_grad = GlobalJobDesc().loss_scale_factor();
-    constant_like_conf->set_int_operand(origin_grad);
+    float origin_grad = GlobalJobDesc().loss_scale_factor();
+    constant_like_conf->set_float_operand(origin_grad);
   }
   op_confs->push_back(constant_like_op);
   out_diff_lbi->set_op_name(constant_like_op.name());
@@ -712,7 +712,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
 
 void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
-  const int32_t loss_scale_factor = GlobalJobDesc().loss_scale_factor();
+  const float loss_scale_factor = GlobalJobDesc().loss_scale_factor();
   if (loss_scale_factor == 1) { return; }
   const float down_scale_factor = 1.0f / loss_scale_factor;
   for (auto& pair : *lbi2diff_lbi) {
