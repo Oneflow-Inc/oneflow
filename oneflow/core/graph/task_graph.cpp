@@ -343,12 +343,16 @@ void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
 
 void TaskGraph::SetOrderInGraphForEachNode() {
   int64_t order_in_graph = 0;
+  auto SetOrderInGraph = [&](TaskNode* task_node) {
+    task_node->set_order_in_graph(order_in_graph);
+    ordered_task_nodes_.emplace_back(task_node);
+    ++order_in_graph;
+  };
+  /*
   DfsTopoForEachNodeSortByDistanceToSink(source_nodes(), &TaskNode::ForEachNodeOnInEdge,
-                                         &TaskNode::ForEachNodeOnOutEdge, [&](TaskNode* task_node) {
-                                           task_node->set_order_in_graph(order_in_graph);
-                                           ordered_task_nodes_.emplace_back(task_node);
-                                           ++order_in_graph;
-                                         });
+                                         &TaskNode::ForEachNodeOnOutEdge, SetOrderInGraph);
+                                         */
+  AcyclicTopoForEachNode(SetOrderInGraph);
 }
 
 void TaskGraph::MergeChain() {
