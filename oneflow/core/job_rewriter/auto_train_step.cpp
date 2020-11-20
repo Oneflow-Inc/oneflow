@@ -85,30 +85,17 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
   job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf()});
   if (train_conf.has_dynamic_loss_scale_policy()) {
-    auto condition_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-Condition")
-                            .Op("constant")
-                            .Output("out")
-                            .Attr<double>("floating_value", 0.0)
-                            .Attr<int64_t>("integer_value", 0)
-                            .Attr<bool>("is_floating_value", false)
-                            .Attr<DataType>("dtype", DataType::kInt64)
-                            .Attr<Shape>("shape", Shape({1}))
-                            .ScopeSymbolId(scope_symbol_id)
-                            .Build();
+    const auto& state =
+        JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     auto assign_op =
         user_op::UserOpConfWrapperBuilder(train_step_name + "-AssignIfNot")
             .Op("assign_if_not")
             .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
             .Input("value", scalar_add_op.output("out", 0))
-            .Input("condition", condition_op.output("out", 0))
+            .Input("condition", state.count_not_finite_lbn())
             .ScopeSymbolId(scope_symbol_id)
             .Build();
-    job_builder.AddOps(parallel_conf, {condition_op.op_conf(), assign_op.op_conf()});
-    if (!JUST(ctx->HasState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))) {
-      ctx->ResetState("dynamic_loss_scale_state", std::make_unique<DynamicLossScaleJobPassState>());
-    }
-    auto state = JUST(ctx->MutableState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
-    state->set_train_step_assign_condition(condition_op.op_name());
+    job_builder.AddOps(parallel_conf, {assign_op.op_conf()});
   } else {
     auto assign_op =
         user_op::UserOpConfWrapperBuilder(train_step_name + "-Assign")

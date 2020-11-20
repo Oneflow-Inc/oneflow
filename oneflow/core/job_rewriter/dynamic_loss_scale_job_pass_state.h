@@ -26,13 +26,15 @@ class DynamicLossScaleJobPassState : public JobPassState {
   DynamicLossScaleJobPassState() = default;
   ~DynamicLossScaleJobPassState() override = default;
 
-  const std::string& train_step_assign_condition() const { return train_step_assign_condition_; }
-  void set_train_step_assign_condition(const std::string& op_name) {
-    train_step_assign_condition_ = op_name;
-  }
+  const std::string& count_not_finite_lbn() const { return count_not_finite_lbn_; }
+  void set_count_not_finite_lbn(const std::string& lbn) { count_not_finite_lbn_ = lbn; }
+
+  const std::string& loss_scale_val_lbn() const { return loss_scale_val_lbn_; }
+  void set_loss_scale_val_lbn(const std::string& lbn) { loss_scale_val_lbn_ = lbn; }
 
  private:
-  std::string train_step_assign_condition_;
+  std::string count_not_finite_lbn_;
+  std::string loss_scale_val_lbn_;
 };
 
 }  // namespace oneflow
