@@ -180,6 +180,7 @@ void GenMemChainTasksAndRegsts(
       CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
       return lhs_order_in_graph < rhs_order_in_graph;
     });
+    /* NOTE(chengcheng): Try NOT merge will improve speedup
     // merge
     for (MemoryChain* mem_chain : mem_chains) {
       if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
@@ -187,6 +188,8 @@ void GenMemChainTasksAndRegsts(
       }
     }
     for (MemoryChain* merged_chain : merged_chains) {
+    */
+    for (MemoryChain* merged_chain : mem_chains) {
       std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);
       CHECK(sorted_tasks->empty());
       sorted_tasks->insert(sorted_tasks->end(), merged_chain->sorted_tasks.begin(),
