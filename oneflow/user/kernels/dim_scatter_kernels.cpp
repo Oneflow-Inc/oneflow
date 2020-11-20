@@ -13,17 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
 #include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class ScatterDimKernel final : public user_op::OpKernel {
+class DimScatterBaseKernel: public user_op::OpKernel {
  public:
-  ScatterDimKernel() = default;
-  ~ScatterDimKernel() override = default;
-
+  DimScatterBaseKernel() = default;
+  ~DimScatterBaseKernel() override = default;
+  virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
+                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) const{
+    UNIMPLEMENTED();
+  }
  private:
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
@@ -49,9 +54,31 @@ class ScatterDimKernel final : public user_op::OpKernel {
     shape2dims(out_tensor->shape());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
-    DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
+    BinaryOp(
         ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim,
         input_tensor->shape().elem_cnt(), dim, index, src, output);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<DeviceType device_type, typename IN_T, typename IDX_T>
+class ScatterDimKernel final : public DimScatterBaseKernel<device_type, IN_T, IDX_T> {
+ public:
+  ScatterDimKernel() = default;
+  ~ScatterDimKernel() override = default;
+
+ private:
+  void BinaryOp(DeviceCtx* ctx, 
+                const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                const DimOpIndexNdHelper<IDX_T>& output_nd_helper, 
+                int ndim, int64_t elem_cnt,
+                int32_t dim, 
+                const IDX_T* index, 
+                const IN_T* src, 
+                IN_T* output) const override{
+        DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
+        ctx, input_nd_helper, output_nd_helper, ndim,
+        elem_cnt, dim, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
