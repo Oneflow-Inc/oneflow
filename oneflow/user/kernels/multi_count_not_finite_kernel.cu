@@ -53,6 +53,13 @@ __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
   if (threadIdx.x == 0) { AtomicAdd(param.y, block_count_sum); }
 }
 
+constexpr int64_t kMultiCountNotFiniteNumBlocks = 512;
+
+int GetMultiCountNotFiniteNumBlocks(const int64_t elem_cnt) {
+  return std::min((elem_cnt + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  kMultiCountNotFiniteNumBlocks);
+}
+
 }  // namespace
 
 template<typename T>
@@ -88,8 +95,9 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
         para.x_elem_cnt[i] = x->shape().elem_cnt();
         max_elem_cnt = std::max(max_elem_cnt, x->shape().elem_cnt());
       }
-      MultiCountNotFiniteGpu<T, 128><<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock,
-                                       0, ctx->device_ctx()->cuda_stream()>>>(para);
+      MultiCountNotFiniteGpu<T, 128>
+          <<<GetMultiCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
+             ctx->device_ctx()->cuda_stream()>>>(para);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
