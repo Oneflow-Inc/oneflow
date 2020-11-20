@@ -50,9 +50,9 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
         Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
   }
   OperatorConf loss_scale_var_op_conf{};
+  const std::string op_name_prefix = "System-Train-DynamicLossScale-";
   {
-    loss_scale_var_op_conf.set_name("System-Train-DynamicLossScale-" + job->job_conf().job_name()
-                                    + "-LossScale");
+    loss_scale_var_op_conf.set_name(op_name_prefix + job->job_conf().job_name() + "-LossScale");
     VariableOpConf* variable_conf = loss_scale_var_op_conf.mutable_variable_conf();
     variable_conf->set_out("out");
     *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
@@ -64,8 +64,8 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
   }
   OperatorConf good_step_counter_var_conf{};
   {
-    good_step_counter_var_conf.set_name("System-Train-DynamicLossScale-"
-                                        + job->job_conf().job_name() + "-GoodStepCounter");
+    good_step_counter_var_conf.set_name(op_name_prefix + job->job_conf().job_name()
+                                        + "-GoodStepCounter");
     VariableOpConf* variable_conf = good_step_counter_var_conf.mutable_variable_conf();
     variable_conf->set_out("out");
     *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
@@ -83,8 +83,8 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     identity_conf->set_out("out");
   }
   auto dummy_count_not_finite_op =
-      user_op::UserOpConfWrapperBuilder("System-Train-DynamicLossScale-"
-                                        + job->job_conf().job_name() + "-CountNotFinite")
+      user_op::UserOpConfWrapperBuilder(op_name_prefix + job->job_conf().job_name()
+                                        + "-CountNotFinite")
           .Op("constant")
           .Output("out")
           .Attr<double>("floating_value", 0.0)
@@ -95,8 +95,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   auto schedule =
-      user_op::UserOpConfWrapperBuilder("System-Train-DynamicLossScale-"
-                                        + job->job_conf().job_name() + "-Schedule")
+      user_op::UserOpConfWrapperBuilder(op_name_prefix + job->job_conf().job_name() + "-Schedule")
           .Op("dynamic_loss_scale_schedule")
           .Input("count_not_finite", dummy_count_not_finite_op.output("out", 0))
           .Input("loss_scale", GenLogicalBlobName(loss_scale_val_op_conf.name(),
