@@ -423,4 +423,164 @@ void AdamBiasCorrectionLearningRateKernelUtil<DeviceType::kGPU>::AdamBiasCorrect
                                                                      train_step, out);
 }
 
+namespace {
+
+template<typename T, typename G, bool centered>
+__global__ void RmsPropUpdateGpu(int64_t n, T scale, float l1, float l2, T* mean_square,
+                                 T* mean_gradient, float epsilon, float weight_decay,
+                                 float decay_rate, const float* learning_rate,
+                                 const T* scale_by_ptr, const G* model_diff, T* model) {
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    RmsPropUpdateFunctor<T, G, centered>()(model_diff + i, model + i, n, scale, l1, l2,
+                                           mean_square + i,
+                                           (centered ? mean_gradient + i : nullptr), epsilon,
+                                           weight_decay, decay_rate, *learning_rate);
+  }
+}
+
+}  // namespace
+
+template<typename T, typename G>
+struct RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
+                     float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
+                     T* model, T* mean_square, T* mean_gradient);
+};
+
+template<typename T, typename G>
+void RmsPropUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered, float epsilon,
+    float weight_decay, float decay_rate, const float* learning_rate, const T* scale_by_ptr,
+    const G* model_diff, T* model, T* mean_square, T* mean_gradient) {
+  if (centered) {
+    RmsPropUpdateGpu<T, G, true>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            n, scale, l1, l2, mean_square, mean_gradient, epsilon, weight_decay, decay_rate,
+            learning_rate, scale_by_ptr, model_diff, model);
+  } else {
+    RmsPropUpdateGpu<T, G, false>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            n, scale, l1, l2, mean_square, mean_gradient, epsilon, weight_decay, decay_rate,
+            learning_rate, scale_by_ptr, model_diff, model);
+  }
+}
+
+template<typename T>
+struct RmsPropUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
+                     float epsilon, float weight_decay, float decay_rate,
+                     const float* learning_rate, const T* scale_by_ptr, const float16* model_diff,
+                     T* model, T* mean_square, T* mean_gradient);
+};
+
+template<typename T>
+void RmsPropUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered, float epsilon,
+    float weight_decay, float decay_rate, const float* learning_rate, const T* scale_by_ptr,
+    const float16* model_diff, T* model, T* mean_square, T* mean_gradient) {
+  RmsPropUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+      ctx, n, scale, l1, l2, centered, epsilon, weight_decay, decay_rate, learning_rate,
+      scale_by_ptr, reinterpret_cast<const half*>(model_diff), model, mean_square, mean_gradient);
+}
+
+template struct RmsPropUpdateKernelUtil<DeviceType::kGPU, float, float>;
+template struct RmsPropUpdateKernelUtil<DeviceType::kGPU, double, double>;
+template struct RmsPropUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+
+namespace {
+
+template<typename T, typename G>
+__global__ void LarsScaleModelDiffGpu(int64_t n, T scale, float l1, float l2, const T* scale_by_ptr,
+                                      const G* model_diff, T* model, T* model_diff_tmp) {
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    model_diff_tmp[i] =
+        CastScaleRegularizeGradientFunctor<T, G>()(model_diff[i], model[i], scale, l1, l2);
+  }
+}
+
+template<typename T>
+__global__ void LarsGetLocalLearningRateGpu(const float* learning_rate, T weight_decay, T epsilon,
+                                            T lars_coefficient, const int64_t* train_step,
+                                            T* data_tmp) {
+  T* model_norm = &data_tmp[0];
+  T* model_diff_norm = &data_tmp[1];
+  T* local_learning_rate = &data_tmp[2];
+  *model_norm = std::sqrt(*model_norm);
+  *model_diff_norm = std::sqrt(*model_diff_norm);
+  if (*train_step == 0) {
+    *local_learning_rate =
+        *learning_rate * lars_coefficient * (*model_norm) / (epsilon + (*model_diff_norm));
+  } else {
+    *local_learning_rate = *learning_rate * lars_coefficient * (*model_norm)
+                           / (epsilon + (*model_diff_norm) + weight_decay * (*model_diff_norm));
+  }
+}
+
+template<typename T>
+__global__ void LarsUpdateGpu(int64_t n, float momentum_beta, T* momentum, float weight_decay,
+                              T* local_learning_rate, T* model_diff_tmp, T* model) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
+                           *local_learning_rate);
+  }
+}
+}  // namespace
+
+template<typename T, typename G>
+struct LarsUpdateKernelUtil<DeviceType::kGPU, T, G> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
+                     float epsilon, float lars_coefficient, float weight_decay,
+                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
+                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
+};
+
+template<typename T, typename G>
+void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
+    float lars_coefficient, float weight_decay, const float* learning_rate,
+    const int64_t* train_step, const T* scale_by_ptr, const G* model_diff, T* model, T* momentum,
+    T* data_tmp, T* model_diff_tmp) {
+  LarsScaleModelDiffGpu<T, G>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, l1, l2, scale_by_ptr, model_diff, model, model_diff_tmp);
+  T* model_norm = data_tmp;
+  T* model_diff_norm = data_tmp + 1;
+  T* local_learning_rate = data_tmp + 2;
+  KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, model_norm);
+  KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1,
+                                       model_diff_norm);
+  LarsGetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
+      learning_rate, weight_decay, epsilon, lars_coefficient, train_step, data_tmp);
+  LarsUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, momentum_beta, momentum, weight_decay, local_learning_rate, model_diff_tmp, model);
+}
+
+template<typename T>
+struct LarsUpdateKernelUtil<DeviceType::kGPU, T, float16> {
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
+                     float epsilon, float lars_coefficient, float weight_decay,
+                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
+                     const float16* model_diff, T* model, T* momentum, T* data_tmp,
+                     T* model_diff_tmp);
+};
+
+template<typename T>
+void LarsUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
+    float lars_coefficient, float weight_decay, const float* learning_rate,
+    const int64_t* train_step, const T* scale_by_ptr, const float16* model_diff, T* model,
+    T* momentum, T* data_tmp, T* model_diff_tmp) {
+  LarsUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
+      ctx, n, scale, l1, l2, momentum_beta, epsilon, lars_coefficient, weight_decay, learning_rate,
+      train_step, scale_by_ptr, reinterpret_cast<const half*>(model_diff), model, momentum,
+      data_tmp, model_diff_tmp);
+}
+
+template struct LarsUpdateKernelUtil<DeviceType::kGPU, float, float>;
+template struct LarsUpdateKernelUtil<DeviceType::kGPU, double, double>;
+template struct LarsUpdateKernelUtil<DeviceType::kGPU, float, float16>;
+
 }  // namespace oneflow
