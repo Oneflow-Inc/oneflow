@@ -15,7 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+from oneflow.python.oneflow_export import oneflow_export
 
+
+@oneflow_export("util.unique_str")
 def UniqueStr(prefix):
     return "%s%d" % (prefix, UniqueId())
 

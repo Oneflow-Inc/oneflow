@@ -34,7 +34,7 @@ class TestResourceDescScope final {
  public:
   TestResourceDescScope(const TestResourceDescScope&) = delete;
   TestResourceDescScope(TestResourceDescScope&&) = delete;
-  TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num, int64_t machine_id);
+  TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num, int64_t machine_num);
   TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num)
       : TestResourceDescScope(gpu_device_num, cpu_device_num, 1) {}
   ~TestResourceDescScope();
