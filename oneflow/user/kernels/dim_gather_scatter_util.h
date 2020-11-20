@@ -51,8 +51,10 @@ using BinaryOpFn = void (*)(const T* x, T* y);
 // 4. Implement functors in dim_scatter_kernel_util.cu and cpp file:
 //    in .cu file:
 //      IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Mul);
+//      INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Mul);
 //    in .cpp file:
 //      IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Mul);
+//      INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(Mul);
 //
 
 template<typename T>

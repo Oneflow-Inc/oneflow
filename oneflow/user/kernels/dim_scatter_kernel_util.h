@@ -39,12 +39,28 @@ OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& input_nd_
   }
 }
 
-#define INSTANTIATE_DIM_SCATTER_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)  \
-  template struct DimScatterAddFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                       OF_PP_PAIR_FIRST(itype_pair)>;
-#define INSTANTIATE_DIM_SCATTER_UPDATE_FUNCTOR(device_type_v, dtype_pair, itype_pair)  \
-  template struct DimScatterUpdateFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                          OF_PP_PAIR_FIRST(itype_pair)>;
+#define INSTANTIATE_DIM_SCATTER_FUNCTOR(devicetype, dtype, itype, binop) \
+  template struct DimScatter##binop##Functor<devicetype, dtype, itype>;
+
+#define INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(binop)                           \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, int32_t, int32_t, binop) \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, float, int32_t, binop)   \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, double, int32_t, binop)  \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, float16, int32_t, binop) \
+                                                                             \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, int32_t, int64_t, binop) \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, float, int64_t, binop)   \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, double, int64_t, binop)  \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kGPU, float16, int64_t, binop)
+
+#define INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(binop)                           \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kCPU, int32_t, int32_t, binop) \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kCPU, float, int32_t, binop)   \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kCPU, double, int32_t, binop)  \
+                                                                             \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kCPU, int32_t, int64_t, binop) \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kCPU, float, int64_t, binop)   \
+  INSTANTIATE_DIM_SCATTER_FUNCTOR(DeviceType::kCPU, double, int64_t, binop)
 
 }  // namespace user_op
 }  // namespace oneflow
