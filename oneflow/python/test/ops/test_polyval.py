@@ -29,13 +29,20 @@ def compare_with_tensorflow(device_type, device_num, in_shape, data_type, coeffs
     assert data_type in ["float32", "double"]
     flow_data_type = type_name_to_flow_type[data_type]
     flow.clear_default_session()
-    flow.config.gpu_device_num(device_num)
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        flow.config.gpu_device_num(device_num)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow_data_type)
+    func_config.default_placement_scope(
+        flow.scope.placement(device_type, "0:0-{}".format(device_num - 1))
+    )
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function(type="train", function_config=func_config)
     def PolyValJob(x: tp.Numpy.Placeholder(shape=in_shape)):
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+        with flow.scope.placement(device_type, "0:0"):
             x += flow.get_variable(
                 name="x",
                 shape=in_shape,
@@ -43,15 +50,14 @@ def compare_with_tensorflow(device_type, device_num, in_shape, data_type, coeffs
                 initializer=flow.zeros_initializer(),
                 trainable=True,
             )
-            out = flow.math.polyval(coeffs, x)
+        flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+        out = flow.math.polyval(coeffs, x)
+        with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(out)
 
-            flow.watch(out, test_global_storage.Setter("out"))
-            flow.watch_diff(x, test_global_storage.Setter("x_diff"))
-
-            return out
+        return out
 
     # OneFlow
     check_point = flow.train.CheckPoint()
@@ -77,7 +83,7 @@ def gen_arg_list(type):
     else:
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1]
-    arg_dict["in_shape"] = [(1,), (2, 1), (1, 2), (2, 2)]
+    arg_dict["in_shape"] = [(2, 3)]
     arg_dict["data_type"] = ["float32"]
     arg_dict["coeffs"] = [[1.0, 2.0], [1.0, 2.0, 3.0]]
     return GenArgList(arg_dict)
