@@ -71,7 +71,7 @@ bool IsTheNodeCanBeMergedInChain(const TaskNode* node) {
 bool IsInSameWorkStream(const TaskNode* lhs, const TaskNode* rhs) {
   return lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() == rhs->thrd_id()
          && lhs->GlobalWorkStreamId() == rhs->GlobalWorkStreamId()
-         && lhs->device_type() == rhs->device_type();
+         && lhs->device_type() == rhs->device_type() && lhs->area_id() == rhs->area_id();
 }
 
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
