@@ -33,7 +33,7 @@ def multi_count_not_finite(
     x: Optional[Sequence[remote_blob_util.BlobDef]] = None, name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
 
-    y = (
+    return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MultiCountNotFinite_")
         )
@@ -44,4 +44,3 @@ def multi_count_not_finite(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-    return y
