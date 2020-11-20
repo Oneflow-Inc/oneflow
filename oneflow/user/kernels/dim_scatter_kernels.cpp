@@ -19,14 +19,33 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
+#define IMPLEMENT_DIMSCATTER_KERNEL_CLASS(binop)                                                   \
+  template<DeviceType device_type, typename IN_T, typename IDX_T>                                  \
+  class DimScatter##binop##Kernel final : public DimScatterBaseKernel<device_type, IN_T, IDX_T> {  \
+   public:                                                                                         \
+    DimScatter##binop##Kernel() = default;                                                         \
+    ~DimScatter##binop##Kernel() override = default;                                               \
+                                                                                                   \
+   private:                                                                                        \
+    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,                \
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,   \
+                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) const override { \
+      DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                      \
+          ctx, input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, src, output);        \
+    }                                                                                              \
+    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                       \
+  }
+
 template<DeviceType device_type, typename IN_T, typename IDX_T>
-class DimScatterBaseKernel: public user_op::OpKernel {
+class DimScatterBaseKernel : public user_op::OpKernel {
  public:
   DimScatterBaseKernel() = default;
   ~DimScatterBaseKernel() override = default;
   virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) const = 0;
+                        const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
+                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* src,
+                        IN_T* output) const = 0;
+
  private:
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
@@ -52,62 +71,18 @@ class DimScatterBaseKernel: public user_op::OpKernel {
     shape2dims(out_tensor->shape());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
-    BinaryOp(
-        ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim,
-        input_tensor->shape().elem_cnt(), dim, index, src, output);
+    BinaryOp(ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim,
+             input_tensor->shape().elem_cnt(), dim, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-class DimScatterAddKernel final : public DimScatterBaseKernel<device_type, IN_T, IDX_T> {
- public:
-  DimScatterAddKernel() = default;
-  ~DimScatterAddKernel() override = default;
-
- private:
-  void BinaryOp(DeviceCtx* ctx, 
-                const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                const DimOpIndexNdHelper<IDX_T>& output_nd_helper, 
-                int ndim, int64_t elem_cnt,
-                int32_t dim, 
-                const IDX_T* index, 
-                const IN_T* src, 
-                IN_T* output) const override{
-
-        DimScatterAddFunctor<device_type, IN_T, IDX_T>()(
-        ctx, input_nd_helper, output_nd_helper, ndim,
-        elem_cnt, dim, index, src, output);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-class DimScatterUpdateKernel final : public DimScatterBaseKernel<device_type, IN_T, IDX_T> {
- public:
-  DimScatterUpdateKernel() = default;
-  ~DimScatterUpdateKernel() override = default;
-
- private:
-  void BinaryOp(DeviceCtx* ctx, 
-                const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                const DimOpIndexNdHelper<IDX_T>& output_nd_helper, 
-                int ndim, int64_t elem_cnt,
-                int32_t dim, 
-                const IDX_T* index, 
-                const IN_T* src, 
-                IN_T* output) const override{
-
-        DimScatterUpdateFunctor<device_type, IN_T, IDX_T>()(
-        ctx, input_nd_helper, output_nd_helper, ndim,
-        elem_cnt, dim, index, src, output);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
+IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Add);
+IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Update);
 
 #define REGISTER_DIM_SCATTER_KERNEL(device, dtype, itype)                                \
   REGISTER_USER_KERNEL("dim_scatter_add_like")                                           \
-      .SetCreateFn<DimScatterAddKernel<device, dtype, itype>>()                             \
+      .SetCreateFn<DimScatterAddKernel<device, dtype, itype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));

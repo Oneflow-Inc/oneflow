@@ -21,26 +21,14 @@ namespace oneflow {
 
 namespace user_op {
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimScatterAddFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
-};
-
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimScatterUpdateFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output);
-};
+DECLARE_DIMSCATTER_FUNCTOR(Add);
+DECLARE_DIMSCATTER_FUNCTOR(Update);
 
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                    const IN_T* input, IN_T* output,
-                                    BinaryOpFn<IN_T> bin_op) {
+                                      const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
+                                      int64_t elem_cnt, int32_t dim, const IDX_T* index,
+                                      const IN_T* input, IN_T* output, BinaryOpFn<IN_T> bin_op) {
   XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
@@ -56,7 +44,7 @@ OF_DEVICE_FUNC void DoDimScatterBinOp(const DimOpIndexNdHelper<IDX_T>& input_nd_
                                        OF_PP_PAIR_FIRST(itype_pair)>;
 #define INSTANTIATE_DIM_SCATTER_UPDATE_FUNCTOR(device_type_v, dtype_pair, itype_pair)  \
   template struct DimScatterUpdateFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                       OF_PP_PAIR_FIRST(itype_pair)>;
+                                          OF_PP_PAIR_FIRST(itype_pair)>;
 
 }  // namespace user_op
 }  // namespace oneflow
