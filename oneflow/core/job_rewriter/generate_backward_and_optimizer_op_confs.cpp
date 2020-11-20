@@ -135,8 +135,6 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     const auto& old_scope = JUST(scope_storage.MaybeGet(old_scope_symbol_id));
     cfg::ScopeProto new_scope;
     new_scope.InitFromProto(old_scope.scope_proto());
-    // TODO(lixinqi): delete this line after ScopeProto::symbol_id removed
-    new_scope.clear_symbol_id();
     new_scope.set_parent_scope_symbol_id(old_scope_symbol_id);
     new_scope.set_calculation_pass_name(pass_name);
     int64_t symbol_id = 0;

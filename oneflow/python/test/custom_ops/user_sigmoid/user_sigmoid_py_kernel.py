@@ -33,14 +33,6 @@ def forward(args):
 #     y = torch.sigmoid(b).numpy()
 #     return y
 
-# import tensorflow as tf
-# def forward(args):
-#     print("user sigmoid forward args", args)
-#     print("compute with tf")
-#     x, = args
-#     y = tf.math.sigmoid(x).numpy()
-#     return y
-
 
 def backward(args):
     print("user sigmoid backward args", args)
