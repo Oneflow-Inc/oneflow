@@ -60,7 +60,7 @@ class TestMultiCountNotFinite(flow.unittest.TestCase):
     def test_multi_count_not_finite(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
-        arg_dict["device_type"] = ["gpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["x1_shape"] = [(10, 20, 20)]
         arg_dict["x2_shape"] = [(10, 20)]
         arg_dict["dtype"] = ["float32", "double"]
