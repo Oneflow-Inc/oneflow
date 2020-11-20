@@ -103,13 +103,15 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MULTI_COUNT_NOT_FINITE_KERNEL(dtype)     \
+#define REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(dtype) \
   REGISTER_USER_KERNEL("multi_count_not_finite")          \
       .SetCreateFn<MultiCountNotFiniteGpuKernel<dtype>>() \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_MULTI_COUNT_NOT_FINITE_KERNEL(float)
-REGISTER_MULTI_COUNT_NOT_FINITE_KERNEL(double)
+#ifdef WITH_CUDA
+REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(float)
+REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(double)
+#endif
 
 }  // namespace oneflow
