@@ -1928,6 +1928,7 @@ def in_top_k(
     
     For example:
     .. code-block:: python
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -1944,6 +1945,7 @@ def in_top_k(
         out = intopk_Job(targets, predictions)
 
         # out [1 0]
+
     """
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("InTopK_"))
