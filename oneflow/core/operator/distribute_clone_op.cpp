@@ -103,8 +103,10 @@ Maybe<void> DistributeCloneOp::InferParallelSignature() {
   CHECK_EQ(op_parallel_desc.parallel_num(), output_bns().size());
   FOR_RANGE(int, i, 0, output_bns().size()) {
     const auto& out_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
+    const std::shared_ptr<cfg::ParallelConf>& cfg_out_parallel_conf =
+        std::make_shared<cfg::ParallelConf>(out_parallel_conf);
     (*map)[output_bns().Get(i)] =
-        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(out_parallel_conf.DebugString());
+        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(cfg_out_parallel_conf);
   }
   return Maybe<void>::Ok();
 }
