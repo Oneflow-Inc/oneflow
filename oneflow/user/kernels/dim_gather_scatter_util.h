@@ -41,6 +41,20 @@ using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 template<typename T>
 using BinaryOpFn = void (*)(const T* x, T* y);
 
+// Steps for adding a binary operation on scatter are as follows:
+// 1. implment binop in DeviceBinOp, for example "Mul":
+//    OF_DEVICE_FUNC static void Mul(const T* x, T* y) { *y *= *x; }
+// 2. Implement and register kernels in dim_scatter_kernels.cpp:
+//    IMPLEMENT_AND_REGISTER_KERNEL("scatter_mul_like", Mul);
+// 3. Declare Functor in dim_scatter_kernel_util.h:
+//    DECLARE_DIMSCATTER_FUNCTOR(Mul);
+// 4. Implement functors in dim_scatter_kernel_util.cu and cpp file:
+//    in .cu file:
+//      IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Mul);
+//    in .cpp file:
+//      IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Mul);
+//
+
 template<typename T>
 struct DeviceBinOp {
   OF_DEVICE_FUNC static void Add(const T* x, T* y) {

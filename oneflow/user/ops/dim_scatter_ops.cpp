@@ -107,5 +107,16 @@ REGISTER_USER_OP("dim_scatter_add_like")
     .SetBatchAxisInferFn(InferBatchAxis)
     .SetGetSbpFn(SetSbp);
 
+REGISTER_USER_OP("dim_scatter_update_like")
+    .Input("like")
+    .Input("input")
+    .Input("index")
+    .Output("output")
+    .Attr<int32_t>("dim")
+    .SetTensorDescInferFn(InferTensorDesc)
+    .SetInputArgModifyFn(InputArgModifierFn)
+    .SetBatchAxisInferFn(InferBatchAxis)
+    .SetGetSbpFn(SetSbp);
+
 }  // namespace user_op
 }  // namespace oneflow

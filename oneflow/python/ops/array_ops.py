@@ -2314,20 +2314,46 @@ def amp_white_identity(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("dim_scatter")
-def dim_scatter(
+@oneflow_export("dim_scatter_update_like")
+def dim_scatter_update(
     dim: int,
     index: remote_blob_util.BlobDef,
     src: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DimScatter_")
+            name if name is not None else id_util.UniqueStr("DimScatterUpdateLike_")
         )
-        .Op("dim_scatter")
+        .Op("dim_scatter_update_like")
         .Input("input", [src])
         .Input("index", [index])
+        .Input("like", [like])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("dim_scatter_add_like")
+def dim_scatter_add(
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    src: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
+        )
+        .Op("dim_scatter_add_like")
+        .Input("input", [src])
+        .Input("index", [index])
+        .Input("like", [like])
         .Output("output")
         .Attr("dim", int(dim))
         .Build()
