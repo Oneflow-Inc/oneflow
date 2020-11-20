@@ -83,6 +83,7 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
 
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
+  job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf()});
   if (train_conf.has_dynamic_loss_scale_policy()) {
     auto condition_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-Condition")
                             .Op("constant")
