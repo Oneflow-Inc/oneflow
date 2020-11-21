@@ -139,6 +139,21 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
                            const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
                            LogicalBlobId* out_diff_lbi) {
   const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
+  OperatorConf constant_like_op{};
+  constant_like_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_ConstantLike");
+  ConstantLikeOpConf* constant_like_conf = constant_like_op.mutable_constant_like_conf();
+  constant_like_conf->set_like(GenLogicalBlobName(lbi));
+  constant_like_conf->set_out("out");
+  {
+    float origin_grad;
+    if (train_conf.has_loss_scale_factor()) {
+      origin_grad = train_conf.loss_scale_factor();
+    } else {
+      origin_grad = 1.0;
+    }
+    constant_like_conf->set_float_operand(origin_grad);
+  }
+  op_confs->push_back(constant_like_op);
   if (train_conf.has_dynamic_loss_scale_policy()) {
     const auto& dynamic_loss_scale_state =
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
@@ -159,23 +174,16 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
     cast_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
     job_builder->MutSbpParallel4Oba(cast_out_op_blob_arg)->mutable_broadcast_parallel();
     op_confs->push_back(cast_op.op_conf());
-    *out_diff_lbi = GenLogicalBlobId(cast_op.output("out", 0));
+    auto scalar_mul_op =
+        user_op::UserOpConfWrapperBuilder(lbi.op_name() + "_" + lbi.blob_name() + "_grad_Scale")
+            .Op("scalar_mul_by_tensor")
+            .Input("x", GenLogicalBlobName(constant_like_op.name(), constant_like_conf->out()))
+            .Input("scalar", cast_op.output("out", 0))
+            .Output("y")
+            .Build();
+    op_confs->push_back(scalar_mul_op.op_conf());
+    *out_diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   } else {
-    OperatorConf constant_like_op{};
-    constant_like_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_ConstantLike");
-    ConstantLikeOpConf* constant_like_conf = constant_like_op.mutable_constant_like_conf();
-    constant_like_conf->set_like(GenLogicalBlobName(lbi));
-    constant_like_conf->set_out("out");
-    {
-      float origin_grad;
-      if (train_conf.has_loss_scale_factor()) {
-        origin_grad = train_conf.loss_scale_factor();
-      } else {
-        origin_grad = 1.0;
-      }
-      constant_like_conf->set_float_operand(origin_grad);
-    }
-    op_confs->push_back(constant_like_op);
     out_diff_lbi->set_op_name(constant_like_op.name());
     out_diff_lbi->set_blob_name(constant_like_conf->out());
   }
@@ -766,7 +774,6 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
                 .Output("out")
                 .Attr<DataType>("dtype", data_type)
                 .Build();
-
         const ParallelConf& parallel_conf =
             ProducerOpNode4Lbn(dynamic_loss_scale_state.loss_scale_val_lbn())
                 ->parallel_desc()
