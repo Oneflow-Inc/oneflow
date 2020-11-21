@@ -94,12 +94,13 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .Attr<Shape>("shape", Shape({1}))
           .ScopeSymbolId(scope_symbol_id)
           .Build();
+  const std::string loss_scale_var_lbn = GenLogicalBlobName(
+      loss_scale_val_op_conf.name(), loss_scale_val_op_conf.identity_conf().out());
   auto schedule =
       user_op::UserOpConfWrapperBuilder(op_name_prefix + job->job_conf().job_name() + "-Schedule")
           .Op("dynamic_loss_scale_schedule")
           .Input("count_not_finite", dummy_count_not_finite_op.output("out", 0))
-          .Input("loss_scale", GenLogicalBlobName(loss_scale_val_op_conf.name(),
-                                                  loss_scale_val_op_conf.variable_conf().out()))
+          .Input("loss_scale", loss_scale_var_lbn)
           .Input("good_step_counter",
                  GenLogicalBlobName(good_step_counter_var_conf.name(),
                                     good_step_counter_var_conf.variable_conf().out()))
@@ -115,8 +116,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     ctx->ResetState("dynamic_loss_scale_state", std::make_unique<DynamicLossScaleJobPassState>());
   }
   auto state = JUST(ctx->MutableState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
-  state->set_loss_scale_val_lbn(GenLogicalBlobName(loss_scale_val_op_conf.name(),
-                                                   loss_scale_val_op_conf.identity_conf().out()));
+  state->set_loss_scale_val_lbn(loss_scale_var_lbn);
   state->set_count_not_finite_lbn(dummy_count_not_finite_op.output("out", 0));
   return Maybe<void>::Ok();
 }
