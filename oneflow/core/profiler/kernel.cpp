@@ -30,8 +30,10 @@ bool profile_cuda_memory_bandwidth = false;
 COMMAND(ParseBoolFlagFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH",
                              &profile_cuda_memory_bandwidth));
 
+#if defined(WITH_CUDA)
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_start_event = nullptr;
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
+#endif  // WITH_CUDA
 
 }  // namespace
 
