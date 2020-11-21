@@ -119,7 +119,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   AddDiffStaticShapeCast(op_graph, &job_builder, &model_lbi2model_diff_lbi);
   AddDiffParallelCast(op_graph, &job_builder, &model_lbi2model_diff_lbi);
-  JUST(CountNotFiniteIfNeed(ctx, op_graph, &job_builder, model_lbi2model_diff_lbi));
+  JUST(CountNotFiniteIfNeeded(ctx, op_graph, &job_builder, model_lbi2model_diff_lbi));
   JUST(ScaleModelDiffByLossInstanceNum(op_graph, &job_builder, &model_lbi2model_diff_lbi));
   ScaleModelDiffByLossScale(ctx, op_graph, &job_builder, &model_lbi2model_diff_lbi);
   const NormalModelUpdateOpUserConf& model_update_conf =

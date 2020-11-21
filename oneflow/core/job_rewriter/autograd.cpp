@@ -916,8 +916,9 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
   }
 }
 
-Maybe<void> CountNotFiniteIfNeed(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                                 const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
+Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
+                                   JobBuilder* job_builder,
+                                   const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
   if (lbi2diff_lbi.empty()) { return Maybe<void>::Ok(); }
   if (!ctx->job_desc().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
     return Maybe<void>::Ok();
