@@ -51,11 +51,6 @@ bool JobDesc::enable_experiment_run() const {
 
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
 int64_t JobDesc::NumOfPiecesInBatch() const { return 1; }
-int32_t JobDesc::loss_scale_factor() const {
-  int32_t loss_scale_factor = job_conf_.train_conf().loss_scale_factor();
-  CHECK_GE(loss_scale_factor, 1);
-  return loss_scale_factor;
-}
 
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
     : job_conf_(job_conf), job_id_(job_id) {
