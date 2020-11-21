@@ -40,6 +40,15 @@ class MultiCountNotFiniteCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+#define REGISTER_COUNT_NOT_FINITE_CPU_KERNEL(dtype)       \
+  REGISTER_USER_KERNEL("count_not_finite")                \
+      .SetCreateFn<MultiCountNotFiniteCpuKernel<dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_COUNT_NOT_FINITE_CPU_KERNEL(float)
+REGISTER_COUNT_NOT_FINITE_CPU_KERNEL(double)
+
 #define REGISTER_MULTI_COUNT_NOT_FINITE_CPU_KERNEL(dtype) \
   REGISTER_USER_KERNEL("multi_count_not_finite")          \
       .SetCreateFn<MultiCountNotFiniteCpuKernel<dtype>>() \

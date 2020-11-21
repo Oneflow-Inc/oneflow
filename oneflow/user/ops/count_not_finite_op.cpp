@@ -17,6 +17,26 @@ limitations under the License.
 
 namespace oneflow {
 
+REGISTER_USER_OP("count_not_finite")
+    .Input("x")
+    .Output("y")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      *y_desc->mut_shape() = Shape({1});
+      *y_desc->mut_data_type() = DataType::kInt64;
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .PartialSum(user_op::OpArg("y", 0))
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP("multi_count_not_finite")
     .InputWithMinimum("x", 1)
     .Output("y")

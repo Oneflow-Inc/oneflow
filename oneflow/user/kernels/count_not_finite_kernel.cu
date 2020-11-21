@@ -38,6 +38,19 @@ __device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
       atomicAdd(reinterpret_cast<CuInt64T*>(address), static_cast<CuInt64T>(val)));
 }
 
+template<typename T>
+__global__ void CountNotFiniteGpu(const int64_t n, const T* x, int64_t* y) {
+  typedef cub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
+  int64_t thread_count = 0;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (!isfinite(x[i])) { thread_count += 1; }
+  }
+  __syncthreads();
+  int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, cub::Sum());
+  if (threadIdx.x == 0) { AtomicAdd(y, block_count_sum); }
+}
+
 template<typename T, int32_t N>
 __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
   typedef cub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
@@ -53,14 +66,41 @@ __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
   if (threadIdx.x == 0) { AtomicAdd(param.y, block_count_sum); }
 }
 
-constexpr int64_t kMultiCountNotFiniteNumBlocks = 512;
+constexpr int64_t kCountNotFiniteNumBlocks = 512;
 
-int GetMultiCountNotFiniteNumBlocks(const int64_t elem_cnt) {
+int GetCountNotFiniteNumBlocks(const int64_t elem_cnt) {
   return std::min((elem_cnt + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
-                  kMultiCountNotFiniteNumBlocks);
+                  kCountNotFiniteNumBlocks);
 }
 
 }  // namespace
+
+template<typename T>
+class CountNotFiniteGpuKernel final : public user_op::OpKernel {
+ public:
+  CountNotFiniteGpuKernel() = default;
+  ~CountNotFiniteGpuKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const int64_t elem_cnt = x->shape().elem_cnt();
+    CountNotFiniteGpu<T>
+        <<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
+           ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(dtype)       \
+  REGISTER_USER_KERNEL("count_not_finite")                \
+      .SetCreateFn<CountNotFiniteGpuKernel<dtype>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(float)
+REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(double)
 
 template<typename T>
 class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
@@ -96,7 +136,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
         max_elem_cnt = std::max(max_elem_cnt, x->shape().elem_cnt());
       }
       MultiCountNotFiniteGpu<T, 128>
-          <<<GetMultiCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
+          <<<GetCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
              ctx->device_ctx()->cuda_stream()>>>(para);
     }
   }
@@ -109,9 +149,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-#ifdef WITH_CUDA
 REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(float)
 REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(double)
-#endif
 
 }  // namespace oneflow

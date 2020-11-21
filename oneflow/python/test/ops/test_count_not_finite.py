@@ -22,7 +22,27 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
 
-def _run_test(
+def _run_count_test(test_case, device_type, x_shape, dtype):
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+
+    @flow.global_function(function_config=func_config)
+    def count_not_finite_job(
+        x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[dtype]),
+    ):
+        with flow.scope.placement(device_type, "0:0"):
+            return flow.count_not_finite(x)
+
+    x = np.random.randn(*x_shape).astype(type_name_to_np_type[dtype])
+    x[0] = np.nan
+    x[5][4] = np.inf
+    y = count_not_finite_job(x).get()
+    np_y = x.size - np.sum(np.isfinite(x))
+    assert y.numpy() == np_y
+
+
+def _run_multi_count_test(
     test_case, device_type, x1_shape, x2_shape, dtype, x1_count, x2_count,
 ):
     flow.clear_default_session()
@@ -56,7 +76,16 @@ def _run_test(
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestMultiCountNotFinite(flow.unittest.TestCase):
+class TestCountNotFinite(flow.unittest.TestCase):
+    def test_count_not_finite(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10, 30)]
+        arg_dict["dtype"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            _run_count_test(*arg)
+
     def test_multi_count_not_finite(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
@@ -67,7 +96,7 @@ class TestMultiCountNotFinite(flow.unittest.TestCase):
         arg_dict["x1_count"] = [10]
         arg_dict["x2_count"] = [30]
         for arg in GenArgList(arg_dict):
-            _run_test(*arg)
+            _run_multi_count_test(*arg)
 
 
 if __name__ == "__main__":

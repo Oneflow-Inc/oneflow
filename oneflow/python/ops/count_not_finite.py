@@ -28,6 +28,23 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Union, Sequence
 
 
+@oneflow_export("count_not_finite")
+def count_not_finite(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("CountNotFinite_")
+        )
+        .Op("count_not_finite")
+        .Input("x", [x])
+        .Output("y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("multi_count_not_finite")
 def multi_count_not_finite(
     x: Optional[Sequence[remote_blob_util.BlobDef]] = None, name: Optional[str] = None,
