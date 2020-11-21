@@ -46,8 +46,8 @@ struct SGDUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct SGDUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
-                     T* model);
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model);
 };
 
 template<DeviceType device_type, typename T, typename K>
@@ -135,7 +135,7 @@ template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
                      float weight_decay, const float* learning_rate, const T* scale_by_ptr,
-                     const G* model_diff, T* model, T* momentum);
+                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -150,7 +150,8 @@ template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, const float* learning_rate,
-                     const T* scale_by_ptr, const G* model_diff, T* model, T* m, T* v);
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* m, T* v);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -166,8 +167,8 @@ struct LambUpdateKernelUtil {
  public:
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, const float* learning_rate,
-                     const T* scale_by_ptr, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
-                     T* norm_buffer, T* beta1_t, T* beta2_t);
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
 };
 
 template<DeviceType device_type>
@@ -206,8 +207,8 @@ template<DeviceType device_type, typename T, typename G>
 struct RmsPropUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
                      float epsilon, float weight_decay, float decay_rate,
-                     const float* learning_rate, const T* scale_by_ptr, const G* model_diff,
-                     T* model, T* mean_square, T* mean_gradient);
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* mean_square, T* mean_gradient);
 };
 
 template<typename T>
@@ -228,7 +229,8 @@ struct LarsUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
                      const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
-                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
+                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
+                     T* data_tmp, T* model_diff_tmp);
 };
 
 #endif
