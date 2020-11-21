@@ -439,8 +439,10 @@ void OpGraph::InitEdges() {
       const auto it = producer_op_name2lbi2obn.find(pair.first);
       CHECK(it != producer_op_name2lbi2obn.end()) << "producer_op_name: " << pair.first;
       const auto& lbi2obn = it->second;
-      OpNode* producer = lbi2producer.at(lbis->at(0));
-      Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
+      auto producer_it = lbi2producer.find(lbis->front());
+      CHECK(producer_it != lbi2producer.end())
+          << "producer not found: " << GenLogicalBlobName(lbis->front());
+      Connect(producer_it->second, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
   });
 }
