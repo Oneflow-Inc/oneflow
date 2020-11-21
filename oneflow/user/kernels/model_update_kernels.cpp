@@ -129,9 +129,16 @@ class SGDUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
+        learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -217,6 +224,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     beta_ = ctx->Attr<float>("beta");
     weight_decay_ = ctx->Attr<float>("weight_decay");
     has_scale_by_ptr_ = ctx->user_op_conf().has_input("scale_by_tensor", 0);
+    has_skip_if_ = ctx->user_op_conf().has_input("skip_if", 0);
   };
   ~MomentumUpdateKernel() override = default;
 
@@ -233,10 +241,16 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (has_skip_if_) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
-        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 
@@ -247,6 +261,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
   float beta_;
   float weight_decay_;
   bool has_scale_by_ptr_;
+  bool has_skip_if_;
 };
 
 #define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                            \
@@ -356,10 +371,16 @@ class AdamUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
+        epsilon, weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -514,11 +535,17 @@ class LambUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
-        tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
-        tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
+        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+        v->mut_dptr<T>(), tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -603,6 +630,12 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     T* mean_gradient_ptr = nullptr;
     if (centered) {
       user_op::Tensor* mean_gradient = ctx->Tensor4ArgNameAndIndex("mean_gradient", 0);
@@ -610,7 +643,7 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
-        epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(), scale_by_ptr,
+        epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -695,11 +728,17 @@ class LarsUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
         epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(),
-        train_step->dptr<int64_t>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
-        momentum->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+        train_step->dptr<int64_t>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), momentum->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
