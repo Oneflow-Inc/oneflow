@@ -869,8 +869,7 @@ class InstructionsBuilder(object):
 
     def _NewSymbolId4Scope(self, scope_proto):
         symbol_id = self._NewSymbolId()
-        scope_proto.set_symbol_id(symbol_id)
-        self._NewScopeSymbol(scope_proto)
+        self._NewScopeSymbol(symbol_id, scope_proto)
         return symbol_id
 
     def _NewSymbolId4JobConf(self, job_conf):
@@ -1084,15 +1083,13 @@ class InstructionsBuilder(object):
         eager_symbol.parallel_conf_symbol.CopyFrom(parallel_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _NewScopeSymbol(self, scope_proto):
+    def _NewScopeSymbol(self, symbol_id, scope_proto):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitScopeSymbol")
-        instruction.mutable_operand().Add().CopyFrom(
-            _InitSymbolOperand(scope_proto.symbol_id())
-        )
+        instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
-        eager_symbol.symbol_id = scope_proto.symbol_id()
+        eager_symbol.symbol_id = symbol_id
         # Temporary transformation
         eager_symbol.scope_symbol.CopyFrom(
             text_format.Parse(str(scope_proto), scope_pb.ScopeProto())

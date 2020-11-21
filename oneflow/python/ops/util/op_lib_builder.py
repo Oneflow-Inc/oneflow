@@ -37,7 +37,7 @@ def run_cmd(cmd, cwd=None):
         res = sp.run(cmd, shell=True, stdout=sp.PIPE, stderr=sp.STDOUT)
     out = res.stdout.decode("utf8")
     if res.returncode != 0:
-        err_msg = f"Run cmd failed: {cmd}, output: {out}"
+        err_msg = "Run cmd failed: {}, output: {}".format(cmd, out)
         raise Exception(err_msg)
     if len(out) and out[-1] == "\n":
         out = out[:-1]
@@ -48,9 +48,12 @@ def compile(compiler, flags, link, inputs, output):
     if os.path.exists(output):
         return True
     if isinstance(inputs, list):
-        cmd = f"{compiler} {' '.join(inputs)} {flags} {link} -o {output}"
+        cmd = "{} {} {} {} -o {}".format(
+            compiler, " ".join(inputs), flags, link, output
+        )
     else:
-        cmd = f"{compiler} {inputs} {flags} {link} -o {output}"
+        cmd = "{} {} {} {} -o {}".format(compiler, inputs, flags, link, output)
+    print(cmd)
     run_cmd(cmd)
     return True
 
@@ -115,9 +118,9 @@ class OpLib(object):
         self.out_prefix_ = os.path.join(out_path, self.op_type_name_)
 
     def py_api(self):
-        assert os.path.exists(f"{self.src_prefix_}_py_api.py")
+        assert os.path.exists("{}_py_api.py".format(self.src_prefix_))
         spec = importlib.util.spec_from_file_location(
-            self.op_type_name_, f"{self.src_prefix_}_py_api.py"
+            self.op_type_name_, "{}_py_api.py".format(self.src_prefix_)
         )
         self.api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.api)
@@ -129,17 +132,17 @@ class OpLib(object):
             "g++",
             flags,
             get_lflags(),
-            f"{self.src_prefix_}_cpp_def.cpp",
-            f"{self.out_prefix_}_cpp_def.o",
+            "{}_cpp_def.cpp".format(self.src_prefix_),
+            "{}_cpp_def.o".format(self.out_prefix_),
         )
-        self.objs_.append(f"{self.out_prefix_}_cpp_def.o")
+        self.objs_.append("{}_cpp_def.o".format(self.out_prefix_))
         self.has_def_ = True
         return self
 
     def py_kernel(self):
-        assert os.path.exists(f"{self.src_prefix_}_py_kernel.py")
+        assert os.path.exists("{}_py_kernel.py".format(self.src_prefix_))
         spec = importlib.util.spec_from_file_location(
-            self.op_type_name_, f"{self.src_prefix_}_py_kernel.py"
+            self.op_type_name_, "{}_py_kernel.py".format(self.src_prefix_)
         )
         kernel = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(kernel)
@@ -154,10 +157,10 @@ class OpLib(object):
             "g++",
             flags,
             "",
-            f"{self.src_prefix_}_cpp_kernel.cpp",
-            f"{self.out_prefix_}_cpp_kernel.o",
+            "{}_cpp_kernel.cpp".format(self.src_prefix_),
+            "{}_cpp_kernel.o".format(self.out_prefix_),
         )
-        self.objs_.append(f"{self.out_prefix_}_cpp_kernel.o")
+        self.objs_.append("{}_cpp_kernel.o".format(self.out_prefix_))
         self.has_cpu_kernel_ = True
         return self
 
@@ -167,7 +170,9 @@ class OpLib(object):
     def build_load(self):
         if len(self.objs_) > 0:
             flags = "-std=c++11 -shared -fPIC " + get_cflags()
-            compile("g++", flags, get_lflags(), self.objs_, f"{self.out_prefix_}.so")
+            compile(
+                "g++", flags, get_lflags(), self.objs_, "{}.so".format(self.out_prefix_)
+            )
             self.got_so_ = True
             self.so_path_ = self.out_prefix_ + ".so"
 

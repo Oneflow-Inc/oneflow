@@ -96,7 +96,6 @@ class ScopeSymbol(Symbol):
     def _CloneScopeProto(self):
         scope_proto = scope_cfg.ScopeProto()
         scope_proto.CopyFrom(self.data)
-        scope_proto.clear_symbol_id()
         return scope_proto
 
 

@@ -27,10 +27,6 @@ namespace oneflow {
 
 namespace symbol {
 
-// Remove check util HasSymbolIdTraits after field ScopeProto.symbol_id removed.
-template<typename T>
-struct HasSymbolIdTraits;
-
 template<typename T>
 class IdCache final {
  public:
@@ -41,7 +37,6 @@ class IdCache final {
   ~IdCache() = default;
 
   Maybe<int64_t> FindOrCreate(const T& symbol_data, const std::function<Maybe<int64_t>()>& Create) {
-    CHECK_OR_RETURN(!HasSymbolIdTraits<T>::HasSymbolId(symbol_data));
     {
       std::unique_lock<std::mutex> lock(mutex_);
       const auto& iter = symbol_data2id_.find(symbol_data);
@@ -58,21 +53,6 @@ class IdCache final {
  private:
   mutable std::mutex mutex_;
   std::map<T, int64_t> symbol_data2id_;
-};
-
-template<>
-struct HasSymbolIdTraits<cfg::JobConfigProto> {
-  static bool HasSymbolId(const cfg::JobConfigProto&) { return false; }
-};
-
-template<>
-struct HasSymbolIdTraits<cfg::ParallelConf> {
-  static bool HasSymbolId(const cfg::ParallelConf&) { return false; }
-};
-
-template<>
-struct HasSymbolIdTraits<cfg::ScopeProto> {
-  static bool HasSymbolId(const cfg::ScopeProto& scope) { return scope.has_symbol_id(); }
 };
 
 }  // namespace symbol
