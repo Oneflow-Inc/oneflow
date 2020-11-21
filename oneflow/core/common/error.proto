@@ -112,6 +112,7 @@ message UnkownError { }
 message ErrorStackFrame {
   required string location = 1;
   required string function = 2;
+  required string error_msg = 3;
 }
 
 message ErrorProto {
