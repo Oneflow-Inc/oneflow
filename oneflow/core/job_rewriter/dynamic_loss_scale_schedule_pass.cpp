@@ -75,11 +75,12 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     good_step_counter_var_conf.set_scope_symbol_id(scope_symbol_id);
   }
   OperatorConf loss_scale_val_op_conf{};
+  const std::string loss_scale_var_lbn = GenLogicalBlobName(
+      loss_scale_var_op_conf.name(), loss_scale_var_op_conf.variable_conf().out());
   {
     loss_scale_val_op_conf.set_name(loss_scale_var_op_conf.name() + "-Identity");
     IdentityOpConf* identity_conf = loss_scale_val_op_conf.mutable_identity_conf();
-    identity_conf->set_in(GenLogicalBlobName(loss_scale_var_op_conf.name(),
-                                             loss_scale_var_op_conf.variable_conf().out()));
+    identity_conf->set_in(loss_scale_var_lbn);
     identity_conf->set_out("out");
   }
   auto dummy_count_not_finite_op =
@@ -96,14 +97,14 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .Build();
   const std::string loss_scale_val_lbn = GenLogicalBlobName(
       loss_scale_val_op_conf.name(), loss_scale_val_op_conf.identity_conf().out());
+  const std::string good_step_counter_var_lbn = GenLogicalBlobName(
+      good_step_counter_var_conf.name(), good_step_counter_var_conf.variable_conf().out());
   auto schedule =
       user_op::UserOpConfWrapperBuilder(op_name_prefix + job->job_conf().job_name() + "-Schedule")
           .Op("dynamic_loss_scale_schedule")
           .Input("count_not_finite", dummy_count_not_finite_op.output("out", 0))
-          .Input("loss_scale", loss_scale_val_lbn)
-          .Input("good_step_counter",
-                 GenLogicalBlobName(good_step_counter_var_conf.name(),
-                                    good_step_counter_var_conf.variable_conf().out()))
+          .Input("loss_scale", loss_scale_var_lbn)
+          .Input("good_step_counter", good_step_counter_var_lbn)
           .Attr<int64_t>("increment_period", policy.increment_period())
           .Attr<float>("multiplier", policy.multiplier())
           .ScopeSymbolId(scope_symbol_id)
