@@ -36,37 +36,76 @@ namespace user_op {
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                       \
   }
 
-#define REGISTER_DIM_SCATTER_KERNEL(device, dtype, itype, optypename, binop)             \
+#define REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, dtype, itype, optypename, binop)             \
   REGISTER_USER_KERNEL(optypename)                                                       \
       .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-#define REGISTER_DIM_SCATTER_BINOP_KERNELS_WITH_DEVICE(device, optypename, binop) \
-  REGISTER_DIM_SCATTER_KERNEL(device, float, int32_t, optypename, binop)          \
-  REGISTER_DIM_SCATTER_KERNEL(device, double, int32_t, optypename, binop)         \
-  REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int32_t, optypename, binop)        \
-  REGISTER_DIM_SCATTER_KERNEL(device, float, int64_t, optypename, binop)          \
-  REGISTER_DIM_SCATTER_KERNEL(device, double, int64_t, optypename, binop)         \
-  REGISTER_DIM_SCATTER_KERNEL(device, int32_t, int64_t, optypename, binop)
+#define REGISTER_DIM_SCATTER_BINOP_OUT_KERNELS_DEVICE(device, optypename, binop) \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, float, int32_t, optypename, binop)          \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, double, int32_t, optypename, binop)         \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, int32_t, int32_t, optypename, binop)        \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, float, int64_t, optypename, binop)          \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, double, int64_t, optypename, binop)         \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, int32_t, int64_t, optypename, binop)
 
-#define REGISTER_DIM_SCATTER_CPUKERNELS(optypename, binop) \
-  REGISTER_DIM_SCATTER_BINOP_KERNELS_WITH_DEVICE(DeviceType::kCPU, optypename, binop);
+#define REGISTER_DIM_SCATTER_OUTPLACE_CPUKERNELS(optypename, binop) \
+  REGISTER_DIM_SCATTER_BINOP_OUT_KERNELS_DEVICE(DeviceType::kCPU, optypename, binop);
 
 #ifdef WITH_CUDA
-#define REGISTER_DIM_SCATTER_GPUKERNELS(optypename, binop)                             \
-  REGISTER_DIM_SCATTER_BINOP_KERNELS_WITH_DEVICE(DeviceType::kGPU, optypename, binop); \
-  REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop);  \
-  REGISTER_DIM_SCATTER_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
+#define REGISTER_DIM_SCATTER_OUTPLACE_GPUKERNELS(optypename, binop)                             \
+  REGISTER_DIM_SCATTER_BINOP_OUT_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop); \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop);  \
+  REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
 #else
-#define REGISTER_DIM_SCATTER_GPUKERNELS(optypename, binop)
+#define REGISTER_DIM_SCATTER_OUTPLACE_GPUKERNELS(optypename, binop)
 #endif  // WITH_CUDA
 
-#define IMPLEMENT_AND_REGISTER_KERNEL(optypename, binop) \
-  IMPLEMENT_DIMSCATTER_KERNEL_CLASS(binop);              \
-  REGISTER_DIM_SCATTER_CPUKERNELS(optypename, binop);    \
-  REGISTER_DIM_SCATTER_GPUKERNELS(optypename, binop);
+#define REGISTER_SCATTER_OUTPLACE_KERNEL(optypename, binop) \
+  REGISTER_DIM_SCATTER_OUTPLACE_CPUKERNELS(optypename, binop);    \
+  REGISTER_DIM_SCATTER_OUTPLACE_GPUKERNELS(optypename, binop);
+
+// ---- REGISTER INPLACE OPS ----
+Maybe<void> SetInplace(const user_op::InferContext&,                                   
+                         user_op::AddInplaceArgPair AddInplaceArgPairFn){
+  OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "like", 0, true));                      
+  return Maybe<void>::Ok();                                                              
+}
+
+#define REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, dtype, itype, optypename, binop)             \
+  REGISTER_USER_KERNEL(optypename)                                                       \
+      .SetCreateFn<DimScatter##binop##Kernel<device, dtype, itype>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("index", 0) == GetDataType<itype>::value))\
+      .SetInplaceProposalFn(SetInplace);
+              
+
+#define REGISTER_DIM_SCATTER_BINOP_IN_KERNELS_DEVICE(device, optypename, binop) \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, float, int32_t, optypename, binop)          \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, double, int32_t, optypename, binop)         \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, int32_t, int32_t, optypename, binop)        \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, float, int64_t, optypename, binop)          \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, double, int64_t, optypename, binop)         \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(device, int32_t, int64_t, optypename, binop)
+
+#define REGISTER_DIM_SCATTER_INPLACE_CPUKERNELS(optypename, binop) \
+  REGISTER_DIM_SCATTER_BINOP_IN_KERNELS_DEVICE(DeviceType::kCPU, optypename, binop);
+
+#ifdef WITH_CUDA
+#define REGISTER_DIM_SCATTER_INPLACE_GPUKERNELS(optypename, binop)                             \
+  REGISTER_DIM_SCATTER_BINOP_IN_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop); \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop);  \
+  REGISTER_DIM_SCATTER_INPLACE_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
+#else
+#define REGISTER_DIM_SCATTER_INPLACE_GPUKERNELS(optypename, binop)
+#endif  // WITH_CUDA
+
+#define REGISTER_SCATTER_INTPLACE_KERNEL(optypename, binop) \
+  REGISTER_DIM_SCATTER_INPLACE_CPUKERNELS(optypename, binop);    \
+  REGISTER_DIM_SCATTER_INPLACE_GPUKERNELS(optypename, binop);
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 class DimScatterBaseKernel : public user_op::OpKernel {
@@ -109,8 +148,12 @@ class DimScatterBaseKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-IMPLEMENT_AND_REGISTER_KERNEL("dim_scatter_add_like", Add);
-IMPLEMENT_AND_REGISTER_KERNEL("dim_scatter_update_like", Update);
+IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Add);
+IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Update);
+
+REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_add_like", Add);
+REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_update_like", Update);
+REGISTER_SCATTER_INTPLACE_KERNEL("dim_scatter_add", Add);
 
 }  // namespace user_op
 }  // namespace oneflow

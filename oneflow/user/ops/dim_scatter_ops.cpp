@@ -64,6 +64,15 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+                               const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
+  CHECK(like_arg_modifier != nullptr);
+  like_arg_modifier->set_use_header_only(false);
+  like_arg_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
   CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("index", 0)
                   == *ctx->BatchAxis4ArgNameAndIndex("input", 0));
@@ -115,6 +124,17 @@ REGISTER_USER_OP("dim_scatter_update_like")
     .Attr<int32_t>("dim")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(InputArgModifierFn)
+    .SetBatchAxisInferFn(InferBatchAxis)
+    .SetGetSbpFn(SetSbp);
+
+REGISTER_USER_OP("dim_scatter_add") //inplace
+    .Input("like")
+    .Input("input")
+    .Input("index")
+    .Output("output")
+    .Attr<int32_t>("dim")
+    .SetTensorDescInferFn(InferTensorDesc)
+    .SetInputArgModifyFn(InplaceInputArgModifierFn)
     .SetBatchAxisInferFn(InferBatchAxis)
     .SetGetSbpFn(SetSbp);
 
