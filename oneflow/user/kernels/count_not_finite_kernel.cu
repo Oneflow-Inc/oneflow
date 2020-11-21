@@ -86,6 +86,8 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<int64_t>(), 0,
+                             y->shape().elem_cnt() * sizeof(int64_t));
     CountNotFiniteGpu<T>
         <<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
