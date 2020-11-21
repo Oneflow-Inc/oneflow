@@ -116,7 +116,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
   }
   auto state = JUST(ctx->MutableState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
   state->set_loss_scale_val_lbn(GenLogicalBlobName(loss_scale_val_op_conf.name(),
-                                                   loss_scale_val_op_conf.variable_conf().out()));
+                                                   loss_scale_val_op_conf.identity_conf().out()));
   state->set_count_not_finite_lbn(dummy_count_not_finite_op.output("out", 0));
   return Maybe<void>::Ok();
 }
