@@ -154,6 +154,10 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
     cast_in_op_blob_arg.set_op_name(cast_op.op_name());
     cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
     job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
+    OpBlobArg cast_out_op_blob_arg;
+    cast_out_op_blob_arg.set_op_name(cast_op.op_name());
+    cast_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
+    job_builder->MutSbpParallel4Oba(cast_out_op_blob_arg)->mutable_broadcast_parallel();
     op_confs->push_back(cast_op.op_conf());
     *out_diff_lbi = GenLogicalBlobId(cast_op.output("out", 0));
   } else {
