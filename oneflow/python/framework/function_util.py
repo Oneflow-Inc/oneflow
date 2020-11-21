@@ -744,7 +744,7 @@ def set_loss_scale_factor(func_desc, value):
         """
     )
     print(traceback.format_stack()[-3])
-    func_desc.job_config_proto.set_train_conf.loss_scale_factor(value)
+    func_desc.job_config_proto.mutable_train_conf().set_loss_scale_factor(value)
 
 
 @oneflow_function_config("train.primary_lr")
@@ -760,7 +760,7 @@ def set_primary_lr(func_desc, value):
         """
     )
     print(traceback.format_stack()[-3])
-    func_desc.job_config_proto.set_train_conf.primary_lr(value)
+    func_desc.job_config_proto.mutable_train_conf().set_primary_lr(value)
 
 
 @oneflow_function_config("train.secondary_lr")
@@ -776,7 +776,7 @@ def set_secondary_lr(func_desc, value):
         """
     )
     print(traceback.format_stack()[-3])
-    func_desc.job_config_proto.set_train_conf.secondary_lr(value)
+    func_desc.job_config_proto.mutable_train_conf().set_secondary_lr(value)
 
 
 @oneflow_function_config("default_placement_scope")
