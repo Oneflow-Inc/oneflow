@@ -135,8 +135,9 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
   };
 }
 
-void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, const LogicalBlobId& lbi,
-                           std::vector<OperatorConf>* op_confs, LogicalBlobId* out_diff_lbi) {
+void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+                           const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
+                           LogicalBlobId* out_diff_lbi) {
   const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
   if (train_conf.has_dynamic_loss_scale_policy()) {
     const auto& dynamic_loss_scale_state =
@@ -149,6 +150,10 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, const Logic
             .Output("out")
             .Attr<DataType>("dtype", data_type)
             .Build();
+    OpBlobArg cast_in_op_blob_arg;
+    cast_in_op_blob_arg.set_op_name(cast_op.op_name());
+    cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
+    job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
     op_confs->push_back(cast_op.op_conf());
     *out_diff_lbi = GenLogicalBlobId(cast_op.output("out", 0));
   } else {
@@ -430,7 +435,7 @@ void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
     LogicalBlobId* out_diff_lbi =
         &(*out_oba2out_diff_lbi)[GenOpBlobArg(loss_op_node->op().op_name(), *bn_it)];
     std::vector<OperatorConf> ops;
-    GenerateOriginDiffLbi(ctx, op_graph, loss_lbi, &ops, out_diff_lbi);
+    GenerateOriginDiffLbi(ctx, op_graph, job_builder, loss_lbi, &ops, out_diff_lbi);
     int64_t scope_symbol_id = loss_op_node->op().op_conf().scope_symbol_id();
     for (auto& op : ops) { op.set_scope_symbol_id(scope_symbol_id); }
     job_builder->AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
@@ -763,10 +768,6 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
                 ->parallel_desc()
                 .parallel_conf();
         job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
-        OpBlobArg cast_in_op_blob_arg;
-        cast_in_op_blob_arg.set_op_name(cast_op.op_name());
-        cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
-        job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
         const std::string& lbn = cast_op.output("out", 0);
         data_type2loss_scale_lbn[data_type] = lbn;
         return lbn;
