@@ -114,7 +114,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   JobBuilder job_builder(job);
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  JUST(AutoGrad(op_graph, &job_builder, &lbi2diff_lbi));
+  JUST(AutoGrad(ctx, op_graph, &job_builder, &lbi2diff_lbi));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   AddDiffStaticShapeCast(op_graph, &job_builder, &model_lbi2model_diff_lbi);
