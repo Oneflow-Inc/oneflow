@@ -964,10 +964,9 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
   std::vector<std::string> lbns_to_add;
   for (const auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& diff_lbi = pair.second;
-    // TODO(liujuncheng): use count_not_finite
     auto count_not_finite_op =
         user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-CountNotFinite-" + NewUniqueId())
-            .Op("multi_count_not_finite")
+            .Op("count_not_finite")
             .Input("x", GenLogicalBlobName(diff_lbi))
             .Output("y")
             .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, pair.first))
