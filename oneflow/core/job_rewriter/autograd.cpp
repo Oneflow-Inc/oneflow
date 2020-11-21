@@ -150,6 +150,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, const Logic
             .Attr<DataType>("dtype", data_type)
             .Build();
     op_confs->push_back(cast_op.op_conf());
+    *out_diff_lbi = GenLogicalBlobId(cast_op.output("out", 0));
   } else {
     OperatorConf constant_like_op{};
     constant_like_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_ConstantLike");
