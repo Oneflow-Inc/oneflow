@@ -137,7 +137,8 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
 
 void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, const LogicalBlobId& lbi,
                            std::vector<OperatorConf>* op_confs, LogicalBlobId* out_diff_lbi) {
-  if (ctx->job_desc().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
+  const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
+  if (train_conf.has_dynamic_loss_scale_policy()) {
     const auto& dynamic_loss_scale_state =
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     const DataType data_type = op_graph.GetLogicalBlobDesc(lbi).data_type();
@@ -148,6 +149,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, const Logic
             .Output("out")
             .Attr<DataType>("dtype", data_type)
             .Build();
+    op_confs->push_back(cast_op.op_conf());
   } else {
     OperatorConf constant_like_op{};
     constant_like_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_ConstantLike");
@@ -156,8 +158,8 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, const Logic
     constant_like_conf->set_out("out");
     {
       float origin_grad;
-      if (ctx->job_desc().job_conf().train_conf().has_loss_scale_factor()) {
-        origin_grad = ctx->job_desc().job_conf().train_conf().loss_scale_factor();
+      if (train_conf.has_loss_scale_factor()) {
+        origin_grad = train_conf.loss_scale_factor();
       } else {
         origin_grad = 1.0;
       }
@@ -731,27 +733,77 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
   return Maybe<void>::Ok();
 }
 
-void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
+void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
-  const float loss_scale_factor = GlobalJobDesc().loss_scale_factor();
-  if (loss_scale_factor == 1) { return; }
-  const float down_scale_factor = 1.0f / loss_scale_factor;
-  for (auto& pair : *lbi2diff_lbi) {
-    const LogicalBlobId& lbi = pair.first;
-    LogicalBlobId& diff_lbi = pair.second;
-    auto scalar_mul_op =
-        user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
-            .Op("scalar_mul")
-            .Input("in", GenLogicalBlobName(diff_lbi))
-            .Output("out")
-            .Attr<bool>("has_float_operand", true)
-            .Attr<double>("float_operand", down_scale_factor)
-            .Attr<bool>("has_int_operand", false)
-            .Attr<int64_t>("int_operand", 0)
-            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
-            .Build();
-    job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
-    diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
+  auto ProducerOpNode4Lbi = [&](const LogicalBlobId& lbi) {
+    return op_graph.OpNode4OpName(lbi.op_name());
+  };
+  auto ProducerOpNode4Lbn = [&](const std::string& lbn) {
+    return ProducerOpNode4Lbi(GenLogicalBlobId(lbn));
+  };
+  const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
+  if (train_conf.has_dynamic_loss_scale_policy()) {
+    const auto& dynamic_loss_scale_state =
+        CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+    HashMap<DataType, std::string> data_type2loss_scale_lbn;
+    const auto LossScale4DataType = [&](DataType data_type) -> std::string {
+      auto it = data_type2loss_scale_lbn.find(data_type);
+      if (it == data_type2loss_scale_lbn.end()) {
+        auto cast_op =
+            user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-Cast-" + NewUniqueId())
+                .Op("cast")
+                .Input("in", dynamic_loss_scale_state.loss_scale_val_lbn())
+                .Output("out")
+                .Attr<DataType>("dtype", data_type)
+                .Build();
+
+        const ParallelConf& parallel_conf =
+            ProducerOpNode4Lbn(dynamic_loss_scale_state.loss_scale_val_lbn())
+                ->parallel_desc()
+                .parallel_conf();
+        job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+        return cast_op.output("out", 0);
+      } else {
+        return it->second;
+      }
+    };
+    for (auto& pair : *lbi2diff_lbi) {
+      const LogicalBlobId& lbi = pair.first;
+      LogicalBlobId& diff_lbi = pair.second;
+      auto scalar_mul_op =
+          user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
+              .Op("scalar_mul_by_tensor")
+              .Input("x", GenLogicalBlobName(diff_lbi))
+              .Input("scalar", LossScale4DataType(op_graph.GetLogicalBlobDesc(lbi).data_type()))
+              .Output("y")
+              .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
+              .Build();
+      job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+      diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
+    }
+  } else if (train_conf.has_loss_scale_factor()) {
+    const float loss_scale_factor = train_conf.loss_scale_factor();
+    if (loss_scale_factor == 1) { return; }
+    const float down_scale_factor = 1.0f / loss_scale_factor;
+    for (auto& pair : *lbi2diff_lbi) {
+      const LogicalBlobId& lbi = pair.first;
+      LogicalBlobId& diff_lbi = pair.second;
+      auto scalar_mul_op =
+          user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
+              .Op("scalar_mul")
+              .Input("in", GenLogicalBlobName(diff_lbi))
+              .Output("out")
+              .Attr<bool>("has_float_operand", true)
+              .Attr<double>("float_operand", down_scale_factor)
+              .Attr<bool>("has_int_operand", false)
+              .Attr<int64_t>("int_operand", 0)
+              .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
+              .Build();
+      job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+      diff_lbi = GenLogicalBlobId(scalar_mul_op.output("out", 0));
+    }
+  } else {
+    return;
   }
 }
 

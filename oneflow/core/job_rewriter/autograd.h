@@ -32,7 +32,7 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
-void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
+void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
