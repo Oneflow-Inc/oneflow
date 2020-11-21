@@ -22,7 +22,9 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
+class JobPassCtx;
+
+Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);

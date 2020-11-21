@@ -85,14 +85,14 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
   job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf()});
   if (train_conf.has_dynamic_loss_scale_policy()) {
-    const auto& state =
+    const auto& dynamic_loss_scale_state =
         JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     auto assign_op =
         user_op::UserOpConfWrapperBuilder(train_step_name + "-AssignIfNot")
             .Op("assign_if_not")
             .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
             .Input("value", scalar_add_op.output("out", 0))
-            .Input("condition", state.count_not_finite_lbn())
+            .Input("condition", dynamic_loss_scale_state.count_not_finite_lbn())
             .ScopeSymbolId(scope_symbol_id)
             .Build();
     job_builder.AddOps(parallel_conf, {assign_op.op_conf()});
