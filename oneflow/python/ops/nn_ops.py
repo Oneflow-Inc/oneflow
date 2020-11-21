@@ -2868,14 +2868,14 @@ def triplet_margin_loss(
         if p == 2.0:
             # Use Square to compute the p2-norm
             _norm = flow.math.square(_abs_val, name=name + "_square")
-            _norm = flow.math.reduce_sum(_norm, axis=-1, name=name + "_sum")
+            _norm = flow.math.reduce_sum(_norm, axis=1, name=name + "_sum")
             _norm_val = flow.math.sqrt(_norm, name=name + "_sqrt")
         else:
             _p_constant = flow.constant_like(
                 like=_abs_val, value=p, dtype=flow.float32, name=name + "_p_constant"
             )
             _norm = flow.math.pow(_abs_val, _p_constant, name=name + "_pow1")
-            _norm = flow.math.reduce_sum(_norm, axis=-1, name=name + "_sum")
+            _norm = flow.math.reduce_sum(_norm, axis=1, name=name + "_sum")
             _p_reciprocal_constant = flow.constant_like(
                 like=_norm,
                 value=1.0 / p,
@@ -2895,7 +2895,7 @@ def triplet_margin_loss(
 
     if swap:
         _distance_swap = _p_norm(positive - negative + eps, p=p)
-        _distance_swap = flow.math.reduce_sum(_distance_swap, axis=-1)
+        _distance_swap = flow.math.reduce_sum(_distance_swap, axis=1)
         # TODO: minimum still not support backward
         _distance_2 = flow.math.minimum(_distance_2, _distance_swap)
 

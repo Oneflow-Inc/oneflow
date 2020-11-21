@@ -45,6 +45,8 @@ def _compare_margin_ranking_loss_with_np(
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     def np_margin_ranking_loss(np_input1, np_input2, np_target, np_margin):
         np_target = np.broadcast_to(np_target, shape=(np_input1.shape))
@@ -64,17 +66,19 @@ def _compare_margin_ranking_loss_with_np(
         # Use numpy to compute diff
         # Here we only test the input_1 gradient
         # If loss > 0, the grad is: -target, else the grad is 0
-        elem_cnt = np_out.size
-        row, col = np_out.shape
-        np_diff = np.zeros(shape=np_out.shape)
-        # TODO: Optimize the backward logic
-        for i in range(row):
-            for j in range(col):
-                if np_out[i][j] > 0:
-                    np_diff[i][j] = -np_target[i]
+        _elem_cnt = np_out.size
+
+        if np_out.shape != np_target.shape: 
+            # Do Broadcast
+            np_target = np.broadcast_to(np_target, shape=(np_out.shape))
+
+        # If out > 0, the element = 1, else set to 0
+        _clip_zero_index = np.where(np_out>0, 1, 0)
+
+        _np_grad = -np_target
 
         return {
-            "np_margin_ranking_grad_mean": np_diff / elem_cnt,
+            "np_margin_ranking_grad_mean": _np_grad * _clip_zero_index / _elem_cnt
         }
 
     np_grad_dict = np_margin_ranking_diff(

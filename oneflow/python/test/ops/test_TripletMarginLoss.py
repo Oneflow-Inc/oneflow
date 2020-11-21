@@ -26,7 +26,8 @@ import os
 def _compare_triplet_margin_loss_with_np(
     anchor_shape,
     pos_shape,
-    neg_shape,
+    neg_shape, 
+    eps, 
     margin,
     p,
     swap,
@@ -37,6 +38,7 @@ def _compare_triplet_margin_loss_with_np(
     anchor = np.random.random(size=anchor_shape).astype(np.float32)
     pos = np.random.random(size=pos_shape).astype(np.float32)
     neg = np.random.random(size=neg_shape).astype(np.float32)
+    eps = eps 
 
     assert device_type in ["cpu", "gpu"]
 
@@ -47,20 +49,22 @@ def _compare_triplet_margin_loss_with_np(
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
+    func_config.default_logical_view(flow.scope.consistent_view())
 
-    def np_triplet_margin_loss(np_anchor, np_pos, np_neg, np_margin, np_p, swap):
-        np_d_1_norm = np.power(np.abs((np_anchor - np_pos + 1e-6)), np_p)
-        np_d_2_norm = np.power(np.abs((np_anchor - np_neg + 1e-6)), np_p)
+    def np_triplet_margin_loss(np_anchor, np_pos, np_neg, eps, np_margin, np_p, swap):
+        np_d_1_norm = np.power(np.abs((np_anchor - np_pos + eps)), np_p)
+        np_d_2_norm = np.power(np.abs((np_anchor - np_neg + eps)), np_p)
 
-        np_d_1 = np.power(np.sum(np_d_1_norm, axis=-1), 1.0 / p)
-        np_d_2 = np.power(np.sum(np_d_2_norm, axis=-1), 1.0 / p)
+        np_d_1 = np.power(np.sum(np_d_1_norm, axis=-1), 1.0 / np_p)
+        np_d_2 = np.power(np.sum(np_d_2_norm, axis=-1), 1.0 / np_p)
 
         if swap:
-            np_dist_swap = np.power(np.abs((np_pos - np_neg + 1e-6)), p)
-            np_dist_swap = np.power(np.sum(np_dist_swap, axis=-1), 1.0 / p)
+            np_dist_swap = np.power(np.abs((np_pos - np_neg + eps)), np_p)
+            np_dist_swap = np.power(np.sum(np_dist_swap, axis=-1), 1.0 / np_p)
             np_d_2 = np.minimum(np_d_2, np_dist_swap)
 
-        np_triplet_margin_loss = np.maximum((margin + np_d_1 - np_d_2), 0)
+        np_triplet_margin_loss = np.maximum((np_margin + np_d_1 - np_d_2), 0)
         np_triplet_margin_loss_mean = np.mean(np_triplet_margin_loss)
         np_triplet_margin_loss_sum = np.sum(np_triplet_margin_loss)
 
@@ -70,7 +74,7 @@ def _compare_triplet_margin_loss_with_np(
             "np_triplet_margin_loss_sum": np_triplet_margin_loss_sum,
         }
 
-    np_out_tripletloss_dict = np_triplet_margin_loss(anchor, pos, neg, margin, p, swap)
+    np_out_tripletloss_dict = np_triplet_margin_loss(anchor, pos, neg, eps, margin, p, swap)
 
     def np_triplet_loss_diff(anchor, pos, neg, margin, p):
         def _compute_distance(x1, x2, x3):
@@ -205,12 +209,13 @@ def _compare_triplet_margin_loss_with_np(
     )
 
 
-def _gen_arg_dict(shape, margin, p, swap, device_type, machine_ids, device_counts):
+def _gen_arg_dict(shape, eps, margin, p, swap, device_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["anchor_shape"] = [shape]
     arg_dict["pos_shape"] = [shape]
     arg_dict["neg_shape"] = [shape]
+    arg_dict["eps"] = [eps]
     arg_dict["margin"] = [margin]
     arg_dict["p"] = [p]
     arg_dict["swap"] = [swap]
@@ -224,7 +229,8 @@ def _gen_arg_dict(shape, margin, p, swap, device_type, machine_ids, device_count
 class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_triplet_margin_loss_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 3),
+            shape=(3, 3), 
+            eps=1e-6, 
             margin=1,
             p=1.5,
             swap=False,
@@ -240,6 +246,7 @@ class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_margin_ranking_loss_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 6),
+            eps=1e-6, 
             margin=1,
             p=2.0,
             swap=False,
@@ -256,7 +263,8 @@ class Testmarginloss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_margin_ranking_loss_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(6, 6),
+            shape=(6, 6), 
+            eps=1e-6, 
             margin=1,
             p=2.0,
             swap=False,
