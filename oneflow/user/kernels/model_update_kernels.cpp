@@ -129,9 +129,16 @@ class SGDUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
+        learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -217,6 +224,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     beta_ = ctx->Attr<float>("beta");
     weight_decay_ = ctx->Attr<float>("weight_decay");
     has_scale_by_ptr_ = ctx->user_op_conf().has_input("scale_by_tensor", 0);
+    has_skip_if_ = ctx->user_op_conf().has_input("skip_if", 0);
   };
   ~MomentumUpdateKernel() override = default;
 
@@ -233,10 +241,16 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (has_skip_if_) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
-        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 
@@ -247,6 +261,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
   float beta_;
   float weight_decay_;
   bool has_scale_by_ptr_;
+  bool has_skip_if_;
 };
 
 #define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                            \
@@ -356,10 +371,16 @@ class AdamUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
+        epsilon, weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -514,11 +535,17 @@ class LambUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, model_diff->dptr<G>(),
-        tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
-        tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
+        weight_decay, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+        v->mut_dptr<T>(), tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -575,6 +602,170 @@ class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
 REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
+#endif  // WITH_CUDA
+
+template<DeviceType device_type, typename T, typename G>
+class RmsPropUpdateKernel final : public user_op::OpKernel {
+ public:
+  RmsPropUpdateKernel() = default;
+  ~RmsPropUpdateKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
+    user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    user_op::Tensor* mean_square = ctx->Tensor4ArgNameAndIndex("mean_square", 0);
+    const auto scale = ctx->Attr<double>("scale");
+    const auto l1 = ctx->Attr<float>("l1");
+    const auto l2 = ctx->Attr<float>("l2");
+    const auto decay_rate = ctx->Attr<float>("decay_rate");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+    const auto centered = ctx->Attr<bool>("centered");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+    T* mean_gradient_ptr = nullptr;
+    if (centered) {
+      user_op::Tensor* mean_gradient = ctx->Tensor4ArgNameAndIndex("mean_gradient", 0);
+      mean_gradient_ptr = mean_gradient->mut_dptr<T>();
+    }
+    RmsPropUpdateKernelUtil<device_type, T, G>::Update(
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
+        epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                             \
+  REGISTER_USER_KERNEL("rmsprop_update")                                                 \
+      .SetCreateFn<RmsPropUpdateKernel<device, dtype, gtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kGPU, double, double);
+#endif  // WITH_CUDA
+
+template<DeviceType device_type, typename T>
+class LarsTmpBufferManager final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LarsTmpBufferManager);
+  LarsTmpBufferManager(void* ptr, const int64_t n) : ptr_(ptr) {
+    model_diff_size_ = GetCudaAlignedSize(n * sizeof(T));
+    model_diff_offset_ = 0;
+    data_tmp_size_ = GetCudaAlignedSize(3 * sizeof(T));
+    data_tmp_offset_ = model_diff_offset_ + model_diff_size_;
+    total_buffer_size_ = model_diff_size_ + data_tmp_size_;
+  }
+  ~LarsTmpBufferManager() = default;
+
+  size_t GetTotalBufferSize() const { return total_buffer_size_; }
+  size_t GetDataTmpBufferSize() const { return data_tmp_size_; }
+
+  T* ModelDiffPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + model_diff_offset_);
+  }
+
+  T* DataTmpPtr() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + data_tmp_offset_);
+  }
+
+ private:
+  size_t model_diff_offset_;
+  size_t model_diff_size_;
+  size_t data_tmp_offset_;
+  size_t data_tmp_size_;
+  size_t total_buffer_size_;
+  void* ptr_;
+};
+
+template<DeviceType device_type, typename T, typename G>
+class LarsUpdateKernel final : public user_op::OpKernel {
+ public:
+  LarsUpdateKernel() = default;
+  ~LarsUpdateKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+    const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
+    user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    LarsTmpBufferManager<device_type, T> tlm(tmp_buffer->mut_dptr(), model->shape().elem_cnt());
+    const auto scale = ctx->Attr<double>("scale");
+    const auto l1 = ctx->Attr<float>("l1");
+    const auto l2 = ctx->Attr<float>("l2");
+    const auto momentum_beta = ctx->Attr<float>("momentum_beta");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+    const auto lars_coefficient = ctx->Attr<float>("lars_coefficient");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+    LarsUpdateKernelUtil<device_type, T, G>::Update(
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
+        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(),
+        train_step->dptr<int64_t>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), momentum->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+template<DeviceType device_type, typename T>
+user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) {
+    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+    LarsTmpBufferManager<device_type, T> tlm(nullptr, model->shape().elem_cnt());
+    return tlm.GetTotalBufferSize();
+  };
+}
+
+#define REGISTER_LARS_UPDATE_KERNEL(device, dtype, gtype)                                      \
+  REGISTER_USER_KERNEL("lars_update")                                                          \
+      .SetCreateFn<LarsUpdateKernel<device, dtype, gtype>>()                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                     \
+                       & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)       \
+                       & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)) \
+      .SetInferTmpSizeFn(LarsGenInferTmpSizeFn<device, dtype>());
+
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, float, float);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, float, float16);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, float, float);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
 }  // namespace
