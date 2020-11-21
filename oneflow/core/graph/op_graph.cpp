@@ -209,7 +209,7 @@ void OpNode::ForEachSplitOrBroadcastBlobDesc(
     int32_t axis = sbp_parallel.split_parallel().axis();
     CHECK_GE(axis, 0);
     CHECK_LT(axis, blob_desc.shape().NumAxes());
-    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num());
+    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num()) << this->op_->op_name();
     BalancedSplitter bs(blob_desc.shape().At(axis), parallel_desc().parallel_num());
     BlobDesc sub_blob_desc(blob_desc);
     FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) {

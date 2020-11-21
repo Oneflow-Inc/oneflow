@@ -763,6 +763,10 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
                 ->parallel_desc()
                 .parallel_conf();
         job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+        OpBlobArg cast_in_op_blob_arg;
+        cast_in_op_blob_arg.set_op_name(cast_op.op_name());
+        cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
+        job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
         const std::string& lbn = cast_op.output("out", 0);
         data_type2loss_scale_lbn[data_type] = lbn;
         return lbn;
