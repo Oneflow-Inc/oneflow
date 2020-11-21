@@ -22,6 +22,22 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
 
+def dynamic_loss_scale_schedule(
+    count_not_finite, loss_scale, good_step_counter, increment_period, multiplier, name,
+):
+    (
+        flow.user_op_builder(name)
+        .Op("dynamic_loss_scale_schedule")
+        .Input("count_not_finite", [count_not_finite])
+        .Input("loss_scale", [loss_scale])
+        .Input("good_step_counter", [good_step_counter])
+        .Attr("increment_period", increment_period)
+        .Attr("multiplier", multiplier)
+        .Build()
+        .InferAndTryRun()
+    )
+
+
 def _run_test(
     test_case, device_type, op_param,
 ):
@@ -48,12 +64,13 @@ def _run_test(
                     op_param["loss_scale_value"], dtype=flow.float
                 ),
             )
-            flow.dynamic_loss_scale_schedule(
+            dynamic_loss_scale_schedule(
                 count_not_finite,
                 loss_scale,
                 good_step_counter,
                 op_param["increment_period"],
                 op_param["multiplier"],
+                "dynamic_schedule",
             )
             return good_step_counter, loss_scale
 

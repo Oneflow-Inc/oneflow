@@ -22,7 +22,7 @@ namespace {
 constexpr float kLossScaleMin = 1.0;
 constexpr float kLossScaleMax = 65536.0;
 
-__global__ void DynamicLossScaleScheduleGpu(int64_t increment_period, float multiplier,
+__global__ void DynamicLossScaleScheduleGpu(const int64_t increment_period, const float multiplier,
                                             const int64_t* count_not_finite, float* loss_scale,
                                             int64_t* good_step_counter) {
   if (*count_not_finite == 0) {
@@ -62,4 +62,5 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("dynamic_loss_scale_schedule")
     .SetCreateFn<DynamicLossScaleScheduleGpuKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu"));
+
 }  // namespace oneflow

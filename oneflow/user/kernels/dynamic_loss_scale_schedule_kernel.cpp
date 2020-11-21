@@ -47,7 +47,7 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
         cur_good_step_counter = 0;
         LOG(INFO)
             << "In past " << increment_period
-            << " step, there are no Nan or Inf in model_diffs, so we increase  loss_scale from"
+            << " steps, there are no Nan or Inf in model_diffs, so we increase loss_scale from"
             << old_loss_scale << " to " << new_loss_scale;
       }
       *good_step_counter = cur_good_step_counter;
@@ -66,4 +66,5 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("dynamic_loss_scale_schedule")
     .SetCreateFn<DynamicLossScaleScheduleCpuKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
+
 }  // namespace oneflow

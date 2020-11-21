@@ -84,27 +84,3 @@ def smooth_l1_loss(
     )
     op.Attr("beta", float(beta))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
-
-
-@oneflow_export("dynamic_loss_scale_schedule")
-def dynamic_loss_scale_schedule(
-    count_not_finite: remote_blob_util.BlobDef,
-    loss_scale: remote_blob_util.BlobDef,
-    good_step_counter: remote_blob_util.BlobDef,
-    increment_period: int = 1.0,
-    multiplier: float = 2.0,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DynamicLossScaleSchedule_")
-        )
-        .Op("dynamic_loss_scale_schedule")
-        .Input("count_not_finite", [count_not_finite])
-        .Input("loss_scale", [loss_scale])
-        .Input("good_step_counter", [good_step_counter])
-        .Attr("increment_period", increment_period)
-        .Attr("multiplier", multiplier)
-        .Build()
-        .InferAndTryRun()
-    )
