@@ -30,6 +30,8 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
+Maybe<void> CountNotFiniteIfNeed(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+                                 const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,

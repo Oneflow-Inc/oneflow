@@ -765,6 +765,7 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     HashMap<DataType, std::string> data_type2loss_scale_lbn;
     const auto LossScale4DataType = [&](DataType data_type) -> std::string {
+      if (data_type == DataType::kFloat) { return dynamic_loss_scale_state.loss_scale_val_lbn(); }
       auto it = data_type2loss_scale_lbn.find(data_type);
       if (it == data_type2loss_scale_lbn.end()) {
         auto cast_op =
@@ -913,6 +914,85 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
     diff_lbi.set_op_name(cast_to_static_shape_op_conf.name());
     diff_lbi.set_blob_name(cast_to_static_shape_conf->out());
   }
+}
+
+Maybe<void> CountNotFiniteIfNeed(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+                                 const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
+  if (lbi2diff_lbi.empty()) { return Maybe<void>::Ok(); }
+  if (!ctx->job_desc().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
+    return Maybe<void>::Ok();
+  }
+  HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
+  for (auto& pair : lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
+    lbi2parallel_desc[lbi] = &model_op_node->parallel_desc();
+  }
+  bool all_same_parallel_desc = true;
+  const ParallelDesc* parallel_desc = nullptr;
+  for (const auto& pair : lbi2parallel_desc) {
+    if (parallel_desc == nullptr) {
+      parallel_desc = pair.second;
+    } else if (*parallel_desc != *pair.second) {
+      all_same_parallel_desc = false;
+      break;
+    } else {
+      continue;
+    }
+  }
+  ParallelConf count_all_parallel_conf =
+      all_same_parallel_desc ? parallel_desc->parallel_conf() : GenParallelConfOfCpuZeroOnMaster();
+  int64_t scope_symbol_id = 0;
+  {
+    const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+        std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
+    const std::shared_ptr<cfg::ParallelConf> cfg_global_norm_parallel_conf =
+        std::make_shared<cfg::ParallelConf>(count_all_parallel_conf);
+    scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
+        cfg_job_conf, cfg_global_norm_parallel_conf, false);
+  }
+  std::vector<std::string> lbns_to_add;
+  for (const auto& pair : lbi2diff_lbi) {
+    const LogicalBlobId& diff_lbi = pair.second;
+    auto count_not_finite_op =
+        user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-CountNotFinite-" + NewUniqueId())
+            .Op("count_not_finite")
+            .Input("x", GenLogicalBlobName(diff_lbi))
+            .Output("y")
+            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, pair.first))
+            .Build();
+
+    job_builder->AddOps(lbi2parallel_desc.at(pair.first)->parallel_conf(),
+                        {count_not_finite_op.op_conf()});
+    lbns_to_add.push_back(count_not_finite_op.output("y", 0));
+  }
+  while (lbns_to_add.size() != 1) {
+    const size_t add_n_op_max_input_num = 8;
+    user_op::UserOpConfWrapperBuilder add_op_builder(
+        "System-DynamicLossScale-CountNotFinite-Reduce-" + NewUniqueId());
+    add_op_builder.Op("add_n");
+    const size_t start = lbns_to_add.size() >= add_n_op_max_input_num
+                             ? lbns_to_add.size() - add_n_op_max_input_num
+                             : 0;
+    for (size_t i = start; i < lbns_to_add.size(); ++i) {
+      add_op_builder.Input("in", lbns_to_add.at(i));
+    }
+    lbns_to_add.resize(start);
+    const auto add_op = add_op_builder.Output("out").ScopeSymbolId(scope_symbol_id).Build();
+    job_builder->AddOps(count_all_parallel_conf, {add_op.op_conf()});
+    lbns_to_add.push_back(add_op.output("out", 0));
+  }
+  LogicalBlobId count_not_finite_lbi =
+      GenLogicalBlobId(JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
+                           .count_not_finite_lbn());
+  auto count_not_finite_op = user_op::UserOpConfWrapperBuilder(count_not_finite_lbi.op_name())
+                                 .Op("identity")
+                                 .Input("in", lbns_to_add.front())
+                                 .Output("out")
+                                 .ScopeSymbolId(scope_symbol_id)
+                                 .Build();
+  job_builder->MutOpsOnlyOnce({count_not_finite_op.op_conf()});
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
