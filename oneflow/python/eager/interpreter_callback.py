@@ -38,6 +38,7 @@ def AddScopeToStorage(scope_symbol_id, scope_proto_str):
     )
     symbol = scope_symbol.ScopeSymbol(scope_symbol_id, scope_proto, parent_scope_symbol)
     symbol_storage.SetSymbol4Id(scope_symbol_id, symbol)
+    symbol_storage.SetSymbol4SerializedScopeProto(scope_proto_str, symbol)
 
 
 def MakeScopeSymbol(job_conf_str, parallel_conf_str, is_mirrored):
