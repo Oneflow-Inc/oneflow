@@ -18,6 +18,10 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.python.framework.ofblob as ofblob
+import oneflow_api.oneflow.core.operator.op_attribute as op_attribute_cfg
+import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow_api
 
 
