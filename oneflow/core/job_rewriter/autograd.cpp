@@ -89,30 +89,6 @@ Maybe<void> GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
-                                         std::function<bool(OpNode*)>* NeedBackwardOp) {
-  auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
-  GetVariableOpNodesAndDescendants(op_graph, var_op_nodes_and_descendants.get());
-  auto loss_op_nodes_and_ascendants = std::make_shared<HashSet<OpNode*>>();
-  JUST(GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get()));
-  *NeedBackwardOp = [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
-    if (var_op_nodes_and_descendants->find(op_node) == var_op_nodes_and_descendants->end()) {
-      return false;
-    }
-    if (loss_op_nodes_and_ascendants->find(op_node) == loss_op_nodes_and_ascendants->end()) {
-      return false;
-    }
-    for (const auto& ibn : op_node->op().input_bns()) {
-      if (op_node->op().InputBlobModifier4Ibn(ibn).requires_grad()) { return true; }
-    }
-    for (const auto& obn : op_node->op().output_bns()) {
-      if (op_node->op().OutputBlobModifier4Obn(obn).requires_grad()) { return true; }
-    }
-    return false;
-  };
-  return Maybe<void>::Ok();
-}
-
 std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasDiff4LbiOpName(
     const OpGraph& op_graph, const std::function<bool(OpNode*)>& NeedBackwardOp) {
   auto lbis2ops_with_in_diff = std::make_shared<HashMap<LogicalBlobId, HashSet<std::string>>>();
@@ -537,6 +513,30 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 }  // namespace
+
+Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
+                                         std::function<bool(OpNode*)>* NeedBackwardOp) {
+  auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
+  GetVariableOpNodesAndDescendants(op_graph, var_op_nodes_and_descendants.get());
+  auto loss_op_nodes_and_ascendants = std::make_shared<HashSet<OpNode*>>();
+  JUST(GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get()));
+  *NeedBackwardOp = [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
+    if (var_op_nodes_and_descendants->find(op_node) == var_op_nodes_and_descendants->end()) {
+      return false;
+    }
+    if (loss_op_nodes_and_ascendants->find(op_node) == loss_op_nodes_and_ascendants->end()) {
+      return false;
+    }
+    for (const auto& ibn : op_node->op().input_bns()) {
+      if (op_node->op().InputBlobModifier4Ibn(ibn).requires_grad()) { return true; }
+    }
+    for (const auto& obn : op_node->op().output_bns()) {
+      if (op_node->op().OutputBlobModifier4Obn(obn).requires_grad()) { return true; }
+    }
+    return false;
+  };
+  return Maybe<void>::Ok();
+}
 
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
   std::list<OpNode*> starts;
