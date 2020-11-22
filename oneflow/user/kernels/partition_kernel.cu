@@ -55,7 +55,7 @@ __global__ void GetPartionBoundIndex(const int64_t n, const int64_t parallel_num
 #pragma unroll
       for (int32_t j = parallel_num; j >= 0; --j) {
         const int32_t lower_bound = j * num_classes_per_rank;
-        if (in <= lower_bound) { out_ptr[j] = num; }
+        if (in < lower_bound) { out_ptr[j] = num; }
       }
     }
   }
@@ -76,10 +76,9 @@ __global__ void PartitionGpu(const int64_t n, const int64_t parallel_num,
         break;
       }
     }
-    const int32_t id = blockIdx.x * blockDim.x + threadIdx.x;
-    if (id < parallel_num) {
-      param.num_unique[id][0] = partion_bound_index[id + 1] - partion_bound_index[id];
-    }
+  }
+  CUDA_1D_KERNEL_LOOP(i, parallel_num) {
+    param.num_unique[i][0] = partion_bound_index[i + 1] - partion_bound_index[i];
   }
 }
 
