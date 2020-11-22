@@ -33,19 +33,29 @@ __global__ void GetPartionBoundIndex(const int64_t n, const int64_t parallel_num
                                      const K* in_num_unique_ptr, K* out_ptr) {
   const K num = in_num_unique_ptr[0];
   CUDA_1D_KERNEL_LOOP(i, num) {
-    const int32_t id = blockIdx.x * blockDim.x + threadIdx.x;
-    if (id < parallel_num) {
-      out_ptr[id] = static_cast<K>(0);
-    } else if (id == parallel_num) {
-      out_ptr[id] = static_cast<K>(num);
-    }
-    if (i != 0) {
+    if (i != 0 && i != num - 1) {
       const T cur_in = in_ptr[i];
       const T pre_in = in_ptr[i - 1];
 #pragma unroll
       for (int32_t j = 1; j < parallel_num; ++j) {
         const int32_t lower_bound = j * num_classes_per_rank;
         if (cur_in >= lower_bound && pre_in < lower_bound) { out_ptr[j] = static_cast<K>(i); }
+      }
+    }
+    if (i == 0) {
+      const T in = in_ptr[i];
+#pragma unroll
+      for (int32_t j = 0; j <= parallel_num; ++j) {
+        const int32_t lower_bound = j * num_classes_per_rank;
+        if (in >= lower_bound) { out_ptr[j] = 0; }
+      }
+    }
+    if (i == num - 1) {
+      const T in = in_ptr[i];
+#pragma unroll
+      for (int32_t j = parallel_num; j >= 0; --j) {
+        const int32_t lower_bound = j * num_classes_per_rank;
+        if (in <= lower_bound) { out_ptr[j] = num; }
       }
     }
   }
@@ -57,7 +67,6 @@ __global__ void PartitionGpu(const int64_t n, const int64_t parallel_num,
                              Param<T, K, N> param) {
   const K num = param.in_num_unique[0];
   CUDA_1D_KERNEL_LOOP(i, num) {
-    printf(" %d unique: %d\n", i, param.in[i]);
 #pragma unroll
     for (int32_t j = 0; j < parallel_num; ++j) {
       const int32_t partion_bound_index_start = partion_bound_index[j];
@@ -70,17 +79,6 @@ __global__ void PartitionGpu(const int64_t n, const int64_t parallel_num,
     const int32_t id = blockIdx.x * blockDim.x + threadIdx.x;
     if (id < parallel_num) {
       param.num_unique[id][0] = partion_bound_index[id + 1] - partion_bound_index[id];
-      printf("param.num_unique[%d][0] = %d start: %d\n", id, param.num_unique[id][0],
-             partion_bound_index[id]);
-    }
-  }
-}
-
-template<typename T, typename K, int32_t N>
-__global__ void Print(const int parallel_num, Param<T, K, N> param) {
-  for (int i = 0; i < parallel_num; i++) {
-    for (int j = 0; j < param.num_unique[i][0]; j++) {
-      printf("pid: %d out %d: %d\n", i, j, param.out[i][j]);
     }
   }
 }
@@ -119,7 +117,6 @@ class PartitionKernel final : public user_op::OpKernel {
     PartitionGpu<T, K, 32><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                              ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, parallel_num, num_classes_per_rank, tmp_buffer->dptr<K>(), para);
-    Print<T, K, 32><<<1, 1, 0, ctx->device_ctx()->cuda_stream()>>>(parallel_num, para);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
