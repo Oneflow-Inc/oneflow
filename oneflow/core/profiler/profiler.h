@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,29 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import numpy as np
+*/
+#ifndef ONEFLOW_CORE_PROFILER_PROFILER_H_
+#define ONEFLOW_CORE_PROFILER_PROFILER_H_
 
+#include "oneflow/core/common/util.h"
 
-def forward(args):
-    print("user sigmoid forward args", args)
-    (x,) = args
-    y = 1 / (1 + np.exp(-x))
-    return y
+namespace oneflow {
 
+namespace profiler {
 
-# import torch
-# def forward(args):
-#     print("user sigmoid forward args", args)
-#     print("compute with pytorch")
-#     x, = args
-#     b = torch.from_numpy(x)
-#     print(b)
-#     y = torch.sigmoid(b).numpy()
-#     return y
+void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag);
 
+}  // namespace profiler
 
-def backward(args):
-    print("user sigmoid backward args", args)
-    y, dy = args
-    return y * (1 - y) * dy
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_PROFILER_PROFILER_H_
