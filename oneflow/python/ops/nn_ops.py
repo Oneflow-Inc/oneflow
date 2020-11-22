@@ -2674,7 +2674,7 @@ def l1_loss(
     if reduction = "sum": 
     
     .. math:: 
-
+    
         output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
@@ -2763,3 +2763,77 @@ def l1_loss(
     else:
         # Do no reduction
         return l1_value
+
+
+@oneflow_export("nn.BCELoss")
+def bce_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    weight: remote_blob_util = None,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the binary cross entropy loss. 
+    
+    The equation is: 
+
+    if reduction = "none": 
+
+    .. math:: 
+
+        out = -(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    if reduction = "mean": 
+
+    .. math:: 
+        
+        out = -\frac{1}{n}\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+        
+        out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        target (remote_blob_util.BlobDef): The target value. 
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = "BCELoss"
+
+    _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
+    _cross_entropy_loss = flow.math.negative(
+        target * flow.math.log(_sigmiod_value)
+        + (1 - target) * flow.math.log(1 - _sigmiod_value)
+    )
+
+    if weight is not None:
+        assert (
+            weight.shape == input.shape
+        ), "The weight shape must be the same as Input shape"
+        _weighted_loss = weight * _cross_entropy_loss
+    else:
+        _weighted_loss = _cross_entropy_loss
+    if reduction == "mean":
+        return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_weighted_loss, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return _weighted_loss
