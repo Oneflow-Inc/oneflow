@@ -24,6 +24,8 @@ namespace oneflow {
 
 class JobPassCtx;
 
+Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
+                                         std::function<bool(OpNode*)>* NeedBackwardOp);
 Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
