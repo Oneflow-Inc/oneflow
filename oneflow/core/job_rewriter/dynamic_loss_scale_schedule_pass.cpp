@@ -84,7 +84,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
     identity_conf->set_out("out");
   }
   // will be replaced by real count of not finite
-  auto dummy_count_not_finite_op =
+  auto count_not_finite_stub_op =
       user_op::UserOpConfWrapperBuilder(op_name_prefix + job->job_conf().job_name()
                                         + "-CountNotFinite")
           .Op("constant")
@@ -103,7 +103,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
   auto schedule =
       user_op::UserOpConfWrapperBuilder(op_name_prefix + job->job_conf().job_name() + "-Schedule")
           .Op("dynamic_loss_scale_schedule")
-          .Input("count_not_finite", dummy_count_not_finite_op.output("out", 0))
+          .Input("count_not_finite", count_not_finite_stub_op.output("out", 0))
           .Input("loss_scale", loss_scale_var_lbn)
           .Input("good_step_counter", good_step_counter_var_lbn)
           .Attr<int64_t>("increment_period", policy.increment_period())
@@ -112,13 +112,13 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .Build();
   job_builder.AddOps(parallel_conf,
                      {loss_scale_var_op_conf, loss_scale_val_op_conf, good_step_counter_var_conf,
-                      dummy_count_not_finite_op.op_conf(), schedule.op_conf()});
+                      count_not_finite_stub_op.op_conf(), schedule.op_conf()});
   if (!JUST(ctx->HasState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))) {
     ctx->ResetState("dynamic_loss_scale_state", std::make_unique<DynamicLossScaleJobPassState>());
   }
   auto state = JUST(ctx->MutableState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
   state->set_loss_scale_val_lbn(loss_scale_val_lbn);
-  state->set_count_not_finite_lbn(dummy_count_not_finite_op.output("out", 0));
+  state->set_count_not_finite_lbn(count_not_finite_stub_op.output("out", 0));
   return Maybe<void>::Ok();
 }
 
