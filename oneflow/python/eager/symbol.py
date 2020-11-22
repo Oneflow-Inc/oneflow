@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.core.job.placement_pb2 as placement_pb
 import functools
-from google.protobuf import text_format as tmp_text_format
 
 
 class Symbol(object):
@@ -96,7 +95,7 @@ def MakeMachineId2DeviceIdList(parallel_conf):
     global _parallel_conf_str2ofrecord
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
-            tmp_text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+            parallel_conf
         )
         _parallel_conf_str2ofrecord[parallel_conf_str] = {
             int(k): list(v.int32_list.value) for k, v in ofrecord.feature.items()

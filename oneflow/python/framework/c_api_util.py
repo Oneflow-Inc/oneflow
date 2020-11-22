@@ -560,7 +560,7 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
 
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf))
+    serialized_parallel_conf = str(parallel_conf)
     (
         ofrecord,
         error_str,

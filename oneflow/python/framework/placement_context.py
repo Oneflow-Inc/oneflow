@@ -25,7 +25,6 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
-from google.protobuf import text_format as tmp_text_format
 
 
 class PlacementScope(object):
@@ -102,7 +101,7 @@ def MakeMachineId2DeviceIdList(parallel_conf):
     global _parallel_conf_str2ofrecord
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
-            tmp_text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+            parallel_conf
         )
         _parallel_conf_str2ofrecord[parallel_conf_str] = {
             int(k): list(v.int32_list.value) for k, v in ofrecord.feature.items()
