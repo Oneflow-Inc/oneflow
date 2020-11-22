@@ -29,12 +29,12 @@ import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 
 
-def AddScopeToStorage(scope_symbol_id, scope_proto_str):
+def AddScopeToStorage(scope_symbol_id, scope_proto):
+    scope_proto_str = str(scope_proto)
     if symbol_storage.HasSymbol4SerializedScopeProto(scope_proto_str):
         return
-    scope_proto = text_format.Parse(scope_proto_str, scope_pb.ScopeProto())
     parent_scope_symbol = symbol_storage.GetSymbol4Id(
-        scope_proto.parent_scope_symbol_id
+        scope_proto.parent_scope_symbol_id()
     )
     symbol = scope_symbol.ScopeSymbol(scope_symbol_id, scope_proto, parent_scope_symbol)
     symbol_storage.SetSymbol4Id(scope_symbol_id, symbol)

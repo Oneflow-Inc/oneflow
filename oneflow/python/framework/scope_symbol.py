@@ -79,8 +79,12 @@ class ScopeSymbol(Symbol):
             host_parallel_desc_sym = instruction_builder.GetParallelDescSymbol(
                 parallel_conf
             )
-            scope_proto.set_device_parallel_desc_symbol_id(device_parallel_desc_sym.symbol_id)
-            scope_proto.set_host_parallel_desc_symbol_id(host_parallel_desc_sym.symbol_id)
+            scope_proto.set_device_parallel_desc_symbol_id(
+                device_parallel_desc_sym.symbol_id
+            )
+            scope_proto.set_host_parallel_desc_symbol_id(
+                host_parallel_desc_sym.symbol_id
+            )
 
         return self.BuildBySetter(instruction_builder, SetScopeProto)
 
@@ -144,7 +148,7 @@ def MakeParallelConf(device_tag, machine_device_ids):
             machine_device_id, str
         ), "type of machine_device_id (%s) is not string" % type(machine_device_id)
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
-            "machine_device_id: %s is not valid" % machine_device_id\
+            "machine_device_id: %s is not valid" % machine_device_id
         )
         device_names.append(machine_device_id)
 
