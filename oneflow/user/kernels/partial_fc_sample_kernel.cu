@@ -64,9 +64,10 @@ template<typename K>
 class TmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
-  TmpBufferManager(void* ptr, const int64_t device_num_class, const int64_t batch_size)
+  TmpBufferManager(void* ptr, const int64_t device_num_class, const int64_t batch_size,
+                   const int64_t parallel_num)
       : ptr_(ptr) {
-    const int64_t buffer_elem_cnt = std::max(device_num_class, batch_size);
+    const int64_t buffer_elem_cnt = std::max(std::max(device_num_class, batch_size), 2 * (parallel_num + 1));
     const size_t cub_sort_keys_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     const size_t cub_sort_values_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     const size_t cub_sort_keys_out_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
@@ -334,7 +335,8 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     const int64_t batch_size = label->shape().At(0);
     const int64_t num_classes = weight->shape().At(0);
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    TmpBufferManager<K> buffer_manager(tmp_buffer->mut_dptr(), num_classes, batch_size);
+    TmpBufferManager<K> buffer_manager(tmp_buffer->mut_dptr(), num_classes, batch_size,
+                                       parallel_num);
 
     auto* kernel_state = dynamic_cast<DistributedPartialFcSampleOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
@@ -373,8 +375,9 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
         const int64_t num_classes = ctx->TensorDesc4ArgNameAndIndex("weight", 0)->shape().At(0); \
         const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("label", 0)->shape().At(0);   \
+        const int64_t parallel_num = ctx->parallel_ctx().parallel_num();                         \
         TmpBufferManager<OF_PP_PAIR_FIRST(ltype_pair)> buffer_manager(nullptr, num_classes,      \
-                                                                      batch_size);               \
+                                                                      batch_size, parallel_num); \
         return buffer_manager.GetTotalBufferSize();                                              \
       });
 
