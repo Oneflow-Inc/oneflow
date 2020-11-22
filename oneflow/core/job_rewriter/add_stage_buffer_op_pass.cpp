@@ -55,13 +55,13 @@ class AddStageBufferOpPass final : public JobPass {
   Maybe<void> Apply(JobBuilder* job_builder) const {
     HashMap<LogicalBlobId, StageBuffers> produced_lbi2stage_buffers;
     HashMap<const Operator*, StageBuffers> consumer_op2stage_buffers;
-    JUST(ForEachStageBuffer(*job_builder,
-          [&](const std::shared_ptr<StageBuffer>& stage_buffer) -> Maybe<void> {
-            CHECK_GT_OR_RETURN(stage_buffer->buffer_size, 0);
-            produced_lbi2stage_buffers[stage_buffer->produced_lbi].push_back(stage_buffer);
-            consumer_op2stage_buffers[stage_buffer->consumer_op].push_back(stage_buffer);
-            return Maybe<void>::Ok();
-          }));
+    JUST(ForEachStageBuffer(
+        *job_builder, [&](const std::shared_ptr<StageBuffer>& stage_buffer) -> Maybe<void> {
+          CHECK_GT_OR_RETURN(stage_buffer->buffer_size, 0);
+          produced_lbi2stage_buffers[stage_buffer->produced_lbi].push_back(stage_buffer);
+          consumer_op2stage_buffers[stage_buffer->consumer_op].push_back(stage_buffer);
+          return Maybe<void>::Ok();
+        }));
     for (auto& pair : produced_lbi2stage_buffers) {
       JUST(AddBufferOp(job_builder, pair.first, &pair.second));
     }
@@ -72,7 +72,7 @@ class AddStageBufferOpPass final : public JobPass {
   }
 
   Maybe<void> AddBufferOp(JobBuilder* job_builder, const LogicalBlobId& produced_lbi,
-      StageBuffers* stage_buffers) const {
+                          StageBuffers* stage_buffers) const {
     std::string op_name = produced_lbi.op_name() + "_buffer_op";
     const Scope* scope = nullptr;
     size_t buffer_size = -1;
@@ -89,12 +89,12 @@ class AddStageBufferOpPass final : public JobPass {
       }
     }
     const auto buffer_op = user_op::UserOpConfWrapperBuilder(op_name)
-                              .Op("buffer")
-                              .ScopeSymbolId(scope->scope_proto().symbol_id())
-                              .Input("in", GenLogicalBlobName(produced_lbi))
-                              .Output("out")
-                              .Attr<int64_t>("buffer_size", buffer_size)
-                              .Build();
+                               .Op("buffer")
+                               .ScopeSymbolId(scope->scope_proto().symbol_id())
+                               .Input("in", GenLogicalBlobName(produced_lbi))
+                               .Output("out")
+                               .Attr<int64_t>("buffer_size", buffer_size)
+                               .Build();
     const auto& parallel_desc = JUST(scope->GetParallelDesc(buffer_op.op_conf()));
     job_builder->AddOps(parallel_desc.parallel_conf(), {buffer_op.op_conf()});
     for (auto& stage_buffer : *stage_buffers) {
@@ -103,13 +103,13 @@ class AddStageBufferOpPass final : public JobPass {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> ReplaceInputWithBufferOutLbn(
-      JobBuilder* job_builder, const Operator& op, const StageBuffers& stage_buffers) const {
+  Maybe<void> ReplaceInputWithBufferOutLbn(JobBuilder* job_builder, const Operator& op,
+                                           const StageBuffers& stage_buffers) const {
     const auto& FindStageBuffer = [&](const LogicalBlobId& lbi) -> const StageBuffer* {
       const auto& iter = std::find_if(stage_buffers.begin(), stage_buffers.end(),
-          [&](const std::shared_ptr<StageBuffer>& stage_buffer) {
-            return stage_buffer->produced_lbi == lbi;
-          });
+                                      [&](const std::shared_ptr<StageBuffer>& stage_buffer) {
+                                        return stage_buffer->produced_lbi == lbi;
+                                      });
       if (iter == stage_buffers.end()) { return nullptr; }
       return iter->get();
     };
@@ -162,7 +162,6 @@ class AddStageBufferOpPass final : public JobPass {
     if (new_op_confs) { job_builder->MutOpsOnlyOnce(*new_op_confs); }
     return Maybe<void>::Ok();
   }
-
 };
 
 REGISTER_JOB_PASS("AddStageBufferOp", AddStageBufferOpPass);
