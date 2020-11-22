@@ -117,36 +117,51 @@ class UnfoldCpuKernelUtil {
     const int64_t out_cols = out.At(2);
     const int64_t in_channel_size = in.Count(2);
     const int64_t out_channel_size = out.At(1) / in.At(1) * out_cols;
+    const int64_t kernel_size_extent_d = (kernel_size.at(0) - 1) * dilation_rate.at(0) + 1;
+    const int64_t kernel_size_extent_h = (kernel_size.at(1) - 1) * dilation_rate.at(1) + 1;
+    const int64_t kernel_size_extent_w = (kernel_size.at(2) - 1) * dilation_rate.at(2) + 1;
 
     const T* output_diff = out_diff_blob->dptr<T>();
     T* input_diff = in_diff_blob->mut_dptr<T>();
     std::memset(input_diff, T(0), in.elem_cnt() * sizeof(T));
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
-        FOR_RANGE(int64_t, pd, 0, out_5d.At(2)) {
-          const int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-          const int64_t dend = dstart + (kernel_size.at(0) - 1) * dilation_rate.at(0) + 1;
-          FOR_RANGE(int64_t, ph, 0, out_5d.At(3)) {
-            const int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            const int64_t hend = hstart + (kernel_size.at(1) - 1) * dilation_rate.at(1) + 1;
-            FOR_RANGE(int64_t, pw, 0, out_5d.At(4)) {
-              const int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              const int64_t wend = wstart + (kernel_size.at(2) - 1) * dilation_rate.at(2) + 1;
-              const int64_t out_col_index = pd * out_5d.Count(3) + ph * out_5d.At(4) + pw;
-              int64_t out_row_index = 0;
-
-              for (int64_t d = dstart; d < dend; d += dilation_rate.at(0)) {
-                for (int64_t h = hstart; h < hend; h += dilation_rate.at(1)) {
-                  for (int64_t w = wstart; w < wend; w += dilation_rate.at(2)) {
-                    if (d >= 0 && h >= 0 && w >= 0 && d < in.At(2) && h < in.At(3) && w < in.At(4)) {
-                      const int64_t input_index = d * in.Count(3) + h * in.At(4) + w;
-                      const int64_t output_index = out_row_index * out_cols + out_col_index;
-                      input_diff[input_index] = output_diff[output_index];
-                    }
-                    ++out_row_index;
+        int64_t input_index = 0;
+        FOR_RANGE(int64_t, pd_np, 0, in.At(2)) {
+          const int64_t pd = pd_np + padding_before.at(0);
+          const int64_t dstart = pd < kernel_size_extent_d ?
+            0 : (pd - kernel_size_extent_d) / strides.at(0) + 1;
+          const int64_t dend = std::min(pd / strides.at(0) + 1, out_5d.At(2));
+          FOR_RANGE(int64_t, ph_np, 0, in.At(3)) {
+            const int64_t ph = ph_np + padding_before.at(1);
+            const int64_t hstart = ph < kernel_size_extent_h ?
+              0 : (ph - kernel_size_extent_h) / strides.at(1) + 1;
+            const int64_t hend = std::min(ph / strides.at(1) + 1, out_5d.At(3));
+            FOR_RANGE(int64_t, pw_np, 0, in.At(4)) {
+              const int64_t pw = pw_np + padding_before.at(2);
+              const int64_t wstart = pw < kernel_size_extent_w ?
+                0 : (pw - kernel_size_extent_w) / strides.at(2) + 1;
+              const int64_t wend = std::min(pw / strides.at(2) + 1, out_5d.At(4));
+              FOR_RANGE(int64_t, d, dstart, dend) {
+                int64_t k_d = pd - d * strides.at(0);
+                if (k_d % dilation_rate.at(0) != 0) continue;
+                k_d /= dilation_rate.at(0);
+                FOR_RANGE(int64_t, h, hstart, hend) {
+                  int64_t k_h = ph - h * strides.at(1);
+                  if (k_h % dilation_rate.at(1) != 0) continue;
+                  k_h /= dilation_rate.at(1);
+                  FOR_RANGE(int64_t, w, wstart, wend) {
+                    int64_t k_w = pw - w * strides.at(2);
+                    if (k_w % dilation_rate.at(2) != 0) continue;
+                    k_w /= dilation_rate.at(2);
+                    const int64_t out_row_index = (k_d * kernel_size.at(1) + k_h) * kernel_size.at(2) + k_w;
+                    const int64_t out_col_index = (d * out_5d.At(1) + h) * out_5d.At(2) + w;
+                    const int64_t output_index = out_row_index * out_cols + out_col_index;
+                    input_diff[input_index] += output_diff[output_index];
                   }
                 }
               }
+              ++input_index;
             }
           }
         }

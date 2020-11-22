@@ -94,33 +94,40 @@ __global__ void UnfoldCFirstBackward(const int64_t elem_cnt,
                                     const T* output_diff, T* input_diff) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t idx = index;
-    const int64_t pw = idx % out_5d_width;
-    idx /= out_5d_width;
-    const int64_t ph = idx % out_5d_height;
-    idx /= out_5d_height;
-    const int64_t pd = idx % out_5d_depth;
-    idx /= out_5d_depth;
-    input_diff += in_channel_size * idx;
+    const int64_t pw = idx % in_width + padding_before_width;
+    idx /= in_width;
+    const int64_t ph = idx % in_height + padding_before_height;
+    idx /= in_height;
+    const int64_t pd = idx % in_depth + padding_before_depth;
+    idx /= in_depth;
     output_diff += out_channel_size * idx;
 
-    const int64_t dstart = pd * strides_depth - padding_before_depth;
-    const int64_t dend = dstart + (kernel_size_depth - 1) * dilation_rate_depth + 1;
-    const int64_t hstart = ph * strides_height - padding_before_height;
-    const int64_t hend = hstart + (kernel_size_height - 1) * dilation_rate_height + 1;
-    const int64_t wstart = pw * strides_width - padding_before_width;
-    const int64_t wend = wstart + (kernel_size_width - 1) * dilation_rate_width + 1;
-    const int64_t out_col_index = (pd * out_5d_height + ph) * out_5d_width + pw;
-    int64_t out_row_index = 0;
+    const int64_t kernel_size_extent_depth = (kernel_size_depth - 1) * dilation_rate_depth + 1;
+    const int64_t kernel_size_extent_height = (kernel_size_height - 1) * dilation_rate_height + 1;
+    const int64_t kernel_size_extent_width = (kernel_size_width - 1) * dilation_rate_width + 1;
+    const int64_t dstart = pd < kernel_size_extent_depth ? 0 : (pd - kernel_size_extent_depth) / strides_depth + 1;
+    const int64_t dend = min(pd / strides_depth + 1, out_5d_depth);
+    const int64_t hstart = ph < kernel_size_extent_height ? 0 : (ph - kernel_size_extent_height) / strides_height + 1;
+    const int64_t hend = min(ph / strides_height + 1, out_5d_height);
+    const int64_t wstart = pw < kernel_size_extent_width ? 0 : (pw - kernel_size_extent_width) / strides_width + 1;
+    const int64_t wend = min(pw / strides_width + 1, out_5d_width);
 
-    for (int64_t d = dstart; d < dend; d += dilation_rate_depth) {
-      for (int64_t h = hstart; h < hend; h += dilation_rate_height) {
-        for (int64_t w = wstart; w < wend; w += dilation_rate_width) {
-          if (d >= 0 && h >= 0 && w >= 0 && d < in_depth && h < in_height && w < in_width) {
-            const int64_t input_index = (d * in_height + h) * in_width + w;
-            const int64_t output_index = out_row_index * out_cols + out_col_index;
-            input_diff[input_index] += output_diff[output_index];
-          }
-          ++out_row_index;
+    for (int64_t d = dstart; d < dend; d += 1) {
+      int64_t k_depth = pd - d * strides_depth;
+      if (k_depth % dilation_rate_depth != 0) continue;
+      k_depth /= dilation_rate_depth;
+      for (int64_t h = hstart; h < hend; h += 1) {
+        int64_t k_height = ph - h * strides_height;
+        if (k_height % dilation_rate_height != 0) continue;
+        k_height /= dilation_rate_height;
+        for (int64_t w = wstart; w < wend; w += 1) {
+          int64_t k_width = pw - w * strides_width;
+          if (k_width % dilation_rate_width != 0) continue;
+          k_width /= dilation_rate_width;
+          const int64_t out_row_index = (k_depth * kernel_size_height + k_height) * kernel_size_width + k_width;
+          const int64_t out_col_index = (d * out_5d_height + h) * out_5d_width + w;
+          const int64_t output_index = out_row_index * out_cols + out_col_index;
+          input_diff[index] += output_diff[output_index];
         }
       }
     }
@@ -202,7 +209,7 @@ struct UnfoldGpuKernelUtil {
     const T* output_diff = out_diff_blob->dptr<T>();
     T* input_diff = in_diff_blob->mut_dptr<T>();
     cudaMemset(input_diff, T(0), in.elem_cnt() * sizeof(T));
-    RUN_CUDA_KERNEL((UnfoldCFirstBackward<T>), device_ctx, out_5d.elem_cnt(), out_5d.elem_cnt(),
+    RUN_CUDA_KERNEL((UnfoldCFirstBackward<T>), device_ctx, in.elem_cnt(), in.elem_cnt(),
                     in.At(2), in.At(3), in.At(4),
                     out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
                     strides.at(0), strides.at(1), strides.at(2),
