@@ -43,7 +43,6 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     const BlobDesc& indices_desc =
         op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
     const int64_t max_dim_size = indices_desc.shape().elem_cnt() * parallel_num;
-    LOG(ERROR) << " num_classes " << num_classes << " parallel_num " << parallel_num;
     OperatorConf distribute_split_ids_op_conf{};
     distribute_split_ids_op_conf.set_name(op_name + "-distribute_split_ids");
     auto* distribute_split_ids_conf = distribute_split_ids_op_conf.mutable_distribute_split_conf();
@@ -199,7 +198,6 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     distribute_concat_conf->set_axis(0);
     distribute_concat_conf->set_out("out_0");
     job_builder.MutOpsOnlyOnce({distribute_concat_op_conf});
-    LOG(INFO) << "debugstr" << job_builder.job().DebugString();
   });
   return Maybe<void>::Ok();
 }
