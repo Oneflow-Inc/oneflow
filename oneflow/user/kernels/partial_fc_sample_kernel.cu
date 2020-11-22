@@ -30,21 +30,22 @@ namespace user_op {
 namespace {
 
 template<typename K>
-int64_t GetCubSortPairTempStorageSize(int64_t n) {
+int64_t GetCubSortPairsTempStorageSize(int64_t n) {
   size_t cub_sort_temp_store_size = 0;
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
                                                        nullptr, nullptr, nullptr, n)));
-  CHECK_GE(cub_sort_temp_store_size, 0);
-  CHECK_LT(cub_sort_temp_store_size, GetMaxVal<int64_t>());
-  return GetCudaAlignedSize(static_cast<int64_t>(cub_sort_temp_store_size));
+  size_t temp_store_size = GetCudaAlignedSize(static_cast<int64_t>(cub_sort_temp_store_size));
+  CHECK_GE(temp_store_size, 0);
+  CHECK_LT(temp_store_size, GetMaxVal<int64_t>());
+  return temp_store_size;
 }
 
-template<typename KEY, typename VAL>
-void SortPairs(cudaStream_t stream, int64_t n, size_t temp_storage_bytes, const KEY* keys,
-               const VAL* vals, void* tmp_storage, KEY* sorted_keys, VAL* sorted_vals) {
-  OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<KEY, VAL>(tmp_storage, temp_storage_bytes, keys,
-                                                           sorted_keys, vals, sorted_vals, n, 0,
-                                                           sizeof(KEY) * 8, stream)));
+template<typename K>
+void CubSortPairs(cudaStream_t stream, int64_t n, size_t temp_storage_bytes, const K* keys,
+                  const K* vals, void* tmp_storage, K* sorted_keys, K* sorted_vals) {
+  OF_CUDA_CHECK(
+      (cub::DeviceRadixSort::SortPairs<K, K>(tmp_storage, temp_storage_bytes, keys, sorted_keys,
+                                             vals, sorted_vals, n, 0, sizeof(K) * 8, stream)));
 }
 
 template<typename K>
@@ -53,17 +54,10 @@ int64_t GetCubScanTempStorageSize(int64_t n) {
   NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(nullptr, 0);
   OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
       nullptr, cub_scan_temp_store_size, unique_counting_iter, nullptr, n)));
-  CHECK_GE(cub_scan_temp_store_size, 0);
-  CHECK_LT(cub_scan_temp_store_size, GetMaxVal<int64_t>());
-  return GetCudaAlignedSize(static_cast<int64_t>(cub_scan_temp_store_size));
-}
-
-template<typename K>
-void GetUniqueCounter(cudaStream_t stream, int64_t n, size_t temp_storage_bytes, K* sorted_ptr,
-                      K* unique_counter, void* tmp_storage) {
-  NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(sorted_ptr, 0);
-  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
-      tmp_storage, temp_storage_bytes, unique_counting_iter, unique_counter, n, stream)));
+  size_t temp_store_size = GetCudaAlignedSize(static_cast<int64_t>(cub_scan_temp_store_size));
+  CHECK_GE(temp_store_size, 0);
+  CHECK_LT(temp_store_size, GetMaxVal<int64_t>());
+  return temp_store_size;
 }
 
 template<typename K>
@@ -73,59 +67,50 @@ class TmpBufferManager final {
   TmpBufferManager(void* ptr, const int64_t device_num_class, const int64_t batch_size)
       : ptr_(ptr) {
     const int64_t buffer_elem_cnt = std::max(device_num_class, batch_size);
-    const size_t label_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
-    const size_t index_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
-    const size_t sorted_label_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
-    const size_t sorted_index_buffer_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
-    cub_tmp_storage_bytes_ = std::max(GetCubSortPairTempStorageSize<K>(buffer_elem_cnt),
+    const size_t cub_sort_keys_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    const size_t cub_sort_values_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    const size_t cub_sort_keys_out_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    const size_t cub_sort_values_out_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
+    cub_tmp_storage_bytes_ = std::max(GetCubSortPairsTempStorageSize<K>(buffer_elem_cnt),
                                       GetCubScanTempStorageSize<K>(batch_size));
-    label_buffer_offset_ = 0;
-    index_buffer_offset_ = label_buffer_offset_ + label_buffer_bytes;
-    sorted_label_buffer_offset_ = index_buffer_offset_ + index_buffer_bytes;
-    sorted_index_buffer_offset_ = sorted_label_buffer_offset_ + sorted_label_buffer_bytes;
-    cub_tmp_storage_offset_ = sorted_index_buffer_offset_ + sorted_index_buffer_bytes;
-    total_buffer_size_ = label_buffer_bytes + index_buffer_bytes + sorted_label_buffer_bytes
-                         + sorted_index_buffer_bytes + cub_tmp_storage_bytes_;
+    cub_sort_keys_offset_ = 0;
+    cub_sort_values_offset_ = cub_sort_keys_offset_ + cub_sort_keys_bytes;
+    cub_sort_keys_out_offset_ = cub_sort_values_offset_ + cub_sort_keys_bytes;
+    cub_sort_values_out_offset_ = cub_sort_keys_out_offset_ + cub_sort_keys_out_bytes;
+    cub_tmp_storage_offset_ = cub_sort_values_out_offset_ + cub_sort_values_out_bytes;
+    total_buffer_size_ = cub_sort_keys_bytes + cub_sort_values_bytes + cub_sort_keys_out_bytes
+                         + cub_sort_values_out_bytes + cub_tmp_storage_bytes_;
   }
   ~TmpBufferManager() = default;
 
   size_t GetTotalBufferSize() const { return total_buffer_size_; }
   size_t GetCubTmpStorageSize() const { return cub_tmp_storage_bytes_; }
-  K* LabelBufferPtr() const {
+  K* CubSortKeysPtr() const {
     CHECK(ptr_ != nullptr);
-    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + label_buffer_offset_);
+    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + cub_sort_keys_offset_);
   }
-  K* IndexBufferPtr() const {
+  K* CubSortValuesPtr() const {
     CHECK(ptr_ != nullptr);
-    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + index_buffer_offset_);
+    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + cub_sort_values_offset_);
   }
-  K* SortedLabelBufferPtr() const {
+  K* CubSortKeysOutPtr() const {
     CHECK(ptr_ != nullptr);
-    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + sorted_label_buffer_offset_);
+    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + cub_sort_keys_out_offset_);
   }
-  K* SortedIndexBufferPtr() const {
+  K* CubSortValuesOutPtr() const {
     CHECK(ptr_ != nullptr);
-    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + sorted_index_buffer_offset_);
+    return reinterpret_cast<K*>(reinterpret_cast<char*>(ptr_) + cub_sort_values_out_offset_);
   }
   void* CubTmpStoragePtr() const {
     CHECK(ptr_ != nullptr);
     return reinterpret_cast<void*>(reinterpret_cast<char*>(ptr_) + cub_tmp_storage_offset_);
   }
 
-  K* SortedLabelPtr() const { return SortedLabelBufferPtr(); }
-
-  K* LabelIndexPtr() const { return IndexBufferPtr(); }
-
-  K* SortedLabelIndexPtr() const { return SortedIndexBufferPtr(); }
-
-  K* UniqueCounterPtr() const { return LabelIndexPtr(); }
-
  private:
-  size_t label_buffer_offset_;
-  size_t index_buffer_offset_;
-  size_t sorted_label_buffer_offset_;
-  size_t sorted_index_buffer_offset_;
-  size_t rand_value_offset_;
+  size_t cub_sort_keys_offset_;
+  size_t cub_sort_values_offset_;
+  size_t cub_sort_keys_out_offset_;
+  size_t cub_sort_values_out_offset_;
   size_t cub_tmp_storage_offset_;
   size_t cub_tmp_storage_bytes_;
   size_t total_buffer_size_;
@@ -179,16 +164,16 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
 };
 
 template<typename K>
-__global__ void InitBuffer(const int64_t n, K* label_buffer) {
-  CUDA_1D_KERNEL_LOOP(i, n) { label_buffer[i] = i; }
+__global__ void IotaKernel(int64_t n, K* out) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = static_cast<K>(i); }
 }
 
 template<typename K>
 __global__ void IndexSetPos(const int64_t n, const int64_t offset, const int64_t num_classes,
-                            const K* labels, K* index_buffer) {
+                            const K* labels, K* out) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     K label = labels[i] - offset;
-    if (label >= 0 && label < num_classes) { index_buffer[label] = -1; }
+    if (label >= 0 && label < num_classes) { out[label] = -1; }
   }
 }
 
@@ -200,33 +185,55 @@ __global__ void GetSampleLabel(const int64_t n, const int64_t offset, const K* l
 
 template<typename K>
 __global__ void GetLabelMap(const int64_t n, const int64_t parallel_num,
-                            const int64_t num_class_per_rank, const int64_t num_sample_per_rank,
-                            const K* sorted_label, K* label_map) {
-  extern __shared__ __align__(sizeof(K)) unsigned char shared_buf[];
-  auto* compute_buf = reinterpret_cast<K*>(shared_buf);
+                            const int64_t num_sample_per_rank, const K* bound_index,
+                            const K* bound_value, K* label_map) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    const K cur_label = sorted_label[i];
-    const K cur_label_map = label_map[i];
-    if (i > 0) {
-      const K pre_label = sorted_label[i - 1];
-      if (cur_label != pre_label) {
 #pragma unroll
-        for (int64_t j = 1; j < parallel_num; j++) {
-          int64_t lower_bound = j * num_class_per_rank;
-          if (cur_label >= lower_bound && pre_label < lower_bound) {
-            compute_buf[j] = cur_label_map;
-          }
+    for (int64_t j = 0; j < parallel_num; j++) {
+      if (i >= bound_index[j] && i < bound_index[j + 1]) {
+        label_map[i] = label_map[i] - bound_value[j] + j * num_sample_per_rank;
+      }
+    }
+  }
+}
+
+template<typename K>
+__global__ void GetPartionBound(const int64_t n, const int64_t parallel_num,
+                                const int64_t num_classes_per_rank, const K* key_ptr,
+                                const K* value_ptr, K* bound_index, K* bound_value) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (i != 0 && i != n - 1) {
+      const K cur_in = key_ptr[i];
+      const K pre_in = key_ptr[i - 1];
+#pragma unroll
+      for (int32_t j = 1; j < parallel_num; ++j) {
+        const int32_t lower_bound = j * num_classes_per_rank;
+        if (cur_in >= lower_bound && pre_in < lower_bound) {
+          bound_index[j] = static_cast<K>(i);
+          bound_value[j] = value_ptr[i];
         }
       }
     }
-    if (threadIdx.x == 0) { compute_buf[0] = label_map[0]; }
-    __syncthreads();
+    if (i == 0) {
+      const K in = key_ptr[i];
 #pragma unroll
-    for (int64_t j = 0; j < parallel_num; j++) {
-      int64_t lower_bound = j * num_class_per_rank;
-      int64_t upper_bound = (j + 1) * num_class_per_rank;
-      if (cur_label >= lower_bound && cur_label < upper_bound) {
-        label_map[i] = cur_label_map - compute_buf[j] + j * num_sample_per_rank;
+      for (int32_t j = 0; j <= parallel_num; ++j) {
+        const int32_t lower_bound = j * num_classes_per_rank;
+        if (in >= lower_bound) {
+          bound_index[j] = 0;
+          bound_value[j] = value_ptr[i];
+        }
+      }
+    }
+    if (i == n - 1) {
+      const K in = key_ptr[i];
+#pragma unroll
+      for (int32_t j = parallel_num; j >= 0; --j) {
+        const int32_t lower_bound = j * num_classes_per_rank;
+        if (in < lower_bound) {
+          bound_index[j] = n;
+          bound_value[j] = value_ptr[i];
+        }
       }
     }
   }
@@ -242,36 +249,48 @@ template<typename K>
 void SampleIndex(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
                  const int64_t lower_bound, const TmpBufferManager<K>& buffer_manager,
                  const K* label_ptr) {
-  InitBuffer<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      num_classes, buffer_manager.LabelBufferPtr());
+  IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      num_classes, buffer_manager.CubSortValuesPtr());
   IndexSetPos<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      batch_size, lower_bound, num_classes, label_ptr, buffer_manager.IndexBufferPtr());
-  SortPairs<K, K>(ctx->cuda_stream(), num_classes, buffer_manager.GetCubTmpStorageSize(),
-                  buffer_manager.IndexBufferPtr(), buffer_manager.LabelBufferPtr(),
-                  buffer_manager.CubTmpStoragePtr(), buffer_manager.SortedIndexBufferPtr(),
-                  buffer_manager.SortedLabelBufferPtr());
+      batch_size, lower_bound, num_classes, label_ptr, buffer_manager.CubSortKeysPtr());
+  CubSortPairs<K>(ctx->cuda_stream(), num_classes, buffer_manager.GetCubTmpStorageSize(),
+                  buffer_manager.CubSortKeysPtr(), buffer_manager.CubSortValuesPtr(),
+                  buffer_manager.CubTmpStoragePtr(), buffer_manager.CubSortKeysOutPtr(),
+                  buffer_manager.CubSortValuesOutPtr());
 }
 
 template<typename K>
 void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
               const int64_t lower_bound, const int64_t parallel_num, const int64_t num_sample,
               const TmpBufferManager<K>& buffer_manager, const K* label_ptr, K* maped_label_ptr) {
-  InitBuffer<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      batch_size, buffer_manager.LabelIndexPtr());
-  SortPairs<K, K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(), label_ptr,
-                  buffer_manager.LabelIndexPtr(), buffer_manager.CubTmpStoragePtr(),
-                  buffer_manager.SortedLabelPtr(), buffer_manager.SortedLabelIndexPtr());
-  GetUniqueCounter<K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(),
-                      buffer_manager.SortedLabelPtr(), buffer_manager.UniqueCounterPtr(),
-                      buffer_manager.CubTmpStoragePtr());
+  IotaKernel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      batch_size, buffer_manager.CubSortValuesPtr());
+  CubSortPairs<K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(), label_ptr,
+                  buffer_manager.CubSortValuesPtr(), buffer_manager.CubTmpStoragePtr(),
+                  buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesOutPtr());
+
+  size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
+  NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(buffer_manager.CubSortKeysOutPtr(),
+                                                                0);
+  OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
+      buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, unique_counting_iter,
+      buffer_manager.CubSortValuesPtr(), batch_size, ctx->cuda_stream())));
+
+  K* bound_index = buffer_manager.CubSortKeysPtr();
+  K* bound_value = buffer_manager.CubSortKeysPtr() + parallel_num + 1;
+  GetPartionBound<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                    ctx->cuda_stream()>>>(
+      batch_size, parallel_num, num_classes, buffer_manager.CubSortKeysOutPtr(),
+      buffer_manager.CubSortValuesPtr(), bound_index, bound_value);
+
   GetLabelMap<K>
       <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, parallel_num * sizeof(K),
-         ctx->cuda_stream()>>>(batch_size, parallel_num, num_classes, num_sample,
-                               buffer_manager.SortedLabelPtr(), buffer_manager.UniqueCounterPtr());
+         ctx->cuda_stream()>>>(batch_size, parallel_num, num_sample, bound_index, bound_value,
+                               buffer_manager.CubSortValuesPtr());
 
   GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                   ctx->cuda_stream()>>>(batch_size, buffer_manager.SortedLabelIndexPtr(),
-                                         buffer_manager.UniqueCounterPtr(), maped_label_ptr);
+                   ctx->cuda_stream()>>>(batch_size, buffer_manager.CubSortValuesOutPtr(),
+                                         buffer_manager.CubSortValuesPtr(), maped_label_ptr);
 }
 
 }  // namespace
@@ -323,17 +342,17 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     const int64_t lower_bound = kernel_state->lower();
     const int64_t num_sample = kernel_state->num_sample_per_rank();
     kernel_state->GenRandomIndexs<K>(ctx->device_ctx(), num_classes, num_classes,
-                                     buffer_manager.IndexBufferPtr());
+                                     buffer_manager.CubSortKeysPtr());
     SampleIndex<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, buffer_manager,
                    label->dptr<K>());
 
     GetSampleLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
-                                                         buffer_manager.SortedLabelBufferPtr(),
+                                                         buffer_manager.CubSortValuesOutPtr(),
                                                          sampled_label->mut_dptr<K>());
 
     GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(
-        ctx->device_ctx(), buffer_manager.SortedLabelBufferPtr(), num_sample, weight->dptr<T>(),
+        ctx->device_ctx(), buffer_manager.CubSortValuesOutPtr(), num_sample, weight->dptr<T>(),
         Shape({1, weight->shape().At(0), weight->shape().Count(1)}), sampled_weight->mut_dptr<T>(),
         0);
 
