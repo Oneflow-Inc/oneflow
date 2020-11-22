@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/operator/op_attribute.cfg.h"
 #include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/scope.cfg.h"
 
 namespace oneflow {
 
@@ -43,7 +44,7 @@ class ForeignCallback {
 
   // TODO(lixinqi): remove this urgly api after python code migrated into cpp code
   virtual void AddScopeToPyStorage(int64_t scope_symbol_id,
-                                   const std::string& scope_proto_str) const {
+                                   const std::shared_ptr<cfg::ScopeProto>& scope_proto) const {
     UNIMPLEMENTED();
   }
 
