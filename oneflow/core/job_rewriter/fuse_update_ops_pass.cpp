@@ -158,6 +158,9 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (scale_by_tensor_lbn != "") {
       fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
     }
+    if (user_op_conf.has_input("skip_if", 0)) {
+      fused_op_builder.Input("skip_if", user_op_conf.input("skip_if", 0));
+    }
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
