@@ -67,7 +67,9 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
     if (user_op_conf.op_type_name() != "sgd_update"
         && user_op_conf.op_type_name() != "momentum_update"
-        && user_op_conf.op_type_name() != "adam_update") {
+        && user_op_conf.op_type_name() != "adam_update"
+        && user_op_conf.op_type_name() != "rmsprop_update"
+        && user_op_conf.op_type_name() != "lars_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -156,6 +158,9 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (scale_by_tensor_lbn != "") {
       fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
     }
+    if (user_op_conf.has_input("skip_if", 0)) {
+      fused_op_builder.Input("skip_if", user_op_conf.input("skip_if", 0));
+    }
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
@@ -167,6 +172,19 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
           .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+    } else if (user_op_conf.op_type_name() == "rmsprop_update") {
+      const bool centered = user_op_conf.attr<bool>("centered");
+      fused_op_builder.Input("mean_square", user_op_conf.input("mean_square", 0.f))
+          .Attr<bool>("centered", user_op_conf.attr<bool>("centered"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<float>("decay_rate", user_op_conf.attr<float>("decay_rate"));
+      if (centered) {
+        fused_op_builder.Input("mean_gradient", user_op_conf.input("mean_gradient", 0.f));
+      }
+    } else if (user_op_conf.op_type_name() == "lars_update") {
+      fused_op_builder.Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<float>("lars_coefficient", user_op_conf.attr<float>("lars_coefficient"));
     } else {
       UNIMPLEMENTED();
     }
