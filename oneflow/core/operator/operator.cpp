@@ -917,7 +917,7 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
-  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+  const auto& parallel_desc = JUST(scope.GetParallelDesc(op_conf));
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
   const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
   JUST(CheckOpInputSignature(*op, upstream_signature));
