@@ -22,10 +22,12 @@ namespace {
 REGISTER_USER_OP("fake_quantization")
     .Input("in")
     .Input("scale")
-    .OptionalInput("zero_point")
+    .Input("zero_point")
     .Output("out")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
+    // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
+    .Attr<std::string>("quantize_scheme", "symmetric")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       const Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
@@ -34,9 +36,7 @@ REGISTER_USER_OP("fake_quantization")
       // NOTE(Liang Depeng): scale_shape->elem_cnt() > 1 means per-channel quantization for weights.
       if (scale_shape->elem_cnt() > 1) {
         CHECK_OR_RETURN(scale_shape->elem_cnt() == in_shape->At(0));
-        if (zero_point_shape != nullptr) {
-          CHECK_OR_RETURN(zero_point_shape->elem_cnt() == in_shape->At(0));
-        }
+        CHECK_OR_RETURN(zero_point_shape->elem_cnt() == in_shape->At(0));
       }
 
       *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
@@ -50,12 +50,19 @@ REGISTER_USER_OP("fake_quantization")
       scale->set_requires_grad(false);
 
       user_op::InputArgModifier* zero_point = GetInputArgModifierFn("zero_point", 0);
-      if (zero_point != nullptr) zero_point->set_requires_grad(false);
+      CHECK(zero_point != nullptr);
+      zero_point->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       const Shape& logical_scale_shape =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("scale", 0).shape();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("in", 0))
+          .Broadcast(user_op::OpArg("scale", 0))
+          .Broadcast(user_op::OpArg("zero_point", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
       if (logical_scale_shape.elem_cnt() > 1) {
         // NOTE(Liang Depeng): per-channel quantization
         ctx->NewBuilder()
@@ -89,6 +96,9 @@ REGISTER_USER_OP("fake_quantization")
       const int32_t quantize_to_bit = op_conf.attr<int32_t>("quantize_to_bit");
       CHECK_GT_OR_RETURN(quantize_to_bit, 1);
       CHECK_LE_OR_RETURN(quantize_to_bit, 8);
+
+      std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
+      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
       return Maybe<void>::Ok();
     });
 
