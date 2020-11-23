@@ -120,7 +120,7 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+void GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   const int64_t axis = op.attr<int64_t>("axis");
   const int32_t out_size = op.output_size("out");
   int64_t max_dim_size = 0;
@@ -153,6 +153,6 @@ REGISTER_USER_OP("split_like")
     .SetBatchAxisInferFn(InferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
 
-REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGrapOp);
+REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow
