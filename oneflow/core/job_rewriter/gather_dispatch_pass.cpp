@@ -50,10 +50,13 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
         op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
     const int64_t max_dim_size = indices_desc.shape().elem_cnt() * parallel_num;
     OperatorConf distribute_split_ids_op_conf{};
+    distribute_split_ids_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+
     distribute_split_ids_op_conf.set_name(op_name + "-distribute_split_ids");
     auto* distribute_split_ids_conf = distribute_split_ids_op_conf.mutable_distribute_split_conf();
     distribute_split_ids_conf->set_in(cur_op.input("indices", 0));
     distribute_split_ids_conf->set_axis(0);
+
     FOR_RANGE(int32_t, i, 0, parallel_num) {
       const std::string& blob_name = "out_" + std::to_string(i);
       distribute_split_ids_conf->add_out(blob_name);
@@ -61,6 +64,8 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {distribute_split_ids_op_conf});
 
     OperatorConf distribute_split_data_op_conf{};
+    distribute_split_data_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+
     distribute_split_data_op_conf.set_name(op_name + "-distribute_split_data");
     auto* distribute_split_data_conf =
         distribute_split_data_op_conf.mutable_distribute_split_conf();
@@ -84,6 +89,7 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
       parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
 
       OperatorConf unique_with_counts_op_conf{};
+      unique_with_counts_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
       unique_with_counts_op_conf.set_name(op_name + "-unique_" + std::to_string(i));
       auto* unique_with_counts_conf = unique_with_counts_op_conf.mutable_unique_with_counts_conf();
       unique_with_counts_conf->set_x(GenLogicalBlobName(distribute_split_ids_op_conf.name(),
@@ -106,13 +112,16 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
           .Input("in_num_unique", GenLogicalBlobName(unique_with_counts_op_conf.name(),
                                                      unique_with_counts_conf->num_unique()))
           .Attr<int64_t>("parallel_num", parallel_num)
-          .Attr<int64_t>("num_classes", num_classes);
+          .Attr<int64_t>("num_classes", num_classes)
+          .ScopeSymbolId(op_conf.scope_symbol_id());
       partition_op_builder.Output("out", parallel_num).Output("num_unique", parallel_num);
       auto partition_op = partition_op_builder.Build();
       job_builder.AddOps(parallel_conf, {partition_op.op_conf()});
 
       FOR_RANGE(int32_t, j, 0, parallel_num) {
         OperatorConf sync_dynamic_resize_op_conf{};
+        sync_dynamic_resize_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+
         sync_dynamic_resize_op_conf.set_name(op_name + "-dynamic_resize_" + std::to_string(j)
                                              + std::to_string(i));
         auto* sync_dynamic_resize_conf =
@@ -135,8 +144,11 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
       parallel_conf.set_device_tag("gpu");
       parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
       user_op::UserOpConfWrapperBuilder concat_op_builder(op_name + "-concat_" + std::to_string(i));
-      concat_op_builder.Op("concat").Output("out").Attr<int64_t>("axis", 0).Attr<int64_t>(
-          "max_dim_size", max_dim_size);
+      concat_op_builder.Op("concat")
+          .Output("out")
+          .Attr<int64_t>("axis", 0)
+          .Attr<int64_t>("max_dim_size", max_dim_size)
+          .ScopeSymbolId(op_conf.scope_symbol_id());
       FOR_RANGE(int32_t, j, 0, parallel_num) {
         concat_op_builder.Input("in", sparse_ids.at(i).at(j));
       }
@@ -150,6 +162,7 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
                            .Input("indices", concat_op.output("out", 0))
                            .Attr<int64_t>("axis", 0)
                            .Output("out")
+                           .ScopeSymbolId(op_conf.scope_symbol_id())
                            .Build();
       job_builder.AddOps(parallel_conf, {gather_op.op_conf()});
 
@@ -158,7 +171,8 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
       split_like_op_builder.Op("split_like")
           .Input("in", gather_op.output("out", 0))
           .Attr<int64_t>("axis", 0)
-          .Output("out", parallel_num);
+          .Output("out", parallel_num)
+          .ScopeSymbolId(op_conf.scope_symbol_id());
 
       FOR_RANGE(int32_t, j, 0, parallel_num) {
         split_like_op_builder.Input("like", sparse_ids.at(i).at(j));
@@ -178,8 +192,11 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
       parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
       auto concat_gather_op_builder =
           user_op::UserOpConfWrapperBuilder(op_name + "-concat_gather_" + std::to_string(i));
-      concat_gather_op_builder.Op("concat").Output("out").Attr<int64_t>("axis", 0).Attr<int64_t>(
-          "max_dim_size", max_dim_size);
+      concat_gather_op_builder.Op("concat")
+          .Output("out")
+          .Attr<int64_t>("axis", 0)
+          .Attr<int64_t>("max_dim_size", max_dim_size)
+          .ScopeSymbolId(op_conf.scope_symbol_id());
       FOR_RANGE(int32_t, j, 0, parallel_num) {
         concat_gather_op_builder.Input("in", gathered_out.at(i).at(j));
       }
@@ -193,11 +210,13 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
               .Input("indices", map_ids.at(i))
               .Attr<int64_t>("axis", 0)
               .Output("out")
+              .ScopeSymbolId(op_conf.scope_symbol_id())
               .Build();
       job_builder.AddOps(parallel_conf, {gather_map_op.op_conf()});
       out_list.push_back(gather_map_op.output("out", 0));
     }
     OperatorConf distribute_concat_op_conf{};
+    distribute_concat_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
     distribute_concat_op_conf.set_name(op_name);
     auto* distribute_concat_conf = distribute_concat_op_conf.mutable_distribute_concat_conf();
     FOR_RANGE(int32_t, i, 0, parallel_num) { distribute_concat_conf->add_in(out_list.at(i)); }
