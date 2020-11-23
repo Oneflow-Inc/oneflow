@@ -57,21 +57,42 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
+bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
+  const OperatorConf& op_conf = op->op_conf();
+  if (op_conf.has_variable_conf() || op_conf.has_keep_header_only_conf() || op_conf.has_tick_conf()
+      || op_conf.has_device_tick_conf() || op_conf.has_partial_tick_conf()) {
+    return true;
+  }
+  return false;
+}
+
+bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
+  for (const auto& pair : node->produced_regsts()) {
+    if (pair.second->min_register_num() > 1) { return true; }
+  }
+  return false;
+}
+
 bool IsTheNodeCanBeMergedInChain(const TaskNode* node) {
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
+  // NOTE(chengcheng): NOT merge optimizer ops
+  // if (node->area_id() == AreaType::kMdUpdtArea) { return false; }
+  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
   if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
   if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
   const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
-  if (dynamic_cast<const VariableOp*>(op) != nullptr) { return false; }
+  if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
 }
 
 bool IsInSameWorkStream(const TaskNode* lhs, const TaskNode* rhs) {
   return lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() == rhs->thrd_id()
          && lhs->GlobalWorkStreamId() == rhs->GlobalWorkStreamId()
-         && lhs->device_type() == rhs->device_type() && lhs->area_id() == rhs->area_id();
+         && lhs->device_type() == rhs->device_type();
+  // NOTE(chengcheng): use area_id to not merge optimizer ops
+  // && lhs->area_id() == rhs->area_id();
 }
 
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
