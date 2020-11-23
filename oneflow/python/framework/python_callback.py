@@ -75,14 +75,6 @@ class PythonCallback(oneflow_api.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def EagerCastFromMirrored(self, op_attribute, parallel_conf):
-        try:
-            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
-            interpreter_callback.CastFromMirrored(str(op_attribute), str(parallel_conf))
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
     def AddScopeToPyStorage(self, scope_symbol_id, scope_proto):
         try:
             # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
