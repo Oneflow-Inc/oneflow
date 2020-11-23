@@ -146,9 +146,10 @@ def _GetSequence(value, n, name):
 class TestUnfoldPadding(flow.unittest.TestCase):
     def test_unfold(_):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["unfold_conf"] = unfold_confs
-        arg_dict["data_type"] = ["float32"]
+        arg_dict["data_type"] = ["float32", "double"]
+        torch_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         for case in GenArgList(arg_dict):
             (device_type, unfold_conf, data_type) = case
@@ -171,9 +172,8 @@ class TestUnfoldPadding(flow.unittest.TestCase):
             padding_torch = list(0 for _ in range(dim))
             in_dhw = list(x_shape)[-dim :]
 
-            print(case)
             valid_case = True
-            if padding == 'SAME':
+            if padding == "SAME":
                 out_dhw = in_dhw.copy()
                 for i in range(dim):
                     padding_torch[i] = (ksize[i] - 1) * dilation_rate[i]
@@ -186,21 +186,23 @@ class TestUnfoldPadding(flow.unittest.TestCase):
             x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
 
             # torch results
-            x_torch = torch.tensor(x, requires_grad=True, device=device_type, dtype=torch.float)
+            x_torch = torch.tensor(x, requires_grad=True, device=torch_device, dtype=torch.float)
             model = torch.nn.Unfold(ksize, stride=strides, padding=tuple(padding_torch), dilation=dilation_rate)
+            model.to(torch_device)
             y_torch = model(x_torch)
             z = y_torch.sum()
             z.backward()
 
             def assert_grad(b):
-                if valid_case:
-                    assert np.allclose(x_torch.grad.numpy(), b.numpy()), (
-                        case,
-                        x_torch.grad.numpy(),
-                        b.numpy(),
-                    )
-                else:
-                    print('not valid: ', case)
+                if not valid_case:
+                    print("not valid: ", case)
+                    return
+                x_torch_grad_numpy = x_torch.grad.cpu().numpy()
+                assert np.allclose(x_torch_grad_numpy, b.numpy()), (
+                    case,
+                    x_torch_grad_numpy,
+                    b.numpy(),
+                )
 
             # 1F results
             dtype = type_name_to_flow_type[data_type]
@@ -244,19 +246,20 @@ class TestUnfoldPadding(flow.unittest.TestCase):
 
             y = unfold_job(x).get()
             y_ndarray = y.numpy()
-            if valid_case:
-                assert y_ndarray.shape == y_torch.detach().numpy().shape, (
-                    y_ndarray.shape,
-                    y_torch.detach().numpy().shape,
-                )
-                assert np.allclose(y_ndarray, y_torch.detach().numpy(), rtol=1e-5, atol=1e-5), (
-                    case,
-                    y_ndarray.shape,
-                    y_ndarray,
-                    y_torch.detach().numpy(),
-                )
-            else:
-                print('not valid: ', case)
+            if not valid_case:
+                continue
+
+            y_torch_numpy = y_torch.detach().cpu().numpy()
+            assert y_ndarray.shape == y_torch_numpy.shape, (
+                y_ndarray.shape,
+                y_torch_numpy.shape,
+            )
+            assert np.allclose(y_torch_numpy, y_ndarray, rtol=1e-5, atol=1e-5), (
+                case,
+                y_ndarray.shape,
+                y_torch_numpy,
+                y_ndarray,
+            )
 
 
 if __name__ == "__main__":
