@@ -207,14 +207,18 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_paral
   if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
   // B->S
   if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
-  double n_logical_blob_size = logical_blob_desc.shape().elem_cnt()
-                               * GetSizeOfDataType(logical_blob_desc.data_type())
-                               * parallel_desc.parallel_num();
-  // P->S, S->B
+  double logical_blob_size =
+      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+  // has S
   if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel())
-    return n_logical_blob_size;
+    if (consumer_sbp_parallel.has_split_parallel() && producer_sbp_parallel.has_split_parallel())
+      // S(0)->S(1), S(1)->S(0), etc.
+      return logical_blob_size;
+    else
+      // P->S, S->B
+      return logical_blob_size * parallel_desc.parallel_num();
   // P->B (= p->S + S->B)
-  return 2 * n_logical_blob_size;
+  return 2 * logical_blob_size * parallel_desc.parallel_num();
 }
 
 }  // namespace
