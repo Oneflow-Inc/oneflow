@@ -61,6 +61,12 @@ class PyForeignCallback : public ForeignCallback {
                       is_mirrored);
   }
 
+  // TODO(lixinqi): remove this urgly api after python code migrated into cpp code
+  void AddScopeToPyStorage(int64_t scope_symbol_id,
+                           const std::string& scope_proto_str) const override {
+    PYBIND11_OVERRIDE(void, ForeignCallback, AddScopeToPyStorage, scope_symbol_id, scope_proto_str);
+  }
+
   int64_t MakeParallelDescSymbol(
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
     PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeParallelDescSymbol, parallel_conf);
