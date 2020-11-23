@@ -69,11 +69,6 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    LOG(ERROR) << "unsorted " << ctx->user_op_conf().op_name() << "  "
-               << ctx->parallel_ctx().parallel_id() << " data " << data->shape().ToString()
-               << " segment_ids " << segment_ids->shape().ToString() << " out "
-               << out->shape().ToString();
-
     int64_t outer_dim_size = out->shape().Count(0, axis);
     int64_t num_segments = out->shape().At(axis);
     int64_t inner_dim_size = out->shape().Count(axis + 1);
