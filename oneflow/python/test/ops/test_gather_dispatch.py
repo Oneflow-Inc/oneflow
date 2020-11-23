@@ -36,7 +36,7 @@ def gather_dispatch(params, indices, name):
     )
 
 
-def _run_test(test_case, device_type, x_shape, indices_shape, dtype):
+def _run_test(test_case, device_type, x_shape, indices_shape):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -95,8 +95,7 @@ class TestGatherDispatch(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(100, 3)]
-        arg_dict["indices_shape"] = [(60,)]
-        arg_dict["dtype"] = [float]
+        arg_dict["indices_shape"] = [(60,),(48,)]
         for arg in GenArgList(arg_dict):
             _run_test(test_case, *arg)
 
