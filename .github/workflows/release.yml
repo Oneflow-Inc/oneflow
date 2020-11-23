@@ -37,6 +37,8 @@ jobs:
         set -x
         cuda_version=${cuda_version:-"10.0,10.1,10.2,11.0,11.1"}
         python_version=${python_version:-"3.5,3.6,3.7,3.8"}
+        echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
+        echo "python_version=${python_version}" >> $GITHUB_ENV
 
         tmp_dir=$HOME/ci-tmp-rel
         echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
