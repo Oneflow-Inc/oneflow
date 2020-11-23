@@ -60,6 +60,7 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     const user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
+    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
 
     const T *in_ptr = in->dptr<T>();
@@ -73,7 +74,7 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
       inner_num = in->shape().Count(1);
     }
 
-    if (zero_point == nullptr) {  // quantize_scheme == "symmetric"
+    if (quantize_scheme == "symmetric") {
       FOR_RANGE(int64_t, c, 0, outer_num) {
         FakeQuantizationPerLayerSymmetric(in_ptr, scale_ptr[c], quantize_to_bit, inner_num,
                                           out_ptr);
