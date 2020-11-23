@@ -203,7 +203,7 @@ __global__ void GetPartionBound(const int64_t n, const int64_t parallel_num,
                                 const int64_t num_classes_per_rank, const K* key_ptr,
                                 const K* value_ptr, K* bound_index, K* bound_value) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (i != 0 && i != n - 1) {
+    if (i != 0) {
       const K cur_in = key_ptr[i];
       const K pre_in = key_ptr[i - 1];
 #pragma unroll
