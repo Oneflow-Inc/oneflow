@@ -79,6 +79,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
       loss_scale_var_op_conf.name(), loss_scale_var_op_conf.variable_conf().out());
   {
     loss_scale_val_op_conf.set_name(loss_scale_var_op_conf.name() + "-Identity");
+    loss_scale_val_op_conf.set_scope_symbol_id(scope_symbol_id);
     IdentityOpConf* identity_conf = loss_scale_val_op_conf.mutable_identity_conf();
     identity_conf->set_in(loss_scale_var_lbn);
     identity_conf->set_out("out");

@@ -772,24 +772,37 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     HashMap<DataType, std::string> data_type2loss_scale_lbn;
     const auto LossScale4DataType = [&](DataType data_type) -> std::string {
-      if (data_type == DataType::kFloat) { return dynamic_loss_scale_state.loss_scale_val_lbn(); }
       auto it = data_type2loss_scale_lbn.find(data_type);
       if (it == data_type2loss_scale_lbn.end()) {
-        auto cast_op =
-            user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-Cast-" + NewUniqueId())
-                .Op("cast")
-                .Input("in", dynamic_loss_scale_state.loss_scale_val_lbn())
-                .Output("out")
-                .Attr<DataType>("dtype", data_type)
-                .ScopeSymbolId(ScopeSymbolId4Lbi(
-                    op_graph, GenLogicalBlobId(dynamic_loss_scale_state.loss_scale_val_lbn())))
-                .Build();
+        const std::string& loss_scale_val_lbn = dynamic_loss_scale_state.loss_scale_val_lbn();
+        const int64_t scope_symbol_id =
+            ScopeSymbolId4Lbi(op_graph, GenLogicalBlobId(loss_scale_val_lbn));
         const ParallelConf& parallel_conf =
-            ProducerOpNode4Lbn(dynamic_loss_scale_state.loss_scale_val_lbn())
-                ->parallel_desc()
-                .parallel_conf();
-        job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
-        const std::string& lbn = cast_op.output("out", 0);
+            ProducerOpNode4Lbn(loss_scale_val_lbn)->parallel_desc().parallel_conf();
+        std::string loss_scale_lbn_with_data_type;
+        if (data_type == DataType::kFloat) {
+          loss_scale_lbn_with_data_type = loss_scale_val_lbn;
+        } else {
+          auto cast_op =
+              user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-Cast-" + NewUniqueId())
+                  .Op("cast")
+                  .Input("in", loss_scale_val_lbn)
+                  .Output("out")
+                  .Attr<DataType>("dtype", data_type)
+                  .ScopeSymbolId(scope_symbol_id)
+                  .Build();
+          loss_scale_lbn_with_data_type = cast_op.output("out", 0);
+          job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+        }
+        auto inv_scale_op =
+            user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-Reciprocal-" + NewUniqueId())
+                .Op("reciprocal")
+                .Input("x", loss_scale_lbn_with_data_type)
+                .Output("y")
+                .ScopeSymbolId(scope_symbol_id)
+                .Build();
+        job_builder->AddOps(parallel_conf, {inv_scale_op.op_conf()});
+        std::string lbn = inv_scale_op.output("y", 0);
         data_type2loss_scale_lbn[data_type] = lbn;
         return lbn;
       } else {
@@ -799,16 +812,16 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
     for (auto& pair : *lbi2diff_lbi) {
       const LogicalBlobId& lbi = pair.first;
       LogicalBlobId& diff_lbi = pair.second;
-      auto scalar_div_op =
-          user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarDiv-" + NewUniqueId())
-              .Op("scalar_div_by_tensor")
+      auto scalar_mul_op =
+          user_op::UserOpConfWrapperBuilder("System-ModelDiffScale-ScalarMul-" + NewUniqueId())
+              .Op("scalar_mul_by_tensor")
               .Input("x", GenLogicalBlobName(diff_lbi))
               .Input("scalar", LossScale4DataType(op_graph.GetLogicalBlobDesc(lbi).data_type()))
               .Output("y")
               .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
               .Build();
-      job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_div_op.op_conf()});
-      diff_lbi = GenLogicalBlobId(scalar_div_op.output("y", 0));
+      job_builder->AddOps(ProducerParallelConf4Lbi(op_graph, lbi), {scalar_mul_op.op_conf()});
+      diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
     }
   } else if (train_conf.has_loss_scale_factor()) {
     const float loss_scale_factor = train_conf.loss_scale_factor();
