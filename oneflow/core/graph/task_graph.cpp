@@ -366,10 +366,6 @@ void TaskGraph::SetOrderInGraphForEachNode() {
     ordered_task_nodes_.emplace_back(task_node);
     ++order_in_graph;
   };
-  /*
-  DfsTopoForEachNodeSortByDistanceToSink(source_nodes(), &TaskNode::ForEachNodeOnInEdge,
-                                         &TaskNode::ForEachNodeOnOutEdge, SetOrderInGraph);
-                                         */
   AcyclicTopoForEachNode(SetOrderInGraph);
 }
 
