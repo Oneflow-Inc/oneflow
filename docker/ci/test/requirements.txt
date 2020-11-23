@@ -6,3 +6,4 @@ scipy
 pillow
 sphinx_rtd_theme
 tensorflow-addons==0.9.1
+grpcio-tools
