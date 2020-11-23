@@ -131,7 +131,20 @@ void GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     builder = builder.Op("concat");
     FOR_RANGE(int32_t, i, 0, out_size) {
-      builder = builder.Input("in", op.GetGradTensorWithOpOutput("out", i));
+      std::string out_diff_lbn;
+      if (op.HasGradTensor4OpOutput("out", i)) {
+        out_diff_lbn = op.GetGradTensorWithOpOutput("out", i);
+      } else {
+        auto constant_like_op = user_op::UserOpConfWrapperBuilder(
+                                    op.op_name() + "_grad_constant_like_out_" + std::to_string(i))
+                                    .Op("zero_like")
+                                    .Input("like", op.output("out", i))
+                                    .Output("out")
+                                    .Build();
+        AddOp(constant_like_op);
+        out_diff_lbn = constant_like_op.output("out", 0);
+      }
+      builder = builder.Input("in", out_diff_lbn);
     }
     user_op::UserOpConfWrapper grad_op =
         builder.Output("out").Attr("axis", axis).Attr("max_dim_size", max_dim_size).Build();
