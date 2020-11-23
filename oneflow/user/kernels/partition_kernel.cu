@@ -82,6 +82,8 @@ __global__ void PartitionGpu(const int64_t n, const int64_t parallel_num,
   }
 }
 
+constexpr int64_t kMaxParallelNum = 32;
+
 }  // namespace
 
 template<typename T, typename K>
@@ -100,12 +102,12 @@ class PartitionKernel final : public user_op::OpKernel {
     const int64_t num_classes = ctx->Attr<int64_t>("num_classes");
     CHECK_EQ(num_classes % parallel_num, 0);
     const int64_t num_classes_per_rank = num_classes / parallel_num;
-    // CHECK_EQ(ctx->outputs().size(), parallel_num);
-
-    Param<T, K, 32> para;
+    CHECK_EQ(ctx->outputs().size(), 2 * parallel_num);
+    Param<T, K, kMaxParallelNum> para;
+    CHECK_LE(parallel_num, kMaxParallelNum);
     para.in = in->dptr<T>();
     para.in_num_unique = in_num_unique->dptr<K>();
-    for (int32_t i = 0; i < parallel_num; ++i) {
+    FOR_RANGE(int32_t, i, 0, parallel_num) {
       para.out[i] = ctx->Tensor4ArgNameAndIndex("out", i)->mut_dptr<T>();
       para.num_unique[i] = ctx->Tensor4ArgNameAndIndex("num_unique", i)->mut_dptr<K>();
     }
@@ -113,25 +115,28 @@ class PartitionKernel final : public user_op::OpKernel {
                                  ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, parallel_num, num_classes_per_rank, in->dptr<T>(), in_num_unique->dptr<K>(),
         tmp_buffer->mut_dptr<K>());
-    PartitionGpu<T, K, 32><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             ctx->device_ctx()->cuda_stream()>>>(
+    PartitionGpu<T, K, kMaxParallelNum><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
+                                          0, ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, parallel_num, num_classes_per_rank, tmp_buffer->dptr<K>(), para);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_PARTITION_KERNEL(dtype, ktype)                                                \
-  REGISTER_USER_KERNEL("partition")                                                            \
-      .SetCreateFn<PartitionKernel<dtype, ktype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                      \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)         \
-                       & (user_op::HobDataType("num_unique", 0) == GetDataType<ktype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                      \
-        const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");                       \
-        return GetCudaAlignedSize((parallel_num + 1) * sizeof(ktype));                         \
+#define REGISTER_PARTITION_KERNEL(dtype, ktype)                                               \
+  REGISTER_USER_KERNEL("partition")                                                           \
+      .SetCreateFn<PartitionKernel<dtype, ktype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                     \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)        \
+                       & (user_op::HobDataType("num_unique", 0) == GetDataType<ktype>::value) \
+                       & (user_op::HobAttr<int64_t>("parallel_num") <= kMaxParallelNum))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
+        const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");                      \
+        return GetCudaAlignedSize((parallel_num + 1) * sizeof(ktype));                        \
       });
+
 REGISTER_PARTITION_KERNEL(int32_t, int32_t)
 REGISTER_PARTITION_KERNEL(int64_t, int32_t)
 REGISTER_PARTITION_KERNEL(int32_t, int64_t)
 REGISTER_PARTITION_KERNEL(int64_t, int64_t)
+
 }  // namespace oneflow

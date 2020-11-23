@@ -95,7 +95,7 @@ class TestGatherDispatch(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(100, 3)]
-        arg_dict["indices_shape"] = [(60,),(48,)]
+        arg_dict["indices_shape"] = [(60,), (48,)]
         for arg in GenArgList(arg_dict):
             _run_test(test_case, *arg)
 
