@@ -19,6 +19,18 @@ namespace oneflow {
 
 namespace {
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splited because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  double logical_computation_cost = ctx->Shape4ArgNameAndIndex("in", 0)->elem_cnt() * 10;
+  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("in", 0);
+  if (sbp_parallel.has_split_parallel()) {
+    return logical_computation_cost / ctx->parallel_desc().parallel_num();
+  }
+  return logical_computation_cost;
+}
+
 REGISTER_USER_OP("softmax")
     .Input("in")
     .Output("out")
@@ -41,7 +53,8 @@ REGISTER_USER_OP("softmax")
             .Build();
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("softmax_grad")
     .Input("y")

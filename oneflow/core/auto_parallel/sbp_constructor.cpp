@@ -210,13 +210,15 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_paral
   double logical_blob_size =
       logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
   // has S
-  if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel())
-    if (consumer_sbp_parallel.has_split_parallel() && producer_sbp_parallel.has_split_parallel())
+  if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
+    if (consumer_sbp_parallel.has_split_parallel() && producer_sbp_parallel.has_split_parallel()) {
       // S(0)->S(1), S(1)->S(0), etc.
       return logical_blob_size;
-    else
+    } else{
       // P->S, S->B
       return logical_blob_size * parallel_desc.parallel_num();
+    }
+  }
   // P->B (= p->S + S->B)
   return 2 * logical_blob_size * parallel_desc.parallel_num();
 }
