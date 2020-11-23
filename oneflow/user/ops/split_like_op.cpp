@@ -120,6 +120,27 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+  const int64_t axis = op.attr<int64_t>("axis");
+  const int32_t out_size = op.output_size("out");
+  int64_t max_dim_size = 0;
+  FOR_RANGE(int32_t, i, 0, out_size) {
+    max_dim_size += op.TensorDesc4ArgNameAndIndex("like", i).shape().At(axis);
+  }
+  if (op.NeedGenGradTensor4OpInput("in", 0)) {
+    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    builder = builder.Op("concat");
+    FOR_RANGE(int32_t, i, 0, out_size) {
+      builder = builder.Input("in", op.GetGradTensorWithOpOutput("out", i));
+    }
+    user_op::UserOpConfWrapper grad_op =
+        builder.Output("out").Attr("axis", axis).Attr("max_dim_size", max_dim_size).Build();
+
+    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
+    AddOp(grad_op);
+  }
+}
+
 }  // namespace
 
 REGISTER_USER_OP("split_like")
@@ -131,5 +152,7 @@ REGISTER_USER_OP("split_like")
     .SetInputArgModifyFn(SetLikeArgModifier)
     .SetBatchAxisInferFn(InferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
+
+REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGrapOp);
 
 }  // namespace oneflow
