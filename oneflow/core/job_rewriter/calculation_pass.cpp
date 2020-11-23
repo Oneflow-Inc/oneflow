@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,29 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import numpy as np
+*/
+#include "oneflow/core/job_rewriter/calculation_pass.h"
 
+namespace oneflow {
 
-def forward(args):
-    print("user sigmoid forward args", args)
-    (x,) = args
-    y = 1 / (1 + np.exp(-x))
-    return y
+const std::string kForwardPass = "forward_pass";
+const std::string kBackwardPass = "backward_pass";
+const std::string kOptimizerPass = "optimizer_pass";
 
-
-# import torch
-# def forward(args):
-#     print("user sigmoid forward args", args)
-#     print("compute with pytorch")
-#     x, = args
-#     b = torch.from_numpy(x)
-#     print(b)
-#     y = torch.sigmoid(b).numpy()
-#     return y
-
-
-def backward(args):
-    print("user sigmoid backward args", args)
-    y, dy = args
-    return y * (1 - y) * dy
+}  // namespace oneflow
