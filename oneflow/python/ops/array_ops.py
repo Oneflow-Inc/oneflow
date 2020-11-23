@@ -2360,3 +2360,26 @@ def dim_scatter_add(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("dim_scatter_add")
+def dim_scatter_add(
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    src: remote_blob_util.BlobDef,
+    like: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
+        )
+        .Op("dim_scatter_add")
+        .Input("input", [src])
+        .Input("index", [index])
+        .Input("like", [like])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
