@@ -251,7 +251,7 @@ if __name__ == "__main__":
                 img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
             if skip_img == False:
                 build_img(
-                    args.cuda_version,
+                    cuda_version,
                     args.oneflow_src_dir,
                     args.use_tuna,
                     args.use_system_proxy,
