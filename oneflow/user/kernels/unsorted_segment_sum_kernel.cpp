@@ -82,10 +82,11 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel {
       CHECK_EQ(out->shape().At(axis), sum_state->upper() - sum_state->lower());
       offset = sum_state->lower();
     }
-
-    UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(
-        ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
-        outer_dim_size, inner_dim_size, offset, out->mut_dptr<T>());
+    if (num_segment_ids != 0) {
+      UnsortedSegmentSumKernelUtil<device_type, T, K>::UnsortedSegmentSum(
+          ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
+          outer_dim_size, inner_dim_size, offset, out->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
