@@ -2267,7 +2267,7 @@ def dropout(
 def deconv2d(
     value: Optional[remote_blob_util.BlobDef] = None,
     filter: Optional[remote_blob_util.BlobDef] = None,
-    output_shape: Optional[remote_blob_util.BlobDef] = None,
+    output_shape: Tuple[int, int, int, int] = None,
     strides: Optional[Union[int, Sequence[int]]] = None,
     padding: str = "VALID",
     data_format: str = "NCHW",
@@ -2281,7 +2281,7 @@ def deconv2d(
     Args:
         value (Optional[remote_blob_util.BlobDef], optional):   4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
-        output_shape (Optional[remote_blob_util.BlobDef], optional): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
+        output_shape (Tuple[int, int, int, int]): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
         strides (Optional[Union[int, Sequence[int]]], optional): `int` or `int list`. Defaults to None.
         padding (str, optional):  `'VALID'` or `'SAME'`. Defaults to "VALID".
         data_format (str, optional): `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
@@ -2381,13 +2381,15 @@ def deconv2d(
     if data_format.upper() == "NCHW":
         input_shape = input.shape[2:]
         kernel_size = filters.shape[2:4]
-        output_shape = output_shape[2:4]
         channels = filters.shape[1]
+        assert output_shape[1] == channels
+        output_shape = output_shape[2:4]
     elif data_format.upper() == "NHWC":
         input_shape = input.shape[1:3]
         kernel_size = filters.shape[-3:-1]
-        output_shape = output_shape[1:3]
         channels = filters.shape[3]
+        assert output_shape[3] == channels
+        output_shape = output_shape[1:3]
         assert dilations == [1, 1], ValueError(
             "dialtions must be 1 when data format is NHWC "
         )
@@ -2445,7 +2447,7 @@ def deconv2d(
         padding_before = [0] * NDims
         input = (
             flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Conv2d_")
+                name if name is not None else id_util.UniqueStr("Deconv2d_")
             )
             .Op("deconv2d")
             .Input("in", [input])
@@ -2572,6 +2574,9 @@ def deconv2d_torch(
     for pad in padding_needed:
         assert pad % 2 == 0
         padding_before.append(pad // 2)
+
+    if output_padding is None:
+        output_padding = (0, 0)
 
     return (
         flow.user_op_builder(
