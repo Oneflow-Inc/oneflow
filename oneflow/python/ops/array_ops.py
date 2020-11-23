@@ -1679,35 +1679,60 @@ def stack(
 ) -> remote_blob_util.BlobDef:
     """This operator stacks the multiple Blobs on the specified axis. 
 
-    Still Unavailable. 
-
     Args:
         inputs (Sequence[remote_blob_util.BlobDef]): A list of input Blob. 
         axis (int): The stack axis. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def stack_job(x: tp.Numpy.Placeholder(shape=(2, 4, 6)), 
+                    y: tp.Numpy.Placeholder(shape=(2, 4, 6)))->tp.Numpy:
+            out = flow.stack([x, y], axis=2) 
+            return out 
+
+        x = np.ones(shape=(2, 4, 6), dtype=np.float32)
+        y = np.ones(shape=(2, 4, 6), dtype=np.float32)
+
+        out = stack_job(x, y)
+
+        # output.shape (2, 4, 2, 6)
+
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
 
     """
+    if name is None: 
+        name = "Stack"
+
     if not isinstance(inputs, (list, tuple)):
         inputs = [inputs]
 
+    _input_shape = inputs[0].shape
+    _max_dim = len(_input_shape)
+    # if input shape is 4, allow the legal axis is (-5, 4)
+    assert (axis >= - _max_dim - 1) and (axis <= _max_dim)
+
     if axis < 0:
-        axis = axis + len(inputs[0].shape)
+        axis = axis + _max_dim + 1
 
-    assert axis == 0, "Only support dim0 stack now."
-
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
-    setattr(op_conf.stack_conf, "axis", axis)
-    setattr(op_conf.stack_conf, "out", "out")
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    # Assert each tensor has the same shape with `_input_shape`
+    _input_list_length = len(inputs)
+    for i in range(_input_list_length): 
+        _current_shape = inputs[i].shape
+        assert _input_shape == _current_shape, "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(_current_shape)
+        # Expand dims for each tensor 
+        inputs[i] = flow.expand_dims(inputs[i], axis=axis, name=name+"expand_dims_{}".format(i))
+    
+    return flow.concat(inputs, axis=axis, name=name+"_concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
