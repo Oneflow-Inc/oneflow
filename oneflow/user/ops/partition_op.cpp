@@ -30,7 +30,7 @@ REGISTER_USER_OP("partition")
       const user_op::TensorDesc* in_num_unique_desc =
           ctx->TensorDesc4ArgNameAndIndex("in_num_unique", 0);
       const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");
-      // CHECK_EQ_OR_RETURN(parallel_num, ctx->outputs().size());
+      CHECK_EQ_OR_RETURN(2 * parallel_num, ctx->outputs().size());
       FOR_RANGE(int32_t, i, 0, parallel_num) {
         user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
         *out_i_desc = *in_desc;
