@@ -285,7 +285,7 @@ void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_siz
       buffer_manager.CubSortValuesPtr(), bound_index, bound_value);
 
   GetLabelMap<K>
-      <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, parallel_num * sizeof(K),
+      <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
          ctx->cuda_stream()>>>(batch_size, parallel_num, num_sample, bound_index, bound_value,
                                buffer_manager.CubSortValuesPtr());
 
