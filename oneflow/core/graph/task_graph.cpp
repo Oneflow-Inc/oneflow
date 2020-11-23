@@ -87,18 +87,40 @@ MakePredicatorIsLbiAllConsumersReachable(
         IsOpNameDataOrCtrlReachable) {
   auto IsDataOrCtrlReachable = [IsOpNameDataOrCtrlReachable](const TaskNode* src_node,
                                                              const TaskNode* dst_node) -> bool {
+    std::ostringstream ss;
+    ss << "IsDataOrCtrlReachable";
     if (src_node->chain_id() == dst_node->chain_id()
         && src_node->order_in_graph() <= dst_node->order_in_graph()) {
+      std::cout << ss.str() << ", same chain" << std::endl;
       return true;
     }
+    ss << ", src_node: " << src_node->exec_gph().SoleNode()->op()->op_name();
     const CompTaskNode* comp_src_node = dynamic_cast<const CompTaskNode*>(src_node);
-    if (comp_src_node == nullptr) { return false; }
-    if (comp_src_node->logical_node()->op_vec().size() != 1) { return false; }
+    if (comp_src_node == nullptr) {
+      std::cout << ss.str() << ", src_node is not comp CompTaskNode" << std::endl;
+      return false;
+    }
+    if (comp_src_node->logical_node()->op_vec().size() != 1) {
+      std::cout << ss.str() << ", comp_src_node has multi op" << std::endl;
+      return false;
+    }
+    ss << ", comp_src_node: " << comp_src_node->logical_node()->SoleOp()->op_name();
     const CompTaskNode* comp_dst_node = dynamic_cast<const CompTaskNode*>(dst_node);
-    if (comp_dst_node == nullptr) { return false; }
-    if (comp_dst_node->logical_node()->op_vec().size() != 1) { return false; }
-    return IsOpNameDataOrCtrlReachable(comp_src_node->logical_node()->SoleOp()->op_name(),
-                                       comp_dst_node->logical_node()->SoleOp()->op_name());
+    if (comp_dst_node == nullptr) {
+      std::cout << ss.str() << ", dst_node is not comp CompTaskNode" << std::endl;
+      return false;
+    }
+    if (comp_dst_node->logical_node()->op_vec().size() != 1) {
+      std::cout << ss.str() << ", comp_dst_node has multi op" << std::endl;
+      return false;
+    }
+    ss << ", comp_dst_node: " << comp_dst_node->logical_node()->SoleOp()->op_name();
+    bool reachable =
+        IsOpNameDataOrCtrlReachable(comp_src_node->logical_node()->SoleOp()->op_name(),
+                                    comp_dst_node->logical_node()->SoleOp()->op_name());
+    ss << ", is op_name data or ctrl reachable: " << std::boolalpha << reachable;
+    std::cout << ss.str() << std::endl;
+    return reachable;
   };
   return [TaskNode4SoleOpName, IsDataOrCtrlReachable](const LogicalBlobId& lbi,
                                                       const std::string& op_name) -> bool {
@@ -112,6 +134,10 @@ MakePredicatorIsLbiAllConsumersReachable(
         reachable_out_edges_size += IsDataOrCtrlReachable(out_edge->dst_node(), dst_task_node);
       }
     }
+    std::cout << "src op: " << lbi.op_name() << ", dst op: " << op_name
+              << ", lbi: " << lbi.op_name() << "/" << lbi.blob_name()
+              << ", out_edges_size: " << out_edges_size
+              << ", reachable_out_edges_size: " << reachable_out_edges_size << std::endl;
     return out_edges_size > 0 && out_edges_size == reachable_out_edges_size;
   };
 }
@@ -376,6 +402,15 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
   InplaceObasInfo obas_info;
   GetInplaceOpBlobArgList(&obas_info, dev_nodes, TaskNode4SoleOpName);
+
+  std::ostringstream ss;
+  ss << "origin InplaceObasInfo.mut_inplace_oba_pairs: ";
+  for (const auto& arg_pair : obas_info.mut_inplace_oba_pairs.pair()) {
+    ss << "{" << arg_pair.first().op_name() << "/" << arg_pair.first().bn_in_op() << ", "
+       << arg_pair.second().op_name() << "/" << arg_pair.second().bn_in_op() << "}";
+  }
+  std::cout << ss.str() << std::endl;
+
   auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
     return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
   };
@@ -394,6 +429,14 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
 
 void TaskGraph::SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                         const HashSet<TaskNode*>& dev_nodes) const {
+  std::ostringstream ss;
+  ss << "InplaceObasInfo.mut_inplace_oba_pairs: ";
+  for (const auto& arg_pair : obas_info.mut_inplace_oba_pairs.pair()) {
+    ss << "{" << arg_pair.first().op_name() << "/" << arg_pair.first().bn_in_op() << ", "
+       << arg_pair.second().op_name() << "/" << arg_pair.second().bn_in_op() << "}";
+  }
+  std::cout << ss.str() << std::endl;
+
   auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
   auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
     return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();

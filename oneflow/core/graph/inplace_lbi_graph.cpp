@@ -324,6 +324,13 @@ void InplaceLbiGraph::ComputeSafeInplaceEdges(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
     const std::function<void(const InplaceLbiEdge*)>& Handler) const {
+  std::ostringstream ss;
+  ss << "connect component: ";
+  for (const auto* node : nodes) {
+    ss << node->lbi().op_name() << "/" << node->lbi().blob_name() << ", ";
+  }
+  std::cout << ss.str() << std::endl;
+
   CheckSubGraph(nodes);
   HashSet<const InplaceLbiNode*> remainder_nodes(nodes);
   HashSet<const InplaceLbiEdge*> disabled_edges;
@@ -332,39 +339,85 @@ void InplaceLbiGraph::ComputeSafeInplaceEdges(
     HashSet<const InplaceLbiEdge*> cur_disabled_edges;
     ForEachSafeInplaceEdgeInSourceOpSubTree(remainder_nodes, IsReachableFromLbiToOpName, Handler,
                                             &cur_disabled_edges);
+    std::ostringstream ss;
+    ss << "compute safe inplace edges in the subtree containning SourceOpInplaceLbiNode as root: ";
+    for (const auto* edge : cur_disabled_edges) { ss << edge->op().op_name() << ", "; }
+    std::cout << ss.str() << std::endl;
     disabled_edges.insert(cur_disabled_edges.begin(), cur_disabled_edges.end());
   }
   auto IsValidEdge = [&](const InplaceLbiEdge* edge) {
-    return remainder_nodes.find(edge->src_node()) != remainder_nodes.end()
-           && remainder_nodes.find(edge->dst_node()) != remainder_nodes.end()
-           && disabled_edges.find(edge) == disabled_edges.end();
+    bool src_in_remainder = remainder_nodes.find(edge->src_node()) != remainder_nodes.end();
+    bool dst_in_remainder = remainder_nodes.find(edge->dst_node()) != remainder_nodes.end();
+    bool not_disable_yet = disabled_edges.find(edge) == disabled_edges.end();
+    bool valid = src_in_remainder && dst_in_remainder && not_disable_yet;
+    std::cout << edge->op().op_name() << " is valid? " << std::boolalpha << valid
+              << ", src_in_remainder: " << src_in_remainder
+              << ", dst_in_remainder: " << dst_in_remainder
+              << ", not_disable_yet: " << not_disable_yet << std::endl;
+    return valid;
   };
   RemoveUnconnectedNodes(&remainder_nodes, IsValidEdge);
+
+  std::ostringstream ss1;
+  ss1 << "remainder nodes: ";
+  for (const auto* node : remainder_nodes) {
+    ss1 << node->lbi().op_name() << "/" << node->lbi().blob_name() << ", ";
+  }
+  std::cout << ss1.str() << std::endl;
+
   size_t dead_loop_check = remainder_nodes.size();
   while (!remainder_nodes.empty()) {
+    std::cout << "FindFirstInterOpRefConflictMutRefEdge" << std::endl;
     ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
       const InplaceLbiEdge* cur_disabled_edge =
           FindFirstInterOpRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
     });
+    std::ostringstream ss1;
+    ss1 << "cur_disabled_edges: ";
+    for (const auto* edge : disabled_edges) { ss1 << edge->op().op_name() << ", "; }
+    std::cout << ss1.str() << std::endl;
+
+    std::cout << "FindFirstConstRefConflictMutRefEdge" << std::endl;
     ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
       const InplaceLbiEdge* cur_disabled_edge =
           FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
     });
+    std::ostringstream ss2;
+    ss2 << "cur_disabled_edges: ";
+    for (const auto* edge : disabled_edges) { ss2 << edge->op().op_name() << ", "; }
+    std::cout << ss2.str() << std::endl;
+
+    std::cout << "FindFirstIntraOpRefConflictMutRefEdge" << std::endl;
     ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
       const InplaceLbiEdge* cur_disabled_edge =
           FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
     });
+    std::ostringstream ss3;
+    ss3 << "cur_disabled_edges: ";
+    for (const auto* edge : disabled_edges) { ss3 << edge->op().op_name() << ", "; }
+    std::cout << ss3.str() << std::endl;
+
     {
+      std::cout << "GetSafeInplaceObnEdges" << std::endl;
       HashSet<const InplaceLbiEdge*> cur_safe_inplace_obn_edges;
       GetSafeInplaceObnEdges(remainder_nodes, IsValidEdge, IsReachableFromLbiToOpName,
                              &cur_safe_inplace_obn_edges);
       for (const auto* edge : cur_safe_inplace_obn_edges) { Handler(edge); }
       disabled_edges.insert(cur_safe_inplace_obn_edges.begin(), cur_safe_inplace_obn_edges.end());
     }
+    std::cout << "RemoveUnconnectedNodes" << std::endl;
     RemoveUnconnectedNodes(&remainder_nodes, IsValidEdge);
+
+    std::ostringstream ss;
+    ss << "remainder nodes after check: ";
+    for (const auto* node : remainder_nodes) {
+      ss << node->lbi().op_name() << "/" << node->lbi().blob_name() << ", ";
+    }
+    std::cout << ss.str() << std::endl;
+
     CHECK_GE(--dead_loop_check, 0);
   }
 }
@@ -413,7 +466,10 @@ bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
   bool conflict = false;
   const auto& op_name = mut_ref_node->lbi().op_name();
   BfsForEachNode({GetRoot(nodes, IsValidEdge)}, ForEachNext, [&](const InplaceLbiNode* node) {
-    conflict = conflict || !IsLbiAllConsumerReachableToOpName(node->lbi(), op_name);
+    bool reachable = IsLbiAllConsumerReachableToOpName(node->lbi(), op_name);
+    std::cout << node->lbi().op_name() << "/" << node->lbi().blob_name() << " is reachable to "
+              << op_name << "? " << std::boolalpha << reachable << std::endl;
+    conflict = conflict || !reachable;
   });
   return conflict;
 }
@@ -429,9 +485,16 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstConstRefConflictMutRefEdge(
   const InplaceLbiEdge* ret = nullptr;
   TopoForEachNode({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
     if (ret != nullptr) { return; }
-    if (node->IsMutRef(IsValidEdge)
-        && IsConstRefConflictMutRefNode(node, nodes, IsValidEdge,
-                                        IsLbiAllConsumerReachableToOpName)) {
+    bool is_mut_ref = node->IsMutRef(IsValidEdge);
+    bool is_const_ref_conflict_mut_ref_node =
+        is_mut_ref ? IsConstRefConflictMutRefNode(node, nodes, IsValidEdge,
+                                                  IsLbiAllConsumerReachableToOpName)
+                   : false;
+    if (is_mut_ref && is_const_ref_conflict_mut_ref_node) {
+      std::cout << node->lbi().op_name() << "/" << node->lbi().blob_name() << std::boolalpha
+                << " is_mut_ref: " << is_mut_ref
+                << ", is_const_ref_conflict_mut_ref_node: " << is_const_ref_conflict_mut_ref_node
+                << std::endl;
       ret = node->GetValidInEdge(IsValidEdge);
     }
   });
