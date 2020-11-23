@@ -136,7 +136,7 @@ void GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
         out_diff_lbn = op.GetGradTensorWithOpOutput("out", i);
       } else {
         auto constant_like_op = user_op::UserOpConfWrapperBuilder(
-                                    op.op_name() + "_grad_constant_like_out_" + std::to_string(i))
+                                    op.op_name() + "_grad_zero_like_out_" + std::to_string(i))
                                     .Op("zero_like")
                                     .Input("like", op.output("out", i))
                                     .Output("out")
