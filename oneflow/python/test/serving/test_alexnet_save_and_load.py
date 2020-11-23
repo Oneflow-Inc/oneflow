@@ -27,7 +27,7 @@ import google.protobuf.text_format as text_format
 
 from alexnet import load_data, alexnet
 
-DEFAULT_BATCH_SIZE = 8
+DEFAULT_BATCH_SIZE = 4
 DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_227/train/32/"
 DEFAULT_TRAIN_DATA_PART_NUM = 32
 DEFAULT_INFER_DATA_PATH = "/dataset/imagenet_227/train/32/"
@@ -132,16 +132,13 @@ def load_saved_model(model_meta_file_path):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSaveAndLoadModel(flow.unittest.TestCase):
-    def test_alexnet(test_case, batch_size=8, num_batchs=6):
+    def test_alexnet(test_case, batch_size=DEFAULT_BATCH_SIZE, num_batchs=6):
         ofrecord_data_path = os.path.join(DEFAULT_INFER_DATA_PATH, "part-0")
         image_list, label_list = load_data_from_ofrecord(
             num_batchs, batch_size, ofrecord_data_path
         )
 
         init_env()
-        # alexnet_train = make_alexnet_infer_func(
-        #     DEFAULT_BATCH_SIZE, DEFAULT_TRAIN_DATA_PATH, DEFAULT_TRAIN_DATA_PART_NUM
-        # )
         assert image_list[0].shape[0] == batch_size
         image_size = tuple(image_list[0].shape[1:])
         alexnet_infer, input_lbns, output_lbns = make_alexnet_infer_func(

@@ -6,3 +6,5 @@ tqdm
 requests
 onnx
 jinja2
+grpcio
+grpcio-tools

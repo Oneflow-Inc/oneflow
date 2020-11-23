@@ -14,10 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
 namespace {
+
+std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_variable_conf());
+  return GenLogicalBlobName(op_conf.name(), op_conf.variable_conf().out());
+}
 
 OperatorConf GenerateRmspropHelperVariableOpConf(const VariableOp& op, const std::string& name,
                                                  const float initial_value) {
@@ -34,23 +40,34 @@ OperatorConf GenerateRmspropHelperVariableOpConf(const VariableOp& op, const std
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
                              const ParallelConf& parallel_conf, JobBuilder* job_builder,
                              const LogicalBlobId& diff_lbi_of_var_out) {
-  OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(op, "mean_square", 0.f));
+  const auto& train_conf = job_builder->job().job_conf().train_conf();
+  const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
 
-  OperatorConf mdupdt_op;
-  mdupdt_op.set_name(op.op_name() + "_optimizer");
-  auto* mdupdt_op_conf = mdupdt_op.mutable_rmsprop_model_update_conf();
-  *(mdupdt_op_conf->mutable_user_conf()) =
-      GlobalJobDesc().job_conf().train_conf().model_update_conf();
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
-  mdupdt_op_conf->set_mean_square(mean_square_var.name() + "/out");
-  mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  if (GlobalJobDesc().job_conf().train_conf().model_update_conf().rmsprop_conf().centered()) {
+  OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(op, "mean_square", 0.f));
+  job_builder->AddOps(parallel_conf, {mean_square_var});
+
+  user_op::UserOpConfWrapperBuilder rmsprop_update_op_builder(op.op_name() + "_optimizer");
+  const RMSPropModelUpdateConf& rmsprop_conf = model_update_conf.rmsprop_conf();
+  bool centered = rmsprop_conf.centered();
+  rmsprop_update_op_builder.OpTypeName("rmsprop_update")
+      .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
+      .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
+      .Input("learning_rate", train_conf.primary_lr_lbn())
+      .Input("mean_square", GenVariableOutputLbn(mean_square_var))
+      .Attr<bool>("centered", centered)
+      .Attr<float>("epsilon", rmsprop_conf.epsilon())
+      .Attr<float>("decay_rate", rmsprop_conf.decay_rate())
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
+      .ScopeSymbolId(op.op_conf().scope_symbol_id());
+
+  if (centered) {
     OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
-    mdupdt_op_conf->set_mean_gradient(mean_gradient_var.name() + "/out");
-    job_builder->AddOps(parallel_conf, {mean_square_var, mean_gradient_var, mdupdt_op});
-  } else {
-    job_builder->AddOps(parallel_conf, {mean_square_var, mdupdt_op});
+    job_builder->AddOps(parallel_conf, {mean_gradient_var});
+    rmsprop_update_op_builder.Input("mean_gradient", GenVariableOutputLbn(mean_gradient_var));
   }
+
+  user_op::UserOpConfWrapper rmsprop_update_op = rmsprop_update_op_builder.Build();
+  job_builder->AddOps(parallel_conf, {rmsprop_update_op.op_conf()});
 }
 
 }  // namespace

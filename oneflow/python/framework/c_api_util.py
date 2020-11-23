@@ -652,3 +652,7 @@ def JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
+
+
+def LoadLibraryNow(lib_path):
+    oneflow_internal.LoadLibraryNow(lib_path)

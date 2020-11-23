@@ -280,3 +280,7 @@ void CacheInt8Calibration(std::string* error_str) {
 void WriteInt8Calibration(const std::string& path, std::string* error_str) {
   oneflow::WriteInt8Calibration(path).GetDataAndSerializedErrorProto(error_str);
 }
+
+void LoadLibraryNow(const std::string& lib_path, std::string* error_str) {
+  oneflow::LoadLibraryNow(lib_path).GetDataAndSerializedErrorProto(error_str);
+}
