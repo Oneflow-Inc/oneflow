@@ -7,8 +7,17 @@ on:
     - cron:  '0 18 * * *'
   workflow_dispatch:
     inputs:
-      placeholder:
-        description: 'placeholder, no effect'
+      cuda_version:
+        description: 'cuda versions to build'
+        default: '10.0,10.1,10.2,11.0,11,1'
+        required: false
+      python_version:
+        description: 'python_version'
+        default: '3.5,3.6,3.7,3.8'
+        required: false
+      extra_flags:
+        description: 'flags like --xla'
+        default: ''
         required: false
 jobs:
   staging_release:
@@ -19,30 +28,38 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
+    - name: (CUDA) Set environment variables
+      run: |
+        set -x
+        tmp_dir=$HOME/ci-tmp-rel
+        echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
+        echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
+        git_hash=$(git rev-parse --short "$GITHUB_SHA")
+        git_branch=${GITHUB_REF##*/}
+        timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
+        oss_dir=${git_branch}/${timestamp}-${git_hash}
+        echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
+        echo "git_branch=${git_branch}" >> $GITHUB_ENV
     - name: Build OneFlow
+      uses: ./.github/actions/whl
+      with:
+        tmp_dir: ${ci_tmp_dir}
+        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
+    - name: Upload wheel
+      uses: ./.github/actions/upload_oss
+      with:
+        src_path: ${wheelhouse_dir}
+        oss_dst_path: oss://oneflow-staging/${oss_dir}
+        oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+    - name: Update pip index
       env:
         OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       run: |
-        export ONEFLOW_CI_TMP_DIR=$HOME/ci-tmp-rel-102
-        docker run --rm -v $ONEFLOW_CI_TMP_DIR/:$HOME/ci-tmp/ busybox rm -rf $HOME/ci-tmp/wheelhouse
-        export ONEFLOW_CI_PYTHON_VERSION_ARGS=" "
-        export ONEFLOW_CI_EXTRA_ONEFLOW_CMAKE_ARGS="-DWITH_XLA=OFF"
-        export ONEFLOW_CI_BUILD_WHEEL_BASH_ARGS=" "
-        export ONEFLOW_CI_PACKAGE_SUFFIX="_cu102"
-        if [ -d $ONEFLOW_CI_TMP_DIR/wheelhouse ]; then
-            echo "existing wheelhouse found"
-            exit 1
-        fi
-        bash ci/build/make.sh
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
-        git_branch=${GITHUB_REF##*/}
-        timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
-        dir=${git_branch}/${timestamp}-${git_hash}
-        $HOME/ossutil64 cp --update -r $ONEFLOW_CI_TMP_DIR/wheelhouse oss://oneflow-static/staging/${dir}
         python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         python3 -m pip install oss2 beautifulsoup4 --user
-        python3 tools/create_pip_index.py --dir_key staging/${dir} -b oneflow-static --index_key=staging/${git_branch}/pip.index.html
+        python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${git_branch}/pip.index.html
     - name: Update API docs
       if: github.ref == 'refs/heads/master'
       env:
