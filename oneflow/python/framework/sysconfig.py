@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import os
 import imp
+import importlib.util
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
@@ -47,6 +48,10 @@ def get_compile_flags() -> List[str]:
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L{}".format(get_lib()))
-    _, oneflow_internal_lib_path, _ = imp.find_module("_oneflow_internal", [get_lib()])
+    file, oneflow_internal_lib_path, _ = imp.find_module(
+        "_oneflow_internal", [get_lib()]
+    )
+    if file:
+        file.close()
     flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags

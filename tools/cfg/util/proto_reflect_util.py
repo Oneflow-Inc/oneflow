@@ -248,14 +248,17 @@ class ProtoReflectionUtil:
                     TryAddEnum(field.message_type.fields_by_name["value"])
                 else:
                     TryAddEnum(field)
+        namespaces = []
+        enums = []
         for enum in enum_defined_in_other_module:
             package = enum.file.package
             if package != "":
-                yield package.split("."), enum.full_name[len(package) + 1 :].replace(
-                    ".", "_"
-                )
+                namespaces.append(package.split("."))
+                enums.append(enum.full_name[len(package) + 1 :].replace(".", "_"))
             else:
-                yield [], enum.full_name.replace(".", "_")
+                namespaces.append([])
+                enums.append(enum.full_name.replace(".", "_"))
+        return sorted(zip(namespaces, enums))
 
     def other_file_declared_namespaces_and_class_name(self, module):
         cls_defined_in_this_module = set()
@@ -276,14 +279,17 @@ class ProtoReflectionUtil:
                     TryAddClass(field.message_type.fields_by_name["value"])
                 else:
                     TryAddClass(field)
+        namespaces = []
+        clss = []
         for cls in cls_defined_in_other_module:
             package = cls.file.package
             if package != "":
-                yield package.split("."), cls.full_name[len(package) + 1 :].replace(
-                    ".", "_"
-                )
+                namespaces.append(package.split("."))
+                clss.append(cls.full_name[len(package) + 1 :].replace(".", "_"))
             else:
-                yield [], cls.full_name.replace(".", "_")
+                namespaces.append([])
+                clss.append(enum.full_name.replace(".", "_"))
+        return sorted(zip(namespaces, clss))
 
     def field_message_type_name_with_cfg_namespace(self, field):
         package = field.message_type.file.package

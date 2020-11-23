@@ -18,19 +18,19 @@ from __future__ import absolute_import
 import oneflow as flow
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.remote_blob import BlobDef
 from typing import Optional, Sequence
 
 
 @oneflow_export("tensor_buffer_to_tensor")
 def tensor_buffer_to_tensor(
-    x: BlobDef,
+    x: remote_blob_util.BlobDef,
     dtype: dtype_util.dtype,
     instance_shape: Sequence[int],
     name: Optional[str] = None,
-) -> BlobDef:
+) -> remote_blob_util.BlobDef:
     r"""This operator converts the Blob's type from TensorBuffer to Tensor. 
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
     to `Tensor`. 
@@ -70,7 +70,7 @@ def tensor_buffer_to_tensor(
         out = tensor_buffer_to_tensor_Job(x)
 
         # out.shape (4, 16, 64, 64)
-    
+
     """
     if name is None:
         name = id_util.UniqueStr("TensorBufferToTensor_")
@@ -89,8 +89,8 @@ def tensor_buffer_to_tensor(
 
 @oneflow_export("tensor_to_tensor_buffer")
 def tensor_to_tensor_buffer(
-    x: BlobDef, instance_dims: int, name: Optional[str] = None,
-) -> BlobDef:
+    x: remote_blob_util.BlobDef, instance_dims: int, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
     r"""This operator converts the Blob's type from Tensor to TensorBuffer. 
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
