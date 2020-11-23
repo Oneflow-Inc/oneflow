@@ -9,7 +9,7 @@ on:
     inputs:
       cuda_version:
         description: 'cuda versions to build'
-        default: '10.0,10.1,10.2,11.0,11,1'
+        default: '10.0,10.1,10.2,11.0,11.1'
         required: false
       python_version:
         description: 'python_version'
@@ -28,12 +28,20 @@ jobs:
       run: |
         docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
     - uses: actions/checkout@v2
-    - name: (CUDA) Set environment variables
+    - name: Set environment variables
+      env:
+        cuda_version: ${{ github.event.inputs.cuda_version }}
+        python_version: ${{ github.event.inputs.python_version }}
+        extra_flags: ${{ github.event.inputs.extra_flags }}
       run: |
         set -x
+        cuda_version=${cuda_version:-"10.0,10.1,10.2,11.0,11.1"}
+        python_version=${python_version:-"3.5,3.6,3.7,3.8"}
+
         tmp_dir=$HOME/ci-tmp-rel
         echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
         echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
+
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
         timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
@@ -44,7 +52,9 @@ jobs:
       uses: ./.github/actions/whl
       with:
         tmp_dir: ${ci_tmp_dir}
-        extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
+        cuda_version: ${cuda_version}
+        python_version: ${python_version}
+        extra_flags: ${extra_flags}
     - name: Upload wheel
       uses: ./.github/actions/upload_oss
       with:
