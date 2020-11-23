@@ -109,4 +109,51 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
   }
 });
 
+REGISTER_USER_OP("gather_dispatch")
+    .Input("in")
+    .Input("indices")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
+      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
+      CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+
+      DimVector dim_vec;
+      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(), in->shape().dim_vec().cbegin());
+      dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
+                     indices->shape().dim_vec().cend());
+      dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + 1,
+                     in->shape().dim_vec().end());
+      *out->mut_shape() = Shape(dim_vec);
+      out->set_is_dynamic(indices->is_dynamic() || in->is_dynamic());
+      *out->mut_data_type() = in->data_type();
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+      CHECK(indices_modifier != nullptr);
+      indices_modifier->set_requires_grad(false);
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      if (ctx->BatchAxis4ArgNameAndIndex("indices", 0)->has_value()) {
+        ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(
+            ctx->BatchAxis4ArgNameAndIndex("indices", 0)->value());
+      } else {
+        ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("indices", 0), 0)
+          .Split(user_op::OpArg("in", 0), 0)
+          .Split(user_op::OpArg("out", 0), 0)
+          .Build();
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
