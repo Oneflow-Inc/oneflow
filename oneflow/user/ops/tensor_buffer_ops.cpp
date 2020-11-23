@@ -82,6 +82,41 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       return Maybe<void>::Ok();
     });
 
+REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
+    .Input("in")
+    .OutputWithMinimum("out", 1)
+    .Attr<Shape>("shape")
+    .Attr<DataType>("dtype")
+    .Attr<bool>("dynamic_out", true)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
+      CHECK_OR_RETURN(!in->is_dynamic());
+      const Shape& shape = ctx->Attr<Shape>("shape");
+      const DataType dtype = ctx->Attr<DataType>("dtype");
+      CHECK_OR_RETURN(IsPODDataType(dtype));
+      const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
+      int64_t num_tensor_buffers = in->shape().elem_cnt();
+      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
+        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        *out_i->mut_shape() = shape;
+        *out_i->mut_data_type() = dtype;
+        out_i->set_is_dynamic(dynamic_out);
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
+      for (int64_t i = 0; ctx->user_op_conf().input_size("out"); ++i) {
+        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
+      }
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace
 
 }  // namespace oneflow
