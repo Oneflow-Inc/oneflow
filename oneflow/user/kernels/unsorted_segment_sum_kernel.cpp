@@ -119,6 +119,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVI
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+#ifdef WITH_CUDA
 template<typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
  public:
@@ -154,6 +155,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     UnsortedSegmentSumKernelUtil<DeviceType::kGPU, float, K, float16>::UnsortedSegmentSum(
         ctx->device_ctx(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids,
         num_segments, outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
+
     CopyElemOnGpu<float, float16>(ctx->device_ctx(), tmp_buf->dptr<float>(),
                                   out->mut_dptr<float16>(), out->shape().elem_cnt());
   }
@@ -182,6 +184,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 #undef REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE
+
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 
