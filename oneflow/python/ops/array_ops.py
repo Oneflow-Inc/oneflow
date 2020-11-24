@@ -1675,7 +1675,9 @@ def sync_dynamic_resize(
 
 @oneflow_export("stack")
 def stack(
-    inputs: Sequence[remote_blob_util.BlobDef], axis: int, name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef],
+    axis: int = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator stacks the multiple Blobs on the specified axis. 
 
@@ -1710,29 +1712,35 @@ def stack(
         remote_blob_util.BlobDef: The result Blob. 
 
     """
-    if name is None: 
+    if name is None:
         name = "Stack"
 
-    if not isinstance(inputs, (list, tuple)):
-        inputs = [inputs]
+    inputs = list(inputs)
 
     _input_shape = inputs[0].shape
     _max_dim = len(_input_shape)
-    # if input shape is 4, allow the legal axis is (-5, 4)
-    assert (axis >= - _max_dim - 1) and (axis <= _max_dim)
 
     if axis < 0:
         axis = axis + _max_dim + 1
 
-    # Assert each tensor has the same shape with `_input_shape`
+    # if input shape is 4, allow the legal axis is (-5, 4)
+    assert (axis >= 0) and (axis <= _max_dim)
+
+    # All input tensors must have the same shape ?
     _input_list_length = len(inputs)
-    for i in range(_input_list_length): 
+    for i in range(_input_list_length):
         _current_shape = inputs[i].shape
-        assert _input_shape == _current_shape, "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(_current_shape)
-        # Expand dims for each tensor 
-        inputs[i] = flow.expand_dims(inputs[i], axis=axis, name=name+"expand_dims_{}".format(i))
-    
-    return flow.concat(inputs, axis=axis, name=name+"_concat")
+        assert (
+            _input_shape == _current_shape
+        ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+            _current_shape
+        )
+        # Expand dims for each tensor
+        inputs[i] = flow.expand_dims(
+            inputs[i], axis=axis, name=name + "expand_dims_{}".format(i)
+        )
+
+    return flow.concat(inputs, axis=axis, name=name + "_concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
