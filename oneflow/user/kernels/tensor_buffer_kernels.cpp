@@ -103,7 +103,7 @@ REGISTER_USER_KERNEL("tensor_to_tensor_buffer")
     .SetCreateFn<TensorToTensorBufferKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
-                  
+
 class GenTensorBuffer final : public user_op::OpKernel {
  public:
   GenTensorBuffer() = default;

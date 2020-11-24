@@ -114,7 +114,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     .OutputWithMinimum("out", 1)
     .Attr<Shape>("out_shape")
     .Attr<DataType>("out_dtype")
-    .Attr<bool>("dynamic_out", true)
+    .Attr<bool>("dynamic_out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().elem_cnt(), 0);
@@ -139,9 +139,9 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      // for (int64_t i = 0; ctx->user_op_conf().output_size("out"); ++i) {
-      //   ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
-      // }
+      FOR_RANGE(int64_t, i, 0, ctx->user_op_conf().output_size("out")) {
+        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
+      }
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,

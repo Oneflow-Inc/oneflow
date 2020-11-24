@@ -18,10 +18,9 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-from test_util import GenArgList
 
 
-def _test_tensor_buffer_to_list_of_tensors(shape, shape_list, value_list):
+def _run_test(shape, shape_list, value_list):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -31,23 +30,22 @@ def _test_tensor_buffer_to_list_of_tensors(shape, shape_list, value_list):
     def TestTensorBufferToListOfTensorsJob():
         with flow.scope.placement("cpu", "0:0"):
             x = flow.gen_tensor_buffer(shape, shape_list, value_list)
-            y = flow.tensor_buffer_to_list_of_tensors(x, (100, 100), flow.float)
+            y = flow.tensor_buffer_to_list_of_tensors(x, (100, 100), flow.float, True)
             return y
-    
-    x1, x2, x3, x4 = TestTensorBufferToListOfTensorsJob().get()
-    print(x1.numpy_list()[0].shape)
-    print(x1.numpy_list()[0])
-    print(x2.numpy_list()[0].shape)
-    print(x2.numpy_list()[0])
-    print(x3.numpy_list()[0].shape)
-    print(x3.numpy_list()[0])
-    print(x4.numpy_list()[0].shape)
-    print(x4.numpy_list()[0])
+
+    out_0, out_1, out_2, out_3 = TestTensorBufferToListOfTensorsJob().get()
+    assert np.array_equal(out_0.numpy_list()[0], np.zeros((10, 10), np.float))
+    assert np.array_equal(out_1.numpy_list()[0], np.ones((50, 50), np.float))
+    assert np.array_equal(out_2.numpy_list()[0], np.ones((20, 80), np.float) * 2.0)
+    assert np.array_equal(out_3.numpy_list()[0], np.ones((100, 100), np.float) * 3.0)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorBufferToListOfTensors(flow.unittest.TestCase):
-    _test_tensor_buffer_to_list_of_tensors((2, 2), [(10, 10), (50, 50), (20, 80), (100, 100)], [0.0, 1.0, 2.0, 3.0])
+    shape_list = [(10, 10), (50, 50), (20, 80), (100, 100)]
+    value_list = [0.0, 1.0, 2.0, 3.0]
+    _run_test((2, 2), shape_list, value_list)
+    _run_test((4,), shape_list, value_list)
 
 
 if __name__ == "__main__":
