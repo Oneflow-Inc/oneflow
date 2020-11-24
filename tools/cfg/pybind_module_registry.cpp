@@ -17,6 +17,11 @@ SubModuleMap* GetSubModuleMap() {
 
 }
 
+std::set<std::type_index>* Pybind11Context::GetRegisteredTypeIndices() {
+  static std::set<std::type_index> registered_type_indices;
+  return &registered_type_indices;
+}
+
 void Pybind11ModuleRegistry::Register(std::string module_path,
                                      std::function<void(pybind11::module&)> BuildModule) {
   (*GetSubModuleMap())[module_path].emplace_back(BuildModule);

@@ -45,42 +45,46 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% for field in util.message_type_fields(cls) %}
 {# no duplicated python class registered for each repeated field type #}
 {% if util.field_has_repeated_label(field) and util.add_declared_repeated_field_type_name(field) %}
+if (!ctx->IsTypeIndexRegistered(typeid(::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>)))
   {
-    pybind11::class_<Const{{ util.field_repeated_container_name(field) }}, std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}>> registry(m, "Const{{ util.field_repeated_container_name(field) }}");
-    registry.def("__len__", &Const{{ util.field_repeated_container_name(field) }}::size);
+    pybind11::class_<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>, std::shared_ptr<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>>> registry(m, "_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>");
+    registry.def("__len__", &::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::size);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
 {% if util.field_is_message_type(field) %}
-    registry.def("__getitem__", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> (Const{{ util.field_repeated_container_name(field) }}::*)(::std::size_t) const)&Const{{ util.field_repeated_container_name(field) }}::__SharedConst__);
-    registry.def("Get", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> (Const{{ util.field_repeated_container_name(field) }}::*)(::std::size_t) const)&Const{{ util.field_repeated_container_name(field) }}::__SharedConst__);
+    registry.def("__getitem__", [](const ::std::shared_ptr<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>>& s, ::std::size_t index){ return s->Get(index).__SharedConst__();});
+    registry.def("Get", [](const ::std::shared_ptr<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>>& s, ::std::size_t index){ return s->Get(index).__SharedConst__();});
 {% else %}
-    registry.def("__getitem__", &Const{{ util.field_repeated_container_name(field) }}::Get);
-    registry.def("Get", &Const{{ util.field_repeated_container_name(field) }}::Get);
+    registry.def("__getitem__", &::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Get);
+    registry.def("Get", &::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Get);
 {% endif %}
+    ctx->RegisterTypeIndex(typeid(::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>));
   }
+  if (!ctx->IsTypeIndexRegistered(typeid(::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>)))
   {
-    pybind11::class_<{{ util.field_repeated_container_name(field) }}, std::shared_ptr<{{ util.field_repeated_container_name(field) }}>> registry(m, "{{ util.field_repeated_container_name(field) }}");
-    registry.def("__len__", &{{ util.field_repeated_container_name(field) }}::size);
-    registry.def("Set", &{{ util.field_repeated_container_name(field) }}::Set);
-    registry.def("Clear", &{{ util.field_repeated_container_name(field) }}::Clear);
-    registry.def("CopyFrom", (void ({{ util.field_repeated_container_name(field) }}::*)(const Const{{ util.field_repeated_container_name(field) }}&))&{{ util.field_repeated_container_name(field) }}::CopyFrom);
-    registry.def("CopyFrom", (void ({{ util.field_repeated_container_name(field) }}::*)(const {{ util.field_repeated_container_name(field) }}&))&{{ util.field_repeated_container_name(field) }}::CopyFrom);
+    pybind11::class_<::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>, std::shared_ptr<::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>>> registry(m, "_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>");
+    registry.def("__len__", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::size);
+    registry.def("Set", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Set);
+    registry.def("Clear", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Clear);
+    registry.def("CopyFrom", (void (::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::*)(const ::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>&))&::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::CopyFrom);
+    registry.def("CopyFrom", (void (::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::*)(const ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>&))&::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::CopyFrom);
 {% if util.field_is_enum_type(field) or util.field_is_message_type(field) %}
-    registry.def("Add", (void ({{ util.field_repeated_container_name(field) }}::*)(const {{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}&))&{{ util.field_repeated_container_name(field) }}::Add);
+    registry.def("Add", (void (::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::*)(const {{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}&))&::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Add);
 {% else %}
-    registry.def("Add", (void ({{ util.field_repeated_container_name(field) }}::*)(const {{ util.field_type_name(field) }}&))&{{ util.field_repeated_container_name(field) }}::Add);
-{% endif %}    
+    registry.def("Add", (void (::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::*)(const {{ util.field_type_name(field) }}&))&::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Add);
+{% endif %}
     registry.def(pybind11::self == pybind11::self);
     registry.def(pybind11::self < pybind11::self);
 {% if util.field_is_message_type(field) %}
-    registry.def("__getitem__", (::std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}> ({{ util.field_repeated_container_name(field) }}::*)(::std::size_t))&{{ util.field_repeated_container_name(field) }}::__SharedMutable__);
-    registry.def("Get", (::std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}> ({{ util.field_repeated_container_name(field) }}::*)(::std::size_t))&{{ util.field_repeated_container_name(field) }}::__SharedMutable__);
-    registry.def("Add", &{{ util.field_repeated_container_name(field) }}::__SharedAdd__);
+    registry.def("__getitem__", (::std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}> (::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::*)(::std::size_t))&::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::__SharedMutable__);
+    registry.def("Get", (::std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}> (::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::*)(::std::size_t))&::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::__SharedMutable__);
+    registry.def("Add", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::__SharedAdd__);
 {% else %}
-    registry.def("__getitem__", &{{ util.field_repeated_container_name(field) }}::Get);
-    registry.def("Get", &{{ util.field_repeated_container_name(field) }}::Get);
-    registry.def("__setitem__", &{{ util.field_repeated_container_name(field) }}::Set);
+    registry.def("__getitem__", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Get);
+    registry.def("Get", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Get);
+    registry.def("__setitem__", &::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>::Set);
 {% endif %}
+    ctx->RegisterTypeIndex(typeid(::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>));
   }
 
 {# map begin #}
@@ -151,7 +155,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endif %}
 {% elif util.field_has_repeated_label(field) %}
     registry.def("{{ util.field_name(field) }}_size", &Const{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> (Const{{ util.class_name(cls) }}::*)() const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>> (Const{{ util.class_name(cls) }}::*)() const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
     registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> (Const{{ util.class_name(cls) }}::*)(::std::size_t) const)&Const{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% elif util.field_is_enum_type(field) %}
@@ -229,8 +233,8 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% elif util.field_has_repeated_label(field) %}
     registry.def("{{ util.field_name(field) }}_size", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }}_size);
     registry.def("clear_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
-    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)())&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
-    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)() const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
+    registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>> ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)())&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
+    registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>> ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)() const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
     registry.def("{{ util.field_name(field) }}", (::std::shared_ptr<Const{{ util.field_type_name(field) }}> ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_const_{{ util.field_name(field) }});
     registry.def("mutable_{{ util.field_name(field) }}", (::std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}> ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(::std::size_t))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});

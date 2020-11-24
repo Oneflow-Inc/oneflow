@@ -86,14 +86,9 @@ inline ::std::string {{ util.enum_name(enm) }}_Name({{ util.enum_name(enm) }} va
 {% for cls in util.module_nested_message_types(module) %}
 {% if not util.class_is_map_entry(cls) %}
 {% for field in util.message_type_fields(cls) %}
-{# no duplicated class declared for each repeated field type #}
-{% if util.field_has_repeated_label(field) and util.add_declared_repeated_field_type_name(field) %}
-class {{ util.field_repeated_container_name(field) }};
-class Const{{ util.field_repeated_container_name(field) }};
-{% endif  %}{# repeated #}
 {# map begin #}
 {% if util.field_has_map_label(field) and util.add_declared_map_field_type_name(field) %}
-class {{ util.field_map_container_name(field) }}; 
+class {{ util.field_map_container_name(field) }};
 class Const{{ util.field_map_container_name(field) }};
 {% endif  %}{# map end #}
 {% endfor %}{# field #}
@@ -154,10 +149,10 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     // repeated field {{ util.field_name(field) }}
    public:
     ::std::size_t {{ util.field_name(field) }}_size() const;
-    const {{ util.field_repeated_container_name(field) }}& {{ util.field_name(field) }}() const;
+    const ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>& {{ util.field_name(field) }}() const;
     const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}(::std::size_t index) const;
     void clear_{{ util.field_name(field) }}();
-    {{ util.field_repeated_container_name(field) }}* mutable_{{ util.field_name(field) }}();
+    ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>* mutable_{{ util.field_name(field) }}();
     {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}(::std::size_t index);
   {% if util.field_is_message_type(field) %}
     {{ util.field_type_name_with_cfg_namespace(field) }}* add_{{ util.field_name(field) }}();
@@ -165,7 +160,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
   {% endif %}{# field message type #}
    protected:
-    ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> {{ util.field_name(field) }}_;
+    ::std::shared_ptr<::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}> > {{ util.field_name(field) }}_;
   {% elif util.field_has_oneof_label(field) %}
    // oneof field {{ util.oneof_name_of_oneof_type_field(field) }}: {{ util.field_name(field) }}
    public:
@@ -197,7 +192,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   {% endif %}{# label #}
   {% endfor %}{# field #}
   {% for oneof in util.message_type_oneofs(cls) %}
-   
+
    public:
     // oneof {{ util.oneof_name(oneof) }}
     {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case() const;
@@ -220,7 +215,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     } {{ util.oneof_name(oneof) }}_;
     {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case_ = {{ util.oneof_name(oneof).upper() }}_NOT_SET;
   {% endfor %}{# message_oneof #}
-   
+
    public:
     int compare(const _{{ util.class_name(cls) }}_& other);
 
@@ -238,7 +233,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 
   using PbMessage = ::google::protobuf::Message;
   void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override;
-  
+
   ::std::string DebugString() const;
 
   bool __Empty__() const;
@@ -265,10 +260,10 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   // repeated field {{ util.field_name(field) }}
  public:
   ::std::size_t {{ util.field_name(field) }}_size() const;
-  const {{ util.field_repeated_container_name(field) }}& {{ util.field_name(field) }}() const;
+  const ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>& {{ util.field_name(field) }}() const;
   const {{ util.field_type_name_with_cfg_namespace(field) }}& {{ util.field_name(field) }}(::std::size_t index) const;
   // used by pybind11 only
-  ::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> shared_const_{{ util.field_name(field) }}() const;
+  ::std::shared_ptr<::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>> shared_const_{{ util.field_name(field) }}() const;
 {% if util.field_is_message_type(field) %}
   ::std::shared_ptr<{{ util.field_type_name_const_with_cfg_namespace(field) }}> shared_const_{{ util.field_name(field) }}(::std::size_t index) const;
 {% else %}
@@ -315,7 +310,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
   void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }});
   // use ::std::shared_ptr for sharing reference between mutable object and const object
-  // use ::std::unique_ptr for moving ownership 
+  // use ::std::unique_ptr for moving ownership
   ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_;
 };
 
@@ -323,7 +318,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
  public:
   {{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data);
   {{ util.class_name(cls) }}(const {{ util.class_name(cls) }}& other);
-  // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize 
+  // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
   {{ util.class_name(cls) }}();
   {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
@@ -331,7 +326,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   ~{{ util.class_name(cls) }}();
 
   void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override;
-  
+
   void* MutableFieldPtr4FieldNumber(int field_number) override;
 
 
@@ -358,17 +353,17 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   // repeated field {{ util.field_name(field) }}
  public:
   void clear_{{ util.field_name(field) }}();
-  {{ util.field_repeated_container_name(field) }}* mutable_{{ util.field_name(field) }}();
+  ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>* mutable_{{ util.field_name(field) }}();
   {{ util.field_type_name_with_cfg_namespace(field) }}* mutable_{{ util.field_name(field) }}(::std::size_t index);
 {% if util.field_is_message_type(field) %}
   // used by pybind11 only
-  ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> shared_mutable_{{ util.field_name(field) }}();
+  ::std::shared_ptr<::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}> > shared_mutable_{{ util.field_name(field) }}();
   ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> shared_mutable_{{ util.field_name(field) }}(::std::size_t index);
   {{ util.field_type_name_with_cfg_namespace(field) }}* add_{{ util.field_name(field) }}();
 {% else %}
   void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
   // used by pybind11 only
-  ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> shared_mutable_{{ util.field_name(field) }}();
+  ::std::shared_ptr<::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}> > shared_mutable_{{ util.field_name(field) }}();
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
   void clear_{{ util.field_name(field) }}();
@@ -406,45 +401,10 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
 {% if not util.class_is_map_entry(cls) %}
 
 {% for field in util.message_type_fields(cls) %}
-{# no duplicated class defined for each repeated field type #}
-{% if util.field_has_repeated_label(field) and util.add_defined_repeated_field_type_name(field) %}
-
-// inheritance is helpful for avoiding container iterator boilerplate 
-class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}> {
- public:
-  Const{{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name_with_cfg_namespace(field) }}>>& data);
-  Const{{ util.field_repeated_container_name(field) }}();
-  ~Const{{ util.field_repeated_container_name(field) }}();
-
-  bool operator==(const Const{{ util.field_repeated_container_name(field) }}& other) const;
-  bool operator<(const Const{{ util.field_repeated_container_name(field) }}& other) const;
-  // used by pybind11 only
-  ::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> __SharedConst__() const;
-{% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<{{ util.field_type_name_const_with_cfg_namespace(field) }}> __SharedConst__(::std::size_t index) const;
-{% endif %}{# message_type #}
-};
-class {{ util.field_repeated_container_name(field) }} final : public Const{{ util.field_repeated_container_name(field) }} {
- public:
-  {{ util.field_repeated_container_name(field) }}(const ::std::shared_ptr<::std::vector<{{ util.field_type_name_with_cfg_namespace(field) }}>>& data);
-  {{ util.field_repeated_container_name(field) }}();
-  ~{{ util.field_repeated_container_name(field) }}();
-  void CopyFrom(const Const{{ util.field_repeated_container_name(field) }}& other);
-  void CopyFrom(const {{ util.field_repeated_container_name(field) }}& other);
-  bool operator==(const {{ util.field_repeated_container_name(field) }}& other) const;
-  bool operator<(const {{ util.field_repeated_container_name(field) }}& other) const;
-  // used by pybind11 only
-  ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> __SharedMutable__();
-{% if util.field_is_message_type(field) %}
-  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> __SharedAdd__();
-  ::std::shared_ptr<{{ util.field_type_name_with_cfg_namespace(field) }}> __SharedMutable__(::std::size_t index);
-{% endif %}{# message_type #}
-};
-{% endif  %}{# repeated #}
 {# map begin #}
 {% if util.field_has_map_label(field) and util.add_defined_map_field_type_name(field) %}
 
-// inheritance is helpful for avoid container iterator boilerplate 
+// inheritance is helpful for avoid container iterator boilerplate
 class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}> {
  public:
   Const{{ util.field_map_container_name(field) }}(const ::std::shared_ptr<::std::map<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>>& data);
