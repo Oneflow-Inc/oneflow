@@ -130,7 +130,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       const Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
       CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
       const int64_t axis = ctx->Attr<int64_t>("axis");
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
       CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LE_OR_RETURN(axis, like_shape->NumAxes());
@@ -140,9 +140,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       FOR_RANGE(int64_t, i, axis + 1, like_shape->NumAxes()) {
         CHECK_EQ_OR_RETURN(like_shape->At(i), data_shape->At(i + segment_ids_shape->NumAxes() - 1));
       }
-
-      *out_shape = *like_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+      *out = *like;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
