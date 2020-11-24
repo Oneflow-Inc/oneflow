@@ -135,14 +135,14 @@ void GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.HasGradTensor4OpOutput("out", i)) {
         out_diff_lbn = op.GetGradTensorWithOpOutput("out", i);
       } else {
-        auto constant_like_op = user_op::UserOpConfWrapperBuilder(
-                                    op.op_name() + "_grad_zero_like_out_" + std::to_string(i))
-                                    .Op("zero_like")
-                                    .Input("like", op.output("out", i))
-                                    .Output("out")
-                                    .Build();
-        AddOp(constant_like_op);
-        out_diff_lbn = constant_like_op.output("out", 0);
+        auto zero_like_op = user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_zero_like_out_"
+                                                              + std::to_string(i))
+                                .Op("zero_like")
+                                .Input("like", op.output("out", i))
+                                .Output("out")
+                                .Build();
+        AddOp(zero_like_op);
+        out_diff_lbn = zero_like_op.output("out", 0);
       }
       builder = builder.Input("in", out_diff_lbn);
     }
