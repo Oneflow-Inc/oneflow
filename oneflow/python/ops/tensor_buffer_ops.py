@@ -197,7 +197,7 @@ def gen_tensor_buffer(
 
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
-def tensor_buffer_to_tensor(
+def tensor_buffer_to_list_of_tensors(
     x: remote_blob_util.BlobDef,
     out_shape: Sequence[int],
     out_dtype: dtype_util.dtype,

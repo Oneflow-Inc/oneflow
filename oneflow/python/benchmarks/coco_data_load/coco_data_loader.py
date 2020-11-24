@@ -58,6 +58,7 @@ def coco_data_load(cfg, machine_id, nrank):
             batch_size=cfg.batch_size,
             shuffle=cfg.shuffle_after_epoch,
             stride_partition=cfg.stride_partition,
+            name="coco_reader",
         )
         # image decode
         image = flow.image.decode(image, dtype=flow.float)
@@ -85,21 +86,25 @@ def coco_data_load(cfg, machine_id, nrank):
             dtype=flow.float,
             alignment=cfg.image_align_size,
         )
-        gt_bbox = flow.tensor_buffer_to_tensor_list(
-            bbox, shape=(cfg.max_num_objs, 4), dtype=flow.float
+        gt_bbox = flow.tensor_buffer_to_list_of_tensors(
+            bbox, (cfg.max_num_objs, 4), flow.float, True
         )
-        gt_label = flow.tensor_buffer_to_tensor_list(
-            label, shape=(cfg.max_num_objs,), dtype=flow.int32
+        gt_label = flow.tensor_buffer_to_list_of_tensors(
+            label, (cfg.max_num_objs,), flow.int32, True
         )
         segm_mask = flow.detection.object_segmentation_polygon_to_mask(
             segm_poly, segm_poly_index, new_size
         )
-        gt_mask = flow.tensor_buffer_to_tensor_list(
+        gt_mask = flow.tensor_buffer_to_list_of_tensors(
             segm_mask,
-            shape=(cfg.max_num_objs, aligned_target_size, aligned_max_size),
-            dtype=flow.int8,
+            (cfg.max_num_objs, aligned_target_size, aligned_max_size),
+            flow.int8,
+            True,
         )
-        return image, new_size, gt_bbox, gt_label, gt_mask
+
+        ret = [image] + [new_size] + list(gt_bbox) + list(gt_label) + list(gt_mask)
+
+        return ret
 
 
 def _make_data_load_fn():
@@ -120,27 +125,38 @@ def _make_data_load_fn():
 def _benchmark(iter_num, drop_first_iters, verbose=False):
     flow.env.init()
     data_loader = _make_data_load_fn()
+    cfg = COCODataLoadConfig()
     s = pd.Series([], name="time_elapsed", dtype="float32")
     timestamp = time.perf_counter()
     for i in range(iter_num):
         # data_loader().get()
         image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+        index = 0
+        image = ret[index]
+        index = index + 1
+        image_size = ret[index]
+        index = index + 1
+        gt_bbox = ret[index: index + cfg.batch_size]
+        index = index + cfg.batch_size
+        gt_label = ret[index: index + cfg.batch_size]
+        index = index + cfg.batch_size
+        gt_mask = ret[index: index + cfg.batch_size]
         cur = time.perf_counter()
         s[i] = cur - timestamp
         timestamp = cur
 
-        if verbose:
-            print("==== iter {} ====".format(i))
-            print(
-                "image: {}\n".format(image.numpy_list()[0].shape),
-                image.numpy_list()[0],
-            )
-            print(
-                "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
-            )
-            print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
-            print("gt_label:\n", gt_label.numpy_lists()[0])
-            print("gt_mask:\n", gt_mask.numpy_lists()[0])
+        # if verbose:
+        #     print("==== iter {} ====".format(i))
+        #     print(
+        #         "image: {}\n".format(image.numpy_list()[0].shape),
+        #         image.numpy_list()[0],
+        #     )
+        #     print(
+        #         "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
+        #     )
+        #     print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
+        #     print("gt_label:\n", gt_label.numpy_lists()[0])
+        #     print("gt_mask:\n", gt_mask.numpy_lists()[0])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(
