@@ -67,7 +67,8 @@ class TmpBufferManager final {
   TmpBufferManager(void* ptr, const int64_t device_num_class, const int64_t batch_size,
                    const int64_t parallel_num)
       : ptr_(ptr) {
-    const int64_t buffer_elem_cnt = std::max(std::max(device_num_class, batch_size), 2 * (parallel_num + 1));
+    const int64_t buffer_elem_cnt =
+        std::max(std::max(device_num_class, batch_size), 2 * (parallel_num + 1));
     const size_t cub_sort_keys_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     const size_t cub_sort_values_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
     const size_t cub_sort_keys_out_bytes = GetCudaAlignedSize(buffer_elem_cnt * sizeof(K));
@@ -204,42 +205,29 @@ __global__ void GetPartionBound(const int64_t n, const int64_t parallel_num,
                                 const K* value_ptr, K* bound_index, K* bound_value) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (i != 0) {
-      const K cur_in = key_ptr[i];
-      const K pre_in = key_ptr[i - 1];
+      const K cur_in = key_ptr[i] / num_classes_per_rank;
+      const K pre_in = key_ptr[i - 1] / num_classes_per_rank;
+      if (cur_in > pre_in) {
 #pragma unroll
-      for (int32_t j = 1; j < parallel_num; ++j) {
-        const int32_t lower_bound = j * num_classes_per_rank;
-        if (cur_in >= lower_bound && pre_in < lower_bound) {
+        for (int32_t j = pre_in + 1; j <= cur_in; ++j) {
           bound_index[j] = static_cast<K>(i);
           bound_value[j] = value_ptr[i];
         }
       }
     }
-    if (i == 0) {
-      const K in = key_ptr[i];
-#pragma unroll
-      for (int32_t j = 0; j <= parallel_num; ++j) {
-        const int32_t lower_bound = j * num_classes_per_rank;
-        if (in >= lower_bound) {
-          bound_index[j] = 0;
-          bound_value[j] = value_ptr[i];
-        }
-      }
-    }
-    if (i == n - 1) {
-      const K in = key_ptr[i];
-#pragma unroll
-      for (int32_t j = parallel_num; j >= 0; --j) {
-        const int32_t lower_bound = j * num_classes_per_rank;
-        if (in < lower_bound) {
-          bound_index[j] = n;
-          bound_value[j] = value_ptr[i];
-        }
-      }
+  }
+  CUDA_1D_KERNEL_LOOP(i, parallel_num + 1) {
+    const K first_in = key_ptr[0] / num_classes_per_rank;
+    const K last_in = key_ptr[n - 1] / num_classes_per_rank;
+    if (i <= first_in) {
+      bound_index[i] = 0;
+      bound_value[i] = value_ptr[0];
+    } else if (i > last_in) {
+      bound_index[i] = n;
+      bound_value[i] = value_ptr[n - 1];
     }
   }
 }
-
 template<typename K>
 __global__ void GetMappedLabel(const int64_t n, const K* label_map_key, const K* label_map_value,
                                K* maped_label) {
@@ -285,9 +273,9 @@ void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_siz
       buffer_manager.CubSortValuesPtr(), bound_index, bound_value);
 
   GetLabelMap<K>
-      <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-         ctx->cuda_stream()>>>(batch_size, parallel_num, num_sample, bound_index, bound_value,
-                               buffer_manager.CubSortValuesPtr());
+      <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          batch_size, parallel_num, num_sample, bound_index, bound_value,
+          buffer_manager.CubSortValuesPtr());
 
   GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                    ctx->cuda_stream()>>>(batch_size, buffer_manager.CubSortValuesOutPtr(),
