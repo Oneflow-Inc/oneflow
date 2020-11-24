@@ -171,11 +171,11 @@ __global__ void IotaKernel(int64_t n, K* out) {
 }
 
 template<typename K>
-__global__ void IndexSetPos(const int64_t n, const int64_t offset, const int64_t num_classes,
-                            const K* labels, K* out) {
+__global__ void MarkPositive(const int64_t n, const int64_t offset, const int64_t num_classes,
+                             const K* labels, K* out) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     K label = labels[i] - offset;
-    if (label >= 0 && label < num_classes) { out[label] = -1; }
+    if (label >= 0 && label < num_classes) { out[label] = label - num_classes; }
   }
 }
 
@@ -333,8 +333,18 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     const int64_t num_sample = kernel_state->num_sample_per_rank();
     kernel_state->GenRandomIndexs<K>(ctx->device_ctx(), num_classes, num_classes,
                                      buffer_manager.CubSortKeysPtr());
-    SampleIndex<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, buffer_manager,
-                   label->dptr<K>());
+    IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
+                 ctx->device_ctx()->cuda_stream()>>>(num_classes,
+                                                     buffer_manager.CubSortValuesPtr());
+    MarkPositive<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                   ctx->device_ctx()->cuda_stream()>>>(
+        batch_size, lower_bound, num_classes, label->dptr<K>(), buffer_manager.CubSortKeysPtr());
+    size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
+    OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
+        buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.CubSortKeysPtr(),
+        buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesPtr(),
+        buffer_manager.CubSortValuesOutPtr(), num_classes, 0, sizeof(K) * 8,
+        ctx->device_ctx()->cuda_stream())));
 
     GetSampleLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
