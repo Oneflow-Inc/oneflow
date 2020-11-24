@@ -143,6 +143,14 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       //   ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
       // }
       return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
+        user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
+        CHECK(out_i_modifier != nullptr);
+        out_i_modifier->set_header_infered_before_compute(false);
+      }
     });
 
 }  // namespace

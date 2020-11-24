@@ -35,15 +35,19 @@ def _test_tensor_buffer_to_list_of_tensors(shape, shape_list, value_list):
             return y
     
     x1, x2, x3, x4 = TestTensorBufferToListOfTensorsJob().get()
+    print(x1.numpy_list()[0].shape)
     print(x1.numpy_list()[0])
+    print(x2.numpy_list()[0].shape)
     print(x2.numpy_list()[0])
+    print(x3.numpy_list()[0].shape)
     print(x3.numpy_list()[0])
+    print(x4.numpy_list()[0].shape)
     print(x4.numpy_list()[0])
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorBufferToListOfTensors(flow.unittest.TestCase):
-    _test_tensor_buffer_to_list_of_tensors((2, 2), [(10, 10), (100, 100), (10, 10), (100, 100)], [0.0, 1.0, 2.0, 3.0])
+    _test_tensor_buffer_to_list_of_tensors((2, 2), [(10, 10), (50, 50), (20, 80), (100, 100)], [0.0, 1.0, 2.0, 3.0])
 
 
 if __name__ == "__main__":
