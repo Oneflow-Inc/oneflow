@@ -112,26 +112,26 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_GT(in->shape().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
-    const DataType dtype = ctx->Attr<DataType>("dtype");
+    const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
+    CHECK(IsPODDataType(out_dtype));
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
-
     const auto* in_ptr = in->dptr<TensorBuffer>();
     MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
-      CHECK_EQ(dtype, tensor_buffer->data_type());
-      const ShapeView& out_i_shape = out_i->shape();
+      CHECK_EQ(out_dtype, tensor_buffer->data_type());
       if (dynamic_out) {
-        CHECK_LE(out_i_shape.elem_cnt(), tensor_buffer->shape().elem_cnt());
+        CHECK_LE(out_i->shape().elem_cnt(), tensor_buffer->shape().elem_cnt());
       } else {
-        CHECK_EQ(out_i_shape.elem_cnt(), tensor_buffer->shape().elem_cnt());
+        CHECK_EQ(out_i->shape().elem_cnt(), tensor_buffer->shape().elem_cnt());
       }
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
     });
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 REGISTER_USER_KERNEL("tensor_buffer_to_list_of_tensors")

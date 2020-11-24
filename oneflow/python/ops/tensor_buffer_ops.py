@@ -141,3 +141,24 @@ def tensor_to_tensor_buffer(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+@oneflow_export("tensor_buffer_to_list_of_tensors")
+def tensor_buffer_to_tensor(
+    x: remote_blob_util.BlobDef,
+    out_shape: Sequence[int],
+    out_dtype: dtype_util.dtype,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    if name is None:
+        name = id_util.UniqueStr("TensorBufferToListOfTensors_")
+    return (
+        flow.user_op_builder(name)
+        .Op("tensor_buffer_to_list_of_tensors")
+        .Input("in", [x])
+        .Output("out", functools.reduce(operator.mul, x.shape, 1))
+        .Attr("out_dtype", out_dtype)
+        .Attr("out_shape", out_shape)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
