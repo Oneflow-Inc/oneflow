@@ -189,6 +189,12 @@ Maybe<std::string> GetFunctionConfigDef() {
   return ret;
 }
 
+Maybe<std::string> GetScopeConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalScopeConfigDef(), &ret);
+  return ret;
+}
+
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());

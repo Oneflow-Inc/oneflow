@@ -79,6 +79,15 @@ class PythonCallback(oneflow_api.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
+    def AddScopeToPyStorage(self, scope_symbol_id, scope_proto_str):
+        try:
+            return interpreter_callback.AddScopeToStorage(
+                scope_symbol_id, scope_proto_str
+            )
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
             # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side

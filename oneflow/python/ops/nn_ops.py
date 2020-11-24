@@ -2267,7 +2267,7 @@ def dropout(
 def deconv2d(
     value: Optional[remote_blob_util.BlobDef] = None,
     filter: Optional[remote_blob_util.BlobDef] = None,
-    output_shape: Optional[remote_blob_util.BlobDef] = None,
+    output_shape: Tuple[int, int, int, int] = None,
     strides: Optional[Union[int, Sequence[int]]] = None,
     padding: str = "VALID",
     data_format: str = "NCHW",
@@ -2281,7 +2281,7 @@ def deconv2d(
     Args:
         value (Optional[remote_blob_util.BlobDef], optional):   4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
-        output_shape (Optional[remote_blob_util.BlobDef], optional): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
+        output_shape (Tuple[int, int, int, int]): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
         strides (Optional[Union[int, Sequence[int]]], optional): `int` or `int list`. Defaults to None.
         padding (str, optional):  `'VALID'` or `'SAME'`. Defaults to "VALID".
         data_format (str, optional): `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
@@ -2381,13 +2381,15 @@ def deconv2d(
     if data_format.upper() == "NCHW":
         input_shape = input.shape[2:]
         kernel_size = filters.shape[2:4]
-        output_shape = output_shape[2:4]
         channels = filters.shape[1]
+        assert output_shape[1] == channels
+        output_shape = output_shape[2:4]
     elif data_format.upper() == "NHWC":
         input_shape = input.shape[1:3]
         kernel_size = filters.shape[-3:-1]
-        output_shape = output_shape[1:3]
         channels = filters.shape[3]
+        assert output_shape[3] == channels
+        output_shape = output_shape[1:3]
         assert dilations == [1, 1], ValueError(
             "dialtions must be 1 when data format is NHWC "
         )
@@ -2445,7 +2447,7 @@ def deconv2d(
         padding_before = [0] * NDims
         input = (
             flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Conv2d_")
+                name if name is not None else id_util.UniqueStr("Deconv2d_")
             )
             .Op("deconv2d")
             .Input("in", [input])
@@ -2573,6 +2575,9 @@ def deconv2d_torch(
         assert pad % 2 == 0
         padding_before.append(pad // 2)
 
+    if output_padding is None:
+        output_padding = (0, 0)
+
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Deconv2d_")
@@ -2674,7 +2679,7 @@ def l1_loss(
     if reduction = "sum": 
     
     .. math:: 
-
+    
         output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
@@ -2763,3 +2768,77 @@ def l1_loss(
     else:
         # Do no reduction
         return l1_value
+
+
+@oneflow_export("nn.BCELoss")
+def bce_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    weight: remote_blob_util = None,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the binary cross entropy loss. 
+    
+    The equation is: 
+
+    if reduction = "none": 
+
+    .. math:: 
+
+        out = -(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    if reduction = "mean": 
+
+    .. math:: 
+        
+        out = -\frac{1}{n}\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+        
+        out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        target (remote_blob_util.BlobDef): The target value. 
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = "BCELoss"
+
+    _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
+    _cross_entropy_loss = flow.math.negative(
+        target * flow.math.log(_sigmiod_value)
+        + (1 - target) * flow.math.log(1 - _sigmiod_value)
+    )
+
+    if weight is not None:
+        assert (
+            weight.shape == input.shape
+        ), "The weight shape must be the same as Input shape"
+        _weighted_loss = weight * _cross_entropy_loss
+    else:
+        _weighted_loss = _cross_entropy_loss
+    if reduction == "mean":
+        return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_weighted_loss, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return _weighted_loss
