@@ -20,22 +20,22 @@ namespace oneflow {
 
 REGISTER_USER_OP("partition")
     .Input("in")
-    .Input("in_num_unique")
+    .Input("in_size")
     .OutputWithMinimum("out", 2)
-    .OutputWithMinimum("num_unique", 2)
+    .OutputWithMinimum("out_size", 2)
     .Attr<int64_t>("parallel_num")
     .Attr<int64_t>("num_classes")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* in_num_unique_desc =
-          ctx->TensorDesc4ArgNameAndIndex("in_num_unique", 0);
+      const user_op::TensorDesc* in_size_desc = ctx->TensorDesc4ArgNameAndIndex("in_size", 0);
       const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");
-      CHECK_EQ_OR_RETURN(2 * parallel_num, ctx->outputs().size());
+      CHECK_EQ(ctx->user_op_conf().output_size("out"), parallel_num);
+      CHECK_EQ(ctx->user_op_conf().output_size("out_size"), parallel_num);
       FOR_RANGE(int32_t, i, 0, parallel_num) {
         user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
         *out_i_desc = *in_desc;
-        user_op::TensorDesc* num_unique_desc = ctx->TensorDesc4ArgNameAndIndex("num_unique", i);
-        *num_unique_desc = *in_num_unique_desc;
+        user_op::TensorDesc* out_size_desc = ctx->TensorDesc4ArgNameAndIndex("out_size", i);
+        *out_size_desc = *in_size_desc;
       }
       return Maybe<void>::Ok();
     });
