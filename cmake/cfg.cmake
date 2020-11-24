@@ -1,25 +1,25 @@
 execute_process( 
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=cfg_include_dir
   OUTPUT_VARIABLE CFG_INCLUDE_DIR)
 
 execute_process( 
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_convert_python_script
   OUTPUT_VARIABLE TEMPLATE_CONVERT_PYTHON_SCRIPT)
 
 execute_process( 
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=copy_pyproto_python_script
   OUTPUT_VARIABLE COPY_PYPROTO_PYTHON_SCRIPT)
 
 execute_process( 
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=pybind_registry_cc
   OUTPUT_VARIABLE PYBIND_REGISTRY_CC)
 
 execute_process( 
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
+  COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_files
   OUTPUT_VARIABLE TEMPLATE_FILES)
 
@@ -73,9 +73,9 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
-    set(CFG_HPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
-    set(CFG_CPP_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
-    set(CFG_PYBIND_FIL ${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
+    set(CFG_HPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
+    set(CFG_CPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
+    set(CFG_PYBIND_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
     
     add_custom_command(
       OUTPUT "${CFG_HPP_FIL}"

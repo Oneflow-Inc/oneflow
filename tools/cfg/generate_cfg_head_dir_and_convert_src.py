@@ -21,22 +21,22 @@ SCRIPT_DIR = os.path.split(os.path.realpath(__file__))[0]
 
 
 def get_hear_dir():
-    return SCRIPT_DIR + "/include"
+    return os.path.join(SCRIPT_DIR, "include")
 
 
 def get_convert_template_script():
-    return SCRIPT_DIR + "/template_convert.py"
+    return os.path.join(SCRIPT_DIR, "template_convert.py")
 
 
 def get_copy_python_file():
-    return SCRIPT_DIR + "/copy_proto_python_file.py"
+    return os.path.join(SCRIPT_DIR, "copy_proto_python_file.py")
 
 
 def get_convert_src_file():
     # use ';' to produce a list of cmake
     connector = ";"
     src_files = [
-        SCRIPT_DIR + "/pybind_module_registry.cpp",
+        os.path.join(SCRIPT_DIR, "pybind_module_registry.cpp"),
     ]
     return connector.join(src_files)
 
@@ -45,10 +45,10 @@ def get_template_files():
     # use ';' to produce a list of cmake
     connector = ";"
     src_files = [
-        SCRIPT_DIR + "/template/template.cfg.h",
-        SCRIPT_DIR + "/template/template.cfg.cpp",
-        SCRIPT_DIR + "/template/template.cfg.pybind.cpp",
-        SCRIPT_DIR + "/util/proto_reflect_util.py",
+        os.path.join(SCRIPT_DIR, "template", "template.cfg.h"),
+        os.path.join(SCRIPT_DIR, "template", "template.cfg.cpp"),
+        os.path.join(SCRIPT_DIR, "template", "template.cfg.pybind.cpp"),
+        os.path.join(SCRIPT_DIR, "util", "proto_reflect_util.py"),
     ]
     return connector.join(src_files)
 

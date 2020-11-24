@@ -15,7 +15,7 @@ args = parser.parse_args()
 
 sys.path.insert(0, args.of_cfg_proto_python_dir)
 
-template_dir = os.path.dirname(os.path.abspath(__file__)) + "/template"
+template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "template")
 
 
 def JinjaRender(module, filename, **kwargs):
@@ -28,9 +28,8 @@ def JinjaRender(module, filename, **kwargs):
 
 
 def render_cfg_file(dst_file_path, template_file, module):
-    dst_file = open(dst_file_path, "w")
-    dst_file.write(JinjaRender(module, template_file))
-    dst_file.close()
+    with open(dst_file_path, "w") as dst_file:
+        dst_file.write(JinjaRender(module, template_file))
 
 
 def convert_hpp(dst_hpp_path, module=None):
@@ -67,22 +66,18 @@ def render_template(proto_file):
 
     proto_module = __import__(proto_py_file_name)
 
-    dst_hpp_path = "%s/%s/%s.cfg.h" % (
-        args.project_build_dir,
-        rel_proto_file_path,
-        proto_file_name[:-6],
+    dst_hpp_path = os.path.join(
+        args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.h"
     )
 
-    dst_cpp_path = "%s/%s/%s.cfg.cpp" % (
-        args.project_build_dir,
-        rel_proto_file_path,
-        proto_file_name[:-6],
+    dst_cpp_path = os.path.join(
+        args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.cpp"
     )
 
-    dst_pybind_path = "%s/%s/%s.cfg.pybind.cpp" % (
+    dst_pybind_path = os.path.join(
         args.project_build_dir,
         rel_proto_file_path,
-        proto_file_name[:-6],
+        proto_file_name[:-6] + ".cfg.pybind.cpp",
     )
 
     convert_hpp(dst_hpp_path, module=proto_module)
