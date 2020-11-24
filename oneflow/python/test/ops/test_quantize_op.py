@@ -85,6 +85,7 @@ def _check_min_max_observer(
 def _run_test_min_max_observer(
     test_case,
     device_type,
+    device_num,
     dtype,
     weight_shape,
     quantize_to_bit,
@@ -93,12 +94,16 @@ def _run_test_min_max_observer(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        flow.config.gpu_device_num(device_num)
 
     @flow.global_function(type="predict", function_config=flow.FunctionConfig())
     def QuantizeJob(
         weight: oft.Numpy.Placeholder(weight_shape, dtype=type_name_to_flow_type[dtype])
     ):
-        with flow.scope.placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.MinMaxObserver(
                 weight, quantize_to_bit, quantize_scheme, per_layer_quantize
             )
@@ -108,7 +113,6 @@ def _run_test_min_max_observer(
     check_point.init()
     weight = (np.random.random(weight_shape) - 0.5).astype(type_name_to_np_type[dtype])
     scale, zero_point = QuantizeJob(weight).get()
-
     _check_min_max_observer(
         test_case,
         weight,
@@ -196,6 +200,7 @@ def _check_moving_average_min_max_observer(
 def _run_test_moving_average_min_max_observer(
     test_case,
     device_type,
+    device_num,
     dtype,
     activation_shape,
     quantize_to_bit,
@@ -204,6 +209,10 @@ def _run_test_moving_average_min_max_observer(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        flow.config.gpu_device_num(device_num)
 
     @flow.global_function(type="predict", function_config=flow.FunctionConfig())
     def QuantizeJob(
@@ -211,11 +220,11 @@ def _run_test_moving_average_min_max_observer(
             activation_shape, dtype=type_name_to_flow_type[dtype]
         )
     ):
-        with flow.scope.placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.MovingAverageMinMaxObserver(
                 activation, quantize_to_bit, quantize_scheme, momentum,
             )
-            return scale, zero_point
+        return scale, zero_point
 
     check_point = flow.train.CheckPoint()
     check_point.init()
@@ -259,8 +268,6 @@ def fake_quant_per_layer_affine(input, quantize_to_bit, scale, zero_point):
 def _check_fake_quantize(
     test_case,
     input,
-    scale,
-    zero_point,
     input_diff_of,
     out_of,
     quantize_to_bit,
@@ -317,6 +324,7 @@ def _check_fake_quantize(
 def _run_test_fake_quantize(
     test_case,
     device_type,
+    device_num,
     dtype,
     in_shape,
     quantize_to_bit,
@@ -325,6 +333,10 @@ def _run_test_fake_quantize(
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        flow.config.gpu_device_num(device_num)
 
     @flow.global_function(type="train", function_config=flow.FunctionConfig())
     def QuantizeJob(
@@ -338,35 +350,37 @@ def _run_test_fake_quantize(
                 initializer=flow.zeros_initializer(input.dtype),
                 trainable=True,
             )
-            input += x
+            input_x = input + x
+            # input_x = flow.cast_to_current_logical_view(input_x)
+
+        flow.watch_diff(input_x, test_global_storage.Setter("input_diff"))
+
+        with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.MinMaxObserver(
-                input, quantize_to_bit, quantize_scheme, per_layer_quantize
+                input_x, quantize_to_bit, quantize_scheme, per_layer_quantize
             )
             out = flow.quantization.FakeQuantize(
-                input, scale, zero_point, quantize_to_bit, quantize_scheme
+                input_x, scale, zero_point, quantize_to_bit, quantize_scheme
             )
             loss = flow.math.reduce_mean(out)
+
             flow.optimizer.Adam(
                 flow.optimizer.PiecewiseConstantScheduler([], [0.001]),
             ).minimize(loss)
 
-            flow.watch_diff(input, test_global_storage.Setter("input_diff"))
-
-            return out, scale, zero_point
+        return out
 
     check_point = flow.train.CheckPoint()
     check_point.init()
 
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    out, scale, zero_point = QuantizeJob(input).get()
+    out = QuantizeJob(input).get()
 
     input_diff = test_global_storage.Get("input_diff")
 
     _check_fake_quantize(
         test_case,
         input,
-        scale,
-        zero_point,
         input_diff.flatten(),
         out.numpy().flatten(),
         quantize_to_bit,
@@ -375,12 +389,13 @@ def _run_test_fake_quantize(
     )
 
 
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n4d()
 class TestMinMaxObserver(flow.unittest.TestCase):
     def test_min_max_observer(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["weight_shape"] = [(89, 40, 20, 10)]
         arg_dict["quantize_to_bit"] = [8, 2]
@@ -391,12 +406,13 @@ class TestMinMaxObserver(flow.unittest.TestCase):
             _run_test_min_max_observer(*arg)
 
 
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n4d()
 class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
     def test_moving_average_min_max_observer(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["activation_shape"] = [(89, 40, 20, 10)]
         arg_dict["quantize_to_bit"] = [8, 2]
@@ -407,12 +423,13 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
             _run_test_moving_average_min_max_observer(*arg)
 
 
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n4d()
 class TestFakeQuantize(flow.unittest.TestCase):
     def test_fake_quantize(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["in_shape"] = [(89, 40, 20, 10)]
         arg_dict["quantize_to_bit"] = [8, 2]
