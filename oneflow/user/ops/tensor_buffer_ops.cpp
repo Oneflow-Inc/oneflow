@@ -82,6 +82,36 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       return Maybe<void>::Ok();
     });
 
+REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
+    .Output("out")
+    .Attr<Shape>("shape")
+    .Attr<std::vector<Shape>>("shape_list")
+    .Attr<std::vector<float>>("value_list")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const Shape& shape = ctx->Attr<Shape>("shape");
+      const int64_t num_tensor_buffers = shape.elem_cnt();
+      const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
+      const std::vector<float>& value_list = ctx->Attr<std::vector<float>>("value_list");
+      CHECK_EQ_OR_RETURN(num_tensor_buffers, shape_list.size());
+      CHECK_EQ_OR_RETURN(num_tensor_buffers, value_list.size());
+      *out->mut_shape() = shape;
+      *out->mut_data_type() = DataType::kTensorBuffer;
+      out->set_is_dynamic(false);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
+      for (int64_t i = 0; ctx->user_op_conf().input_size("out"); ++i) {
+        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
+      }
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     .Input("in")
     .OutputWithMinimum("out", 1)

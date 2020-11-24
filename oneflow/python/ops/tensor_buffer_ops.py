@@ -142,6 +142,25 @@ def tensor_to_tensor_buffer(
         .RemoteBlobList()[0]
     )
 
+@oneflow_export("gen_tensor_buffer")
+def gen_tensor_buffer(
+    shape: Sequence[int],
+    shape_list: Sequence[Sequence[int]],
+    value_list: Sequence[float],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("GenTensorBuffer_"))
+        .Op("gen_tensor_buffer")
+        .Output("out")
+        .Attr("shape", shape)
+        .Attr("shape_list", shape_list)
+        .Attr("value_list", value_list)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
 @oneflow_export("tensor_buffer_to_list_of_tensors")
 def tensor_buffer_to_tensor(
     x: remote_blob_util.BlobDef,
@@ -149,10 +168,8 @@ def tensor_buffer_to_tensor(
     out_dtype: dtype_util.dtype,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    if name is None:
-        name = id_util.UniqueStr("TensorBufferToListOfTensors_")
     return (
-        flow.user_op_builder(name)
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TensorBufferToListOfTensors_"))
         .Op("tensor_buffer_to_list_of_tensors")
         .Input("in", [x])
         .Output("out", functools.reduce(operator.mul, x.shape, 1))

@@ -103,6 +103,34 @@ REGISTER_USER_KERNEL("tensor_to_tensor_buffer")
     .SetCreateFn<TensorToTensorBufferKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+                  
+class GenTensorBuffer final : public user_op::OpKernel {
+ public:
+  GenTensorBuffer() = default;
+  ~GenTensorBuffer() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const Shape& shape = ctx->Attr<Shape>("shape");
+    const int64_t num_tensor_buffers = shape.elem_cnt();
+    const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
+    const std::vector<float>& value_list = ctx->Attr<std::vector<float>>("value_list");
+    CHECK_EQ(num_tensor_buffers, shape_list.size());
+    CHECK_EQ(num_tensor_buffers, value_list.size());
+    MultiThreadLoop(num_tensor_buffers, [&](size_t i) {
+      TensorBuffer* tensor_buffer = out->mut_dptr<TensorBuffer>() + i;
+      const Shape shape = shape_list.at(i);
+      float* begin = reinterpret_cast<float*>(tensor_buffer->mut_data());
+      std::fill(begin, begin + shape.elem_cnt(), static_cast<float>(value_list.at(i)));
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("gen_tensor_buffer")
+    .SetCreateFn<GenTensorBuffer>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
 
 class TensorBufferToListOfTensors final : public user_op::OpKernel {
  public:
