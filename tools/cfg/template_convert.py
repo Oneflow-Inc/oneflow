@@ -60,7 +60,7 @@ def convert_pybind(dst_pybind_path, module=None):
 def render_template(proto_file):
     rel_proto_file_path, proto_file_name = os.path.split(proto_file)
 
-    proto_py_file_path = args.of_cfg_proto_python_dir + "/" + rel_proto_file_path
+    proto_py_file_path = os.path.join(args.of_cfg_proto_python_dir, rel_proto_file_path)
     proto_py_file_name = proto_file_name[:-6] + "_pb2"
 
     sys.path.insert(0, proto_py_file_path)
