@@ -17,22 +17,38 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_DIM_GATHER_KERNEL_UTIL_H_
 #include "oneflow/user/kernels/dim_gather_scatter_util.h"
 
-namespace oneflow {
+// Steps for adding a binary operation on gathers are as follows:
+// 1. implment binop in DeviceBinOp, for example "Mul":
+//    OF_DEVICE_FUNC static void Mul(const T* x, T* y) { *y *= *x; }
+//
+// 2. Declare Functor in dim_gather_kernel_util.h:
+//    DECLARE_DIMGATHER_FUNCTOR(Mul);
+//
+// 3. Implement functors in dim_gather_kernel_util.cu and cpp file:
+//    in .cu file:
+//      IMPLEMENT_DIMGATHER_GPUFUNCTOR(Mul);
+//      INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Mul);
+//    in .cpp file:
+//      IMPLEMENT_DIMGATHER_CPUFUNCTOR(Mul);
+//      INSTANTIATE_DIM_GATHER_CPUFUNCTORS(Mul);
+//
+// 4. Implement kernels in dim_gather_kernels.cpp:
+//    IMPLEMENT_DIMGATHER_KERNEL_CLASS(Mul);
+//
+// 5. Register kernels
+//    REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather_mul_like", Mul);
 
+namespace oneflow {
 namespace user_op {
 
-template<DeviceType device_type, typename IN_T, typename IDX_T>
-struct DimGatherFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
-};
+DECLARE_DIMGATHER_FUNCTOR(Update);
+DECLARE_DIMGATHER_FUNCTOR(Add);
 
 template<typename IN_T, typename IDX_T>
-OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                                const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
-                                int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                const IN_T* input, IN_T* output) {
+OF_DEVICE_FUNC void DoDimGatherBinop(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                                     const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
+                                     int64_t elem_cnt, int32_t dim, const IDX_T* index,
+                                     const IN_T* input, IN_T* output, BinaryOpFn<IN_T> bin_op) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     const IDX_T x = index[index_offset];
@@ -40,14 +56,32 @@ OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper
     coordinate[dim] = x;
 
     IDX_T input_offset = input_nd_helper.NdIndexToOffset(coordinate, ndim);
-    output[index_offset] = input[input_offset];
+    bin_op(input + input_offset, output + index_offset);
   }
 }
 
-// macros for functors instantiate(used by dim_gather_kernel_util.cu and dim_gather_kernel_uti.cpp)
-#define INSTANTIATE_DIM_GATHER_FUNCTOR(device_type_v, dtype_pair, itype_pair)   \
-  template struct DimGatherFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-                                   OF_PP_PAIR_FIRST(itype_pair)>;
+#define INSTANTIATE_DIM_GATHER_FUNCTOR(devicetype, dtype, itype, binop) \
+  template struct DimGather##binop##Functor<devicetype, dtype, itype>;
+
+#define INSTANTIATE_DIM_GATHER_GPUFUNCTORS(binop)                           \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, int32_t, int32_t, binop) \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float, int32_t, binop)   \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, double, int32_t, binop)  \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float16, int32_t, binop) \
+                                                                            \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, int32_t, int64_t, binop) \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float, int64_t, binop)   \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, double, int64_t, binop)  \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kGPU, float16, int64_t, binop)
+
+#define INSTANTIATE_DIM_GATHER_CPUFUNCTORS(binop)                           \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, int32_t, int32_t, binop) \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, float, int32_t, binop)   \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, double, int32_t, binop)  \
+                                                                            \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, int32_t, int64_t, binop) \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, float, int64_t, binop)   \
+  INSTANTIATE_DIM_GATHER_FUNCTOR(DeviceType::kCPU, double, int64_t, binop)
 
 }  // namespace user_op
 }  // namespace oneflow

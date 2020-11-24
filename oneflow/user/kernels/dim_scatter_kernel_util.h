@@ -17,6 +17,28 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_KERNEL_UTIL_H_
 #include "oneflow/user/kernels/dim_gather_scatter_util.h"
 
+// Steps for adding a binary operation on scatter are as follows:
+// 1. implment binop in DeviceBinOp, for example "Mul":
+//    OF_DEVICE_FUNC static void Mul(const T* x, T* y) { *y *= *x; }
+//
+// 2. Implement kernels in dim_scatter_kernels.cpp:
+//    IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Mul);
+//
+// 3. Register kernels
+//    REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_mul_like", Mul);
+//
+// 4. Declare Functor in dim_scatter_kernel_util.h:
+//    DECLARE_DIMSCATTER_FUNCTOR(Mul);
+//
+// 5. Implement functors in dim_scatter_kernel_util.cu and cpp file:
+//    in .cu file:
+//      IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Mul);
+//      INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Mul);
+//    in .cpp file:
+//      IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Mul);
+//      INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(Mul);
+//
+
 namespace oneflow {
 
 namespace user_op {

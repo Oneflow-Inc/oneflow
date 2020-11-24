@@ -21,39 +21,12 @@ namespace oneflow {
 
 namespace user_op {
 
-template<typename IN_T, typename IDX_T>
-__global__ void DoCUDADimGather(const DimOpIndexNdHelper<IDX_T> input_nd_helper,
-                                const DimOpIndexNdHelper<IDX_T> index_nd_helper, int ndim,
-                                int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                const IN_T* input, IN_T* output) {
-  DoDimGather<IN_T, IDX_T>(input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, input,
-                           output);
-}
+IMPLEMENT_DIMGATHER_GPUFUNCTOR(Update);
+INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Update);
 
-template<typename IDX_T, typename IN_T>
-struct DimGatherFunctor<DeviceType::kGPU, IN_T, IDX_T> final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {
-    RUN_CUDA_KERNEL((DoCUDADimGather<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                    input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, input, output);
-  }
-};
+IMPLEMENT_DIMGATHER_GPUFUNCTOR(Add);
+INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Add);
 
-// float16 special case of DimGatherFunctor template
-template<typename IDX_T>
-struct DimGatherFunctor<DeviceType::kGPU, float16, IDX_T> final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
-                  const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const float16* input, float16* output) {
-    RUN_CUDA_KERNEL((DoCUDADimGather<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                    input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index,
-                    reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));
-  }
-};
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_DIM_GATHER_FUNCTOR, (DeviceType::kGPU),
-                                 DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ, INDEX_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 

@@ -65,7 +65,7 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
 }
 
 Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
-                               const user_op::UserOpConfWrapper&) {
+                                      const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
   CHECK(like_arg_modifier != nullptr);
   like_arg_modifier->set_requires_grad(false);
@@ -105,29 +105,29 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
 }
 }  // namespace
 
-#define REGISTER_SCATTER_LIKE_OP(optypename) \
-REGISTER_USER_OP(optypename) \
-    .Input("like") \
-    .Input("input") \
-    .Input("index") \
-    .Output("output") \
-    .Attr<int32_t>("dim") \
-    .SetTensorDescInferFn(InferTensorDesc) \
-    .SetInputArgModifyFn(InputArgModifierFn) \
-    .SetBatchAxisInferFn(InferBatchAxis) \
-    .SetGetSbpFn(SetSbp)
+#define REGISTER_SCATTER_LIKE_OP(optypename)   \
+  REGISTER_USER_OP(optypename)                 \
+      .Input("like")                           \
+      .Input("input")                          \
+      .Input("index")                          \
+      .Output("output")                        \
+      .Attr<int32_t>("dim")                    \
+      .SetTensorDescInferFn(InferTensorDesc)   \
+      .SetInputArgModifyFn(InputArgModifierFn) \
+      .SetBatchAxisInferFn(InferBatchAxis)     \
+      .SetGetSbpFn(SetSbp)
 
-#define REGISTER_SCATTER_INPLACE_OP(optypename) \
-REGISTER_USER_OP(optypename) \
-    .Input("like") \
-    .Input("input") \
-    .Input("index") \
-    .Output("output") \
-    .Attr<int32_t>("dim") \
-    .SetTensorDescInferFn(InferTensorDesc) \
-    .SetInputArgModifyFn(InplaceInputArgModifierFn) \
-    .SetBatchAxisInferFn(InferBatchAxis) \
-    .SetGetSbpFn(SetSbp)
+#define REGISTER_SCATTER_INPLACE_OP(optypename)       \
+  REGISTER_USER_OP(optypename)                        \
+      .Input("like")                                  \
+      .Input("input")                                 \
+      .Input("index")                                 \
+      .Output("output")                               \
+      .Attr<int32_t>("dim")                           \
+      .SetTensorDescInferFn(InferTensorDesc)          \
+      .SetInputArgModifyFn(InplaceInputArgModifierFn) \
+      .SetBatchAxisInferFn(InferBatchAxis)            \
+      .SetGetSbpFn(SetSbp)
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
 REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");

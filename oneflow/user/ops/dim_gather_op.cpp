@@ -17,99 +17,107 @@ limitations under the License.
 #include "oneflow/user/kernels/dim_gather_kernel_util.h"
 
 namespace oneflow {
-
 namespace user_op {
+
+namespace {
+Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+  const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+  int64_t input_num_axes = in->shape().NumAxes();
+  CHECK_GT_OR_RETURN(input_num_axes, 0);
+  CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
+
+  const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+  int64_t index_num_axes = index->shape().NumAxes();
+  CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+
+  const int32_t dim = ctx->Attr<int32_t>("dim");
+  CHECK_GE_OR_RETURN(dim, 0);
+  CHECK_LT_OR_RETURN(dim, input_num_axes);
+  CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
+
+  // split_axs should NOT equals dim when in consistent view
+  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+  auto is_split = in_sbp.has_split_parallel();
+  if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
+    int64_t split_axis = in_sbp.split_parallel().axis();
+    CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
+  }
+
+  CHECK_OR_RETURN(!in->is_dynamic());
+  CHECK_OR_RETURN(!index->is_dynamic());
+
+  FOR_RANGE(int64_t, i, 0, input_num_axes) {
+    if (i == dim) { continue; }
+    CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
+  }
+
+  user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+  *out->mut_shape() = index->shape();
+  *out->mut_data_type() = in->data_type();
+
+  return Maybe<void>::Ok();
+}
+
+void GatherInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+                              const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
+  CHECK(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
+}
+
+Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
+  OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
+  if (indices_batch_axis->has_value()) {
+    CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
+    CHECK_LE_OR_RETURN(
+        indices_batch_axis->value(),
+        ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
+  }
+  *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BuildSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
+  int64_t index_num_axes = index_tensor.shape().NumAxes();
+  const int32_t dim = ctx->Attr<int32_t>("dim");
+
+  FOR_RANGE(int64_t, i, 0, index_num_axes) {
+    if (i != dim) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("output", 0), i)
+          .Build();
+    } else if (i == dim) {
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("input", 0))
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("output", 0), i)
+          .Build();
+    }
+  }
+
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("input", 0))
+      .Broadcast(user_op::OpArg("index", 0))
+      .PartialSum(user_op::OpArg("output", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+}  // namespace
+
 REGISTER_USER_OP("dim_gather")
     .Input("input")
     .Input("index")
     .Output("output")
     .Attr<int32_t>("dim")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-      int64_t input_num_axes = in->shape().NumAxes();
-      CHECK_GT_OR_RETURN(input_num_axes, 0);
-      CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
-
-      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
-      int64_t index_num_axes = index->shape().NumAxes();
-      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
-
-      const int32_t dim = ctx->Attr<int32_t>("dim");
-      CHECK_GE_OR_RETURN(dim, 0);
-      CHECK_LT_OR_RETURN(dim, input_num_axes);
-      CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
-
-      // split_axs should NOT equals dim when in consistent view
-      const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-      auto is_split = in_sbp.has_split_parallel();
-      if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
-        int64_t split_axis = in_sbp.split_parallel().axis();
-        CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-      }
-
-      CHECK_OR_RETURN(!in->is_dynamic());
-      CHECK_OR_RETURN(!index->is_dynamic());
-
-      FOR_RANGE(int64_t, i, 0, input_num_axes) {
-        if (i == dim) { continue; }
-        CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
-      }
-
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-      *out->mut_shape() = index->shape();
-      *out->mut_data_type() = in->data_type();
-
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-      CHECK(indices_modifier != nullptr);
-      indices_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
-      if (indices_batch_axis->has_value()) {
-        CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-        CHECK_LE_OR_RETURN(
-            indices_batch_axis->value(),
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
-      }
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& index_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
-      int64_t index_num_axes = index_tensor.shape().NumAxes();
-      const int32_t dim = ctx->Attr<int32_t>("dim");
-
-      FOR_RANGE(int64_t, i, 0, index_num_axes) {
-        if (i != dim) {
-          ctx->NewBuilder()
-              .Split(user_op::OpArg("index", 0), i)
-              .Split(user_op::OpArg("input", 0), i)
-              .Split(user_op::OpArg("output", 0), i)
-              .Build();
-        } else if (i == dim) {
-          ctx->NewBuilder()
-              .Broadcast(user_op::OpArg("input", 0))
-              .Split(user_op::OpArg("index", 0), i)
-              .Split(user_op::OpArg("output", 0), i)
-              .Build();
-        }
-      }
-
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("input", 0))
-          .Broadcast(user_op::OpArg("index", 0))
-          .PartialSum(user_op::OpArg("output", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
+    .SetTensorDescInferFn(InferTensorDesc)
+    .SetInputArgModifyFn(GatherInputArgModifierFn)
+    .SetBatchAxisInferFn(InferBatchAxis)
+    .SetGetSbpFn(BuildSbp);
 
 REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {

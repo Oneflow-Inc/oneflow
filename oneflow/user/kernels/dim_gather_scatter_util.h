@@ -23,14 +23,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
-  FLOATING_DATA_TYPE_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-
-#define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
-  DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ       \
-  FLOAT16_DATA_TYPE_SEQ
-
 constexpr int kDimGatherMaxDimCount = 8;
 
 namespace user_op {
@@ -40,28 +32,6 @@ using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
 
 template<typename T>
 using BinaryOpFn = void (*)(const T* x, T* y);
-
-// Steps for adding a binary operation on scatter are as follows:
-// 1. implment binop in DeviceBinOp, for example "Mul":
-//    OF_DEVICE_FUNC static void Mul(const T* x, T* y) { *y *= *x; }
-//
-// 2. Implement kernels in dim_scatter_kernels.cpp:
-//    IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Mul);
-//
-// 3. Register kernels
-//    REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_add_like", Add);
-//
-// 4. Declare Functor in dim_scatter_kernel_util.h:
-//    DECLARE_DIMSCATTER_FUNCTOR(Mul);
-//
-// 5. Implement functors in dim_scatter_kernel_util.cu and cpp file:
-//    in .cu file:
-//      IMPLEMENT_DIMSCATTER_GPUFUNCTOR(Mul);
-//      INSTANTIATE_DIM_SCATTER_GPUFUNCTORS(Mul);
-//    in .cpp file:
-//      IMPLEMENT_DIMSCATTER_CPUFUNCTOR(Mul);
-//      INSTANTIATE_DIM_SCATTER_CPUFUNCTORS(Mul);
-//
 
 template<typename T>
 struct DeviceBinOp {
@@ -76,6 +46,7 @@ struct DeviceBinOp {
   OF_DEVICE_FUNC static void Update(const T* x, T* y) { *y = *x; }
 };
 
+// ----- macros for scatter functors -----
 #define DECLARE_DIMSCATTER_FUNCTOR(binop)                                                          \
   template<DeviceType device_type, typename IN_T, typename IDX_T>                                  \
   struct DimScatter##binop##Functor final {                                                        \
@@ -124,6 +95,56 @@ struct DeviceBinOp {
                       reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));      \
     }                                                                                              \
   }
+
+// ----- macros for gather functors -----
+#define DECLARE_DIMGATHER_FUNCTOR(binop)                                                          \
+  template<DeviceType device_type, typename IN_T, typename IDX_T>                                 \
+  struct DimGather##binop##Functor final {                                                        \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,             \
+                    const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt, \
+                    int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);            \
+  }
+
+#define IMPLEMENT_DIMGATHER_CPUFUNCTOR(binop)                                                     \
+  template<typename IN_T, typename IDX_T>                                                         \
+  struct DimGather##binop##Functor<DeviceType::kCPU, IN_T, IDX_T> final {                         \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,             \
+                    const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt, \
+                    int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {           \
+      DoDimGatherBinop<IN_T, IDX_T>(input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, \
+                                    input, output, DeviceBinOp<IN_T>::binop);                     \
+    }                                                                                             \
+  }
+
+#define IMPLEMENT_DIMGATHER_GPUFUNCTOR(binop)                                                     \
+  template<typename IN_T, typename IDX_T>                                                         \
+  __global__ void DoCUDADimGather##binop(const DimOpIndexNdHelper<IDX_T> input_nd_helper,         \
+                                         const DimOpIndexNdHelper<IDX_T> index_nd_helper,         \
+                                         int ndim, int64_t elem_cnt, int32_t dim,                 \
+                                         const IDX_T* index, const IN_T* input, IN_T* output) {   \
+    DoDimGatherBinop<IN_T, IDX_T>(input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index,   \
+                                  input, output, DeviceBinOp<IN_T>::binop);                       \
+  }                                                                                               \
+  template<typename IDX_T, typename IN_T>                                                         \
+  struct DimGather##binop##Functor<DeviceType::kGPU, IN_T, IDX_T> final {                         \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,             \
+                    const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt, \
+                    int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) {           \
+      RUN_CUDA_KERNEL((DoCUDADimGather##binop<IN_T, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
+                      input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index, input,        \
+                      output);                                                                    \
+    }                                                                                             \
+  };                                                                                              \
+  template<typename IDX_T>                                                                        \
+  struct DimGather##binop##Functor<DeviceType::kGPU, float16, IDX_T> final {                      \
+    void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,             \
+                    const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt, \
+                    int32_t dim, const IDX_T* index, const float16* input, float16* output) {     \
+      RUN_CUDA_KERNEL((DoCUDADimGather##binop<half, IDX_T>), ctx, BlocksNum4ThreadsNum(elem_cnt), \
+                      input_nd_helper, index_nd_helper, ndim, elem_cnt, dim, index,               \
+                      reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output));     \
+    }                                                                                             \
+  };
 
 }  // namespace user_op
 }  // namespace oneflow
