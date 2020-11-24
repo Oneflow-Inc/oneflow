@@ -112,15 +112,15 @@ class GenTensorBuffer final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const Shape& shape = ctx->Attr<Shape>("shape");
-    const int64_t num_tensor_buffers = shape.elem_cnt();
+    const int64_t num_tensor_buffers = ctx->Attr<Shape>("shape").elem_cnt();
     const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
     const std::vector<float>& value_list = ctx->Attr<std::vector<float>>("value_list");
     CHECK_EQ(num_tensor_buffers, shape_list.size());
     CHECK_EQ(num_tensor_buffers, value_list.size());
     MultiThreadLoop(num_tensor_buffers, [&](size_t i) {
       TensorBuffer* tensor_buffer = out->mut_dptr<TensorBuffer>() + i;
-      const Shape shape = shape_list.at(i);
+      const Shape& shape = shape_list.at(i);
+      tensor_buffer->Resize(shape, DataType::kFloat);
       float* begin = reinterpret_cast<float*>(tensor_buffer->mut_data());
       std::fill(begin, begin + shape.elem_cnt(), static_cast<float>(value_list.at(i)));
     });
@@ -151,9 +151,9 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       CHECK_EQ(out_dtype, tensor_buffer->data_type());
       if (dynamic_out) {
-        CHECK_LE(out_i->shape().elem_cnt(), tensor_buffer->shape().elem_cnt());
+        CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
       } else {
-        CHECK_EQ(out_i->shape().elem_cnt(), tensor_buffer->shape().elem_cnt());
+        CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
       }
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());

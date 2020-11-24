@@ -15,11 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import functools
+import operator
+
 import oneflow as flow
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence
 
@@ -177,5 +179,5 @@ def tensor_buffer_to_tensor(
         .Attr("out_shape", out_shape)
         .Build()
         .InferAndTryRun()
-        .RemoteBlobList()[0]
+        .RemoteBlobList()
     )

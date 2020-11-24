@@ -101,14 +101,11 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      for (int64_t i = 0; ctx->user_op_conf().input_size("out"); ++i) {
-        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
-      }
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
     });
 
@@ -142,9 +139,9 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      for (int64_t i = 0; ctx->user_op_conf().input_size("out"); ++i) {
-        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
-      }
+      // for (int64_t i = 0; ctx->user_op_conf().output_size("out"); ++i) {
+      //   ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
+      // }
       return Maybe<void>::Ok();
     });
 
