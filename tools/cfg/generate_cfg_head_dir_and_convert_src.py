@@ -40,6 +40,7 @@ def get_convert_src_file():
     ]
     return connector.join(src_files)
 
+
 def get_template_files():
     # use ';' to produce a list of cmake
     connector = ";"

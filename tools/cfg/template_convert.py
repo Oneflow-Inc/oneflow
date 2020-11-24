@@ -26,10 +26,12 @@ def JinjaRender(module, filename, **kwargs):
         **kwargs
     )
 
+
 def render_cfg_file(dst_file_path, template_file, module):
     dst_file = open(dst_file_path, "w")
     dst_file.write(JinjaRender(module, template_file))
     dst_file.close()
+
 
 def convert_hpp(dst_hpp_path, module=None):
     if not os.path.exists(os.path.dirname(dst_hpp_path)):
@@ -38,6 +40,7 @@ def convert_hpp(dst_hpp_path, module=None):
 
     render_cfg_file(dst_hpp_path, "template.cfg.h", module)
 
+
 def convert_cpp(dst_cpp_path, module=None):
     if not os.path.exists(os.path.dirname(dst_cpp_path)):
         if os.path.dirname(dst_cpp_path):
@@ -45,12 +48,14 @@ def convert_cpp(dst_cpp_path, module=None):
 
     render_cfg_file(dst_cpp_path, "template.cfg.cpp", module)
 
+
 def convert_pybind(dst_pybind_path, module=None):
     if not os.path.exists(os.path.dirname(dst_pybind_path)):
         if os.path.dirname(dst_pybind_path):
             os.makedirs(os.path.dirname(dst_pybind_path))
 
     render_cfg_file(dst_pybind_path, "template.cfg.pybind.cpp", module)
+
 
 def render_template(proto_file):
     rel_proto_file_path, proto_file_name = os.path.split(proto_file)
