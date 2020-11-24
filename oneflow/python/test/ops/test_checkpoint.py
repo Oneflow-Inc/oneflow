@@ -23,6 +23,11 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
+def refresh_session():
+    flow.clear_default_session()
+    flow.config.gpu_device_num(flow.unittest.env.device_num())
+
+
 def get_placement():
     node_size = flow.unittest.env.node_size()
     device_ids = "0-{}".format(flow.unittest.env.device_num() - 1)
@@ -98,7 +103,27 @@ def get_large_model(dtype):
     return large
 
 
-get_reduce_sum_model = get_large_model
+def get_add_and_reduce_mean_model(dtype):
+    @flow.global_function()
+    def model() -> tp.Numpy:
+        with get_placement():
+            x = flow.get_variable(
+                name="x",
+                shape=(10, 801, 820, 4),
+                dtype=dtype,
+                initializer=flow.random_normal_initializer(mean=10, stddev=1),
+                distribute=flow.distribute.split(0),
+            )
+            y = flow.get_variable(
+                name="y",
+                shape=(10, 801, 820, 4),
+                dtype=dtype,
+                initializer=flow.random_normal_initializer(mean=10, stddev=1),
+                distribute=flow.distribute.split(0),
+            )
+            return flow.math.reduce_mean(x + y)
+
+    return model
 
 
 def get_checkpoint_ready_model(model_getter, dtype):
@@ -114,8 +139,7 @@ def _TestSaveCorrectness(test_case, model_getter, dtype, legacy_api):
     and check the equality.
     """
     with tempfile.TemporaryDirectory() as save_dir:
-        flow.clear_default_session()
-        flow.config.gpu_device_num(4)
+        refresh_session()
         flow.config.enable_legacy_model_io(False)
 
         large1 = get_checkpoint_ready_model(model_getter, dtype)
@@ -127,8 +151,7 @@ def _TestSaveCorrectness(test_case, model_getter, dtype, legacy_api):
             flow.checkpoint.save(save_dir)
         res1 = large1()
 
-        flow.clear_default_session()
-        flow.config.gpu_device_num(4)
+        refresh_session()
         flow.config.enable_legacy_model_io(True)
 
         large2 = get_checkpoint_ready_model(model_getter, dtype)
@@ -147,16 +170,14 @@ def _TestRoundTrip(test_case, model_getter, dtype):
     and check the equality.
     """
     with tempfile.TemporaryDirectory() as save_dir:
-        flow.clear_default_session()
-        flow.config.gpu_device_num(4)
+        refresh_session()
 
         large1 = get_checkpoint_ready_model(model_getter, dtype)
 
         flow.checkpoint.save(save_dir)
         res1 = large1()
 
-        flow.clear_default_session()
-        flow.config.gpu_device_num(4)
+        refresh_session()
 
         large2 = get_checkpoint_ready_model(model_getter, dtype)
 
@@ -173,8 +194,7 @@ def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
     and check the equality.
     """
     with tempfile.TemporaryDirectory() as save_dir:
-        flow.clear_default_session()
-        flow.config.gpu_device_num(4)
+        refresh_session()
         flow.config.enable_legacy_model_io(True)
 
         large1 = get_checkpoint_ready_model(model_getter, dtype)
@@ -203,25 +223,86 @@ def _TestLoadCorrectness(test_case, model_getter, dtype, legacy_api):
         test_case.assertTrue(np.array_equal(res1, res2))
 
 
-def _TestLoadNumpy(test_case, dtype):
-    flow.clear_default_session()
-    flow.config.gpu_device_num(4)
+def _TestPartiallyLoadNumpy(test_case, dtype):
+    refresh_session()
 
-    model = get_checkpoint_ready_model(get_reduce_sum_model, dtype)
+    model = get_checkpoint_ready_model(get_add_and_reduce_mean_model, dtype)
     var_x = flow.get_all_variables()["x"]
+    var_y_value_before_loading = flow.get_all_variables()["y"].numpy()
     new_val_np = np.random.random(var_x.shape).astype(np.float32)
     flow.load_variables({"x": new_val_np})
+    var_y_value_after_loading = flow.get_all_variables()["y"].numpy()
     flow_res = model()
     np_res = new_val_np.mean()
     test_case.assertTrue(np.allclose(flow_res, np_res))
+    test_case.assertTrue(
+        np.array_equal(var_y_value_before_loading, var_y_value_after_loading)
+    )
+
+
+def _TestMixedModel(test_case, dtype):
+    with tempfile.TemporaryDirectory() as save_dir1, tempfile.TemporaryDirectory() as save_dir2:
+
+        def get_variable(name):
+            return flow.get_variable(
+                name=name,
+                shape=(10, 80, 40, 20),
+                dtype=dtype,
+                initializer=flow.random_normal_initializer(mean=10, stddev=1),
+                distribute=flow.distribute.split(0),
+            )
+
+        def get_part_of_mixed_model(dtype):
+            @flow.global_function()
+            def model() -> tp.Numpy:
+                with get_placement():
+                    x = get_variable("x")
+                    return x
+
+            return model
+
+        def get_mixed_model(dtype):
+            @flow.global_function()
+            def model() -> tp.Numpy:
+                with get_placement():
+                    x1 = get_variable("x_from_model1")
+                    x2 = get_variable("x_from_model2")
+                    return x1 + x2
+
+            return model
+
+        refresh_session()
+        model1 = get_checkpoint_ready_model(get_part_of_mixed_model, dtype)
+        flow.checkpoint.save(save_dir1)
+
+        refresh_session()
+        model2 = get_checkpoint_ready_model(get_part_of_mixed_model, dtype)
+        flow.checkpoint.save(save_dir2)
+
+        refresh_session()
+        mixed_model = get_checkpoint_ready_model(get_mixed_model, dtype)
+        var_dict_from_model1 = flow.checkpoint.get(save_dir1)
+        var_dict_from_model2 = flow.checkpoint.get(save_dir2)
+        new_var_dict = {}
+        for key, val in var_dict_from_model1.items():
+            new_var_dict["{}_from_model1".format(key)] = val
+        for key, val in var_dict_from_model2.items():
+            new_var_dict["{}_from_model2".format(key)] = val
+        flow.load_variables(new_var_dict)
+        res = mixed_model()
+        test_case.assertTrue(
+            np.allclose(
+                res,
+                var_dict_from_model1["x"].numpy() + var_dict_from_model2["x"].numpy(),
+            )
+        )
 
 
 def _TestResumeTraining(test_case):
     with tempfile.TemporaryDirectory() as save_dir:
         x = np.random.random((4, 5)).astype(np.float32)
 
-        flow.clear_default_session()
-        flow.config.gpu_device_num(2)
+        refresh_session()
         model = get_checkpoint_ready_model(
             get_simple_momentum_training_model, flow.float32
         )
@@ -230,8 +311,7 @@ def _TestResumeTraining(test_case):
         model(x)
         w1 = flow.get_all_variables()["w"].numpy()
 
-        flow.clear_default_session()
-        flow.config.gpu_device_num(2)
+        refresh_session()
         model = get_checkpoint_ready_model(
             get_simple_momentum_training_model, flow.float32
         )
@@ -243,8 +323,7 @@ def _TestResumeTraining(test_case):
 
 
 def _TestAssignmentBetweenMemory(test_case, dtype):
-    flow.clear_default_session()
-    flow.config.gpu_device_num(4)
+    refresh_session()
 
     model = get_checkpoint_ready_model(get_simple_model, dtype)
     all_vars = flow.get_all_variables()
@@ -318,8 +397,12 @@ class TestCheckpoint(flow.unittest.TestCase):
         _TestRoundTrip(test_case, get_large_model, flow.float)
 
     @flow.unittest.skip_unless_1n4d()
-    def test_load_numpy(test_case):
-        _TestLoadNumpy(test_case, flow.float)
+    def test_partially_load_numpy(test_case):
+        _TestPartiallyLoadNumpy(test_case, flow.float)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_mixed_model(test_case):
+        _TestMixedModel(test_case, flow.float)
 
     @flow.unittest.skip_unless_1n2d()
     def test_resume_training(test_case):
