@@ -15,12 +15,10 @@ limitations under the License.
 """
 import unittest
 import numpy as np
-import tensorflow as tf
 import oneflow as flow
 import oneflow.typing as tp
 from collections import OrderedDict
 
-import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -40,6 +38,18 @@ def compare_with_tensorflow(device_type, device_num, in_shape, data_type, coeffs
     )
     func_config.default_logical_view(flow.scope.consistent_view())
 
+    x = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
+
+    def np_polyval_grad(coeffs, x):
+        coeffs_len = len(coeffs)
+        coeffs_diff = [(coeffs_len - i - 1) * coeffs[i] for i in range(coeffs_len - 1)]
+        np_x_diff = np.polyval(coeffs_diff, x)
+        return np_x_diff
+
+    def assert_prediction_grad(blob: tp.Numpy):
+        np_x_diff = np_polyval_grad(coeffs, x)
+        assert np.allclose(blob, np_x_diff, rtol=1e-5, atol=1e-5)
+
     @flow.global_function(type="train", function_config=func_config)
     def PolyValJob(x: tp.Numpy.Placeholder(shape=in_shape)):
         with flow.scope.placement(device_type, "0:0"):
@@ -50,7 +60,7 @@ def compare_with_tensorflow(device_type, device_num, in_shape, data_type, coeffs
                 initializer=flow.zeros_initializer(),
                 trainable=True,
             )
-        flow.watch_diff(x, test_global_storage.Setter("x_diff"))
+        flow.watch_diff(x, assert_prediction_grad)
         out = flow.math.polyval(coeffs, x)
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
@@ -59,20 +69,11 @@ def compare_with_tensorflow(device_type, device_num, in_shape, data_type, coeffs
 
         return out
 
-    # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    x = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     of_out = PolyValJob(x).get().numpy()
-    of_x_diff = test_global_storage.Get("x_diff")
-    # TensorFlow
-    with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(x)
-        tf_out = tf.math.polyval(coeffs, x)
-    tf_x_diff = tape.gradient(tf_out, x)
-
-    assert np.allclose(of_out, tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(of_x_diff, tf_x_diff.numpy(), rtol=1e-5, atol=1e-5)
+    np_out = np.polyval(coeffs, x)
+    assert np.allclose(of_out, np_out, rtol=1e-5, atol=1e-5)
 
 
 def gen_arg_list(type):
