@@ -18,23 +18,25 @@ limitations under the License.
 
 namespace oneflow {
 
-class GatherDispatchPass final : public JobPass {
+class DistributedGatherRewritePass final : public JobPass {
  public:
-  GatherDispatchPass() = default;
-  ~GatherDispatchPass() override = default;
+  DistributedGatherRewritePass() = default;
+  ~DistributedGatherRewritePass() override = default;
   bool IsEnabled(const JobPassCtx& ctx) const { return true; }
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
+Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](const OpNode* op_node) {
+    const int64_t parallel_num = op_node->parallel_desc().parallel_num();
+    if (parallel_num == 1) { return; }
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
     const std::string& op_type_name = op_conf.user_conf().op_type_name();
-    if (op_type_name != "gather_dispatch") { return; }
+    if (op_type_name != "distributed_gather") { return; }
     user_op::UserOpConfWrapper cur_op(op_conf);
     const SbpParallel& indices_sbp =
         op_node->SbpParallel4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
@@ -42,8 +44,6 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
     if (!indices_sbp.has_split_parallel() || !in_sbp.has_split_parallel()) { return; }
     if (indices_sbp.split_parallel().axis() != 0 || in_sbp.split_parallel().axis() != 0) { return; }
     const std::string& op_name = cur_op.op_name();
-    const int64_t parallel_num = op_node->parallel_desc().parallel_num();
-    if (parallel_num == 1) { return; }
     const BlobDesc& in_desc = op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("in", 0)));
     const int64_t num_classes = in_desc.shape().At(0);
     const BlobDesc& indices_desc =
@@ -227,6 +227,6 @@ Maybe<void> GatherDispatchPass::Apply(Job* job, JobPassCtx* ctx) const {
   return Maybe<void>::Ok();
 }
 
-REGISTER_JOB_PASS("GatherDispatchPass", GatherDispatchPass);
+REGISTER_JOB_PASS("DistributedGatherRewritePass", DistributedGatherRewritePass);
 
 }  // namespace oneflow
