@@ -209,15 +209,17 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
 user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::string& input,
                                        const std::string& scale, const std::string& zero_point,
                                        const int64_t scope_symbol_id, OpConfMap* inserted_ops) {
-  const auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
-                              .Op("fake_quantization")
-                              .Input("in", input)
-                              .Input("scale", scale)
-                              .Input("zero_point", zero_point)
-                              // affine is always correct
-                              .Output("out")
-                              .ScopeSymbolId(scope_symbol_id)
-                              .Build();
+  const auto op_wrapper =
+      user_op::UserOpConfWrapperBuilder(name)
+          .Op("fake_quantization")
+          .Input("in", input)
+          .Input("scale", scale)
+          .Input("zero_point", zero_point)
+          // TODO(jianhao): affine is always correct, but symmetric can be better
+          .Attr<std::string>("quantize_scheme", "affine")
+          .Output("out")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
   (*inserted_ops)[name] = op_wrapper.op_conf();
   return op_wrapper;
 }
