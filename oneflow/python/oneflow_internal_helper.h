@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -207,6 +208,12 @@ Maybe<std::string> GetFunctionConfigDef() {
   return ret;
 }
 
+Maybe<std::string> GetScopeConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalScopeConfigDef(), &ret);
+  return ret;
+}
+
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
@@ -308,5 +315,7 @@ Maybe<long long> NewPhysicalSymbolId() {
   CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
   return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
+
+Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
 
 }  // namespace oneflow
