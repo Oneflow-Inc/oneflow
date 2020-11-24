@@ -11,6 +11,7 @@ parser.add_argument(
         "template_convert_python_script",
         "copy_pyproto_python_script",
         "pybind_registry_cc",
+        "template_files",
     ],
     required=True,
 )
@@ -39,6 +40,17 @@ def get_convert_src_file():
     ]
     return connector.join(src_files)
 
+def get_template_files():
+    # use ';' to produce a list of cmake
+    connector = ";"
+    src_files = [
+        SCRIPT_DIR + "/template/template.cfg.h",
+        SCRIPT_DIR + "/template/template.cfg.cpp",
+        SCRIPT_DIR + "/template/template.cfg.pybind.cpp",
+        SCRIPT_DIR + "/util/proto_reflect_util.py",
+    ]
+    return connector.join(src_files)
+
 
 if __name__ == "__main__":
     message_type = args.get_message_type
@@ -50,5 +62,7 @@ if __name__ == "__main__":
         print(get_copy_python_file(), end="")
     elif message_type == "pybind_registry_cc":
         print(get_convert_src_file(), end="")
+    elif message_type == "template_files":
+        print(get_template_files(), end="")
     else:
         raise NotImplementedError
