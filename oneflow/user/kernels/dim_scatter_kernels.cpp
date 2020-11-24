@@ -129,7 +129,17 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
-    Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
+    
+    Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
+    if(!like_tensor->dptr()){
+      Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size); 
+    }else {
+      const IN_T* like = like_tensor->dptr<IN_T>();
+      if(output != like)
+      {
+        Memcpy<device_type>(ctx->device_ctx(), output, like_tensor->dptr<IN_T>(), out_bytes_size); 
+      }  
+    }
 
     int ndim = input_tensor->shape().NumAxes();
     fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);

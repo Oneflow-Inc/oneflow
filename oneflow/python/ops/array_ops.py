@@ -2315,7 +2315,7 @@ def amp_white_identity(
 
 
 @oneflow_export("dim_scatter_update_like")
-def dim_scatter_update(
+def dim_scatter_update_like(
     dim: int,
     index: remote_blob_util.BlobDef,
     src: remote_blob_util.BlobDef,
@@ -2339,7 +2339,7 @@ def dim_scatter_update(
 
 
 @oneflow_export("dim_scatter_add_like")
-def dim_scatter_add(
+def dim_scatter_add_like(
     dim: int,
     index: remote_blob_util.BlobDef,
     src: remote_blob_util.BlobDef,
