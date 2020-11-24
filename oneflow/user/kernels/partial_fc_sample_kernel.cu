@@ -235,30 +235,16 @@ __global__ void GetMappedLabel(const int64_t n, const K* label_map_key, const K*
 }
 
 template<typename K>
-void SampleIndex(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
-                 const int64_t lower_bound, const TmpBufferManager<K>& buffer_manager,
-                 const K* label_ptr) {
-  IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      num_classes, buffer_manager.CubSortValuesPtr());
-  IndexSetPos<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      batch_size, lower_bound, num_classes, label_ptr, buffer_manager.CubSortKeysPtr());
-  CubSortPairs<K>(ctx->cuda_stream(), num_classes, buffer_manager.GetCubTmpStorageSize(),
-                  buffer_manager.CubSortKeysPtr(), buffer_manager.CubSortValuesPtr(),
-                  buffer_manager.CubTmpStoragePtr(), buffer_manager.CubSortKeysOutPtr(),
-                  buffer_manager.CubSortValuesOutPtr());
-}
-
-template<typename K>
 void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
               const int64_t lower_bound, const int64_t parallel_num, const int64_t num_sample,
               const TmpBufferManager<K>& buffer_manager, const K* label_ptr, K* maped_label_ptr) {
   IotaKernel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       batch_size, buffer_manager.CubSortValuesPtr());
-  CubSortPairs<K>(ctx->cuda_stream(), batch_size, buffer_manager.GetCubTmpStorageSize(), label_ptr,
-                  buffer_manager.CubSortValuesPtr(), buffer_manager.CubTmpStoragePtr(),
-                  buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesOutPtr());
-
   size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
+  OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
+      buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, label_ptr,
+      buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesPtr(),
+      buffer_manager.CubSortValuesOutPtr(), batch_size, 0, sizeof(K) * 8, ctx->cuda_stream())));
   NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(buffer_manager.CubSortKeysOutPtr(),
                                                                 0);
   OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
