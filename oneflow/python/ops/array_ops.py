@@ -1720,13 +1720,12 @@ def stack(
     _input_shape = inputs[0].shape
     _max_dim = len(_input_shape)
 
+    # The legal axis is -(Rank+1) ~ Rank
     if axis < 0:
         axis = axis + _max_dim + 1
-
-    # if input shape is 4, allow the legal axis is (-5, 4)
     assert (axis >= 0) and (axis <= _max_dim)
 
-    # All input tensors must have the same shape ?
+    # All input tensors must have the same shape
     _input_list_length = len(inputs)
     for i in range(_input_list_length):
         _current_shape = inputs[i].shape
