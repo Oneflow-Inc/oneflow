@@ -23,10 +23,10 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import test_global_storage
 
 
-def gather_dispatch(params, indices, name):
+def distributed_gather(params, indices, name):
     return (
         flow.user_op_builder(name)
-        .Op("gather_dispatch")
+        .Op("distributed_gather")
         .Input("in", [params])
         .Input("indices", [indices])
         .Output("out")
@@ -57,7 +57,7 @@ def _run_test(test_case, device_type, x_shape, indices_shape):
             )
             x += v
         with flow.scope.placement(device_type, "0:0-3"):
-            loss = gather_dispatch(x, indices, name="gather_dispatch")
+            loss = distributed_gather(x, indices, name="distributed_gather")
 
         with flow.scope.placement(device_type, "0:0"):
             loss = flow.identity(loss)
@@ -90,8 +90,8 @@ def _run_test(test_case, device_type, x_shape, indices_shape):
 
 
 @flow.unittest.skip_unless_1n4d()
-class TestGatherDispatch(flow.unittest.TestCase):
-    def test_gather_dispatch(test_case):
+class TestDistributedGather(flow.unittest.TestCase):
+    def test_distributed_gather(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(100, 3)]

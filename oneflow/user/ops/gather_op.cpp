@@ -109,7 +109,7 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
   }
 });
 
-REGISTER_USER_OP("gather_dispatch")
+REGISTER_USER_OP("distributed_gather")
     .Input("in")
     .Input("indices")
     .Output("out")
