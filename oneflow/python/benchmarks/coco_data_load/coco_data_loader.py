@@ -130,7 +130,7 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
     timestamp = time.perf_counter()
     for i in range(iter_num):
         # data_loader().get()
-        image, image_size, gt_bbox, gt_label, gt_mask = data_loader().get()
+        ret = data_loader().get()
         index = 0
         image = ret[index]
         index = index + 1

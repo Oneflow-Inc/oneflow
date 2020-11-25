@@ -152,7 +152,7 @@ def gen_tensor_buffer(
     value_list: Sequence[float],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator generates a tensor buffer blob.
+    r"""This operator generates a tensor buffer blob, for now we only support float data type.
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorBuffer. 
@@ -204,15 +204,14 @@ def tensor_buffer_to_list_of_tensors(
     dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator converts the Blob's type from TensorBuffer to list of Tensors. Every element in x will be convert 
+    r"""This operator converts the Blob of TensorBuffer to list of Tensors. Every element in x will be converted
     to a Tensor and output will be flatten to a list.
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorBuffer. 
 
-
     Args:
-        x (BlobDef): Input `Blob`.
+        x (BlobDef): Input `Blob`, data type must be tensor buffer.
         out_shape (Sequence[int]): max shape for a tensor buffer in x
         out_dtype (type_util.dtype,): output data type
         dynamic_out (Optioinal[bool]): if output is dynamic blob. Default to False.
