@@ -87,6 +87,7 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .Attr<Shape>("shape")
     .Attr<std::vector<Shape>>("shape_list")
     .Attr<std::vector<float>>("value_list")
+    .Attr<bool>("dynamic_out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
@@ -97,7 +98,7 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       CHECK_EQ_OR_RETURN(num_tensor_buffers, value_list.size());
       *out->mut_shape() = shape;
       *out->mut_data_type() = DataType::kTensorBuffer;
-      out->set_is_dynamic(false);
+      out->set_is_dynamic(ctx->Attr<bool>("dynamic_out"));
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -129,34 +129,35 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
     s = pd.Series([], name="time_elapsed", dtype="float32")
     timestamp = time.perf_counter()
     for i in range(iter_num):
-        # data_loader().get()
         ret = data_loader().get()
+
         index = 0
         image = ret[index]
-        index = index + 1
+        index += 1
         image_size = ret[index]
-        index = index + 1
+        index += 1
         gt_bbox = ret[index: index + cfg.batch_size]
-        index = index + cfg.batch_size
+        index += cfg.batch_size
         gt_label = ret[index: index + cfg.batch_size]
-        index = index + cfg.batch_size
+        index += cfg.batch_size
         gt_mask = ret[index: index + cfg.batch_size]
         cur = time.perf_counter()
+
         s[i] = cur - timestamp
         timestamp = cur
 
-        # if verbose:
-        #     print("==== iter {} ====".format(i))
-        #     print(
-        #         "image: {}\n".format(image.numpy_list()[0].shape),
-        #         image.numpy_list()[0],
-        #     )
-        #     print(
-        #         "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
-        #     )
-        #     print("gt_bbox:\n", gt_bbox.numpy_lists()[0])
-        #     print("gt_label:\n", gt_label.numpy_lists()[0])
-        #     print("gt_mask:\n", gt_mask.numpy_lists()[0])
+        if verbose:
+            print("==== iter {} ====".format(i))
+            print(
+                "image: {}\n".format(image.numpy_list()[0].shape),
+                image.numpy_list()[0],
+            )
+            print(
+                "image_size: {}\n".format(image_size.numpy().shape), image_size.numpy(),
+            )
+            print("gt_bbox:\n", [x.numpy_list()[0] for x in gt_bbox])
+            print("gt_label:\n", [x.numpy_list()[0] for x in gt_label])
+            print("gt_mask:\n", [x.numpy_list()[0] for x in gt_mask])
 
     print(
         "mean of time elapsed of {} iters (dropped {} first iters): {}".format(
@@ -167,4 +168,4 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
 
 
 if __name__ == "__main__":
-    _benchmark(500, 10)
+    _benchmark(500, 10, True)

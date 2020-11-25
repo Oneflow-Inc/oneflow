@@ -150,6 +150,7 @@ def gen_tensor_buffer(
     shape: Sequence[int],
     shape_list: Sequence[Sequence[int]],
     value_list: Sequence[float],
+    dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""This operator generates a tensor buffer blob, for now we only support float data type.
@@ -161,6 +162,7 @@ def gen_tensor_buffer(
         shape (Sequence[int]): shape of output blob
         shape_list ( Sequence[Sequence[int]]): shapes for tensor buffer in output blob
         value_list (Sequence[float]): values for tensor buffer in output blob
+        dynamic_out: if output is dynamic blob
         name (Optional[str]): The name for the operation. Defaults to None.
 
     Returns:
@@ -190,6 +192,7 @@ def gen_tensor_buffer(
         .Attr("shape", shape)
         .Attr("shape_list", shape_list)
         .Attr("value_list", value_list)
+        .Attr("dynamic_out", dynamic_out)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
