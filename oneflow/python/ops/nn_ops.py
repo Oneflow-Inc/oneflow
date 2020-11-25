@@ -3024,8 +3024,6 @@ def margin_ranking_loss(
         input1.shape == input2.shape
     ), "The shape of `input1`, `input2` must be the same. "
 
-    # TODO: Should we add a check of target?
-
     assert reduction in [
         "none",
         "mean",
@@ -3035,7 +3033,7 @@ def margin_ranking_loss(
     )
 
     if name is None:
-        name = "MarginRankingLoss_"
+        name = id_util.UniqueStr("MarginRankingLoss_")
 
     _margin_loss = flow.math.negative(flow.math.subtract(input1, input2))
     _margin_loss = flow.math.multiply(target, _margin_loss)
@@ -3140,22 +3138,27 @@ def triplet_margin_loss(
     ), "For now we only support `swap=True`, OneFlow still have backward error in minimum"
 
     if name is None:
-        name = "TripletMarginLoss_"
+        name = id_util.UniqueStr("TripletMarginLoss_")
 
     def _p_norm(x, p=2.0, name="p_norm"):
         r"""Compute the p-norm 
+
         The equation is: 
+        
         .. math:: 
+        
             out = \sqrt[P]{\sum_{i=0}^{n}(abs(x)^P)} 
+        
         Args:
             x ([type]): The input Blob. 
             p ([type], optional): The norm degree. Defaults to 2..
+        
         """
         # In order to avoid the `nan` case.
         _abs_val = flow.math.abs(x, name=name + "_abs")
 
         if p == 2.0:
-            # Use Square to compute the p2-norm
+            # Use Square to compute the l2-norm
             _norm = flow.math.square(_abs_val, name=name + "_square")
             _norm = flow.math.reduce_sum(_norm, axis=1, name=name + "_sum")
             _norm_val = flow.math.sqrt(_norm, name=name + "_sqrt")
@@ -3185,7 +3188,7 @@ def triplet_margin_loss(
     if swap:
         _distance_swap = _p_norm(positive - negative + eps, p=p)
         _distance_swap = flow.math.reduce_sum(_distance_swap, axis=1)
-        # TODO: minimum still not support backward
+        # TODO(zhengzekang): minimum still not support backward
         _distance_2 = flow.math.minimum(_distance_2, _distance_swap)
 
     _triplet_loss = flow.clip(margin + _distance_1 - _distance_2, min_value=0.0)
