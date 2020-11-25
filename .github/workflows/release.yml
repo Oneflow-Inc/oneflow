@@ -22,6 +22,7 @@ on:
 jobs:
   staging_release:
     name: Staging Release
+    timeout-minutes: 1200
     runs-on: [self-hosted, linux]
     steps:
     - name: Fix permissions
