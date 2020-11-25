@@ -65,7 +65,7 @@ Maybe<void> DistributeConcatOp::InferBlobDescs(
   if (parallel_ctx->parallel_num() > 1) {
     const auto* in_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(parallel_ctx->parallel_id()));
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-    *GetBlobDesc4BnInOp("out") = *in_blob_desc;
+    *out_blob_desc = *in_blob_desc;
     out_blob_desc->set_is_dynamic(false);
     return Maybe<void>::Ok();
   }

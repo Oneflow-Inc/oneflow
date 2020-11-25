@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include <re2/re2.h>
 
 namespace oneflow {
@@ -105,5 +106,12 @@ void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_o
   template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                     \
                                          const LogicalBlobId& diff_lbi_of_var_out, \
                                          JobBuilder* job_builder, T* mdupdt_op_conf)
+
+void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder) {
+  if (!ctx->job_desc().job_conf().train_conf().has_dynamic_loss_scale_policy()) { return; }
+  builder->Input("skip_if",
+                 CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
+                     .count_not_finite_lbn());
+}
 
 }  // namespace oneflow

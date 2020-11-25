@@ -61,6 +61,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .Attr<float>("beta", model_update_conf.momentum_conf().beta())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &momentum_update_op_builder);
   user_op::UserOpConfWrapper momentum_update_op = momentum_update_op_builder.Build();
   job_builder->AddOps(parallel_conf, {momentum_update_op.op_conf()});
 }
