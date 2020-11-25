@@ -113,12 +113,14 @@ Maybe<void> DistributeSplitOp::InferParallelSignature() {
   mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
   auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
   (*map)["in"] = op_parallel_desc_symbol_id;
-  const auto& op_parallel_desc = *JUST(scope.GetParallelDesc(op_conf()));
+  const auto& op_parallel_desc = JUST(scope.GetParallelDesc(op_conf()));
   CHECK_EQ(op_parallel_desc.parallel_num(), output_bns().size());
   FOR_RANGE(int, i, 0, output_bns().size()) {
     const auto& out_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
+    const std::shared_ptr<cfg::ParallelConf>& cfg_out_parallel_conf =
+        std::make_shared<cfg::ParallelConf>(out_parallel_conf);
     (*map)[output_bns().Get(i)] =
-        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(out_parallel_conf.DebugString());
+        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(cfg_out_parallel_conf);
   }
   return Maybe<void>::Ok();
 }
