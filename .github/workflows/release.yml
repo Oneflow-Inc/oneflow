@@ -7,10 +7,6 @@ on:
     - cron:  '0 18 * * *'
   workflow_dispatch:
     inputs:
-      cuda_version:
-        description: 'cuda versions to build'
-        default: '10.0,10.1,10.2,11.0,11.1'
-        required: false
       python_version:
         description: 'python_version'
         default: '3.5,3.6,3.7,3.8'
@@ -23,7 +19,13 @@ jobs:
   staging_release:
     name: Staging Release
     timeout-minutes: 1200
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, linux, release]
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        cuda_version: [10.0, 10.1, 10.2, 11.0, 11.1]
     steps:
     - name: Fix permissions
       run: |
@@ -31,12 +33,18 @@ jobs:
     - uses: actions/checkout@v2
     - name: Set environment variables
       env:
-        cuda_version: ${{ github.event.inputs.cuda_version }}
+        input_cuda_version: ${{ github.event.inputs.cuda_version }}
+        matrix_cuda_version: ${{matrix.cuda_version }}
         python_version: ${{ github.event.inputs.python_version }}
         extra_flags: ${{ github.event.inputs.extra_flags }}
       run: |
         set -x
-        cuda_version=${cuda_version:-"10.0,10.1,10.2,11.0,11.1"}
+        cuda_version=${matrix_cuda_version}
+        if [ -z "$cuda_version" ]
+        then
+          echo "cuda_version empty"
+          exit 1
+        fi
         python_version=${python_version:-"3.5,3.6,3.7,3.8"}
         echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
         echo "python_version=${python_version}" >> $GITHUB_ENV
@@ -47,8 +55,7 @@ jobs:
 
         git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
-        timestamp=$(date '+%Y.%m.%d-%H.%M.%S')
-        oss_dir=${git_branch}/${timestamp}-${git_hash}
+        oss_dir=${git_branch}/${git_hash}
         echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
         echo "git_branch=${git_branch}" >> $GITHUB_ENV
     - name: Build OneFlow
