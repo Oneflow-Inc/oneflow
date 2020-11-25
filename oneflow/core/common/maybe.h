@@ -252,14 +252,10 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
 
-#define OF_RETURN_IF_ERROR(...)                                                         \
-  MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-  if (!maybe_##__LINE__.IsOk()) {                                                       \
-    auto* stack_frame = maybe_##__LINE__.error()->add_stack_frame();                    \
-    stack_frame->set_location(MAYBE_FAILED_LOC);                                        \
-    stack_frame->set_function(__FUNCTION__);                                            \
-    return maybe_##__LINE__.error();                                                    \
-  }
+#define OF_RETURN_IF_ERROR(...)                                                              \
+  for (MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+       !maybe_##__LINE__.IsOk();)                                                            \
+  return Error(maybe_##__LINE__.error()).AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
 
 #else
 #error statement expression is no supported, please implement try-catch version of JUST
@@ -267,16 +263,14 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 }  // namespace oneflow
 
-#define OF_TODO() \
-  return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) <= Error::Todo()
-#define OF_UNIMPLEMENTED()                                                   \
-  return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) \
-         <= Error::Unimplemented()
+#define OF_TODO() return Error::Todo().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+#define OF_UNIMPLEMENTED() \
+  return Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
 
-#define CHECK_OR_RETURN(expr)                                                \
-  if (!(expr))                                                               \
-  return std::pair<std::string, std::string>(MAYBE_FAILED_LOC, __FUNCTION__) \
-         <= Error::CheckFailedError() << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+#define CHECK_OR_RETURN(expr)                                                    \
+  if (!(expr))                                                                   \
+  return Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
+         << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
   CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
