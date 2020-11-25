@@ -14,28 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("partition")
-    .Input("in")
-    .Input("in_size")
+REGISTER_USER_OP("gather_dispatch")
+    .Input("indices")
+    .Output("idx")
     .OutputWithMinimum("out", 2)
-    .OutputWithMinimum("out_size", 2)
+    .OutputWithMinimum("count", 2)
     .Attr<int64_t>("parallel_num")
     .Attr<int64_t>("num_classes")
+    .Attr<DataType>("dtype", DataType::kInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* in_size_desc = ctx->TensorDesc4ArgNameAndIndex("in_size", 0);
+      const user_op::TensorDesc* indices_desc = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      const int64_t num_classes = ctx->Attr<int64_t>("num_classes");
       const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");
+      CHECK_EQ(num_classes % parallel_num, 0);
+      const DataType& data_type = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* idx_desc = ctx->TensorDesc4ArgNameAndIndex("idx", 0);
+      *idx_desc = *indices_desc;
+      *idx_desc->mut_data_type() = data_type;
       CHECK_EQ(ctx->user_op_conf().output_size("out"), parallel_num);
-      CHECK_EQ(ctx->user_op_conf().output_size("out_size"), parallel_num);
+      CHECK_EQ(ctx->user_op_conf().output_size("count"), parallel_num);
       FOR_RANGE(int32_t, i, 0, parallel_num) {
         user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
-        *out_i_desc = *in_desc;
-        user_op::TensorDesc* out_size_desc = ctx->TensorDesc4ArgNameAndIndex("out_size", i);
-        *out_size_desc = *in_size_desc;
+        *out_i_desc = *indices_desc;
+        user_op::TensorDesc* count_desc = ctx->TensorDesc4ArgNameAndIndex("count", i);
+        *count_desc->mut_shape() = Shape({1});
+        *count_desc->mut_data_type() = data_type;
       }
       return Maybe<void>::Ok();
     });

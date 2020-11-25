@@ -26,16 +26,17 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def partition(input, in_num_unique, parallel_num, num_classes, name):
+def gather_dispatch(input, parallel_num, num_classes, name):
     return (
         flow.user_op_builder(name)
-        .Op("partition")
-        .Input("in", [input])
-        .Input("in_size", [in_num_unique])
+        .Op("gather_dispatch")
+        .Input("indices", [input])
+        .Output("idx")
         .Output("out", parallel_num)
-        .Output("out_size", parallel_num)
+        .Output("count", parallel_num)
         .Attr("parallel_num", parallel_num)
         .Attr("num_classes", num_classes)
+        .Attr("dtype", flow.int64)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
@@ -47,14 +48,14 @@ def _run_test(test_case, device, x_shape, num_classes, parallel_num, dtype):
     flow.clear_default_session()
 
     @flow.global_function(function_config=func_config)
-    def PartitionJob(
+    def GatherDispatchJob(
         x: oft.Numpy.Placeholder(x_shape, dtype=type_name_to_flow_type[dtype])
     ):
         with flow.scope.placement(device, "0:0"):
-            y, idx, count, num_unique = flow.experimental.unique_with_counts(x)
-            out_list = partition(y, num_unique, parallel_num, num_classes, "partition")
-            partition_out_list = out_list[0:parallel_num]
-            out_size_list = out_list[parallel_num:]
+            out_list = gather_dispatch(x, parallel_num, num_classes, "partition")
+            idx = out_list[0]
+            partition_out_list = out_list[1 : 1 + parallel_num]
+            out_size_list = out_list[1 + parallel_num :]
             result_list = []
             for i in range(parallel_num):
                 result = flow.sync_dynamic_resize(
@@ -66,7 +67,7 @@ def _run_test(test_case, device, x_shape, num_classes, parallel_num, dtype):
     x = np.random.randint(0, num_classes, size=(x_shape)).astype(
         type_name_to_np_type[dtype]
     )
-    result_list = PartitionJob(x).get()
+    result_list = GatherDispatchJob(x).get()
     unique_x = np.unique(x)
     for i in range(parallel_num):
         lower = i * num_classes_per_rank
