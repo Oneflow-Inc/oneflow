@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename K>
-struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K> final {
+struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K, T> final {
   static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const T* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
@@ -26,7 +26,7 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K> final {
 };
 
 template<typename T, typename K>
-void UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K>::UnsortedSegmentSum(
+void UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K, T>::UnsortedSegmentSum(
     DeviceCtx* ctx, const K* segment_ids, const T* data, int64_t num_segment_ids,
     int64_t num_segments, int64_t outer_dim_size, int64_t inner_dim_size, int64_t segment_id_offset,
     T* out) {
@@ -44,9 +44,11 @@ void UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K>::UnsortedSegmentSum(
 }
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU(in_type_pair, index_type_pair)             \
   template struct UnsortedSegmentSumKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
-                                               OF_PP_PAIR_FIRST(index_type_pair)>;
+                                               OF_PP_PAIR_FIRST(index_type_pair),                \
+                                               OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU
 
 }  // namespace oneflow
