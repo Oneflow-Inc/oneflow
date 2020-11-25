@@ -54,7 +54,7 @@ class FunctionConfig(object):
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
         flag_name2flag_value = (
-            self.function_desc.job_config_proto.mutable_flag_name2flag_value()
+            self.function_desc.job_config_proto.flag_name2flag_value()
         )
         default_val = name2default[attr_name]
 
@@ -849,11 +849,7 @@ def set_tensorrt_int8_calibration(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    assert (
-        func_desc.job_config_proto.mutable_xrt_config()
-        .mutable_tensorrt_config()
-        .use_int8()
-    )
+    assert func_desc.job_config_proto.xrt_config().tensorrt_config().use_int8()
     func_desc.job_config_proto.mutable_xrt_config().mutable_tensorrt_config().set_int8_calibration(
         value
     )

@@ -53,13 +53,13 @@ class FunctionDesc(object):
         if attr_name == "flag_name2flag_value":
             return False
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
-        if attr_name in self.job_config_proto.mutable_flag_name2flag_value():
+        if attr_name in self.job_config_proto.flag_name2flag_value():
             return True
         return getattr(self.job_config_proto, "has_" + attr_name)()
 
     def __getattr__(self, attr_name):
         assert attr_name != "flag_name2flag_value"
-        flag_name2flag_value = self.job_config_proto.mutable_flag_name2flag_value()
+        flag_name2flag_value = self.job_config_proto.flag_name2flag_value()
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name not in name2default:
             assert getattr(self.job_config_proto, "has_" + attr_name)()
