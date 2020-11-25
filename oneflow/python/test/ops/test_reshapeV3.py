@@ -53,6 +53,7 @@ def distribute_reshape_test(device_type, device_num, input_shape, shape):
     x, loss = ReshapeJob().get()
 
 
+@flow.unittest.skip_unless_1n2d()
 class TestReshapeV2(flow.unittest.TestCase):
     def test_reshape(test_case):
         arg_dict = OrderedDict()
