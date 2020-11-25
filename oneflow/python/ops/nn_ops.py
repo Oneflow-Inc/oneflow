@@ -2799,12 +2799,14 @@ def bce_loss(
     .. math:: 
         
         out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
     Args:
         input (remote_blob_util.BlobDef): The input Blob. 
         target (remote_blob_util.BlobDef): The target value. 
         weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
+    
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
     """
