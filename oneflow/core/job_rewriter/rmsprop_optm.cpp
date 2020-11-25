@@ -59,6 +59,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .Attr<float>("decay_rate", rmsprop_conf.decay_rate())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &rmsprop_update_op_builder);
 
   if (centered) {
     OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
