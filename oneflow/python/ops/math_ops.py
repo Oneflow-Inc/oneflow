@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-from typing import Union, Optional, Sequence
+from typing import Union, Optional, Sequence, List, Tuple
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -1907,6 +1907,55 @@ def tril(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.polyval")
+def polyval(
+    coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Computes the elementwise value of a polynomial.
+
+    Args:
+        coeffs (Union[List, Tuple]): The coefficients of the polynomial.
+        x (remote_blob_util.BlobDef): A Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same data type of x.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        
+        @flow.global_function()
+        def polyval_Job(
+            x: tp.Numpy.Placeholder((3,), dtype=flow.float32)
+        ) -> tp.Numpy:
+            coeffs = [1.0, 3.0, -2.0]
+            return flow.math.polyval(coeffs, x)
+
+        x = np.array([1.0, 2.0, 3.0]).astype(np.float32)
+        out = polyval_Job(x)
+        
+        # output [ 2. 8. 16.]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Polyval_")
+    if not isinstance(coeffs, (list, tuple)):
+        raise ValueError(
+            "Argument coeffs must be list type " "found {}".format(type(coeffs))
+        )
+    if len(coeffs) < 1:
+        return flow.zeros_like(x, name=name)
+    p = flow.zeros_like(x, name=name)
+    for c in coeffs:
+        p = flow.math.add(c, flow.math.multiply(p, x))
+    return p
 
 
 @oneflow_export("range")

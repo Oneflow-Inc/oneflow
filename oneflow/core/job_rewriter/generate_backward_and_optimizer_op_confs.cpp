@@ -171,7 +171,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   job_builder = JUST(WithCalculationPassScope(kBackwardPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
-    JUST(AutoGrad(op_graph, job_builder.get(), &lbi2diff_lbi));
+    JUST(AutoGrad(ctx, op_graph, job_builder.get(), &lbi2diff_lbi));
     return Maybe<void>::Ok();
   }));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
@@ -181,8 +181,9 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
-    ScaleModelDiffByLossScale(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     const NormalModelUpdateOpUserConf& model_update_conf =
         job->job_conf().train_conf().model_update_conf();
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
