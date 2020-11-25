@@ -2800,6 +2800,36 @@ def bce_loss(
         
         out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
     
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def bceloss_job(
+            of_input: tp.Numpy.Placeholder(shape=(3, 3)),
+            of_target: tp.Numpy.Placeholder(shape=(3, 3))
+        ) -> tp.Numpy:
+            out = flow.nn.BCELoss(of_input, of_target)
+            return out 
+
+
+        np_input = np.array([[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]).astype(np.float32)
+
+        np_target = np.array([[0, 1, 0],
+                            [1, 0, 0],
+                            [0, 0, 1]]).astype(np.float32)
+
+        out = bceloss_job(np_input, np_target)
+
+        # output [3.390836]
+
     Args:
         input (remote_blob_util.BlobDef): The input Blob. 
         target (remote_blob_util.BlobDef): The target value. 
@@ -2837,6 +2867,7 @@ def bce_loss(
         _weighted_loss = weight * _cross_entropy_loss
     else:
         _weighted_loss = _cross_entropy_loss
+
     if reduction == "mean":
         return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
     elif reduction == "sum":
@@ -2889,7 +2920,12 @@ def mse_loss(
     Example 1: 
     
     .. code-block:: python 
-     
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
+        
         @flow.global_function()
         def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
                         target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
@@ -2906,6 +2942,11 @@ def mse_loss(
     Example 2: 
     
     .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
     
         @flow.global_function()
         def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
@@ -2988,6 +3029,8 @@ def margin_ranking_loss(
         import oneflow as flow 
         import oneflow.typing as tp 
         import numpy as np 
+
+
         @flow.global_function()
         def margin_ranking_loss_job(input1: tp.Numpy.Placeholder(shape=(3, 3)),
                                     input2: tp.Numpy.Placeholder(shape=(3, 3)),
@@ -3090,12 +3133,15 @@ def triplet_margin_loss(
         import oneflow as flow 
         import oneflow.typing as tp 
         import numpy as np 
+
+
         @flow.global_function()
         def triplet_loss_job(anchor: tp.Numpy.Placeholder(shape=(3, 3)),
                             pos: tp.Numpy.Placeholder(shape=(3, 3)),
                             neg: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy:
             out = flow.nn.TripletMarginLoss(anchor, pos, neg, margin=1.0, p=2.0)
             return out 
+
         np_anchor = np.array([[1, 2, 3],
                             [4, 5, 6],
                             [7, 8, 9]]).astype(np.float32)
