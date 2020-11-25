@@ -130,7 +130,7 @@ template<typename K>
 __global__ void GenerateGpu(curandState* state, const int64_t n, const int64_t max_val, K* buffer) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, n) { buffer[i] = static_cast<K>(curand(state) % max_val); }
+  CUDA_1D_KERNEL_LOOP(i, n) { buffer[i] = static_cast<K>(curand(&localState) % max_val); }
   state[id] = localState;
 }
 
@@ -153,7 +153,7 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
   int64_t num_sample_per_rank() const { return num_sample_per_rank_; }
 
   template<typename K>
-  void GenRandomIndexs(DeviceCtx* ctx, const int64_t n, const int64_t max_val, K* buffer) {
+  void GenRandom(DeviceCtx* ctx, const int64_t n, const int64_t max_val, K* buffer) {
     GenerateGpu<K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         curand_states_, n, max_val, buffer);
   }
@@ -228,6 +228,7 @@ __global__ void GetPartionBound(const int64_t n, const int64_t parallel_num,
     }
   }
 }
+
 template<typename K>
 __global__ void GetMappedLabel(const int64_t n, const K* label_map_key, const K* label_map_value,
                                K* maped_label) {
@@ -317,8 +318,8 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
     const int64_t lower_bound = kernel_state->lower();
     const int64_t num_sample = kernel_state->num_sample_per_rank();
-    kernel_state->GenRandomIndexs<K>(ctx->device_ctx(), num_classes, num_classes,
-                                     buffer_manager.CubSortKeysPtr());
+    kernel_state->GenRandom<K>(ctx->device_ctx(), num_classes, num_classes,
+                               buffer_manager.CubSortKeysPtr());
     IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
                  ctx->device_ctx()->cuda_stream()>>>(num_classes,
                                                      buffer_manager.CubSortValuesPtr());
