@@ -63,7 +63,6 @@ class Session(object):
         self.config_proto_ = None
         self.resource_ = None
         self.is_mirrored_strategy_enabled_stack_ = []
-        self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
@@ -72,7 +71,10 @@ class Session(object):
         self.interface_op_name2job_name_ = {}
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
+        self.function_flag_name2default_val_ = {}
         self._UpdateFunctionFlagName2DefaultVal()
+        self.scope_attr_name2default_val_ = {}
+        self._UpdateScopeAttrName2DefaultVal()
         self.instruction_list_ = instr_cfg.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
@@ -115,6 +117,10 @@ class Session(object):
     @property
     def function_flag_name2default_val(self):
         return self.function_flag_name2default_val_
+
+    @property
+    def scope_attr_name2default_val(self):
+        return self.scope_attr_name2default_val_
 
     @property
     def inter_user_job_info(self):
@@ -161,6 +167,10 @@ class Session(object):
     def _UpdateFunctionFlagName2DefaultVal(self):
         items = c_api_util.GetFunctionConfigDef().attr_name2attr_def.items()
         self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
+
+    def _UpdateScopeAttrName2DefaultVal(self):
+        items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
+        self.scope_attr_name2default_val_ = {k: v.default_val for k, v in items}
 
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN:

@@ -16,10 +16,31 @@ limitations under the License.
 import traceback
 import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.attr_util as attr_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+
+
+@oneflow_export("experimental.scope.config")
+def api_scope_config(**kwargs):
+    name2default = session_ctx.GetDefaultSession().scope_attr_name2default_val
+
+    def SetScopeProto(scope_proto):
+        for attr_name, py_value in kwargs.items():
+            assert attr_name in name2default
+            attr_util.SetAttrValue(
+                scope_proto.attr_name2attr_value[attr_name],
+                py_value,
+                name2default[attr_name],
+            )
+
+    sess = session_ctx.GetDefaultSession()
+    scope = MakeScope(
+        lambda old_scope, builder: old_scope.BuildBySetter(builder, SetScopeProto)
+    )
+    return ScopeContext(scope)
 
 
 @oneflow_export("current_scope")

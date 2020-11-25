@@ -18,11 +18,27 @@ from __future__ import absolute_import
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
+import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.symbol_storage as symbol_storage
+
+
+def AddScopeToStorage(scope_symbol_id, scope_proto_str):
+    if symbol_storage.HasSymbol4SerializedScopeProto(scope_proto_str):
+        return
+    scope_proto = text_format.Parse(scope_proto_str, scope_pb.ScopeProto())
+    parent_scope_symbol = symbol_storage.GetSymbol4Id(
+        scope_proto.parent_scope_symbol_id
+    )
+    symbol = scope_symbol.ScopeSymbol(scope_symbol_id, scope_proto, parent_scope_symbol)
+    symbol_storage.SetSymbol4Id(scope_symbol_id, symbol)
+    symbol_storage.SetSymbol4SerializedScopeProto(scope_proto_str, symbol)
 
 
 def MakeScopeSymbol(job_conf, parallel_conf_str, is_mirrored):

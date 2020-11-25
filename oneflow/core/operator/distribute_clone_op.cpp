@@ -64,7 +64,7 @@ Maybe<void> DistributeCloneOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
   if (parallel_ctx->parallel_num() > 1) {
-    CHECK_EQ(parallel_ctx->parallel_num(), output_bns().size());
+    CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), output_bns().size());
     auto* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(parallel_ctx->parallel_id()));
     *out_blob_desc = in_blob_desc;
     return Maybe<void>::Ok();
@@ -83,7 +83,7 @@ Maybe<void> DistributeCloneOp::InferOutParallelDesc(
   FOR_RANGE(int, i, 0, output_bns().size()) {
     const auto& obn = output_bns().Get(i);
     if (op_parallel_desc.parallel_num() > 1) {
-      CHECK_EQ(op_parallel_desc.parallel_num(), output_bns().size());
+      CHECK_EQ_OR_RETURN(op_parallel_desc.parallel_num(), output_bns().size());
       *ParallelDesc4Obn(obn) = ParallelDesc(op_parallel_desc.GetParallelIdOnlyParallelConf(i));
     } else {
       *ParallelDesc4Obn(obn) = op_parallel_desc;
@@ -99,8 +99,8 @@ Maybe<void> DistributeCloneOp::InferParallelSignature() {
   mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
   auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
   (*map)["in"] = op_parallel_desc_symbol_id;
-  const auto& op_parallel_desc = *JUST(scope.GetParallelDesc(op_conf()));
-  CHECK_EQ(op_parallel_desc.parallel_num(), output_bns().size());
+  const auto& op_parallel_desc = JUST(scope.GetParallelDesc(op_conf()));
+  CHECK_EQ_OR_RETURN(op_parallel_desc.parallel_num(), output_bns().size());
   FOR_RANGE(int, i, 0, output_bns().size()) {
     const auto& out_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
     const std::shared_ptr<cfg::ParallelConf>& cfg_out_parallel_conf =
