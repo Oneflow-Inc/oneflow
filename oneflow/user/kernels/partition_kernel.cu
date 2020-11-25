@@ -36,29 +36,21 @@ __global__ void GetPartionBoundIndex(const int64_t n, const int64_t parallel_num
   const K num = in_size_ptr[0];
   CUDA_1D_KERNEL_LOOP(i, num) {
     if (i != 0) {
-      const T cur_in = in_ptr[i];
-      const T pre_in = in_ptr[i - 1];
+      const T cur_in = in_ptr[i] / num_classes_per_rank;
+      const T pre_in = in_ptr[i - 1] / num_classes_per_rank;
+      if (cur_in > pre_in) {
 #pragma unroll
-      for (int32_t j = 1; j < parallel_num; ++j) {
-        const int32_t lower_bound = j * num_classes_per_rank;
-        if (cur_in >= lower_bound && pre_in < lower_bound) { out_ptr[j] = static_cast<K>(i); }
+        for (int32_t j = pre_in + 1; j <= cur_in; ++j) { out_ptr[j] = static_cast<K>(i); }
       }
     }
-    if (i == 0) {
-      const T in = in_ptr[i];
-#pragma unroll
-      for (int32_t j = 0; j <= parallel_num; ++j) {
-        const int32_t lower_bound = j * num_classes_per_rank;
-        if (in >= lower_bound) { out_ptr[j] = 0; }
-      }
-    }
-    if (i == num - 1) {
-      const T in = in_ptr[i];
-#pragma unroll
-      for (int32_t j = parallel_num; j >= 0; --j) {
-        const int32_t lower_bound = j * num_classes_per_rank;
-        if (in < lower_bound) { out_ptr[j] = num; }
-      }
+  }
+  CUDA_1D_KERNEL_LOOP(i, parallel_num + 1) {
+    const K first_in = in_ptr[0] / num_classes_per_rank;
+    const K last_in = in_ptr[num - 1] / num_classes_per_rank;
+    if (i <= first_in) {
+      out_ptr[i] = 0;
+    } else if (i > last_in) {
+      out_ptr[i] = num;
     }
   }
 }
