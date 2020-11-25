@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       max-parallel: 5
       matrix:
-        cuda_version: [10.0, 10.1, 10.2, 11.0, 11.1]
+        cuda_version: ['10.0', '10.1', '10.2', '11.0', '11.1']
     steps:
     - name: Fix permissions
       run: |
