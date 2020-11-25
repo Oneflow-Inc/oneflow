@@ -23,6 +23,8 @@ namespace oneflow {
 
 namespace {
 
+constexpr int32_t kUnfoldMaxGpuBlockSize = 256;
+
 template<typename T>
 __global__ void UnfoldCFirstForward(const int64_t elem_cnt, 
                                     const int64_t in_d, const int64_t in_h,
@@ -112,26 +114,32 @@ __global__ void UnfoldCFirstBackward(const int64_t elem_cnt,
     const int64_t wstart = pw < kernel_size_extent_w ? 0 : (pw - kernel_size_extent_w) / strides_w + 1;
     const int64_t wend = min(pw / strides_w + 1, out_5d_w);
 
+    T val = static_cast<T>(0);
     for (int64_t d = dstart; d < dend; d += 1) {
-      int64_t k_d = pd - d * strides_d;
-      if (k_d % dilation_rate_d != 0) continue;
-      k_d /= dilation_rate_d;
       for (int64_t h = hstart; h < hend; h += 1) {
-        int64_t k_h = ph - h * strides_h;
-        if (k_h % dilation_rate_h != 0) continue;
-        k_h /= dilation_rate_h;
         for (int64_t w = wstart; w < wend; w += 1) {
-          int64_t k_w = pw - w * strides_w;
-          if (k_w % dilation_rate_w != 0) continue;
-          k_w /= dilation_rate_w;
-          const int64_t out_row_index = (k_d * kernel_size_h + k_h) * kernel_size_w + k_w;
-          const int64_t out_col_index = (d * out_5d_h + h) * out_5d_w + w;
-          const int64_t output_index = out_row_index * out_cols + out_col_index;
-          input_diff[index] += output_diff[output_index];
+          int64_t k_d = (pd - d * strides_d);
+          int64_t k_h = (ph - h * strides_h);
+          int64_t k_w = (pw - w * strides_w);
+          if (k_d % dilation_rate_d == 0 && k_h % dilation_rate_h == 0 && k_w % dilation_rate_w == 0) {
+            k_d /= dilation_rate_d;
+            k_h /= dilation_rate_h;
+            k_w /= dilation_rate_w;
+            const int64_t out_row_index = (k_d * kernel_size_h + k_h) * kernel_size_w + k_w;
+            const int64_t out_col_index = (d * out_5d_h + h) * out_5d_w + w;
+            const int64_t output_index = out_row_index * out_cols + out_col_index;
+            val += output_diff[output_index];
+          }
         }
       }
     }
+    input_diff[index] = val;
   }
+}
+
+inline int32_t GetUnfoldMaxNumBlocks(const int32_t n) {
+  CHECK_GT(n, 0);
+  return std::min((n + kUnfoldMaxGpuBlockSize - 1) / kUnfoldMaxGpuBlockSize, kCudaMaxBlocksNum);
 }
 
 class UnfoldGpuOpKernelState final : public user_op::OpKernelState {
@@ -182,14 +190,18 @@ struct UnfoldGpuKernelUtil {
     const T* input = in_blob->dptr<T>();
     T* output = out_blob->mut_dptr<T>();
     cudaMemset(output, T(0), out.elem_cnt() * sizeof(T));
-    RUN_CUDA_KERNEL((UnfoldCFirstForward<T>), device_ctx, out_5d.elem_cnt(), out_5d.elem_cnt(),
-                    in.At(2), in.At(3), in.At(4),
-                    out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
-                    strides.at(0), strides.at(1), strides.at(2),
-                    padding_before.at(0), padding_before.at(1), padding_before.at(2),
-                    kernel_size.at(0), kernel_size.at(1), kernel_size.at(2),
-                    dilation_rate.at(0), dilation_rate.at(1), dilation_rate.at(2),
-                    in_channel_size, out_channel_size, input, output);
+
+    UnfoldCFirstForward<T><<<GetUnfoldMaxNumBlocks(out_5d.elem_cnt()),
+                              kUnfoldMaxGpuBlockSize, 0, device_ctx->cuda_stream()>>>(
+      out_5d.elem_cnt(),
+      in.At(2), in.At(3), in.At(4),
+      out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
+      strides.at(0), strides.at(1), strides.at(2),
+      padding_before.at(0), padding_before.at(1), padding_before.at(2),
+      kernel_size.at(0), kernel_size.at(1), kernel_size.at(2),
+      dilation_rate.at(0), dilation_rate.at(1), dilation_rate.at(2),
+      in_channel_size, out_channel_size, input, output);
+    OF_CUDA_CHECK(cudaGetLastError());
 
   }
 
@@ -209,14 +221,18 @@ struct UnfoldGpuKernelUtil {
     const T* output_diff = out_diff_blob->dptr<T>();
     T* input_diff = in_diff_blob->mut_dptr<T>();
     cudaMemset(input_diff, T(0), in.elem_cnt() * sizeof(T));
-    RUN_CUDA_KERNEL((UnfoldCFirstBackward<T>), device_ctx, in.elem_cnt(), in.elem_cnt(),
-                    in.At(2), in.At(3), in.At(4),
-                    out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
-                    strides.at(0), strides.at(1), strides.at(2),
-                    padding_before.at(0), padding_before.at(1), padding_before.at(2),
-                    kernel_size.at(0), kernel_size.at(1), kernel_size.at(2),
-                    dilation_rate.at(0), dilation_rate.at(1), dilation_rate.at(2),
-                    in_channel_size, out_channel_size, output_diff, input_diff);
+
+    UnfoldCFirstBackward<T><<<GetUnfoldMaxNumBlocks(in.elem_cnt()),
+                              kUnfoldMaxGpuBlockSize, 0, device_ctx->cuda_stream()>>>(
+      in.elem_cnt(),
+      in.At(2), in.At(3), in.At(4),
+      out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
+      strides.at(0), strides.at(1), strides.at(2),
+      padding_before.at(0), padding_before.at(1), padding_before.at(2),
+      kernel_size.at(0), kernel_size.at(1), kernel_size.at(2),
+      dilation_rate.at(0), dilation_rate.at(1), dilation_rate.at(2),
+      in_channel_size, out_channel_size, output_diff, input_diff);
+    OF_CUDA_CHECK(cudaGetLastError());
 
   }
 
