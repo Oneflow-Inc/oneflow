@@ -293,12 +293,6 @@ int64_t NormalForwardLogicalNode::GetAreaId() const {
   }
 }
 
-std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
-
-CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
-
-int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
 int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;
   return ++next_area_id;
