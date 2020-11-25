@@ -2755,7 +2755,7 @@ def l1_loss(
     )
 
     if name is None:
-        name = "L1Loss"
+        name = id_util.UniqueStr("L1Loss")
 
     l1_value = flow.math.abs(
         flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
@@ -2933,7 +2933,7 @@ def mse_loss(
     )
 
     if name is None:
-        name = id_util.UniqueStr("MSELoss_")
+        name = id_util.UniqueStr("MSELoss")
 
     mean_squared_difference = flow.math.squared_difference(
         target, input, name=name + "_mean_squared"
