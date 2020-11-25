@@ -26,8 +26,8 @@ import os
 def _compare_triplet_margin_loss_with_np(
     anchor_shape,
     pos_shape,
-    neg_shape, 
-    eps, 
+    neg_shape,
+    eps,
     margin,
     p,
     swap,
@@ -38,7 +38,7 @@ def _compare_triplet_margin_loss_with_np(
     anchor = np.random.random(size=anchor_shape).astype(np.float32)
     pos = np.random.random(size=pos_shape).astype(np.float32)
     neg = np.random.random(size=neg_shape).astype(np.float32)
-    eps = eps 
+    eps = eps
 
     assert device_type in ["cpu", "gpu"]
 
@@ -74,7 +74,9 @@ def _compare_triplet_margin_loss_with_np(
             "np_triplet_margin_loss_sum": np_triplet_margin_loss_sum,
         }
 
-    np_out_tripletloss_dict = np_triplet_margin_loss(anchor, pos, neg, eps, margin, p, swap)
+    np_out_tripletloss_dict = np_triplet_margin_loss(
+        anchor, pos, neg, eps, margin, p, swap
+    )
 
     def np_triplet_loss_diff(anchor, pos, neg, margin, p):
         def _compute_distance(x1, x2, x3):
@@ -229,8 +231,8 @@ def _gen_arg_dict(shape, eps, margin, p, swap, device_type, machine_ids, device_
 class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_triplet_margin_loss_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 3), 
-            eps=1e-6, 
+            shape=(3, 3),
+            eps=1e-6,
             margin=1,
             p=1.5,
             swap=False,
@@ -246,7 +248,7 @@ class Test_triplet_loss_1n1d(flow.unittest.TestCase):
     def test_margin_ranking_loss_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 6),
-            eps=1e-6, 
+            eps=1e-6,
             margin=1,
             p=2.0,
             swap=False,
@@ -263,8 +265,8 @@ class Testmarginloss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_margin_ranking_loss_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(6, 6), 
-            eps=1e-6, 
+            shape=(6, 6),
+            eps=1e-6,
             margin=1,
             p=2.0,
             swap=False,

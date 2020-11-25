@@ -68,18 +68,16 @@ def _compare_margin_ranking_loss_with_np(
         # If loss > 0, the grad is: -target, else the grad is 0
         _elem_cnt = np_out.size
 
-        if np_out.shape != np_target.shape: 
+        if np_out.shape != np_target.shape:
             # Do Broadcast
             np_target = np.broadcast_to(np_target, shape=(np_out.shape))
 
         # If out > 0, the element = 1, else set to 0
-        _clip_zero_index = np.where(np_out>0, 1, 0)
+        _clip_zero_index = np.where(np_out > 0, 1, 0)
 
         _np_grad = -np_target
 
-        return {
-            "np_margin_ranking_grad_mean": _np_grad * _clip_zero_index / _elem_cnt
-        }
+        return {"np_margin_ranking_grad_mean": _np_grad * _clip_zero_index / _elem_cnt}
 
     np_grad_dict = np_margin_ranking_diff(
         np_out_marginloss_dict["np_margin_ranking_loss"], target

@@ -2674,10 +2674,12 @@ def l1_loss(
     
     .. math:: 
 
-        out = \frac{1}{n}\sum_{i=1}^n\max\ (0, -y*(x_1-x_2)+margin)
         output = \frac{1}{n}\sum_{i=1}^n|Target_i - Input_i|
     
+    if reduction = "sum": 
     
+    .. math:: 
+
         output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
@@ -3192,4 +3194,3 @@ def triplet_margin_loss(
         return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
     else:
         return _triplet_loss
-        
