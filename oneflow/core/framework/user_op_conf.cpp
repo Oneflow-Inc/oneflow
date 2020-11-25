@@ -147,6 +147,16 @@ bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
 }
 
+bool UserOpWrapper::HasGradTensor4OpOutput(const std::string& output_arg_name,
+                                           int32_t index) const {
+  auto it = op_conf().user_conf().output().find(output_arg_name);
+  CHECK(it != op_conf().user_conf().output().end())
+      << "arg_name: " << output_arg_name << ", index: " << index;
+  CHECK(index >= 0 && index < it->second.s_size())
+      << "arg_name: " << output_arg_name << ", index: " << index;
+  return diff_fn_(GenRepeatedBn(output_arg_name, index)) != nullptr;
+}
+
 std::string UserOpWrapper::output_grad(const std::string& output_arg_name, int32_t index) const {
   auto it = op_conf().user_conf().output().find(output_arg_name);
   CHECK(it != op_conf().user_conf().output().end())
