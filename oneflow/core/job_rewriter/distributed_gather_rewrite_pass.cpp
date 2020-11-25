@@ -88,35 +88,19 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
       parallel_conf.set_device_tag("gpu");
       parallel_conf.add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
 
-      OperatorConf unique_with_counts_op_conf{};
-      unique_with_counts_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
-      unique_with_counts_op_conf.set_name(op_name + "-unique_" + std::to_string(i));
-      auto* unique_with_counts_conf = unique_with_counts_op_conf.mutable_unique_with_counts_conf();
-      unique_with_counts_conf->set_x(GenLogicalBlobName(distribute_split_ids_op_conf.name(),
-                                                        distribute_split_ids_conf->out(i)));
-      unique_with_counts_conf->set_y("y");
-      unique_with_counts_conf->set_idx("idx");
-      unique_with_counts_conf->set_count("count");
-      unique_with_counts_conf->set_num_unique("num_unique");
-
-      job_builder.AddOps(parallel_conf, {unique_with_counts_op_conf});
-
-      map_ids.push_back(
-          GenLogicalBlobName(unique_with_counts_op_conf.name(), unique_with_counts_conf->idx()));
-
-      user_op::UserOpConfWrapperBuilder partition_op_builder(op_name + "-partition_"
-                                                             + std::to_string(i));
-      partition_op_builder.Op("partition")
-          .Input("in", GenLogicalBlobName(unique_with_counts_op_conf.name(),
-                                          unique_with_counts_conf->y()))
-          .Input("in_num_unique", GenLogicalBlobName(unique_with_counts_op_conf.name(),
-                                                     unique_with_counts_conf->num_unique()))
+      user_op::UserOpConfWrapperBuilder gather_dispatch_op_builder(op_name + "-gather_dispatch_"
+                                                                   + std::to_string(i));
+      gather_dispatch_op_builder.Op("gather_dispatch")
+          .Input("indices", GenLogicalBlobName(distribute_split_ids_op_conf.name(),
+                                               distribute_split_ids_conf->out(i)))
+          .Output("idx")
           .Attr<int64_t>("parallel_num", parallel_num)
           .Attr<int64_t>("num_classes", num_classes)
           .ScopeSymbolId(op_conf.scope_symbol_id());
-      partition_op_builder.Output("out", parallel_num).Output("num_unique", parallel_num);
-      auto partition_op = partition_op_builder.Build();
-      job_builder.AddOps(parallel_conf, {partition_op.op_conf()});
+      gather_dispatch_op_builder.Output("out", parallel_num).Output("count", parallel_num);
+      auto gather_dispatch_op = gather_dispatch_op_builder.Build();
+      job_builder.AddOps(parallel_conf, {gather_dispatch_op.op_conf()});
+      map_ids.push_back(gather_dispatch_op.output("idx", 0));
 
       FOR_RANGE(int32_t, j, 0, parallel_num) {
         OperatorConf sync_dynamic_resize_op_conf{};
@@ -126,8 +110,8 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
                                              + std::to_string(i));
         auto* sync_dynamic_resize_conf =
             sync_dynamic_resize_op_conf.mutable_sync_dynamic_resize_conf();
-        sync_dynamic_resize_conf->set_in(partition_op.output("out", j));
-        sync_dynamic_resize_conf->set_size(partition_op.output("num_unique", j));
+        sync_dynamic_resize_conf->set_in(gather_dispatch_op.output("out", j));
+        sync_dynamic_resize_conf->set_size(gather_dispatch_op.output("count", j));
         sync_dynamic_resize_conf->set_out("out");
         sync_dynamic_resize_conf->set_axis(0);
         job_builder.AddOps(parallel_conf, {sync_dynamic_resize_op_conf});
