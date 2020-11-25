@@ -2822,7 +2822,7 @@ def bce_loss(
     )
 
     if name is None:
-        name = "BCELoss"
+        name = id_util.UniqueStr("BCELoss")
 
     _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
     _cross_entropy_loss = flow.math.negative(
@@ -2933,7 +2933,7 @@ def mse_loss(
     )
 
     if name is None:
-        name = "MSELoss"
+        name = id_util.UniqueStr("MSELoss_")
 
     mean_squared_difference = flow.math.squared_difference(
         target, input, name=name + "_mean_squared"
@@ -3033,7 +3033,7 @@ def margin_ranking_loss(
     )
 
     if name is None:
-        name = id_util.UniqueStr("MarginRankingLoss_")
+        name = id_util.UniqueStr("MarginRankingLoss")
 
     _margin_loss = flow.math.negative(flow.math.subtract(input1, input2))
     _margin_loss = flow.math.multiply(target, _margin_loss)
@@ -3138,7 +3138,7 @@ def triplet_margin_loss(
     ), "For now we only support `swap=True`, OneFlow still have backward error in minimum"
 
     if name is None:
-        name = id_util.UniqueStr("TripletMarginLoss_")
+        name = id_util.UniqueStr("TripletMarginLoss")
 
     def _p_norm(x, p=2.0, name="p_norm"):
         r"""Compute the p-norm 
