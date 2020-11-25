@@ -655,6 +655,7 @@ const ::std::set<::std::type_index>& Const{{ util.class_name(cls) }}::ValidTypeI
     case {{ util.field_number(field) }}: {
       static const ::std::set<::std::type_index> type_indices{
 {% if util.field_has_repeated_label(field) %}
+        typeid(::oneflow::cfg::_ConstRepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>)
         typeid(::oneflow::cfg::_RepeatedField_<{{ util.field_type_name_with_cfg_namespace(field) }}>)
 {% elif util.field_has_map_label(field) %}
         typeid(::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>)
