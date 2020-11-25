@@ -45,6 +45,7 @@ jobs:
           echo "cuda_version empty"
           exit 1
         fi
+        python3 ci/build/ensure_img.py
         python_version=${python_version:-"3.5,3.6,3.7,3.8"}
         echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
         echo "python_version=${python_version}" >> $GITHUB_ENV
