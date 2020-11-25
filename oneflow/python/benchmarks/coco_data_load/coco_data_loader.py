@@ -136,11 +136,11 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
         index += 1
         image_size = ret[index]
         index += 1
-        gt_bbox = ret[index: index + cfg.batch_size]
+        gt_bbox = ret[index : index + cfg.batch_size]
         index += cfg.batch_size
-        gt_label = ret[index: index + cfg.batch_size]
+        gt_label = ret[index : index + cfg.batch_size]
         index += cfg.batch_size
-        gt_mask = ret[index: index + cfg.batch_size]
+        gt_mask = ret[index : index + cfg.batch_size]
         cur = time.perf_counter()
 
         s[i] = cur - timestamp
