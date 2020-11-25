@@ -141,8 +141,8 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
         gt_label = ret[index : index + cfg.batch_size]
         index += cfg.batch_size
         gt_mask = ret[index : index + cfg.batch_size]
-        cur = time.perf_counter()
 
+        cur = time.perf_counter()
         s[i] = cur - timestamp
         timestamp = cur
 
