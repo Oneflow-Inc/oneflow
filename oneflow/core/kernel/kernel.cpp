@@ -144,7 +144,9 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                               DeviceCtx* device_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   Kernel* rptr = kernel_registration::CreateKernel(conf);
-  if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
+  if (rptr == nullptr && IsClassRegistered<int32_t, Kernel>(op_type, conf)) {
+    rptr = NewObj<int32_t, Kernel>(op_type, conf);
+  }
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
