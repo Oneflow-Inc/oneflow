@@ -20,7 +20,6 @@ jobs:
     name: Staging Release
     timeout-minutes: 1200
     runs-on: [self-hosted, linux, release]
-    continue-on-error: true
     strategy:
       fail-fast: false
       max-parallel: 5
