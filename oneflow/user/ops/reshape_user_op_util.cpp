@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/ops/reshape_user_op_util.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
@@ -113,8 +114,39 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_sha
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
     int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);
+    CHECK_EQ_OR_RETURN(ctx->inputs().size(), 1);
+    CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1);
     ctx->NewBuilder()
         .Split(ctx->inputs(), start_in_axis)
+        .Split(ctx->outputs(), start_out_axis)
+        .Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReshapeUserOpUtil::GetReshapeLikeUserOpSbpSignatures(const Shape& in_shape,
+                                                             const Shape& out_shape,
+                                                             user_op::SbpContext* ctx) {
+  HashMap<int, int> squeezed_group_start_in_axis2out_axis;
+  HashMap<int, int> in_squeezed_axis2original_axis;
+  HashMap<int, int> out_squeezed_axis2original_axis;
+  {
+    Shape squeezed_in_shape;
+    Shape squeezed_out_shape;
+    ReshapeUserOpUtil::Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
+    ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
+    ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
+                                                   ctx->parallel_num(),
+                                                   &squeezed_group_start_in_axis2out_axis);
+  }
+  CHECK_EQ_OR_RETURN(ctx->outputs().size(), 1);
+  for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
+    int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
+    int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);
+    ctx->NewBuilder()
+        .Split({"in", 0}, start_in_axis)
+        .Split({"like", 0}, start_out_axis)
         .Split(ctx->outputs(), start_out_axis)
         .Build();
   }
