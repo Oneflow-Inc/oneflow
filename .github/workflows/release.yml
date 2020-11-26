@@ -42,6 +42,8 @@ jobs:
       env:
         matrix_release_version: ${{matrix.release_version }}
         python_version: ${{ github.event.inputs.python_version }}
+        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       run: |
         set -x
         if [ "$matrix_release_version" == "cpu" ]; then
@@ -95,7 +97,11 @@ jobs:
         oss_dir=${git_branch}/${GITHUB_SHA}
         echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
         echo "git_branch=${git_branch}" >> $GITHUB_ENV
+
+        $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir})
+        echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
     - name: Build OneFlow
+      if: github.ref == 'refs/heads/master'
       uses: ./.github/actions/whl
       with:
         tmp_dir: ${ci_tmp_dir}
