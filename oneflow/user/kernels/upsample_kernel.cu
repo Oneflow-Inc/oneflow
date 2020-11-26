@@ -64,7 +64,20 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
 
 template<typename T>
 __host__ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool align_corners, const T scale) {
-  return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1) : 1.0 / scale;
+/* When the scales are inferred from the input and output sizes,
+ * we view each pixel as an area, idx + 0.5 as its center index.
+ * Here is an example formula in 1D case.
+ * if align_corners: center of two corner pixel areas are preserved,
+ *     (0.5, 0.5) -> (0.5, 0.5),
+ *     (input_size - 0.5, 0.5) -> (output_size - 0.5)
+ *     scale = (input_size - 0.5 - 0.5) / (output_size - 0.5 - 0.5)
+ *     src_index + 0.5 - 0.5 = scale * (dst_index + 0.5 - 0.5)
+ * if not align_corners: the whole range is scaled accordingly
+ *     scale = input_size / output_size
+ *     src_idx + 0.5 = scale * (dst_index + 0.5)
+ */
+  return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1) :
+                         (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
 }
 
 template<typename T>

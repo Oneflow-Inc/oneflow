@@ -99,7 +99,7 @@ def compare_with_tensorflow(
             ), interpolation
         else:
             print("#####################################################################")
-            print("# Warning: Please install pytorch for `incubic` upsampling testing! #")
+            print("# Warning: Please install pytorch for `bicubic` upsampling testing! #")
             print("#####################################################################")
     else:
         # TensorFlow
