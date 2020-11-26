@@ -53,7 +53,6 @@ def compile(compiler, flags, link, inputs, output):
         )
     else:
         cmd = "{} {} {} {} -o {}".format(compiler, inputs, flags, link, output)
-    print(cmd)
     run_cmd(cmd)
     return True
 
