@@ -628,6 +628,14 @@ def NewPhysicalSymbolId():
     return object_id
 
 
+def GetOpAttributes():
+    op_attributes, error_str = oneflow_internal.GetSerializedOpAttributes()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
+
+
 def GetJobSet():
     job_set, error_str = oneflow_internal.GetSerializedJobSet()
     error = text_format.Parse(error_str, error_util.ErrorProto())
