@@ -25,6 +25,9 @@ jobs:
       max-parallel: 5
       matrix:
         cuda_version: ['10.0', '10.1', '10.2', '11.0', '11.1']
+        include:
+          - cuda_version: '10.2'
+            extra_flags: "--cpu"
     steps:
     - name: Fix permissions
       run: |
@@ -34,8 +37,9 @@ jobs:
       env:
         input_cuda_version: ${{ github.event.inputs.cuda_version }}
         matrix_cuda_version: ${{matrix.cuda_version }}
+        matrix_extra_flags: ${{matrix.extra_flags }}
+        inputs_extra_flags: ${{ github.event.inputs.extra_flags }}
         python_version: ${{ github.event.inputs.python_version }}
-        extra_flags: ${{ github.event.inputs.extra_flags }}
       run: |
         set -x
         cuda_version=${matrix_cuda_version}
@@ -48,6 +52,9 @@ jobs:
         python_version=${python_version:-"3.5,3.6,3.7,3.8"}
         echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
         echo "python_version=${python_version}" >> $GITHUB_ENV
+
+        extra_flags="${inputs_extra_flags} ${matrix_extra_flags}"
+        echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
         tmp_dir=$HOME/ci-tmp-rel
         echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
