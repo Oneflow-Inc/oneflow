@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/operator/normal_model_update_op.h"
 
 namespace oneflow {
 
@@ -209,7 +208,7 @@ void OpNode::ForEachSplitOrBroadcastBlobDesc(
     int32_t axis = sbp_parallel.split_parallel().axis();
     CHECK_GE(axis, 0);
     CHECK_LT(axis, blob_desc.shape().NumAxes());
-    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num());
+    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num()) << this->op_->op_name();
     BalancedSplitter bs(blob_desc.shape().At(axis), parallel_desc().parallel_num());
     BlobDesc sub_blob_desc(blob_desc);
     FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) {
@@ -439,8 +438,10 @@ void OpGraph::InitEdges() {
       const auto it = producer_op_name2lbi2obn.find(pair.first);
       CHECK(it != producer_op_name2lbi2obn.end()) << "producer_op_name: " << pair.first;
       const auto& lbi2obn = it->second;
-      OpNode* producer = lbi2producer.at(lbis->at(0));
-      Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
+      auto producer_it = lbi2producer.find(lbis->front());
+      CHECK(producer_it != lbi2producer.end())
+          << "producer not found: " << GenLogicalBlobName(lbis->front());
+      Connect(producer_it->second, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
   });
 }

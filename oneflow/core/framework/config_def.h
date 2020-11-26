@@ -32,6 +32,10 @@ struct ConfigDefBuidler final {
                                  const std::string& description) const;
   const ConfigDefBuidler& String(const std::string& name, const std::string& default_val,
                                  const std::string& description) const;
+
+  const ConfigDefBuidler& ListInt64(const std::string& name,
+                                    const std::vector<int64_t>& default_val,
+                                    const std::string& description) const;
 };
 
 #define REGISTER_ENV_CONFIG_DEF() REGISTER_CONFIG_DEF(kEnvConfigDefType)
