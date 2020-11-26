@@ -22,15 +22,22 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> AutoGrad(const OpGraph& op_graph, JobBuilder* job_builder,
+class JobPassCtx;
+
+Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
+                                         std::function<bool(OpNode*)>* NeedBackwardOp);
+Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
+Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
+                                   JobBuilder* job_builder,
+                                   const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
-void ScaleModelDiffByLossScale(const OpGraph& op_graph, JobBuilder* job_builder,
+void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
