@@ -193,11 +193,10 @@ Maybe<std::string> GetSerializedOpAttributes() {
     const Job& job = job_ctx_mgr->job_set().job(i);
     auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
     const auto& op_graph = JUST(OpGraph::New(job));
-    JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
-      const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
+    op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
+      const auto& op_attribute = op_node->op().GetOpAttributeWithoutOpNameAndLbn();
       op_attribute_list.mutable_op_attribute()->Add()->CopyFrom(*op_attribute);
-      return Maybe<void>::Ok();
-    }));
+    });
   }
   return PbMessage2TxtString(op_attribute_list);
 }
