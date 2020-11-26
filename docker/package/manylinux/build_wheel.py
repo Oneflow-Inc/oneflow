@@ -6,6 +6,7 @@ from pathlib import Path
 
 def build_arg_env(env_var_name):
     val = os.getenv(env_var_name)
+    assert val, f"system environment variable {env_var_name} found empty"
     return f"--build-arg {env_var_name}={val}"
 
 
