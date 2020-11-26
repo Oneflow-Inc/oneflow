@@ -186,7 +186,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
     });
 
 REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
