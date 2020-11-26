@@ -286,10 +286,10 @@ def CompareBnWithTensorFlow(
     op_args=None,
     input_minval=-10,
     input_maxval=10,
-    y_rtol=1e-5,
-    y_atol=1e-5,
-    x_diff_rtol=1e-5,
-    x_diff_atol=1e-5,
+    y_rtol=5e-3,
+    y_atol=5e-3,
+    x_diff_rtol=5e-3,
+    x_diff_atol=5e-3,
     training=True,
     trainable=True,
 ):
@@ -302,11 +302,6 @@ def CompareBnWithTensorFlow(
         flow_args, tf_args = op_args.flow_args, op_args.tf_args
 
     x = np.random.uniform(low=input_minval, high=input_maxval, size=input_shape)
-    if device_type == "cpu":
-        y_rtol *= 100
-        y_atol *= 100
-        x_diff_rtol *= 100
-        x_diff_atol *= 100
 
     msg = (
         "device_type={}, input_shape={}, data_type={}, op_args={}, input_minval={}, input_maxval={}, y_rtol={}, "

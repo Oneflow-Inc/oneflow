@@ -40,8 +40,8 @@ void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::ReduceSum(
   const Shape flat_in_shape({1, n, m});
   Memset<device_type>(ctx, values_out, 0, n * m * sizeof(T));
 
-  UnsortedSegmentSumKernelUtil<device_type, T, IDX>::UnsortedSegmentSum(ctx, unique_idx_ptr, values,
-                                                                        n, n, 1, m, 0, values_out);
+  UnsortedSegmentSumKernelUtil<device_type, T, IDX, T>::UnsortedSegmentSum(
+      ctx, unique_idx_ptr, values, n, n, 1, m, 0, values_out);
 }
 
 template<DeviceType device_type, typename K, typename T, typename IDX>

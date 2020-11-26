@@ -10,7 +10,7 @@ args = parser.parse_args()
 
 def main():
     for p in glob.glob(os.path.join(args.root_path, "oneflow/*/")):
-        if p.endswith("python/"):
+        if p.endswith("python/") or p.endswith("include/"):
             pass
         else:
             shutil.rmtree(p)
