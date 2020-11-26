@@ -20,14 +20,19 @@ jobs:
       fail-fast: false
       max-parallel: 5
       matrix:
-        cuda_version: ['10.0', '10.1', '10.2', '11.0', '11.1']
-        include:
-          - cuda_version: '10.0'
-            extra_flags: ['', '--cpu', '--xla']
-          - cuda_version: '10.1'
-            extra_flags: ['', '--xla']
-          - cuda_version: '10.2'
-            extra_flags: ['', '--xla']
+        release_version: [
+          'cpu',
+          'cu100',
+          'cu101',
+          'cu102',
+          'cu110',
+          'cu111',
+          'cu100_xla',
+          'cu101_xla',
+          'cu102_xla',
+          'cu110_xla',
+          'cu111_xla'
+        ]
     steps:
     - name: Fix permissions
       run: |
@@ -35,13 +40,42 @@ jobs:
     - uses: actions/checkout@v2
     - name: Set environment variables
       env:
-        input_cuda_version: ${{ github.event.inputs.cuda_version }}
-        matrix_cuda_version: ${{matrix.cuda_version }}
-        matrix_extra_flags: ${{matrix.extra_flags }}
+        matrix_release_version: ${{matrix.release_version }}
         python_version: ${{ github.event.inputs.python_version }}
       run: |
         set -x
-        cuda_version=${matrix_cuda_version}
+        if [ "$matrix_release_version" == "cpu" ]; then
+            cuda_version="10.2"
+            extra_flags="--cpu"
+        elif [ "$matrix_release_version" == "cu100" ]; then
+            cuda_version="10.0"
+        elif [ "$matrix_release_version" == "cu101" ]; then
+            cuda_version="10.1"
+        elif [ "$matrix_release_version" == "cu102" ]; then
+            cuda_version="10.2"
+        elif [ "$matrix_release_version" == "cu110" ]; then
+            cuda_version="11.0"
+        elif [ "$matrix_release_version" == "cu111" ]; then
+            cuda_version="11.1"
+        elif [ "$matrix_release_version" == "cu100_xla" ]; then
+            cuda_version="10.0"
+        elif [ "$matrix_release_version" == "cu101_xla" ]; then
+            cuda_version="10.1"
+            extra_flags="--xla"
+        elif [ "$matrix_release_version" == "cu102_xla" ]; then
+            cuda_version="10.2"
+            extra_flags="--xla"
+        elif [ "$matrix_release_version" == "cu110_xla" ]; then
+            cuda_version="11.0"
+            extra_flags="--xla"
+        elif [ "$matrix_release_version" == "cu111_xla" ]; then
+            cuda_version="11.1"
+            extra_flags="--xla"
+        else
+            echo "Release version: $matrix_release_version not supported"
+            exit 1
+        fi
+
         if [ -z "$cuda_version" ]
         then
           echo "cuda_version empty"
@@ -51,8 +85,6 @@ jobs:
         python_version=${python_version:-"3.5,3.6,3.7,3.8"}
         echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
         echo "python_version=${python_version}" >> $GITHUB_ENV
-
-        extra_flags="${matrix_extra_flags}"
         echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
         tmp_dir=$HOME/ci-tmp-rel
