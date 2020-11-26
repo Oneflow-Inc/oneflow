@@ -149,7 +149,7 @@ class TestUnfoldPadding(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["unfold_conf"] = unfold_confs
         arg_dict["data_type"] = ["float32", "double"]
-        torch_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         for case in GenArgList(arg_dict):
             (device_type, unfold_conf, data_type) = case
@@ -170,7 +170,7 @@ class TestUnfoldPadding(flow.unittest.TestCase):
             strides = _GetSequence(strides, dim, "strides")
             dilation_rate = _GetSequence(dilation_rate, dim, "dilation_rate")
             padding_torch = list(0 for _ in range(dim))
-            in_dhw = list(x_shape)[-dim :]
+            in_dhw = list(x_shape)[-dim:]
 
             valid_case = True
             if padding == "SAME":
@@ -182,12 +182,19 @@ class TestUnfoldPadding(flow.unittest.TestCase):
                     padding_torch[i] //= 2
 
             # Random inputs
-            #x = np.arange(np.prod(x_shape)).astype(type_name_to_np_type[data_type]).reshape(*x_shape)
+            # x = np.arange(np.prod(x_shape)).astype(type_name_to_np_type[data_type]).reshape(*x_shape)
             x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
 
             # torch results
-            x_torch = torch.tensor(x, requires_grad=True, device=torch_device, dtype=torch.float)
-            model = torch.nn.Unfold(ksize, stride=strides, padding=tuple(padding_torch), dilation=dilation_rate)
+            x_torch = torch.tensor(
+                x, requires_grad=True, device=torch_device, dtype=torch.float
+            )
+            model = torch.nn.Unfold(
+                ksize,
+                stride=strides,
+                padding=tuple(padding_torch),
+                dilation=dilation_rate,
+            )
             model.to(torch_device)
             y_torch = model(x_torch)
             z = y_torch.sum()
@@ -240,7 +247,8 @@ class TestUnfoldPadding(flow.unittest.TestCase):
                         data_format=data_format,
                     )
                     flow.optimizer.SGD(
-                        flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+                        flow.optimizer.PiecewiseConstantScheduler([], [1e-4]),
+                        momentum=0,
                     ).minimize(y)
                 return y
 

@@ -24,15 +24,12 @@ namespace {
 
 class UnfoldCpuOpKernelState final : public user_op::OpKernelState {
  public:
-  UnfoldCpuOpKernelState(ParamsUnfold3D params_3d)
-      : params_3d(params_3d) {}
+  UnfoldCpuOpKernelState(ParamsUnfold3D params_3d) : params_3d(params_3d) {}
   const ParamsUnfold3D& GetParams3D() { return params_3d; }
 
   static std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(
       user_op::KernelInitContext* ctx, const int32_t& dim) {
-    if (2 != dim) {
-        UNIMPLEMENTED();
-    }
+    if (2 != dim) { UNIMPLEMENTED(); }
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
@@ -42,8 +39,9 @@ class UnfoldCpuOpKernelState final : public user_op::OpKernelState {
     const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-    ParamsUnfold3D params_3d = ParamsUnfold3D(dim, x_shape, data_format, padding, padding_before, padding_after,
-                                  kernel_size, strides, dilation_rate, ceil_mode);
+    ParamsUnfold3D params_3d =
+        ParamsUnfold3D(dim, x_shape, data_format, padding, padding_before, padding_after,
+                       kernel_size, strides, dilation_rate, ceil_mode);
     std::shared_ptr<UnfoldCpuOpKernelState> state(new UnfoldCpuOpKernelState(params_3d));
     return std::move(state);
   }
@@ -68,27 +66,33 @@ class UnfoldCpuKernelUtil {
     T* data_col = out_blob->mut_dptr<T>();
     std::memset(data_col, T(0), out.elem_cnt() * sizeof(T));
 
-    const int64_t channels_col = in.At(1)
-      * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
+    const int64_t channels_col =
+        in.At(1) * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
     for (int64_t n = 0; n < in.At(0); ++n) {
       for (int64_t c_col = 0; c_col < channels_col; ++c_col) {
         const int64_t w_offset = c_col % kernel_size.at(2);
         const int64_t h_offset = (c_col / kernel_size.at(2)) % kernel_size.at(1);
-        const int64_t d_offset = ((c_col / kernel_size.at(2)) / kernel_size.at(1)) % kernel_size.at(0);
+        const int64_t d_offset =
+            ((c_col / kernel_size.at(2)) / kernel_size.at(1)) % kernel_size.at(0);
         const int64_t c_im = c_col / kernel_size.at(0) / kernel_size.at(1) / kernel_size.at(2);
 
         for (int64_t d_col = 0; d_col < out_5d.At(2); ++d_col) {
-          const int64_t d_im = d_col * strides.at(0) - padding_before.at(0) + d_offset * dilation_rate.at(0);
+          const int64_t d_im =
+              d_col * strides.at(0) - padding_before.at(0) + d_offset * dilation_rate.at(0);
 
           for (int64_t h_col = 0; h_col < out_5d.At(3); ++h_col) {
-            const int64_t h_im = h_col * strides.at(1) - padding_before.at(1) + h_offset * dilation_rate.at(1);
+            const int64_t h_im =
+                h_col * strides.at(1) - padding_before.at(1) + h_offset * dilation_rate.at(1);
 
             for (int64_t w_col = 0; w_col < out_5d.At(4); ++w_col) {
-              const int64_t w_im = w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
-              data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4) + w_col] =
-                  (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3) && w_im < in.At(4))
-                  ? data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im]
-                  : static_cast<T>(0);
+              const int64_t w_im =
+                  w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
+              data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4)
+                       + w_col] =
+                  (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3)
+                   && w_im < in.At(4))
+                      ? data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im]
+                      : static_cast<T>(0);
             }
           }
         }
@@ -109,27 +113,33 @@ class UnfoldCpuKernelUtil {
     T* data_im = in_diff_blob->mut_dptr<T>();
     std::memset(data_im, T(0), in.elem_cnt() * sizeof(T));
 
-    const int64_t channels_col = in.At(1)
-      * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
+    const int64_t channels_col =
+        in.At(1) * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
     for (int64_t n = 0; n < in.At(0); ++n) {
       for (int64_t c_col = 0; c_col < channels_col; ++c_col) {
         const int64_t d_offset = c_col % kernel_size.at(0);
         const int64_t h_offset = (c_col / kernel_size.at(0)) % kernel_size.at(1);
-        const int64_t w_offset = ((c_col / kernel_size.at(0)) / kernel_size.at(1)) % kernel_size.at(2);
+        const int64_t w_offset =
+            ((c_col / kernel_size.at(0)) / kernel_size.at(1)) % kernel_size.at(2);
         const int64_t c_im = c_col / kernel_size.at(0) / kernel_size.at(1) / kernel_size.at(2);
 
         for (int64_t d_col = 0; d_col < out_5d.At(2); ++d_col) {
-          const int64_t d_im = d_col * strides.at(0) - padding_before.at(0) + d_offset * dilation_rate.at(0);
+          const int64_t d_im =
+              d_col * strides.at(0) - padding_before.at(0) + d_offset * dilation_rate.at(0);
 
           for (int64_t h_col = 0; h_col < out_5d.At(3); ++h_col) {
-            const int64_t h_im = h_col * strides.at(1) - padding_before.at(1) + h_offset * dilation_rate.at(1);
+            const int64_t h_im =
+                h_col * strides.at(1) - padding_before.at(1) + h_offset * dilation_rate.at(1);
 
             for (int64_t w_col = 0; w_col < out_5d.At(4); ++w_col) {
-              const int64_t w_im = w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
+              const int64_t w_im =
+                  w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
 
-              if (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3) && w_im < in.At(4)) {
+              if (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3)
+                  && w_im < in.At(4)) {
                 data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im] +=
-                    data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4) + w_col];
+                    data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4)
+                             + w_col];
               }
             }
           }
@@ -275,29 +285,29 @@ class Unfold3DGradCpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_UNFOLD_CPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("unfold_1d")                                                  \
-      .SetCreateFn<Unfold1DCpuKernel<dtype>>()                                        \
+#define REGISTER_UNFOLD_CPU_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("unfold_1d")                                                    \
+      .SetCreateFn<Unfold1DCpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_1d_grad")                                             \
-      .SetCreateFn<Unfold1DGradCpuKernel<dtype>>()                                    \
+  REGISTER_USER_KERNEL("unfold_1d_grad")                                               \
+      .SetCreateFn<Unfold1DGradCpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_2d")                                                  \
-      .SetCreateFn<Unfold2DCpuKernel<dtype>>()                                        \
+  REGISTER_USER_KERNEL("unfold_2d")                                                    \
+      .SetCreateFn<Unfold2DCpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_2d_grad")                                             \
-      .SetCreateFn<Unfold2DGradCpuKernel<dtype>>()                                    \
+  REGISTER_USER_KERNEL("unfold_2d_grad")                                               \
+      .SetCreateFn<Unfold2DGradCpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_3d")                                                  \
-      .SetCreateFn<Unfold3DCpuKernel<dtype>>()                                        \
+  REGISTER_USER_KERNEL("unfold_3d")                                                    \
+      .SetCreateFn<Unfold3DCpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_3d_grad")                                             \
-      .SetCreateFn<Unfold3DGradCpuKernel<dtype>>()                                    \
+  REGISTER_USER_KERNEL("unfold_3d_grad")                                               \
+      .SetCreateFn<Unfold3DGradCpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 

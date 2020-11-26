@@ -48,11 +48,13 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
 
 }  // namespace
 
-ParamsUnfold3D::ParamsUnfold3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                   const std::string& padding, const std::vector<int32_t>& padding_before,
-                   const std::vector<int32_t>& padding_after, const std::vector<int32_t>& kernel_size,
-                   const std::vector<int32_t>& strides, const std::vector<int32_t>& dilation_rate,
-                   const bool ceil_mode)
+ParamsUnfold3D::ParamsUnfold3D(const int32_t dim, const ShapeView& x_shape,
+                               const std::string& data_format, const std::string& padding,
+                               const std::vector<int32_t>& padding_before,
+                               const std::vector<int32_t>& padding_after,
+                               const std::vector<int32_t>& kernel_size,
+                               const std::vector<int32_t>& strides,
+                               const std::vector<int32_t>& dilation_rate, const bool ceil_mode)
     : dim_(dim),
       kernel_size_3d_(Get3DVec(kernel_size, dim)),
       strides_3d_(Get3DVec(strides, dim)),
@@ -64,8 +66,8 @@ ParamsUnfold3D::ParamsUnfold3D(const int32_t dim, const ShapeView& x_shape, cons
       ceil_mode_(ceil_mode) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  Get3DOutputSize(x_3d_, kernel_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_rate_3d_, &y_3d_,
-                  &padding_before_3d_, &padding_after_3d_);
+  Get3DOutputSize(x_3d_, kernel_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_rate_3d_,
+                  &y_3d_, &padding_before_3d_, &padding_after_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
   } else {
@@ -79,16 +81,15 @@ ParamsUnfold3D::ParamsUnfold3D(const int32_t dim, const ShapeView& x_shape, cons
 void ParamsUnfold3D::Reset(const ShapeView& x_shape) {
   x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
            GetInDim(x_shape, data_format_, 2, dim_)};
-  Get3DOutputSize(x_3d_, kernel_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_rate_3d_, &y_3d_,
-                  &padding_before_3d_, &padding_after_3d_);
+  Get3DOutputSize(x_3d_, kernel_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_rate_3d_,
+                  &y_3d_, &padding_before_3d_, &padding_after_3d_);
 }
 
 Shape ParamsUnfold3D::GetYShape() const {
-  if (dim_ < 1 || dim_ > 3) {
-    UNIMPLEMENTED();
-  }
+  if (dim_ < 1 || dim_ > 3) { UNIMPLEMENTED(); }
   DimVector y_dim_vec{batch_num_, 0, 0};
-  y_dim_vec.at(1) = channel_num_ * kernel_size_3d_.at(0) * kernel_size_3d_.at(1) * kernel_size_3d_.at(2);
+  y_dim_vec.at(1) =
+      channel_num_ * kernel_size_3d_.at(0) * kernel_size_3d_.at(1) * kernel_size_3d_.at(2);
   y_dim_vec.at(2) = y_3d_.at(0) * y_3d_.at(1) * y_3d_.at(2);
   return Shape(y_dim_vec);
 }
