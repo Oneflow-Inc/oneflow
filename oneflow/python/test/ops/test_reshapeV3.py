@@ -32,7 +32,7 @@ def distribute_reshape_test(device_type, device_num, input_shape, shape):
     def ReshapeJob():
         with flow.scope.placement(device_type, "0:0-{}".format(device_num-1)):
             x = flow.get_variable(
-                "in",
+                "var_x",
                 shape=input_shape,
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=2, maxval=5),
