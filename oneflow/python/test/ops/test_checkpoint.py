@@ -233,7 +233,7 @@ def _TestPartiallyLoadNumpy(test_case, dtype):
     flow.load_variables({"x": new_val_np})
     var_y_value_after_loading = flow.get_all_variables()["y"].numpy()
     flow_res = model()
-    np_res = new_val_np.mean()
+    np_res = (var_y_value_after_loading + new_val_np).mean()
     test_case.assertTrue(np.allclose(flow_res, np_res))
     test_case.assertTrue(
         np.array_equal(var_y_value_before_loading, var_y_value_after_loading)
