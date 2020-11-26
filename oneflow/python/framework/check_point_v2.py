@@ -426,7 +426,7 @@ def _FeedValueToVariable(
 @oneflow_export("load_variables")
 @session_ctx.try_init_default_session
 def LoadVariables(
-    value_dict: Dict[str, ValueContainer], ignore_mismatch: bool = False,
+    value_dict: Dict[str, ValueContainer], ignore_mismatch: bool = True,
 ):
     """
     Load value in `value_dict` into oneflow variables.
