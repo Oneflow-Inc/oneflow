@@ -54,9 +54,8 @@ jobs:
         echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
         echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
 
-        git_hash=$(git rev-parse --short "$GITHUB_SHA")
         git_branch=${GITHUB_REF##*/}
-        oss_dir=${git_branch}/${git_hash}
+        oss_dir=${git_branch}/${GITHUB_SHA}
         echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
         echo "git_branch=${git_branch}" >> $GITHUB_ENV
     - name: Build OneFlow
