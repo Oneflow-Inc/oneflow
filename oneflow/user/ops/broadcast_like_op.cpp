@@ -114,7 +114,6 @@ REGISTER_USER_OP_GRAD("broadcast_like")
                                 [&ctx, &x_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(x_grad_op_name).output("y", 0);
                                 });
-
     });
 
 }  // namespace oneflow
