@@ -26,51 +26,53 @@ namespace {
 constexpr int32_t kUnfoldMaxGpuBlockSize = 256;
 
 template<typename T>
-__global__ void UnfoldCFirstForward(const int64_t elem_cnt, 
-                                    const int64_t in_d, const int64_t in_h,
-                                    const int64_t in_w, 
-                                    const int64_t out_5d_d, const int64_t out_5d_h,
-                                    const int64_t out_5d_w,
-                                    const int64_t out_cols,
-                                    const int64_t strides_d, const int64_t strides_h,
-                                    const int64_t strides_w,
-                                    const int64_t padding_before_d, const int64_t padding_before_h,
-                                    const int64_t padding_before_w,
-                                    const int64_t kernel_size_d, const int64_t kernel_size_h,
-                                    const int64_t kernel_size_w,
-                                    const int64_t dilation_rate_d, const int64_t dilation_rate_h,
-                                    const int64_t dilation_rate_w, 
-                                    const int64_t in_channel_size, const int64_t out_channel_size,
-                                    const T* input, T* output) {
+__global__ void UnfoldCFirstForward(const int64_t elem_cnt,
+                                    const T* data_im,
+                                    const int64_t depth,
+                                    const int64_t height,
+                                    const int64_t width,
+                                    const int64_t kernel_depth,
+                                    const int64_t kernel_height,
+                                    const int64_t kernel_width,
+                                    const int64_t pad_depth,
+                                    const int64_t pad_height,
+                                    const int64_t pad_width,
+                                    const int64_t stride_depth,
+                                    const int64_t stride_height,
+                                    const int64_t stride_width,
+                                    const int64_t dilation_depth,
+                                    const int64_t dilation_height,
+                                    const int64_t dilation_width,
+                                    const int64_t depth_col,
+                                    const int64_t height_col,
+                                    const int64_t width_col,
+                                    T* data_col) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
-    int64_t idx = index;
-    const int64_t pw = idx % out_5d_w;
-    idx /= out_5d_w;
-    const int64_t ph = idx % out_5d_h;
-    idx /= out_5d_h;
-    const int64_t pd = idx % out_5d_d;
-    idx /= out_5d_d;
-    input += in_channel_size * idx;
-    output += out_channel_size * idx;
+    int64_t w_out = index % width_col;
+    int64_t idx = index / width_col;
+    int64_t h_out = idx % height_col;
+    idx /= height_col;
+    int64_t d_out = idx % depth_col;
 
-    const int64_t dstart = pd * strides_d - padding_before_d;
-    const int64_t dend = dstart + (kernel_size_d - 1) * dilation_rate_d + 1;
-    const int64_t hstart = ph * strides_h - padding_before_h;
-    const int64_t hend = hstart + (kernel_size_h - 1) * dilation_rate_h + 1;
-    const int64_t wstart = pw * strides_w - padding_before_w;
-    const int64_t wend = wstart + (kernel_size_w - 1) * dilation_rate_w + 1;
-    const int64_t out_col_index = (pd * out_5d_h + ph) * out_5d_w + pw;
-    int64_t out_row_index = 0;
+    int64_t channel_in = idx / depth_col;
+    int64_t channel_out = channel_in * kernel_depth * kernel_height * kernel_width;
+    int64_t d_in = d_out * stride_depth - pad_depth;
+    int64_t h_in = h_out * stride_height - pad_height;
+    int64_t w_in = w_out * stride_width - pad_width;
 
-    for (int64_t d = dstart; d < dend; d += dilation_rate_d) {
-      for (int64_t h = hstart; h < hend; h += dilation_rate_h) {
-        for (int64_t w = wstart; w < wend; w += dilation_rate_w) {
-          if (d >= 0 && h >= 0 && w >= 0 && d < in_d && h < in_h && w < in_w) {
-            const int64_t input_index = (d * in_h + h) * in_w + w;
-            const int64_t output_index = out_row_index * out_cols + out_col_index;
-            output[output_index] = input[input_index];
-          }
-          ++out_row_index;
+    T* col = data_col + ((channel_out * depth_col + d_out) * height_col + h_out) * width_col + w_out;
+    const T* im = data_im + ((channel_in * depth + d_in ) * height + h_in) * width + w_in;
+
+    for (int64_t i = 0; i < kernel_depth; ++i) {
+      for (int64_t j = 0; j < kernel_height; ++j) {
+        for (int64_t k = 0; k < kernel_width; ++k) {
+          int64_t d = d_in + i * dilation_depth;
+          int64_t h = h_in + j * dilation_height;
+          int64_t w = w_in + k * dilation_width;
+          *col = (d >= 0 && h >= 0 && w >= 0 && d < depth && h < height && w < width)
+              ? im[(i * dilation_depth * height + j * dilation_height) * width + k * dilation_width]
+              : static_cast<T>(0);
+          col += depth_col * height_col * width_col;
         }
       }
     }
@@ -78,62 +80,72 @@ __global__ void UnfoldCFirstForward(const int64_t elem_cnt,
 }
 
 template<typename T>
-__global__ void UnfoldCFirstBackward(const int64_t elem_cnt, 
-                                     const int64_t in_d, const int64_t in_h,
-                                     const int64_t in_w, 
-                                     const int64_t out_5d_d, const int64_t out_5d_h,
-                                     const int64_t out_5d_w,
-                                     const int64_t out_cols,
-                                     const int64_t strides_d, const int64_t strides_h,
-                                     const int64_t strides_w,
-                                     const int64_t padding_before_d, const int64_t padding_before_h,
-                                     const int64_t padding_before_w,
-                                     const int64_t kernel_size_d, const int64_t kernel_size_h,
-                                     const int64_t kernel_size_w,
-                                     const int64_t dilation_rate_d, const int64_t dilation_rate_h,
-                                     const int64_t dilation_rate_w, 
-                                     const int64_t in_channel_size, const int64_t out_channel_size,
-                                     const T* output_diff, T* input_diff) {
+__global__ void UnfoldCFirstBackward(const int64_t elem_cnt,
+                                     const T* data_col,
+                                     const int64_t depth,
+                                     const int64_t height,
+                                     const int64_t width,
+                                     const int64_t kernel_d,
+                                     const int64_t kernel_h,
+                                     const int64_t kernel_w,
+                                     const int64_t pad_depth,
+                                     const int64_t pad_height,
+                                     const int64_t pad_width,
+                                     const int64_t stride_depth,
+                                     const int64_t stride_height,
+                                     const int64_t stride_width,
+                                     const int64_t dilation_depth,
+                                     const int64_t dilation_height,
+                                     const int64_t dilation_width,
+                                     const int64_t depth_col,
+                                     const int64_t height_col,
+                                     const int64_t width_col,
+                                     T* data_im) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
-    int64_t idx = index;
-    const int64_t pw = idx % in_w + padding_before_w;
-    idx /= in_w;
-    const int64_t ph = idx % in_h + padding_before_h;
-    idx /= in_h;
-    const int64_t pd = idx % in_d + padding_before_d;
-    idx /= in_d;
-    output_diff += out_channel_size * idx;
-
-    const int64_t kernel_size_extent_d = (kernel_size_d - 1) * dilation_rate_d + 1;
-    const int64_t kernel_size_extent_h = (kernel_size_h - 1) * dilation_rate_h + 1;
-    const int64_t kernel_size_extent_w = (kernel_size_w - 1) * dilation_rate_w + 1;
-    const int64_t dstart = pd < kernel_size_extent_d ? 0 : (pd - kernel_size_extent_d) / strides_d + 1;
-    const int64_t dend = min(pd / strides_d + 1, out_5d_d);
-    const int64_t hstart = ph < kernel_size_extent_h ? 0 : (ph - kernel_size_extent_h) / strides_h + 1;
-    const int64_t hend = min(ph / strides_h + 1, out_5d_h);
-    const int64_t wstart = pw < kernel_size_extent_w ? 0 : (pw - kernel_size_extent_w) / strides_w + 1;
-    const int64_t wend = min(pw / strides_w + 1, out_5d_w);
-
     T val = static_cast<T>(0);
-    for (int64_t d = dstart; d < dend; d += 1) {
-      for (int64_t h = hstart; h < hend; h += 1) {
-        for (int64_t w = wstart; w < wend; w += 1) {
-          int64_t k_d = (pd - d * strides_d);
-          int64_t k_h = (ph - h * strides_h);
-          int64_t k_w = (pw - w * strides_w);
-          if (k_d % dilation_rate_d == 0 && k_h % dilation_rate_h == 0 && k_w % dilation_rate_w == 0) {
-            k_d /= dilation_rate_d;
-            k_h /= dilation_rate_h;
-            k_w /= dilation_rate_w;
-            const int64_t out_row_index = (k_d * kernel_size_h + k_h) * kernel_size_w + k_w;
-            const int64_t out_col_index = (d * out_5d_h + h) * out_5d_w + w;
-            const int64_t output_index = out_row_index * out_cols + out_col_index;
-            val += output_diff[output_index];
+    const int64_t w_im = index % width + pad_width;
+    const int64_t h_im = (index / width) % height + pad_height;
+    const int64_t d_im = ((index / width) / height) % depth + pad_depth;
+    const int64_t c_im = index / (width * height * depth);
+    int64_t kernel_extent_w = (kernel_w - 1) * dilation_width + 1;
+    int64_t kernel_extent_h = (kernel_h - 1) * dilation_height + 1;
+    int64_t kernel_extent_d = (kernel_d - 1) * dilation_depth + 1;
+
+    // compute the start and end of the output
+    const int64_t w_col_start = (w_im < kernel_extent_w)
+        ? 0
+        : (w_im - kernel_extent_w) / stride_width + 1;
+    const int64_t w_col_end = ::min(w_im / stride_width + 1, width_col);
+    const int64_t h_col_start = (h_im < kernel_extent_h)
+        ? 0
+        : (h_im - kernel_extent_h) / stride_height + 1;
+    const int64_t h_col_end = ::min(h_im / stride_height + 1, height_col);
+    const int64_t d_col_start = (d_im < kernel_extent_d)
+        ? 0
+        : (d_im - kernel_extent_d) / stride_depth + 1;
+    const int64_t d_col_end = ::min(d_im / stride_depth + 1, depth_col);
+
+    for (int64_t d_col = d_col_start; d_col < d_col_end; d_col += 1) {
+      for (int64_t h_col = h_col_start; h_col < h_col_end; h_col += 1) {
+        for (int64_t w_col = w_col_start; w_col < w_col_end; w_col += 1) {
+          int64_t d_k = (d_im - d_col * stride_depth);
+          int64_t h_k = (h_im - h_col * stride_height);
+          int64_t w_k = (w_im - w_col * stride_width);
+          if (d_k % dilation_depth == 0 && h_k % dilation_height == 0 && w_k % dilation_width == 0) {
+            d_k /= dilation_depth;
+            h_k /= dilation_height;
+            w_k /= dilation_width;
+            int64_t data_col_index =
+                (((((c_im * kernel_d + d_k) * kernel_h + h_k) * kernel_w + w_k) * depth_col + d_col) * height_col +
+                h_col) *
+                    width_col +
+                w_col;
+            val += data_col[data_col_index];
           }
         }
       }
     }
-    input_diff[index] = val;
+    data_im[index] = static_cast<T>(val);
   }
 }
 
@@ -183,24 +195,21 @@ struct UnfoldGpuKernelUtil {
     const std::vector<int32_t>& strides = params_3d.strides_3d();
     const std::vector<int32_t>& dilation_rate = params_3d.dilation_rate_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-    const int64_t out_cols = out.At(2);
-    const int64_t in_channel_size = in.Count(2);
-    const int64_t out_channel_size = out.At(1) / in.At(1) * out_cols;
 
-    const T* input = in_blob->dptr<T>();
-    T* output = out_blob->mut_dptr<T>();
-    cudaMemset(output, T(0), out.elem_cnt() * sizeof(T));
+    const T* data_im = in_blob->dptr<T>();
+    T* data_col = out_blob->mut_dptr<T>();
+    cudaMemset(data_col, T(0), out.elem_cnt() * sizeof(T));
 
     UnfoldCFirstForward<T><<<GetUnfoldMaxNumBlocks(out_5d.elem_cnt()),
                               kUnfoldMaxGpuBlockSize, 0, device_ctx->cuda_stream()>>>(
-      out_5d.elem_cnt(),
+      out_5d.elem_cnt(), data_im,
       in.At(2), in.At(3), in.At(4),
-      out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
-      strides.at(0), strides.at(1), strides.at(2),
-      padding_before.at(0), padding_before.at(1), padding_before.at(2),
       kernel_size.at(0), kernel_size.at(1), kernel_size.at(2),
+      padding_before.at(0), padding_before.at(1), padding_before.at(2),
+      strides.at(0), strides.at(1), strides.at(2),
       dilation_rate.at(0), dilation_rate.at(1), dilation_rate.at(2),
-      in_channel_size, out_channel_size, input, output);
+      out_5d.At(2), out_5d.At(3), out_5d.At(4),
+      data_col);
     OF_CUDA_CHECK(cudaGetLastError());
 
   }
@@ -218,20 +227,20 @@ struct UnfoldGpuKernelUtil {
     const int64_t in_channel_size = in.Count(2);
     const int64_t out_channel_size = out.At(1) / in.At(1) * out_cols;
 
-    const T* output_diff = out_diff_blob->dptr<T>();
-    T* input_diff = in_diff_blob->mut_dptr<T>();
-    cudaMemset(input_diff, T(0), in.elem_cnt() * sizeof(T));
+    const T* data_col = out_diff_blob->dptr<T>();
+    T* data_im = in_diff_blob->mut_dptr<T>();
+    cudaMemset(data_im, T(0), in.elem_cnt() * sizeof(T));
 
     UnfoldCFirstBackward<T><<<GetUnfoldMaxNumBlocks(in.elem_cnt()),
                               kUnfoldMaxGpuBlockSize, 0, device_ctx->cuda_stream()>>>(
-      in.elem_cnt(),
+      in.elem_cnt(), data_col,
       in.At(2), in.At(3), in.At(4),
-      out_5d.At(2), out_5d.At(3), out_5d.At(4), out_cols,
-      strides.at(0), strides.at(1), strides.at(2),
-      padding_before.at(0), padding_before.at(1), padding_before.at(2),
       kernel_size.at(0), kernel_size.at(1), kernel_size.at(2),
+      padding_before.at(0), padding_before.at(1), padding_before.at(2),
+      strides.at(0), strides.at(1), strides.at(2),
       dilation_rate.at(0), dilation_rate.at(1), dilation_rate.at(2),
-      in_channel_size, out_channel_size, output_diff, input_diff);
+      out_5d.At(2), out_5d.At(3), out_5d.At(4),
+      data_im);
     OF_CUDA_CHECK(cudaGetLastError());
 
   }

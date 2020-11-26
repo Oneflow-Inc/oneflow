@@ -2712,7 +2712,7 @@ def unfold2d(
 
 
         @flow.global_function()
-        def unfold2d_Job(x: tp.Numpy.Placeholder((1, 32, 128, 128))
+        def unfold2d_Job(x: tp.Numpy.Placeholder((1, 3, 7, 7))
         ) -> tp.Numpy:
             unfold_out = flow.nn.unfold2d(
                 input=x,
@@ -2726,10 +2726,12 @@ def unfold2d(
             return unfold_out
 
 
-        x = np.random.randn(1, 32, 128, 128).astype(np.float32)
+        x = np.random.randn(1, 3, 7, 7).astype(np.float32)
         out = unfold2d_Job(x)
 
-        # out.shape (1, 32, 64, 64)
+        # out.shape[1] = channels * ksize * ksize
+        # out.shape[2] = ((in_size + 2 * pad - (dilation_rate * (ksize - 1) + 1)) / strides + 1) ** 2
+        # out.shape (1, 27, 16)
 
     """
     op = (
@@ -2740,7 +2742,7 @@ def unfold2d(
         .Input("x", [input])
         .Output("y")
     )
-    assert data_format in ["NHWC", "NCHW", "NCHW_VECT_C"]
+    assert data_format in ["NHWC", "NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
     kernel_size = _GetSequence(ksize, 2, "ksize")
@@ -2782,62 +2784,10 @@ def unfold3d(
         data_format (str, optional):  '`NDHWC'` or '`NCDHW'`. Defaults to "NCDHW".
         name (Optional[str], optional):  This operator's name(optional).Defaults to None.
 
+    Raises:
+        NotImplementedError: not implement unfold3d currently
+
     Returns:
         remote_blob_util.BlobDef: A `Blob` with the same type as value. The unfold output `Blob`.
-    
-    For example: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def unfold3d_Job(x: tp.Numpy.Placeholder((1, 32, 10, 128, 128))
-        ) -> tp.Numpy:
-            unfold_out = flow.nn.unfold3d(
-                input=x,
-                ksize=3,
-                strides=2,
-                dilation_rate=1,
-                padding='SAME',
-                data_format='NCDHW'
-            )
-
-            return unfold_out
-
-
-        x = np.random.randn(1, 32, 10, 128, 128).astype(np.float32)
-        out = unfold3d_Job(x)
-
-        # out.shape (1, 32, 5, 64, 64)
-
     """
-    op = (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Unfold3D_")
-        )
-        .Op("unfold_3d")
-        .Input("x", [input])
-        .Output("y")
-    )
-    assert data_format in ["NDHWC", "NCDHW"]
-    channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
-    op.Attr("data_format", channel_pos)
-    kernel_size = _GetSequence(ksize, 3, "ksize")
-    op.Attr("kernel_size", kernel_size)
-    strides = _GetSequence(strides, 3, "strides")
-    op.Attr("strides", strides)
-    dilation_rate = _GetSequence(dilation_rate, 3, "dilation_rate")
-    op.Attr("dilation_rate", dilation_rate)
-    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
-    assert len(pads_list) == len(input.shape) - 2
-    padding_before = [pad[0] for pad in pads_list]
-    padding_after = [pad[1] for pad in pads_list]
-    op.Attr("padding", padding_type)
-    op.Attr("padding_before", padding_before)
-    op.Attr("padding_after", padding_after)
-    op.Attr("ceil_mode", ceil_mode)
-    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+    raise NotImplementedError

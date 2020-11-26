@@ -63,44 +63,35 @@ class UnfoldCpuKernelUtil {
     const std::vector<int32_t>& strides = params_3d.strides_3d();
     const std::vector<int32_t>& dilation_rate = params_3d.dilation_rate_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-    const int64_t out_cols = out.At(2);
-    const int64_t in_channel_size = in.Count(2);
-    const int64_t out_channel_size = out.At(1) / in.At(1) * out_cols;
 
-    const T* input = in_blob->dptr<T>();
-    T* output = out_blob->mut_dptr<T>();
-    std::memset(output, T(0), out.elem_cnt() * sizeof(T));
-    FOR_RANGE(int64_t, n, 0, in.At(0)) {
-      FOR_RANGE(int64_t, c, 0, in.At(1)) {
-        FOR_RANGE(int64_t, pd, 0, out_5d.At(2)) {
-          const int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-          const int64_t dend = dstart + (kernel_size.at(0) - 1) * dilation_rate.at(0) + 1;
-          FOR_RANGE(int64_t, ph, 0, out_5d.At(3)) {
-            const int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            const int64_t hend = hstart + (kernel_size.at(1) - 1) * dilation_rate.at(1) + 1;
-            FOR_RANGE(int64_t, pw, 0, out_5d.At(4)) {
-              const int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              const int64_t wend = wstart + (kernel_size.at(2) - 1) * dilation_rate.at(2) + 1;
-              const int64_t out_col_index = pd * out_5d.Count(3) + ph * out_5d.At(4) + pw;
-              int64_t out_row_index = 0;
+    const T* data_im = in_blob->dptr<T>();
+    T* data_col = out_blob->mut_dptr<T>();
+    std::memset(data_col, T(0), out.elem_cnt() * sizeof(T));
 
-              for (int64_t d = dstart; d < dend; d += dilation_rate.at(0)) {
-                for (int64_t h = hstart; h < hend; h += dilation_rate.at(1)) {
-                  for (int64_t w = wstart; w < wend; w += dilation_rate.at(2)) {
-                    if (d >= 0 && h >= 0 && w >= 0 && d < in.At(2) && h < in.At(3) && w < in.At(4)) {
-                      const int64_t input_index = d * in.Count(3) + h * in.At(4) + w;
-                      const int64_t output_index = out_row_index * out_cols + out_col_index;
-                      output[output_index] = input[input_index];
-                    }
-                    ++out_row_index;
-                  }
-                }
-              }
+    const int64_t channels_col = in.At(1)
+      * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
+    for (int64_t n = 0; n < in.At(0); ++n) {
+      for (int64_t c_col = 0; c_col < channels_col; ++c_col) {
+        const int64_t w_offset = c_col % kernel_size.at(2);
+        const int64_t h_offset = (c_col / kernel_size.at(2)) % kernel_size.at(1);
+        const int64_t d_offset = ((c_col / kernel_size.at(2)) / kernel_size.at(1)) % kernel_size.at(0);
+        const int64_t c_im = c_col / kernel_size.at(0) / kernel_size.at(1) / kernel_size.at(2);
+
+        for (int64_t d_col = 0; d_col < out_5d.At(2); ++d_col) {
+          const int64_t d_im = d_col * strides.at(0) - padding_before.at(0) + d_offset * dilation_rate.at(0);
+
+          for (int64_t h_col = 0; h_col < out_5d.At(3); ++h_col) {
+            const int64_t h_im = h_col * strides.at(1) - padding_before.at(1) + h_offset * dilation_rate.at(1);
+
+            for (int64_t w_col = 0; w_col < out_5d.At(4); ++w_col) {
+              const int64_t w_im = w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
+              data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4) + w_col] =
+                  (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3) && w_im < in.At(4))
+                  ? data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im]
+                  : static_cast<T>(0);
             }
           }
         }
-        input += in_channel_size;
-        output += out_channel_size;
       }
     }
   }
@@ -109,64 +100,40 @@ class UnfoldCpuKernelUtil {
                              user_op::Tensor* in_diff_blob) {
     const Shape& in = params_3d.GetXShape5D();
     const Shape& out_5d = params_3d.GetYShape5D();
-    const Shape& out = params_3d.GetYShape();
     const std::vector<int32_t>& kernel_size = params_3d.kernel_size_3d();
     const std::vector<int32_t>& strides = params_3d.strides_3d();
     const std::vector<int32_t>& dilation_rate = params_3d.dilation_rate_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-    const int64_t out_cols = out.At(2);
-    const int64_t in_channel_size = in.Count(2);
-    const int64_t out_channel_size = out.At(1) / in.At(1) * out_cols;
-    const int64_t kernel_size_extent_d = (kernel_size.at(0) - 1) * dilation_rate.at(0) + 1;
-    const int64_t kernel_size_extent_h = (kernel_size.at(1) - 1) * dilation_rate.at(1) + 1;
-    const int64_t kernel_size_extent_w = (kernel_size.at(2) - 1) * dilation_rate.at(2) + 1;
 
-    const T* output_diff = out_diff_blob->dptr<T>();
-    T* input_diff = in_diff_blob->mut_dptr<T>();
-    std::memset(input_diff, T(0), in.elem_cnt() * sizeof(T));
-    FOR_RANGE(int64_t, n, 0, in.At(0)) {
-      FOR_RANGE(int64_t, c, 0, in.At(1)) {
-        int64_t input_index = 0;
-        FOR_RANGE(int64_t, pd_np, 0, in.At(2)) {
-          const int64_t pd = pd_np + padding_before.at(0);
-          const int64_t dstart = pd < kernel_size_extent_d ?
-            0 : (pd - kernel_size_extent_d) / strides.at(0) + 1;
-          const int64_t dend = std::min(pd / strides.at(0) + 1, out_5d.At(2));
-          FOR_RANGE(int64_t, ph_np, 0, in.At(3)) {
-            const int64_t ph = ph_np + padding_before.at(1);
-            const int64_t hstart = ph < kernel_size_extent_h ?
-              0 : (ph - kernel_size_extent_h) / strides.at(1) + 1;
-            const int64_t hend = std::min(ph / strides.at(1) + 1, out_5d.At(3));
-            FOR_RANGE(int64_t, pw_np, 0, in.At(4)) {
-              const int64_t pw = pw_np + padding_before.at(2);
-              const int64_t wstart = pw < kernel_size_extent_w ?
-                0 : (pw - kernel_size_extent_w) / strides.at(2) + 1;
-              const int64_t wend = std::min(pw / strides.at(2) + 1, out_5d.At(4));
-              FOR_RANGE(int64_t, d, dstart, dend) {
-                int64_t k_d = pd - d * strides.at(0);
-                if (k_d % dilation_rate.at(0) != 0) continue;
-                k_d /= dilation_rate.at(0);
-                FOR_RANGE(int64_t, h, hstart, hend) {
-                  int64_t k_h = ph - h * strides.at(1);
-                  if (k_h % dilation_rate.at(1) != 0) continue;
-                  k_h /= dilation_rate.at(1);
-                  FOR_RANGE(int64_t, w, wstart, wend) {
-                    int64_t k_w = pw - w * strides.at(2);
-                    if (k_w % dilation_rate.at(2) != 0) continue;
-                    k_w /= dilation_rate.at(2);
-                    const int64_t out_row_index = (k_d * kernel_size.at(1) + k_h) * kernel_size.at(2) + k_w;
-                    const int64_t out_col_index = (d * out_5d.At(1) + h) * out_5d.At(2) + w;
-                    const int64_t output_index = out_row_index * out_cols + out_col_index;
-                    input_diff[input_index] += output_diff[output_index];
-                  }
-                }
+    const T* data_col = out_diff_blob->dptr<T>();
+    T* data_im = in_diff_blob->mut_dptr<T>();
+    std::memset(data_im, T(0), in.elem_cnt() * sizeof(T));
+
+    const int64_t channels_col = in.At(1)
+      * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
+    for (int64_t n = 0; n < in.At(0); ++n) {
+      for (int64_t c_col = 0; c_col < channels_col; ++c_col) {
+        const int64_t d_offset = c_col % kernel_size.at(0);
+        const int64_t h_offset = (c_col / kernel_size.at(0)) % kernel_size.at(1);
+        const int64_t w_offset = ((c_col / kernel_size.at(0)) / kernel_size.at(1)) % kernel_size.at(2);
+        const int64_t c_im = c_col / kernel_size.at(0) / kernel_size.at(1) / kernel_size.at(2);
+
+        for (int64_t d_col = 0; d_col < out_5d.At(2); ++d_col) {
+          const int64_t d_im = d_col * strides.at(0) - padding_before.at(0) + d_offset * dilation_rate.at(0);
+
+          for (int64_t h_col = 0; h_col < out_5d.At(3); ++h_col) {
+            const int64_t h_im = h_col * strides.at(1) - padding_before.at(1) + h_offset * dilation_rate.at(1);
+
+            for (int64_t w_col = 0; w_col < out_5d.At(4); ++w_col) {
+              const int64_t w_im = w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
+
+              if (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3) && w_im < in.At(4)) {
+                data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im] +=
+                    data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4) + w_col];
               }
-              ++input_index;
             }
           }
         }
-        input_diff += in_channel_size;
-        output_diff += out_channel_size;
       }
     }
   }
