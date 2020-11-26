@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/ops/reshape_user_op_util.h"
-#include <vector>
-#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
