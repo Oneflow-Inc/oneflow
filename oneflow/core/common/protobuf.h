@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
@@ -196,6 +197,13 @@ PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 }  // namespace oneflow
 
 namespace std {
+
+template<>
+struct hash<oneflow::DataType> {
+  size_t operator()(const oneflow::DataType data_type) const {
+    return std::hash<int64_t>()(data_type);
+  }
+};
 
 template<>
 struct hash<oneflow::LogicalBlobId> {
