@@ -46,10 +46,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(!in->is_dynamic());
   CHECK_OR_RETURN(!index->is_dynamic());
 
-  FOR_RANGE(int64_t, i, 0, input_num_axes) {
-    if (i == dim) { continue; }
-    CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
-  }
+  // for scatter backword, this check moved to python
+  // FOR_RANGE(int64_t, i, 0, input_num_axes) {
+  //   if (i == dim) { continue; }
+  //   CHECK_EQ_OR_RETURN(in->shape().At(i), index->shape().At(i));
+  // }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = index->shape();

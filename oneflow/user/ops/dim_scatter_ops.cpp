@@ -61,6 +61,10 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
   CHECK(like_arg_modifier != nullptr);
   like_arg_modifier->set_use_header_only(true);
   like_arg_modifier->set_requires_grad(false);
+
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
+  CHECK(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
@@ -69,6 +73,10 @@ Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgMo
   user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
   CHECK(like_arg_modifier != nullptr);
   like_arg_modifier->set_requires_grad(false);
+
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
+  CHECK(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
@@ -128,6 +136,27 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
       .SetBatchAxisInferFn(InferBatchAxis)            \
       .SetGetSbpFn(SetSbp)
+
+REGISTER_USER_OP_GRAD("dim_scatter_add_like")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+      const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
+
+      ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder
+            .OpTypeName("dim_gather")  // dim_gather(grad, dim, index) -> output
+            .InputBind("index", ctx->FwOp().input("index", 0))  // gather.index <- scatter.index
+            .InputBind("input",
+                       ctx->FwOp().output_grad("output", 0))  // gather.input <- grad of scatter.out
+            .Output("output")
+            .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))
+            .Build();
+      });
+
+      ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
+                                [&ctx, &op_grad_name]() -> const std::string& {
+                                  return ctx->GetOp(op_grad_name).output("output", 0);
+                                });
+    });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
 REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
