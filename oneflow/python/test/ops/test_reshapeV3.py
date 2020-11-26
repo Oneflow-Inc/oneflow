@@ -30,14 +30,14 @@ def distribute_reshape_test(device_type, device_num, input_shape, shape):
 
     @flow.global_function(type="train", function_config=func_config)
     def ReshapeJob():
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num-1)):
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
             x = flow.get_variable(
                 "var_x",
                 shape=input_shape,
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=2, maxval=5),
                 trainable=True,
-                distribute=flow.distribute.split(2)
+                distribute=flow.distribute.split(2),
             )
 
             loss = flow.reshape(x, shape)
