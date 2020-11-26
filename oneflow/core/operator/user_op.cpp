@@ -568,6 +568,22 @@ Maybe<double> UserOp::GetComputeComplexity(
     SbpSignature* sbp_signature,
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
+  // check logical blob desc could split or not
+  auto CouldSplit = [&](const std::string& bn) {
+    const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+    if (sbp_parallel.has_split_parallel()) {
+      const int32_t axis = sbp_parallel.split_parallel().axis();
+      return logical_blob_desc4bn(bn).shape().At(axis) >= parallel_desc.parallel_num();
+    }
+    return true;
+  };
+  for (const auto& ibn : input_bns()) {
+    if (!CouldSplit(ibn)) return GetMaxVal<float>();
+  }
+  for (const auto& obn : output_bns()) {
+    if (!CouldSplit(obn)) return GetMaxVal<float>();
+  }
+
   if (val_->compute_complexity_fn) {
     UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
         op_conf(), parallel_desc, sbp_signature, logical_blob_desc4bn);
