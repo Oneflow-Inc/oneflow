@@ -98,8 +98,10 @@ jobs:
         echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
         echo "git_branch=${git_branch}" >> $GITHUB_ENV
 
-        $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${matrix_release_version})
+        check_path="${oss_dir}/oneflow_${matrix_release_version}"
+        $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${check_path})
         echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
+        echo "[EXISTED: ${is_built}] ${check_path} : "
     - name: Build OneFlow
       if: ${{ env.is_built }} != '1'
       uses: ./.github/actions/whl
