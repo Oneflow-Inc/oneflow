@@ -73,7 +73,7 @@ bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
   return false;
 }
 
-bool IsTheNodeCanBeMergedInChain(const TaskNode* node) {
+bool CanBeMergedInChain(const TaskNode* node) {
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
   if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
@@ -83,13 +83,6 @@ bool IsTheNodeCanBeMergedInChain(const TaskNode* node) {
   const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
-}
-
-bool IsInSameWorkStream(const TaskNode* lhs, const TaskNode* rhs) {
-  // NOTE(chengcheng): use area_id to not merge optimizer ops
-  return lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() == rhs->thrd_id()
-         && lhs->GlobalWorkStreamId() == rhs->GlobalWorkStreamId()
-         && lhs->device_type() == rhs->device_type() && lhs->area_id() == rhs->area_id();
 }
 
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
@@ -108,8 +101,10 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     cur_node->set_chain_id(this_chain_id);
 
     cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
-      if (visited_nodes.find(next_node) == visited_nodes.end()
-          && IsTheNodeCanBeMergedInChain(next_node) && IsInSameWorkStream(this_node, next_node)) {
+      // NOTE(chengcheng): use area_id to not merge optimizer ops with fw/bw ops
+      if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
+          && this_node->area_id() == next_node->area_id()) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
@@ -376,7 +371,7 @@ void TaskGraph::MergeChain() {
     if (this_node->chain_id() != -1) { continue; }
 
     CHECK_EQ(this_node->chain_id(), -1);
-    if (IsTheNodeCanBeMergedInChain(this_node)) {
+    if (CanBeMergedInChain(this_node)) {
       TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
     } else {
       this_node->set_chain_id(chain_id);
