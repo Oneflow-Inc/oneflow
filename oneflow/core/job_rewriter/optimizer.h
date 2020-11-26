@@ -31,10 +31,6 @@ float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_updat
 
 void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder);
 
-template<typename T>
-void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           JobBuilder* job_builder, T*);
-
 class GenerateOptimizerOpConfWrapperStruct final {
  public:
   using Func = std::function<void(JobPassCtx*, const VariableOp&, const ParallelConf&, JobBuilder*,
