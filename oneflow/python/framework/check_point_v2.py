@@ -128,6 +128,8 @@ def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
     """
     Get all variables of all jobs as a dict.
     """
+    oneflow.sync_default_session()
+
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
     variables = {}
@@ -229,6 +231,7 @@ def SaveVarDict(
     """
     Save `var_dict` to `path`
     """
+    oneflow.sync_default_session()
 
     if var_dict is None:
         var_dict = GetAllVariables()
@@ -432,6 +435,8 @@ def LoadVariables(
     If `ignore_mismatch` is False, an exception will be raised when
     there is a name in `value_dict` not belonging to any variable.
     """
+    oneflow.sync_default_session()
+
     all_vars = GetAllVariables()
     for name, value in value_dict.items():
         if name in all_vars:
@@ -492,6 +497,8 @@ def _ForEachSlice(
 
 
 def Init() -> None:
+    oneflow.sync_default_session()
+
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
         var_conf = sess.OpAttribute4InterfaceOpName(op_name).op_conf.variable_conf
