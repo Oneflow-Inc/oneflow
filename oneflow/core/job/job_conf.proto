@@ -118,7 +118,7 @@ message JobConfigProto {
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = true];
+  optional bool enable_keep_header_only = 700 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 
