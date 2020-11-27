@@ -94,7 +94,7 @@ jobs:
         echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
 
         git_branch=${GITHUB_REF##*/}
-        oss_dir=${git_branch}/${GITHUB_SHA}
+        oss_dir=branch/${git_branch}/${GITHUB_SHA}
         echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
         echo "git_branch=${git_branch}" >> $GITHUB_ENV
 
