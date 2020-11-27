@@ -206,7 +206,7 @@ if __name__ == "__main__":
     parser.add_argument("--oneflow_worker_bin", type=str, required=False, default=None)
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--ssh_port", type=int, required=False, default=None)
-    parser.add_argument("--timeout", type=int, required=False, default=10 * 60)
+    parser.add_argument("--timeout", type=int, required=False, default=60 * 60)
     args = parser.parse_args()
 
     ssh_port = None
