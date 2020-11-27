@@ -312,7 +312,7 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
         ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
@@ -435,7 +435,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
 
     ReduceSumUtilT::ReduceSum(
         ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),

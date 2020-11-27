@@ -30,6 +30,7 @@ REGISTER_USER_OP("gather_dispatch")
       const int64_t num_classes = ctx->Attr<int64_t>("num_classes");
       const int64_t parallel_num = ctx->Attr<int64_t>("parallel_num");
       CHECK_EQ(num_classes % parallel_num, 0);
+      const int64_t indices_elem_cnt = indices_desc->shape().elem_cnt();
       const DataType& data_type = ctx->Attr<DataType>("dtype");
       user_op::TensorDesc* idx_desc = ctx->TensorDesc4ArgNameAndIndex("idx", 0);
       *idx_desc = *indices_desc;
@@ -39,6 +40,7 @@ REGISTER_USER_OP("gather_dispatch")
       FOR_RANGE(int32_t, i, 0, parallel_num) {
         user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
         *out_i_desc = *indices_desc;
+        *out_i_desc->mut_shape() = Shape({indices_elem_cnt});
         user_op::TensorDesc* count_desc = ctx->TensorDesc4ArgNameAndIndex("count", i);
         *count_desc->mut_shape() = Shape({1});
         *count_desc->mut_data_type() = data_type;

@@ -43,8 +43,8 @@ Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply
   const auto IsSupportedUpdateOp = [&](const OperatorConf& op_conf) -> bool {
     if (!op_conf.has_user_conf()) { return false; }
     const std::string& op_type_name = op_conf.user_conf().op_type_name();
-    return op_type_name == "sgd_update" || op_type_name != "momentum_update"
-           || op_type_name != "adam_update";
+    return op_type_name == "sgd_update" || op_type_name == "momentum_update"
+           || op_type_name == "adam_update";
   };
 
   const auto GetSuccSupportedUpdateOp = [&](const OpNode* node) -> const OpNode* {
@@ -75,7 +75,7 @@ Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply
     if (update_node == nullptr) { return; }
     const LogicalBlobId model_lbi = update_node->op().BnInOp2Lbi(GenRepeatedBn("model", 0));
     const std::string& model_op_name = model_lbi.op_name();
-    if (include_op_name_set.find(model_op_name) != include_op_name_set.end()) { return; }
+    if (include_op_name_set.find(model_op_name) == include_op_name_set.end()) { return; }
     const OpNode* variable_node = op_graph.OpNode4OpName(model_lbi.op_name());
     const SbpParallel& variable_sbp = variable_node->SbpParallel4Lbi(model_lbi);
     if ((!variable_sbp.has_split_parallel()) || variable_sbp.split_parallel().axis() != 0) {
@@ -164,7 +164,8 @@ Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply
     segment_ids_disable_boxing_conf->set_out("out");
     data_disable_boxing_conf->set_out("out");
     const auto new_unsorted_segment_sum_like_op =
-        user_op::UserOpConfWrapperBuilder(op_name_prefix + "DisableBoxing-")
+        user_op::UserOpConfWrapperBuilder(op_name_prefix + "UnsortedSegmentSumLike-"
+                                          + NewUniqueId())
             .OpTypeName("unsorted_segment_sum_like")
             .Input("segment_ids", GenLogicalBlobName(segment_ids_disable_boxing_op_conf.name(),
                                                      segment_ids_disable_boxing_conf->out()))
@@ -189,12 +190,16 @@ Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply
           CHECK_EQ(GenLogicalBlobName(old_lbi), old_val);
         }
       }
+      if (consumer_op_conf.has_parallel_cast_conf()) {
+        consumer_op_conf.mutable_parallel_cast_conf()->clear_split_axis();
+      }
     }
     job_builder.DelOps({src_node->op().op_conf()});
     job_builder.AddOps(consistent_parallel_desc.parallel_conf(),
                        {new_unsorted_segment_sum_like_op.op_conf(),
                         segment_ids_disable_boxing_op_conf, data_disable_boxing_op_conf});
   });
+  for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
   return Maybe<void>::Ok();
 }
 

@@ -48,7 +48,7 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
     const int64_t num_classes = in_desc.shape().At(0);
     const BlobDesc& indices_desc =
         op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
-    const int64_t max_dim_size = indices_desc.shape().elem_cnt() * parallel_num;
+    const int64_t max_dim_size = indices_desc.shape().elem_cnt();
     OperatorConf distribute_split_ids_op_conf{};
     distribute_split_ids_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
 
