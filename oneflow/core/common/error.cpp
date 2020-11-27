@@ -28,6 +28,13 @@ void LogError(const Error& error) {
 
 }  // namespace
 
+Error&& Error::AddStackFrame(const std::string& location, const std::string& function) {
+  auto* stack_frame = error_proto_->add_stack_frame();
+  stack_frame->set_location(location);
+  stack_frame->set_function(function);
+  return std::move(*this);
+}
+
 Error::operator std::string() const { return error_proto_->DebugString(); }
 
 Error Error::Ok() { return std::make_shared<cfg::ErrorProto>(); }
@@ -221,15 +228,6 @@ Error Error::GradientFunctionNotFound() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_gradient_function_not_found_error();
   return error;
-}
-
-Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error) {
-  LogError(error);
-  CHECK(error.error_proto()->stack_frame().empty());
-  auto* stack_frame = error.error_proto()->add_stack_frame();
-  stack_frame->set_location(loc_and_func.first);
-  stack_frame->set_function(loc_and_func.second);
-  return std::move(error);
 }
 
 }  // namespace oneflow

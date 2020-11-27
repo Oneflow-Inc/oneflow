@@ -75,6 +75,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .Attr<float>("epsilon", lamb_conf.epsilon())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &lamb_update_op_builder);
   const auto lamb_update_op = lamb_update_op_builder.Build();
   job_builder->AddOps(parallel_conf, {lamb_update_op.op_conf()});
 }

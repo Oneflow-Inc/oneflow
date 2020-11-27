@@ -566,6 +566,14 @@ def GetFunctionConfigDef():
     return text_format.Parse(func_config_def, ConfigDef())
 
 
+def GetScopeConfigDef():
+    scope_config_def, error_str = oneflow_internal.GetScopeConfigDef()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(scope_config_def, ConfigDef())
+
+
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
     symbols = str(text_format.MessageToString(eager_symbol_list))
     error_str = oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, symbols)
@@ -618,6 +626,14 @@ def NewPhysicalSymbolId():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return object_id
+
+
+def GetOpAttributes():
+    op_attributes, error_str = oneflow_internal.GetSerializedOpAttributes()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
 def GetJobSet():
