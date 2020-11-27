@@ -125,7 +125,7 @@ jobs:
       run: |
         python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         python3 -m pip install oss2 beautifulsoup4 --user
-        python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/pip.index.html --index_key=${oss_dir}/pip.index.html
+        python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
     - name: Update API docs
       if: github.ref == 'refs/heads/master'
       env:
