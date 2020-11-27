@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void Compiler::GenNetTopo(Plan* plan) const {
+Maybe<void> Compiler::GenNetTopo(Plan* plan) const {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   std::map<int64_t, std::set<int64_t>> net_topo;
@@ -60,11 +60,12 @@ void Compiler::GenNetTopo(Plan* plan) const {
     CHECK(std_net_topo.emplace(src_mid, pb_mids).second);
   }
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
+  return Maybe<void>::Ok();
 }
 
-void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
+Maybe<void> Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   const JobDesc& job_desc = GlobalJobDesc();
-  if (need_job_complete) { JobCompleter().Complete(job); }
+  if (need_job_complete) { JUST(JobCompleter().Complete(job)); }
   Global<OpGraph>::New(*job);
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
@@ -95,6 +96,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   }
   Global<OpGraph>::Delete();
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

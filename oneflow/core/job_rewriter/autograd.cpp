@@ -337,32 +337,33 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
   for (const auto& pair : out_oba2clone_bw_add_out_lbi) {
     CHECK(clone_bw_add_out_lbi2out_oba.emplace(pair.second, pair.first).second);
   }
-  job_builder.ForEachOperator([&](const Operator& op) {
-    for (const auto& ibn : op.input_bns()) {
-      const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
+  CHECK_JUST(job_builder.ForEachOperator([&](const std::shared_ptr<Operator>& op) -> Maybe<void> {
+    for (const auto& ibn : op->input_bns()) {
+      const auto& out_oba_it = out_diff_lbi2out_oba.find(op->BnInOp2Lbi(ibn));
       if (out_oba_it == out_diff_lbi2out_oba.end()) { continue; }
       auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-      *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
+      *pair->mutable_first() = GenOpBlobArg(op->op_name(), ibn);
       *pair->mutable_second() = out_oba_it->second;
     }
-    for (const auto& obn : op.output_bns()) {
-      const auto& lbi = op.BnInOp2Lbi(obn);
+    for (const auto& obn : op->output_bns()) {
+      const auto& lbi = op->BnInOp2Lbi(obn);
       {
         const auto& in_oba_it = in_diff_lbi2in_oba.find(lbi);
         if (in_oba_it == in_diff_lbi2in_oba.end()) { continue; }
         auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-        *pair->mutable_first() = GenOpBlobArg(op.op_name(), obn);
+        *pair->mutable_first() = GenOpBlobArg(op->op_name(), obn);
         *pair->mutable_second() = in_oba_it->second;
       }
       {
         const auto& clone_out_oba_it = clone_bw_add_out_lbi2out_oba.find(lbi);
         if (clone_out_oba_it == clone_bw_add_out_lbi2out_oba.end()) { continue; }
         auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-        *pair->mutable_first() = GenOpBlobArg(op.op_name(), obn);
+        *pair->mutable_first() = GenOpBlobArg(op->op_name(), obn);
         *pair->mutable_second() = clone_out_oba_it->second;
       }
     }
-  });
+    return Maybe<void>::Ok();
+  }));
 }
 
 void InitOutOba2OutDiffLbi(const std::list<OpNode*>& loss_nodes,
