@@ -20,6 +20,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -189,7 +190,7 @@ def get_eager_variable(
         )
 
     if job_var_blob is None:
-        op_conf = _GenerateVariableOpConf(
+        op_conf = GenerateVariableOpConf(
             name=name,
             shape=shape,
             dtype=dtype,
@@ -202,7 +203,7 @@ def get_eager_variable(
         )
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
-            var_blob = _CreateEagerVariableBlob(op_attribute)
+            var_blob = CreateEagerVariableBlob(op_attribute)
             op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
 
         assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
@@ -250,7 +251,7 @@ def get_lazy_variable(
         )
 
     if job_var_blob is None:
-        op_conf = _GenerateVariableOpConf(
+        op_conf = GenerateVariableOpConf(
             name=name,
             shape=shape,
             dtype=dtype,
@@ -275,7 +276,7 @@ def get_lazy_variable(
     return job_var_blob
 
 
-def _GenerateVariableOpConf(
+def GenerateVariableOpConf(
     name,
     shape,
     dtype=None,
@@ -293,11 +294,14 @@ def _GenerateVariableOpConf(
     assert dtype is not None
     op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
 
-    root_path = (
-        compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
-    )
-    dir_path = os.path.join(root_path, name)
-    file_path = os.path.join(dir_path, "out")
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        root_path = None
+    else:
+        root_path = (
+            compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+        )
+        dir_path = os.path.join(root_path, name)
+        file_path = os.path.join(dir_path, "out")
     if root_path and os.path.isfile(file_path):
         op_conf.variable_conf.initialize_with_snapshot.path = dir_path
         op_conf.variable_conf.initialize_with_snapshot.key = "out"
@@ -336,7 +340,7 @@ def _CreateVariableBlob(op_conf):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-def _CreateEagerVariableBlob(op_attribute):
+def CreateEagerVariableBlob(op_attribute, job_name=None):
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):
@@ -351,6 +355,6 @@ def _CreateEagerVariableBlob(op_attribute):
     lbi = logical_blob_id_util.LogicalBlobId()
     lbi.op_name = op_attribute.op_conf.name
     lbi.blob_name = op_attribute.op_conf.variable_conf.out
-    return remote_blob_util.EagerLogicalBlob(
-        lbi, blob_object=bn_in_op2blob_object["out"]
+    return remote_blob_util.EagerConsistentBlob(
+        lbi, blob_object=bn_in_op2blob_object["out"], job_name=job_name
     )
