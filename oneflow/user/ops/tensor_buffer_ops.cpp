@@ -102,13 +102,13 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       out->set_is_dynamic(ctx->Attr<bool>("dynamic_out"));
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {	
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();	
-      return Maybe<void>::Ok();	
-    })	
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {	
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);	
-      return Maybe<void>::Ok();	
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
@@ -135,7 +135,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       }
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {	
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
         FOR_RANGE(int64_t, j, 0, ctx->user_op_conf().output_size("out")) {
@@ -145,13 +145,13 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
               .Build();
         }
       }
-      return Maybe<void>::Ok();	
-    })	
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {	
-      FOR_RANGE(int64_t, i, 0, ctx->user_op_conf().output_size("out")) {	
-        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);	
-      }	
-      return Maybe<void>::Ok();	
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      FOR_RANGE(int64_t, i, 0, ctx->user_op_conf().output_size("out")) {
+        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
+      }
+      return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {

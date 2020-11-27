@@ -200,6 +200,7 @@ def gen_tensor_buffer(
         .RemoteBlobList()[0]
     )
 
+
 def _tensor_buffer_to_list_of_tensors(
     x: remote_blob_util.BlobDef,
     out_shape: Sequence[int],
@@ -223,6 +224,7 @@ def _tensor_buffer_to_list_of_tensors(
         .InferAndTryRun()
         .RemoteBlobList()
     )
+
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
 def tensor_buffer_to_list_of_tensors(
@@ -253,11 +255,17 @@ def tensor_buffer_to_list_of_tensors(
     .. code-block:: python 
         # the same with `gen_tensor_buffer` op
     """
-        if x.split_axis is not None:
-            local_xs = flow.advance.distribute_split(x, 0)
-            ret = []
-            for local_x in local_xs:
-                ret.append(_tensor_buffer_to_list_of_tensors(local_x, out_shape, out_dtype, dynamic_out, name))
-            return ret
-        else:
-            return _tensor_buffer_to_list_of_tensors(local_x, out_shape, out_dtype, dynamic_out, name)
+    if x.split_axis is not None:
+        local_xs = flow.advance.distribute_split(x, 0)
+        ret = []
+        for local_x in local_xs:
+            ret.append(
+                _tensor_buffer_to_list_of_tensors(
+                    local_x, out_shape, out_dtype, dynamic_out, name
+                )
+            )
+        return ret
+    else:
+        return _tensor_buffer_to_list_of_tensors(
+            local_x, out_shape, out_dtype, dynamic_out, name
+        )

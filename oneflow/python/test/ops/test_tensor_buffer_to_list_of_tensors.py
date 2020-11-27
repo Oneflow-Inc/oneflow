@@ -30,8 +30,12 @@ def _run_test(shape, shape_list, value_list, data_type):
     @flow.global_function(function_config=func_config)
     def TestTensorBufferToListOfTensorsJob():
         with flow.scope.placement("cpu", "0:0"):
-            x = flow.gen_tensor_buffer(shape, shape_list, value_list, type_name_to_flow_type[data_type])
-            y = flow.tensor_buffer_to_list_of_tensors(x, (100, 100), type_name_to_flow_type[data_type], True)
+            x = flow.gen_tensor_buffer(
+                shape, shape_list, value_list, type_name_to_flow_type[data_type]
+            )
+            y = flow.tensor_buffer_to_list_of_tensors(
+                x, (100, 100), type_name_to_flow_type[data_type], True
+            )
             return y
 
     out_0, out_1, out_2, out_3 = TestTensorBufferToListOfTensorsJob().get()
