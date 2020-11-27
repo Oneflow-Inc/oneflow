@@ -28,7 +28,7 @@ class JobCompleter final {
   JobCompleter() = default;
   ~JobCompleter() = default;
 
-  void Complete(Job* job) const;
+  Maybe<void> Complete(Job* job) const;
 };
 
 }  // namespace oneflow

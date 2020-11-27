@@ -25,10 +25,6 @@ REGISTER_FUNCTION_CONFIG_DEF()
             "ssp partition strategy, Avaiable strategies: naive_sequantial | disable")
     .ListInt64("ssp_partition_scope_ids", {}, "type: list[int64]. ssp partition scope symbol ids");
 
-REGISTER_SCOPE_CONFIG_DEF()
-    .Int64("ssp_num_stages", -1, "total number of ssp stages")
-    .Int64("ssp_stage_id", -1, "current ssp stage id ");
-
 }  // namespace
 
 }  // namespace oneflow

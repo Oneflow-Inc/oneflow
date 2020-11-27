@@ -41,7 +41,7 @@ class BufferKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_IDENTITY_KERNEL(device)                                                        \
-  REGISTER_USER_KERNEL("identity")                                                              \
+  REGISTER_USER_KERNEL("buffer")                                                                \
       .SetCreateFn<BufferKernel<device>>()                                                      \
       .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
