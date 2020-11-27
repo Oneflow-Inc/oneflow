@@ -60,6 +60,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
                                    .Input("in", variable_lbn)
                                    .Output("out")
                                    .Attr<int32_t>("repeat_num", repeat_num)
+                                   .ScopeSymbolId(op_conf.scope_symbol_id())
                                    .Build();
         job_builder.AddOps(node->parallel_desc().parallel_conf(), {repeat_op.op_conf()});
         node->ForEachNodeOnInOutEdge([&](const OpNode* dst) {
@@ -79,6 +80,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
         OperatorConf tick_conf{};
         tick_conf.set_name("System-GradientAccumulation-RepeatTick-Tick-" + op_conf.name());
         tick_conf.mutable_tick_conf()->set_out("out");
+        tick_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
         user_op::UserOpConfWrapperBuilder repeat_builder(
             "System-GradientAccumulation-RepeatTick-Repeat-" + op_conf.name());
         const auto repeat_op =
@@ -86,6 +88,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
                 .Input("in", GenLogicalBlobName(tick_conf.name(), tick_conf.tick_conf().out()))
                 .Output("out")
                 .Attr<int32_t>("repeat_num", repeat_num)
+                .ScopeSymbolId(op_conf.scope_symbol_id())
                 .Build();
         job_builder.AddOps(node->parallel_desc().parallel_conf(), {tick_conf, repeat_op.op_conf()});
         (*new_op_conf->mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
@@ -103,6 +106,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
                                       .Input("in", return_in_lbn)
                                       .Output("out")
                                       .Attr<int32_t>("pack_num", repeat_num)
+                                      .ScopeSymbolId(op_conf.scope_symbol_id())
                                       .Build();
       job_builder.AddOps(node->parallel_desc().parallel_conf(), {return_pack_op.op_conf()});
       OperatorConf* new_return_op_conf = GetOperatorConf4Modify(op_conf);
