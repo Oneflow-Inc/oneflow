@@ -121,6 +121,46 @@ unfold_confs = [
         "padding": "SAME",
         "data_format": "NCHW",
     },
+    {
+        "x_shape": (1, 3, 3, 3),
+        "ksize": 1,
+        "strides": 1,
+        "dilation_rate": 3,
+        "padding": (0, 0),
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 2, 8, 8),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 2,
+        "padding": 2,
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 2, 8, 8),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 2,
+        "padding": (2, 2),
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 2, 8, 8),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 2,
+        "padding": ((1, 1), (2, 2)),
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (1, 2, 8, 8),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 2,
+        "padding": [(1, 2), (1, 2)],
+        "data_format": "NCHW",
+    },
 ]
 
 
@@ -140,6 +180,35 @@ def _GetSequence(value, n, name):
         raise ValueError(
             "{} should be of length 1 or {} but was {}".format(name, n, current_n)
         )
+
+
+def _GetTorchPadding(padding, dim, in_dhw, ksize, strides, dilation_rate):
+    valid_case = True
+    torch_padding = [0 for _ in range(dim)]
+    if isinstance(padding, int):
+        torch_padding = _GetSequence(padding, 2, "padding")
+    elif isinstance(padding, (list, tuple)):
+        for i in range(dim):
+            if isinstance(padding[i], int):
+                torch_padding[i] = padding[i]
+            elif isinstance(padding[i], (list, tuple)):
+                if padding[i][0] != padding[i][1]:
+                    valid_case = False
+                torch_padding[i] = padding[i][0]
+    elif isinstance(padding, str):
+        padding = padding.upper()
+        padding = "SAME_LOWER" if padding == "SAME" else padding
+        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
+        if padding.startswith("SAME"):
+            out_dhw = in_dhw.copy()
+            for i in range(dim):
+                torch_padding[i] = (ksize[i] - 1) * dilation_rate[i]
+                if strides[i] != 1 or torch_padding[i] % 2 != 0:
+                    valid_case = False
+                torch_padding[i] //= 2
+    else:
+        raise NotImplementedError
+    return valid_case, tuple(torch_padding)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -162,27 +231,13 @@ class TestUnfoldPadding(flow.unittest.TestCase):
             flow.clear_default_session()
 
             dim = len(x_shape) - 2
-            # TODO: not implement currently
-            if dim == 3 or data_format == "NHWC":
-                continue
-
             ksize = _GetSequence(ksize, dim, "ksize")
             strides = _GetSequence(strides, dim, "strides")
             dilation_rate = _GetSequence(dilation_rate, dim, "dilation_rate")
-            padding_torch = list(0 for _ in range(dim))
             in_dhw = list(x_shape)[-dim:]
-
-            valid_case = True
-            if padding == "SAME":
-                out_dhw = in_dhw.copy()
-                for i in range(dim):
-                    padding_torch[i] = (ksize[i] - 1) * dilation_rate[i]
-                    if strides[i] != 1 or padding_torch[i] % 2 != 0:
-                        valid_case = False
-                    padding_torch[i] //= 2
+            valid_case, torch_padding = _GetTorchPadding(padding, 2, in_dhw, ksize, strides, dilation_rate)
 
             # Random inputs
-            # x = np.arange(np.prod(x_shape)).astype(type_name_to_np_type[data_type]).reshape(*x_shape)
             x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
 
             # torch results
@@ -192,7 +247,7 @@ class TestUnfoldPadding(flow.unittest.TestCase):
             model = torch.nn.Unfold(
                 ksize,
                 stride=strides,
-                padding=tuple(padding_torch),
+                padding=torch_padding,
                 dilation=dilation_rate,
             )
             model.to(torch_device)
@@ -216,6 +271,7 @@ class TestUnfoldPadding(flow.unittest.TestCase):
 
             func_config = flow.FunctionConfig()
             func_config.default_data_type(flow.float)
+            flow.config.gpu_device_num(1)
 
             tensor_def = None
             tensor_def = oft.Numpy.Placeholder
