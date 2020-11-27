@@ -470,7 +470,6 @@ message ModelLoadV2OpConf {
   required string tick = 6;
 }
 
-
 message ModelSaveV2OpConf {
   required string path = 1;
   required string in = 2;
