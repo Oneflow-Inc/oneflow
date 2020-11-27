@@ -36,8 +36,15 @@ import oneflow
 oneflow_api = oneflow.oneflow_api
 
 
+def RegisterForeignCallbackOnlyOnce(callback):
+    error_str = oneflow_api.RegisterForeignCallbackOnlyOnce(callback)
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+
+
 def RegisterWatcherOnlyOnce(watcher):
-    error_str = oneflow_internal.RegisterWatcherOnlyOnce(watcher)
+    error_str = oneflow_api.RegisterWatcherOnlyOnce(watcher)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
@@ -146,7 +153,7 @@ def GetInterUserJobInfo():
 
 
 def LaunchJob(job_instance):
-    error_str = oneflow_internal.LaunchJob(job_instance)
+    error_str = oneflow_api.LaunchJob(job_instance)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)

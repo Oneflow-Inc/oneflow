@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/foreign_callback_mgr.h"
 
 namespace py = pybind11;
 
@@ -86,5 +85,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("RemoveForeignCallback", &ForeignCallback::RemoveForeignCallback)
       .def("MakeScopeSymbol", &ForeignCallback::MakeScopeSymbol)
       .def("MakeParallelDescSymbol", &ForeignCallback::MakeParallelDescSymbol);
-  m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
 }

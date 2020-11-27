@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
-#define ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
+#include <pybind11/pybind11.h>
+#include <string>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/framework/framework.h"
 
-namespace oneflow {
+namespace py = pybind11;
 
-class ForeignCallback;
-
-void RegisterForeignCallbackOnlyOnce(ForeignCallback* callback);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
+  m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
+  m.def("LaunchJob", &LaunchJob);
+}
