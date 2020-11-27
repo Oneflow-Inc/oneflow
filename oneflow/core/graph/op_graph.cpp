@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/operator/normal_model_update_op.h"
 
 namespace oneflow {
 

@@ -18,11 +18,13 @@ from __future__ import absolute_import
 import functools
 import math
 
+import numpy as np
+
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 
 @oneflow_export("constant_initializer")
@@ -1060,3 +1062,142 @@ def _CalcGain(nonlinearity, negative_slope):
         raise NotImplementedError(
             "Only support None, 'tanh', 'sigmoid', 'relu' and 'leaky_relu' nonlinearity"
         )
+
+
+_init_map = {}
+
+
+def register_initializer(flow_initializer):
+    def deco(func):
+        _init_map[flow_initializer] = func
+        return func
+
+    return deco
+
+
+def GetInitializer(initializer_conf, random_seed, var_blob_shape):
+    f = None
+    for m in _init_map:
+        if initializer_conf.HasField(m):
+            f = _init_map[m]
+            break
+    assert f is not None, initializer_conf
+    return f(getattr(initializer_conf, m), random_seed, var_blob_shape)
+
+
+@register_initializer("constant_conf")
+@register_initializer("constant_int_conf")
+def ConstantInitializerImpl(
+    initializer_conf: Union[
+        op_conf_util.ConstantInitializerConf, op_conf_util.ConstantIntInitializerConf
+    ],
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    return lambda length: np.full((length,), initializer_conf.value)
+
+
+@register_initializer("random_normal_conf")
+def RandomNormalInitializerImpl(
+    initializer_conf: op_conf_util.RandomNormalInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.normal(
+        loc=initializer_conf.mean, scale=initializer_conf.std, size=length
+    )
+
+
+@register_initializer("random_uniform_conf")
+def RandomUniformInitializerImpl(
+    initializer_conf: op_conf_util.RandomUniformIntInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.uniform(
+        low=initializer_conf.min,
+        high=np.nextafter(initializer_conf.max, float("inf")),
+        size=length,
+    )
+
+
+@register_initializer("random_uniform_int_conf")
+def RandomUniformIntInitializerImpl(
+    initializer_conf: op_conf_util.RandomUniformIntInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: rng.integers(
+        low=initializer_conf.min, high=initializer_conf.max, size=length
+    )
+
+
+def RngTruncatedNormal(mean, std, length, rng):
+    truncated_value = 2 * std
+    data = []
+    while len(data) < length:
+        data.extend(
+            filter(
+                lambda value: abs(value - mean) < truncated_value,
+                rng.normal(mean, std, size=length - len(data)),
+            )
+        )
+    return data
+
+
+@register_initializer("truncated_normal_conf")
+def TruncatedNormalInitializerImpl(
+    initializer_conf: op_conf_util.TruncatedNormalInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    rng = np.random.default_rng(random_seed)
+    return lambda length: RngTruncatedNormal(
+        initializer_conf.mean, initializer_conf.std, length, rng,
+    )
+
+
+def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
+    variance_norm = initializer_conf.variance_norm
+    data_format = initializer_conf.data_format
+    fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
+    fan_out = var_blob_shape[0]
+    if data_format == "channel_first":
+        fan_out *= np.prod(var_blob_shape[2:]).astype(np.int).item()
+    else:
+        fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int).item()
+
+    if variance_norm == op_conf_util.kAverage:
+        fan = (fan_in + fan_out) / 2
+    elif variance_norm == op_conf_util.kFanIn:
+        fan = fan_in
+    elif variance_norm == op_conf_util.kFanOut:
+        fan = fan_out
+    else:
+        raise NotImplemented()
+    return fan
+
+
+@register_initializer("variance_scaling_conf")
+def VarianceScalingInitializerImpl(
+    initializer_conf: op_conf_util.VarianceScalingInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    scale = initializer_conf.scale / GenInitialFan(initializer_conf, var_blob_shape)
+    distribution = initializer_conf.distribution
+    rng = np.random.default_rng(random_seed)
+    if distribution == op_conf_util.kTruncatedNormal:
+        stddev = math.sqrt(scale) / 0.87962566103423978
+        return lambda length: RngTruncatedNormal(0, stddev, length, rng)
+    elif distribution == op_conf_util.kRandomNormal:
+        stddev = math.sqrt(scale)
+        return lambda length: rng.normal(0, stddev, size=length,)
+    elif distribution == op_conf_util.kRandomUniform:
+        limit = math.sqrt(3.0 * scale)
+        return lambda length: rng.uniform(low=-limit, high=limit, size=length)
+    else:
+        raise NotImplemented()
