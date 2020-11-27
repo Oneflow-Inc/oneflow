@@ -150,6 +150,7 @@ def gen_tensor_buffer(
     shape: Sequence[int],
     shape_list: Sequence[Sequence[int]],
     value_list: Sequence[float],
+    data_type: Optional[dtype_util.dtype] = dtype_util.float,
     dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -192,6 +193,7 @@ def gen_tensor_buffer(
         .Attr("shape", shape)
         .Attr("shape_list", shape_list)
         .Attr("value_list", value_list)
+        .Attr("data_type", data_type)
         .Attr("dynamic_out", dynamic_out)
         .Build()
         .InferAndTryRun()

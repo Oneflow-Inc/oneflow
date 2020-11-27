@@ -87,6 +87,7 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .Attr<Shape>("shape")
     .Attr<std::vector<Shape>>("shape_list")
     .Attr<std::vector<float>>("value_list")
+    .Attr<DataType>("data_type")
     .Attr<bool>("dynamic_out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -99,14 +100,6 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       *out->mut_shape() = shape;
       *out->mut_data_type() = DataType::kTensorBuffer;
       out->set_is_dynamic(ctx->Attr<bool>("dynamic_out"));
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
     });
 
@@ -134,23 +127,14 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       }
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      FOR_RANGE(int64_t, i, 0, ctx->user_op_conf().output_size("out")) {
-        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
-      }
-      return Maybe<void>::Ok();
-    })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
-      FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
-        user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
-        CHECK(out_i_modifier != nullptr);
-        out_i_modifier->set_header_infered_before_compute(false);
+      if (conf.attr<bool>("dynamic_out")) {
+        FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
+          user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
+          CHECK(out_i_modifier != nullptr);
+          out_i_modifier->set_header_infered_before_compute(false);
+        }
       }
     });
 

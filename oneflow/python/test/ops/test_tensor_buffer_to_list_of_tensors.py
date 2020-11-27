@@ -15,11 +15,13 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+from collections import OrderedDict
 
 import oneflow as flow
+from test_util import GenArgList, type_name_to_flow_type
 
 
-def _run_test(shape, shape_list, value_list):
+def _run_test(shape, shape_list, value_list, data_type):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -28,8 +30,8 @@ def _run_test(shape, shape_list, value_list):
     @flow.global_function(function_config=func_config)
     def TestTensorBufferToListOfTensorsJob():
         with flow.scope.placement("cpu", "0:0"):
-            x = flow.gen_tensor_buffer(shape, shape_list, value_list)
-            y = flow.tensor_buffer_to_list_of_tensors(x, (100, 100), flow.float, True)
+            x = flow.gen_tensor_buffer(shape, shape_list, value_list, type_name_to_flow_type[data_type])
+            y = flow.tensor_buffer_to_list_of_tensors(x, (100, 100), type_name_to_flow_type[data_type], True)
             return y
 
     out_0, out_1, out_2, out_3 = TestTensorBufferToListOfTensorsJob().get()
@@ -39,12 +41,21 @@ def _run_test(shape, shape_list, value_list):
     assert np.array_equal(out_3.numpy_list()[0], np.ones((100, 100), np.float) * 3.0)
 
 
+def gen_arg_list():
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(2, 2), (4,)]
+    arg_dict["shape_list"] = [[(10, 10), (50, 50), (20, 80), (100, 100)]]
+    arg_dict["value_list"] = [[0.0, 1.0, 2.0, 3.0]]
+    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+
+    return GenArgList(arg_dict)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestTensorBufferToListOfTensors(flow.unittest.TestCase):
-    shape_list = [(10, 10), (50, 50), (20, 80), (100, 100)]
-    value_list = [0.0, 1.0, 2.0, 3.0]
-    _run_test((2, 2), shape_list, value_list)
-    _run_test((4,), shape_list, value_list)
+    def test_tensor_buffer_to_list_of_tensors(test_case):
+        for arg in gen_arg_list():
+            _run_test(*arg)
 
 
 if __name__ == "__main__":

@@ -102,9 +102,13 @@ def coco_data_load(cfg, machine_id, nrank):
             True,
         )
 
-        ret = [image] + [new_size] + list(gt_bbox) + list(gt_label) + list(gt_mask)
-
-        return ret
+        return {
+            "image": image,
+            "image_size": new_size,
+            "gt_bbox": list(gt_bbox),
+            "gt_label": list(gt_label),
+            "gt_mask": list(gt_mask),
+        }
 
 
 def _make_data_load_fn():
@@ -129,18 +133,12 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
     s = pd.Series([], name="time_elapsed", dtype="float32")
     timestamp = time.perf_counter()
     for i in range(iter_num):
-        ret = data_loader().get()
-
-        index = 0
-        image = ret[index]
-        index += 1
-        image_size = ret[index]
-        index += 1
-        gt_bbox = ret[index : index + cfg.batch_size]
-        index += cfg.batch_size
-        gt_label = ret[index : index + cfg.batch_size]
-        index += cfg.batch_size
-        gt_mask = ret[index : index + cfg.batch_size]
+        dict = data_loader().get()
+        image = dict["image"]
+        image_size = dict["image_size"]
+        gt_bbox = dict["gt_bbox"]
+        gt_label = dict["gt_label"]
+        gt_mask = dict["gt_mask"]
 
         cur = time.perf_counter()
         s[i] = cur - timestamp

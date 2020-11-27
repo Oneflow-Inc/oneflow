@@ -104,6 +104,7 @@ REGISTER_USER_KERNEL("tensor_to_tensor_buffer")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
+template<typename T>
 class GenTensorBuffer final : public user_op::OpKernel {
  public:
   GenTensorBuffer() = default;
@@ -120,17 +121,26 @@ class GenTensorBuffer final : public user_op::OpKernel {
     MultiThreadLoop(num_tensor_buffers, [&](size_t i) {
       TensorBuffer* tensor_buffer = out->mut_dptr<TensorBuffer>() + i;
       const Shape& shape = shape_list.at(i);
-      tensor_buffer->Resize(shape, DataType::kFloat);
-      float* begin = reinterpret_cast<float*>(tensor_buffer->mut_data());
-      std::fill(begin, begin + shape.elem_cnt(), static_cast<float>(value_list.at(i)));
+      tensor_buffer->Resize(shape, GetDataType<T>::value);
+      T* begin = reinterpret_cast<T*>(tensor_buffer->mut_data());
+      std::fill(begin, begin + shape.elem_cnt(), static_cast<T>(value_list.at(i)));
     });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("gen_tensor_buffer")
-    .SetCreateFn<GenTensorBuffer>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
+#define REGISTER_GEN_TENSOR_BUFFER_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("gen_tensor_buffer")                          \
+      .SetCreateFn<GenTensorBuffer<dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU) \
+                       & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
+
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(int32_t)
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(int64_t)
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(float)
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(double)
+
+#undef REGISTER_GEN_TENSOR_BUFFER_KERNEL
 
 class TensorBufferToListOfTensors final : public user_op::OpKernel {
  public:
