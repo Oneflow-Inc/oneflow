@@ -84,8 +84,6 @@ def compare_with_np(device_type, label_type, num_classes, num_sample, batch_size
     )
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     weight, maped_label, sampled_label, sampled_weight = PartialFcJob(labels).get()
 
     gpu_num = 4
