@@ -46,19 +46,19 @@
   - To install latest release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102 --user
     ```
 
   - To install master branch release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/pip.index.html oneflow_cu102 --user
+    python3 -m pip install --find-links https://staging.oneflow.info/branch/master oneflow_cu102 --user
     ```
 
   - To install latest release of CPU-only OneFlow:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cpu --user
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
     ```
 
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
