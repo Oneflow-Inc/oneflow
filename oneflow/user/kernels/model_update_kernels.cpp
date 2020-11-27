@@ -178,6 +178,14 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("model_diff_indices", 0);
     const user_op::Tensor* model_diff_values = ctx->Tensor4ArgNameAndIndex("model_diff_values", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    const int64_t num_indices = model_diff_indices->shape().elem_cnt();
+    const int64_t num_values = model_diff_values->shape().elem_cnt();
+    if (num_indices == 0) {
+      CHECK_EQ(num_values, 0);
+      return;
+    }
+    CHECK_NE(num_values, 0);
+    CHECK_EQ(num_values % num_indices, 0);
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
