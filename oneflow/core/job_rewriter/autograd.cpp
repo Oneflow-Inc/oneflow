@@ -420,7 +420,8 @@ void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
                            const std::list<OpNode*>& loss_nodes,
                            HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
                            JobBuilder* job_builder) {
-  for (const std::string& loss_lbn : UniqueLossLbns(ctx->job_desc().job_conf().train_conf().loss_lbn())) {
+  for (const std::string& loss_lbn :
+       UniqueLossLbns(ctx->job_desc().job_conf().train_conf().loss_lbn())) {
     const LogicalBlobId loss_lbi = GenLogicalBlobId(loss_lbn);
     const auto loss_node_it = std::find_if(
         loss_nodes.cbegin(), loss_nodes.cend(),
