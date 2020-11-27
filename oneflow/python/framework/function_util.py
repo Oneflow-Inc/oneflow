@@ -706,6 +706,19 @@ def set_indexed_slices_optimizer_conf(func_desc, value):
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
 
+@oneflow_function_config("indexed_slices_optimizer_conf")
+def set_indexed_slices_mirrored_unsorted_segment_sum_promotion(func_desc, value):
+    r"""Set indexed slices mirrored_unsorted_segment_sum_promotion configuration of optimizer
+
+    Args:
+        func_desc ([type]): [description]
+        value ([type]): [description]
+    """
+    func_desc.job_config_proto.indexed_slices_optimizer_conf.enable_mirrored_unsorted_segment_sum_promotion = (
+        value
+    )
+
+
 @oneflow_function_config("enable_fuse_model_update_ops")
 def set_enable_fuse_model_update_ops(func_desc, value=True):
     r"""Whether enable fuse_model_update_ops.

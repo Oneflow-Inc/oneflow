@@ -29,7 +29,11 @@ class IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass final : publ
 Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply(
     Job* job, JobPassCtx* ctx) const {
   if (!(ctx->job_desc().job_conf().has_indexed_slices_optimizer_conf()
-        && ctx->job_desc().job_conf().indexed_slices_optimizer_conf().enable())) {
+        && ctx->job_desc().job_conf().indexed_slices_optimizer_conf().enable()
+        && ctx->job_desc()
+               .job_conf()
+               .indexed_slices_optimizer_conf()
+               .enable_mirrored_unsorted_segment_sum_promotion())) {
     return Maybe<void>::Ok();
   }
   HashMap<std::string, OperatorConf> op_name2op_conf;

@@ -18,6 +18,26 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+void UpdateConsumerOpConf(const std::string& new_lbn, const OpNode* op_node,
+                          JobBuilder* job_builder) {
+  const LogicalBlobId& old_lbi = op_node->op().BnInOp2Lbi(GenRepeatedBn("out", 0));
+  for (const OpEdge* edge : op_node->out_edges()) {
+    OpNode* out_node = edge->dst_node();
+    OperatorConf new_conf = out_node->op().op_conf();
+    for (const std::string& ibn : out_node->op().input_bns()) {
+      if (out_node->op().BnInOp2Lbi(ibn) == old_lbi) {
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&new_conf, ibn, new_lbn);
+        CHECK_EQ(GenLogicalBlobName(old_lbi), old_val);
+      }
+    }
+    job_builder->MutOpsOnlyOnce({new_conf});
+  }
+}
+
+}  // namespace
+
 class DistributedGatherRewritePass final : public JobPass {
  public:
   DistributedGatherRewritePass() = default;
@@ -31,19 +51,34 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](const OpNode* op_node) {
-    const int64_t parallel_num = op_node->parallel_desc().parallel_num();
-    if (parallel_num == 1) { return; }
+
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
     const std::string& op_type_name = op_conf.user_conf().op_type_name();
     if (op_type_name != "distributed_gather") { return; }
     user_op::UserOpConfWrapper cur_op(op_conf);
+    const std::string& op_name = cur_op.op_name();
+    const int64_t parallel_num = op_node->parallel_desc().parallel_num();
+
+    if (parallel_num == 1) {
+      auto gather_op = user_op::UserOpConfWrapperBuilder(op_name + "-gather")
+                           .Op("gather")
+                           .Input("in", cur_op.input("in", 0))
+                           .Input("indices", cur_op.input("indices", 0))
+                           .Attr<int64_t>("axis", 0)
+                           .Output("out")
+                           .ScopeSymbolId(op_conf.scope_symbol_id())
+                           .Build();
+      UpdateConsumerOpConf(gather_op.output("out", 0), op_node, &job_builder);
+      job_builder.DelOps({op_node->op().op_conf()});
+      job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {gather_op.op_conf()});
+      return;
+    }
     const SbpParallel& indices_sbp =
         op_node->SbpParallel4Lbi(GenLogicalBlobId(cur_op.input("indices", 0)));
     const SbpParallel& in_sbp = op_node->SbpParallel4Lbi(GenLogicalBlobId(cur_op.input("in", 0)));
     if (!indices_sbp.has_split_parallel() || !in_sbp.has_split_parallel()) { return; }
     if (indices_sbp.split_parallel().axis() != 0 || in_sbp.split_parallel().axis() != 0) { return; }
-    const std::string& op_name = cur_op.op_name();
     const BlobDesc& in_desc = op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cur_op.input("in", 0)));
     const int64_t num_classes = in_desc.shape().At(0);
     const BlobDesc& indices_desc =
@@ -201,12 +236,17 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
     }
     OperatorConf distribute_concat_op_conf{};
     distribute_concat_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
-    distribute_concat_op_conf.set_name(op_name);
+    distribute_concat_op_conf.set_name(op_name + "-distribute_concat");
     auto* distribute_concat_conf = distribute_concat_op_conf.mutable_distribute_concat_conf();
     FOR_RANGE(int32_t, i, 0, parallel_num) { distribute_concat_conf->add_in(out_list.at(i)); }
     distribute_concat_conf->set_axis(0);
-    distribute_concat_conf->set_out("out_0");
-    job_builder.MutOpsOnlyOnce({distribute_concat_op_conf});
+    distribute_concat_conf->set_out("out");
+    UpdateConsumerOpConf(
+        GenLogicalBlobName(distribute_concat_op_conf.name(), distribute_concat_conf->out()),
+        op_node, &job_builder);
+
+    job_builder.DelOps({op_node->op().op_conf()});
+    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {distribute_concat_op_conf});
   });
   return Maybe<void>::Ok();
 }

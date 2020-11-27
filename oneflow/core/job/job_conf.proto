@@ -61,6 +61,7 @@ message XrtConfig {
 message IndexedSlicesOptimizerConf {
   optional bool enable = 1 [default = true];
   required OpNameSet include_op_names = 2;
+  optional bool enable_mirrored_unsorted_segment_sum_promotion = 3 [default = true];
 }
 
 message ParallelBlobConf {

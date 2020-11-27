@@ -41,6 +41,7 @@ __global__ void GetPartionBoundIndex(const int64_t n, const int64_t parallel_num
       const T cur_in = in_ptr[i] / num_classes_per_rank;
       const T pre_in = in_ptr[i - 1] / num_classes_per_rank;
       if (cur_in > pre_in) {
+        assert(cur_in < parallel_num);
 #pragma unroll
         for (int32_t j = pre_in + 1; j <= cur_in; ++j) { out_ptr[j] = static_cast<K>(i); }
       }
