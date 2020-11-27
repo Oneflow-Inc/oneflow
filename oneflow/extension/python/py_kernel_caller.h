@@ -18,20 +18,20 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-class PyKernelForward : public user_op::OpKernel {
+class PyForwardKernel final : public user_op::OpKernel {
  public:
-  PyKernelForward() = default;
-  ~PyKernelForward() = default;
+  PyForwardKernel() = default;
+  ~PyForwardKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-class PyKernelBackward final : public user_op::OpKernel {
+class PyBackwardKernel final : public user_op::OpKernel {
  public:
-  PyKernelBackward() = default;
-  ~PyKernelBackward() = default;
+  PyBackwardKernel() = default;
+  ~PyBackwardKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override;

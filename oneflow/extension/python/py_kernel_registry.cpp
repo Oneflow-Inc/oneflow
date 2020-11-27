@@ -24,14 +24,14 @@ void RegisterPyKernelCaller(const std::string& op_module_name) {
   // register python op kernel
   auto reg = user_op::UserOpRegistryMgr::Get()
                  .CheckAndGetOpKernelRegistry(op_module_name + "_forward")
-                 .SetCreateFn<PyKernelForward>()
+                 .SetCreateFn<PyForwardKernel>()
                  .SetIsMatchedHob(
                      ((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
   user_op::UserOpRegistryMgr::Get().Register(reg.Finish().GetResult());
   // register python grad op kernel
   auto grad_reg = user_op::UserOpRegistryMgr::Get()
                       .CheckAndGetOpKernelRegistry(op_module_name + "_backward")
-                      .SetCreateFn<PyKernelBackward>()
+                      .SetCreateFn<PyBackwardKernel>()
                       .SetIsMatchedHob(((user_op::HobDeviceTag() == "cpu")
                                         & (user_op::HobDeviceSubTag() == "py")));
   user_op::UserOpRegistryMgr::Get().Register(grad_reg.Finish().GetResult());

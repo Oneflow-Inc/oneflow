@@ -216,8 +216,8 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   PyObject *py_inputs, *py_outputs;
 
   // get python kernel
-  const std::string backward_suffix = "_backward";
-  const std::string forward_suffix = "_forward";
+  static const std::string forward_suffix = "_forward";
+  static const std::string backward_suffix = "_backward";
   std::string op_module_name = op_type_name;
   if (op_type_name.size() > forward_suffix.size()
       && op_type_name.rfind(forward_suffix) == (op_type_name.size() - forward_suffix.size())) {
