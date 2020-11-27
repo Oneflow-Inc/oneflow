@@ -214,16 +214,28 @@ def _run_test_moving_average_min_max_observer(
     else:
         flow.config.gpu_device_num(device_num)
 
-    @flow.global_function(type="predict", function_config=flow.FunctionConfig())
+    @flow.global_function(type="train", function_config=flow.FunctionConfig())
     def QuantizeJob(
         activation: oft.Numpy.Placeholder(
             activation_shape, dtype=type_name_to_flow_type[dtype]
         )
     ):
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
+            x = flow.get_variable(
+                "x",
+                shape=activation_shape,
+                dtype=activation.dtype,
+                initializer=flow.zeros_initializer(activation.dtype),
+                trainable=True,
+            )
             scale, zero_point = flow.quantization.MovingAverageMinMaxObserver(
                 activation, quantize_to_bit, quantize_scheme, momentum,
             )
+            fake = x + activation
+            loss = flow.math.reduce_mean(fake)
+            flow.optimizer.Adam(
+                flow.optimizer.PiecewiseConstantScheduler([], [0.001]),
+            ).minimize(loss)
         return scale, zero_point
 
     check_point = flow.train.CheckPoint()
