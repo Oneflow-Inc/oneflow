@@ -573,6 +573,7 @@ Maybe<double> UserOp::GetComputeComplexity(
     const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
     if (sbp_parallel.has_split_parallel()) {
       const int32_t axis = sbp_parallel.split_parallel().axis();
+      if (logical_blob_desc4bn(bn).shape().NumAxes() <= axis) return false;
       return logical_blob_desc4bn(bn).shape().At(axis) >= parallel_desc.parallel_num();
     }
     return true;

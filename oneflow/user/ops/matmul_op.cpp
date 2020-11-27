@@ -143,7 +143,7 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
       || ctx->SbpParallel4ArgNameAndIndex("b", 0).has_split_parallel()) {
     return logical_computation_cost / ctx->parallel_desc().parallel_num();
   } else
-  return logical_computation_cost;
+    return logical_computation_cost;
 }
 
 }  // namespace

@@ -32,8 +32,17 @@ Maybe<void> InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
-                                         parallel_ctx));
+  const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
+  out_blob_desc->mut_shape() = Shape(blob_conf.shape());
+  CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
+  out_blob_desc->set_data_type(blob_conf.data_type());
+  out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
+  out_blob_desc->set_is_tensor_list(blob_conf.is_tensor_list());
+  if (sbp_signature->bn_in_op2sbp_parallel().at("out").has_split_parallel()) {
+    int64_t split_axis = sbp_signature->bn_in_op2sbp_parallel().at("out").split_parallel().axis();
+    BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
+    out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
+  }
   return Maybe<void>::Ok();
 }
 

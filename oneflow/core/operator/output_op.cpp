@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/operator/output_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/operator/interface_op_util.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -27,14 +28,23 @@ void OutputOp::InitFromOpConf() {
 
 Maybe<void> OutputOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   if (in_blob_desc->is_dynamic()) {
     *out_blob_desc = *in_blob_desc;
   } else {
-    InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
-                                      parallel_ctx);
+    const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
+    out_blob_desc->mut_shape() = Shape(blob_conf.shape());
+    CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
+    out_blob_desc->set_data_type(blob_conf.data_type());
+    out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
+    out_blob_desc->set_is_tensor_list(blob_conf.is_tensor_list());
+    if (sbp_signature->bn_in_op2sbp_parallel().at("out").has_split_parallel()) {
+      int64_t split_axis = sbp_signature->bn_in_op2sbp_parallel().at("out").split_parallel().axis();
+      BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
+      out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
+    }
     CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
   }
   return Maybe<void>::Ok();
