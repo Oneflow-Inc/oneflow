@@ -19,10 +19,10 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow
 
 
-def Infer(op_conf, ibn2blob_object, scope_symbol=None):
-    if scope_symbol is None:
-        scope_symbol = oneflow.current_scope()
-    op_conf.scope_symbol_id = scope_symbol.symbol_id
+def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):
+    if scope_symbol_id is None:
+        scope_symbol_id = oneflow.current_scope().symbol_id
+    op_conf.scope_symbol_id = scope_symbol_id
     upstream_signature = MakeUpstreamSignature(ibn2blob_object)
     return c_api_util.InferOpConf(op_conf, upstream_signature)
 
