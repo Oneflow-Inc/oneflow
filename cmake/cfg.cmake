@@ -25,8 +25,11 @@ execute_process(
 
 include_directories(${CFG_INCLUDE_DIR})
 
+list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${CFG_INCLUDE_DIR})
+
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND ALL_CFG_CONVERT_PROTO
+      oneflow/core/common/error.proto
       oneflow/core/vm/instruction.proto
       oneflow/core/eager/eager_symbol.proto
       oneflow/core/job/job_conf.proto
