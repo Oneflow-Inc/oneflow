@@ -84,6 +84,11 @@ std::string GetSerializedInterUserJobInfo(std::string* error_str) {
                                                                                  std::string(""));
 }
 
+std::string GetSerializedOpAttributes(std::string* error_str) {
+  return oneflow::GetSerializedOpAttributes().GetDataAndSerializedErrorProto(error_str,
+                                                                             std::string(""));
+}
+
 std::string GetSerializedJobSet(std::string* error_str) {
   return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
@@ -95,6 +100,10 @@ std::string GetSerializedStructureGraph(std::string* error_str) {
 
 std::string GetFunctionConfigDef(std::string* error_str) {
   return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
+}
+
+std::string GetScopeConfigDef(std::string* error_str) {
+  return oneflow::GetScopeConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
@@ -274,4 +283,8 @@ void CacheInt8Calibration(std::string* error_str) {
 
 void WriteInt8Calibration(const std::string& path, std::string* error_str) {
   oneflow::WriteInt8Calibration(path).GetDataAndSerializedErrorProto(error_str);
+}
+
+void LoadLibraryNow(const std::string& lib_path, std::string* error_str) {
+  oneflow::LoadLibraryNow(lib_path).GetDataAndSerializedErrorProto(error_str);
 }

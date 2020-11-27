@@ -121,6 +121,63 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
         x = Foo()
         test_case.assertTrue(np.allclose(x, ones + ones + ones + ones))
 
+    def test_add_ssp_variable_proxy(test_case):
+        if flow.eager_execution_enabled():
+            return
+        device_name = "0:0"
+
+        flow.config.enable_debug_mode(True)
+        flow.config.cpu_device_num(2)
+
+        buffer_size = 4
+
+        function_config = flow.FunctionConfig()
+        function_config.enable_ssp(True)
+
+        @flow.global_function(type="train", function_config=function_config)
+        def Foo() -> tp.Numpy:
+            with flow.scope.placement(
+                "cpu", device_name
+            ), flow.experimental.scope.config(
+                ssp_num_stages=buffer_size, ssp_stage_id=0
+            ):
+                w = flow.get_variable(
+                    "w",
+                    shape=(10,),
+                    dtype=flow.float,
+                    initializer=flow.constant_initializer(0),
+                )
+                loss = w + flow.constant_like(w, value=0.0, dtype=flow.float)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [-10.0]), momentum=0
+                ).minimize(loss)
+                return loss
+
+        checkpoint = flow.train.CheckPoint()
+        checkpoint.init()
+        zeros = np.zeros((10,)).astype(np.float32)
+        ones = np.ones((10,)).astype(np.float32)
+
+        # the first four results are always initialized with zeros
+        for i in range(buffer_size):
+            x = Foo()
+            test_case.assertTrue(np.allclose(x, zeros))
+        # ones, because the formula is W_mutable = W_mutable + 1
+        x = Foo()
+        test_case.assertTrue(np.allclose(x, ones))
+
+        # twos, because the formula is W_mutable = W_mutable + 1
+        x = Foo()
+        test_case.assertTrue(np.allclose(x, ones + ones))
+
+        # threes, because the formula is W_mutable = W_mutable + 1
+        x = Foo()
+        test_case.assertTrue(np.allclose(x, ones + ones + ones))
+
+        # fours, because the formula is W_mutable = W_mutable + 1
+        x = Foo()
+        test_case.assertTrue(np.allclose(x, ones + ones + ones + ones))
+
 
 if __name__ == "__main__":
     unittest.main()

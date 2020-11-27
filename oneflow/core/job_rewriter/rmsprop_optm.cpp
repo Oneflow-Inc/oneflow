@@ -47,19 +47,19 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   job_builder->AddOps(parallel_conf, {mean_square_var});
 
   user_op::UserOpConfWrapperBuilder rmsprop_update_op_builder(op.op_name() + "_optimizer");
-  bool centered;
   const RMSPropModelUpdateConf& rmsprop_conf = model_update_conf.rmsprop_conf();
-  centered = rmsprop_conf.centered();
+  bool centered = rmsprop_conf.centered();
   rmsprop_update_op_builder.OpTypeName("rmsprop_update")
       .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
       .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
       .Input("learning_rate", train_conf.primary_lr_lbn())
       .Input("mean_square", GenVariableOutputLbn(mean_square_var))
-      .Attr<bool>("centered", rmsprop_conf.centered())
+      .Attr<bool>("centered", centered)
       .Attr<float>("epsilon", rmsprop_conf.epsilon())
       .Attr<float>("decay_rate", rmsprop_conf.decay_rate())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &rmsprop_update_op_builder);
 
   if (centered) {
     OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
