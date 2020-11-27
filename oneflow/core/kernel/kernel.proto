@@ -1,11 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
-import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
@@ -17,15 +15,6 @@ message DecodeRandomKernelConf {
 
 message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
-}
-
-message SliceKernelConf {
-  required ShapeProto in_shape = 1;
-}
-
-message ConstantKernelConf {
-  required InitializerConf initializer = 1;
-  required uint32 random_seed = 2;
 }
 
 message VariableKernelConf {
@@ -104,7 +93,6 @@ message KernelConf {
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
     ArgWhereKernelConf arg_where_conf = 361;
 
-    SliceKernelConf slice_conf = 402;
     VariableKernelConf variable_conf = 407;
     RecordLoadKernelConf record_load_conf = 408;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
