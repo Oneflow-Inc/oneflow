@@ -27,6 +27,8 @@ class TmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(void* ptr, const int64_t num_indices, const int64_t num_values) : ptr_(ptr) {
+    CHECK_NE(num_indices, 0);
+    CHECK_NE(num_values, 0);
     const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
     const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
     const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
@@ -303,6 +305,11 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     const auto beta = ctx->Attr<float>("beta");
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
+    if (num_indices == 0) {
+      CHECK_EQ(num_values, 0);
+      return;
+    }
+    CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
     CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
@@ -429,6 +436,11 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
+    if (num_indices == 0) {
+      CHECK_EQ(num_values, 0);
+      return;
+    }
+    CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
     CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
