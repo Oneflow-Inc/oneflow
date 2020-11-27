@@ -208,15 +208,15 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
 
 user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::string& input,
                                        const std::string& scale, const std::string& zero_point,
-                                       const int64_t scope_symbol_id, OpConfMap* inserted_ops) {
+                                       bool symmetric, const int64_t scope_symbol_id,
+                                       OpConfMap* inserted_ops) {
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
           .Op("fake_quantization")
           .Input("in", input)
           .Input("scale", scale)
           .Input("zero_point", zero_point)
-          // TODO(jianhao): affine is always correct, but symmetric can be better
-          .Attr<std::string>("quantize_scheme", "affine")
+          .Attr<std::string>("quantize_scheme", symmetric ? "symmetric" : "affine")
           .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -309,33 +309,31 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
     return node->op().op_name();
   };
   HashSet<OpNode*> white_set;
-  DfsTopoGraphTraversal(op_graph, false,
-                        [this](OpNode* node) { return IsNodeInList(int8_list_, node); },
-                        [&](OpNode* node) { return IsNodeInList(transparent_list_, node); },
-                        [&](OpNode* node) { return IsKeyFound(white_set, node); },
-                        [&](OpNode* node) {
-                          INSERT_CHECK(white_set.insert(node));
-                          if (node->op().op_conf().user_conf().op_type_name() == "conv2d"
-                              && node->out_edges().size() == 1) {
-                            OpNode* next_node = node->SoleOutEdge()->dst_node();
-                            if (OpTypeName4OpNode(next_node) == "bias_add") {
-                              INSERT_CHECK(white_set.insert(next_node));
-                              // TODO: mark these special nodes
-                              if (next_node->out_edges().size() == 1) {
-                                next_node = next_node->SoleOutEdge()->dst_node();
-                              }
-                            }
-                            if (OpTypeName4OpNode(next_node) == "normalization") {
-                              INSERT_CHECK(white_set.insert(next_node));
-                              if (next_node->out_edges().size() == 1) {
-                                next_node = next_node->SoleOutEdge()->dst_node();
-                              }
-                            }
-                            if (OpTypeName4OpNode(next_node) == "relu") {
-                              INSERT_CHECK(white_set.insert(next_node));
-                            }
-                          }
-                        });
+  DfsTopoGraphTraversal(
+      op_graph, false, [this](OpNode* node) { return IsNodeInList(int8_list_, node); },
+      [&](OpNode* node) { return IsNodeInList(transparent_list_, node); },
+      [&](OpNode* node) { return IsKeyFound(white_set, node); },
+      [&](OpNode* node) {
+        INSERT_CHECK(white_set.insert(node));
+        if (node->op().op_conf().user_conf().op_type_name() == "conv2d"
+            && node->out_edges().size() == 1) {
+          OpNode* next_node = node->SoleOutEdge()->dst_node();
+          if (OpTypeName4OpNode(next_node) == "bias_add") {
+            INSERT_CHECK(white_set.insert(next_node));
+            // TODO: mark these special nodes
+            if (next_node->out_edges().size() == 1) {
+              next_node = next_node->SoleOutEdge()->dst_node();
+            }
+          }
+          if (OpTypeName4OpNode(next_node) == "normalization") {
+            INSERT_CHECK(white_set.insert(next_node));
+            if (next_node->out_edges().size() == 1) {
+              next_node = next_node->SoleOutEdge()->dst_node();
+            }
+          }
+          if (OpTypeName4OpNode(next_node) == "relu") { INSERT_CHECK(white_set.insert(next_node)); }
+        }
+      });
 
   VLOG(3) << "white_set include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
@@ -427,7 +425,8 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
                                         &zero_point, qat_config, scope_symbol_id, &inserted_ops));
       const std::string fake_quant_op_name = ReplaceSlashToDash4Lbn(lbn) + fake_quant_suffix;
       const auto fake_quant_op =
-          FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, scope_symbol_id, &inserted_ops);
+          FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, qat_config.symmetric(),
+                      scope_symbol_id, &inserted_ops);
 
       const std::string fake_quant_op_output_name = fake_quant_op.output("out", 0);
 
