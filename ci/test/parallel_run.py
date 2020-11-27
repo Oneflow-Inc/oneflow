@@ -44,7 +44,13 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                 cmd = cmds.pop()
                 cuda_visible_devices = ",".join([str(i) for i in gpu_ids_to_occupy])
                 if verbose:
-                    print("cuda_visible_devices:", cuda_visible_devices, "cmd:", cmd)
+                    print(
+                        "cuda_visible_devices:",
+                        cuda_visible_devices,
+                        "cmd:",
+                        cmd,
+                        flush=True,
+                    )
                 proc = subprocess.Popen(
                     cmd,
                     env=dict(
