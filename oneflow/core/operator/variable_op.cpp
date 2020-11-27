@@ -73,14 +73,22 @@ Maybe<void> VariableOp::InferBatchAxis(
 }
 
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
-  SbpSignatureBuilder sbp_sig_builder;
-  if (opt_split_axis->has_value()) {
-    sbp_sig_builder.Split(output_bns(), opt_split_axis->value());
-  } else {
-    sbp_sig_builder.Broadcast(output_bns());
+  // const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
+  // SbpSignatureBuilder sbp_sig_builder;
+  // if (opt_split_axis->has_value()) {
+  //   sbp_sig_builder.Split(output_bns(), opt_split_axis->value());
+  // } else {
+  //   sbp_sig_builder.Broadcast(output_bns());
+  // }
+  // sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+
+  // build all avaible sbp signature
+  for (int32_t i = 0; i < 5; i++) {
+    SbpSignatureBuilder sbp_sig_builder;
+    sbp_sig_builder.Split(output_bns(), i)
+        .Broadcast(input_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
-  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
