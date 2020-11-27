@@ -34,10 +34,10 @@ int64_t GetCubSortPairsTempStorageSize(int64_t n) {
   size_t cub_sort_temp_store_size = 0;
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
                                                        nullptr, nullptr, nullptr, n)));
-  size_t temp_store_size = GetCudaAlignedSize(static_cast<int64_t>(cub_sort_temp_store_size));
+  size_t temp_store_size = GetCudaAlignedSize(cub_sort_temp_store_size);
   CHECK_GE(temp_store_size, 0);
-  CHECK_LT(temp_store_size, GetMaxVal<int64_t>());
-  return temp_store_size;
+  CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()));
+  return static_cast<int64_t>(temp_store_size);
 }
 
 template<typename K>
@@ -46,10 +46,10 @@ int64_t GetCubScanTempStorageSize(int64_t n) {
   NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(nullptr, 0);
   OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
       nullptr, cub_scan_temp_store_size, unique_counting_iter, nullptr, n)));
-  size_t temp_store_size = GetCudaAlignedSize(static_cast<int64_t>(cub_scan_temp_store_size));
+  size_t temp_store_size = GetCudaAlignedSize(cub_scan_temp_store_size);
   CHECK_GE(temp_store_size, 0);
-  CHECK_LT(temp_store_size, GetMaxVal<int64_t>());
-  return temp_store_size;
+  CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()));
+  return static_cast<int64_t>(temp_store_size);
 }
 
 template<typename K>
@@ -70,7 +70,7 @@ class TmpBufferManager final {
                                       GetCubScanTempStorageSize<K>(batch_size));
     cub_sort_keys_offset_ = 0;
     cub_sort_values_offset_ = cub_sort_keys_offset_ + cub_sort_keys_bytes;
-    cub_sort_keys_out_offset_ = cub_sort_values_offset_ + cub_sort_keys_bytes;
+    cub_sort_keys_out_offset_ = cub_sort_values_offset_ + cub_sort_values_bytes;
     cub_sort_values_out_offset_ = cub_sort_keys_out_offset_ + cub_sort_keys_out_bytes;
     cub_tmp_storage_offset_ = cub_sort_values_out_offset_ + cub_sort_values_out_bytes;
     bound_index_offset_ = cub_tmp_storage_offset_ + cub_tmp_storage_bytes_;
@@ -186,9 +186,9 @@ __global__ void MarkPositive(const int64_t n, const int64_t offset, const int64_
 }
 
 template<typename K>
-__global__ void GetSampleLabel(const int64_t n, const int64_t offset, const K* label,
-                               K* sample_label) {
-  CUDA_1D_KERNEL_LOOP(i, n) { sample_label[i] = label[i] + offset; }
+__global__ void GetSampledLabel(const int64_t n, const int64_t offset, const K* label,
+                                K* sampled_label) {
+  CUDA_1D_KERNEL_LOOP(i, n) { sampled_label[i] = label[i] + offset; }
 }
 
 template<typename K>
@@ -214,6 +214,7 @@ __global__ void GetPartionBound(const int64_t n, const int64_t parallel_num,
       const K cur_in = key_ptr[i] / num_classes_per_rank;
       const K pre_in = key_ptr[i - 1] / num_classes_per_rank;
       if (cur_in > pre_in) {
+        assert(cur_in < parallel_num);
 #pragma unroll
         for (int32_t j = pre_in + 1; j <= cur_in; ++j) {
           bound_index[j] = static_cast<K>(i);
@@ -237,14 +238,14 @@ __global__ void GetPartionBound(const int64_t n, const int64_t parallel_num,
 
 template<typename K>
 __global__ void GetMappedLabel(const int64_t n, const K* label_map_key, const K* label_map_value,
-                               K* maped_label) {
-  CUDA_1D_KERNEL_LOOP(i, n) { maped_label[label_map_key[i]] = label_map_value[i]; }
+                               K* mapped_label) {
+  CUDA_1D_KERNEL_LOOP(i, n) { mapped_label[label_map_key[i]] = label_map_value[i]; }
 }
 
 template<typename K>
 void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
               const int64_t lower_bound, const int64_t parallel_num, const int64_t num_sample,
-              size_t temp_storage_bytes, const K* label_ptr, K* maped_label_ptr,
+              size_t temp_storage_bytes, const K* label_ptr, K* mapped_label_ptr,
               K* cub_sort_values_ptr, K* cub_sort_keys_out_ptr, K* cub_sort_values_out_ptr,
               void* cub_tmp_storage_ptr, K* bound_index_ptr, K* bound_value_ptr) {
   IotaKernel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -270,7 +271,7 @@ void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_siz
 
   GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                    ctx->cuda_stream()>>>(batch_size, cub_sort_values_out_ptr, cub_sort_values_ptr,
-                                         maped_label_ptr);
+                                         mapped_label_ptr);
 }
 
 }  // namespace
@@ -279,7 +280,7 @@ template<typename T, typename K>
 class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
  public:
   DistributedPartialFcSampleGpuKernel() = default;
-  ~DistributedPartialFcSampleGpuKernel() = default;
+  ~DistributedPartialFcSampleGpuKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -306,7 +307,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
-    user_op::Tensor* maped_label = ctx->Tensor4ArgNameAndIndex("maped_label", 0);
+    user_op::Tensor* mapped_label = ctx->Tensor4ArgNameAndIndex("mapped_label", 0);
     user_op::Tensor* sampled_label = ctx->Tensor4ArgNameAndIndex("sampled_label", 0);
     user_op::Tensor* sampled_weight = ctx->Tensor4ArgNameAndIndex("sampled_weight", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -324,12 +325,12 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     const int64_t num_sample = kernel_state->num_sample_per_rank();
     kernel_state->GenRandom<K>(ctx->device_ctx(), num_classes, num_classes,
                                buffer_manager.CubSortKeysPtr());
-    IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
-                 ctx->device_ctx()->cuda_stream()>>>(num_classes,
-                                                     buffer_manager.CubSortValuesPtr());
     MarkPositive<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
                    ctx->device_ctx()->cuda_stream()>>>(
         batch_size, lower_bound, num_classes, label->dptr<K>(), buffer_manager.CubSortKeysPtr());
+    IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
+                 ctx->device_ctx()->cuda_stream()>>>(num_classes,
+                                                     buffer_manager.CubSortValuesPtr());
     size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
     OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
         buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.CubSortKeysPtr(),
@@ -337,21 +338,21 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
         buffer_manager.CubSortValuesOutPtr(), num_classes, 0, sizeof(K) * 8,
         ctx->device_ctx()->cuda_stream())));
 
-    GetSampleLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
-                     ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
-                                                         buffer_manager.CubSortValuesOutPtr(),
-                                                         sampled_label->mut_dptr<K>());
+    GetSampledLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
+                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
+                                                          buffer_manager.CubSortValuesOutPtr(),
+                                                          sampled_label->mut_dptr<K>());
 
     GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(
         ctx->device_ctx(), buffer_manager.CubSortValuesOutPtr(), num_sample, weight->dptr<T>(),
-        Shape({1, weight->shape().At(0), weight->shape().Count(1)}), sampled_weight->mut_dptr<T>(),
-        0);
+        Shape({1, num_classes, weight->shape().Count(1)}), sampled_weight->mut_dptr<T>(), 0);
 
     MapLabel<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, parallel_num, num_sample,
-                buffer_manager.GetCubTmpStorageSize(), label->dptr<K>(), maped_label->mut_dptr<K>(),
-                buffer_manager.CubSortValuesPtr(), buffer_manager.CubSortKeysOutPtr(),
-                buffer_manager.CubSortValuesOutPtr(), buffer_manager.CubTmpStoragePtr(),
-                buffer_manager.BoundIndexPtr(), buffer_manager.BoundValuePtr());
+                buffer_manager.GetCubTmpStorageSize(), label->dptr<K>(),
+                mapped_label->mut_dptr<K>(), buffer_manager.CubSortValuesPtr(),
+                buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesOutPtr(),
+                buffer_manager.CubTmpStoragePtr(), buffer_manager.BoundIndexPtr(),
+                buffer_manager.BoundValuePtr());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -377,39 +378,42 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_GPU_KERN
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
-class DistributedPartialFcSampleGradGpuKernel final : public user_op::OpKernel {
+class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::OpKernel {
  public:
-  DistributedPartialFcSampleGradGpuKernel() = default;
-  ~DistributedPartialFcSampleGradGpuKernel() = default;
+  DistributedPartialFcSampleDisableBoxingGpuKernel() = default;
+  ~DistributedPartialFcSampleDisableBoxingGpuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* sampled_weight_diff =
         ctx->Tensor4ArgNameAndIndex("sampled_weight_diff", 0);
     const user_op::Tensor* sampled_label = ctx->Tensor4ArgNameAndIndex("sampled_label", 0);
-    user_op::Tensor* sampled_weight_diff_out =
-        ctx->Tensor4ArgNameAndIndex("sampled_weight_diff_out", 0);
-    user_op::Tensor* sampled_label_out = ctx->Tensor4ArgNameAndIndex("sampled_label_out", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(), sampled_weight_diff_out->mut_dptr<void>(),
+    user_op::Tensor* boxing_disabled_sampled_weight_diff =
+        ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0);
+    user_op::Tensor* boxing_disabled_sampled_label =
+        ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
+    Memcpy<DeviceType::kGPU>(ctx->device_ctx(),
+                             boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
                              sampled_weight_diff->dptr<void>(),
                              sampled_weight_diff->shape().elem_cnt()
                                  * GetSizeOfDataType(sampled_weight_diff->data_type()));
     Memcpy<DeviceType::kGPU>(
-        ctx->device_ctx(), sampled_label_out->mut_dptr<void>(), sampled_label->dptr<void>(),
+        ctx->device_ctx(), boxing_disabled_sampled_label->mut_dptr<void>(),
+        sampled_label->dptr<void>(),
         sampled_label->shape().elem_cnt() * GetSizeOfDataType(sampled_label->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_GRAD_GPU_KERNEL(dtype_pair, ltype_pair)      \
-  REGISTER_USER_KERNEL("distributed_partial_fc_sample_grad")                                \
-      .SetCreateFn<DistributedPartialFcSampleGradGpuKernel<OF_PP_PAIR_FIRST(dtype_pair),    \
-                                                           OF_PP_PAIR_FIRST(ltype_pair)>>() \
-      .SetIsMatchedHob(                                                                     \
-          (user_op::HobDeviceTag() == "gpu")                                                \
-          & (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
+#define REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL(dtype_pair, ltype_pair) \
+  REGISTER_USER_KERNEL("distributed_partial_fc_sample_disable_boxing")                           \
+      .SetCreateFn<DistributedPartialFcSampleDisableBoxingGpuKernel<                             \
+          OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()                         \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceTag() == "gpu")                                                     \
+          & (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))          \
           & (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_GRAD_GPU_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op

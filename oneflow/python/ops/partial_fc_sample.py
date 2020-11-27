@@ -48,7 +48,7 @@ def distributed_partial_fc_sample(
         .Input("weight", [weight])
         .Input("label", [label])
         .Attr("num_sample", num_sample)
-        .Output("maped_label")
+        .Output("mapped_label")
         .Output("sampled_label")
         .Output("sampled_weight")
         .Build()
