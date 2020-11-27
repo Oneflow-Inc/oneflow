@@ -54,7 +54,8 @@ REGISTER_USER_OP("reshape_like")
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
-      return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, like_shape, ctx);
+      return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, like_shape, {{"in", 0}},
+                                                              {{"like", 0}, {"out", 0}}, ctx);
     });
 
 }  // namespace oneflow

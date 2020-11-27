@@ -31,8 +31,6 @@ class XrtLaunchOp : public Operator {
                              const ParallelContext* parallel_ctx) const override;
 
   LogicalNode* NewProperLogicalNode() const override {
-    const auto& launch_conf = op_conf().xrt_launch_conf();
-    if (launch_conf.model_update()) { return new OptimizerLogicalNode; }
     return new NormalForwardLogicalNode;
   }
 

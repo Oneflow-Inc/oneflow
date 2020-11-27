@@ -81,7 +81,7 @@ def _compare_mseloss_with_np(
             v = flow.get_variable(
                 shape=input.shape,
                 dtype=flow.float32,
-                initializer=flow.ones_initializer(),
+                initializer=flow.zeros_initializer(),
                 name="x_var",
             )
             x_var = of_input + v
