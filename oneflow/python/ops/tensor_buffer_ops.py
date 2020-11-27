@@ -154,7 +154,7 @@ def gen_tensor_buffer(
     dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r"""This operator generates a tensor buffer blob, for now we only support float data type.
+    r"""This operator generates a tensor buffer blob.
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorBuffer. 

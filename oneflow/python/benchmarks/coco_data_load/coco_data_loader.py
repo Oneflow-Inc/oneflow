@@ -129,7 +129,6 @@ def _make_data_load_fn():
 def _benchmark(iter_num, drop_first_iters, verbose=False):
     flow.env.init()
     data_loader = _make_data_load_fn()
-    cfg = COCODataLoadConfig()
     s = pd.Series([], name="time_elapsed", dtype="float32")
     timestamp = time.perf_counter()
     for i in range(iter_num):
