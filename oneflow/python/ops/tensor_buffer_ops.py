@@ -200,6 +200,29 @@ def gen_tensor_buffer(
         .RemoteBlobList()[0]
     )
 
+def _tensor_buffer_to_list_of_tensors(
+    x: remote_blob_util.BlobDef,
+    out_shape: Sequence[int],
+    out_dtype: dtype_util.dtype,
+    dynamic_out: Optional[bool] = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("TensorBufferToListOfTensors_")
+        )
+        .Op("tensor_buffer_to_list_of_tensors")
+        .Input("in", [x])
+        .Output("out", functools.reduce(operator.mul, x.shape, 1))
+        .Attr("out_dtype", out_dtype)
+        .Attr("out_shape", out_shape)
+        .Attr("dynamic_out", dynamic_out)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
 def tensor_buffer_to_list_of_tensors(
@@ -230,19 +253,11 @@ def tensor_buffer_to_list_of_tensors(
     .. code-block:: python 
         # the same with `gen_tensor_buffer` op
     """
-    return (
-        flow.user_op_builder(
-            name
-            if name is not None
-            else id_util.UniqueStr("TensorBufferToListOfTensors_")
-        )
-        .Op("tensor_buffer_to_list_of_tensors")
-        .Input("in", [x])
-        .Output("out", functools.reduce(operator.mul, x.shape, 1))
-        .Attr("out_dtype", out_dtype)
-        .Attr("out_shape", out_shape)
-        .Attr("dynamic_out", dynamic_out)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()
-    )
+        if x.split_axis is not None:
+            local_xs = flow.advance.distribute_split(x, 0)
+            ret = []
+            for local_x in local_xs:
+                ret.append(_tensor_buffer_to_list_of_tensors(local_x, out_shape, out_dtype, dynamic_out, name))
+            return ret
+        else:
+            return _tensor_buffer_to_list_of_tensors(local_x, out_shape, out_dtype, dynamic_out, name)
