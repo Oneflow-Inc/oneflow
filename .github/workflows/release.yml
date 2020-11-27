@@ -94,7 +94,9 @@ jobs:
         echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
 
         git_branch=${GITHUB_REF##*/}
-        oss_dir=branch/${git_branch}/${GITHUB_SHA}
+        oss_branch_dir=branch/${git_branch}
+        oss_dir=${oss_branch_dir}/${GITHUB_SHA}
+        echo "oss_branch_dir=${oss_branch_dir}" >> $GITHUB_ENV
         echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
         echo "git_branch=${git_branch}" >> $GITHUB_ENV
 
@@ -124,7 +126,7 @@ jobs:
       run: |
         python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
         python3 -m pip install oss2 beautifulsoup4 --user
-        python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${git_branch}/pip.index.html
+        python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/pip.index.html --index_key=${oss_dir}/pip.index.html
     - name: Update API docs
       if: github.ref == 'refs/heads/master'
       env:
