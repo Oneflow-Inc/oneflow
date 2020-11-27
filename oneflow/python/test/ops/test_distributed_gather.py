@@ -70,9 +70,6 @@ def _run_test(test_case, device_type, x_shape, indices_shape):
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
         return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     x = np.random.randn(*x_shape).astype(np.float32)
     indices = np.random.randint(0, x_shape[0], size=indices_shape).astype(np.int32)
     my_loss = FlowJob(x, indices).get()
@@ -95,7 +92,9 @@ class TestDistributedGather(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [(100, 3)]
-        arg_dict["indices_shape"] = [(60,),]
+        arg_dict["indices_shape"] = [
+            (60,),
+        ]
         for arg in GenArgList(arg_dict):
             _run_test(test_case, *arg)
 
