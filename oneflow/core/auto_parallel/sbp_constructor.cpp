@@ -17,7 +17,9 @@ limitations under the License.
 #include <type_traits>
 #include <vector>
 #define DEBUG_ALGORITHM_
+// #define TEST_DEBUG_
 // #define PRINT_GRAPH_
+// #define TEST_DEBUG_2
 
 #include "sbp_constructor.h"
 
@@ -214,7 +216,7 @@ double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_paral
     if (consumer_sbp_parallel.has_split_parallel() && producer_sbp_parallel.has_split_parallel()) {
       // S(0)->S(1), S(1)->S(0), etc.
       return logical_blob_size;
-    } else{
+    } else {
       // P->S, S->B
       return logical_blob_size * parallel_desc.parallel_num();
     }
@@ -262,6 +264,11 @@ void SbpConstructor::InitializeCopyCost(
         sbp_edge->Cost[sbp_id_producer].resize(consumer_sbp_size, 0);
       }
     }
+#ifdef TEST_DEBUG_
+    // test debug
+    std::cout << op_node->op().op_name() << "(0.0):" << std::endl;
+#endif
+
     // Assemble copy cost between two nodes
     // look through input blobs
     for (const std::string& ibn : op_node->op().input_bns()) {
@@ -316,6 +323,13 @@ void SbpConstructor::InitializeCopyCost(
 
           edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
               sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_mutable_);
+
+#ifdef TEST_DEBUG_
+          // test debug
+          std::cout << "Pre Op:" << producer->op().op_name() << ": " << ibn;
+          std::cout << sbp_producer.DebugString() << "->" << sbp_consumer.DebugString()
+                    << " Cost:" << edge_found->Cost[sbp_id_producer][sbp_id_consumer] << std::endl;
+#endif
         }
       }
     }
@@ -406,6 +420,39 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
         [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
           return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
+
+#ifdef TEST_DEBUG_2
+    // test debug
+    // ===================================================
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    for (const auto& ibn : op_node->op().input_bns()) {
+      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
+      if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
+      if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
+      auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
+      int elem_cnt_ = blob_desc->shape().elem_cnt();
+      std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
+    }
+    for (const auto& ibn : op_node->op().output_bns()) {
+      std::cout << "Out Op:" << ibn;
+      const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
+      if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
+      if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
+      auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
+      int elem_cnt_ = blob_desc->shape().elem_cnt();
+      std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
+    }
+    if (!op_name2is_fixed[op_node->op().op_name()]) {
+      Algorithm::SbpNode<SbpSignature>* sbp_node = op_name2sbp_node[op_node->op().op_name()];
+      std::cout << "Computation cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId]
+                << std::endl;
+    }
+// ====================================
+#endif
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
