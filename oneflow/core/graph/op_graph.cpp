@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#define AUTO_PARALLEL_
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -402,10 +403,12 @@ Maybe<void> OpGraph::Init(const Job& job) {
   InferTimeShape();
   JUST(InferLogicalBlobDesc(job));
 
+#ifdef AUTO_PARALLEL_
   // auto-parallel
   std::cout << "==============================================\n";
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(*this, job);
+#endif
 
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
   return Maybe<void>::Ok();
@@ -625,8 +628,10 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     }
     InferOpNodeSbpSignature(op_node, sbp_sig_conf);
     op_node->InferBlobParallelDesc();
+#ifndef AUTO_PARALLEL_
     // SbpConstructor: Do not update to job because it will limit sbp_node to choose condidate
-    // UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
+    UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
+#endif
     // Infer logical_blob_desc
     JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
@@ -634,6 +639,34 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
         [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
           return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
+
+    // test debug
+    // ===================================================
+    /*
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    for (const auto& ibn : op_node->op().input_bns()) {
+      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
+      if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
+      if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
+      auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
+      int elem_cnt_ = blob_desc->shape().elem_cnt();
+      std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
+    }
+    for (const auto& ibn : op_node->op().output_bns()) {
+      std::cout << "Out Op:" << ibn;
+      const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+      if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
+      if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
+      if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
+      auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
+      int elem_cnt_ = blob_desc->shape().elem_cnt();
+      std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
+    }
+    */
+    // ====================================
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
