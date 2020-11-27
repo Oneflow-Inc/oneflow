@@ -22,16 +22,6 @@ namespace oneflow {
 
 namespace {
 
-// Get dim vector with size of data type
-void GetDimVectorInBytes(const ShapeView& tensor_shape, const int64_t size_of_data_type,
-                         DimVector& shape_vec) {
-  int64_t ndims = tensor_shape.NumAxes();
-  for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = tensor_shape.At(i); }
-  // Replace the last dimension of the dim vector with: the number of elements n × the number of
-  // bytes of the data type
-  shape_vec[ndims - 1] = shape_vec[ndims - 1] * size_of_data_type;
-}
-
 // Fill ShapeView into dim vector
 DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
   int64_t ndims = tensor_shape.NumAxes();
@@ -39,157 +29,6 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
   for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = tensor_shape.At(i); }
   shape_vec[ndims - 1] = shape_vec[ndims - 1];
   return shape_vec;
-}
-
-// Fill input elements(x) to output body(y)
-template<DeviceType device_type, typename T>
-void FillBodyElements(const int64_t ndims, const user_op::Tensor* x, user_op::Tensor* y,
-                      const int64_t sizeof_dtype, user_op::KernelComputeContext* ctx,
-                      bool is_backward) {
-  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  MemoryCopyNdDesc memory_copy_nd_desc;
-  DimVector src_shape_vec(ndims);
-  DimVector dst_shape_vec(ndims);
-
-  GetDimVectorInBytes(x->shape(), sizeof_dtype, src_shape_vec);
-  GetDimVectorInBytes(y->shape(), sizeof_dtype, dst_shape_vec);
-  memory_copy_nd_desc.src_shape = Shape(src_shape_vec);
-  memory_copy_nd_desc.dst_shape = Shape(dst_shape_vec);
-  if (is_backward == true) {
-    DimVector dst_pos_vec(ndims, 0);
-    DimVector src_pos_vec(padding.cbegin(), padding.cend());
-    src_pos_vec[ndims - 1] *= sizeof_dtype;
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.dst_shape;
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-  } else {
-    DimVector src_pos_vec(ndims, 0);
-    DimVector dst_pos_vec(padding.cbegin(), padding.cend());
-    dst_pos_vec[ndims - 1] *= sizeof_dtype;
-    memory_copy_nd_desc.extent = memory_copy_nd_desc.src_shape;
-    memory_copy_nd_desc.dst_pos = NdIndex(dst_pos_vec);
-    memory_copy_nd_desc.src_pos = NdIndex(src_pos_vec);
-  }
-  MemoryCopyNdDesc reduced_memory_copy_nd_desc = memory_copy_nd_desc.CreateDimReducedDesc();
-  std::unique_ptr<MemoryCopier> device_memory_copier(NewDefaultMemoryCopier(device_type));
-  device_memory_copier->Copy(ctx->device_ctx(), y->mut_dptr<T>(), x->dptr<T>(),
-                             reduced_memory_copy_nd_desc);
-}
-
-// Padding the diagonal elements around index_vector and assign values
-template<DeviceType device_type, typename T>
-void PaddingDiagonalElements(const int64_t w_idx, NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                             const std::vector<int64_t>& index_vector, const user_op::Tensor* x,
-                             user_op::Tensor* y, user_op::KernelComputeContext* ctx) {
-  const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
-  const std::string data_format = ctx->Attr<std::string>("data_format");
-  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  int64_t padding_w;
-  padding_w = padding[w_idx];
-
-  FOR_RANGE(int, i, 0, index_vector.size()) {
-    int64_t coord_y[4];
-    index_helper.OffsetToNdIndex(index_vector[i], coord_y);
-    int64_t dest_w;
-    int64_t dest_index;
-    int64_t dest_coords[4];
-    if (coord_y[w_idx] < padding_w) {
-      // left part
-      dest_w = 2 * padding_w - coord_y[w_idx];
-    } else {
-      // right part
-      dest_w = 2 * (padding_w + x->shape().At(w_idx) - 1) - coord_y[w_idx];
-    }
-    dest_coords[0] = coord_y[0];
-    dest_coords[1] = coord_y[1];
-    if (data_format == "NCHW") {
-      dest_coords[2] = coord_y[2];
-      dest_coords[3] = dest_w;
-    } else {
-      dest_coords[2] = dest_w;
-      dest_coords[3] = coord_y[3];
-    }
-    dest_index = index_helper.NdIndexToOffset(dest_coords);
-    Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + index_vector[i],
-                        y->mut_dptr<T>() + dest_index, sizeof_dtype);
-  }
-}
-
-// Padding body elements
-template<DeviceType device_type, typename T>
-void PaddingBodyElements(const int64_t h_idx, const int64_t w_idx,
-                         NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                         std::vector<int64_t>& index_vector, const user_op::Tensor* x,
-                         user_op::Tensor* y, user_op::KernelComputeContext* ctx) {
-  const int64_t ndims = x->shape().NumAxes();
-  const ShapeView& x_shape = x->shape();
-  const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
-  const std::string data_format = ctx->Attr<std::string>("data_format");
-  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  const int64_t padding_h = padding[h_idx];
-  const int64_t padding_w = padding[w_idx];
-  FOR_RANGE(int, i, 0, y->shape().elem_cnt()) {
-    // Traverse one-dimensional array y
-    int64_t coord_y[ndims];
-    index_helper.OffsetToNdIndex(i, coord_y);
-    int64_t x_h = coord_y[h_idx] - padding_h;
-    int64_t x_w = coord_y[w_idx] - padding_w;
-    if (x_h < 0 || x_h >= x_shape.At(h_idx) || x_w < 0 || x_w >= x_shape.At(w_idx)) {
-      // Indicates that the element is no longer in the original x range (the data to be padding
-      // outside)
-      int64_t dest_coords[4];
-      int64_t dest_index;
-      // Determine whether it is a diagonal element
-      if ((x_h >= 0 && x_h < x_shape.At(2))) {
-        // Within the left and right range lines, non-diagonal elements
-        int64_t dest_w;
-        if (x_w < 0) {
-          // left part
-          dest_w = 2 * padding_w - coord_y[w_idx];
-        } else {
-          // right pary
-          dest_w = 2 * (padding_w + x_shape.At(w_idx) - 1) - coord_y[w_idx];
-        }
-        dest_coords[0] = coord_y[0];
-        dest_coords[1] = coord_y[1];
-        if (data_format == "NCHW") {
-          dest_coords[2] = coord_y[2];
-          dest_coords[3] = dest_w;
-        } else {
-          dest_coords[2] = dest_w;
-          dest_coords[3] = coord_y[3];
-        }
-        dest_index = index_helper.NdIndexToOffset(dest_coords);
-        Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i, y->mut_dptr<T>() + dest_index,
-                            sizeof_dtype);
-      } else if (x_w >= 0 && x_w < x_shape.At(w_idx)) {
-        // Within the upper and lower range lines, non-diagonal elements
-        int64_t dest_h;
-        if (x_h < 0) {
-          // upper part
-          dest_h = 2 * padding_h - coord_y[h_idx];
-        } else {
-          // lower part
-          dest_h = 2 * (padding_h + x_shape.At(h_idx) - 1) - coord_y[h_idx];
-        }
-        dest_coords[0] = coord_y[0];
-        dest_coords[3] = coord_y[3];
-        if (data_format == "NCHW") {
-          dest_coords[1] = coord_y[1];
-          dest_coords[2] = dest_h;
-        } else {
-          dest_coords[1] = dest_h;
-          dest_coords[2] = coord_y[2];
-        }
-        dest_index = index_helper.NdIndexToOffset(dest_coords);
-        Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + i, y->mut_dptr<T>() + dest_index,
-                            sizeof_dtype);
-      } else {
-        // Diagonal element
-        index_vector.push_back(i);
-      }
-    }
-  }
 }
 
 }  // namespace
@@ -231,6 +70,8 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     int64_t y_width = y->shape().At(w_idx);
 
     int64_t ip_x, ip_y;
+    T * dest = y->mut_dptr<T>();
+    const T* src = x->dptr<T>();
     for(int64_t n = 0; n<y->shape().At(0); n++){
       for(int64_t c = 0; c<y->shape().At(c_idx); c++){
         for(int64_t i = 0; i<y_vector[h_idx]; i++){
@@ -254,40 +95,13 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
             ip_y = ip_y - pad_top;
             int64_t  dest_index = c * y_width * y_height + i * y_width + j;
             int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
-            printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
-
-          //   T * dest =reinterpret_cast<T*>(y->mut_dptr<T>() + dest_index); 
-          //   const T* src = reinterpret_cast<const T*>(x->dptr<T>() + src_index);
-          //  *dest = *src;
-            
-            // T * dest = y->mut_dptr<T>();
-            // const T* src = x->dptr<T>();
-            // dest[dest_index] = src[src_index];
-
-            //y->mut_dptr<T>()[dest_index] = x->dptr<T>()[src_index];
-            
-            Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
-                              
+            //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
+            dest[dest_index] = src[src_index];
+            //Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
           }
-
-
         }
       }
     }
-
-    // // fill(copy) body elements form x to y
-    // FillBodyElements<device_type, T>(ndims, x, y, sizeof_dtype, ctx, false);
-    // // elements index vector of diagonal elements
-    // std::vector<int64_t> index_vector;
-    // DimVector y_vector = ShapeViewToDimVector(y->shape());
-    // NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-    // // reflection padding body
-    // PaddingBodyElements<device_type, T>(h_idx, w_idx, index_helper, index_vector, x, y, ctx);
-    // // reflection padding diagonal
-    // PaddingDiagonalElements<device_type, T>(w_idx, index_helper, index_vector, x, y, ctx);
-
-  
-
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -340,52 +154,55 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
       c_idx = 3;
     }
 
-    // DimVector dx_vector = ShapeViewToDimVector(dx->shape());
-    // DimVector dy_vector = ShapeViewToDimVector(dy->shape());
-    // int64_t pad_left = padding[w_idx];
-    // int64_t pad_top = padding[h_idx];
+    DimVector dx_vector = ShapeViewToDimVector(dx->shape());
+    DimVector dy_vector = ShapeViewToDimVector(dy->shape());
+    int64_t pad_left = padding[w_idx];
+    int64_t pad_top = padding[h_idx];
 
-    // int64_t dx_height = dx->shape().At(h_idx);
-    // int64_t dx_width = dx->shape().At(w_idx);
-    // int64_t dy_height = dy->shape().At(h_idx);
-    // int64_t dy_width = dy->shape().At(w_idx);
+    int64_t dx_height = dx->shape().At(h_idx);
+    int64_t dx_width = dx->shape().At(w_idx);
+    int64_t dy_height = dy->shape().At(h_idx);
+    int64_t dy_width = dy->shape().At(w_idx);
 
-    // int64_t ip_x, ip_y;
-    // for(int64_t n = 0; n<dy->shape().At(0); n++){
-    //   for(int64_t c = 0; c<dy->shape().At(c_idx); c++){
-    //     for(int64_t i = 0; i<dy_vector[h_idx]; i++){
-    //       for(int64_t j = 0; j<dy_vector[w_idx]; j++){
-    //         if(j < pad_left){
-    //           ip_x = pad_left * 2 - j;
-    //         }else if( j >= pad_left && j < x_width + pad_left){
-    //           ip_x = j;
-    //         }else{
-    //           ip_x = (x_width + pad_left - 1) * 2 - j;
-    //         }
+    const T* src = dy->dptr<T>();
+    T * dest = dx->mut_dptr<T>();
 
-    //         if(i<pad_top){
-    //           ip_y = pad_top * 2 - i;
-    //         }else if(i >= pad_top && i < x_height + pad_top){
-    //           ip_y = i;
-    //         }else{
-    //           ip_y = (x_height + pad_top - 1) * 2 - i;
-    //         }
-    //         ip_x = ip_x - pad_left;
-    //         ip_y = ip_y - pad_top;
-    //         int64_t  dest_index = c * y_width * y_height + i * y_width + j;
-    //         int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
-    //         printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
-      
-    //         Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
+    int64_t ip_x, ip_y;
+    for(int64_t n = 0; n<dy->shape().At(0); n++){
+      for(int64_t c = 0; c<dy->shape().At(c_idx); c++){
+        for(int64_t i = 0; i<dy_vector[h_idx]; i++){
+          for(int64_t j = 0; j<dy_vector[w_idx]; j++){
+            printf("n:%ld;  c:%ld, h:%ld, w:%ld\n", n, c, i, j);
+            if(j < pad_left){
+              ip_x = pad_left * 2 - j;
+            }else if( j >= pad_left && j < dx_width + pad_left){
+              ip_x = j;
+            }else{
+              ip_x = (dx_width + pad_left - 1) * 2 - j;
+            }
+          
+            if(i<pad_top){
+              ip_y = pad_top * 2 - i;
+            }else if(i >= pad_top && i < dx_height + pad_top){
+              ip_y = i;
+            }else{
+              ip_y = (dx_height + pad_top - 1) * 2 - i;
+            }
+            ip_x = ip_x - pad_left;
+            ip_y = ip_y - pad_top;
+
+            int64_t src_index =  c * dy_width * dy_height + i * dy_width + j;
+            int64_t  dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
+            //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
+            dest[dest_index] += src[src_index];
+            // Memcpy<device_type>(ctx->device_ctx(), dx->mut_dptr<T>() + dest_index, dy->dptr<T>() + src_index, sizeof_dtype);
                               
-    //       }
+          }
 
 
-    //     }
-    //   }
-    // }
-
-    FillBodyElements<device_type, T>(ndims, dy, dx, sizeof_dtype, ctx, true);
+        }
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
