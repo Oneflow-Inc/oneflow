@@ -316,7 +316,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }});
   // use ::std::shared_ptr for sharing reference between mutable object and const object
   // use ::std::unique_ptr for moving ownership 
-  ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_;
+  ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_ = std::make_shared<std::unique_ptr<_{{ util.class_name(cls) }}_>>();
 };
 
 class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} {
