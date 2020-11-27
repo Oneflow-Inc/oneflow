@@ -102,7 +102,7 @@ jobs:
         $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${matrix_release_version})
         echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
     - name: Build OneFlow
-      if: ${{ env.is_built }} != '1'
+      if: env.is_built != '1'
       uses: ./.github/actions/whl
       with:
         tmp_dir: ${ci_tmp_dir}
@@ -110,7 +110,7 @@ jobs:
         python_version: ${python_version}
         extra_flags: ${extra_flags}
     - name: Upload wheel
-      if: ${{ env.is_built }} != '1'
+      if: env.is_built != '1'
       uses: ./.github/actions/upload_oss
       with:
         src_path: ${wheelhouse_dir}
@@ -118,7 +118,7 @@ jobs:
         oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
         oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Update pip index
-      if: ${{ env.is_built }} != '1'
+      if: env.is_built != '1'
       env:
         OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
