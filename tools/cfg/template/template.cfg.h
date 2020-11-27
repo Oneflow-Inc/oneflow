@@ -234,7 +234,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept;
   Const{{ util.class_name(cls) }}();
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
-  ~Const{{ util.class_name(cls) }}() override;
+  virtual ~Const{{ util.class_name(cls) }}() override;
 
   using PbMessage = ::google::protobuf::Message;
   void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override;
