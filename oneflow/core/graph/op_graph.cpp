@@ -127,6 +127,23 @@ std::string OpNode::VisualStr() const {
     str += "\\n" + GetTimeShapeStr(*GetInputBlobFastestTimeShape(), "in_blob_time_shape");
   }
   str += "\\n" + GetTimeShapeStr(*out_blob_time_shape(), "out_blob_time_shape");
+  for (const auto& ibn : op().input_bns()) {
+    str += "\\n";
+    auto producer_node = MutSrcNode4Ibn(ibn);
+    str += "Pre Op:" + producer_node->op().op_name() + ": " + ibn;
+    const SbpParallel& this_sbp_parallel = SbpParallel4BnInOp(ibn);
+    if (this_sbp_parallel.has_split_parallel()) str+= " S" + std::to_string(this_sbp_parallel.split_parallel().axis());
+    if (this_sbp_parallel.has_broadcast_parallel()) str+= " B";
+    if (this_sbp_parallel.has_partial_sum_parallel()) str+= " P";
+  }
+  for (const auto& ibn : op().output_bns()) {
+    str += "\\n";
+    str+= "Out Op:" + ibn;
+    const SbpParallel& this_sbp_parallel = SbpParallel4BnInOp(ibn);
+    if (this_sbp_parallel.has_split_parallel()) str+= " S" + std::to_string(this_sbp_parallel.split_parallel().axis());
+    if (this_sbp_parallel.has_broadcast_parallel()) str+= " B";
+    if (this_sbp_parallel.has_partial_sum_parallel()) str+= " P";
+  }
   return str;
 }
 
@@ -401,13 +418,16 @@ Maybe<void> OpGraph::Init(const Job& job) {
   InferBlobLastUsed();
   InferTimeShape();
   JUST(InferLogicalBlobDesc(job));
-
   // auto-parallel
   std::cout << "==============================================\n";
+  // print sbp graph before auto-parallel
+  std::string job_name = job.job_conf().job_name();
+  ToDotWithFilePath(job_name+"_before_auto_parallel_op_graph_sbp.dot");
   SbpConstructor sbp_constructor;
   sbp_constructor.constructSbpGraph(*this, job);
-
   ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
+  // print sbp graph before auto-parallel
+  ToDotWithFilePath(job_name+"_after_auto_parallel_op_graph_sbp.dot");
   return Maybe<void>::Ok();
 }
 
@@ -635,6 +655,29 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
           return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
         }));
     return Maybe<void>::Ok();
+      //test debug
+    // std::cout << op_node->op().op_name() << "::" << std::endl;
+    // for (const auto& ibn : op_node->op().input_bns()) {
+    //   auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+    //   std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+    //   const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+    //   if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
+    //   if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
+    //   if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
+    //   auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
+    //   int elem_cnt_ = blob_desc->shape().elem_cnt();
+    //   std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
+    // } 
+    // for (const auto& ibn : op_node->op().output_bns()) {
+    //   std::cout << "Out Op:" << ibn;
+    //   const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
+    //   if (this_sbp_parallel.has_split_parallel()) std::cout << " has split parallel";
+    //   if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " has broadcast parallel";
+    //   if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " has partial parallel";
+    //   auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0);
+    //   int elem_cnt_ = blob_desc->shape().elem_cnt();
+    //   std::cout << " Elem_cnt:" << elem_cnt_ << std::endl;
+    // }
   }));
   return Maybe<void>::Ok();
 }
