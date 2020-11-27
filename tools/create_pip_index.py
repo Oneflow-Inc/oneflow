@@ -58,7 +58,7 @@ def generate_index_file(endpoint, bucket, dir_key, file_path, index_keys=None):
     with open(file_path, "w+") as f:
         f.write(html)
     if index_keys == None:
-        index_keys = [dir_key + ".pip.index.html"]
+        index_keys = [dir_key + ".index.html"]
     for index_key in index_keys:
         bucket_obj.put_object_from_file(index_key, file_path)
 
