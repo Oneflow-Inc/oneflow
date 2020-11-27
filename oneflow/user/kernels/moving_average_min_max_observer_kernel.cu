@@ -183,6 +183,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
+    const bool is_training = ctx->Attr<bool>("training");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
@@ -197,7 +198,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
                              current_train_step->shape().elem_cnt() * sizeof(int64_t),
                              cudaMemcpyDefault));
 
-    if (*host_current_train_step_ptr <= stop_update_after_iters) {
+    if (*host_current_train_step_ptr <= stop_update_after_iters && is_training) {
       LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), 1, 0, 1, max_ptr, min_ptr);
       LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
                          kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,

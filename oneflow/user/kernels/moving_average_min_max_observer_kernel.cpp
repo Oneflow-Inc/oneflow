@@ -21,11 +21,11 @@ namespace oneflow {
 
 template<typename T>
 void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_step,
-                                    const int64_t stop_update_after_iters,
+                                    const int64_t stop_update_after_iters, const bool is_training,
                                     const int32_t quantize_to_bit, const int64_t num_elements,
                                     const float momentum, T *moving_max, T *moving_min, T *scale,
                                     T *zero_point) {
-  if (current_train_step <= stop_update_after_iters) {
+  if (current_train_step <= stop_update_after_iters && is_training) {
     T in_max = *std::max_element(in, in + num_elements);
     T in_min = *std::min_element(in, in + num_elements);
 
@@ -50,11 +50,11 @@ void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_ste
 
 template<typename T>
 void GenQuantScalePerLayerAffine(const T *in, const int64_t current_train_step,
-                                 const int64_t stop_update_after_iters,
+                                 const int64_t stop_update_after_iters, const bool is_training,
                                  const int32_t quantize_to_bit, const int64_t num_elements,
                                  const float momentum, T *moving_max, T *moving_min, T *scale,
                                  T *zero_point) {
-  if (current_train_step <= stop_update_after_iters) {
+  if (current_train_step <= stop_update_after_iters && is_training) {
     T in_max = *std::max_element(in, in + num_elements);
     T in_min = *std::min_element(in, in + num_elements);
 
@@ -98,6 +98,7 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
     const float momentum = ctx->Attr<float>("momentum");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
+    const bool is_training = ctx->Attr<bool>("training");
 
     const T *in_ptr = in->dptr<T>();
     const int64_t *current_train_step_ptr = current_train_step->dptr<int64_t>();
@@ -110,12 +111,12 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
 
     if (quantize_scheme == "symmetric") {
       GenQuantScalePerLayerSymmetric(in_ptr, *current_train_step_ptr, stop_update_after_iters,
-                                     quantize_to_bit, num_elements, momentum, moving_max_ptr,
-                                     moving_min_ptr, scale_ptr, zero_point_ptr);
+                                     is_training, quantize_to_bit, num_elements, momentum,
+                                     moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
     } else {  // quantize_scheme == "affine"
       GenQuantScalePerLayerAffine(in_ptr, *current_train_step_ptr, stop_update_after_iters,
-                                  quantize_to_bit, num_elements, momentum, moving_max_ptr,
-                                  moving_min_ptr, scale_ptr, zero_point_ptr);
+                                  is_training, quantize_to_bit, num_elements, momentum,
+                                  moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
     }
   }
 
