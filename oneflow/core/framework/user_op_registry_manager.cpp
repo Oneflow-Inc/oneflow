@@ -38,10 +38,6 @@ OpRegistry UserOpRegistryMgr::CheckAndGetOpRegistry(const std::string& op_type_n
 }
 
 void UserOpRegistryMgr::Register(OpRegistryResult result) {
-  if (result.op_type_name == "user_sigmoid_forward"
-      || result.op_type_name == "user_sigmoid_backward") {
-    std::cout << "xxy debug : register op_type_name " << result.op_type_name << std::endl;
-  }
   CHECK(op_reg_result_.emplace(result.op_type_name, result).second);
 }
 
