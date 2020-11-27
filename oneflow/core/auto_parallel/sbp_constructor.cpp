@@ -627,7 +627,13 @@ Maybe<void> SbpConstructor::InferSbpSignature(
 
   // filter out those sbp signatures who contain sbp signature configure from sbp signature list
   SbpSignatureList filtered_sbp_sigs_by_conf;
-  FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
+  // remove matmul filter in sbp_sig_conf
+  if (op_.op_name().find("matmul") == std::string::npos)
+    FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
+  else {
+    filtered_sbp_sigs_by_conf = sbp_sig_list;
+  }
+
   CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
   // Generate Sbp candidates for sbp node with lowest order value
   {
