@@ -33,6 +33,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.pb_util as pb_util
+import oneflow.python.framework.attr_util as attr_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
 import traceback
@@ -56,27 +57,11 @@ class FunctionConfig(object):
         default_val = name2default[attr_name]
 
         def FunctionConfigSetter(
-            attr_value: Optional[Union[bool, int, float, str]] = None
+            py_value: Optional[Union[bool, int, float, str]] = None
         ) -> None:
-            if default_val.HasField("at_bool"):
-                if attr_value is None:
-                    attr_value = True
-                assert type(attr_value) is bool
-                flag_name2flag_value[attr_name].at_bool = attr_value
-            elif default_val.HasField("at_int64"):
-                assert type(attr_value) is int
-                flag_name2flag_value[attr_name].at_int64 = attr_value
-            elif default_val.HasField("at_double"):
-                assert type(attr_value) is float
-                flag_name2flag_value[attr_name].at_double = attr_value
-            elif default_val.HasField("at_string"):
-                assert type(attr_value) is str
-                flag_name2flag_value[attr_name].at_string = attr_value
-            else:
-                raise NotImplementedError(
-                    "config_flag `%s' with type %s is not supported"
-                    % (attr_name, type(attr_value))
-                )
+            attr_util.SetAttrValue(
+                flag_name2flag_value[attr_name], py_value, default_val
+            )
 
         return FunctionConfigSetter
 
