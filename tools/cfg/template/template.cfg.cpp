@@ -784,9 +784,6 @@ const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(c
   return default_ptr;
 }
 const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(cls) }}::__SharedPtr__() {
-  return __SharedUniquePtr__();
-}
-const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(cls) }}::__SharedUniquePtr__() {
   if (!data_) { data_.reset(new _{{ util.class_name(cls) }}_()); }
   return data_;
 }
@@ -939,7 +936,7 @@ const {{ util.field_map_container_name(field) }} & {{ util.class_name(cls) }}::{
 {% endfor %}{# field #}
 
 ::std::shared_ptr<{{ util.class_name(cls) }}> {{ util.class_name(cls) }}::__SharedMutable__() {
-  return ::std::make_shared<{{ util.class_name(cls) }}>(__SharedUniquePtr__());
+  return ::std::make_shared<{{ util.class_name(cls) }}>(__SharedPtr__());
 }
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}

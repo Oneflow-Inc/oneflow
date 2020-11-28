@@ -309,7 +309,6 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
  protected:
   const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedPtrOrDefault__() const;
   const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedPtr__();
-  const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedUniquePtr__();
   // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
   void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }});
   
