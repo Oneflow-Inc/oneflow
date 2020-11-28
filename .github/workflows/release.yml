@@ -60,6 +60,7 @@ jobs:
             cuda_version="11.1"
         elif [ "$matrix_release_version" == "cu100_xla" ]; then
             cuda_version="10.0"
+            extra_flags="--xla"
         elif [ "$matrix_release_version" == "cu101_xla" ]; then
             cuda_version="10.1"
             extra_flags="--xla"
