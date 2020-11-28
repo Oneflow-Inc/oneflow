@@ -51,12 +51,13 @@ using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpC
 using InferOutputBlobTimeShapeFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
+  OpRegistryResult() : cpu_only_supported(false), same_output_regst_num_getter() {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
-  int32_t same_output_regst_num;
+  std::shared_ptr<std::function<Maybe<size_t>(const UserOpConfWrapper&)>>
+      same_output_regst_num_getter;
   UserOpDef op_def;
   CheckAttrFn check_fn;
   TensorDescInferFn tensor_desc_infer_fn;
@@ -89,7 +90,8 @@ class OpRegistry final {
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistry& SupportCpuOnly();
-  OpRegistry& SetOutputBufferNum(int32_t num);
+  OpRegistry& SetOutputBufferNumGetter(
+      std::function<Maybe<size_t>(const UserOpConfWrapper&)> getter);
 
   __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type);
   template<typename T>

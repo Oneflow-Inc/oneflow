@@ -132,7 +132,7 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
         buffer_size = 4
 
         function_config = flow.FunctionConfig()
-        function_config.enable_ssp(True)
+        function_config.enable_ssp_variable_proxy(True)
 
         @flow.global_function(type="train", function_config=function_config)
         def Foo() -> tp.Numpy:
