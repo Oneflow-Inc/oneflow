@@ -958,7 +958,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DynamicLossScaleSchedulePass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
-    JUST(DoPass("SspPartition"));
+    JUST(DoPass("StagePartition"));
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));

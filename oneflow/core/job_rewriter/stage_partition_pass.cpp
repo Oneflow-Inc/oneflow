@@ -26,55 +26,55 @@ namespace oneflow {
 
 namespace {
 
-class SspPartitionStragety {
+class StagePartitionStragety {
  public:
-  SspPartitionStragety() = default;
-  ~SspPartitionStragety() = default;
+  StagePartitionStragety() = default;
+  ~StagePartitionStragety() = default;
   virtual Maybe<void> Apply(Job* job, JobPassCtx* ctx) const = 0;
 };
 
-class SspPartitionPass final : public JobPass {
+class StagePartitionPass final : public JobPass {
  public:
-  SspPartitionPass() = default;
-  ~SspPartitionPass() = default;
+  StagePartitionPass() = default;
+  ~StagePartitionPass() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const std::string& partition_strategy = ctx->job_desc().String("ssp_partition_strategy");
-    std::unique_ptr<const SspPartitionStragety> strategy;
-    strategy.reset(NewObj<std::string, SspPartitionStragety>(partition_strategy));
+    const std::string& partition_strategy = ctx->job_desc().String("stage_partition_strategy");
+    std::unique_ptr<const StagePartitionStragety> strategy;
+    strategy.reset(NewObj<std::string, StagePartitionStragety>(partition_strategy));
     return strategy->Apply(job, ctx);
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return ctx.job_desc().IsTrain() && ctx.job_desc().Bool("enable_ssp");
+    return ctx.job_desc().IsTrain() && ctx.job_desc().Bool("enable_stage_partition");
   }
 };
 
-REGISTER_JOB_PASS("SspPartition", SspPartitionPass);
+REGISTER_JOB_PASS("StagePartition", StagePartitionPass);
 
-#define REGISTER_SSP_PARTITION_STRATEGY(strategy_name, strategy_type)      \
-  REGISTER_CLASS_CREATOR(std::string, strategy_name, SspPartitionStragety, \
+#define REGISTER_SSP_PARTITION_STRATEGY(strategy_name, strategy_type)        \
+  REGISTER_CLASS_CREATOR(std::string, strategy_name, StagePartitionStragety, \
                          ([] { return new strategy_type(); }));
 
-class DisableSspPartitionStrategy : public SspPartitionStragety {
+class DisableStagePartitionStrategy : public StagePartitionStragety {
  public:
-  DisableSspPartitionStrategy() = default;
-  ~DisableSspPartitionStrategy() = default;
+  DisableStagePartitionStrategy() = default;
+  ~DisableStagePartitionStrategy() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx*) const override { return Maybe<void>::Ok(); }
 };
-REGISTER_SSP_PARTITION_STRATEGY("disable", DisableSspPartitionStrategy);
+REGISTER_SSP_PARTITION_STRATEGY("disable", DisableStagePartitionStrategy);
 
-class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
+class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
  public:
-  NaiveSequantialSspPartitionStrategy() = default;
-  ~NaiveSequantialSspPartitionStrategy() = default;
+  NaiveSequantialStagePartitionStrategy() = default;
+  ~NaiveSequantialStagePartitionStrategy() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
-    JUST(ForEachSspScope4TrainableFwOp(
+    JUST(ForEachStageScope4TrainableFwOp(
         op_graph, ctx->job_desc(),
         [&](const OpNode* op_node, const Scope& scope, int64_t scope_symbol_id) -> Maybe<void> {
           // Sets scope_symbol_id
@@ -93,28 +93,28 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
   }
 
  private:
-  Maybe<void> ForEachSspScope4TrainableFwOp(
+  Maybe<void> ForEachStageScope4TrainableFwOp(
       const OpGraph& op_graph, const JobDesc& job_desc,
       const std::function<Maybe<void>(const OpNode*, const Scope&, int64_t scope_symbol_id)>&
           Handler) const {
     // Sequantialize trainable forward ops
     std::list<std::unique_ptr<std::vector<OpNode*>>> sequantial_trainable_fw_ops;
     JUST(GetSequantialTrainableFwOps(op_graph, &sequantial_trainable_fw_ops));
-    // Gets ssp partition config
-    std::vector<int64_t> ssp_partition_scope_ids;
-    JUST(GetSspPartitionScopeIds(job_desc, &ssp_partition_scope_ids));
+    // Gets stage partition config
+    std::vector<int64_t> stage_partition_scope_ids;
+    JUST(GetStagePartitionScopeIds(job_desc, &stage_partition_scope_ids));
     // Partition to stages
     std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
-    int64_t num_stages = ssp_partition_scope_ids.size();
-    JUST(GetSspDepth2Stage(sequantial_trainable_fw_ops, num_stages, &Stage4Depth));
-    std::function<Maybe<const Scope&>(int64_t, int64_t*)> SspScope4Stage;
+    int64_t num_stages = stage_partition_scope_ids.size();
+    JUST(GetStageDepth2Stage(sequantial_trainable_fw_ops, num_stages, &Stage4Depth));
+    std::function<Maybe<const Scope&>(int64_t, int64_t*)> StageScope4Stage;
     // Provides scope for each stage
-    JUST(MakeGetterSspScope4Stage(ssp_partition_scope_ids, &SspScope4Stage));
+    JUST(MakeGetterStageScope4Stage(stage_partition_scope_ids, &StageScope4Stage));
     int64_t depth = 0;
     for (const auto& fused_vec : sequantial_trainable_fw_ops) {
       int64_t stage = JUST(Stage4Depth(depth));
       int64_t scope_symbol_id = 0;
-      const auto& scope = JUST(SspScope4Stage(stage, &scope_symbol_id));
+      const auto& scope = JUST(StageScope4Stage(stage, &scope_symbol_id));
       for (OpNode* op_node : *fused_vec) { JUST(Handler(op_node, scope, scope_symbol_id)); }
       ++depth;
     }
@@ -156,7 +156,7 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> GetSspDepth2Stage(
+  Maybe<void> GetStageDepth2Stage(
       const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
       int64_t num_stages, std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) const {
     int64_t num_ops = 0;
@@ -303,29 +303,29 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> MakeGetterSspScope4Stage(
-      const std::vector<int64_t>& ssp_partition_scope_ids,
-      std::function<Maybe<const Scope&>(int64_t stage, int64_t* scope_symbol_id)>* SspScope4Stage)
+  Maybe<void> MakeGetterStageScope4Stage(
+      const std::vector<int64_t>& stage_partition_scope_ids,
+      std::function<Maybe<const Scope&>(int64_t stage, int64_t* scope_symbol_id)>* StageScope4Stage)
       const {
-    *SspScope4Stage = [ssp_partition_scope_ids](int64_t stage,
-                                                int64_t* scope_symbol_id) -> Maybe<const Scope&> {
+    *StageScope4Stage = [stage_partition_scope_ids](
+                            int64_t stage, int64_t* scope_symbol_id) -> Maybe<const Scope&> {
       CHECK_GE_OR_RETURN(stage, 0);
-      CHECK_LT_OR_RETURN(stage, ssp_partition_scope_ids.size());
-      *scope_symbol_id = ssp_partition_scope_ids.at(stage);
+      CHECK_LT_OR_RETURN(stage, stage_partition_scope_ids.size());
+      *scope_symbol_id = stage_partition_scope_ids.at(stage);
       return Global<vm::SymbolStorage<Scope>>::Get()->Get(*scope_symbol_id);
     };
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> GetSspPartitionScopeIds(const JobDesc& job_desc,
-                                      std::vector<int64_t>* ssp_partition_scope_ids) const {
-    const auto& scope_ids = job_desc.ListInt64("ssp_partition_scope_ids");
+  Maybe<void> GetStagePartitionScopeIds(const JobDesc& job_desc,
+                                        std::vector<int64_t>* stage_partition_scope_ids) const {
+    const auto& scope_ids = job_desc.ListInt64("stage_partition_scope_ids");
     CHECK_GT_OR_RETURN(scope_ids.size(), 0);
-    ssp_partition_scope_ids->assign(scope_ids.begin(), scope_ids.end());
+    stage_partition_scope_ids->assign(scope_ids.begin(), scope_ids.end());
     return Maybe<void>::Ok();
   }
 };
-REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial", NaiveSequantialSspPartitionStrategy);
+REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial", NaiveSequantialStagePartitionStrategy);
 
 }  // namespace
 

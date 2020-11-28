@@ -30,6 +30,9 @@ def SetAttrValue(attr_value, py_value, default_attr_value):
     elif default_attr_value.HasField("at_string"):
         assert type(py_value) is str
         attr_value.at_string = py_value
+    elif default_attr_value.HasField("at_list_int64"):
+        assert type(py_value) is list
+        attr_value.at_list_int64.val[:] = py_value
     else:
         raise ValueError(
             "config with type %s is invalid. supported types: [bool, int, float, str]"
