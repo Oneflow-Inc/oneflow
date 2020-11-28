@@ -44,15 +44,21 @@ def generate_index_file(endpoint, bucket, dir_key, file_path, index_keys=None):
     ks = os.getenv("OSS_ACCESS_KEY_SECRET")
     auth = oss2.Auth(ki, ks)
     bucket_obj = oss2.Bucket(auth, endpoint, bucket)
-
-    files = bucket_obj.list_objects(dir_key + "/")
+    should_continue = True
     count = 0
-    for f in files.object_list:
-        key = f.key
-        print(key)
-        link = url4key(endpoint, bucket, key)
-        append_link(soup, link)
-        count += 1
+    next_marker = ""
+    while should_continue:
+        files = bucket_obj.list_objects(dir_key + "/", marker=next_marker)
+        for f in files.object_list:
+            key = f.key
+            if key.endswith(".whl"):
+                print(key)
+                link = url4key(endpoint, bucket, key)
+                append_link(soup, link)
+                count += 1
+        next_marker = files.next_marker
+        should_continue = next_marker != ""
+    print("count", count)
     assert count
     html = soup.prettify()
     with open(file_path, "w+") as f:
