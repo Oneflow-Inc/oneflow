@@ -125,8 +125,8 @@ class AddSspVariableProxyPass final : public JobPass {
     const Scope& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
     int64_t buffer_size = 0;
     {
-      int64_t num_stages = scope.Int64("ssp_num_stages");
-      int64_t stage_id = scope.Int64("ssp_stage_id");
+      int64_t num_stages = scope.Int64("num_stages");
+      int64_t stage_id = scope.Int64("stage_id");
       CHECK_GT(num_stages, 0);
       CHECK_GE(stage_id, 0);
       CHECK_LT(stage_id, num_stages);

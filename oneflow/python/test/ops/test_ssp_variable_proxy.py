@@ -139,7 +139,7 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
             with flow.scope.placement(
                 "cpu", device_name
             ), flow.experimental.scope.config(
-                ssp_num_stages=buffer_size, ssp_stage_id=0
+                num_stages=buffer_size, stage_id=0
             ):
                 w = flow.get_variable(
                     "w",
