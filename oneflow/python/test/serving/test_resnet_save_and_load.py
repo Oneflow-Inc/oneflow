@@ -16,23 +16,18 @@ limitations under the License.
 
 import oneflow as flow
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
-import oneflow.core.record.record_pb2 as record_pb
 import unittest
 import os
-import struct
-import cv2
 import numpy as np
 import shutil
 import google.protobuf.text_format as text_format
 
 from resnet_model import resnet50
+from imagenet_record_dataset import ImageNetRecordDataset
 
-DEFAULT_BATCH_SIZE = 8
-DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_224/train/32/"
-DEFAULT_TRAIN_DATA_PART_NUM = 32
-DEFAULT_INFER_DATA_PATH = "/dataset/imagenet_224/train/32/"
-DEFAULT_INFER_DATA_PART_NUM = 32
+DEFAULT_BATCH_SIZE = 4
 DEFAULT_CHECKPOINT_DIR = "./resnet_v15_of_best_model_val_top1_77318"
+DEFAULT_IMAGE_SIZE = 224
 
 
 def init_env():
@@ -61,53 +56,6 @@ def make_resnet_infer_func(batch_size, image_size):
     return resnet_inference, input_lbns, output_lbns
 
 
-def preprocess_image(im):
-    rgb_mean = [123.68, 116.779, 103.939]
-    rgb_std = [58.393, 57.12, 57.375]
-    im = cv2.resize(im.astype("uint8"), (224, 224))
-    im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-    im = im.astype("float32")
-    im = (im - rgb_mean) / rgb_std
-    im = np.transpose(im, (2, 0, 1))
-    return np.ascontiguousarray(im, "float32")
-
-
-def load_data_from_ofrecord(num_batchs, batch_size, ofrecord_data_file):
-    image_list = []
-    label_list = []
-
-    with open(ofrecord_data_file, "rb") as reader:
-        for i in range(num_batchs):
-            images = []
-            labels = []
-            num_read = batch_size
-            while num_read > 0:
-                record_head = reader.read(8)
-                if record_head is None or len(record_head) != 8:
-                    break
-
-                ofrecord = record_pb.OFRecord()
-                ofrecord_byte_size = struct.unpack("q", record_head)[0]
-                ofrecord.ParseFromString(reader.read(ofrecord_byte_size))
-
-                image_raw_bytes = ofrecord.feature["encoded"].bytes_list.value[0]
-                image = cv2.imdecode(
-                    np.frombuffer(image_raw_bytes, np.uint8), cv2.IMREAD_COLOR
-                )
-                images.append(preprocess_image(image))
-                label = ofrecord.feature["class/label"].int32_list.value[0]
-                labels.append(label)
-                num_read -= 1
-
-            if num_read == 0:
-                image_list.append(np.stack(images))
-                label_list.append(np.array(labels, dtype=np.int32))
-            else:
-                break
-
-    return image_list, label_list
-
-
 def load_saved_model(model_meta_file_path):
     saved_model_proto = saved_model_pb.SavedModel()
     with open(model_meta_file_path, "rb") as f:
@@ -117,21 +65,26 @@ def load_saved_model(model_meta_file_path):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSaveAndLoadModel(flow.unittest.TestCase):
-    def test_resnet(test_case, batch_size=8, num_batchs=6):
-        ofrecord_data_path = os.path.join(DEFAULT_INFER_DATA_PATH, "part-0")
-        image_list, label_list = load_data_from_ofrecord(
-            num_batchs, batch_size, ofrecord_data_path
-        )
-
+    def test_resnet(test_case, batch_size=DEFAULT_BATCH_SIZE, num_batchs=6):
         init_env()
-        assert image_list[0].shape[0] == batch_size
-        image_size = tuple(image_list[0].shape[1:])
+        # input image format NCHW
+        image_size = (3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
         resnet_infer, input_lbns, output_lbns = make_resnet_infer_func(
             batch_size, image_size
         )
-        # origin resnet inference model
+
+        # resnet inference model parameters
         checkpoint = flow.train.CheckPoint()
         checkpoint.load(DEFAULT_CHECKPOINT_DIR)
+
+        # test data
+        dataset = ImageNetRecordDataset(
+            batch_size=batch_size,
+            image_resize_size=DEFAULT_IMAGE_SIZE,
+            data_format="NCHW",
+        )
+        image_list, label_list = dataset.load_batchs(num_batchs)
+
         print("resnet inference result:")
         origin_outputs = []
         for i, (image, label) in enumerate(zip(image_list, label_list)):
@@ -139,14 +92,22 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             arg_max = np.argmax(output, axis=1)
             origin_outputs.append(arg_max)
             print("iter#{:<6} predict: ".format(i), arg_max, "label: ", label)
+
         origin_outputs = np.array(origin_outputs, dtype=np.float32)
 
         # save model
         saved_model_path = "resnet50_models"
-        if os.path.exists(saved_model_path) and os.path.isdir(saved_model_path):
-            shutil.rmtree(saved_model_path)
-
         model_version = 1
+
+        model_version_path = os.path.join(saved_model_path, str(model_version))
+        if os.path.exists(model_version_path) and os.path.isdir(model_version_path):
+            print(
+                "WARNING: The model version path '{}' already exist, it will be replaced".format(
+                    model_version_path
+                )
+            )
+            shutil.rmtree(model_version_path)
+
         saved_model_builder = flow.SavedModelBuilderV2(saved_model_path)
         job_builder = (
             saved_model_builder.ModelName("resnet50")
@@ -191,6 +152,7 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             arg_max = np.argmax(outputs[0], axis=1)
             cmp_outputs.append(arg_max)
             print("iter#{:<6} output:".format(i), arg_max, "label: ", label)
+
         cmp_outputs = np.array(cmp_outputs, dtype=np.float32)
 
         test_case.assertTrue(np.allclose(origin_outputs, cmp_outputs))

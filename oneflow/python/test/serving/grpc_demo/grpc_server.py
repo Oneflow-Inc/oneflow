@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
-import oneflow.typing as tp
 
 import argparse
 import cv2
@@ -27,7 +26,7 @@ import prediction_service_pb2_grpc as grpc_service_pb2
 import prediction_service_pb2 as predict_message_pb2
 
 from concurrent import futures
-from imagenet1000_clsidx_to_labels import clsidx_2_labels
+from oneflow.python.test.serving.imagenet1000_clsidx_to_labels import clsidx_2_labels
 
 
 def get_parser():

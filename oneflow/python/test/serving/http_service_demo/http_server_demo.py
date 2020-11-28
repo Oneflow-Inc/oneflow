@@ -15,16 +15,15 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.typing as tp
-
-from imagenet1000_clsidx_to_labels import clsidx_2_labels
-import resnet_model
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from io import BytesIO
 import json
 import cv2
 import numpy as np
 import argparse
+
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from io import BytesIO
+from oneflow.python.test.serving.resnet_model import resnet50
+from oneflow.python.test.serving.imagenet1000_clsidx_to_labels import clsidx_2_labels
 
 
 def get_parser():
@@ -70,7 +69,7 @@ def preprocess_image(im):
 def InferenceNet(
     images: tp.Numpy.Placeholder((1, 3, 224, 224), dtype=flow.float)
 ) -> tp.Numpy:
-    logits = resnet_model.resnet50(images, training=False)
+    logits = resnet50(images, training=False)
     predictions = flow.nn.softmax(logits)
     return predictions
 
