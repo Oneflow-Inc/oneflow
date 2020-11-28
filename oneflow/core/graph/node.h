@@ -102,6 +102,19 @@ class Node {
     ForEachNodeOnInEdge(Handler);
     ForEachNodeOnOutEdge(Handler);
   }
+  Maybe<void> ForEachInNode(std::function<Maybe<void>(NodeType*)> Handler) const {
+    for (EdgeType* edge : in_edges_) { JUST(Handler(edge->src_node())); }
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> ForEachOutNode(std::function<Maybe<void>(NodeType*)> Handler) const {
+    for (EdgeType* edge : out_edges_) { JUST(Handler(edge->dst_node())); }
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> ForEachInOutNode(std::function<Maybe<void>(NodeType*)> Handler) const {
+    JUST(ForEachNodeOnInEdge(Handler));
+    JUST(ForEachNodeOnOutEdge(Handler));
+    return Maybe<void>::Ok();
+  }
 
   void ForEachNodeOnSortedInEdge(std::function<void(NodeType*)> Handler) const {
     for (EdgeType* edge : sorted_in_edges_) { Handler(edge->src_node()); }

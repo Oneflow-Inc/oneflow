@@ -14,26 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include <re2/re2.h>
 
 namespace oneflow {
 
-void GenerateOptimizerOpConfWrapperStruct::Call(const VariableOp& var_op,
+void GenerateOptimizerOpConfWrapperStruct::Call(JobPassCtx* ctx, const VariableOp& var_op,
                                                 const ParallelConf& parallel_conf,
                                                 JobBuilder* job_builder,
                                                 const LogicalBlobId& diff_lbi_of_var_out) const {
-  (*func_)(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
+  (*func_)(ctx, var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
-void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
-                               JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+void GenerateOptimizerOpConfIf(JobPassCtx* ctx, const VariableOp& var_op,
+                               const ParallelConf& parallel_conf, JobBuilder* job_builder,
+                               const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<int32_t, GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
+  obj->Call(ctx, var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
 }
 
-void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
+void AddOptimizerOpConf(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
@@ -42,7 +44,7 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
 
     LogicalBlobId diff_lbi_of_var_out = lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), job_builder,
+    GenerateOptimizerOpConfIf(ctx, *var_op, parallel_desc.parallel_conf(), job_builder,
                               diff_lbi_of_var_out);
   });
 }
@@ -79,33 +81,11 @@ float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_updat
   }
 }
 
-template<typename T>
-void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           JobBuilder* job_builder, T* mdupdt_op_conf) {
-  const auto& train_conf = job_builder->job().job_conf().train_conf();
-  *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
-  mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
-  mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
-  mdupdt_op_conf->set_train_step(train_conf.train_step_lbn());
-  const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
-  const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
-  if (op.op_conf().variable_conf().model_name() == "weight") {
-    mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-  } else if (op.op_conf().variable_conf().model_name() == "bias") {
-    mdupdt_op_conf->set_learning_rate(secondary_lr_lbn);
-  } else {
-    mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-  }
-  const float weight_decay_rate = GetOptimizerWeightDecayRate(train_conf.model_update_conf(), op);
-  if (weight_decay_rate != 0) { mdupdt_op_conf->set_weight_decay(weight_decay_rate); }
+void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder) {
+  if (!ctx->job_desc().job_conf().train_conf().has_dynamic_loss_scale_policy()) { return; }
+  builder->Input("skip_if",
+                 CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
+                     .count_not_finite_lbn());
 }
-
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                  \
-  template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                     \
-                                         const LogicalBlobId& diff_lbi_of_var_out, \
-                                         JobBuilder* job_builder, T* mdupdt_op_conf)
-
-INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(RMSPropModelUpdateOpConf);
-INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(LARSModelUpdateOpConf);
 
 }  // namespace oneflow

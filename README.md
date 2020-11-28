@@ -28,13 +28,11 @@
   - CUDA Toolkit Linux x86_64 Driver
     | OneFlow |CUDA Driver Version|
     |---|---|
+    | oneflow_cu111  | >= 450.80.02  |
     | oneflow_cu110  | >= 450.36.06  |
     | oneflow_cu102  | >= 440.33  |
     | oneflow_cu101  | >= 418.39  |
     | oneflow_cu100  | >= 410.48  |
-    | oneflow_cu92  | >= 396.26  |
-    | oneflow_cu91  | >= 390.46  |
-    | oneflow_cu90  | >= 384.81  |
     | oneflow_cpu  | N/A  |
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
@@ -48,22 +46,19 @@
   - To install latest release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102 --user
+    ```
+
+  - To install master branch release of OneFlow with CUDA support:
+
+    ```
+    python3 -m pip install --find-links https://staging.oneflow.info/branch/master oneflow_cu102 --user
     ```
 
   - To install latest release of CPU-only OneFlow:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cpu --user
-    ```
-
-  - To install OneFlow with legacy CUDA support, run one of:
-    ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu101 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu100 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu92 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu91 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu90 --user
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
     ```
 
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
@@ -126,18 +121,42 @@
 
 3. #### Build and Install OneFlow
 
-    - In the root directory of OneFlow source code, run:
+    - #### Option 1: Build in docker container (recommended)
+      - In the root directory of OneFlow source code, run:
 
-      ```
-      mkdir build
-      cd build
-      cmake ..
-      make -j$(nproc)
-      make pip_install
-      ```
+        ```
+        python3 docker/package/manylinux/build_wheel.py
+        ```
 
-    - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
-    - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
+        This should produces `.whl` files in the directory `wheelhouse`
+
+      - If you are in China, you might need to add these flags:
+
+        ```
+        --use_tuna --use_system_proxy --use_aliyun_mirror
+        ```
+
+      - You can choose CUDA/Python versions of wheel by adding:
+
+        ```
+        --cuda_version=10.1 --python_version=3.6,3.7
+        ```
+
+      - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
+
+    - #### Option 2: Build on bare metal
+      - In the root directory of OneFlow source code, run:
+
+        ```
+        mkdir build
+        cd build
+        cmake ..
+        make -j$(nproc)
+        make pip_install
+        ```
+
+      - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
+      - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 
 ### Troubleshooting
 

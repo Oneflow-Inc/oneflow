@@ -18,26 +18,26 @@ limitations under the License.
 
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
-void AddOptimizerOpConf(const OpGraph& op_graph, JobBuilder* job_builder,
+void AddOptimizerOpConf(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
 
 float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_update_conf,
                                   const VariableOp& op);
 
-template<typename T>
-void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           JobBuilder* job_builder, T*);
+void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder);
 
 class GenerateOptimizerOpConfWrapperStruct final {
  public:
-  using Func = std::function<void(const VariableOp&, const ParallelConf&, JobBuilder*,
+  using Func = std::function<void(JobPassCtx*, const VariableOp&, const ParallelConf&, JobBuilder*,
                                   const LogicalBlobId&)>;
   GenerateOptimizerOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
-  void Call(const VariableOp& op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-            const LogicalBlobId& diff_lbi_of_var_out) const;
+  void Call(JobPassCtx* ctx, const VariableOp& op, const ParallelConf& parallel_conf,
+            JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) const;
 
  private:
   const std::unique_ptr<const Func> func_;
