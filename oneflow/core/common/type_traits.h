@@ -13,26 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_COMPILER_H_
-#define ONEFLOW_CORE_JOB_COMPILER_H_
-
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/operator/operator.h"
-
 namespace oneflow {
 
-class Compiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  Compiler() = default;
-  ~Compiler() = default;
+namespace detail {
 
-  Maybe<void> Compile(Job*, Plan*, bool need_job_complete) const;
-  Maybe<void> GenNetTopo(Plan* plan) const;
+template<typename T, typename Enabled = void>
+struct ScalarOrConstRef;
+
+template<typename T>
+struct ScalarOrConstRef<T, typename std::enable_if<std::is_scalar<T>::value>::type> {
+  using type = T;
 };
 
-}  // namespace oneflow
+template<typename T>
+struct ScalarOrConstRef<T, typename std::enable_if<!std::is_scalar<T>::value>::type> {
+  using type = const T&;
+};
 
-#endif  // ONEFLOW_CORE_JOB_COMPILER_H_
+}  // namespace detail
+
+template<typename T>
+using scalar_or_const_ref_t = typename detail::ScalarOrConstRef<T>::type;
+
+}  // namespace oneflow

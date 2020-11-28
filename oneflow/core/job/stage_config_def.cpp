@@ -26,8 +26,10 @@ REGISTER_FUNCTION_CONFIG_DEF()
     .ListInt64("stage_partition_scope_ids", {},
                "type: list[int64]. stage partition scope symbol ids");
 
+REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_stage_buffer", false, "enable stage buffer");
+
 REGISTER_SCOPE_CONFIG_DEF()
-    .Int64("num_stages", -1, "total number of stages")
+    .Int64("num_stages", 0, "total number of stages")
     .Int64("stage_id", -1, "current stage id ");
 
 }  // namespace

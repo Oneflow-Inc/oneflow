@@ -13,26 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_COMPILER_H_
-#define ONEFLOW_CORE_JOB_COMPILER_H_
-
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/type_traits.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-class Compiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  Compiler() = default;
-  ~Compiler() = default;
-
-  Maybe<void> Compile(Job*, Plan*, bool need_job_complete) const;
-  Maybe<void> GenNetTopo(Plan* plan) const;
-};
+template<typename MapT, typename KeyT>
+Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, const KeyT& key) {
+  const auto& iter = map.find(key);
+  CHECK_OR_RETURN(iter != map.end());
+  return iter->second;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_COMPILER_H_
