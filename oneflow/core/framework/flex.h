@@ -34,16 +34,14 @@ class FlexValue;
 
 class FlexDef {
  public:
+  FlexDef(const FlexDef&) = delete;
+  FlexDef(FlexDef&&) = delete;
+  FlexDef() = default;
   virtual ~FlexDef() = default;
 
   virtual std::shared_ptr<FlexValue> New(const std::shared_ptr<const FlexDef>& flex_def) const = 0;
   virtual void InitFromProto(const FlexDefProto& proto) = 0;
   virtual void ToProto(FlexDefProto* proto) const = 0;
-
- protected:
-  FlexDef(FlexDef&&) noexcept = default;
-  FlexDef(const FlexDef&) = default;
-  FlexDef() = default;
 };
 std::shared_ptr<FlexDef> NewFlexDef(const FlexDefProto& flex_def_proto);
 
@@ -133,9 +131,10 @@ class ListFlexDef : public FlexDef {
  public:
   ListFlexDef(const ListFlexDef&) = delete;
   ListFlexDef(ListFlexDef&&) = delete;
-  explicit ListFlexDef(const std::shared_ptr<const FlexDef>& elem_flex_def)
+  ListFlexDef() = default;
+  ListFlexDef(const std::shared_ptr<const FlexDef>& elem_flex_def)
       : FlexDef(), elem_flex_def_(elem_flex_def) {}
-  ~ListFlexDef() = default;
+  ~ListFlexDef() override = default;
 
   const std::shared_ptr<const FlexDef> elem_flex_def() const { return elem_flex_def_; }
 
@@ -246,7 +245,6 @@ class FlexDefBuilder final {
 };
 
 class ListFlexValue;
-class StructFlexValue;
 template<typename T>
 struct FlexValueGetter;
 class MutFlexValue;

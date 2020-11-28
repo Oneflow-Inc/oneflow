@@ -29,7 +29,10 @@ std::shared_ptr<FlexDef> NewFlexDef(const FlexDefProto& flex_def_proto) {
     flex_def->InitFromProto(flex_def_proto);
     return flex_def;
   } else {
-    UNIMPLEMENTED();
+    CHECK(flex_def_proto.has_list_flex_def());
+    auto flex_def = std::make_shared<ListFlexDef>();
+    flex_def->InitFromProto(flex_def_proto);
+    return flex_def;
   }
   return std::shared_ptr<FlexDef>();
 }
