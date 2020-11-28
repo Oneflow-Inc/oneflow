@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace {
 
-constexpr int64_t kSoftmaxGpuBlockSize = 256;
+constexpr int64_t kSoftmaxGpuBlockSize = 128;
 
 template<typename T>
 struct SoftmaxUtil {
@@ -97,11 +97,11 @@ __global__ void SoftmaxGpuForwardImpl(const int num_instances, const int num_cla
     }
     __syncthreads();
     ComputeType block_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_sum, cub::Sum());
-    if (tid == 0) { row_reduce_result = block_sum; }
+    if (tid == 0) { row_reduce_result = static_cast<ComputeType>(1.0) / block_sum; }
     __syncthreads();
-    const ComputeType row_sum_t = row_reduce_result;
+    const ComputeType inv_row_sum = row_reduce_result;
     for (int col = tid; col < num_classes; col += kSoftmaxGpuBlockSize) {
-      prob_row[col] = SU::FromComputeType(compute_buf[col] / row_sum_t);
+      prob_row[col] = SU::FromComputeType(compute_buf[col] * inv_row_sum);
     }
   }
 }

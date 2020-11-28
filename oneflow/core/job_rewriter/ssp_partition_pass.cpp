@@ -52,8 +52,6 @@ class SspPartitionPass final : public JobPass {
 };
 
 REGISTER_JOB_PASS("SspPartition", SspPartitionPass);
-REGISTER_FUNCTION_CONFIG_DEF().String("ssp_partition_strategy", "disable",
-                                      "ssp partition strategy");
 
 #define REGISTER_SSP_PARTITION_STRATEGY(strategy_name, strategy_type)      \
   REGISTER_CLASS_CREATOR(std::string, strategy_name, SspPartitionStragety, \
@@ -77,17 +75,18 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     JUST(ForEachSspScope4TrainableFwOp(
-        op_graph, ctx->job_desc(), [&](const OpNode* op_node, const Scope& scope) -> Maybe<void> {
+        op_graph, ctx->job_desc(),
+        [&](const OpNode* op_node, const Scope& scope, int64_t scope_symbol_id) -> Maybe<void> {
           // Sets scope_symbol_id
           std::vector<OperatorConf> op_confs(1);
           auto* op_conf = &op_confs.at(0);
           op_conf->CopyFrom(op_node->op().op_conf());
-          op_conf->set_scope_symbol_id(scope.scope_proto().symbol_id());
+          op_conf->set_scope_symbol_id(scope_symbol_id);
           job_builder.MutOpsOnlyOnce(op_confs);
           // Sets parallel_conf
-          const auto* parallel_desc = JUST(scope.GetParallelDesc(*op_conf));
+          const auto& parallel_desc = JUST(scope.GetParallelDesc(*op_conf));
           const auto& op_name = op_node->op().op_name();
-          job_builder.MutParallelConfOnlyOnce(op_name, parallel_desc->parallel_conf());
+          job_builder.MutParallelConfOnlyOnce(op_name, parallel_desc.parallel_conf());
           return Maybe<void>::Ok();
         }));
     return Maybe<void>::Ok();
@@ -96,7 +95,8 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
  private:
   Maybe<void> ForEachSspScope4TrainableFwOp(
       const OpGraph& op_graph, const JobDesc& job_desc,
-      const std::function<Maybe<void>(const OpNode*, const Scope&)>& Handler) const {
+      const std::function<Maybe<void>(const OpNode*, const Scope&, int64_t scope_symbol_id)>&
+          Handler) const {
     // Sequantialize trainable forward ops
     std::list<std::unique_ptr<std::vector<OpNode*>>> sequantial_trainable_fw_ops;
     JUST(GetSequantialTrainableFwOps(op_graph, &sequantial_trainable_fw_ops));
@@ -107,14 +107,15 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
     std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
     int64_t num_stages = ssp_partition_scope_ids.size();
     JUST(GetSspDepth2Stage(sequantial_trainable_fw_ops, num_stages, &Stage4Depth));
-    std::function<Maybe<const Scope&>(int64_t)> SspScope4Stage;
+    std::function<Maybe<const Scope&>(int64_t, int64_t*)> SspScope4Stage;
     // Provides scope for each stage
     JUST(MakeGetterSspScope4Stage(ssp_partition_scope_ids, &SspScope4Stage));
     int64_t depth = 0;
     for (const auto& fused_vec : sequantial_trainable_fw_ops) {
       int64_t stage = JUST(Stage4Depth(depth));
-      const auto& scope = JUST(SspScope4Stage(stage));
-      for (OpNode* op_node : *fused_vec) { JUST(Handler(op_node, scope)); }
+      int64_t scope_symbol_id = 0;
+      const auto& scope = JUST(SspScope4Stage(stage, &scope_symbol_id));
+      for (OpNode* op_node : *fused_vec) { JUST(Handler(op_node, scope, scope_symbol_id)); }
       ++depth;
     }
     return Maybe<void>::Ok();
@@ -304,12 +305,14 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
 
   Maybe<void> MakeGetterSspScope4Stage(
       const std::vector<int64_t>& ssp_partition_scope_ids,
-      std::function<Maybe<const Scope&>(int64_t stage)>* SspScope4Stage) const {
-    *SspScope4Stage = [ssp_partition_scope_ids](int64_t stage) -> Maybe<const Scope&> {
+      std::function<Maybe<const Scope&>(int64_t stage, int64_t* scope_symbol_id)>* SspScope4Stage)
+      const {
+    *SspScope4Stage = [ssp_partition_scope_ids](int64_t stage,
+                                                int64_t* scope_symbol_id) -> Maybe<const Scope&> {
       CHECK_GE_OR_RETURN(stage, 0);
       CHECK_LT_OR_RETURN(stage, ssp_partition_scope_ids.size());
-      int64_t scope_id = ssp_partition_scope_ids.at(stage);
-      return Global<vm::SymbolStorage<Scope>>::Get()->Get(scope_id);
+      *scope_symbol_id = ssp_partition_scope_ids.at(stage);
+      return Global<vm::SymbolStorage<Scope>>::Get()->Get(*scope_symbol_id);
     };
     return Maybe<void>::Ok();
   }
@@ -323,9 +326,6 @@ class NaiveSequantialSspPartitionStrategy : public SspPartitionStragety {
   }
 };
 REGISTER_SSP_PARTITION_STRATEGY("naive_sequantial", NaiveSequantialSspPartitionStrategy);
-
-REGISTER_FUNCTION_CONFIG_DEF().ListInt64("ssp_partition_scope_ids", {},
-                                         "type: list[int64]. ssp partition scope symbol ids");
 
 }  // namespace
 

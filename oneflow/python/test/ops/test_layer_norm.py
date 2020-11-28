@@ -115,7 +115,7 @@ class TestLayerNorm(flow.unittest.TestCase):
                 diff = dx_tf.numpy() - b.numpy()
                 max_diff = np.max(np.abs(diff))
                 if data_type == "float16":
-                    tolerance = 2e-3
+                    tolerance = 3e-3
                 else:
                     tolerance = 1e-5
                 assert np.allclose(
@@ -252,8 +252,8 @@ class TestLayerNorm(flow.unittest.TestCase):
                 assert np.allclose(
                     np_gamma_diff,
                     test_global_storage.Get("gamma_diff").astype(np.float16),
-                    rtol=1e-2,
-                    atol=1e-2,
+                    rtol=5e-2,
+                    atol=5e-2,
                 ), (
                     case,
                     max_diff,

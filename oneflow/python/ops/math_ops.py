@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-from typing import Union, Optional, Sequence
+from typing import Union, Optional, Sequence, List, Tuple
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -28,6 +28,8 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
+from oneflow.python.ops.transpose_util import get_inversed_perm
 
 
 @oneflow_export("math.add")
@@ -67,7 +69,7 @@ def add(
         x = np.array([1, 2, 3]).astype(np.float32)
         y = np.array([1, 1, 1]).astype(np.float32)
         out = addJob(x, y) 
-        
+
         # out [2., 3., 4.]
 
     """
@@ -300,7 +302,7 @@ def divide(
         out = divideJob(x, y)
 
         # out [2.5, 4., 4.5]
-        
+
     """
     if isinstance(x, (int, float)):
         return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
@@ -363,7 +365,7 @@ def floor_mod(
         x = np.array([16, 9, 5]).astype(np.float32)
         y = np.array([6, 4, 3]).astype(np.float32)
         out = modJob(x, y)
-        
+
         # out [4., 1., 2.]
 
     """
@@ -557,7 +559,7 @@ def tanh(
 
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         out = tanhJob(x)
-        
+
         # out [-0.46211714, 0., 0.46211714]
 
     """
@@ -720,6 +722,26 @@ def sigmoid(
     )
 
 
+@oneflow_export("math.sigmoid_grad")
+def sigmoid_grad(
+    y: remote_blob_util.BlobDef,
+    dy: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SigmoidGrad_")
+        )
+        .Op("sigmoid_grad")
+        .Input("y", [y])
+        .Input("dy", [dy])
+        .Output("dx")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(
     data: remote_blob_util.BlobDef,
@@ -764,7 +786,7 @@ def unsorted_segment_sum(
         # out [[ 4.  6.]
         #      [12. 14.]
         #      [20. 22.]]
-        
+
         # Example 2
         import oneflow as flow
         import numpy as np
@@ -784,7 +806,7 @@ def unsorted_segment_sum(
 
         #  out [[10. 12. 14. 16.]
         #       [ 5.  6.  7.  8.]]
-        
+
     """
     return (
         flow.user_op_builder(
@@ -847,7 +869,7 @@ def unsorted_segment_sum_like(
 
         # out [[10. 12. 14. 16.]
         #      [ 5.  6.  7.  8.]]
-        
+
     """
     return (
         flow.user_op_builder(
@@ -873,11 +895,11 @@ def unsorted_batch_segment_sum(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data. 
-    
+
     For example, the segment id is like:
 
     .. code-block:: python
-    
+
         [[0 0 0 1 2 2 3 3], 
          [0 0 1 1 2 3 3 3]]
 
@@ -889,11 +911,11 @@ def unsorted_batch_segment_sum(
 
     Returns:
         remote_blob_util.BlobDef: A Blob.
-    
+
     For example:
 
     .. code-block:: python
-    
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -945,7 +967,7 @@ def cast(
 
     Returns:
         remote_blob_util.BlobDef: A Blob
-    
+
     For example:
 
     .. code-block:: python
@@ -995,7 +1017,7 @@ def equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1033,7 +1055,7 @@ def not_equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1071,7 +1093,7 @@ def less(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1109,7 +1131,7 @@ def less_equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1185,7 +1207,7 @@ def greater_equal(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1203,7 +1225,7 @@ def greater_equal(
         x = np.array([1, 1, 4]).astype(np.float32)
         y = np.array([1, 2, 3]).astype(np.float32)
         out = greater_equal_Job(x, y)
-    
+
         # out [1 0 1]
 
     """
@@ -1228,7 +1250,7 @@ def logical_and(
 
     Returns:
         remote_blob_util.BlobDef: A Blob with int8 type.
-    
+
     For example:
 
     .. code-block:: python
@@ -1246,9 +1268,9 @@ def logical_and(
         x = np.array([1, 0, 1]).astype(np.float32)
         y = np.array([0, 0, 1]).astype(np.float32)
         out = logical_and_Job(x, y)
-    
+
         # out [0 0 1]
-    
+
     """
     return build_broadcast_binary_op("broadcast_logical_and", x, y, name)
 
@@ -1266,7 +1288,7 @@ def broadcast_min(
 
     Returns:
         remote_blob_util.BlobDef: A Blob, has the same type of x. 
-    
+
     For example:
 
     .. code-block:: python
@@ -1284,7 +1306,7 @@ def broadcast_min(
         x = np.array([2, 3, 4]).astype(np.float32)
         y = np.array([4, 2, 1]).astype(np.float32)
         out = minimum_Job(x, y)
-    
+
         # out [2. 2. 1.]
 
     """
@@ -1304,7 +1326,7 @@ def broadcast_max(
 
     Returns:
         remote_blob_util.BlobDef: A Blob, has the same type of x. 
-    
+
     For example:
 
     .. code-block:: python
@@ -1363,7 +1385,7 @@ def elem_cnt(
 
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 = 12
-        
+
         # out [12]
 
         # Example 2:
@@ -1378,7 +1400,7 @@ def elem_cnt(
 
         x = np.ones(shape=(3, 4, 5), dtype=np.float32)
         out = elem_cnt_Job(x) # 3 x 4 x 5 = 60
-        
+
         # out [60]
 
     """
@@ -1404,17 +1426,38 @@ def elem_cnt(
     return remote_blob_util.RemoteBlob(out_lbi)
 
 
-@oneflow_export("math.top_k")
-def top_k(
+def _top_k_at_last_dim(
     input: remote_blob_util.BlobDef,
     k: int = 1,
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """Finds the indices of the k largest entries for the last dimension, the difference between other framework is that oneflow only return the indices. 
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
+        .Op("top_k")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("k", k)
+        .Attr("sorted", sorted)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.top_k")
+def top_k(
+    input: remote_blob_util.BlobDef,
+    axis: int = -1,
+    k: int = 1,
+    sorted: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices. 
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         k (int, optional): Number of top elements to look for along the last dimension. Defaults to 1.
         sorted (bool, optional): If true the resulting k elements will be sorted by the values in descending order. Defaults to True.
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -1441,13 +1484,29 @@ def top_k(
         # out [2 3]
 
     """
+    name = name if name is not None else id_util.UniqueStr("TopK_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    assert 0 <= axis < num_axes, "axis out of range"
+    if axis == num_axes - 1:
+        return _top_k_at_last_dim(input, k, sorted, name)
+    else:
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
+        x = _top_k_at_last_dim(x, k, sorted, name)
+        return flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
+
+
+def _argmax_at_last_dim(
+    input: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
     return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("TopK_"))
-        .Op("top_k")
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
+        .Op("argmax")
         .Input("in", [input])
         .Output("out")
-        .Attr("k", k)
-        .Attr("sorted", sorted)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -1456,17 +1515,18 @@ def top_k(
 
 @oneflow_export("math.argmax")
 def argmax(
-    input: remote_blob_util.BlobDef, name: Optional[str] = None
+    input: remote_blob_util.BlobDef, axis: int = -1, name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """The op computes the index with the largest value of a Blob.
+    """The op computes the index with the largest value of a Blob at specified axis.
 
     Args:
         input (remote_blob_util.BlobDef): Input Blob
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         remote_blob_util.BlobDef: A Blob(dtype=int32) contains the index with the largest value of `input`
-    
+
     For example:
 
     .. code-block:: python
@@ -1488,15 +1548,22 @@ def argmax(
         # out [2 1]
 
     """
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("ArgMax_"))
-        .Op("argmax")
-        .Input("in", [input])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    name = name if name is not None else id_util.UniqueStr("ArgMax_")
+    num_axes = len(input.shape)
+    axis = axis if axis >= 0 else axis + num_axes
+    assert 0 <= axis < num_axes, "axis out of range"
+    if axis == num_axes - 1:
+        return _argmax_at_last_dim(input, name)
+    else:
+        perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+        x = flow.transpose(input, perm, False, True, name + "_transpose")
+        x = _argmax_at_last_dim(x, name)
+        x = flow.expand_dims(x, -1, name + "_expand_dims")
+        x = flow.transpose(
+            x, get_inversed_perm(perm), False, True, name + "_inverse_transpose"
+        )
+        x = flow.squeeze(x, [axis], name + "_squeeze")
+        return x
 
 
 @oneflow_export("math.broadcast_to_compatible_with", "broadcast_to_compatible_with")
@@ -1514,7 +1581,7 @@ def broadcast_to_compatible_with(
 
     Returns:
         remote_blob_util.BlobDef: A 'Blob' with the biggest shape
-    
+
     For example:
 
     .. code-block:: python
@@ -1567,7 +1634,7 @@ def clip_by_value(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This op clips Blob values to a specified min value and max value.
-    
+
     The equation is:
 
     .. math::
@@ -1584,7 +1651,7 @@ def clip_by_value(
 
     Returns:
         remote_blob_util.BlobDef: A clipped Blob
-    
+
     For example:
 
     .. code-block:: python
@@ -1653,7 +1720,7 @@ def l2_normalize(
     r"""Use L2 norm to normalizes along dimension `axis`
 
     The equation is: 
-    
+
     .. math::
         out = \frac{x}{\sqrt{\Sigma{x^2}+\epsilon}}
 
@@ -1665,7 +1732,7 @@ def l2_normalize(
 
     Returns:
         remote_blob_util.BlobDef: The normalized Blob
-    
+
     For example:
 
     .. code-block:: python
@@ -1682,7 +1749,7 @@ def l2_normalize(
         x = np.array([1, 2, 3, 4], dtype=np.float32)
 
         out = l2_normalize_Job(x)
-        
+
         # out [0.18257418 0.36514837 0.5477226  0.73029673]
 
     """
@@ -1796,23 +1863,23 @@ def tril(
     x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""Compute lower triangle of an matrix.
-    
+
     Args:
         x (remote_blob_util.BlobDef): Input Blob.
         diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
                         otherwise, offset downward.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-    
+
     Attention:
         The dimension of x must greater or equal to 2.
-    
+
     Returns:
         remote_blob_util.BlobDef: The lower triangle blob of input.
-    
+
     For example:
 
     .. code-block:: python
-    
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -1823,7 +1890,7 @@ def tril(
         x = np.array([[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
                       dtype=np.float32)
         out = tril_Job(x).get()
-        
+
         # output [[1, 0, 0, 0],
                   [1, 2, 0, 0],
                   [1, 2, 3, 0],
@@ -1835,6 +1902,143 @@ def tril(
         .Op("tril")
         .Input("in", [x])
         .Attr("diagonal", diagonal)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.polyval")
+def polyval(
+    coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Computes the elementwise value of a polynomial.
+
+    Args:
+        coeffs (Union[List, Tuple]): The coefficients of the polynomial.
+        x (remote_blob_util.BlobDef): A Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same data type of x.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        
+        @flow.global_function()
+        def polyval_Job(
+            x: tp.Numpy.Placeholder((3,), dtype=flow.float32)
+        ) -> tp.Numpy:
+            coeffs = [1.0, 3.0, -2.0]
+            return flow.math.polyval(coeffs, x)
+
+        x = np.array([1.0, 2.0, 3.0]).astype(np.float32)
+        out = polyval_Job(x)
+        
+        # output [ 2. 8. 16.]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Polyval_")
+    if not isinstance(coeffs, (list, tuple)):
+        raise ValueError(
+            "Argument coeffs must be list type " "found {}".format(type(coeffs))
+        )
+    if len(coeffs) < 1:
+        return flow.zeros_like(x, name=name)
+    p = flow.zeros_like(x, name=name)
+    for c in coeffs:
+        p = flow.math.add(c, flow.math.multiply(p, x))
+    return p
+
+
+@oneflow_export("range")
+def range(
+    start, limit=None, delta=1, dtype=None, name="range"
+) -> remote_blob_util.BlobDef:
+    r"""This operator is similar to python `range`, the difference is that `oneflow.range` generates 
+    a Blob. 
+
+    Args:
+        start ([type]): The start of interval. Its type should be `int`. 
+        limit ([type], optional): The limit of interval. Its type should be `int`.
+        delta (int, optional): The numerical spacing between elements. Defaults to 1.
+        dtype ([type], optional): The output's data type. Currently we only support `oneflow.int64`. Defaults to None.
+        name (str, optional): The name for the operation. Defaults to "range".
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def range_job()->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):   
+                out = flow.range(10, dtype=flow.int64)
+            
+            return out
+
+        out = range_job()
+
+        # out [0 1 2 3 4 5 6 7 8 9]
+    
+    Example2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def range_job()->tp.Numpy:
+            with flow.scope.placement("cpu", "0:0"):   
+                out = flow.range(1, 10, 3, dtype=flow.int64)
+            
+            return out
+
+        out = range_job()
+
+        # out [1 4 7]
+
+    """
+    # Ensure the dtype is not None
+    assert dtype is not None, "Please specified data type"
+
+    if limit is None:
+        # If limit is None, We start from zero.
+        start, limit = 0, start
+
+    assert limit > start, "Limit should be larger than start"
+    assert delta <= limit - start, "Delta is ilegal"
+
+    # Ensure start, limit, delta's dtype is int, We will Add dtype hierarchy in Later version.
+    assert type(start) == int, "Params `start`'s type should be int"
+    assert type(limit) == int, "Params `limit`'s type should be int"
+    assert type(delta) == int, "Params `delta`'s type should be int"
+
+    # Build User OP
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Range_"))
+        .Op("range")
+        .Attr("start", start)
+        .Attr("delta", delta)
+        .Attr("limit", limit)
+        .Attr("dtype", dtype)
         .Output("out")
         .Build()
         .InferAndTryRun()

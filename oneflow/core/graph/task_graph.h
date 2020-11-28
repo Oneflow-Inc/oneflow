@@ -39,7 +39,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
-  void AddOrderingCtrlEdgeInSameChain();
+  void MergeChainAndAddOrderingCtrlEdgeInSameChain();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -78,7 +78,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                         const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void MergeChainAndSetOrderInGraphForEachNode();
+  void SetOrderInGraphForEachNode();
+  void MergeChain();
   void BuildCtrlRegstDescInSameChain();
 
   void GenerateIndependentThrdId(

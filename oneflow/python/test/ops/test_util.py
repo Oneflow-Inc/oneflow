@@ -54,6 +54,12 @@ class Args:
         self.flow_args = flow_args
         self.tf_args = tf_args
 
+    def __str__(self):
+        return "flow_args={} tf_args={}".format(self.flow_args, self.tf_args)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 def RunOneflowOp(device_type, flow_op, x, flow_args):
     flow.clear_default_session()

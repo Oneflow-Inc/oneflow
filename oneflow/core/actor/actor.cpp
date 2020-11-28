@@ -183,7 +183,8 @@ void Actor::InitBnInOp2BlobInfo(const TaskProto& task_proto) {
       blob_info.lbi = pair.second;
       const std::string& bn = pair.first;
       auto regst_desc_id_it = node.bn_in_op2regst_desc_id().find(bn);
-      if (regst_desc_id_it != node.bn_in_op2regst_desc_id().end()) {
+      if (regst_desc_id_it != node.bn_in_op2regst_desc_id().end()
+          && Global<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
         const int64_t regst_desc_id = regst_desc_id_it->second;
         blob_info.regst_desc_id = regst_desc_id;
         const RtRegstDesc& regst_desc =
