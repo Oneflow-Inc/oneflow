@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <ostream>
+#include <cstdlib>
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
@@ -30,7 +32,10 @@ ConfigDef* MutGlobalConfigDef() {
 template<ConfigDefType config_def_type>
 AttrValue* AddAttrDef(const std::string& name, const std::string& description) {
   auto* name2flag_def = MutGlobalConfigDef<config_def_type>()->mutable_attr_name2attr_def();
-  CHECK(name2flag_def->find(name) == name2flag_def->end());
+  if (name2flag_def->find(name) != name2flag_def->end()) {
+    std::cerr << "duplicated attribute found. attribute name: " << name << std::endl;
+    std::exit(-1);
+  }
   auto* flag_def = &(*name2flag_def)[name];
   flag_def->set_name(name);
   flag_def->set_description(description);
