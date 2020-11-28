@@ -114,9 +114,6 @@ def test_combined_margin_loss(
 
         return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     x = np.random.uniform(low=-1, high=1, size=input_shape).astype(np.float32)
     labels = np.random.randint(0, 100, size=(*label_shape,)).astype(np.int32)
     test_job(x, labels).get()
@@ -132,11 +129,11 @@ def test_combined_margin_loss(
     test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
 
 
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n4d()
 class TestCombinedMarginLoss(flow.unittest.TestCase):
     def test_case(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(512, 10000)]
+        arg_dict["input_shape"] = [(512, 1000)]
         arg_dict["label_shape"] = [(512,)]
         arg_dict["data_type"] = [flow.float32]
         arg_dict["m1"] = [1.0]
