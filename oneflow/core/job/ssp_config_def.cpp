@@ -26,8 +26,8 @@ REGISTER_FUNCTION_CONFIG_DEF()
     .ListInt64("ssp_partition_scope_ids", {}, "type: list[int64]. ssp partition scope symbol ids");
 
 REGISTER_SCOPE_CONFIG_DEF()
-    .Int64("ssp_num_stages", -1, "total number of ssp stages")
-    .Int64("ssp_stage_id", -1, "current ssp stage id ");
+    .Int64("num_stages", -1, "total number of stages")
+    .Int64("stage_id", -1, "current stage id ");
 
 }  // namespace
 
