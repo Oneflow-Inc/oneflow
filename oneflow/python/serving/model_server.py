@@ -23,7 +23,6 @@ import google.protobuf.text_format as text_format
 import grpc
 import os
 import asyncio
-import logging
 
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -34,10 +33,7 @@ from oneflow.python.oneflow_export import oneflow_export
 # -- support stream request and stream response for big-size inputs and outputs
 # -- version policy of model
 # -- aiohttp server
-# -- complete async server
-# -- fix proto
-# -- update and change SimpleSession interface
-# -- batching util
+# -- batching
 # -- hot update model, two ways: 1) watch model config file changing and reload;
 #    2) through ReloadConfig request
 
@@ -48,10 +44,8 @@ class PredictionService(prediction_grpc.PredictionServiceServicer):
         self.model_server_ = model_server
 
     async def Predict(self, predict_request, context):
-        print("accept request")
-        print("model name:", predict_request.model_spec.model_name)
-        print("function name:", predict_request.model_spec.function_name)
-        print("signature name:", predict_request.model_spec.signature_name)
+        print("accept predict request")
+        print("model name:", predict_request.model_name)
         for input_name, tensor in predict_request.inputs.items():
             print(
                 "input {} shape: {}, dtype: {}".format(
@@ -60,7 +54,8 @@ class PredictionService(prediction_grpc.PredictionServiceServicer):
             )
 
         outputs = await self.model_server_.predict(predict_request)
-        print("predict finished")
+        print("predict request processing finished")
+
         predict_response = predict_pb.PredictResponse()
         for output_name, output in outputs.items():
             output_tensor_proto = predict_response.outputs[output_name]
@@ -80,47 +75,110 @@ class ModelServer(object):
         # read model config
         # TODO: support pass model config directly
         assert server_config.HasField("model_config_file")
-        self.model_config_ = model_config_pb.ModelServerConfig()
+        model_config_list_proto = model_config_pb.ModelConfigList()
         with open(server_config.model_config_file, "rb") as f:
-            text_format.Merge(f.read(), self.model_config_)
+            text_format.Merge(f.read(), model_config_list_proto)
 
         # load model
         # TODO: support multi model through subprocess
-        assert len(self.model_config_.model_config_list) == 1
-        model_config = self.model_config_.model_config_list[0]
+        assert len(model_config_list_proto.configs) == 1
+        model_config = model_config_list_proto.configs[0]
         self.load_model(model_config)
-        print("model loaded")
 
         # start grpc server
         asyncio.run(self.build_and_start_grpc_server())
         print("server started")
 
     def load_model(self, model_config):
-        latest_model_version = find_model_latest_version(model_config.path)
+        model_name = model_config.name
+        if model_name not in self.model_name2versions2session_:
+            self.model_name2versions2session_[model_name] = {}
+
+        # load saved_model proto
+        model_path = model_config.saved_model_path
+        model_meta_file_name = model_config.saved_model_meta_file_name
+        model_version = find_model_latest_version(model_path)
+        if model_version in self.model_name2versions2session_[model_name]:
+            raise ValueError(
+                "The version ({}) of model ({}) already exist".format(
+                    model_name, model_version
+                )
+            )
+
         model_meta_file_path = os.path.join(
-            model_config.path, str(latest_model_version), "saved_model.prototxt"
+            model_path, str(model_version), model_meta_file_name
         )
         saved_model_proto = load_saved_model(model_meta_file_path)
-        sess = flow.SimpleSession()
+
+        # create session
+        option = flow.SessionOption()
+        if model_config.HasField("device_tag"):
+            option.device_tag = model_config.device_tag
+        if model_config.HasField("device_num"):
+            option.device_num = model_config.device_num
+
+        sess = flow.SimpleSession(option)
+
+        # set checkpoint dir
         checkpoint_path = os.path.join(
-            model_config.path,
-            str(latest_model_version),
-            saved_model_proto.checkpoint_dir[0],
+            model_path, str(model_version), saved_model_proto.checkpoint_dir[0],
         )
         sess.set_checkpoint_path(checkpoint_path)
-        for job_name, signature in saved_model_proto.signatures_v2.items():
-            sess.setup_job_signature(job_name, signature)
 
-        for job_name, net in saved_model_proto.graphs.items():
-            with sess.open(job_name) as sess:
-                sess.compile(net.op)
+        # add graph
+        def add_graph(graph_name, signature_name=None):
+            graph_def = saved_model_proto.graphs[graph_name]
+            if signature_name is None:
+                if graph_def.HasField("default_signature_name"):
+                    signature_name = graph_def.default_signature_name
+                else:
+                    raise ValueError(
+                        "graph ({graph_name}) of saved model {model_name} has no default signature name"
+                        ", you should set signature_name for graph in model_config".format(
+                            graph_name=graph_name, model_name=model_name,
+                        )
+                    )
+
+            signature_def = graph_def.signatures[signature_name]
+            sess.setup_job_signature(graph_name, signature_def)
+            with sess.open(graph_name):
+                sess.compile(graph_def.op_list)
+
+            print(
+                "graph ({}) with signature ({}) add to model ({})".format(
+                    graph_name, signature_name, model_name
+                )
+            )
+
+        graph_name = None
+        for graph_config in model_config.graphs:
+            graph_name = graph_config.graph_name
+            signature_name = None
+            if graph_config.HasField("signature_name"):
+                signature_name = graph_config.signature_name
+            add_graph(graph_name, signature_name)
+
+        # these is no any graph_config in model_config
+        if graph_name is None:
+            if saved_model_proto.HasField("default_graph_name"):
+                graph_name = saved_model_proto.default_graph_name
+            else:
+                raise ValueError(
+                    "saved model {} has no default graph name, you should set model_config.graph_name".format(
+                        model_name
+                    )
+                )
+            add_graph(graph_name)
 
         sess.launch()
-        if model_config.name not in self.model_name2versions2session_:
-            self.model_name2versions2session_[model_config.name] = {}
-        self.model_name2versions2session_[model_config.name][
-            latest_model_version
-        ] = sess
+
+        self.model_name2versions2session_[model_name][model_version] = sess
+
+        print("version {} of model {} loaded".format(model_version, model_name))
+        input_names = sess.list_inputs()
+        print("input names:", input_names)
+        for input_name in input_names:
+            print('input "{}" info: {}'.format(input_name, sess.input_info(input_name)))
 
     async def build_and_start_grpc_server(self):
         grpc_server = grpc.aio.server()
@@ -137,13 +195,16 @@ class ModelServer(object):
     async def predict(self, predict_request):
         print("predict")
         model_spec = predict_request.model_spec
+        model_name = model_spec.model_name
         if model_spec.HasField("version"):
             model_version = model_spec.version
-            assert model_version in self.model_name2versions2session_[model_config.name]
+            if model_version not in self.model_name2versions2session_[model_name]:
+                raise ValueError("model version {} not exist".format(model_version))
         else:
-            versions = list(self.model_name2versions2session_[model_config.name].keys())
+            versions = list(self.model_name2versions2session_[model_name].keys())
             model_version = versions[-1]
-        sess = self.model_name2versions2session_[model_config.name][model_version]
+
+        sess = self.model_name2versions2session_[model_name][model_version]
         print("session got")
 
         input_names = sess.list_inputs()
@@ -192,8 +253,9 @@ if __name__ == "__main__":
     # test_code: generate model_config
     model_server_config = model_config_pb.ModelServerConfig()
     model_config = model_config_pb.ModelConfig()
-    model_config.name = "alexnet"
-    model_config.path = "alexnet_models"
+    model_config.name = "resnet50"
+    # model_config.path = "alexnet_models"
+    model_config.path = "resnet50_models"
     model_server_config.model_config_list.append(model_config)
     with open("model_config.prototxt", "w") as f:
         f.write("{}\n".format(str(model_server_config)))
