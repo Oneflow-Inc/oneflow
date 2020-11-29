@@ -21,7 +21,7 @@ import unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestStagePartition(flow.unittest.TestCase):
+class TestSsp(flow.unittest.TestCase):
     def GetScopeSymbolIds(self, device_tag, device_name, num):
         scope_symbol_ids = []
         scope = flow.scope.placement(device_tag, device_name)
@@ -30,7 +30,7 @@ class TestStagePartition(flow.unittest.TestCase):
                 scope_symbol_ids.append(flow.current_scope().symbol_id)
         return scope_symbol_ids
 
-    def test_stage_partition(self):
+    def test_ssp(self):
         if flow.eager_execution_enabled():
             return
         device_name = "0:0"
@@ -38,12 +38,13 @@ class TestStagePartition(flow.unittest.TestCase):
         flow.config.enable_debug_mode(True)
         flow.config.cpu_device_num(2)
 
-        shape = (10,)
+        shape = (10, 10)
 
         function_config = flow.FunctionConfig()
-        function_config.enable_stage_partition(True)
-        function_config.stage_partition_scope_ids(
-            self.GetScopeSymbolIds("gpu", device_name, 2)
+        function_config.ssp_placement(
+            flow.scope.placement("gpu", device_name),
+            flow.scope.placement("gpu", device_name),
+            flow.scope.placement("gpu", device_name),
         )
 
         @flow.global_function(type="train", function_config=function_config)
@@ -57,7 +58,7 @@ class TestStagePartition(flow.unittest.TestCase):
                         dtype=flow.float,
                         initializer=flow.constant_initializer(0),
                     )
-                    x = w + x
+                    x = flow.matmul(x, w)
             loss = x
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [-10.0]), momentum=0
