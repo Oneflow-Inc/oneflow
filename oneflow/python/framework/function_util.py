@@ -557,6 +557,23 @@ def set_all_reduce_fp16(func_desc, value=True):
     )
 
 
+@oneflow_function_config("train.optimizer_placement_optimization_mode")
+def set_optimizer_placement_optimization_mode(func_desc, mode=None):
+    r"""Enable optimizer_placement_optimization with mode 'mode'
+
+    Args:
+        func_desc ([type]): [description]
+        mode (str, optional): [description]. Defaults to 'non_distributed'.
+    """
+    conf = func_desc.job_config_proto.train_conf.optimizer_placement_optimization_conf
+    if mode is None or mode == "non_distributed":
+        conf.non_distributed_conf.SetInParent()
+    elif mode == "distributed_split":
+        conf.distributed_split_conf.SetInParent()
+    else:
+        raise ValueError
+
+
 @oneflow_function_config("enable_non_distributed_optimizer")
 def set_enable_non_distributed_optimizer(func_desc, value=True):
     r"""Whether enable non_distributed optimizer or not
@@ -565,7 +582,12 @@ def set_enable_non_distributed_optimizer(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.enable_non_distributed_optimizer = value
+    if value:
+        set_optimizer_placement_optimization_mode(func_desc, "non_distributed")
+    else:
+        func_desc.job_config_proto.train_conf.ClearField(
+            "optimizer_placement_optimization_conf"
+        )
 
 
 @oneflow_function_config("disable_all_reduce_sequence")

@@ -14,6 +14,19 @@ message DynamicLossScalePolicy {
   optional float multiplier = 3 [default=2.0];
 }
 
+message OptimizerPlacementOptimizationNonDistributedConf {
+}
+
+message OptimizerPlacementOptimizationDistributedSplitConf {
+}
+
+message OptimizerPlacementOptimizationConf {
+  oneof mode {
+    OptimizerPlacementOptimizationNonDistributedConf non_distributed_conf = 1;
+    OptimizerPlacementOptimizationDistributedSplitConf distributed_split_conf = 2 ;
+  }
+}
+
 message TrainConf {
   optional NormalModelUpdateOpUserConf model_update_conf = 3;
   repeated string loss_lbn = 6;
@@ -24,7 +37,7 @@ message TrainConf {
     float loss_scale_factor = 11 [default = 1];
     DynamicLossScalePolicy dynamic_loss_scale_policy = 12;
   }
-
+  optional OptimizerPlacementOptimizationConf optimizer_placement_optimization_conf = 13;
   optional float primary_lr = 101;
   optional float secondary_lr = 102;
 }
@@ -70,6 +83,7 @@ message ParallelBlobConf {
   required OptInt64 batch_axis = 4;
 }
 
+
 message JobConfigProto {
   required string job_name = 1;
 
@@ -109,7 +123,6 @@ message JobConfigProto {
 
   optional bool do_parallel_cast_before_widening_type_cast = 403 [default = true];
 
-  optional bool enable_non_distributed_optimizer = 506 [default = false];
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
 
