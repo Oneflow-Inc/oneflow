@@ -35,6 +35,6 @@ def SetAttrValue(attr_value, py_value, default_attr_value):
         attr_value.at_list_int64.val[:] = py_value
     else:
         raise ValueError(
-            "config with type %s is invalid. supported types: [bool, int, float, str]"
+            "config with type %s is invalid. supported types: [bool, int, float, str, list]"
             % type(py_value)
         )
