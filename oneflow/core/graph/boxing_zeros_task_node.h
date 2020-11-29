@@ -38,7 +38,7 @@ class BoxingZerosTaskNode : public TaskNode {
 
   LogicalBlobId lbi_;
   Shape shape_;
-  DataType data_type_ = DataType::kInvalidDataType;
+  DataType data_type_;
   Shape time_shape_;
 };
 

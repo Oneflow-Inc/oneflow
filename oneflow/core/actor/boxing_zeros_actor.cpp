@@ -38,7 +38,7 @@ class BoxingZerosActor : public NaiveActor {
     piece_id_ += 1;
   }
 
-  int64_t piece_id_ = 0;
+  int64_t piece_id_;
 };
 
 REGISTER_ACTOR(TaskType::kBoxingZeros, BoxingZerosActor);
