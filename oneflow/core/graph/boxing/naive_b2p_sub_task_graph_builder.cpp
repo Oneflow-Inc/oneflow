@@ -35,9 +35,9 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
       CompTaskNode* dst_node = sorted_dst_comp_tasks.at(dst_node_idx);
       const int64_t nearest_src_node_idx =
           SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
-      CHECK_NE(nearest_src_node_idx, -1);
+      CHECK_NE_OR_RETURN(nearest_src_node_idx, -1);
       CompTaskNode* nearest_src_node = sorted_src_comp_tasks.at(nearest_src_node_idx);
-      dst_node2nearest_src_node.emplace(dst_node, nearest_src_node);
+      CHECK_OR_RETURN(dst_node2nearest_src_node.emplace(dst_node, nearest_src_node).second);
       const int64_t distance = SubTskGphBuilderUtil::GetDistance(nearest_src_node, dst_node);
       if (nearest_dst_node_idx == -1 || distance < nearest_dst_node_distance) {
         nearest_dst_node_idx = dst_node_idx;
