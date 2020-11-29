@@ -58,7 +58,7 @@ class FunctionConfig(object):
         default_val = name2default[attr_name]
 
         def FunctionConfigSetter(
-            py_value: Optional[Union[bool, int, float, str]] = None
+            py_value: Optional[Union[bool, int, float, str, list]] = None
         ) -> None:
             attr_util.SetAttrValue(
                 flag_name2flag_value[attr_name], py_value, default_val
