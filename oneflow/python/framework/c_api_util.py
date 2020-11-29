@@ -141,10 +141,9 @@ def StopLazyGlobalSession():
 
 
 def GetInterUserJobInfo():
-    inter_user_job_info, error_str = oneflow_internal.GetSerializedInterUserJobInfo()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    inter_user_job_info, error = oneflow_api.GetSerializedInterUserJobInfo()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(inter_user_job_info, InterUserJobInfo())
 
 
@@ -546,31 +545,25 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     serialized_parallel_conf = str(text_format.MessageToString(parallel_conf))
-    (
-        ofrecord,
-        error_str,
-    ) = oneflow_internal.GetMachine2DeviceIdListOFRecordFromParallelConf(
+    (ofrecord, error,) = oneflow_api.GetMachine2DeviceIdListOFRecordFromParallelConf(
         serialized_parallel_conf
     )
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(ofrecord, record_util.OFRecord())
 
 
 def GetFunctionConfigDef():
-    func_config_def, error_str = oneflow_internal.GetFunctionConfigDef()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    func_config_def, error = oneflow_api.GetFunctionConfigDef()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(func_config_def, ConfigDef())
 
 
 def GetScopeConfigDef():
-    scope_config_def, error_str = oneflow_internal.GetScopeConfigDef()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    scope_config_def, error = oneflow_api.GetScopeConfigDef()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(scope_config_def, ConfigDef())
 
 
@@ -631,20 +624,20 @@ def GetOpAttributes():
 
 
 def GetJobSet():
-    job_set, error_str = oneflow_internal.GetSerializedJobSet()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    job_set, error = oneflow_api.GetSerializedJobSet()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(job_set, job_set_pb.JobSet())
 
 
 def GetStructureGraph():
-    structure_graph, error_str = oneflow_internal.GetSerializedStructureGraph()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    structure_graph, error = oneflow_api.GetSerializedStructureGraph()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return structure_graph
 
 
 def LoadLibraryNow(lib_path):
-    oneflow_internal.LoadLibraryNow(lib_path)
+    error = oneflow_api.LoadLibraryNow(lib_path)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)

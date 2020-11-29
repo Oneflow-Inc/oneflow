@@ -58,39 +58,6 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   return Maybe<void>::Ok();
 }
 
-Maybe<std::string> GetSerializedStructureGraph() {
-  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  return job_ctx_mgr->structure_graph();
-}
-
-Maybe<std::string> GetSerializedInterUserJobInfo() {
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
-  CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
-  std::string ret;
-  google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
-  return ret;
-}
-
-Maybe<std::string> GetSerializedJobSet() {
-  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  return PbMessage2TxtString(job_ctx_mgr->job_set());
-}
-
-Maybe<std::string> GetFunctionConfigDef() {
-  std::string ret;
-  google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
-  return ret;
-}
-
-Maybe<std::string> GetScopeConfigDef() {
-  std::string ret;
-  google::protobuf::TextFormat::PrintToString(GlobalScopeConfigDef(), &ret);
-  return ret;
-}
-
 Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
@@ -107,15 +74,5 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(job_id);
   return Maybe<void>::Ok();
 }
-
-Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
-    const std::string& parallel_conf_str) {
-  ParallelConf parallel_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
-      << "parallel conf parse failed";
-  return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
-}
-
-Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
 
 }  // namespace oneflow

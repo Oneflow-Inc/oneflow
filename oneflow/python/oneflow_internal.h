@@ -21,36 +21,8 @@ void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* erro
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
 }
 
-std::string GetSerializedInterUserJobInfo(std::string* error_str) {
-  return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str,
-                                                                                 std::string(""));
-}
-
-std::string GetSerializedJobSet(std::string* error_str) {
-  return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-std::string GetSerializedStructureGraph(std::string* error_str) {
-  return oneflow::GetSerializedStructureGraph().GetDataAndSerializedErrorProto(error_str,
-                                                                               std::string(""));
-}
-
-std::string GetFunctionConfigDef(std::string* error_str) {
-  return oneflow::GetFunctionConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-std::string GetScopeConfigDef(std::string* error_str) {
-  return oneflow::GetScopeConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
-}
-
-std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,
-                                                            std::string* error_str) {
-  return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
-      .GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
@@ -165,8 +137,4 @@ void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int siz
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurMutTensorCopyShapeFrom(array, size);
-}
-
-void LoadLibraryNow(const std::string& lib_path, std::string* error_str) {
-  oneflow::LoadLibraryNow(lib_path).GetDataAndSerializedErrorProto(error_str);
 }
