@@ -601,34 +601,30 @@ def CurrentMachineId():
 
 
 def NewLogicalObjectId():
-    object_id, error_str = oneflow_internal.NewLogicalObjectId()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    object_id, error = oneflow_api.NewLogicalObjectId()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return object_id
 
 
 def NewLogicalSymbolId():
-    object_id, error_str = oneflow_internal.NewLogicalSymbolId()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    object_id, error = oneflow_api.NewLogicalSymbolId()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return object_id
 
 
 def NewPhysicalObjectId():
-    object_id, error_str = oneflow_internal.NewPhysicalObjectId()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    object_id, error = oneflow_api.NewPhysicalObjectId()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return object_id
 
 
 def NewPhysicalSymbolId():
-    object_id, error_str = oneflow_internal.NewPhysicalSymbolId()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    object_id, error = oneflow_api.NewPhysicalSymbolId()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return object_id
 
 

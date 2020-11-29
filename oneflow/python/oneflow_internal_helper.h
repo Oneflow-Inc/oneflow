@@ -203,26 +203,6 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
-Maybe<long long> NewLogicalObjectId() {
-  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
-  return vm::IdUtil::NewLogicalObjectId();
-}
-
-Maybe<long long> NewLogicalSymbolId() {
-  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
-  return vm::IdUtil::NewLogicalSymbolId();
-}
-
-Maybe<long long> NewPhysicalObjectId() {
-  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
-  return vm::IdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
-}
-
-Maybe<long long> NewPhysicalSymbolId() {
-  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
-  return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
-}
-
 Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
 
 }  // namespace oneflow

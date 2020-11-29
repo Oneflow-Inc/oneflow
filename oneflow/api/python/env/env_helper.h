@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_ENV_HELPER_H_
-#define ONEFLOW_API_PYTHON_ENV_HELPER_H_
+#ifndef ONEFLOW_API_PYTHON_ENV_ENV_HELPER_H_
+#define ONEFLOW_API_PYTHON_ENV_ENV_HELPER_H_
 
 #include <string>
 #include <google/protobuf/text_format.h>
@@ -74,4 +74,4 @@ Maybe<long long> CurrentMachineId() {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_API_PYTHON_ENV_HELPER_H_
+#endif  // ONEFLOW_API_PYTHON_ENV_ENV_HELPER_H_
