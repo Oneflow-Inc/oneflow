@@ -17,7 +17,9 @@ limitations under the License.
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/env.pb.h"
@@ -181,6 +183,22 @@ Maybe<std::string> GetSerializedJobSet() {
   const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
   return PbMessage2TxtString(job_ctx_mgr->job_set());
+}
+
+Maybe<std::string> GetSerializedOpAttributes() {
+  OpAttributeList op_attribute_list;
+  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  for (int i = 0; i < job_ctx_mgr->job_set().job_size(); i++) {
+    const Job& job = job_ctx_mgr->job_set().job(i);
+    auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
+    const auto& op_graph = JUST(OpGraph::New(job));
+    op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
+      const auto& op_attribute = op_node->op().GetOpAttributeWithoutOpNameAndLbn();
+      op_attribute_list.mutable_op_attribute()->Add()->CopyFrom(*op_attribute);
+    });
+  }
+  return PbMessage2TxtString(op_attribute_list);
 }
 
 Maybe<std::string> GetFunctionConfigDef() {
