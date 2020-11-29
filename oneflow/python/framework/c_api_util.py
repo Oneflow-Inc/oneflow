@@ -32,6 +32,11 @@ from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 import oneflow
+from oneflow.python.framework.job_build_and_infer_cfg_error import (
+    JobBuildAndInferCfgError,
+)
+import oneflow
+import oneflow_api.oneflow.core.common.error as error_cfg
 
 oneflow_api = oneflow.oneflow_api
 
@@ -60,23 +65,23 @@ def IsOpTypeNameCpuSupportOnly(op_type_name):
 
 
 def CurrentResource():
-    resource, error_str = oneflow_internal.CurrentResource()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    resource, error = oneflow_api.CurrentResource()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(resource, resource_util.Resource())
 
 
 def EnvResource():
-    resource, error_str = oneflow_internal.EnvResource()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    resource, error = oneflow_api.EnvResource()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(resource, resource_util.Resource())
 
 
 def EnableEagerEnvironment(enable_eager_execution):
-    return oneflow_internal.EnableEagerEnvironment(enable_eager_execution)
+    error = oneflow_api.EnableEagerEnvironment(enable_eager_execution)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def EagerExecutionEnabled():
@@ -84,23 +89,24 @@ def EagerExecutionEnabled():
 
 
 def IsEnvInited():
-    return oneflow_internal.IsEnvInited()
+    is_env_inited, error = oneflow_api.IsEnvInited()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
+    return is_env_inited
 
 
 def InitEnv(env_proto):
     assert type(env_proto) is env_pb2.EnvProto
     env_proto_str = text_format.MessageToString(env_proto)
-    error_str = oneflow_internal.InitEnv(env_proto_str)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.InitEnv(env_proto_str)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def DestroyEnv():
-    error_str = oneflow_internal.DestroyEnv()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.DestroyEnv()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def IsSessionInited():
@@ -589,10 +595,9 @@ def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
 
 
 def CurrentMachineId():
-    machine_id, error_str = oneflow_internal.CurrentMachineId()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    machine_id, error = oneflow_api.CurrentMachineId()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return machine_id
 
 

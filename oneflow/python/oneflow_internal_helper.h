@@ -77,37 +77,6 @@ Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
   return val->cpu_only_supported;
 }
 
-Maybe<std::string> CurrentResource() {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
-  return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
-}
-
-Maybe<std::string> EnvResource() {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
-  return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
-}
-
-Maybe<void> InitEnv(const std::string& env_proto_str) {
-  EnvProto env_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
-      << "failed to parse env_proto" << env_proto_str;
-  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
-  // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { CHECK_JUST(Cluster::WorkerLoop()); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DestroyEnv() {
-  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterInstruction::MasterSendHalt();
-  // Global<EnvGlobalObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
 void FixCpuDeviceNum(ConfigProto* config_proto) {
   if (config_proto->resource().cpu_device_num() > 0) { return; }
   config_proto->mutable_resource()->set_cpu_device_num(std::thread::hardware_concurrency());
@@ -288,11 +257,6 @@ Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   return JUST(scope.GetParallelDescSymbolId(op_conf));
-}
-
-Maybe<long long> CurrentMachineId() {
-  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
-  return Global<MachineCtx>::Get()->this_machine_id();
 }
 
 Maybe<long long> NewLogicalObjectId() {

@@ -31,32 +31,6 @@ bool IsOpTypeNameCpuSupportOnly(const std::string& op_type_name, std::string* er
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-std::string CurrentResource(std::string* error_str) {
-  return oneflow::CurrentResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-std::string EnvResource(std::string* error_str) {
-  return oneflow::EnvResource().GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-void EnableEagerEnvironment(bool enable_eager_execution) {
-  using namespace oneflow;
-  *Global<bool, EagerExecution>::Get() = enable_eager_execution;
-}
-
-bool IsEnvInited() {
-  using namespace oneflow;
-  return Global<EnvGlobalObjectsScope>::Get() != nullptr;
-}
-
-void InitEnv(const std::string& env_proto_str, std::string* error_str) {
-  return oneflow::InitEnv(env_proto_str).GetDataAndSerializedErrorProto(error_str);
-}
-
-void DestroyEnv(std::string* error_str) {
-  return oneflow::DestroyEnv().GetDataAndSerializedErrorProto(error_str);
-}
-
 bool IsSessionInited() {
   using namespace oneflow;
   return Global<SessionGlobalObjectsScope>::Get() != nullptr;
@@ -141,10 +115,6 @@ std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf,
                                        std::string* error_str) {
   return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
       .GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-long CurrentMachineId(std::string* error_str) {
-  return oneflow::CurrentMachineId().GetDataAndSerializedErrorProto(error_str, 0LL);
 }
 
 long NewLogicalObjectId(std::string* error_str) {
