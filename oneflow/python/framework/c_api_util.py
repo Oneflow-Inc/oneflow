@@ -110,37 +110,36 @@ def DestroyEnv():
 
 
 def IsSessionInited():
-    return oneflow_internal.IsSessionInited()
+    is_sess_inited, error = oneflow_api.IsSessionInited()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
+    return is_sess_inited
 
 
 def InitLazyGlobalSession(config_proto):
     assert type(config_proto) is job_set_pb.ConfigProto
     config_proto_str = text_format.MessageToString(config_proto)
-    error_str = oneflow_internal.InitLazyGlobalSession(config_proto_str)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.InitLazyGlobalSession(config_proto_str)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def DestroyLazyGlobalSession():
-    error_str = oneflow_internal.DestroyLazyGlobalSession()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.DestroyLazyGlobalSession()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def StartLazyGlobalSession():
-    error_str = oneflow_internal.StartLazyGlobalSession()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.StartLazyGlobalSession()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def StopLazyGlobalSession():
-    error_str = oneflow_internal.StopLazyGlobalSession()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.StopLazyGlobalSession()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def GetInterUserJobInfo():

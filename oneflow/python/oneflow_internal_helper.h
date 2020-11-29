@@ -77,66 +77,10 @@ Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
   return val->cpu_only_supported;
 }
 
-void FixCpuDeviceNum(ConfigProto* config_proto) {
-  if (config_proto->resource().cpu_device_num() > 0) { return; }
-  config_proto->mutable_resource()->set_cpu_device_num(std::thread::hardware_concurrency());
-}
-
-Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
-  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-
-  ClusterInstruction::MasterSendSessionStart();
-
-  ConfigProto config_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
-      << "failed to parse config_proto: " << config_proto_str;
-  FixCpuDeviceNum(&config_proto);
-  Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
-
-  CHECK_ISNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get());
-  Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
-  JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
-  LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DestroyLazyGlobalSession() {
-  if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  Global<SessionGlobalObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> StartLazyGlobalSession() {
-  CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
-  }
-  if (job_set.job().empty()) { return Error::JobSetEmptyError() << "no function defined"; }
-  CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
-  Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
-  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
-  Global<Oneflow>::New();
-  JUST(Global<Oneflow>::Get()->Init(job_set));
-  return Maybe<void>::Ok();
-}
-
 Maybe<std::string> GetSerializedStructureGraph() {
   const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
   return job_ctx_mgr->structure_graph();
-}
-
-Maybe<void> StopLazyGlobalSession() {
-  if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
-  Global<Oneflow>::Delete();
-  Global<const InterJobReuseMemStrategy>::Delete();
-  return Maybe<void>::Ok();
 }
 
 Maybe<std::string> GetSerializedInterUserJobInfo() {

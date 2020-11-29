@@ -17,10 +17,18 @@ limitations under the License.
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/session.h"
+#include "oneflow/api/python/session/session.h"
 
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("IsSessionInited", &IsSessionInited);
+  m.def("InitLazyGlobalSession", &InitLazyGlobalSession);
+  m.def("DestroyLazyGlobalSession", &DestroyLazyGlobalSession);
+
+  m.def("StartLazyGlobalSession", &StartLazyGlobalSession);
+  m.def("StopLazyGlobalSession", &StopLazyGlobalSession);
+
   using namespace oneflow;
   m.def("NewSessionId", &NewSessionId);
   py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")

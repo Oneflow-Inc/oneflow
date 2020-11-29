@@ -31,28 +31,6 @@ bool IsOpTypeNameCpuSupportOnly(const std::string& op_type_name, std::string* er
       .GetDataAndSerializedErrorProto(error_str, false);
 }
 
-bool IsSessionInited() {
-  using namespace oneflow;
-  return Global<SessionGlobalObjectsScope>::Get() != nullptr;
-}
-
-void InitLazyGlobalSession(const std::string& config_proto_str, std::string* error_str) {
-  using namespace oneflow;
-  return InitLazyGlobalSession(config_proto_str).GetDataAndSerializedErrorProto(error_str);
-}
-
-void DestroyLazyGlobalSession(std::string* error_str) {
-  return oneflow::DestroyLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
-}
-
-void StartLazyGlobalSession(std::string* error_str) {
-  return oneflow::StartLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
-}
-
-void StopLazyGlobalSession(std::string* error_str) {
-  return oneflow::StopLazyGlobalSession().GetDataAndSerializedErrorProto(error_str);
-}
-
 std::string GetSerializedInterUserJobInfo(std::string* error_str) {
   return oneflow::GetSerializedInterUserJobInfo().GetDataAndSerializedErrorProto(error_str,
                                                                                  std::string(""));
