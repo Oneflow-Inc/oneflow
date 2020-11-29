@@ -49,18 +49,16 @@ def RegisterWatcherOnlyOnce(watcher):
 
 
 def IsOpTypeCaseCpuSupportOnly(op_type_case):
-    ret, error_str = oneflow_internal.IsOpTypeCaseCpuSupportOnly(op_type_case)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    ret, error = oneflow_api.IsOpTypeCaseCpuSupportOnly(op_type_case)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return ret
 
 
 def IsOpTypeNameCpuSupportOnly(op_type_name):
-    ret, error_str = oneflow_internal.IsOpTypeNameCpuSupportOnly(op_type_name)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    ret, error = oneflow_api.IsOpTypeNameCpuSupportOnly(op_type_name)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return ret
 
 
@@ -205,12 +203,11 @@ def CurJobBuildAndInferCtx_Complete():
 def InferOpConf(op_conf_proto, upstream_signature):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_upstream_sig = str(text_format.MessageToString(upstream_signature))
-    op_attribute_str, error_str = oneflow_internal.InferOpConf(
+    op_attribute_str, error = oneflow_api.InferOpConf(
         serialized_op_conf, serialized_upstream_sig,
     )
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
@@ -219,34 +216,34 @@ def IsInterfaceOpConf(op_conf):
     field_number = op_conf_util.OperatorConf.DESCRIPTOR.fields_by_name[
         op_type_field
     ].number
-    return oneflow_internal.IsInterfaceOpTypeCase(field_number)
+    res, error = oneflow_api.IsInterfaceOpTypeCase(field_number)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
+    return res
 
 
 def GetOpParallelSymbolId(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    symbol_id, error_str = oneflow_internal.GetOpParallelSymbolId(serialized_op_conf)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    symbol_id, error = oneflow_api.GetOpParallelSymbolId(serialized_op_conf)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return symbol_id
 
 
 def GetUserOpAttrType(op_type_name, attr_name):
-    attr_type, error_str = oneflow_internal.GetUserOpAttrType(op_type_name, attr_name)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    attr_type, error = oneflow_api.GetUserOpAttrType(op_type_name, attr_name)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return attr_type
 
 
 def CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    new_op_conf, error_str = oneflow_internal.CheckAndCompleteUserOpConf(
+    new_op_conf, error = oneflow_api.CheckAndCompleteUserOpConf(
         serialized_op_conf
     )
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 
@@ -629,10 +626,9 @@ def NewPhysicalSymbolId():
 
 
 def GetOpAttributes():
-    op_attributes, error_str = oneflow_internal.GetSerializedOpAttributes()
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    op_attributes, error = oneflow_api.GetSerializedOpAttributes()
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 

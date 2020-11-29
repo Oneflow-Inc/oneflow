@@ -62,21 +62,6 @@ Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   return Maybe<void>::Ok();
 }
 
-Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
-  using OnlyCpuSupport = OnlyCpuSupportPredicator;
-  CHECK_OR_RETURN((IsClassRegistered<int32_t, OnlyCpuSupport>(op_type_case)))
-      << ": op_type_case = " << op_type_case;
-  return static_cast<bool>(
-      *std::unique_ptr<OnlyCpuSupport>(NewObj<int32_t, OnlyCpuSupport>(op_type_case)));
-}
-
-Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
-  const user_op::OpRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
-  CHECK_OR_RETURN(val != nullptr) << "op_type_name " << op_type_name << " not register";
-  return val->cpu_only_supported;
-}
-
 Maybe<std::string> GetSerializedStructureGraph() {
   const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
@@ -96,22 +81,6 @@ Maybe<std::string> GetSerializedJobSet() {
   const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
   return PbMessage2TxtString(job_ctx_mgr->job_set());
-}
-
-Maybe<std::string> GetSerializedOpAttributes() {
-  OpAttributeList op_attribute_list;
-  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  for (int i = 0; i < job_ctx_mgr->job_set().job_size(); i++) {
-    const Job& job = job_ctx_mgr->job_set().job(i);
-    auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
-    const auto& op_graph = JUST(OpGraph::New(job));
-    op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
-      const auto& op_attribute = op_node->op().GetOpAttributeWithoutOpNameAndLbn();
-      op_attribute_list.mutable_op_attribute()->Add()->CopyFrom(*op_attribute);
-    });
-  }
-  return PbMessage2TxtString(op_attribute_list);
 }
 
 Maybe<std::string> GetFunctionConfigDef() {
@@ -168,39 +137,6 @@ Maybe<void> WriteInt8Calibration(const std::string& path) {
   CHECK_OR_RETURN(0) << "Please recompile with TensorRT.";
 #endif  // WITH_TENSORRT
   return Maybe<void>::Ok();
-}
-
-Maybe<long long> GetUserOpAttrType(const std::string& op_type_name, const std::string& attr_name) {
-  return JUST(GetAttrTypeImpl(op_type_name, attr_name));
-}
-
-Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
-  return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
-}
-
-Maybe<std::string> InferOpConf(const std::string& op_conf_str,
-                               const std::string& upstream_signature_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
-  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  OpNodeSignature upstream_signature;
-  CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
-      << "OpNodeSignature parse failed";
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
-  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
-  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
-  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
-  return PbMessage2TxtString(*op_attribute);
-}
-
-Maybe<long> GetOpParallelSymbolId(const std::string& op_conf_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
-  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
-  return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
 Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
