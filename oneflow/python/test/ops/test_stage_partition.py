@@ -26,7 +26,9 @@ class TestStagePartition(flow.unittest.TestCase):
         scope_symbol_ids = []
         scope = flow.scope.placement(device_tag, device_name)
         for i in range(num):
-            with scope, flow.experimental.scope.config(num_stages=num, stage_id=i):
+            with scope, flow.experimental.scope.config(
+                stage_buffer_size=num - i, stage_id=i
+            ):
                 scope_symbol_ids.append(flow.current_scope().symbol_id)
         return scope_symbol_ids
 

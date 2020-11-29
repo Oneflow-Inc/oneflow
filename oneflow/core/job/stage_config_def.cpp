@@ -29,7 +29,7 @@ REGISTER_FUNCTION_CONFIG_DEF()
 REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_stage_buffer", false, "enable stage buffer");
 
 REGISTER_SCOPE_CONFIG_DEF()
-    .Int64("num_stages", 0, "total number of stages")
+    .Int64("stage_buffer_size", 0, "stage buffer size")
     .Int64("stage_id", -1, "current stage id ");
 
 }  // namespace
