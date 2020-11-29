@@ -138,7 +138,9 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
         def Foo() -> tp.Numpy:
             with flow.scope.placement(
                 "cpu", device_name
-            ), flow.experimental.scope.config(num_stages=buffer_size, stage_id=0):
+            ), flow.experimental.scope.config(
+                stage_buffer_size=buffer_size, stage_id=0
+            ):
                 w = flow.get_variable(
                     "w",
                     shape=(10,),

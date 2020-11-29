@@ -49,6 +49,11 @@ class AddSspVariableProxyPass final : public JobPass {
     JUST(ForEachTrainableVarOpNode(op_graph, [&](OpNode* op_node) -> Maybe<void> {
       op_node->ForEachNodeOnOutEdge([&](OpNode* consumer) { var_consumers.insert(consumer); });
       const auto& old_var_out_lbi = op_node->op().BnInOp2Lbi("out");
+      int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
+      const Scope& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+      int64_t buffer_size = scope.Int64("stage_buffer_size");
+      CHECK_GT_OR_RETURN(buffer_size, 0);
+      if (buffer_size == 1) { return Maybe<void>::Ok(); }
       return AddSspVarProxyOp(op_node, job_builder, &var2ref_value_pair[old_var_out_lbi].first,
                               &var2ref_value_pair[old_var_out_lbi].second);
     }));
@@ -123,15 +128,8 @@ class AddSspVariableProxyPass final : public JobPass {
                                JobBuilder* job_builder, std::string* ref_lbn,
                                std::string* value_lbn) const {
     const Scope& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
-    int64_t buffer_size = 0;
-    {
-      int64_t num_stages = scope.Int64("num_stages");
-      int64_t stage_id = scope.Int64("stage_id");
-      CHECK_GT(num_stages, 0);
-      CHECK_GE(stage_id, 0);
-      CHECK_LT(stage_id, num_stages);
-      buffer_size = num_stages - stage_id;
-    }
+    int64_t buffer_size = scope.Int64("stage_buffer_size");
+    CHECK_GT(buffer_size, 0);
     std::string op_name = old_var_out_lbi.op_name() + "_ssp_variable_proxy";
     const auto proxy_op = user_op::UserOpConfWrapperBuilder(op_name)
                               .Op("ssp_variable_proxy")

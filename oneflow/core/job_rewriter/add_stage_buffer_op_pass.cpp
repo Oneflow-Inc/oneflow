@@ -88,17 +88,16 @@ class AddStageBufferOpPass final : public JobPass {
       const std::function<Maybe<void>(const std::shared_ptr<StageBuffer>&)>& DoEach) const {
     std::function<Maybe<int64_t>(const LogicalBlobId&)> BufferSize4Lbi;
     JUST(MakeGetterBufferSize4Lbi(op_name2op, &BufferSize4Lbi));
-    JUST(ForEachLbi7Consumer7StagesInPath(
+    JUST(ForEachLbi7Consumer7RequiredBufferSize(
         op_name2op,
         [&](const LogicalBlobId& lbi, const Operator* consumer_op,
-            const Range& path_stage_range) -> Maybe<void> {
-          int64_t num_stages = path_stage_range.size();
+            int64_t required_buffer_size) -> Maybe<void> {
           int64_t lbi_buffer_size = JUST(BufferSize4Lbi(lbi));
           CHECK_GT(lbi_buffer_size, 0);
           // buffer size provided: (stage_buffer->buffer_size + lbi_buffer_size)
-          // buffer size required: num_stages
-          // (stage_buffer->buffer_size + lbi_buffer_size) == num_stages
-          if (num_stages <= lbi_buffer_size) { return Maybe<void>::Ok(); }
+          // buffer size required: required_buffer_size
+          // (stage_buffer->buffer_size + lbi_buffer_size) >= required_buffer_size
+          if (required_buffer_size <= lbi_buffer_size) { return Maybe<void>::Ok(); }
           auto stage_buffer = std::make_shared<StageBuffer>();
           stage_buffer->produced_lbi = lbi;
           {
@@ -109,7 +108,7 @@ class AddStageBufferOpPass final : public JobPass {
                 &JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
           }
           stage_buffer->consumer_op = consumer_op;
-          stage_buffer->buffer_size = num_stages - lbi_buffer_size;
+          stage_buffer->buffer_size = required_buffer_size - lbi_buffer_size;
           CHECK_GT_OR_RETURN(stage_buffer->buffer_size, 0);
           return DoEach(stage_buffer);
         }));
@@ -215,9 +214,8 @@ class AddStageBufferOpPass final : public JobPass {
   Maybe<bool> HasStageInfo(const OperatorConf& op_conf) const {
     const auto& scope = JUST(GetScope(op_conf));
     int64_t stage_id = scope.Int64("stage_id");
-    int64_t num_stage = scope.Int64("num_stages");
-    CHECK_LT_OR_RETURN(stage_id, num_stage);
-    return stage_id >= 0 && num_stage > 0;
+    int64_t stage_buffer_size = scope.Int64("stage_buffer_size");
+    return stage_id >= 0 && stage_buffer_size > 0;
   }
 
   Maybe<int64_t> GetStageId(const OperatorConf& op_conf) const {
@@ -227,18 +225,17 @@ class AddStageBufferOpPass final : public JobPass {
     return stage_id;
   }
 
-  Maybe<int64_t> GetNumStage(const OperatorConf& op_conf) const {
+  Maybe<int64_t> GetStageBufferSize(const OperatorConf& op_conf) const {
     const auto& scope = JUST(GetScope(op_conf));
-    int64_t num_stage = scope.Int64("num_stages");
-    CHECK_GE_OR_RETURN(num_stage, 0) << op_conf.DebugString();
-    return num_stage;
+    int64_t stage_buffer_size = scope.Int64("stage_buffer_size");
+    CHECK_GT_OR_RETURN(stage_buffer_size, 0) << op_conf.DebugString();
+    return stage_buffer_size;
   }
 
-  // path_stage_range.end() is not in path_stage_range
-  Maybe<void> ForEachLbi7Consumer7StagesInPath(
+  Maybe<void> ForEachLbi7Consumer7RequiredBufferSize(
       const HashMap<std::string, std::shared_ptr<Operator>>& op_name2op,
       const std::function<Maybe<void>(const LogicalBlobId& lbi, const Operator* consumer_op,
-                                      const Range& path_stage_range)>& DoEach) const {
+                                      int64_t required_buffer_size)>& DoEach) const {
     for (const auto& pair : op_name2op) {
       const auto& consumer_op = *pair.second;
       const auto& scope = JUST(GetScope(consumer_op.op_conf()));
@@ -250,25 +247,20 @@ class AddStageBufferOpPass final : public JobPass {
         const auto& producer_op = *op_name2op.at(lbi.op_name());
         if (!JUST(HasStageInfo(producer_op.op_conf()))) { continue; }
         const auto& producer_scope = JUST(GetScope(producer_op.op_conf()));
-        if (producer_scope.scope_proto().calculation_pass_name() == kForwardPass
-            && scope.scope_proto().calculation_pass_name() != kForwardPass) {
-          int64_t start_stage_id = JUST(GetStageId(producer_op.op_conf()));
-          int64_t end_stage_id = JUST(GetNumStage(producer_op.op_conf()));
-          CHECK_LT(start_stage_id, end_stage_id);
-          Range path_stage_range(start_stage_id, end_stage_id);
-          JUST(DoEach(lbi, &consumer_op, path_stage_range));
+        int64_t required_buffer_size = 0;
+        if (producer_scope.scope_proto().calculation_pass_name()
+            != scope.scope_proto().calculation_pass_name()) {
+          required_buffer_size = JUST(GetStageBufferSize(producer_op.op_conf()));
         } else {
           int64_t producer_stage_id = JUST(GetStageId(producer_op.op_conf()));
-          int64_t consumer_stage_id = -1;
           if (JUST(HasStageInfo(consumer_op.op_conf()))) {
-            consumer_stage_id = JUST(GetStageId(consumer_op.op_conf()));
+            int64_t consumer_stage_id = JUST(GetStageId(consumer_op.op_conf()));
+            required_buffer_size = std::abs(consumer_stage_id - producer_stage_id);
           } else {
-            consumer_stage_id = producer_stage_id + 1;
+            required_buffer_size = 1;
           }
-          // path_stage_range.end() is not in range path_stage_range
-          Range path_stage_range(producer_stage_id, consumer_stage_id);
-          JUST(DoEach(lbi, &consumer_op, path_stage_range));
         }
+        JUST(DoEach(lbi, &consumer_op, required_buffer_size));
       }
     }
     return Maybe<void>::Ok();

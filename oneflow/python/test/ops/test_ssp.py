@@ -22,14 +22,6 @@ import unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestSsp(flow.unittest.TestCase):
-    def GetScopeSymbolIds(self, device_tag, device_name, num):
-        scope_symbol_ids = []
-        scope = flow.scope.placement(device_tag, device_name)
-        for i in range(num):
-            with scope, flow.experimental.scope.config(num_stages=num, stage_id=i):
-                scope_symbol_ids.append(flow.current_scope().symbol_id)
-        return scope_symbol_ids
-
     def test_ssp(self):
         if flow.eager_execution_enabled():
             return
