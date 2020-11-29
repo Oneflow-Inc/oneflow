@@ -12,7 +12,6 @@
   
 #include "oneflow/python/oneflow_internal.h"
 #include "oneflow/python/oneflow_internal.e.h.expanded.h"
-#include "oneflow/python/job_build_and_infer_if.h"
 
 %}
 %shared_ptr(oneflow::ForeignJobInstance);
@@ -25,5 +24,3 @@
 %include "oneflow/core/job/foreign_watcher.h"
 %include "oneflow/python/oneflow_internal.h"
 %include "oneflow/python/oneflow_internal.e.h.expanded.h"
-
-%include "oneflow/python/job_build_and_infer_if.h"
