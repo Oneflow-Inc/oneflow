@@ -26,10 +26,11 @@ class BoxingZerosKernel final : public KernelIf<device_type> {
   ~BoxingZerosKernel() override = default;
 
  private:
+  void VirtualKernelInit() override { inited_ = false; }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  mutable bool inited_ = false;
+  mutable bool inited_;
 };
 
 template<DeviceType device_type>
