@@ -25,18 +25,6 @@ void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::stri
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
 
-int Ofblob_GetDataType(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->data_type();
-}
-
-size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->NumAxes();
-}
-
 void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -49,60 +37,6 @@ void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, long* array, int size) {
   return of_blob->CopyShapeTo(array, size);
 }
 
-bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->is_dynamic();
-}
-
-bool OfBlob_IsTensorList(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->is_tensor_list();
-}
-
-long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->TotalNumOfTensors();
-}
-
-long OfBlob_NumOfTensorListSlices(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->NumOfTensorListSlices();
-}
-
-long OfBlob_TensorIndex4SliceId(uint64_t of_blob_ptr, int32_t slice_id) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->TensorIndex4SliceId(slice_id);
-}
-
-void OfBlob_AddTensorListSlice(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->AddTensorListSlice();
-}
-
-void OfBlob_ResetTensorIterator(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->ResetTensorIterator();
-}
-
-void OfBlob_IncTensorIterator(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->IncTensorIterator();
-}
-
-bool OfBlob_CurTensorIteratorEqEnd(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurTensorIteratorEqEnd();
-}
-
 void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -113,24 +47,6 @@ void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* array, int size) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurTensorCopyShapeTo(array, size);
-}
-
-void OfBlob_ClearTensorLists(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->ClearTensorLists();
-}
-
-void OfBlob_AddTensor(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->AddTensor();
-}
-
-bool OfBlob_CurMutTensorAvailable(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurMutTensorAvailable();
 }
 
 void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int size) {

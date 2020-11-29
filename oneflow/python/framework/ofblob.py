@@ -20,7 +20,8 @@ from functools import reduce
 
 import numpy as np
 import oneflow as flow
-import oneflow.oneflow_internal as oneflow_api
+import oneflow.oneflow_internal as oneflow_internal
+import oneflow_api
 from google.protobuf import text_format
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 from oneflow.python.lib.core.box import Box
@@ -40,14 +41,14 @@ class OfBlob(object):
     def static_shape(self):
         num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
-        oneflow_api.OfBlob_CopyStaticShapeTo(self.of_blob_ptr_, dst_ndarray)
+        oneflow_internal.OfBlob_CopyStaticShapeTo(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
 
     @property
     def shape(self):
         num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.zeros(num_axes, dtype=np.int64)
-        oneflow_api.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
+        oneflow_internal.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
 
     @property
@@ -58,7 +59,9 @@ class OfBlob(object):
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
         while not oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_):
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
-            oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
+            oneflow_internal.OfBlob_CurTensorCopyShapeTo(
+                self.of_blob_ptr_, shape_tensor
+            )
             assert len(shape_tensor.shape) == 1
             assert shape_tensor.size == num_axes
             tensor_shape_list.append(tuple(shape_tensor.tolist()))
@@ -69,7 +72,7 @@ class OfBlob(object):
     def set_shape(self, shape):
         assert isinstance(shape, (list, tuple))
         assert len(shape) == oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
-        oneflow_api.OfBlob_CopyShapeFromNumpy(
+        oneflow_internal.OfBlob_CopyShapeFromNumpy(
             self.of_blob_ptr_, np.array(shape, dtype=np.int64)
         )
 
@@ -110,10 +113,10 @@ class OfBlob(object):
 
     def _CopyBodyFromNdarray(self, src_ndarray):
         assert not self.is_dynamic
-        method_name = oneflow_api.Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(
+        method_name = oneflow_internal.Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
-        copy_method = getattr(oneflow_api, method_name)
+        copy_method = getattr(oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)
 
     def CopyFromNdarrayList(self, src_ndarray_list):
@@ -137,15 +140,17 @@ class OfBlob(object):
 
     def _CopyToNdarrayListAndIsNewSliceStartMask(self):
         # get tensor list
-        method_name = oneflow_api.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
+        method_name = oneflow_internal.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
-        copy_method = getattr(oneflow_api, method_name)
+        copy_method = getattr(oneflow_internal, method_name)
         tensor_list = []
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
         while oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_) == False:
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
-            oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
+            oneflow_internal.OfBlob_CurTensorCopyShapeTo(
+                self.of_blob_ptr_, shape_tensor
+            )
             shape = tuple(shape_tensor.tolist())
             tensor = np.zeros(
                 shape, dtype=flow.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
@@ -186,10 +191,10 @@ class OfBlob(object):
         self, tensor_list, is_new_slice_start_mask
     ):
         assert len(tensor_list) == len(is_new_slice_start_mask)
-        method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
+        method_name = oneflow_internal.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
-        copy_method = getattr(oneflow_api, method_name)
+        copy_method = getattr(oneflow_internal, method_name)
         oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
         for i, tensor in enumerate(tensor_list):
             assert tensor.data.contiguous
@@ -198,7 +203,7 @@ class OfBlob(object):
             oneflow_api.OfBlob_AddTensor(self.of_blob_ptr_)
             assert oneflow_api.OfBlob_CurMutTensorAvailable(self.of_blob_ptr_)
             shape_tensor = np.array(tensor.shape, dtype=np.int64)
-            oneflow_api.OfBlob_CurMutTensorCopyShapeFrom(
+            oneflow_internal.OfBlob_CurMutTensorCopyShapeFrom(
                 self.of_blob_ptr_, shape_tensor
             )
             copy_method(self.of_blob_ptr_, tensor)
