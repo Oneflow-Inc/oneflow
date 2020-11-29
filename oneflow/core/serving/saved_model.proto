@@ -7,7 +7,7 @@ import "oneflow/core/job/job_conf.proto";
 message SavedModel {
   required string name = 1;
   required int64 version = 2;
-  repeated string checkpoint_dir = 3;
+  required string checkpoint_dir = 3;
   map<string, GraphDef> graphs = 4;
   optional string default_graph_name = 5;
   repeated JobGraph job_graphs = 6;

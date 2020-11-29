@@ -102,23 +102,23 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         model_version_path = os.path.join(saved_model_path, str(model_version))
         if os.path.exists(model_version_path) and os.path.isdir(model_version_path):
             print(
-                "WARNING: The model version path '{}' already exist, it will be replaced".format(
-                    model_version_path
-                )
+                "WARNING: The model version path '{}' already exist"
+                ", old version directory will be removed".format(model_version_path)
             )
             shutil.rmtree(model_version_path)
 
-        saved_model_builder = flow.SavedModelBuilderV2(saved_model_path)
-        job_builder = (
+        saved_model_builder = flow.saved_model.ModelBuilder(saved_model_path)
+        signature_builder = (
             saved_model_builder.ModelName("resnet50")
             .Version(model_version)
-            .Job(resnet_infer)
+            .AddFunction(resnet_infer)
+            .AddSignature("regress")
         )
         for input_name, lbn in input_lbns.items():
-            job_builder.Input(input_name, lbn)
+            signature_builder.Input(input_name, lbn)
         for output_name, lbn in output_lbns.items():
-            job_builder.Output(output_name, lbn)
-        job_builder.Complete().Save()
+            signature_builder.Output(output_name, lbn)
+        signature_builder.Complete().Complete().Save()
 
         # load model and run
         flow.clear_default_session()
@@ -128,18 +128,21 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         saved_model_proto = load_saved_model(model_meta_file_path)
         sess = flow.SimpleSession()
         checkpoint_path = os.path.join(
-            saved_model_path, str(model_version), saved_model_proto.checkpoint_dir[0]
+            saved_model_path, str(model_version), saved_model_proto.checkpoint_dir
         )
         sess.set_checkpoint_path(checkpoint_path)
-        for job_name, signature in saved_model_proto.signatures_v2.items():
-            sess.setup_job_signature(job_name, signature)
 
-        for job_name, net in saved_model_proto.graphs.items():
-            with sess.open(job_name) as sess:
-                sess.compile(net.op)
+        graph_name = saved_model_proto.default_graph_name
+        graph_def = saved_model_proto.graphs[graph_name]
+        signature_def = graph_def.signatures[graph_def.default_signature_name]
+
+        sess.setup_job_signature(graph_name, signature_def)
+        with sess.open(graph_name):
+            sess.compile(graph_def.op_list)
 
         # sess.print_job_set()
         sess.launch()
+
         input_names = sess.list_inputs()
         print("input names:", input_names)
         for input_name in input_names:
