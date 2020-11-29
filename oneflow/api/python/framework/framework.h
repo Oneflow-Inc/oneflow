@@ -19,21 +19,18 @@ limitations under the License.
 #include <string>
 #include "oneflow/api/python/framework/framework_helper.h"
 
-std::string RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback) {
-  std::string error_str;
-  oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndSerializedErrorProto(&error_str);
-  return error_str;
+std::shared_ptr<oneflow::cfg::ErrorProto> RegisterForeignCallbackOnlyOnce(
+    oneflow::ForeignCallback* callback) {
+  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndErrorProto();
 }
 
-std::string RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher) {
-  std::string error_str;
-  oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(&error_str);
-  return error_str;
+std::shared_ptr<oneflow::cfg::ErrorProto> RegisterWatcherOnlyOnce(
+    oneflow::ForeignWatcher* watcher) {
+  return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndErrorProto();
 }
 
-std::string LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  std::string error_str;
-  oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(&error_str);
-  return error_str;
+std::shared_ptr<oneflow::cfg::ErrorProto> LaunchJob(
+    const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+  return oneflow::LaunchJob(cb).GetDataAndErrorProto();
 }
 #endif  // ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
