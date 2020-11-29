@@ -239,9 +239,7 @@ def GetUserOpAttrType(op_type_name, attr_name):
 
 def CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    new_op_conf, error = oneflow_api.CheckAndCompleteUserOpConf(
-        serialized_op_conf
-    )
+    new_op_conf, error = oneflow_api.CheckAndCompleteUserOpConf(serialized_op_conf)
     if error.has_error_type():
         raise JobBuildAndInferCfgError(error)
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
