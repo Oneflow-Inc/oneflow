@@ -36,6 +36,7 @@ import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.attr_util as attr_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
 import traceback
 import sys
 
@@ -64,6 +65,13 @@ class FunctionConfig(object):
             )
 
         return FunctionConfigSetter
+
+    def ssp_placement(self, *placements, stage_partition_strategy="naive_sequantial"):
+        self.enable_stage_partition(True)
+        self.stage_partition_scope_ids(_GetScopeSymbolIds(placements))
+        self.stage_partition_strategy(stage_partition_strategy)
+        self.enable_ssp_variable_proxy(True)
+        self.enable_stage_buffer(True)
 
 
 @oneflow_export("global_function")
@@ -856,3 +864,14 @@ def deprecated_set_default_distribute_strategy(*args, **kwargs):
     )
     print(traceback.format_stack()[-3], file=sys.stderr)
     set_default_distribute_strategy(*args, **kwargs)
+
+
+def _GetScopeSymbolIds(placements):
+    scope_symbol_ids = []
+    num = len(placements)
+    for i in range(num):
+        with placements[i], oneflow.experimental.scope.config(
+            num_stages=num, stage_id=i
+        ):
+            scope_symbol_ids.append(oneflow.current_scope().symbol_id)
+    return scope_symbol_ids
