@@ -42,7 +42,7 @@ def dense(
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""Fully-connected layer. 
-
+    
     The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
 
     Args:
@@ -65,7 +65,7 @@ def dense(
         ValueError: The dimension of input `Blob` must be less than 2.
         VauleError: Model distribute must be in auto, broadcast, split.
         ValueError: The input must be a 2D `Blob` when the model distribute is split.
-
+    
     For example: 
 
     .. code-block:: python 
@@ -181,7 +181,7 @@ def conv1d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""1D convolution layer. 
-
+    
     This layer computes a 1-D convolution with 3D input Blob and filters. 
 
     Args:
@@ -214,7 +214,7 @@ def conv1d(
 
     Returns:
         remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).
-
+    
     For example: 
 
     .. code-block:: python 
@@ -375,7 +375,7 @@ def conv2d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""2D convolution layer. 
-
+    
     This layer computes a 2D convolution with 4D input Blob and filters. 
 
     Args:
@@ -410,7 +410,7 @@ def conv2d(
 
     Returns:
         remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
-
+    
     For example: 
 
     .. code-block:: python 
@@ -572,7 +572,7 @@ def conv3d(
     bias_name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""3D convolution layer. 
-
+    
     This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
@@ -607,7 +607,7 @@ def conv3d(
 
     Returns:
         remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
-
+    
     For example: 
 
     .. code-block:: python 
@@ -1067,9 +1067,9 @@ def batch_normalization(
     name: str = "BatchNorm",
 ) -> remote_blob_util.BlobDef:
     r"""The BatchNormalization Layer. 
-
+    
     This layer can be used in conv or dense layer.
-
+    
     The input data will be normalized by the mean and variance of the current batch data
 
     Args:
@@ -1403,6 +1403,7 @@ Raises:
 def upsample(
     x: remote_blob_util.BlobDef,
     size: Sequence[int] = (2, 2),
+    align_corners: bool = False,
     data_format: str = "NCHW",
     interpolation: str = "nearest",
     name: str = "Upsample2D",
@@ -1412,18 +1413,19 @@ def upsample(
     Args:
         x ([type]): Input `Blob`.
         size (tuple, optional): (height_scale, width_scale)  Defaults to (2, 2).
+        align_corners (bool, optional): Defaults to False.
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width).
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
-        interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest". "nearest" and "bilinear" are available now.
+        interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest". "nearest", "bilinear" and "bicubic" are available now.
         name ([type], optional): This layer's name. Defaults to None.
 
     Raises:
-        ValueError: interpolation must be "nearest" or "bilinear".
+        ValueError: interpolation must be "nearest", "bilinear" or "bicubic".
         ValueError: data_format must be "NHWC" or "NCHW"
 
     Returns:
         [type]: remote_blob_util.BlobDef:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
-
+    
     For example: 
 
     .. code-block:: python 
@@ -1459,8 +1461,11 @@ def upsample(
         height_scale = size[0]
         width_scale = size[1]
 
-    if interpolation != "nearest" and interpolation != "bilinear":
-        raise ValueError('interpolation must be "nearest" or "bilinear".')
+    if interpolation != "nearest" and interpolation != "bilinear" and interpolation != "bicubic":
+        raise ValueError('interpolation must be "nearest", "bilinear" or "bicubic".')
+
+    if interpolation == "nearest" and align_corners:
+        raise ValueError('interpolation "nearest" does not support align_corners.')
 
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
@@ -1479,6 +1484,7 @@ def upsample(
         .Output("y")
         .Attr("height_scale", float(height_scale))
         .Attr("width_scale", float(width_scale))
+        .Attr("align_corners", align_corners)
         .Attr("data_format", "channels_first")
         .Attr("interpolation", interpolation)
         .Build()

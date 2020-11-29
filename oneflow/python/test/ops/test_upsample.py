@@ -23,13 +23,22 @@ import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type
 
+
+has_pytorch = True
+try:
+    import torch
+    import torch.nn.functional as F
+except:
+    has_pytorch = False
+
+
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
 def compare_with_tensorflow(
-    device_type, input_shape, dtype, size, data_format, interpolation
+    device_type, input_shape, dtype, size, data_format, interpolation, align_corners
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -49,7 +58,8 @@ def compare_with_tensorflow(
             )
 
             loss = flow.layers.upsample_2d(
-                x, size=size, data_format=data_format, interpolation=interpolation
+                x, size=size, data_format=data_format, interpolation=interpolation,
+                align_corners=align_corners
             )
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
@@ -67,19 +77,44 @@ def compare_with_tensorflow(
     check_point.init()
     of_out = UpsampleJob().get()
     channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
-    # TensorFlow
-    with tf.GradientTape(persistent=True) as tape:
-        x = tf.Variable(test_global_storage.Get("x").astype(np.float32))
-        tf_out = tf.keras.layers.UpSampling2D(
-            size=size, data_format=channel_pos, interpolation=interpolation
-        )(x)
 
-    loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
-    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-    assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
-    )
+    if align_corners or interpolation == "bicubic":
+        # Pytorch
+        if has_pytorch:
+            x = torch.from_numpy(test_global_storage.Get("x"))
+            if data_format == "NHWC":
+                x = x.permute([0, 3, 1, 2]).contiguous()
+            x.requires_grad_()
+            pt_out = F.interpolate(x, scale_factor=size, mode=interpolation, align_corners=align_corners)
+            loss = pt_out.sum()
+            loss.backward()
+            x_diff = test_global_storage.Get("x_diff")
+            of_out_np = of_out.numpy()
+            if data_format == "NHWC":
+                x_diff = np.transpose(x_diff, (0, 3, 1, 2))
+                of_out_np = np.transpose(of_out_np, (0, 3, 1, 2))
+            assert np.allclose(of_out_np, pt_out.detach().numpy(), rtol=1e-5, atol=1e-5)
+            assert np.allclose(
+                x_diff, x.grad.numpy(), rtol=1e-5, atol=1e-5
+            ), interpolation
+        else:
+            print("#####################################################################")
+            print("# Warning: Please install pytorch for `bicubic` upsampling testing! #")
+            print("#####################################################################")
+    else:
+        # TensorFlow
+        with tf.GradientTape(persistent=True) as tape:
+            x = tf.Variable(test_global_storage.Get("x").astype(np.float32))
+            tf_out = tf.keras.layers.UpSampling2D(
+                size=size, data_format=channel_pos, interpolation=interpolation
+            )(x)
+
+        loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
+        tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+        assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+        assert np.allclose(
+            test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -91,8 +126,10 @@ class TestUpsample(flow.unittest.TestCase):
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["size"] = [(2, 2), 3, (1, 2)]
         arg_dict["data_format"] = ["NCHW", "NHWC"]
-        arg_dict["interpolation"] = ["nearest", "bilinear"]
+        arg_dict["interpolation"] = ["nearest", "bilinear", "bicubic"]
+        arg_dict["align_corners"] = [False, True]
         for arg in GenArgList(arg_dict):
+            if arg[5] == "nearest" and arg[6]: continue
             compare_with_tensorflow(*arg)
 
 
