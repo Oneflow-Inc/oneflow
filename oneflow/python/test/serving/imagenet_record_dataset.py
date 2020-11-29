@@ -102,7 +102,7 @@ class ImageNetRecordDataset(object):
             label_list.append(label)
 
         image_tensor = np.stack(image_list, axis=0)
-        label_tensor = np.array(label_list)
+        label_tensor = np.array(label_list, dtype=np.int32)
         self.num_read_batchs_ += 1
         return image_tensor, label_tensor
 
