@@ -27,7 +27,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   ShapeProto shape_proto;
   shape.ToProto(&shape_proto);
   const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
-  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, *outshape, ctx);
+  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, *outshape, {{"in", 0}},
+                                                          {{"out", 0}}, ctx);
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
