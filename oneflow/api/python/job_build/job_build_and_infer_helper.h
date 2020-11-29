@@ -226,4 +226,5 @@ Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
 }
 
 }  // namespace oneflow
+
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_HELPER_H_
