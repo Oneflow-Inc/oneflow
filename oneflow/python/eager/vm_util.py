@@ -389,10 +389,9 @@ class InstructionsBuilder(object):
         assert len(op_attribute.output_bns) == 1
         obn = op_attribute.output_bns[0]
 
-        blob_parallel_desc_sym_id = op_attribute.parallel_signature.bn_in_op2parallel_desc_symbol_id[
-            obn
-        ]
-        blob_parallel_desc_sym = symbol_storage.GetSymbol4Id(blob_parallel_desc_sym_id)
+        parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
+        blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+
         op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
             blob_parallel_desc_sym, op_attribute, obn
         )
@@ -868,8 +867,7 @@ class InstructionsBuilder(object):
 
     def _NewSymbolId4Scope(self, scope_proto):
         symbol_id = self._NewSymbolId()
-        scope_proto.symbol_id = symbol_id
-        self._NewScopeSymbol(scope_proto)
+        self._NewScopeSymbol(symbol_id, scope_proto)
         return symbol_id
 
     def _NewSymbolId4JobConf(self, job_conf):
@@ -1083,15 +1081,13 @@ class InstructionsBuilder(object):
         eager_symbol.parallel_conf_symbol.CopyFrom(parallel_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _NewScopeSymbol(self, scope_proto):
+    def _NewScopeSymbol(self, symbol_id, scope_proto):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitScopeSymbol")
-        instruction.mutable_operand().Add().CopyFrom(
-            _InitSymbolOperand(scope_proto.symbol_id)
-        )
+        instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
-        eager_symbol.symbol_id = scope_proto.symbol_id
+        eager_symbol.symbol_id = symbol_id
         eager_symbol.scope_symbol.CopyFrom(scope_proto)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 

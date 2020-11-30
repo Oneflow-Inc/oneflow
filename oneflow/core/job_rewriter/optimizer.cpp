@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include <re2/re2.h>
 
 namespace oneflow {
@@ -80,33 +81,11 @@ float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_updat
   }
 }
 
-template<typename T>
-void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           JobBuilder* job_builder, T* mdupdt_op_conf) {
-  const auto& train_conf = job_builder->job().job_conf().train_conf();
-  *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
-  mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
-  mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
-  mdupdt_op_conf->set_train_step(train_conf.train_step_lbn());
-  const std::string& primary_lr_lbn = train_conf.primary_lr_lbn();
-  const std::string& secondary_lr_lbn = train_conf.secondary_lr_lbn();
-  if (op.op_conf().variable_conf().model_name() == "weight") {
-    mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-  } else if (op.op_conf().variable_conf().model_name() == "bias") {
-    mdupdt_op_conf->set_learning_rate(secondary_lr_lbn);
-  } else {
-    mdupdt_op_conf->set_learning_rate(primary_lr_lbn);
-  }
-  const float weight_decay_rate = GetOptimizerWeightDecayRate(train_conf.model_update_conf(), op);
-  if (weight_decay_rate != 0) { mdupdt_op_conf->set_weight_decay(weight_decay_rate); }
+void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder) {
+  if (!ctx->job_desc().job_conf().train_conf().has_dynamic_loss_scale_policy()) { return; }
+  builder->Input("skip_if",
+                 CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
+                     .count_not_finite_lbn());
 }
-
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                  \
-  template void ConstructMdUpdtOpConf<T>(const VariableOp& op,                     \
-                                         const LogicalBlobId& diff_lbi_of_var_out, \
-                                         JobBuilder* job_builder, T* mdupdt_op_conf)
-
-INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(RMSPropModelUpdateOpConf);
-INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(LARSModelUpdateOpConf);
 
 }  // namespace oneflow

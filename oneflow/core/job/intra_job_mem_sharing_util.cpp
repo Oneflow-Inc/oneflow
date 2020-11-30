@@ -71,11 +71,11 @@ struct MemoryChain {
   std::vector<TaskProto*> sorted_tasks;
   HashSet<RegstDescProto*> mem_reused_regsts;
   int64_t total_mem_reused_size = 0;
+  Shape time_shape;
 };
 
 void InitMemoryChains(Plan* plan,
                       HashMap<int64_t, HashMap<int64_t, MemoryChain>>* device2chain2mem_chain) {
-  Shape meta_shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
     int64_t machine_id = task->machine_id();
@@ -92,10 +92,18 @@ void InitMemoryChains(Plan* plan,
           && regst_desc->mem_case().device_cuda_mem().device_id() == device_id
           && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
           && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
-          && regst_desc->regst_desc_type().has_data_regst_desc()
-          && Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape()) == meta_shape) {
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
         mem_chain->total_mem_reused_size += RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
+
+        // for time shape in mem chain
+        Shape regst_time_shape =
+            Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape());
+        if (mem_chain->time_shape.elem_cnt() == 0) {
+          mem_chain->time_shape = regst_time_shape;
+        } else {
+          CHECK(mem_chain->time_shape == regst_time_shape);
+        }
       }
     }
   }
@@ -122,18 +130,21 @@ void InitMemoryChains(Plan* plan,
 bool TryMergeMemChain2MergedChains(
     std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
     const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
+  Shape meta_shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   std::sort(merged_chains->begin(), merged_chains->end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
     return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
   });
   for (MemoryChain* merged_chain : *merged_chains) {
-    if (IsStrictOrderL2R(merged_chain, mem_chain)) {
-      merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
-                                        mem_chain->sorted_tasks.begin(),
-                                        mem_chain->sorted_tasks.end());
-      merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
-                                             mem_chain->mem_reused_regsts.end());
-      merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
-      return true;
+    if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape) {
+      if (IsStrictOrderL2R(merged_chain, mem_chain)) {
+        merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
+                                          mem_chain->sorted_tasks.begin(),
+                                          mem_chain->sorted_tasks.end());
+        merged_chain->mem_reused_regsts.insert(mem_chain->mem_reused_regsts.begin(),
+                                               mem_chain->mem_reused_regsts.end());
+        merged_chain->total_mem_reused_size += mem_chain->total_mem_reused_size;
+        return true;
+      }
     }
   }
   return false;
@@ -169,7 +180,6 @@ void GenMemChainTasksAndRegsts(
       CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
       return lhs_order_in_graph < rhs_order_in_graph;
     });
-    // merge
     for (MemoryChain* mem_chain : mem_chains) {
       if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
         merged_chains.push_back(mem_chain);

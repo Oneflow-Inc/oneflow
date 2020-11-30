@@ -18,25 +18,21 @@ chmod 400 ~/.ssh/id_rsa.pub
 chmod 600 ~/.ssh/config
 """
 
-HARD_CODED_AFFILIATIONS = [
-    ["192.168.1.11", "192.168.1.12",],
-    ["192.168.1.13", "192.168.1.14",],
-    ["192.168.1.15", "192.168.1.16",],
-    ["oneflow-11", "oneflow-12",],
-    ["oneflow-13", "oneflow-14",],
-    ["oneflow-15", "oneflow-16",],
-]
+HARD_CODED_AFFILIATIONS = {
+    "192.168.1.11": ["192.168.1.12",],
+    "192.168.1.12": ["192.168.1.11",],
+    "192.168.1.13": ["192.168.1.11",],
+    "192.168.1.15": ["192.168.1.16",],
+    "192.168.1.16": ["192.168.1.15",],
+}
 
 
 def get_affiliations(host):
     # TODO(tsai): Implement a HTTP endpoint to retrieve affiliations
-    affiliations = None
-    for a in HARD_CODED_AFFILIATIONS:
-        if host in a:
-            a_set = set(a)
-            a_set.remove(host)
-            affiliations = list(a_set)
-    return affiliations
+    if host in HARD_CODED_AFFILIATIONS:
+        return HARD_CODED_AFFILIATIONS[host]
+    else:
+        return None
 
 
 def resolve_hostname_hardcoded(host: str):
@@ -210,7 +206,7 @@ if __name__ == "__main__":
     parser.add_argument("--oneflow_worker_bin", type=str, required=False, default=None)
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--ssh_port", type=int, required=False, default=None)
-    parser.add_argument("--timeout", type=int, required=False, default=10 * 60)
+    parser.add_argument("--timeout", type=int, required=False, default=60 * 60)
     args = parser.parse_args()
 
     ssh_port = None
@@ -222,20 +218,20 @@ if __name__ == "__main__":
     if args.make_dotssh:
         make_dotssh(args.dotssh_dir)
 
+    this_host = args.this_host
+    this_host = resolve_hostname_hardcoded(this_host)
+
     remote_host = None
     if args.remote_host:
         assert len(args.remote_host.split(",")) == 1, "only support 2-nodes run for now"
         remote_host = args.remote_host
     else:
-        affiliations = get_affiliations(args.this_host)
+        affiliations = get_affiliations(this_host)
         assert (
             affiliations
-        ), f"no affiliated node found for {args.this_host}, you should specify one"
+        ), f"no affiliated node found for {this_host}, you should specify one"
         remote_host = affiliations[0]
         remote_host = socket.gethostbyname(remote_host)
-
-    this_host = args.this_host
-    this_host = resolve_hostname_hardcoded(this_host)
 
     print(f"this_host: {this_host}, remote_host: {remote_host}")
     workspace_dir = os.path.join(

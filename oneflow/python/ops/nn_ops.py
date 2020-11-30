@@ -2267,7 +2267,7 @@ def dropout(
 def deconv2d(
     value: Optional[remote_blob_util.BlobDef] = None,
     filter: Optional[remote_blob_util.BlobDef] = None,
-    output_shape: Optional[remote_blob_util.BlobDef] = None,
+    output_shape: Tuple[int, int, int, int] = None,
     strides: Optional[Union[int, Sequence[int]]] = None,
     padding: str = "VALID",
     data_format: str = "NCHW",
@@ -2299,7 +2299,7 @@ def deconv2d(
     Args:
         value (Optional[remote_blob_util.BlobDef], optional): The input 4-d `Blob`. Defaults to None.
         filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
-        output_shape (Optional[remote_blob_util.BlobDef], optional): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
+        output_shape (Tuple[int, int, int, int]): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
         strides (Optional[Union[int, Sequence[int]]], optional): `int` or `int list`. Defaults to None.
         padding (str, optional):  `'VALID'` or `'SAME'`. Defaults to "VALID".
         data_format (str, optional): The data format, includes `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
@@ -2399,13 +2399,15 @@ def deconv2d(
     if data_format.upper() == "NCHW":
         input_shape = input.shape[2:]
         kernel_size = filters.shape[2:4]
-        output_shape = output_shape[2:4]
         channels = filters.shape[1]
+        assert output_shape[1] == channels
+        output_shape = output_shape[2:4]
     elif data_format.upper() == "NHWC":
         input_shape = input.shape[1:3]
         kernel_size = filters.shape[-3:-1]
-        output_shape = output_shape[1:3]
         channels = filters.shape[3]
+        assert output_shape[3] == channels
+        output_shape = output_shape[1:3]
         assert dilations == [1, 1], ValueError(
             "dialtions must be 1 when data format is NHWC "
         )
@@ -2463,7 +2465,7 @@ def deconv2d(
         padding_before = [0] * NDims
         input = (
             flow.user_op_builder(
-                name if name is not None else id_util.UniqueStr("Conv2d_")
+                name if name is not None else id_util.UniqueStr("Deconv2d_")
             )
             .Op("deconv2d")
             .Input("in", [input])
@@ -2674,6 +2676,9 @@ def deconv2d_torch(
         assert pad % 2 == 0
         padding_before.append(pad // 2)
 
+    if output_padding is None:
+        output_padding = (0, 0)
+
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Deconv2d_")
@@ -2747,3 +2752,597 @@ def leaky_relu(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.L1Loss")
+def l1_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the L1 Loss between each element in `input` and `target`. 
+
+    The equation is: 
+
+    if reduction = "none": 
+    
+    .. math:: 
+
+        output = |Target - Input|
+
+    if reduction = "mean": 
+    
+    .. math:: 
+
+        output = \frac{1}{n}\sum_{i=1}^n|Target_i - Input_i|
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+
+        output = \sum_{i=1}^n|Target_i - Input_i|
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob.  
+        target (remote_blob_util.BlobDef): The target value. 
+        reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, reduction="mean", name="l1")
+
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [2.6666667]
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def l1_job(x: tp.Numpy.Placeholder(shape=(3, 3)),
+                y: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy:
+            out = flow.nn.L1Loss(x, y, reduction="sum", name="l1")
+
+            return out
+
+
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+
+        out = l1_job(input, target)
+
+        # output [24.]
+
+    """
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("L1Loss")
+
+    l1_value = flow.math.abs(
+        flow.math.subtract(target, input, name=name + "_sub"), name=name + "_abs"
+    )
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(l1_value, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(l1_value, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return l1_value
+
+
+@oneflow_export("nn.BCELoss")
+def bce_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    weight: remote_blob_util = None,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the binary cross entropy loss. 
+    
+    The equation is: 
+
+    if reduction = "none": 
+
+    .. math:: 
+
+        out = -(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    if reduction = "mean": 
+
+    .. math:: 
+        
+        out = -\frac{1}{n}\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+        
+        out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def bceloss_job(
+            of_input: tp.Numpy.Placeholder(shape=(3, 3)),
+            of_target: tp.Numpy.Placeholder(shape=(3, 3))
+        ) -> tp.Numpy:
+            out = flow.nn.BCELoss(of_input, of_target)
+            return out 
+
+
+        np_input = np.array([[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]).astype(np.float32)
+
+        np_target = np.array([[0, 1, 0],
+                            [1, 0, 0],
+                            [0, 0, 1]]).astype(np.float32)
+
+        out = bceloss_job(np_input, np_target)
+
+        # output [3.390836]
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        target (remote_blob_util.BlobDef): The target value. 
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("BCELoss")
+
+    _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
+    _cross_entropy_loss = flow.math.negative(
+        target * flow.math.log(_sigmiod_value)
+        + (1 - target) * flow.math.log(1 - _sigmiod_value)
+    )
+
+    if weight is not None:
+        assert (
+            weight.shape == input.shape
+        ), "The weight shape must be the same as Input shape"
+        _weighted_loss = weight * _cross_entropy_loss
+    else:
+        _weighted_loss = _cross_entropy_loss
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_weighted_loss, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return _weighted_loss
+
+
+@oneflow_export("nn.MSELoss")
+def mse_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the mean squared error between each element in `input` and `target`. 
+    
+    The equation is: 
+    
+    if reduction = "none": 
+    
+    .. math:: 
+    
+        out = (Target_i - Input_i)^2
+    
+    if reduction = "mean": 
+    
+    .. math:: 
+    
+        out = \frac{1}{n}\sum_{i=1}^n(Target_i - Input_i)^2
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+    
+        out = \sum_{i=1}^n(Target_i - Input_i)^2
+    
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob.
+        target (remote_blob_util.BlobDef): The target value. 
+        reduction (str) = The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean". 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob.
+    
+    For example: 
+    
+    Example 1: 
+    
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
+        
+        @flow.global_function()
+        def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
+                        target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
+            out = flow.nn.MSELoss(input, target, reduction="mean")
+            return out
+    
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+    
+        out = mseloss_job(input, target)
+    
+        # output [7.3333335]
+    
+    Example 2: 
+    
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
+    
+        @flow.global_function()
+        def mseloss_job(input: tp.Numpy.Placeholder(shape=(3, 3)), 
+                        target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy: 
+            out = flow.nn.MSELoss(input, target, reduction="sum")
+            return out
+    
+        input = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
+        target = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
+    
+        out = mseloss_job(input, target)
+    
+        # output [66.]
+    """
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("MSELoss")
+
+    mean_squared_difference = flow.math.squared_difference(
+        target, input, name=name + "_mean_squared"
+    )
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(
+            mean_squared_difference, name=name + "_reduce_mean"
+        )
+    elif reduction == "sum":
+        return flow.math.reduce_sum(mean_squared_difference, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return mean_squared_difference
+
+
+@oneflow_export("nn.MarginRankingLoss")
+def margin_ranking_loss(
+    input1: remote_blob_util.BlobDef,
+    input2: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    margin: float = 0.0,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the Margin Ranking loss. 
+    
+    The equation is: 
+    
+    if reduction = "none": 
+    
+    .. math:: 
+     
+        out = \max\ (0, -y*(x_1-x_2)+margin)
+    
+    if reduction = "mean": 
+    
+    .. math:: 
+    
+        out = \frac{1}{n}\sum_{i=1}^n\max\ (0, -y*(x_1-x_2)+margin)
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+    
+        out = \sum_{i=1}^n\max\ (0, -y*(x_1-x_2)+margin)
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def margin_ranking_loss_job(input1: tp.Numpy.Placeholder(shape=(3, 3)),
+                                    input2: tp.Numpy.Placeholder(shape=(3, 3)),
+                                    target: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy:
+            out = flow.nn.MarginRankingLoss(input1, input2, target, margin=1.0)
+            return out 
+    
+        np_input1 = np.array([[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]).astype(np.float32)
+        np_input2 = np.array([[2, 2, 2],
+                            [2, 2, 2],
+                            [2, 2, 2]]).astype(np.float32)
+        np_target = np.array([[3, 3, 3],
+                            [3, 3, 3],
+                            [3, 3, 3]]).astype(np.float32)
+    
+        out = margin_ranking_loss_job(np_input1, np_input2, np_target)
+    
+        # output [0.5555556]
+    
+    Args:
+        input1 (remote_blob_util.BlobDef): The ranking score of input1 Blob. 
+        input2 (remote_blob_util.BlobDef): The ranking score of input2 Blob. 
+        target (remote_blob_util.BlobDef): The target Blob. 
+        margin (float): The margin value. Defaults to 0.0. 
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    assert (
+        input1.shape == input2.shape
+    ), "The shape of `input1`, `input2` must be the same. "
+
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("MarginRankingLoss")
+
+    _margin_loss = flow.math.negative(flow.math.subtract(input1, input2))
+    _margin_loss = flow.math.multiply(target, _margin_loss)
+    _margin_loss = flow.math.add(margin, _margin_loss)
+
+    _clipped_margin_loss = flow.clip(_margin_loss, min_value=0.0)
+
+    if reduction == "none":
+        return _clipped_margin_loss
+    elif reduction == "mean":
+        return flow.math.reduce_mean(_clipped_margin_loss, name=name + "_reduce_mean")
+    else:
+        return flow.math.reduce_sum(_clipped_margin_loss, name=name + "_reduce_sum")
+
+
+@oneflow_export("nn.TripletMarginLoss")
+def triplet_margin_loss(
+    anchor: remote_blob_util.BlobDef,
+    positive: remote_blob_util.BlobDef,
+    negative: remote_blob_util.BlobDef,
+    margin: float = 1.0,
+    p: float = 2.0,
+    eps: float = 1e-6,
+    swap: bool = False,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the Triplet Margin Loss. 
+    
+    The equation is: 
+    
+    if reduction = "none": 
+    
+    .. math:: 
+    
+        output = \max\{\left\lVert a_i - p_i \right\rVert_p - \left\lVert a_i - n_i \right\rVert_p + {\rm margin}, 0\}
+    
+    if reduction = "mean": 
+    
+    .. math:: 
+    
+        output = \frac{1}{n}\sum_{i=1}^n\max\{\left\lVert a_i - p_i \right\rVert_p - \left\lVert a_i - n_i \right\rVert_p + {\rm margin}, 0\}
+    
+    if reduction = "sum": 
+    
+    .. math:: 
+    
+        output = \sum_{i=1}^n\max\{\left\lVert a_i - p_i \right\rVert_p - \left\lVert a_i - n_i \right\rVert_p + {\rm margin}, 0\}
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def triplet_loss_job(anchor: tp.Numpy.Placeholder(shape=(3, 3)),
+                            pos: tp.Numpy.Placeholder(shape=(3, 3)),
+                            neg: tp.Numpy.Placeholder(shape=(3, 3)))->tp.Numpy:
+            out = flow.nn.TripletMarginLoss(anchor, pos, neg, margin=1.0, p=2.0)
+            return out 
+
+        np_anchor = np.array([[1, 2, 3],
+                            [4, 5, 6],
+                            [7, 8, 9]]).astype(np.float32)
+        np_pos = np.array([[2, 2, 2],
+                        [2, 2, 2],
+                        [2, 2, 2]]).astype(np.float32)
+        np_neg = np.array([[3, 3, 3],
+                        [3, 3, 3],
+                        [3, 3, 3]]).astype(np.float32)
+    
+        out = triplet_loss_job(np_anchor, np_pos, np_neg)
+    
+        # output [1.8449262]
+    
+    Args:
+        anchor (remote_blob_util.BlobDef): The anchor Blob. 
+        positive (remote_blob_util.BlobDef): The positive sample Blob. 
+        negative (remote_blob_util.BlobDef): The negative sample Blob. 
+        margin (float, optional): The margin value. Defaults to 1.0.
+        p (float, optional): The norm degree for computing distance. Defaults to 2.0.
+        eps (float, optional): A small value use in norm computation. Defaults to 1e-6.
+        swap (bool, optional): Whether to swap the distance. 
+        For more details you can check the Paper `Learning shallow convolutional feature descriptors with triplet losses`. Defaults to False.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    assert (
+        swap == False
+    ), "For now we only support `swap=True`, OneFlow still have backward error in minimum"
+
+    if name is None:
+        name = id_util.UniqueStr("TripletMarginLoss")
+
+    def _p_norm(x, p=2.0, name="p_norm"):
+        r"""Compute the p-norm 
+
+        The equation is: 
+        
+        .. math:: 
+        
+            out = \sqrt[P]{\sum_{i=0}^{n}(abs(x)^P)} 
+        
+        Args:
+            x ([type]): The input Blob. 
+            p ([type], optional): The norm degree. Defaults to 2..
+        
+        """
+        # In order to avoid the `nan` case.
+        _abs_val = flow.math.abs(x, name=name + "_abs")
+
+        if p == 2.0:
+            # Use Square to compute the l2-norm
+            _norm = flow.math.square(_abs_val, name=name + "_square")
+            _norm = flow.math.reduce_sum(_norm, axis=1, name=name + "_sum")
+            _norm_val = flow.math.sqrt(_norm, name=name + "_sqrt")
+        else:
+            _p_constant = flow.constant_like(
+                like=_abs_val, value=p, dtype=flow.float32, name=name + "_p_constant"
+            )
+            _norm = flow.math.pow(_abs_val, _p_constant, name=name + "_pow1")
+            _norm = flow.math.reduce_sum(_norm, axis=1, name=name + "_sum")
+            _p_reciprocal_constant = flow.constant_like(
+                like=_norm,
+                value=1.0 / p,
+                dtype=flow.float32,
+                name=name + "_p_reciprocal_constant",
+            )
+            _norm_val = flow.math.pow(
+                _norm, _p_reciprocal_constant, name=name + "_norm_val"
+            )
+
+        return _norm_val
+
+    # Compute the distance
+
+    _distance_1 = _p_norm(anchor - positive + eps, p=p, name=name + "_distance_1")
+    _distance_2 = _p_norm(anchor - negative + eps, p=p, name=name + "_distance_2")
+
+    if swap:
+        _distance_swap = _p_norm(positive - negative + eps, p=p)
+        _distance_swap = flow.math.reduce_sum(_distance_swap, axis=1)
+        # TODO(zhengzekang): minimum still not support backward
+        _distance_2 = flow.math.minimum(_distance_2, _distance_swap)
+
+    _triplet_loss = flow.clip(margin + _distance_1 - _distance_2, min_value=0.0)
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(_triplet_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
+    else:
+        return _triplet_loss

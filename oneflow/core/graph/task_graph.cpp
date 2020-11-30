@@ -23,12 +23,14 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/naive_b2b_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/b21_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/to_interface_sub_task_graph_builder.h"
@@ -54,6 +56,65 @@ bool IsConnectToTickOp(const TaskNode* node) {
   const Operator* op = comp_task_node->logical_node()->SoleOp().get();
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
   return false;
+}
+
+bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
+  const OperatorConf& op_conf = op->op_conf();
+  if (op_conf.has_variable_conf() || op_conf.has_keep_header_only_conf() || op_conf.has_tick_conf()
+      || op_conf.has_device_tick_conf() || op_conf.has_partial_tick_conf()) {
+    return true;
+  }
+  return false;
+}
+
+bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
+  for (const auto& pair : node->produced_regsts()) {
+    if (pair.second->min_register_num() > 1) { return true; }
+  }
+  return false;
+}
+
+bool CanBeMergedInChain(const TaskNode* node) {
+  // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
+  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
+  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
+  if (fw_comp_node == nullptr) { return false; }
+  if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
+  if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
+  return true;
+}
+
+void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
+  CHECK_NE(this_chain_id, -1);
+  CHECK_EQ(this_node->chain_id(), -1);
+  // bfs search all node can be merged in this chain
+  HashSet<TaskNode*> visited_nodes;
+  std::queue<TaskNode*> queued_nodes;
+  queued_nodes.push(this_node);
+  visited_nodes.insert(this_node);
+  while (!queued_nodes.empty()) {
+    TaskNode* cur_node = queued_nodes.front();
+    queued_nodes.pop();
+
+    CHECK_EQ(cur_node->chain_id(), -1);
+    cur_node->set_chain_id(this_chain_id);
+
+    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
+      // NOTE(chengcheng): use area_id to not merge optimizer ops with fw/bw ops
+      if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
+          && this_node->area_id() == next_node->area_id()) {
+        if (next_node->chain_id() == -1) {
+          queued_nodes.push(next_node);
+          visited_nodes.insert(next_node);
+        } else {
+          CHECK_EQ(next_node->chain_id(), this_chain_id);
+        }
+      }
+    });
+  }
 }
 
 std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
@@ -164,6 +225,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
   builders.emplace_back(new NaiveB2BSubTskGphBuilder());
+  builders.emplace_back(new NaiveB2PSubTskGphBuilder());
   sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
@@ -214,7 +276,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
       });
 
-  MergeChainAndSetOrderInGraphForEachNode();
+  SetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
@@ -289,17 +351,37 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain(); }
+void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
+  MergeChain();
+  BuildCtrlRegstDescInSameChain();
+}
 
-void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
-  ChainGraph chain_graph(*this);
+void TaskGraph::SetOrderInGraphForEachNode() {
   int64_t order_in_graph = 0;
-  AcyclicTopoForEachNode([&](TaskNode* task_node) {
-    task_node->set_chain_id(chain_graph.ChainId4TaskNode(task_node));
+  auto SetOrderInGraph = [&](TaskNode* task_node) {
     task_node->set_order_in_graph(order_in_graph);
     ordered_task_nodes_.emplace_back(task_node);
     ++order_in_graph;
-  });
+  };
+  AcyclicTopoForEachNode(SetOrderInGraph);
+}
+
+void TaskGraph::MergeChain() {
+  int64_t chain_id = 0;
+  for (auto* this_node : ordered_task_nodes_) {
+    // skip if this node has been set in a chain.
+    if (this_node->chain_id() != -1) { continue; }
+
+    CHECK_EQ(this_node->chain_id(), -1);
+    if (CanBeMergedInChain(this_node)) {
+      TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
+    } else {
+      this_node->set_chain_id(chain_id);
+    }
+
+    ++chain_id;
+  }
+  for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {

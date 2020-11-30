@@ -176,6 +176,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
                        .Input("in", lbn)
                        .Output("out")
                        .Attr<DataType>("dtype", cast_data_type)
+                       .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
                        .Build();
 
     bool cast_is_consumed = false;

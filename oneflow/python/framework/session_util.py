@@ -31,6 +31,8 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.op_executor as op_executor
+from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.module as module_util
@@ -42,6 +44,7 @@ from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
+import oneflow.python.framework.check_point_v2 as check_point_v2
 import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
@@ -64,16 +67,23 @@ class Session(object):
         self.config_proto_ = None
         self.resource_ = None
         self.is_mirrored_strategy_enabled_stack_ = []
-        self.function_flag_name2default_val_ = {}
         self.job_name2var_name2var_blob_ = {}
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
         self.var_name2var_blob_ = {}
+        # parallel desc symbol id in op attribute does not always correct
+        # for lazy ops as parallel conf may be updated in some passes
+        # (like non_distributed_optimizer_pass)
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
+        self.lazy_interface_op_name2parallel_conf_ = {}
+        self.op_name2lazy_blob_cache_ = {}
         self.job_name2name_scope_stack_ = {}
         self.eager_global_function_desc_stack_ = []
+        self.function_flag_name2default_val_ = {}
         self._UpdateFunctionFlagName2DefaultVal()
+        self.scope_attr_name2default_val_ = {}
+        self._UpdateScopeAttrName2DefaultVal()
         self.instruction_list_ = instr_cfg.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
         self.backward_blob_register_ = blob_register_util.BlobRegister()
@@ -116,6 +126,10 @@ class Session(object):
     @property
     def function_flag_name2default_val(self):
         return self.function_flag_name2default_val_
+
+    @property
+    def scope_attr_name2default_val(self):
+        return self.scope_attr_name2default_val_
 
     @property
     def inter_user_job_info(self):
@@ -163,10 +177,33 @@ class Session(object):
         items = c_api_util.GetFunctionConfigDef().attr_name2attr_def.items()
         self.function_flag_name2default_val_ = {k: v.default_val for k, v in items}
 
+    def _UpdateScopeAttrName2DefaultVal(self):
+        items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
+        self.scope_attr_name2default_val_ = {k: v.default_val for k, v in items}
+
     def TryInit(self):
         if self.status_ is SessionStatus.OPEN:
             self.Init()
         return self
+
+    def _UpdateInfo4LazyInterfaceOp(self):
+        for op_attr in c_api_util.GetOpAttributes().op_attribute:
+            op_conf = op_attr.op_conf
+            if c_api_util.IsInterfaceOpConf(op_conf):
+                self.interface_op_name2op_attr_[op_conf.name] = op_attr
+        for job in c_api_util.GetJobSet().job:
+            op_name2parallel_conf = {}
+            for placement_group in job.placement.placement_group:
+                for op_name in placement_group.op_set.op_name:
+                    op_name2parallel_conf[op_name] = placement_group.parallel_conf
+            for op_conf in job.net.op:
+                if c_api_util.IsInterfaceOpConf(op_conf):
+                    self.interface_op_name2job_name_[
+                        op_conf.name
+                    ] = job.job_conf.job_name
+                    self.lazy_interface_op_name2parallel_conf_[
+                        op_conf.name
+                    ] = op_name2parallel_conf[op_conf.name]
 
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
@@ -184,11 +221,20 @@ class Session(object):
             assert len(self.job_name2function_desc_.items()) > 0
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
+            # Get latest op_attr and job_name after compiler.Compile
+            self._UpdateInfo4LazyInterfaceOp()
+            if not config_util.api_legacy_model_io_enabled():
+                check_point_v2.Init()
         else:
             self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
                 str(self.config_proto)
             )
         return self
+
+    def FindOrCreateLazyBlob(self, op_name, Create):
+        if op_name not in self.op_name2lazy_blob_cache_:
+            self.op_name2lazy_blob_cache_[op_name] = Create()
+        return self.op_name2lazy_blob_cache_[op_name]
 
     def TryClose(self):
         if self.status_ is SessionStatus.RUNNING:
@@ -200,6 +246,7 @@ class Session(object):
         assert len(self.job_name2var_name2var_blob_) == 0
         del self.var_name2var_blob_
         del self.job_name2module_name2module_
+        self.ReleaseLazyRefBlob()
         self.ForceReleaseEagerBlobs()
         c_api_util.StopLazyGlobalSession()
         c_api_util.DestroyLazyGlobalSession()
@@ -220,6 +267,9 @@ class Session(object):
             self.cond_var_.wait()
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
+
+    def ReleaseLazyRefBlob(self):
+        self.op_name2lazy_blob_cache_.clear()
 
     def ForceReleaseEagerBlobs(self):
         blob_register_util.GetDefaultBlobRegister().ForceReleaseAll()
@@ -289,16 +339,28 @@ class Session(object):
         self.job_name2var_name2var_blob_[job_name][var_name] = var_blob
 
     def AddInfo4InterfaceOpName(self, interface_op_name, op_attribute):
-        self.interface_op_name2op_attr_[interface_op_name] = op_attribute
-        self.interface_op_name2job_name_[
-            interface_op_name
-        ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        if oneflow.eager_execution_enabled():
+            self.interface_op_name2op_attr_[interface_op_name] = op_attribute
+            self.interface_op_name2job_name_[
+                interface_op_name
+            ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        else:
+            # In lazy mode, we update fields with
+            # the latest info in another function after compiler.Compile
+            pass
 
     def OpAttribute4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2op_attr_[interface_op_name]
 
+    def ParallelConf4LazyInterfaceOpName(self, interface_op_name):
+        return self.lazy_interface_op_name2parallel_conf_[interface_op_name]
+
     def JobName4InterfaceOpName(self, interface_op_name):
         return self.interface_op_name2job_name_[interface_op_name]
+
+    @property
+    def interface_ops(self):
+        return self.interface_op_name2op_attr_.keys()
 
     # return global_variable_blob, job_variable_blob
     def TryGetVariableBlobOfJobFromStash(self, job_name, var_name):
