@@ -8,5 +8,5 @@ message ServerConfig {
   // HTTP/REST API will not be available. Can't be set to the same port as gRPC port.
   optional int32 rest_api_port = 2 [default = 0];
   // 
-  optional string model_config_file = 3;
+  optional string model_config_prototxt = 3;
 }

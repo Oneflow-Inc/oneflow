@@ -4,4 +4,5 @@ package oneflow.serving;
 message ModelSpec {
   required string model_name = 1;
   optional int64 version = 2 [default = -1];
+  optional string graph_name = 3;
 }

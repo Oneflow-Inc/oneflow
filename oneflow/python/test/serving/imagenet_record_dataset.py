@@ -20,6 +20,8 @@ import cv2
 import numpy as np
 import oneflow.core.record.record_pb2 as record_pb
 
+from oneflow.python.oneflow_export import oneflow_export
+
 DEFAULT_BATCH_SIZE = 4
 DEFAULT_TRAIN_DATA_PATH = "/dataset/ImageNet/ofrecord/train"
 DEFAULT_TRAIN_DATA_PART_NUM = 256
@@ -28,6 +30,7 @@ DEFAULT_TEST_DATA_PART_NUM = 256
 DEFAULT_IMAGE_SIZE = 224
 
 
+@oneflow_export("serving.ImageNetRecordDataset")
 class ImageNetRecordDataset(object):
     def __init__(
         self,

@@ -1,0 +1,10 @@
+model_config {
+  name: "resnet50"
+  saved_model_path: "resnet50_models"
+  saved_model_prototxt_file_name: "saved_model.prototxt"
+  graph_config {
+    name: "resnet_inference"
+  }
+  device_tag: "gpu"
+  device_num: 1
+}
