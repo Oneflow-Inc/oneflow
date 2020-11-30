@@ -380,6 +380,7 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
 endforeach()
 
 copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_CORE_HDRS)
 list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")
