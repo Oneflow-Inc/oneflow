@@ -138,7 +138,7 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   } else {
     n = shape_b->At(shape_b->NumAxes() - 2);
   }
-  double logical_computation_cost = ctx->Shape4ArgNameAndIndex("a", 0)->elem_cnt() * n;
+  double logical_computation_cost = 4 * ctx->Shape4ArgNameAndIndex("a", 0)->elem_cnt() * n;
   if (ctx->SbpParallel4ArgNameAndIndex("a", 0).has_split_parallel()
       || ctx->SbpParallel4ArgNameAndIndex("b", 0).has_split_parallel()) {
     return logical_computation_cost / ctx->parallel_desc().parallel_num();
