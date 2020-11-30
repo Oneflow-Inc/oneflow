@@ -131,6 +131,7 @@ def test_combined_margin_loss(
 
 @flow.unittest.skip_unless_1n4d()
 class TestCombinedMarginLoss(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_shape"] = [(512, 1000)]
