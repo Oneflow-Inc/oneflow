@@ -869,6 +869,12 @@ message ImageDecoderRandomCropResizeOpConf {
   optional float random_aspect_ratio_max = 13 [default = 1.333333];
 }
 
+message BoxingZerosOpConf {
+  required LogicalBlobId lbi = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -919,7 +925,8 @@ message OperatorConf {
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
     BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
-    DistributeCastToDisableBoxingOpConf distribute_cast_to_disable_boxing_conf = 176;
+    BoxingZerosOpConf boxing_zeros_conf = 176;
+    DistributeCastToDisableBoxingOpConf distribute_cast_to_disable_boxing_conf = 177;
     UserOpConf user_conf = 199;
 
     // domain op

@@ -60,6 +60,7 @@ jobs:
             cuda_version="11.1"
         elif [ "$matrix_release_version" == "cu100_xla" ]; then
             cuda_version="10.0"
+            extra_flags="--xla"
         elif [ "$matrix_release_version" == "cu101_xla" ]; then
             cuda_version="10.1"
             extra_flags="--xla"
@@ -118,7 +119,7 @@ jobs:
         oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
         oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Update pip index
-      if: env.is_built != '1' && matrix.release_version == 'cu102'
+      if: env.is_built != '1'
       env:
         OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
         OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -127,7 +128,7 @@ jobs:
         python3 -m pip install oss2 beautifulsoup4 --user
         python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
     - name: Update API docs
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' && matrix.release_version == 'cu102'
       env:
         READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
       run: |

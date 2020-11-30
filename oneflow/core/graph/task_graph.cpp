@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/naive_b2b_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/b21_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/to_interface_sub_task_graph_builder.h"
@@ -224,6 +225,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
   builders.emplace_back(new NaiveB2BSubTskGphBuilder());
+  builders.emplace_back(new NaiveB2PSubTskGphBuilder());
   sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
