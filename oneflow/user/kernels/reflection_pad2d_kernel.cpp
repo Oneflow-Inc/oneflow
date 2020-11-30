@@ -17,9 +17,10 @@ limitations under the License.
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/user/kernels/reflection_pad2d_kernel_util.h"
 
 namespace oneflow {
-
+namespace user_op {
 namespace {
 
 // Fill ShapeView into dim vector
@@ -30,6 +31,45 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
   shape_vec[ndims - 1] = shape_vec[ndims - 1];
   return shape_vec;
 }
+
+// template<DeviceType device_type, typename T>
+// void ReflectionPad2dFunctor(
+//       DeviceCtx* ctx, const int64_t num_batch,  const int64_t  num_channel,
+//       const int64_t num_height, const int64_t num_width, const int64_t pad_left, const int64_t pad_top, 
+//       const int64_t x_height, const int64_t x_width, const int64_t y_height, const int64_t y_width,
+//       const T* src,  T* dest
+//  ){
+//     int64_t ip_x, ip_y;
+//     for(int64_t n = 0; n<num_batch; n++){
+//       for(int64_t c = 0; c<num_channel; c++){
+//         for(int64_t i = 0; i<num_height; i++){
+//           for(int64_t j = 0; j<num_width; j++){
+//             if(j < pad_left){
+//               ip_x = pad_left * 2 - j;
+//             }else if( j >= pad_left && j < x_width + pad_left){
+//               ip_x = j;
+//             }else{
+//               ip_x = (x_width + pad_left - 1) * 2 - j;
+//             }
+
+//             if(i<pad_top){
+//               ip_y = pad_top * 2 - i;
+//             }else if(i >= pad_top && i < x_height + pad_top){
+//               ip_y = i;
+//             }else{
+//               ip_y = (x_height + pad_top - 1) * 2 - i;
+//             }
+//             ip_x = ip_x - pad_left;
+//             ip_y = ip_y - pad_top;
+//             int64_t  dest_index = c * y_width * y_height + i * y_width + j;
+//             int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
+//             //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
+//             dest[dest_index] = src[src_index];
+//           }
+//         }
+//       }
+//     }
+// }
 
 }  // namespace
 
@@ -46,7 +86,6 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = x->shape().NumAxes();
-    const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding.size(), ndims);
     int64_t c_idx, h_idx, w_idx;
     if (data_format == "NCHW") {
@@ -59,8 +98,12 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
       c_idx = 3;
     }
 
-    DimVector x_vector = ShapeViewToDimVector(x->shape());
     DimVector y_vector = ShapeViewToDimVector(y->shape());
+    int64_t num_batch = y->shape().At(0);
+    int64_t num_channel = y->shape().At(c_idx);
+    int64_t num_height = y_vector[h_idx];
+    int64_t num_width = y_vector[w_idx];
+
     int64_t pad_left = padding[w_idx];
     int64_t pad_top = padding[h_idx];
 
@@ -69,39 +112,17 @@ class ReflectionPad2dKernel final : public user_op::OpKernel {
     int64_t y_height = y->shape().At(h_idx);
     int64_t y_width = y->shape().At(w_idx);
 
-    int64_t ip_x, ip_y;
     T * dest = y->mut_dptr<T>();
     const T* src = x->dptr<T>();
-    for(int64_t n = 0; n<y->shape().At(0); n++){
-      for(int64_t c = 0; c<y->shape().At(c_idx); c++){
-        for(int64_t i = 0; i<y_vector[h_idx]; i++){
-          for(int64_t j = 0; j<y_vector[w_idx]; j++){
-            if(j < pad_left){
-              ip_x = pad_left * 2 - j;
-            }else if( j >= pad_left && j < x_width + pad_left){
-              ip_x = j;
-            }else{
-              ip_x = (x_width + pad_left - 1) * 2 - j;
-            }
 
-            if(i<pad_top){
-              ip_y = pad_top * 2 - i;
-            }else if(i >= pad_top && i < x_height + pad_top){
-              ip_y = i;
-            }else{
-              ip_y = (x_height + pad_top - 1) * 2 - i;
-            }
-            ip_x = ip_x - pad_left;
-            ip_y = ip_y - pad_top;
-            int64_t  dest_index = c * y_width * y_height + i * y_width + j;
-            int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
-            //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
-            dest[dest_index] = src[src_index];
-            //Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
-          }
-        }
-      }
-    }
+    ReflectionPad2dFunctor<device_type, T>()(
+        ctx->device_ctx(), num_batch, num_channel, num_height, num_width, 
+        pad_left, pad_top, 
+        x_height, x_width, y_height, y_width, 
+        src, dest, y->shape().elem_cnt()
+    );
+
+    
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -140,7 +161,6 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = dy->shape().NumAxes();
-    const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
     CHECK_EQ(padding.size(), ndims);
 
     int64_t c_idx, h_idx, w_idx;
@@ -195,7 +215,6 @@ class ReflectionPad2dGradKernel final : public user_op::OpKernel {
             int64_t  dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
             //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
             dest[dest_index] += src[src_index];
-            // Memcpy<device_type>(ctx->device_ctx(), dx->mut_dptr<T>() + dest_index, dy->dptr<T>() + src_index, sizeof_dtype);
                               
           }
 
@@ -227,4 +246,5 @@ REGISTER_REFLECTION_PAD2D_GRAD_KERNELS(DeviceType::kCPU, int32_t)
 REGISTER_REFLECTION_PAD2D_GRAD_KERNELS(DeviceType::kCPU, int64_t)
 REGISTER_REFLECTION_PAD2D_GRAD_KERNELS(DeviceType::kCPU, int8_t)
 
+}  // namespace user_op
 }  // namespace oneflow
