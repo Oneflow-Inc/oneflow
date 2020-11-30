@@ -111,10 +111,10 @@ class OfBlob(object):
 
     def _CopyBodyFromNdarray(self, src_ndarray):
         assert not self.is_dynamic
-        method_name = oneflow_internal.Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(
+        method_name = oneflow_api.Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
-        copy_method = getattr(oneflow_internal, method_name)
+        copy_method = getattr(oneflow_api, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)
 
     def CopyFromNdarrayList(self, src_ndarray_list):
@@ -138,10 +138,10 @@ class OfBlob(object):
 
     def _CopyToNdarrayListAndIsNewSliceStartMask(self):
         # get tensor list
-        method_name = oneflow_internal.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
+        method_name = oneflow_api.Dtype_GetOfBlobCurTensorCopyToBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
-        copy_method = getattr(oneflow_internal, method_name)
+        copy_method = getattr(oneflow_api, method_name)
         tensor_list = []
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
         while oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_) == False:
@@ -187,10 +187,10 @@ class OfBlob(object):
         self, tensor_list, is_new_slice_start_mask
     ):
         assert len(tensor_list) == len(is_new_slice_start_mask)
-        method_name = oneflow_internal.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
+        method_name = oneflow_api.Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(
             self.dtype.oneflow_proto_dtype
         )
-        copy_method = getattr(oneflow_internal, method_name)
+        copy_method = getattr(oneflow_api, method_name)
         oneflow_api.OfBlob_ClearTensorLists(self.of_blob_ptr_)
         for i, tensor in enumerate(tensor_list):
             assert tensor.data.contiguous

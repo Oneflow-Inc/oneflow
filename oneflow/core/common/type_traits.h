@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_OF_BLOB_TYPE_TRAITS_H
-#define ONEFLOW_API_PYTHON_OF_BLOB_TYPE_TRAITS_H
+#ifndef ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
+#define ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
 
 namespace std {
 
@@ -94,4 +94,4 @@ class is_trivially_copyable<T*> : public true_type {};
 
 }  // namespace std
 
-#endif  // ONEFLOW_API_PYTHON_OF_BLOB_TYPE_TRAITS_H
+#endif  // ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #if __GNUG__ && __GNUC__ < 5
-#include "oneflow/api/python/ofblob/type_traits.h"
+#include "oneflow/core/common/type_traits.h"
 #endif
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
