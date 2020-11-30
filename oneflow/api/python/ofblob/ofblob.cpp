@@ -38,4 +38,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("OfBlob_AddTensor", &OfBlob_AddTensor);
   m.def("OfBlob_CurMutTensorAvailable", &OfBlob_CurMutTensorAvailable);
+  m.def("OfBlob_CopyShapeFromNumpy", &OfBlob_CopyShapeFromNumpy);
+
+  m.def("OfBlob_CopyShapeToNumpy", &OfBlob_CopyShapeToNumpy);
+  m.def("OfBlob_CopyStaticShapeTo", &OfBlob_CopyStaticShapeTo);
+  m.def("OfBlob_CurTensorCopyShapeTo", &OfBlob_CurTensorCopyShapeTo);
+  m.def("OfBlob_CurMutTensorCopyShapeFrom", &OfBlob_CurMutTensorCopyShapeFrom);
 }

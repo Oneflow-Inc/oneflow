@@ -13,7 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#if __GNUG__ && __GNUC__ < 5
+#include "oneflow/api/python/ofblob/type_traits.h"
+#endif
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include "oneflow/core/register/ofblob.h"
+
+namespace py = pybind11;
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   using namespace oneflow;
@@ -97,4 +104,49 @@ bool OfBlob_CurMutTensorAvailable(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurMutTensorAvailable();
+}
+
+void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+  py::buffer_info buf = array.request();
+  int64_t* buf_ptr = (int64_t*)buf.ptr;
+  size_t size = buf.size;
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyShapeFrom(buf_ptr, size);
+}
+
+void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+  py::buffer_info buf = array.request();
+  int64_t* buf_ptr = (int64_t*)buf.ptr;
+  size_t size = buf.size;
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyShapeTo(buf_ptr, size);
+}
+
+void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+  py::buffer_info buf = array.request();
+  int64_t* buf_ptr = (int64_t*)buf.ptr;
+  size_t size = buf.size;
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CopyStaticShapeTo(buf_ptr, size);
+}
+
+void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+  py::buffer_info buf = array.request();
+  int64_t* buf_ptr = (int64_t*)buf.ptr;
+  size_t size = buf.size;
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CurTensorCopyShapeTo(buf_ptr, size);
+}
+
+void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+  py::buffer_info buf = array.request();
+  int64_t* buf_ptr = (int64_t*)buf.ptr;
+  size_t size = buf.size;
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  return of_blob->CurMutTensorCopyShapeFrom(buf_ptr, size);
 }

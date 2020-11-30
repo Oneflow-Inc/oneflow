@@ -24,33 +24,3 @@ void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* erro
 void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
   return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
-
-void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, long* array, int size) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CopyShapeFrom(array, size);
-}
-
-void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, long* array, int size) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CopyShapeTo(array, size);
-}
-
-void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, long* array, int size) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CopyStaticShapeTo(array, size);
-}
-
-void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, long* array, int size) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurTensorCopyShapeTo(array, size);
-}
-
-void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, long* array, int size) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CurMutTensorCopyShapeFrom(array, size);
-}
