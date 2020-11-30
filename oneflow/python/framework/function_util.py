@@ -706,7 +706,9 @@ def set_indexed_slices_optimizer_conf(func_desc, value):
     pb_util.PythonDict2PbMessage(value, pb_msg)
 
 
-@oneflow_function_config("indexed_slices_optimizer_conf")
+@oneflow_function_config(
+    "indexed_slices_optimizer_conf.enable_mirrored_unsorted_segment_sum_promotion"
+)
 def set_indexed_slices_mirrored_unsorted_segment_sum_promotion(func_desc, value):
     r"""Set indexed slices mirrored_unsorted_segment_sum_promotion configuration of optimizer
 
