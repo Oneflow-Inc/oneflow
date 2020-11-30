@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import argparse
-import time
 import oneflow as flow
+from oneflow.python.test.serving.imagenet1000_clsidx_to_labels import clsidx_2_labels
+
+import argparse
+import numpy as np
+import time
 
 
 def get_parser():
@@ -65,6 +68,14 @@ if __name__ == "__main__":
                     output_name, arr.shape, arr.dtype, arr
                 )
             )
+            arr_reshape = arr.reshape((args.batch_size, -1))
+            clsidxs = np.argmax(arr_reshape, axis=1)
+            probs = np.max(arr_reshape, axis=1)
+            for i in range(len(clsidxs)):
+                print(
+                    "predicted as class: %s, with probility: %f\n"
+                    % (clsidx_2_labels[clsidxs[i]], probs[i])
+                )
 
         i += 1
         if i > 10:

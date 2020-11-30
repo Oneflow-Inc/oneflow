@@ -14,17 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+import oneflow.core.serving.model_config_pb2 as model_config_pb
 import oneflow.core.serving.prediction_service_pb2_grpc as prediction_grpc
 import oneflow.core.serving.predict_pb2 as predict_pb
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
-import oneflow.core.serving.model_config_pb2 as model_config_pb
 import oneflow.core.serving.server_config_pb2 as server_config_pb
+
+from oneflow.python.oneflow_export import oneflow_export
+
+import asyncio
 import google.protobuf.text_format as text_format
 import grpc
 import os
-import asyncio
-
-from oneflow.python.oneflow_export import oneflow_export
+import queue
+import threading
 
 
 # TODO list:
@@ -64,6 +67,84 @@ class PredictionService(prediction_grpc.PredictionServiceServicer):
         return predict_response
 
 
+class BatchingScheduler(object):
+    def __init__(self, model_server):
+        print("init scheduler")
+        self.thread = None
+        self.requests_queue = queue.Queue()
+        self.model_server = model_server
+
+    def run_model(self, predict_request):
+        model_spec = predict_request.model_spec
+        model_name = model_spec.model_name
+        if model_spec.HasField("version"):
+            model_version = model_spec.version
+            if (
+                model_version
+                not in self.model_server.model_name2versions2session_[model_name]
+            ):
+                raise ValueError("model version {} not exist".format(model_version))
+        else:
+            versions = list(
+                self.model_server.model_name2versions2session_[model_name].keys()
+            )
+            model_version = versions[-1]
+
+        sess = self.model_server.model_name2versions2session_[model_name][model_version]
+        print("session got")
+
+        input_names = sess.list_inputs()
+        inputs = {}
+        for input_name, tensor_proto in predict_request.inputs.items():
+            if input_name in input_names:
+                inputs[input_name] = flow.serving.tensor_proto_to_array(tensor_proto)
+                print("{} dtype: {}".format(input_name, inputs[input_name].dtype))
+
+        print("ready to run")
+        graph_name = None
+        if model_spec.HasField("graph_name"):
+            graph_name = model_spec.graph_name
+        elif model_name in self.model_server.model_name2default_graph_name_:
+            graph_name = self.model_server.model_name2default_graph_name_[model_name]
+        else:
+            raise ValueError(
+                "model ({}) has no default graph, graph_name must be set in model_spec".format(
+                    model_name
+                )
+            )
+
+        outputs = sess.run(graph_name, **inputs)
+        output_dict = {}
+        for i, output_name in enumerate(sess.list_outputs()):
+            print(i, output_name, type(outputs[i]))
+            output_dict[output_name] = outputs[i]
+
+        return output_dict
+
+    def enqueue_request(self, request, result_future):
+        print("enqueue:")
+        self.requests_queue.put((request, result_future))
+        print("enqueue done.")
+
+    # TODO(Liang Depeng): merge multiple requests to construct a complete batch or
+    #                     split a request if its batch size is large than the model setting.
+    def handle_request(self):
+        while True:
+            if self.requests_queue.empty() == False:
+                request, result_future = self.requests_queue.get()
+                print("process : ", str(request.model_spec))
+                result_future.set_result(self.run_model(request))
+                print("set result done.")
+
+    def start(self):
+        if self.thread == None:
+            self.thread = threading.Thread(target=self.handle_request)
+            self.thread.start()
+            print("start batching scheduler.")
+        else:
+            print("batching scheduler already started.")
+
+
 # TODO: sperate model_server and base_server (process request and dispatch)
 @oneflow_export("serving.Server")
 class ModelServer(object):
@@ -71,6 +152,7 @@ class ModelServer(object):
         self.server_config_ = server_config
         self.model_name2versions2session_ = {}
         self.model_name2default_graph_name_ = {}
+        self.batching_scheduler = None
 
     def build_and_start(self):
         # read model config
@@ -203,51 +285,17 @@ class ModelServer(object):
         listen_addr = "0.0.0.0:{}".format(self.server_config_.port)
         grpc_server.add_insecure_port(listen_addr)
         await grpc_server.start()
+        self.batching_scheduler = BatchingScheduler(self)
+        self.batching_scheduler.start()
         print("grpc server started, listen at {}".format(listen_addr))
         await grpc_server.wait_for_termination()
 
     # TODO: support batching
     async def predict(self, predict_request):
         print("predict")
-        model_spec = predict_request.model_spec
-        model_name = model_spec.model_name
-        if model_spec.HasField("version"):
-            model_version = model_spec.version
-            if model_version not in self.model_name2versions2session_[model_name]:
-                raise ValueError("model version {} not exist".format(model_version))
-        else:
-            versions = list(self.model_name2versions2session_[model_name].keys())
-            model_version = versions[-1]
-
-        sess = self.model_name2versions2session_[model_name][model_version]
-        print("session got")
-
-        input_names = sess.list_inputs()
-        inputs = {}
-        for input_name, tensor_proto in predict_request.inputs.items():
-            if input_name in input_names:
-                inputs[input_name] = flow.serving.tensor_proto_to_array(tensor_proto)
-                print("{} dtype: {}".format(input_name, inputs[input_name].dtype))
-
-        print("ready to run")
-        graph_name = None
-        if model_spec.HasField("graph_name"):
-            graph_name = model_spec.graph_name
-        elif model_name in self.model_name2default_graph_name_:
-            graph_name = self.model_name2default_graph_name_[model_name]
-        else:
-            raise ValueError(
-                "model ({}) has no default graph, graph_name must be set in model_spec".format(
-                    model_name
-                )
-            )
-
-        outputs = sess.run(graph_name, **inputs)
-        output_dict = {}
-        for i, output_name in enumerate(sess.list_outputs()):
-            output_dict[output_name] = outputs[i]
-
-        return output_dict
+        result_future = flow.OutputFuture()
+        self.batching_scheduler.enqueue_request(predict_request, result_future)
+        return result_future.get()
 
 
 def is_int(val):
