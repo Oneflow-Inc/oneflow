@@ -324,7 +324,7 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
     JobBuilder job_builder(job);
     if (conf.has_non_distributed_conf()) {
       return RewriteNonDistributed(op_graph, &job_builder);
-    } else if (conf.has_distributed_split()) {
+    } else if (conf.has_distributed_split_conf()) {
       return RewriteDistributedSplit(op_graph, &job_builder);
     } else {
       return Error::Unimplemented();
