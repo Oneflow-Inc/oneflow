@@ -19,6 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 void DeviceTickOp::InitFromOpConf() {
+  CHECK(op_conf().has_device_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
 }
