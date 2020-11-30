@@ -64,8 +64,6 @@ class AddInputOutputOpsPass final : public JobPass {
 Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   if (!job_builder->job().job_conf().has_signature()) { return Maybe<void>::Ok(); }
   const auto& job_sig = job_builder->job().job_conf().signature();
-  // std::cout << "job signature: " << job_builder->job().job_conf().job_name() << std::endl
-  //           << PbMessage2TxtString(job_sig) << std::endl;
   auto IsInputLbi = [&](const LogicalBlobId& lbi) -> bool {
     for (const auto& pair : job_sig.inputs()) {
       if (pair.second.lbi() == lbi) { return true; }

@@ -32,6 +32,13 @@ import numpy as np
 from oneflow.python.oneflow_export import oneflow_export
 
 
+def _need_check_device_tag(op_conf):
+    if op_conf.HasField("return_conf"):
+        return False
+
+    return op_conf.HasField("device_tag")
+
+
 class OutputFuture(object):
     def __init__(self):
         self.cond_var_ = threading.Condition()
@@ -53,6 +60,13 @@ class OutputFuture(object):
         return self.result_
 
 
+@oneflow_export("SessionOption")
+class SessionOption(object):
+    def __init__(self):
+        self.device_tag = "gpu"
+        self.device_num = 1
+
+
 @oneflow_export("SimpleSession")
 class SimpleSession(object):
     # TODO: support multi user job
@@ -63,13 +77,19 @@ class SimpleSession(object):
         RUNNING = "RUNNING"
         CLOSED = "CLOSED"
 
-    def __init__(self, config_proto=None):
+    def __init__(self, option=None):
+        if option is None:
+            self.option_ = SessionOption()
+        else:
+            assert isinstance(option, SessionOption)
+            self.option_ = option
+
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
         self.is_mirrored_ = False
         self.checkpoint_path_ = None
+        self.config_proto_ = None
         self.job_name2job_conf_ = {}
-        # self.job_name2inter_user_job_info_ = {}
         self.inter_user_job_info_ = None
         self.job_name2input_name2lbn_ = {}
         self.job_name2output_name2lbn_ = {}
@@ -80,17 +100,27 @@ class SimpleSession(object):
             flow.env.init()
 
         # session init
-        if config_proto is None:
-            self.config_proto_ = session_util._GetDefaultConfigProto()
-        else:
-            self.config_proto_ = config_proto
-
+        self._make_config_proto()
         session_util._TryCompleteConfigProto(self.config_proto_)
         c_api_util.InitLazyGlobalSession(self.config_proto_)
         self.status_ = self.SessionStatus.OPEN
 
     def __del__(self):
         self.close()
+
+    def _make_config_proto(self):
+        if self.config_proto_ is None:
+            self.config_proto_ = session_util._GetDefaultConfigProto()
+
+        if self.option_.device_tag == "gpu":
+            self.config_proto_.resource.gpu_device_num = self.option_.device_num
+        elif self.option_.device_tag == "cpu":
+            self.config_proto_.resource.cpu_device_num = self.option_.device_num
+            self.config_proto_.resource.gpu_device_num = 0
+        else:
+            raise NotImplementedError(
+                "not supported device tag {}".format(self.option_.device_tag)
+            )
 
     def close(self):
         self._sync()
@@ -181,7 +211,18 @@ class SimpleSession(object):
 
     def compile(self, op_list):
         self._check_status(self.SessionStatus.OPEN)
+        scope = flow.current_scope()
+        device_tag = scope.device_parallel_desc_symbol.device_tag
         for op_conf in op_list:
+            if _need_check_device_tag(op_conf) and op_conf.device_tag != device_tag:
+                print(
+                    "WARNING: the device_tag of op {} is not equal to the device_tag of seesion's current scope"
+                    " ({} vs. {})"
+                    ", which may cause the op graph to be incompatible".format(
+                        op_conf.name, op_conf.device_tag, device_tag
+                    )
+                )
+
             compile_ctx.CurJobAddOp(op_conf)
 
         c_api_util.CurJobBuildAndInferCtx_Complete()

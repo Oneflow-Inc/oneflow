@@ -194,26 +194,3 @@ def resnet50(
             name="fc1001",
         )
     return fc1001
-
-
-# def main():
-#     import oneflow.typing as tp
-#     @flow.global_function("predict", flow.function_config())
-#     def InferenceNet(images: tp.Numpy.Placeholder((1, 3, 224, 224), dtype=flow.float)) -> tp.Numpy:
-#         print(images.logical_blob_name)
-#         logits = resnet50(images, training=False)
-#         predictions = flow.nn.softmax(logits)
-#         print(predictions.logical_blob_name)
-#         return predictions
-
-#     check_point = flow.train.CheckPoint()
-#     check_point.init()
-
-#     # keypoint: save alexnet
-#     saved_model_builder = flow.saved_model.SavedModelBuilder("./saved_resnet_models", 1)
-#     saved_model_builder.ModelName("resnet50").AddJobFunction(
-#         InferenceNet, {"image" : "Input_0/out"}, {"score" : "Softmax_67/out_0"}
-#     ).Save()
-
-# if __name__ == "__main__":
-#     main()

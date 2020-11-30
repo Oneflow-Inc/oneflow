@@ -4,6 +4,4 @@ package oneflow.serving;
 message ModelSpec {
   required string model_name = 1;
   optional int64 version = 2 [default = -1];
-  required string function_name = 3;
-  required string signature_name = 4;
 }

@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_LOAD_MODEL_H_
-#define ONEFLOW_CORE_JOB_LOAD_MODEL_H_
+#ifndef ONEFLOW_CORE_JOB_REWRITE_CALCULATION_PASS_H_
+#define ONEFLOW_CORE_JOB_REWRITE_CALCULATION_PASS_H_
 
-#include "oneflow/core/common/util.h"
+#include <string>
 
 namespace oneflow {
 
-std::string ApiLoadModel(const std::string& load_model_proto_str);
+extern const std::string kForwardPass;
+extern const std::string kBackwardPass;
+extern const std::string kOptimizerPass;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_LOAD_MODEL_H_
+#endif  // ONEFLOW_CORE_JOB_REWRITE_CALCULATION_PASS_H_
