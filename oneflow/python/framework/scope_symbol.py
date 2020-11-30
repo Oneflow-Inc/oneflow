@@ -18,8 +18,8 @@ from __future__ import absolute_import
 from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
-import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.scope_pb2 as scope_pb
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 import collections
 import re
 
@@ -140,7 +140,9 @@ def BuildInitialScope(
 
 def MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, (list, tuple))
-    device_names = []
+
+    parallel_conf = placement_cfg.ParallelConf()
+    parallel_conf.set_device_tag(device_tag)
     for machine_device_id in machine_device_ids:
         assert isinstance(
             machine_device_id, str
@@ -148,9 +150,6 @@ def MakeParallelConf(device_tag, machine_device_ids):
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
             "machine_device_id: %s is not valid" % machine_device_id
         )
-        device_names.append(machine_device_id)
+        parallel_conf.add_device_name(machine_device_id)
 
-    parallel_conf = placement_pb.ParallelConf()
-    parallel_conf.device_tag = device_tag
-    parallel_conf.device_name.extend(device_names)
     return parallel_conf

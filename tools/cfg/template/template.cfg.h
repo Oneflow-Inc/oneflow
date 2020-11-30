@@ -229,12 +229,12 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     bool operator<(const _{{ util.class_name(cls) }}_& other) const;
   };
 
-  Const{{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data);
+  Const{{ util.class_name(cls) }}(const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& data);
   Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&);
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept;
   Const{{ util.class_name(cls) }}();
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
-  ~Const{{ util.class_name(cls) }}() override;
+  virtual ~Const{{ util.class_name(cls) }}() override;
 
   using PbMessage = ::google::protobuf::Message;
   void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override;
@@ -302,33 +302,29 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 
   ::std::shared_ptr<Const{{ util.class_name(cls) }}> __SharedConst__() const;
   int64_t __Id__() const;
-  // the data of `this` will be moved to the result which is mutable
-  ::std::shared_ptr<{{ util.class_name(cls) }}> __Move__();
  public:
   bool operator==(const Const{{ util.class_name(cls) }}& other) const;
 
   bool operator<(const Const{{ util.class_name(cls) }}& other) const;
  protected:
-  const ::std::unique_ptr<_{{ util.class_name(cls) }}_>& __SharedPtrOrDefault__() const;
-  const ::std::unique_ptr<_{{ util.class_name(cls) }}_>& __SharedPtr__();
-  const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& __SharedUniquePtr__();
+  const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedPtrOrDefault__() const;
+  const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedPtr__();
   // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
   void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }});
-  // use ::std::shared_ptr for sharing reference between mutable object and const object
-  // use ::std::unique_ptr for moving ownership 
-  ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_;
+  
+  ::std::shared_ptr<_{{ util.class_name(cls) }}_> data_;
 };
 
 class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} {
  public:
-  {{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data);
+  {{ util.class_name(cls) }}(const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& data);
   {{ util.class_name(cls) }}(const {{ util.class_name(cls) }}& other);
   // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
   {{ util.class_name(cls) }}();
   {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
-  ~{{ util.class_name(cls) }}();
+  ~{{ util.class_name(cls) }}() override;
 
   void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override;
   
@@ -498,12 +494,6 @@ class {{ util.field_map_container_name(field) }} final : public Const{{ util.fie
 {% endfor %}{# field #}
 
 
-inline ::std::shared_ptr<{{ util.class_name(cls) }}> Const{{ util.class_name(cls) }}::__Move__() {
-  if (__Empty__()) { return ::std::make_shared<{{ util.class_name(cls) }}>(); }
-  auto data = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>();
-  *data = ::std::move(*data_);
-  return ::std::make_shared<{{ util.class_name(cls) }}>(data);
-}
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
 
