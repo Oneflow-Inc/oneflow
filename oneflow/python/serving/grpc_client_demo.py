@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+# Deprecated Warning: This file will be removed in the future, the code in this file may be stale
 import oneflow as flow
 import oneflow.core.serving.prediction_service_pb2_grpc as prediction_service_grpc
 import oneflow.core.serving.predict_pb2 as predict_pb

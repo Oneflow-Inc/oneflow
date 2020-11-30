@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+# Deprecated Warning: This file will be removed in the future, the code in this file may be stale
 import oneflow as flow
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.shape_pb2 as shape_pb2
