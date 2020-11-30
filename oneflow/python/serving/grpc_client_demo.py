@@ -41,12 +41,12 @@ class PredictionServiceClient(object):
         self.stub = prediction_service_grpc.PredictionServiceStub(self.channel)
 
     # TODO: sepcify ouputs
-    def predict(self, model_name, function_name, signature_name, **kwargs):
+    def predict(self, model_name, graph_name, **kwargs):
         request = predict_pb.PredictRequest()
 
         request.model_spec.model_name = model_name
-        request.model_spec.function_name = function_name
-        request.model_spec.signature_name = signature_name
+        if isinstance(graph_name, str):
+            request.model_spec.graph_name = graph_name
 
         for k, v in kwargs.items():
             if not isinstance(v, np.ndarray):
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         print("#### iter{} ####".format(i))
         print("send image to server")
         response = client.predict(
-            "alexnet", "alexnet_inference", "regress", image=image, label=label
+            "resnet50", "resnet_inference", "regress", image=image, label=label
         )
         print("get result from server:")
         for output_name, tensor_proto in response.outputs.items():

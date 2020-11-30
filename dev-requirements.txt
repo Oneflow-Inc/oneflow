@@ -8,3 +8,4 @@ onnx
 jinja2
 grpcio
 grpcio-tools
+opencv-python

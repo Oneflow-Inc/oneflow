@@ -94,6 +94,7 @@ class SimpleSession(object):
         self.job_name2input_name2lbn_ = {}
         self.job_name2output_name2lbn_ = {}
         self.output_name2future_ = {}
+        self.status_ = None
 
         # env init
         if not c_api_util.IsEnvInited():

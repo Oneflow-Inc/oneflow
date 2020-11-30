@@ -45,7 +45,7 @@ class PredictionService(prediction_grpc.PredictionServiceServicer):
 
     async def Predict(self, predict_request, context):
         print("accept predict request")
-        print("model name:", predict_request.model_name)
+        print("model name:", predict_request.model_spec.model_name)
         for input_name, tensor in predict_request.inputs.items():
             print(
                 "input {} shape: {}, dtype: {}".format(
@@ -70,19 +70,20 @@ class ModelServer(object):
     def __init__(self, server_config):
         self.server_config_ = server_config
         self.model_name2versions2session_ = {}
+        self.model_name2default_graph_name_ = {}
 
     def build_and_start(self):
         # read model config
         # TODO: support pass model config directly
-        assert server_config.HasField("model_config_file")
+        assert server_config.HasField("model_config_prototxt")
         model_config_list_proto = model_config_pb.ModelConfigList()
-        with open(server_config.model_config_file, "rb") as f:
+        with open(server_config.model_config_prototxt, "rb") as f:
             text_format.Merge(f.read(), model_config_list_proto)
 
         # load model
         # TODO: support multi model through subprocess
-        assert len(model_config_list_proto.configs) == 1
-        model_config = model_config_list_proto.configs[0]
+        assert len(model_config_list_proto.model_config) == 1
+        model_config = model_config_list_proto.model_config[0]
         self.load_model(model_config)
 
         # start grpc server
@@ -94,9 +95,7 @@ class ModelServer(object):
         if model_name not in self.model_name2versions2session_:
             self.model_name2versions2session_[model_name] = {}
 
-        # load saved_model proto
         model_path = model_config.saved_model_path
-        model_meta_file_name = model_config.saved_model_meta_file_name
         model_version = find_model_latest_version(model_path)
         if model_version in self.model_name2versions2session_[model_name]:
             raise ValueError(
@@ -105,10 +104,24 @@ class ModelServer(object):
                 )
             )
 
-        model_meta_file_path = os.path.join(
-            model_path, str(model_version), model_meta_file_name
-        )
-        saved_model_proto = load_saved_model(model_meta_file_path)
+        # load saved_model proto
+        saved_model_proto = saved_model_pb.SavedModel()
+        if model_config.HasField("saved_model_pb_file_name"):
+            pb_file_path = os.path.join(
+                model_path, str(model_version), model_config.saved_model_pb_file_name
+            )
+            with open(pb_file_path, "rb") as f:
+                saved_model_proto.ParseFromString(f.read())
+        elif model_config.HasField("saved_model_prototxt_file_name"):
+            prototxt_file_path = os.path.join(
+                model_path,
+                str(model_version),
+                model_config.saved_model_prototxt_file_name,
+            )
+            with open(prototxt_file_path, "rt") as f:
+                text_format.Merge(f.read(), saved_model_proto)
+        else:
+            raise ValueError("")
 
         # create session
         option = flow.SessionOption()
@@ -116,12 +129,11 @@ class ModelServer(object):
             option.device_tag = model_config.device_tag
         if model_config.HasField("device_num"):
             option.device_num = model_config.device_num
-
         sess = flow.SimpleSession(option)
 
         # set checkpoint dir
         checkpoint_path = os.path.join(
-            model_path, str(model_version), saved_model_proto.checkpoint_dir[0],
+            model_path, str(model_version), saved_model_proto.checkpoint_dir,
         )
         sess.set_checkpoint_path(checkpoint_path)
 
@@ -144,15 +156,18 @@ class ModelServer(object):
             with sess.open(graph_name):
                 sess.compile(graph_def.op_list)
 
+            if model_name not in self.model_name2default_graph_name_:
+                self.model_name2default_graph_name_[model_name] = graph_name
+
             print(
-                "graph ({}) with signature ({}) add to model ({})".format(
+                "graph ({}) with signature ({}) is added to model ({})".format(
                     graph_name, signature_name, model_name
                 )
             )
 
         graph_name = None
-        for graph_config in model_config.graphs:
-            graph_name = graph_config.graph_name
+        for graph_config in model_config.graph_config:
+            graph_name = graph_config.name
             signature_name = None
             if graph_config.HasField("signature_name"):
                 signature_name = graph_config.signature_name
@@ -162,13 +177,13 @@ class ModelServer(object):
         if graph_name is None:
             if saved_model_proto.HasField("default_graph_name"):
                 graph_name = saved_model_proto.default_graph_name
+                add_graph(graph_name)
             else:
                 raise ValueError(
                     "saved model {} has no default graph name, you should set model_config.graph_name".format(
                         model_name
                     )
                 )
-            add_graph(graph_name)
 
         sess.launch()
 
@@ -215,7 +230,19 @@ class ModelServer(object):
                 print("{} dtype: {}".format(input_name, inputs[input_name].dtype))
 
         print("ready to run")
-        outputs = sess.run(model_spec.function_name, **inputs)
+        graph_name = None
+        if model_spec.HasField("graph_name"):
+            graph_name = model_spec.graph_name
+        elif model_name in self.model_name2default_graph_name_:
+            graph_name = self.model_name2default_graph_name_[model_name]
+        else:
+            raise ValueError(
+                "model ({}) has no default graph, graph_name must be set in model_spec".format(
+                    model_name
+                )
+            )
+
+        outputs = sess.run(graph_name, **inputs)
         output_dict = {}
         for i, output_name in enumerate(sess.list_outputs()):
             output_dict[output_name] = outputs[i]
@@ -241,28 +268,23 @@ def find_model_latest_version(saved_model_path):
     return version_dirs[0]
 
 
-def load_saved_model(model_meta_file_path):
-    saved_model_proto = saved_model_pb.SavedModel()
-    with open(model_meta_file_path, "rb") as f:
-        text_format.Merge(f.read(), saved_model_proto)
-    return saved_model_proto
-
-
 if __name__ == "__main__":
-    print("start model server")
-    # test_code: generate model_config
-    model_server_config = model_config_pb.ModelServerConfig()
-    model_config = model_config_pb.ModelConfig()
-    model_config.name = "resnet50"
-    # model_config.path = "alexnet_models"
-    model_config.path = "resnet50_models"
-    model_server_config.model_config_list.append(model_config)
-    with open("model_config.prototxt", "w") as f:
-        f.write("{}\n".format(str(model_server_config)))
+    import argparse
 
-    # test_code: init server
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--port", type=int, default=9887, help="port for grpc",
+    )
+    parser.add_argument(
+        "--model_config_prototxt",
+        type=str,
+        default="model_config.prototxt",
+        help="model config file",
+    )
+    args = parser.parse_args()
+
     server_config = server_config_pb.ServerConfig()
-    server_config.port = 9887
-    server_config.model_config_file = "model_config.prototxt"
+    server_config.port = args.port
+    server_config.model_config_prototxt = args.model_config_prototxt
     server = ModelServer(server_config)
     server.build_and_start()
