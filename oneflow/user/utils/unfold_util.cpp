@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace user_op {
+
 namespace {
 
 std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
@@ -101,5 +103,7 @@ Shape ParamsUnfold3D::GetXShape5D() const {
 Shape ParamsUnfold3D::GetYShape5D() const {
   return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
 }
+
+}  // namespace user_op
 
 }  // namespace oneflow

@@ -235,7 +235,9 @@ class TestUnfoldPadding(flow.unittest.TestCase):
             strides = _GetSequence(strides, dim, "strides")
             dilation_rate = _GetSequence(dilation_rate, dim, "dilation_rate")
             in_dhw = list(x_shape)[-dim:]
-            valid_case, torch_padding = _GetTorchPadding(padding, 2, in_dhw, ksize, strides, dilation_rate)
+            valid_case, torch_padding = _GetTorchPadding(
+                padding, 2, in_dhw, ksize, strides, dilation_rate
+            )
 
             # Random inputs
             x = np.random.randn(*x_shape).astype(type_name_to_np_type[data_type])
@@ -245,10 +247,7 @@ class TestUnfoldPadding(flow.unittest.TestCase):
                 x, requires_grad=True, device=torch_device, dtype=torch.float
             )
             model = torch.nn.Unfold(
-                ksize,
-                stride=strides,
-                padding=torch_padding,
-                dilation=dilation_rate,
+                ksize, stride=strides, padding=torch_padding, dilation=dilation_rate,
             )
             model.to(torch_device)
             y_torch = model(x_torch)

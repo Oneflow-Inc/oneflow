@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace user_op {
+
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
@@ -216,5 +218,7 @@ REGISTER_USER_OP("unfold_3d_grad")
     .SetGetSbpFn(BwGetSbpFn);
 
 REGISTER_USER_OP_GRAD("unfold_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn(3));
+
+}  // namespace user_op
 
 }  // namespace oneflow
