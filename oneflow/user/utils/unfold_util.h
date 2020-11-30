@@ -15,11 +15,15 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_UTILS_UNFOLD_UTIL_H_
 #define ONEFLOW_USER_UTILS_UNFOLD_UTIL_H_
+#ifdef WITH_CUDA
 #include "oneflow/core/device/cudnn_util.h"
+#endif  // WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 
 namespace oneflow {
+
+namespace user_op {
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
@@ -59,6 +63,8 @@ class ParamsUnfold3D {
   int64_t batch_num_;
   int64_t channel_num_;
 };
+
+}  // namespace user_op
 
 }  // namespace oneflow
 
