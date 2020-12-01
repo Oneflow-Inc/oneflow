@@ -23,5 +23,5 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
   m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
-  m.def("LaunchJob", &LaunchJob);
+  m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
 }
