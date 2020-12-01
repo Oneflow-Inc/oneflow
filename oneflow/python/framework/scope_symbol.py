@@ -45,7 +45,7 @@ class ScopeSymbol(Symbol):
 
     @property
     def session_id(self):
-        return self.data.session_id
+        return self.data.session_id()
 
     @property
     def job_desc_symbol(self):
