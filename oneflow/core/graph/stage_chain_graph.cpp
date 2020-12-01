@@ -56,7 +56,7 @@ Maybe<void> StageChainGraph::InitNodes(
   std::function<Maybe<const std::set<const ComputeNode*>&>(const ComputeNode&)>
       OtherStageAncestors4ComputeNode;
   JUST(MakeGetterOtherStageAncestors4ComputeNode(compute_graph, &OtherStageAncestors4ComputeNode));
-  using StagePlacementId2NodesT = HashMap<int64_t, std::shared_ptr<HashSet<const ComputeNode*>>>;
+  using StagePlacementId2NodesT = HashMap<int64_t, std::shared_ptr<std::list<const ComputeNode*>>>;
   std::map<std::set<const ComputeNode*>, StagePlacementId2NodesT>
       other_stage_ancestors2compute_nodes;
   JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& compute_node) -> Maybe<void> {
@@ -64,8 +64,8 @@ Maybe<void> StageChainGraph::InitNodes(
     auto* stage_placement_id2nodes = &other_stage_ancestors2compute_nodes[ancestors];
     int64_t stage_placement_id = compute_node.scope().Int64("stage_placement_id");
     auto* group = &(*stage_placement_id2nodes)[stage_placement_id];
-    if (!*group) { group->reset(new HashSet<const ComputeNode*>()); }
-    (*group)->insert(&compute_node);
+    if (!*group) { group->reset(new std::list<const ComputeNode*>()); }
+    (*group)->push_back(&compute_node);
     return Maybe<void>::Ok();
   }));
   for (const auto& ancestors7nodes : other_stage_ancestors2compute_nodes) {
