@@ -43,7 +43,7 @@ class Test1dBufferOp(flow.unittest.TestCase):
             with flow.scope.placement(
                 "cpu", device_name
             ), flow.experimental.scope.config(
-                stage_buffer_size=buffer_size, stage_id=0
+                stage_weight_buffer_size=buffer_size, stage_placement_id=0
             ):
                 w = flow.get_variable(
                     "w",
@@ -53,6 +53,20 @@ class Test1dBufferOp(flow.unittest.TestCase):
                 )
                 x = w + flow.constant_like(w, value=0.0, dtype=flow.float)
                 loss = flow.matmul(x, x) + flow.matmul(w, w)
+
+            with flow.scope.placement(
+                "cpu", device_name
+            ), flow.experimental.scope.config(
+                stage_weight_buffer_size=buffer_size, stage_placement_id=1
+            ):
+                loss = loss + 1
+
+            with flow.scope.placement(
+                "cpu", device_name
+            ), flow.experimental.scope.config(
+                stage_weight_buffer_size=buffer_size, stage_placement_id=2
+            ):
+                loss = loss + 1
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [-10.0]), momentum=0
                 ).minimize(loss)
