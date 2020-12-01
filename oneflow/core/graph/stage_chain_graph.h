@@ -43,21 +43,21 @@ class StageChainNode : public Node<StageChainNode, StageChainEdge> {
 
   int64_t stage_placement_id() const { return stage_placement_id_; }
 
-  const HashSet<const ComputeNode*>& compute_nodes() const { return *compute_nodes_; }
+  const std::list<const ComputeNode*>& compute_nodes() const { return *compute_nodes_; }
 
   std::string VisualStr() const override;
 
  private:
   StageChainNode() = default;
   Maybe<void> Init(int64_t stage_placement_id,
-                   const std::shared_ptr<HashSet<const ComputeNode*>>& compute_nodes) {
+                   const std::shared_ptr<std::list<const ComputeNode*>>& compute_nodes) {
     stage_placement_id_ = stage_placement_id;
     compute_nodes_ = compute_nodes;
     return Maybe<void>::Ok();
   }
 
   int64_t stage_placement_id_;
-  std::shared_ptr<HashSet<const ComputeNode*>> compute_nodes_;
+  std::shared_ptr<std::list<const ComputeNode*>> compute_nodes_;
 };
 
 class StageChainEdge : public Edge<StageChainNode, StageChainEdge> {

@@ -34,6 +34,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.pb_util as pb_util
 import oneflow.python.framework.attr_util as attr_util
+import oneflow.python.framework.stage as stage_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
@@ -66,9 +67,9 @@ class FunctionConfig(object):
 
         return FunctionConfigSetter
 
-    def ssp_placement(self, *placements, stage_partition_strategy="naive_sequantial"):
+    def ssp_placement(self, *stages, stage_partition_strategy="naive_sequantial"):
         self.enable_stage_partition(True)
-        self.stage_partition_scope_ids(_GetScopeSymbolIds(placements))
+        self.stage_partition_scope_ids(_GetScopeSymbolIds(stages))
         self.stage_partition_strategy(stage_partition_strategy)
         self.enable_ssp_variable_proxy(True)
         self.enable_stage_buffer(True)
@@ -866,12 +867,35 @@ def deprecated_set_default_distribute_strategy(*args, **kwargs):
     set_default_distribute_strategy(*args, **kwargs)
 
 
-def _GetScopeSymbolIds(placements):
+def _GetScopeSymbolIds(stages):
     scope_symbol_ids = []
-    num = len(placements)
-    for i in range(num):
-        with placements[i], oneflow.experimental.scope.config(
-            stage_weight_buffer_size=num - i, stage_placement_id=i
-        ):
-            scope_symbol_ids.append(oneflow.current_scope().symbol_id)
+    assert all(x.stage_placement_id is None for x in stages) or all(
+        x.stage_placement_id is not None for x in stages
+    )
+    assert all(x.stage_weight_buffer_size is None for x in stages) or all(
+        x.stage_weight_buffer_size is not None for x in stages
+    )
+    num = len(stages)
+    for i, stage in enumerate(stages):
+        assert isinstance(stage, stage_util.Stage)
+        stage_placement_id = stage.stage_placement_id
+        if stage_placement_id is None:
+            stage_placement_id = i
+        else:
+            assert isinstance(stage_placement_id, int)
+            assert stage_placement_id >= 0
+            assert stage_placement_id < num
+        stage_weight_buffer_size = stage.stage_weight_buffer_size
+        if stage_weight_buffer_size is None:
+            stage_weight_buffer_size = num - i
+        else:
+            assert isinstance(stage_weight_buffer_size, int)
+            assert stage_weight_buffer_size > 0
+
+        for placement in stage.placements:
+            with placement, oneflow.experimental.scope.config(
+                stage_weight_buffer_size=stage_weight_buffer_size,
+                stage_placement_id=stage_placement_id,
+            ):
+                scope_symbol_ids.append(oneflow.current_scope().symbol_id)
     return scope_symbol_ids

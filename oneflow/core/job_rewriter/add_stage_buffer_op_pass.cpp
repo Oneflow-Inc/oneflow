@@ -44,8 +44,8 @@ class AddStageBufferOpPass final : public JobPass {
     auto stage_chain_graph = JUST(StageChainGraph::New(*compute_graph));
     {
       std::string job_name = ctx->job_desc().job_name();
-      compute_graph->ToDotWithFilePath(job_name + "-compute_graph.dot");
-      stage_chain_graph->ToDotWithFilePath(job_name + "-stage_chain_graph.dot");
+      compute_graph->ToDotWithFilePath(std::string("compute_graph-") + job_name + ".dot");
+      stage_chain_graph->ToDotWithFilePath(std::string("stage_chain_graph-") + job_name + ".dot");
     }
     JobBuilder job_builder(job);
     return Apply(*compute_graph, *stage_chain_graph, &job_builder);
