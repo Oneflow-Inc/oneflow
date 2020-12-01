@@ -101,11 +101,9 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     CHECK_EQ(cur_node->chain_id(), -1);
     cur_node->set_chain_id(this_chain_id);
 
-    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
-      // NOTE(chengcheng): use area_id to not merge optimizer ops with fw/bw ops
+    cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
-          && this_node->area_id() == next_node->area_id()) {
+          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
