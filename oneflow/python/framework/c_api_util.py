@@ -584,16 +584,16 @@ def GetScopeConfigDef():
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, symbols)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
+    error = oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, symbols)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
     symbols = str(text_format.MessageToString(eager_symbol_list))
-    error_str = oneflow_api.vm.RunPhysicalInstruction(vm_instruction_list, symbols)
-    error = text_format.Parse(error_str, error_util.ErrorProto())
+    error = oneflow_api.vm.RunPhysicalInstruction(vm_instruction_list, symbols)
+    if error.has_error_type():
+        raise JobBuildAndInferCfgError(error)
 
 
 def CurrentMachineId():
