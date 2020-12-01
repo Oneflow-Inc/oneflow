@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -517,7 +518,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
-void FilterOpName2ParallelBlobConf(
+Maybe<void> FilterOpName2ParallelBlobConf(
     const HashSet<OperatorConf::OpTypeCase>& match, const std::vector<std::shared_ptr<Job>>& jobs,
     HashMap<std::string, ParallelBlobConf>* op_name2parallel_blob_conf) {
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
@@ -531,10 +532,11 @@ void FilterOpName2ParallelBlobConf(
       } else {
         ParallelBlobConf parallel_blob_conf;
         GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
-        CHECK(parallel_blob_conf == iter->second);
+        CHECK_OR_RETURN(parallel_blob_conf == iter->second);
       }
     }
   }
+  return Maybe<void>::Ok();
 }
 
 void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>>& jobs) {
@@ -900,8 +902,8 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
-                                  &var_op_name2parallel_blob_conf);
+    JUST(FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
+                                       &var_op_name2parallel_blob_conf));
     auto AppendJob = [&](Job* job) {
       JobDesc job_desc(job->job_conf(), jobs.size());
       CHECK(!job_desc.Bool("__is_user_function__"));
@@ -923,11 +925,11 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
-                                  &push_op_name2parallel_blob_conf);
+    JUST(FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
+                                       &push_op_name2parallel_blob_conf));
     HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
-                                  &pull_op_name2parallel_blob_conf);
+    JUST(FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
+                                       &pull_op_name2parallel_blob_conf));
     for (const auto& pair : push_op_name2parallel_blob_conf) {
       auto push_job = std::make_shared<Job>();
       MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second,

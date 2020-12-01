@@ -34,9 +34,9 @@ class AddSspVariableProxyPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const OpGraph op_graph(*job);
+    auto op_graph = JUST(OpGraph::New(*job));
     JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
+    return Apply(*op_graph, &job_builder);
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {

@@ -34,7 +34,6 @@ class AutoTrainStep final : public JobPass {
 
 Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   if (!ctx->job_desc().IsTrain()) { return Maybe<void>::Ok(); }
-  const OpGraph op_graph(*job);
   const TrainConf& train_conf = job->job_conf().train_conf();
   if (train_conf.has_train_step_lbn()) {
     CHECK_OR_RETURN(!train_conf.has_dynamic_loss_scale_policy());

@@ -34,8 +34,8 @@ class AutoLearningRate final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const OpGraph op_graph(*job);
-    return Apply(op_graph, job);
+    auto op_graph = JUST(OpGraph::New(*job));
+    return Apply(*op_graph, job);
   }
 };
 

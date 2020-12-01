@@ -482,7 +482,8 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
-void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const {
+Maybe<void> OpGraph::InferOpNodeSbpSignature(OpNode* op_node,
+                                             const SbpSignature& sbp_sig_conf) const {
   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
@@ -490,16 +491,17 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const SbpParallel* sbp = &producer->SbpParallel4Lbi(lbi);
-    const OptInt64* batch_axis = CHECK_JUST(producer->BatchAxis4Lbi(lbi));
+    const OptInt64* batch_axis = JUST(producer->BatchAxis4Lbi(lbi));
     ibn2sbp_infer_hint.emplace(ibn,
                                SbpInferHint(parallel_desc, logical_blob_desc, sbp, batch_axis));
   }
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
     return op_node->op().BatchAxis4BnInOp(bn_in_op);
   };
-  CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
-                                 ibn2sbp_infer_hint, BatchAxis4BnInOp));
+  JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
+                           ibn2sbp_infer_hint, BatchAxis4BnInOp));
   op_node->InitLbi2SbpParallel();
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const {
@@ -599,7 +601,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       const auto& iter = op_name2sbp_sig_conf.find(op_node->op().op_name());
       if (iter != op_name2sbp_sig_conf.end()) { sbp_sig_conf = iter->second; }
     }
-    InferOpNodeSbpSignature(op_node, sbp_sig_conf);
+    JUST(InferOpNodeSbpSignature(op_node, sbp_sig_conf));
     op_node->InferBlobParallelDesc();
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     // Infer logical_blob_desc

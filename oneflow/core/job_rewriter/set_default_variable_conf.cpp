@@ -24,9 +24,9 @@ namespace {
 class SetDefaultVariableConf final : public JobPass {
  public:
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    const OpGraph op_graph(*job);
+    auto op_graph = JUST(OpGraph::New(*job));
     JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
+    return Apply(*op_graph, &job_builder);
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {

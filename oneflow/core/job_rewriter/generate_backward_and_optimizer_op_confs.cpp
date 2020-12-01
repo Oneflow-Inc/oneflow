@@ -164,7 +164,8 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
 
 Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-  const OpGraph op_graph(*job);
+  const auto& op_graph_ptr = JUST(OpGraph::New(*job));
+  const OpGraph& op_graph = *op_graph_ptr;
   auto job_builder = std::make_shared<JobBuilder>(job);
   const JobBuilder* old_job_builder = job_builder.get();
   LogicalBlobId total_loss_instance_num;
