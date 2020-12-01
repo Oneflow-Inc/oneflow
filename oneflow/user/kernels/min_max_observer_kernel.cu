@@ -96,7 +96,7 @@ __global__ void ReduceMaxMinPerChannel(const T *input_ptr, const int64_t element
       gpu_atomic_max(&min_ptr[cur_channel], shared_min[0]);
     }
 
-    __syncthreads();
+    // __syncthreads();
     cur_channel += gridDim.x;
   }
 }
