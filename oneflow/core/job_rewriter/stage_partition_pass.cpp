@@ -72,10 +72,10 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
   ~NaiveSequantialStagePartitionStrategy() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    const OpGraph op_graph(*job);
+    auto op_graph = JUST(OpGraph::New(*job));
     JobBuilder job_builder(job);
     JUST(ForEachStageScope4TrainableFwOp(
-        op_graph, ctx->job_desc(),
+        *op_graph, ctx->job_desc(),
         [&](const OpNode* op_node, const Scope& scope, int64_t scope_symbol_id) -> Maybe<void> {
           // Sets scope_symbol_id
           std::vector<OperatorConf> op_confs(1);
@@ -256,22 +256,21 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
   Maybe<void> FuseOtherFwOpsToBackboneOps(
       const OpGraph& op_graph, const HashSet<OpNode*>& backbone_op_nodes,
       HashMap<OpNode*, OpNode*>* other_fw_op2backbone_op) const {
-    const auto& ForEachNextOther = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-      node->ForEachNodeOnInEdge([&](OpNode* in_node) {
-        if (backbone_op_nodes.count(in_node) > 0) { return; }
+    const auto& ForEachOtherNext = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+      node->ForEachNodeOnInOutEdge([&](OpNode* next_node) {
+        if (backbone_op_nodes.count(next_node) > 0) { return; }
         // It's safe to update container other_fw_op2backbone_op when traversing.
-        if (other_fw_op2backbone_op->count(in_node) > 0) { return; }
+        if (other_fw_op2backbone_op->count(next_node) > 0) { return; }
         // Traverses other nodes.
-        Handler(in_node);
+        Handler(next_node);
       });
     };
-    const auto& DoEachBackboneOp = [&](OpNode* backbone_op_node) {
-      op_graph.BfsForEachNode({backbone_op_node}, ForEachNextOther, [&](OpNode* other) {
+    JUST(BfsForEachBackboneOp(op_graph, backbone_op_nodes, [&](OpNode* backbone_op_node) {
+      op_graph.BfsForEachNode({backbone_op_node}, ForEachOtherNext, [&](OpNode* other) {
         if (backbone_op_nodes.count(other) > 0) { return; }
         (*other_fw_op2backbone_op)[other] = backbone_op_node;
       });
-    };
-    JUST(BfsForEachBackboneOp(op_graph, backbone_op_nodes, DoEachBackboneOp));
+    }));
     return Maybe<void>::Ok();
   }
 

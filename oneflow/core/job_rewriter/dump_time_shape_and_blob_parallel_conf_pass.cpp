@@ -38,8 +38,8 @@ class DumpTimeShapeAndBlobParallelConfPass final : public JobPass {
   }
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    const OpGraph op_graph(*job);
-    return Apply(op_graph, job);
+    auto op_graph = JUST(OpGraph::New(*job));
+    return Apply(*op_graph, job);
   }
 };
 

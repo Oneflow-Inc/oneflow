@@ -37,7 +37,6 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
   const TrainConf& train_conf = job->job_conf().train_conf();
   if (!train_conf.has_dynamic_loss_scale_policy()) { return Maybe<void>::Ok(); }
   const auto& policy = train_conf.dynamic_loss_scale_policy();
-  const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   int64_t scope_symbol_id;
