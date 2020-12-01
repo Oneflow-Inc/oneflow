@@ -175,9 +175,9 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
 cd oneflow-documentation/cn/docs/code/quick_start/
 ```
-2. Run it in Python
+2. Run it in Python3
 ```
-python mlp_mnist.py
+python3 mlp_mnist.py
 ```
 
 3. Oneflow is running and you got the training loss
