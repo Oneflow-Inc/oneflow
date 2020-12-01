@@ -32,16 +32,16 @@ def _test(test_case, device_type, type_name_value):
     type_name, value = type_name_value
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-
+    flow_type = type_name_to_flow_type(type_name)
+    np_type = type_name_to_np_type(type_name)
     shape = (1024, 1024)
 
     @flow.global_function(function_config=func_config)
     def constant_job():
-        flow_type = type_name_to_flow_type(type_name)
-        return flow.constant(value, dtype=flow_type, shape=shape)
+        with flow.scope.placement(device_type, "0:0"):
+            return flow.constant(value, dtype=flow_type, shape=shape)
 
     of_out = constant_job().get().numpy()
-    np_type = type_name_to_np_type(type_name)
     test_case.assertTrue(np.array_equal(of_out, np.full(shape, value).astype(np_type)))
 
 
