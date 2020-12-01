@@ -13,10 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
+#define ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
+
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+template<typename Key, typename T, typename Hash = std::hash<Key>>
+using HashMap = std::unordered_map<Key, T, Hash>;
+
+template<typename Key, typename Hash = std::hash<Key>>
+using HashSet = std::unordered_set<Key, Hash>;
 
 template<typename MapT, typename KeyT>
 Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, const KeyT& key) {
@@ -26,3 +35,5 @@ Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, 
 }
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_

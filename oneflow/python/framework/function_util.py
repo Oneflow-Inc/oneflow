@@ -871,7 +871,7 @@ def _GetScopeSymbolIds(placements):
     num = len(placements)
     for i in range(num):
         with placements[i], oneflow.experimental.scope.config(
-            stage_buffer_size=num - i, stage_id=i
+            stage_weight_buffer_size=num - i, stage_placement_id=i
         ):
             scope_symbol_ids.append(oneflow.current_scope().symbol_id)
     return scope_symbol_ids
