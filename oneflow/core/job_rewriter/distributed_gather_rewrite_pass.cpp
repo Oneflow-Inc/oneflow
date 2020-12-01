@@ -151,8 +151,17 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
         sync_dynamic_resize_conf->set_axis(0);
         job_builder.AddOps(parallel_conf, {sync_dynamic_resize_op_conf});
 
-        sparse_ids.at(j).push_back(GenLogicalBlobName(sync_dynamic_resize_op_conf.name(),
-                                                      sync_dynamic_resize_conf->out()));
+        OperatorConf identity_op_conf{};
+        identity_op_conf.set_name(op_name + "-Identity" + std::to_string(j) + std::to_string(i));
+        IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
+        identity_conf->set_in(GenLogicalBlobName(sync_dynamic_resize_op_conf.name(),
+                                                 sync_dynamic_resize_conf->out()));
+        identity_conf->set_out("out");
+        identity_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+        job_builder.AddOps(parallel_conf, {identity_op_conf});
+
+        sparse_ids.at(j).push_back(
+            GenLogicalBlobName(identity_op_conf.name(), identity_conf->out()));
       }
     }
     std::vector<std::vector<std::string>> gathered_out(parallel_num);
@@ -199,7 +208,16 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
       auto split_like_op = split_like_op_builder.Build();
       job_builder.AddOps(parallel_conf, {split_like_op.op_conf()});
       FOR_RANGE(int32_t, j, 0, parallel_num) {
-        gathered_out.at(j).push_back(split_like_op.output("out", j));
+        OperatorConf identity_op_conf{};
+        identity_op_conf.set_name(op_name + "-split_like_identity" + std::to_string(j)
+                                  + std::to_string(i));
+        IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
+        identity_conf->set_in(split_like_op.output("out", j));
+        identity_conf->set_out("out");
+        identity_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+        job_builder.AddOps(parallel_conf, {identity_op_conf});
+        gathered_out.at(j).push_back(
+            GenLogicalBlobName(identity_op_conf.name(), identity_conf->out()));
       }
     }
     std::vector<std::string> out_list;
@@ -217,7 +235,16 @@ Maybe<void> DistributedGatherRewritePass::Apply(Job* job, JobPassCtx* ctx) const
           .Attr<int64_t>("max_dim_size", max_dim_size)
           .ScopeSymbolId(op_conf.scope_symbol_id());
       FOR_RANGE(int32_t, j, 0, parallel_num) {
-        concat_gather_op_builder.Input("in", gathered_out.at(i).at(j));
+        OperatorConf identity_op_conf{};
+        identity_op_conf.set_name(op_name + "-concat_gather_identity" + std::to_string(j)
+                                  + std::to_string(i));
+        IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
+        identity_conf->set_in(gathered_out.at(i).at(j));
+        identity_conf->set_out("out");
+        identity_op_conf.set_scope_symbol_id(op_conf.scope_symbol_id());
+        job_builder.AddOps(parallel_conf, {identity_op_conf});
+        concat_gather_op_builder.Input(
+            "in", GenLogicalBlobName(identity_op_conf.name(), identity_conf->out()));
       }
       auto concat_gather_op = concat_gather_op_builder.Build();
       job_builder.AddOps(parallel_conf, {concat_gather_op.op_conf()});
