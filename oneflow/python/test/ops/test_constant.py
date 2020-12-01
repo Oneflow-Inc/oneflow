@@ -32,8 +32,8 @@ def _test(test_case, device_type, type_name_value):
     type_name, value = type_name_value
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow_type = type_name_to_flow_type(type_name)
-    np_type = type_name_to_np_type(type_name)
+    flow_type = type_name_to_flow_type[type_name]
+    np_type = type_name_to_np_type[type_name]
     shape = (1024, 1024)
 
     @flow.global_function(function_config=func_config)
@@ -51,24 +51,24 @@ class TestConstant(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["type_name_value"] = [
-            (flow.float, 0),
-            (flow.float, 0.0),
-            (flow.float, 1),
-            (flow.float, 1.0),
-            (flow.float, -1),
-            (flow.float, -1.0),
-            (flow.float, math.pi),
-            (flow.float, -math.pi),
-            (flow.float, float("inf")),
-            (flow.float, float("-inf")),
-            (flow.int32, 0),
-            (flow.int32, 0.0),
-            (flow.int32, 1),
-            (flow.int32, 1.0),
-            (flow.int32, -1),
-            (flow.int32, -1.0),
-            (flow.int32, 2 ** 31 - 1),
-            (flow.int32, -(2 ** 31)),
+            ("float32", 0),
+            ("float32", 0.0),
+            ("float32", 1),
+            ("float32", 1.0),
+            ("float32", -1),
+            ("float32", -1.0),
+            ("float32", math.pi),
+            ("float32", -math.pi),
+            ("float32", float("inf")),
+            ("float32", float("-inf")),
+            ("int32", 0),
+            ("int32", 0.0),
+            ("int32", 1),
+            ("int32", 1.0),
+            ("int32", -1),
+            ("int32", -1.0),
+            ("int32", 2 ** 31 - 1),
+            ("int32", -(2 ** 31)),
         ]
         for arg in GenArgList(arg_dict):
             _test(test_case, *arg)
