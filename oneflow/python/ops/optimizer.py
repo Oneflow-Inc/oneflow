@@ -498,8 +498,8 @@ class PiecewiseScalingScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.PolynomialSchduler")
-class PolynomialSchduler(LrScheduler):
+@oneflow_export("optimizer.PolynomialScheduler")
+class PolynomialScheduler(LrScheduler):
     r"""This operator creates a polynomial decayed learning rate scheduler.
 
     The learning rate will be updated as follows:
