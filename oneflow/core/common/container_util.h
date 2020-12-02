@@ -34,6 +34,13 @@ Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, 
   return iter->second;
 }
 
+template<typename VecT>
+Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec, int64_t index) {
+  CHECK_GE_OR_RETURN(index, 0);
+  CHECK_LT_OR_RETURN(index, vec.size());
+  return vec.at(index);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_

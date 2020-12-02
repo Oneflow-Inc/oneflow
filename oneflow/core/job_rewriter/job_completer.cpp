@@ -107,6 +107,31 @@ Maybe<void> DumpScopeSymbol(Job* job) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> DumpParallelDescSymbol(Job* job) {
+  auto* map = job->mutable_helper()->mutable_symbol_id2symbol();
+  const auto& Dump = [&](int64_t parallel_desc_symbol_id) -> Maybe<void> {
+    const auto& iter = map->find(parallel_desc_symbol_id);
+    if (iter != map->end()) {
+      CHECK_OR_RETURN(iter->second.has_parallel_conf_symbol());
+      return Maybe<void>::Ok();
+    }
+    auto* symbol = &(*map)[parallel_desc_symbol_id];
+    symbol->set_symbol_id(parallel_desc_symbol_id);
+    const auto& parallel_desc =
+        JUST(Global<vm::SymbolStorage<ParallelDesc>>::Get()->MaybeGet(parallel_desc_symbol_id));
+    symbol->mutable_parallel_conf_symbol()->CopyFrom(parallel_desc.parallel_conf());
+    return Maybe<void>::Ok();
+  };
+  for (const auto& op : job->net().op()) {
+    int64_t symbol_id = op.scope_symbol_id();
+    if (symbol_id == 0) { continue; }
+    const auto& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(symbol_id));
+    JUST(Dump(scope.scope_proto().device_parallel_desc_symbol_id()));
+    JUST(Dump(scope.scope_proto().host_parallel_desc_symbol_id()));
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 Maybe<void> JobCompleter::Complete(Job* job) const {
@@ -134,6 +159,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
 #endif  // OF_WITH_XRT
   }
   JUST(DumpScopeSymbol(job));
+  JUST(DumpParallelDescSymbol(job));
   CheckOpGraph(OpGraph(*job));
   return Maybe<void>::Ok();
 }
