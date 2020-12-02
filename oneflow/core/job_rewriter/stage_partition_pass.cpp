@@ -82,7 +82,7 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
     std::function<Maybe<int64_t>(int64_t old_scope, int64_t stage_scope)> GetMergedScopeSymbolId;
     MakeGetterGetMergedScopeSymbolId(&GetMergedScopeSymbolId);
     JUST(ForEachStageScope4TrainableFwOp(
-        op_graph, ctx->job_desc(),
+        *op_graph, ctx->job_desc(),
         [&](const OpNode* op_node, int64_t stage_scope_symbol_id) -> Maybe<void> {
           const auto& old_op_conf = op_node->op().op_conf();
           CHECK_OR_RETURN(old_op_conf.has_scope_symbol_id());

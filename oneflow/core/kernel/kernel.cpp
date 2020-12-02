@@ -59,11 +59,7 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
 
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  LOG(ERROR) << this << " ENTER";
-  LOG(ERROR) << this << " op_name: " << this->op_conf().name();
-
   Forward(ctx, BnInOp2Blob);
-  LOG(ERROR) << this << " LEAVE";
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {

@@ -226,9 +226,7 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
     buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(cb);
   }
   buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(cb);
-  LOG(ERROR) << "BEFORE";
   Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(job_id);
-  LOG(ERROR) << "after";
   return Maybe<void>::Ok();
 }
 
