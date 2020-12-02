@@ -22,7 +22,9 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/range.h"
-#include "oneflow/core/common/map_util.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/graph/compute_graph.h"
+#include "oneflow/core/graph/stage_chain_graph.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
@@ -38,8 +40,15 @@ class AddStageBufferOpPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    auto compute_graph = JUST(ComputeGraph::New(*job));
+    auto stage_chain_graph = JUST(StageChainGraph::New(*compute_graph));
+    {
+      std::string job_name = ctx->job_desc().job_name();
+      compute_graph->ToDotWithFilePath(std::string("compute_graph-") + job_name + ".dot");
+      stage_chain_graph->ToDotWithFilePath(std::string("stage_chain_graph-") + job_name + ".dot");
+    }
     JobBuilder job_builder(job);
-    return Apply(&job_builder);
+    return Apply(*compute_graph, *stage_chain_graph, &job_builder);
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
@@ -59,16 +68,13 @@ class AddStageBufferOpPass final : public JobPass {
 
   using StageBuffers = std::vector<std::shared_ptr<StageBuffer>>;
 
-  Maybe<void> Apply(JobBuilder* job_builder) const {
+  Maybe<void> Apply(const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
+                    JobBuilder* job_builder) const {
     HashMap<LogicalBlobId, StageBuffers> produced_lbi2stage_buffers;
-    HashMap<std::string, std::shared_ptr<Operator>> op_name2op;
-    JUST(job_builder->ForEachOperator([&](const std::shared_ptr<Operator>& op) -> Maybe<void> {
-      CHECK_OR_RETURN(op_name2op.emplace(op->op_name(), op).second);
-      return Maybe<void>::Ok();
-    }));
     HashMap<const Operator*, StageBuffers> consumer_op2stage_buffers;
     JUST(ForEachStageBuffer(
-        op_name2op, [&](const std::shared_ptr<StageBuffer>& stage_buffer) -> Maybe<void> {
+        compute_graph, stage_chain_graph,
+        [&](const std::shared_ptr<StageBuffer>& stage_buffer) -> Maybe<void> {
           CHECK_GT_OR_RETURN(stage_buffer->buffer_size, 0);
           produced_lbi2stage_buffers[stage_buffer->produced_lbi].push_back(stage_buffer);
           consumer_op2stage_buffers[stage_buffer->consumer_op].push_back(stage_buffer);
@@ -84,25 +90,25 @@ class AddStageBufferOpPass final : public JobPass {
   }
 
   Maybe<void> ForEachStageBuffer(
-      const HashMap<std::string, std::shared_ptr<Operator>>& op_name2op,
+      const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
       const std::function<Maybe<void>(const std::shared_ptr<StageBuffer>&)>& DoEach) const {
     std::function<Maybe<int64_t>(const LogicalBlobId&)> BufferSize4Lbi;
-    JUST(MakeGetterBufferSize4Lbi(op_name2op, &BufferSize4Lbi));
+    JUST(MakeGetterBufferSize4Lbi(compute_graph, &BufferSize4Lbi));
     JUST(ForEachLbi7Consumer7RequiredBufferSize(
-        op_name2op,
+        compute_graph, stage_chain_graph,
         [&](const LogicalBlobId& lbi, const Operator* consumer_op,
             int64_t required_buffer_size) -> Maybe<void> {
           int64_t lbi_buffer_size = JUST(BufferSize4Lbi(lbi));
           CHECK_GT(lbi_buffer_size, 0);
           // buffer size provided: (stage_buffer->buffer_size + lbi_buffer_size)
           // buffer size required: required_buffer_size
-          // (stage_buffer->buffer_size + lbi_buffer_size) >= required_buffer_size
+          // (stage_buffer->buffer_size + lbi_buffer_size) == required_buffer_size
           if (required_buffer_size <= lbi_buffer_size) { return Maybe<void>::Ok(); }
           auto stage_buffer = std::make_shared<StageBuffer>();
           stage_buffer->produced_lbi = lbi;
           {
-            const auto& producer_op_conf = JUST(MapAt(op_name2op, lbi.op_name()))->op_conf();
-            int64_t scope_symbol_id = producer_op_conf.scope_symbol_id();
+            const auto& producer_op = JUST(compute_graph.Node4OpName(lbi.op_name())).op();
+            int64_t scope_symbol_id = producer_op.op_conf().scope_symbol_id();
             stage_buffer->scope_symbol_id = scope_symbol_id;
             stage_buffer->scope =
                 &JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
@@ -172,14 +178,15 @@ class AddStageBufferOpPass final : public JobPass {
   }
 
   Maybe<void> MakeGetterBufferSize4Lbi(
-      const HashMap<std::string, std::shared_ptr<Operator>>& op_name2op,
+      const ComputeGraph& compute_graph,
       std::function<Maybe<int64_t>(const LogicalBlobId&)>* BufferSize4Lbi) const {
     auto lbi2buffer_size = std::make_shared<HashMap<LogicalBlobId, int64_t>>();
-    for (const auto& pair : op_name2op) {
-      const auto& op = pair.second;
-      int64_t size = JUST(GetSameOutputRegstNum(op->op_conf()));
-      for (const auto& obn : op->output_bns()) { (*lbi2buffer_size)[op->BnInOp2Lbi(obn)] = size; }
-    }
+    JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& node) -> Maybe<void> {
+      const auto& op = node.op();
+      int64_t size = JUST(GetSameOutputRegstNum(op.op_conf()));
+      for (const auto& obn : op.output_bns()) { (*lbi2buffer_size)[op.BnInOp2Lbi(obn)] = size; }
+      return Maybe<void>::Ok();
+    }));
     *BufferSize4Lbi = [lbi2buffer_size](const LogicalBlobId& lbi) -> Maybe<int64_t> {
       const auto& iter = lbi2buffer_size->find(lbi);
       CHECK_OR_RETURN(iter != lbi2buffer_size->end());
@@ -211,57 +218,85 @@ class AddStageBufferOpPass final : public JobPass {
     return Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(op_conf.scope_symbol_id());
   }
 
-  Maybe<bool> HasStageInfo(const OperatorConf& op_conf) const {
-    const auto& scope = JUST(GetScope(op_conf));
-    int64_t stage_id = scope.Int64("stage_id");
-    int64_t stage_buffer_size = scope.Int64("stage_buffer_size");
-    return stage_id >= 0 && stage_buffer_size > 0;
-  }
-
-  Maybe<int64_t> GetStageId(const OperatorConf& op_conf) const {
-    const auto& scope = JUST(GetScope(op_conf));
-    int64_t stage_id = scope.Int64("stage_id");
-    CHECK_GE_OR_RETURN(stage_id, 0) << op_conf.DebugString();
-    return stage_id;
-  }
-
-  Maybe<int64_t> GetStageBufferSize(const OperatorConf& op_conf) const {
-    const auto& scope = JUST(GetScope(op_conf));
-    int64_t stage_buffer_size = scope.Int64("stage_buffer_size");
-    CHECK_GT_OR_RETURN(stage_buffer_size, 0) << op_conf.DebugString();
-    return stage_buffer_size;
-  }
-
   Maybe<void> ForEachLbi7Consumer7RequiredBufferSize(
-      const HashMap<std::string, std::shared_ptr<Operator>>& op_name2op,
+      const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
       const std::function<Maybe<void>(const LogicalBlobId& lbi, const Operator* consumer_op,
                                       int64_t required_buffer_size)>& DoEach) const {
-    for (const auto& pair : op_name2op) {
-      const auto& consumer_op = *pair.second;
-      const auto& scope = JUST(GetScope(consumer_op.op_conf()));
+    std::function<Maybe<int64_t>(const OpBlobArg&)> RequiredBufferSize4Oba;
+    JUST(MakeGetterRequiredBufferSize4Oba(stage_chain_graph, &RequiredBufferSize4Oba));
+    JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& node) -> Maybe<void> {
+      const auto& consumer_op = node.op();
       for (const auto& ibn : consumer_op.input_bns()) {
         const auto& input_modifier = consumer_op.InputBlobModifier4Ibn(ibn);
         if (input_modifier.is_mutable()) { continue; }
         if (input_modifier.use_header_only()) { continue; }
         const auto& lbi = consumer_op.BnInOp2Lbi(ibn);
-        const auto& producer_op = *op_name2op.at(lbi.op_name());
-        if (!JUST(HasStageInfo(producer_op.op_conf()))) { continue; }
-        const auto& producer_scope = JUST(GetScope(producer_op.op_conf()));
         int64_t required_buffer_size = 0;
-        if (producer_scope.scope_proto().calculation_pass_name()
-            != scope.scope_proto().calculation_pass_name()) {
-          required_buffer_size = JUST(GetStageBufferSize(producer_op.op_conf()));
-        } else {
-          int64_t producer_stage_id = JUST(GetStageId(producer_op.op_conf()));
-          if (JUST(HasStageInfo(consumer_op.op_conf()))) {
-            int64_t consumer_stage_id = JUST(GetStageId(consumer_op.op_conf()));
-            required_buffer_size = std::abs(consumer_stage_id - producer_stage_id);
-          } else {
-            required_buffer_size = 1;
-          }
+        {
+          OpBlobArg oba;
+          oba.set_op_name(consumer_op.op_name());
+          oba.set_bn_in_op(ibn);
+          required_buffer_size = JUST(RequiredBufferSize4Oba(oba));
         }
         JUST(DoEach(lbi, &consumer_op, required_buffer_size));
       }
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> MakeGetterRequiredBufferSize4Oba(
+      const StageChainGraph& stage_chain_graph,
+      std::function<Maybe<int64_t>(const OpBlobArg&)>* RequiredBufferSize4Oba) const {
+    auto oba2stage_chain_edge = std::make_shared<HashMap<OpBlobArg, StageChainEdge*>>();
+    auto edge2required_buffer_size = std::make_shared<HashMap<StageChainEdge*, int64_t>>();
+    *RequiredBufferSize4Oba = [oba2stage_chain_edge,
+                               edge2required_buffer_size](const OpBlobArg& oba) -> Maybe<int64_t> {
+      const auto& iter = oba2stage_chain_edge->find(oba);
+      if (iter == oba2stage_chain_edge->end()) { return 0; }
+      return MapAt(*edge2required_buffer_size, iter->second);
+    };
+
+    HashMap<StageChainEdge*, HashSet<int64_t>> edge2path_stage_placement_ids;
+    auto IsReachable = stage_chain_graph.MakePredicatorIsReachable();
+    stage_chain_graph.ForEachEdge([&](StageChainEdge* edge) {
+      auto* src = edge->src_node();
+      auto* dst = edge->dst_node();
+      // set oba2stage_chain_edge
+      for (const auto* compute_node : dst->compute_nodes()) {
+        for (const auto& ibn : compute_node->op().input_bns()) {
+          const auto& lbi = compute_node->op().BnInOp2Lbi(ibn);
+          if (edge->lbis().count(lbi) > 0) {
+            OpBlobArg oba;
+            oba.set_op_name(compute_node->op().op_name());
+            oba.set_bn_in_op(ibn);
+            CHECK(oba2stage_chain_edge->emplace(oba, edge).second);
+          }
+        }
+      }
+      // update edge2path_stage_placement_ids
+      auto* path_stage_placement_ids = &edge2path_stage_placement_ids[edge];
+      const auto& ForEachNext = [&](StageChainNode* node,
+                                    const std::function<void(StageChainNode*)>& DoEach) {
+        node->ForEachNodeOnInOutEdge([&](StageChainNode* next) {
+          if (IsReachable(src, next) && IsReachable(next, dst)) { DoEach(next); }
+        });
+      };
+      stage_chain_graph.BfsForEachNode({src}, ForEachNext, [&](StageChainNode* node) {
+        path_stage_placement_ids->insert(node->stage_placement_id());
+      });
+      path_stage_placement_ids->insert(dst->stage_placement_id());
+    });
+    for (const auto& pair : edge2path_stage_placement_ids) {
+      auto* edge = pair.first;
+      int64_t copy_op_buffer_size = 0;
+      if (edge->src_node()->stage_placement_id() != edge->dst_node()->stage_placement_id()) {
+        // copy_op will be inserted between the two stages with different stage_placement_id.
+        copy_op_buffer_size = 1;
+      } else {
+        copy_op_buffer_size = 0;
+      }
+      (*edge2required_buffer_size)[edge] = pair.second.size() - copy_op_buffer_size;
     }
     return Maybe<void>::Ok();
   }
