@@ -19,8 +19,18 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_ssp_variable_proxy", false,
-                                    "enable ssp variable proxy");
+REGISTER_FUNCTION_CONFIG_DEF()
+    .Bool("enable_stage_partition", false, "enable stage partition")
+    .String("stage_partition_strategy", "naive_sequantial",
+            "stage partition strategy, Avaiable strategies: naive_sequantial | disable")
+    .ListInt64("stage_partition_scope_ids", {},
+               "type: list[int64]. stage partition scope symbol ids");
+
+REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_stage_buffer", false, "enable stage buffer");
+
+REGISTER_SCOPE_CONFIG_DEF()
+    .Int64("stage_weight_buffer_size", 0, "stage weight buffer size")
+    .Int64("stage_placement_id", -1, "current stage id ");
 
 }  // namespace
 

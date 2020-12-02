@@ -59,7 +59,8 @@ class JobBuilder final {
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
 
-  void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
+  Maybe<void> ForEachOperator(
+      const std::function<Maybe<void>(const std::shared_ptr<Operator>&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;

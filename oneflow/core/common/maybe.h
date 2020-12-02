@@ -86,7 +86,10 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
-  static Maybe Ok() { return Maybe(); }
+  static const Maybe& Ok() {
+    static const Maybe ok;
+    return ok;
+  }
 
   bool IsOk() const { return error_or_plain_.IsPlain(); }
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}

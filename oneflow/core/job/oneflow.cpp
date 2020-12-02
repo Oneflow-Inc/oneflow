@@ -299,7 +299,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_c
   Plan complete_plan;
   double start = GetCurTime();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Compiler().Compile(job, &naive_plan, need_job_complete);
+    JUST(Compiler().Compile(job, &naive_plan, need_job_complete));
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     complete_plan =
         *JUST(Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan));

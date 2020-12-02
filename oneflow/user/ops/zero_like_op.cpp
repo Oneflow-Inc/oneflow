@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
 REGISTER_USER_OP("zero_like")
     .Input("like")
     .Output("out")
-    .SetOutputBufferNum(1)
+    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper&) -> Maybe<size_t> { return 1; })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);

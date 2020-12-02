@@ -51,10 +51,14 @@ Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const
 }
 
 Maybe<const ParallelDesc&> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
+  return *JUST(GetParallelDescPtr(op_conf));
+}
+
+Maybe<ParallelDesc> Scope::GetParallelDescPtr(const OperatorConf& op_conf) const {
   if (op_conf.device_tag() == "cpu" || IsCpuOnly(op_conf)) {
-    return *host_parallel_desc_;
+    return host_parallel_desc_;
   } else {
-    return *device_parallel_desc_;
+    return device_parallel_desc_;
   }
 }
 

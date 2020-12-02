@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
 
 namespace oneflow {
@@ -91,11 +93,25 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
   }
 }
 
+Maybe<void> DumpScopeSymbol(Job* job) {
+  auto* map = job->mutable_helper()->mutable_symbol_id2symbol();
+  for (const auto& op : job->net().op()) {
+    int64_t symbol_id = op.scope_symbol_id();
+    if (symbol_id == 0) { continue; }
+    if (map->count(symbol_id) > 0) { continue; }
+    auto* eager_symbol = &(*map)[symbol_id];
+    eager_symbol->set_symbol_id(symbol_id);
+    const auto& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(symbol_id));
+    eager_symbol->mutable_scope_symbol()->CopyFrom(scope.scope_proto());
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
-void JobCompleter::Complete(Job* job) const {
+Maybe<void> JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
+  JUST(JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx));
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   if (GlobalJobDesc().enable_keep_header_only()) {
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
@@ -108,7 +124,7 @@ void JobCompleter::Complete(Job* job) const {
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
-  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
+  CHECK_JUST(JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
@@ -117,7 +133,9 @@ void JobCompleter::Complete(Job* job) const {
                     "WITH_TENSORRT was not enabled when compiling the project.";
 #endif  // OF_WITH_XRT
   }
+  JUST(DumpScopeSymbol(job));
   CheckOpGraph(OpGraph(*job));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

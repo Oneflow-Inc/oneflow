@@ -209,14 +209,15 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
   MutOpsOnlyOnce(mut_ops);
 }
 
-void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
+Maybe<void> JobBuilder::ForEachOperator(
+    const std::function<Maybe<void>(const std::shared_ptr<Operator>&)>& Handler) const {
   for (const auto& pair : op_name2op_conf_) {
     auto it = op_name2parallel_conf_.find(pair.first);
-    CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
+    CHECK_OR_RETURN(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
     DeviceType device_type = ParallelDesc(*it->second).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
-    Handler(*op);
+    JUST(Handler(ConstructOp(*pair.second, device_type, &GlobalJobDesc())));
   }
+  return Maybe<void>::Ok();
 }
 
 const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {

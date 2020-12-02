@@ -40,6 +40,7 @@ limitations under the License.
 
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/container_util.h"
 
 DECLARE_string(log_dir);
 
@@ -96,12 +97,6 @@ template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
 }
-
-template<typename Key, typename T, typename Hash = std::hash<Key>>
-using HashMap = std::unordered_map<Key, T, Hash>;
-
-template<typename Key, typename Hash = std::hash<Key>>
-using HashSet = std::unordered_set<Key, Hash>;
 
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {

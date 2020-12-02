@@ -20,8 +20,13 @@ namespace oneflow {
 
 namespace {
 
-bool IsSourceNode(const Operator& op) {
+bool IsSourceNode(const LogicalBlobId& lbi,
+                  const std::function<const Operator*(const std::string&)>& Op4OpName) {
+  const Operator& op = *Op4OpName(lbi.op_name());
   const auto& op_conf = op.op_conf();
+  if (op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "ssp_variable_proxy") {
+    return lbi == op.BnInOp2Lbi("ref_0");
+  }
   if (op_conf.has_user_conf() && op_conf.user_conf().input().size() == 0
       && op_conf.user_conf().output().size() == 1) {
     return true;
@@ -83,7 +88,7 @@ const InplaceLbiNode* FindSoleIsMutableIbnConsumer(const SourceOpInplaceLbiNode*
 InplaceLbiNode* CreateNode(const LogicalBlobId& lbi,
                            const std::function<const Operator*(const std::string&)>& Op4OpName) {
   const Operator& op = *Op4OpName(lbi.op_name());
-  if (IsSourceNode(op)) {
+  if (IsSourceNode(lbi, Op4OpName)) {
     return new SourceOpInplaceLbiNode(lbi);
   } else if (std::find_if(op.output_bns().begin(), op.output_bns().end(),
                           [&](const std::string& obn) { return op.BnInOp2Lbi(obn) == lbi; })

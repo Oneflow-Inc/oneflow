@@ -104,14 +104,15 @@ void ConnectSourceTickAndOtherTick(JobBuilder* job_builder) {
   OperatorConf src_tick_op;
   BuildSourceTickOpAndParallelConf(&src_tick_op, job_builder);
 
-  job_builder->ForEachOperator([&](const Operator& op) {
-    if (op.op_name() != src_tick_op.name()) { CHECK(!op.op_conf().has_source_tick_conf()); }
-    auto mut_helper = NewMutOpConTickInputHelper(op.op_conf());
-    if (!mut_helper) { return; }
-    if (mut_helper->IsTickInputBound() == true) { return; }
+  CHECK_JUST(job_builder->ForEachOperator([&](const std::shared_ptr<Operator>& op) -> Maybe<void> {
+    if (op->op_name() != src_tick_op.name()) { CHECK(!op->op_conf().has_source_tick_conf()); }
+    auto mut_helper = NewMutOpConTickInputHelper(op->op_conf());
+    if (!mut_helper) { return Maybe<void>::Ok(); }
+    if (mut_helper->IsTickInputBound() == true) { return Maybe<void>::Ok(); }
     job_builder->MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(
         src_tick_op.name() + "/" + src_tick_op.source_tick_conf().out())});
-  });
+    return Maybe<void>::Ok();
+  }));
 }
 
 const OpNode* GetSrcTickOpNode(const OpGraph& op_graph) {

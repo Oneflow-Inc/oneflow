@@ -52,7 +52,6 @@ class FunctionDesc(object):
     def HasAttr(self, attr_name):
         if attr_name == "flag_name2flag_value":
             return False
-        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         if attr_name in self.job_config_proto.flag_name2flag_value:
             return True
         return self.job_config_proto.HasField(attr_name)
@@ -75,6 +74,8 @@ class FunctionDesc(object):
             return attr_value.at_double
         elif attr_value.HasField("at_string"):
             return attr_value.at_string
+        elif attr_value.HasField("at_list_int64"):
+            return attr_value.at_list_int64
         else:
             raise NotImplementedError()
 

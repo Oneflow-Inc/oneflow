@@ -24,6 +24,9 @@ REGISTER_USER_OP("ssp_variable_proxy")
     .Output("ref")
     .Output("value")
     .Attr<int64_t>("buffer_size", 1)
+    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper& op_conf) -> Maybe<size_t> {
+      return op_conf.attr<int64_t>("buffer_size");
+    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* var_shape = ctx->Shape4ArgNameAndIndex("var", 0);
       *ctx->Shape4ArgNameAndIndex("ref", 0) = *var_shape;

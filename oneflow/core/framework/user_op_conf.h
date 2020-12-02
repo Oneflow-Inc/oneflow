@@ -115,7 +115,7 @@ class UserOpWrapper final {
   std::string GetGradTensorWithOpOutput(const std::string& output_arg_name, int32_t index) const;
 
   template<typename T>
-  T attr(const std::string& attr_name) const {
+  const T& attr(const std::string& attr_name) const {
     return conf_.attr<T>(attr_name);
   }
 
