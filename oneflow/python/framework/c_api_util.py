@@ -146,6 +146,7 @@ def GetInterUserJobInfo():
 
 
 def LaunchJob(job_instance):
+    print("launched-job-name:", job_instance.job_name())
     error_str = oneflow_internal.LaunchJob(job_instance)
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
