@@ -11,8 +11,7 @@ namespace cfg {
 
 template<typename T>
 class _ConstRepeatedField_ {
-  public:
-  static_assert(std::is_nothrow_move_constructible<T>::value, "");
+ public:
   using value_type = typename std::vector<T>::value_type;
   using size_type = typename std::vector<T>::size_type;
   using difference_type = typename std::vector<T>::difference_type;
@@ -21,10 +20,11 @@ class _ConstRepeatedField_ {
   using const_iterator = typename std::vector<T>::const_iterator;
   using const_reverse_iterator = typename std::vector<T>::const_reverse_iterator;
 
-  _ConstRepeatedField_():  data_(std::make_shared<std::vector<T>>()) {}
-  _ConstRepeatedField_(const std::shared_ptr<std::vector<T>>& data): data_(data) {}
+  _ConstRepeatedField_() : data_(std::make_shared<std::vector<T>>()) {}
+  _ConstRepeatedField_(const std::shared_ptr<std::vector<T>>& data) : data_(data) {}
   template<typename InputIt>
-  _ConstRepeatedField_(InputIt begin, InputIt end): data_(std::make_shared<std::vector<T>>(begin, end)) {}
+  _ConstRepeatedField_(InputIt begin, InputIt end)
+      : data_(std::make_shared<std::vector<T>>(begin, end)) {}
   virtual ~_ConstRepeatedField_() = default;
 
   const_iterator begin() const noexcept { return data_->begin(); }
@@ -51,18 +51,20 @@ class _ConstRepeatedField_ {
     return std::make_shared<_ConstRepeatedField_>(__SharedPtr__());
   }
 
-  bool operator==(const _ConstRepeatedField_& other) const {return *__SharedPtr__() == *other.__SharedPtr__();}
-  bool operator<(const _ConstRepeatedField_& other) const {return *__SharedPtr__() < *other.__SharedPtr__();}
+  bool operator==(const _ConstRepeatedField_& other) const {
+    return *__SharedPtr__() == *other.__SharedPtr__();
+  }
+  bool operator<(const _ConstRepeatedField_& other) const {
+    return *__SharedPtr__() < *other.__SharedPtr__();
+  }
 
-  protected:
+ protected:
   std::shared_ptr<std::vector<T>> data_;
-
 };
 
 template<typename T>
-class _RepeatedField_: public _ConstRepeatedField_<T>{
+class _RepeatedField_ : public _ConstRepeatedField_<T> {
  public:
-  static_assert(std::is_nothrow_move_constructible<T>::value, "");
   using reference = typename std::vector<T>::reference;
   using pointer = typename std::vector<T>::pointer;
   using iterator = typename std::vector<T>::iterator;
@@ -81,18 +83,14 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
   using _ConstRepeatedField_<T>::data_;
   using _ConstRepeatedField_<T>::__SharedPtr__;
 
-  _RepeatedField_(): _ConstRepeatedField_<T>::_ConstRepeatedField_() {}
-  _RepeatedField_(const std::shared_ptr<std::vector<T>>& data): _ConstRepeatedField_<T>(data) {}
-  _RepeatedField_(const _RepeatedField_& other) {
-    CopyFrom(other);
-  }
-  _RepeatedField_(const _ConstRepeatedField_<T>& other) {
-    CopyFrom(other);
-  }
+  _RepeatedField_() : _ConstRepeatedField_<T>::_ConstRepeatedField_() {}
+  _RepeatedField_(const std::shared_ptr<std::vector<T>>& data) : _ConstRepeatedField_<T>(data) {}
+  _RepeatedField_(const _RepeatedField_& other) { CopyFrom(other); }
+  _RepeatedField_(const _ConstRepeatedField_<T>& other) { CopyFrom(other); }
 
   _RepeatedField_(_RepeatedField_&&) = default;
   template<typename InputIt>
-  _RepeatedField_(InputIt begin, InputIt end): _ConstRepeatedField_<T>(begin, end) {}
+  _RepeatedField_(InputIt begin, InputIt end) : _ConstRepeatedField_<T>(begin, end) {}
   ~_RepeatedField_() = default;
 
   iterator begin() noexcept { return data_->begin(); }
@@ -114,9 +112,7 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
     return Mutable(index)->__SharedMutable__();
   }
 
-  std::shared_ptr<T> __SharedAdd__() {
-    return Add()->__SharedMutable__();
-  }
+  std::shared_ptr<T> __SharedAdd__() { return Add()->__SharedMutable__(); }
 
   pointer Mutable(size_type pos) { return &data_->at(pos); }
 
@@ -137,22 +133,16 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
     }
   }
 
-  void CopyFrom(const _ConstRepeatedField_<T>& other) {
-    CopyFrom(other);
-  }
+  void CopyFrom(const _ConstRepeatedField_<T>& other) { CopyFrom(other); }
 
   _RepeatedField_& operator=(const _RepeatedField_& other) {
     CopyFrom(other);
     return *this;
   }
 
-  void Set(size_type pos, const T& elem) {
-    data_->at(pos) = elem;
-  }
+  void Set(size_type pos, const T& elem) { data_->at(pos) = elem; }
 
-  void Add(const T& elem) {
-    data_->push_back(std::move(elem));
-  }
+  void Add(const T& elem) { data_->push_back(std::move(elem)); }
 
   pointer Add() {
     data_->push_back(T());
@@ -160,7 +150,7 @@ class _RepeatedField_: public _ConstRepeatedField_<T>{
   }
 };
 
-}
-}
+}  // namespace cfg
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CFG_REPEATED_FIELD_H_

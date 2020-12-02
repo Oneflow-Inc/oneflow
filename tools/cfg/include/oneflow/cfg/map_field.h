@@ -26,14 +26,14 @@ class _MapField_ {
   using reverse_iterator = typename std::map<Key, T>::reverse_iterator;
   using const_reverse_iterator = typename std::map<Key, T>::const_reverse_iterator;
 
-  _MapField_(): data_(std::make_shared<std::map<Key, T>>()) {}
-  _MapField_(const std::shared_ptr<std::map<Key, T>>& data): data_(data) {}
-  _MapField_(const _MapField_& other): data_(std::make_shared<std::map<Key, T>>()) {
+  _MapField_() : data_(std::make_shared<std::map<Key, T>>()) {}
+  _MapField_(const std::shared_ptr<std::map<Key, T>>& data) : data_(data) {}
+  _MapField_(const _MapField_& other) : data_(std::make_shared<std::map<Key, T>>()) {
     CopyFrom(other);
   }
   _MapField_(_MapField_&&) = default;
   template<typename InputIt>
-  _MapField_(InputIt begin, InputIt end): data_(std::make_shared<std::map<Key, T>>(begin, end)) {}
+  _MapField_(InputIt begin, InputIt end) : data_(std::make_shared<std::map<Key, T>>(begin, end)) {}
   ~_MapField_() = default;
 
   iterator begin() noexcept { return data_->begin(); }
@@ -69,12 +69,12 @@ class _MapField_ {
 
   std::pair<iterator, bool> insert(const value_type& value) { return data_->insert(value); }
   template<class InputIt>
-  void insert(InputIt first, InputIt last) { return data_->insert(first, last); }
+  void insert(InputIt first, InputIt last) {
+    return data_->insert(first, last);
+  }
 
   void Clear() { data_->clear(); }
-  void CopyFrom(const _MapField_& other) {
-    *data_ = *other.data_;
-  }
+  void CopyFrom(const _MapField_& other) { *data_ = *other.data_; }
 
   _MapField_& operator=(const _MapField_& other) {
     CopyFrom(other);
@@ -89,7 +89,7 @@ class _MapField_ {
   std::shared_ptr<std::map<Key, T>> data_;
 };
 
-}
-}
+}  // namespace cfg
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CFG_MAP_FIELD_H_
