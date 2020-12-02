@@ -28,13 +28,11 @@
   - CUDA Toolkit Linux x86_64 Driver
     | OneFlow |CUDA Driver Version|
     |---|---|
+    | oneflow_cu111  | >= 450.80.02  |
     | oneflow_cu110  | >= 450.36.06  |
     | oneflow_cu102  | >= 440.33  |
     | oneflow_cu101  | >= 418.39  |
     | oneflow_cu100  | >= 410.48  |
-    | oneflow_cu92  | >= 396.26  |
-    | oneflow_cu91  | >= 390.46  |
-    | oneflow_cu90  | >= 384.81  |
     | oneflow_cpu  | N/A  |
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
@@ -48,22 +46,19 @@
   - To install latest release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu102 --user
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102 --user
+    ```
+
+  - To install master branch release of OneFlow with CUDA support:
+
+    ```
+    python3 -m pip install --find-links https://staging.oneflow.info/branch/master oneflow_cu102 --user
     ```
 
   - To install latest release of CPU-only OneFlow:
 
     ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cpu --user
-    ```
-
-  - To install OneFlow with legacy CUDA support, run one of:
-    ```
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu101 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu100 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu92 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu91 --user
-    python3 -m pip install --find-links https://oneflow-inc.github.io/nightly oneflow_cu90 --user
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
     ```
 
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:

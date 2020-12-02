@@ -8,13 +8,22 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
 
+message DynamicLossScalePolicy {
+  optional float initial_loss_scale = 1 [default = 32768.0];
+  optional float increment_period = 2 [default = 2000];
+  optional float multiplier = 3 [default=2.0];
+}
+
 message TrainConf {
   optional NormalModelUpdateOpUserConf model_update_conf = 3;
   repeated string loss_lbn = 6;
-  optional int32 loss_scale_factor = 7 [default = 1];
   optional string train_step_lbn = 8;
   optional string primary_lr_lbn = 9;
   optional string secondary_lr_lbn = 10;
+  oneof loss_scale_policy {
+    float loss_scale_factor = 11 [default = 1];
+    DynamicLossScalePolicy dynamic_loss_scale_policy = 12;
+  }
 
   optional float primary_lr = 101;
   optional float secondary_lr = 102;
@@ -108,7 +117,7 @@ message JobConfigProto {
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = true];
+  optional bool enable_keep_header_only = 700 [default = false];
 
   optional int64 concurrency_width = 1000 [default = 128];
 

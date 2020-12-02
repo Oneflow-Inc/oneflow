@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.core.job.placement_pb2 as placement_pb
 import functools
 
 
@@ -36,7 +37,7 @@ class Symbol(object):
 class ParallelDescSymbol(Symbol):
     def __init__(self, symbol_id, parallel_conf):
         Symbol.__init__(self, symbol_id, parallel_conf)
-        self.device_tag_ = parallel_conf.device_tag
+        self.device_tag_ = parallel_conf.device_tag()
         self.machine_id2device_id_list_ = MakeMachineId2DeviceIdList(parallel_conf)
         sub_parallel_nums = [len(v) for k, v in self.machine_id2device_id_list_.items()]
         self.parallel_num_ = functools.reduce(lambda a, b: a + b, sub_parallel_nums, 0)
@@ -90,7 +91,7 @@ def _GlobalDeviceIdsContaining(bigger, smaller):
 
 
 def MakeMachineId2DeviceIdList(parallel_conf):
-    parallel_conf_str = parallel_conf.SerializeToString()
+    parallel_conf_str = str(parallel_conf)
     global _parallel_conf_str2ofrecord
     if parallel_conf_str not in _parallel_conf_str2ofrecord:
         ofrecord = c_api_util.GetMachine2DeviceIdListOFRecordFromParallelConf(
