@@ -31,7 +31,7 @@ def api_scope_config(**kwargs):
         for attr_name, py_value in kwargs.items():
             assert attr_name in name2default
             attr_util.SetAttrValue(
-                scope_proto.attr_name2attr_value[attr_name],
+                scope_proto.mutable_attr_name2attr_value()[attr_name],
                 py_value,
                 name2default[attr_name],
             )
