@@ -42,15 +42,12 @@ class SspVariableProxyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SSP_VARIABLE_PROXY_KERNEL(device)                                              \
-  REGISTER_USER_KERNEL("ssp_variable_proxy")                                                    \
-      .SetCreateFn<SspVariableProxyKernel<device>>()                                            \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("ref", 0, "var", 0, true));                      \
-        return Maybe<void>::Ok();                                                               \
-      });
+// There is no need to do SetInplaceProposalFn. because the `ref` output and `var` input are force
+// inplaced by SspVariableProxyTaskNode.
+#define REGISTER_SSP_VARIABLE_PROXY_KERNEL(device)   \
+  REGISTER_USER_KERNEL("ssp_variable_proxy")         \
+      .SetCreateFn<SspVariableProxyKernel<device>>() \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
 REGISTER_SSP_VARIABLE_PROXY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA

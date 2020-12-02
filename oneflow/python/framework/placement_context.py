@@ -31,11 +31,12 @@ class PlacementScope(object):
 
 
 class EmptyPlacementScope(PlacementScope):
-    def __init__(self, device_tag, machine_device_ids):
+    def __init__(self, device_tag, machine_device_ids, make_scope_ctx):
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.device_tag_ = device_tag
         self.machine_device_ids_ = machine_device_ids
+        self.scope_ctx_ = make_scope_ctx()
 
     @property
     def device_tag(self):
@@ -46,12 +47,10 @@ class EmptyPlacementScope(PlacementScope):
         return self.machine_device_ids_
 
     def __enter__(self):
-        # do nothing
-        pass
+        self.scope_ctx_.__enter__()
 
-    def __exit__(self, *args):
-        # do nothing
-        pass
+    def __exit__(self, *args, **kwargs):
+        self.scope_ctx_.__exit__(*args, **kwargs)
 
 
 class GlobalModePlacementScope(PlacementScope):
