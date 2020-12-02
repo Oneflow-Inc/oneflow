@@ -78,6 +78,7 @@ def api_placement(
 
     if with_cuda == False:
         device_tag = "cpu"
+    # TODO: merge GetNormalModePlacementScope and GetEmptyPlacementScope
     func = enable_if.unique(
         [
             GetEmptyPlacementScope,
@@ -92,7 +93,11 @@ def api_placement(
     hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized
 )
 def GetEmptyPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.EmptyPlacementScope(device_tag, machine_device_ids)
+    return placement_ctx.EmptyPlacementScope(
+        device_tag,
+        machine_device_ids,
+        lambda: GetNormalModePlacementScope(device_tag, machine_device_ids),
+    )
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
