@@ -48,11 +48,11 @@ REGISTER_USER_OP("layer_norm")
     .Output("mean")
     .Output("inv_variance")
     .OptionalOutput("normalized")
-    .Attr("center", UserOpAttrType::kAtBool)
-    .Attr("scale", UserOpAttrType::kAtBool)
-    .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
-    .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
-    .Attr("epsilon", UserOpAttrType::kAtDouble)
+    .Attr<bool>("center")
+    .Attr<bool>("scale")
+    .Attr<int64_t>("begin_norm_axis")
+    .Attr<int64_t>("begin_params_axis")
+    .Attr<double>("epsilon")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -115,8 +115,8 @@ REGISTER_USER_OP("layer_norm_grad")
     .Input("mean")
     .Input("inv_variance")
     .Output("dx")
-    .Attr("begin_norm_axis", UserOpAttrType::kAtInt64)
-    .Attr("epsilon", UserOpAttrType::kAtDouble)
+    .Attr<int64_t>("begin_norm_axis")
+    .Attr<double>("epsilon")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -156,7 +156,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .OptionalOutput("beta_diff")
     .OptionalOutput("gamma_diff")
     .OptionalOutput("reduce_buf")
-    .Attr("begin_params_axis", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("begin_params_axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // TODO: tsai: replace lambda with user op if
       auto has_tensor = [ctx](const std::string& bn) -> bool {

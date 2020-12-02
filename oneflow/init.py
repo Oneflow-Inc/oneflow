@@ -59,11 +59,28 @@ import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
+import oneflow.python.framework.python_interpreter_util
 
 atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
 del atexit
 
+import sys
+
+__original_exit__ = sys.exit
+
+
+def custom_exit(returncode):
+    if returncode != 0:
+        oneflow_api.MasterSendAbort()
+    __original_exit__(returncode)
+
+
+sys.exit = custom_exit
+
+del custom_exit
+del sys
 del absolute_import
 del oneflow
 del python

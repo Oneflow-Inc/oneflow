@@ -173,7 +173,7 @@ REGISTER_USER_OP("scatter_nd")
     .Input("indices")
     .Input("updates")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
+    .Attr<Shape>("shape")
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("indices", 0)

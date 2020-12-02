@@ -19,15 +19,15 @@ namespace oneflow {
 
 REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
     .Output("out")
-    .Attr("data_dir", UserOpAttrType::kAtString)
-    .Attr("data_part_num", UserOpAttrType::kAtInt32)
-    .Attr("batch_size", UserOpAttrType::kAtInt32)
-    .Attr<std::string>("part_name_prefix", UserOpAttrType::kAtString, "part-")
-    .Attr<int32_t>("part_name_suffix_length", UserOpAttrType::kAtInt32, -1)
-    .Attr<bool>("random_shuffle", UserOpAttrType::kAtBool, false)
-    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
-    .Attr<int32_t>("shuffle_buffer_size", UserOpAttrType::kAtInt32, 1024)
-    .Attr<bool>("shuffle_after_epoch", UserOpAttrType::kAtBool, false)
+    .Attr<std::string>("data_dir")
+    .Attr<int32_t>("data_part_num")
+    .Attr<int32_t>("batch_size")
+    .Attr<std::string>("part_name_prefix", "part-")
+    .Attr<int32_t>("part_name_suffix_length", -1)
+    .Attr<bool>("random_shuffle", false)
+    .Attr<int64_t>("seed", -1)
+    .Attr<int32_t>("shuffle_buffer_size", 1024)
+    .Attr<bool>("shuffle_after_epoch", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");

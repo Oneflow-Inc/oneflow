@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -147,16 +147,17 @@ void AddRecordLoadOps(Job* job) {
 
 }  // namespace
 
-class CompleteOfrecordDecoder final : public OpGraphPass {
+class CompleteOfrecordDecoder final : public JobPass {
  public:
-  bool IsEnabled() const override { return true; }
-  Maybe<void> Apply(Job* job) const override {
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override { return Apply(job); }
+
+  Maybe<void> Apply(Job* job) const {
     SplitDecodeOps(job);
     AddRecordLoadOps(job);
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_FUNCTION_PASS("CompleteOfrecordDecoder", CompleteOfrecordDecoder);
+REGISTER_JOB_PASS("CompleteOfrecordDecoder", CompleteOfrecordDecoder);
 
 }  // namespace oneflow

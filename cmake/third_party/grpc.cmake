@@ -35,6 +35,8 @@ set(CARES_CONFIG_DIR ${CARES_INSTALL}/lib/cmake/c-ares)
 
 if(THIRD_PARTY)
 
+include(ProcessorCount)
+ProcessorCount(PROC_NUM)
 ExternalProject_Add(grpc
     PREFIX ${GRPC_SOURCE_DIR}
     DEPENDS protobuf absl cares openssl zlib zlib_copy_headers_to_destination
@@ -77,8 +79,8 @@ add_custom_target(grpc_copy_libs_to_destination
   DEPENDS grpc_create_library_dir)
 
 foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
-  add_custom_command(TARGET grpc_copy_libs_to_destination 
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME} 
+  add_custom_command(TARGET grpc_copy_libs_to_destination
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME}
     ${GRPC_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 

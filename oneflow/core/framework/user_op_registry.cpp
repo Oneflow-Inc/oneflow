@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/user_op_attr.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/batch_axis_context.h"
@@ -87,7 +87,7 @@ OpRegistry& OpRegistry::SetOutputBufferNum(int32_t num) {
   return *this;
 }
 
-OpRegistry& OpRegistry::Attr(const std::string& name, UserOpAttrType type) {
+OpRegistry& OpRegistry::Attr(const std::string& name, AttrType type) {
   CHECK(InsertIfNotExists(name, &unique_names_));
   UserOpDef::AttrDef attr_def;
   attr_def.set_name(name);
@@ -98,7 +98,7 @@ OpRegistry& OpRegistry::Attr(const std::string& name, UserOpAttrType type) {
 
 namespace {
 
-void AddAttrWithDefault(OpRegistryResult* result, const std::string& name, UserOpAttrType type,
+void AddAttrWithDefault(OpRegistryResult* result, const std::string& name, AttrType type,
                         std::function<void(UserOpDef::AttrDef*)> handler) {
   UserOpDef::AttrDef attr_def;
   attr_def.set_name(name);
@@ -109,21 +109,37 @@ void AddAttrWithDefault(OpRegistryResult* result, const std::string& name, UserO
 
 }  // namespace
 
-#define ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                       \
-  template<>                                                                               \
-  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name, UserOpAttrType type,     \
-                                         cpp_type&& default_val) {                         \
-    CHECK(InsertIfNotExists(name, &unique_names_));                                        \
-    CHECK_EQ(type, attr_type);                                                             \
-    AddAttrWithDefault(&result_, name, type, [default_val](UserOpDef::AttrDef* attr_def) { \
-      AttrValAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());       \
-    });                                                                                    \
-    return *this;                                                                          \
+#define ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                             \
+  template<>                                                                                     \
+  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name, AttrType type,                 \
+                                         const cpp_type& default_val) {                          \
+    CHECK_EQ(type, attr_type);                                                                   \
+    return DefaultedAttr(name, type, [default_val](UserOpDef::AttrDef* attr_def) {               \
+      AttrValueAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());           \
+    });                                                                                          \
+  }                                                                                              \
+  template<>                                                                                     \
+  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name, const cpp_type& default_val) { \
+    return DefaultedAttr(                                                                        \
+        name, GetAttrType<cpp_type>::value, [default_val](UserOpDef::AttrDef* attr_def) {        \
+          AttrValueAccessor<cpp_type>::Attr(default_val, attr_def->mutable_default_val());       \
+        });                                                                                      \
+  }                                                                                              \
+  template<>                                                                                     \
+  OpRegistry& OpRegistry::Attr<cpp_type>(const std::string& name) {                              \
+    return Attr<cpp_type>(name, cpp_type());                                                     \
   }
 
 OF_PP_FOR_EACH_TUPLE(ATTR_MEMBER_FUNC, ATTR_SEQ)
 
 #undef ATTR_MEMBER_FUNC
+
+OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, AttrType type,
+                                      const std::function<void(UserOpDef::AttrDef*)>& SetDefault) {
+  CHECK(InsertIfNotExists(name, &unique_names_));
+  AddAttrWithDefault(&result_, name, type, SetDefault);
+  return *this;
+}
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
   result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);

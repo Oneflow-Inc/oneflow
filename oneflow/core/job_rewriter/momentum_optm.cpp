@@ -21,8 +21,9 @@ namespace oneflow {
 
 namespace {
 
-void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
+                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
+                             const LogicalBlobId& diff_lbi_of_var_out) {
   const auto& train_conf = job_builder->job().job_conf().train_conf();
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
 
@@ -60,6 +61,7 @@ void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_
       .Attr<float>("beta", model_update_conf.momentum_conf().beta())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &momentum_update_op_builder);
   user_op::UserOpConfWrapper momentum_update_op = momentum_update_op_builder.Build();
   job_builder->AddOps(parallel_conf, {momentum_update_op.op_conf()});
 }

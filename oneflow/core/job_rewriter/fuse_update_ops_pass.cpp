@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -42,15 +42,22 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 };
 
-class FuseUpdateOpsPass final : public OpGraphPass {
+class FuseUpdateOpsPass final : public JobPass {
  public:
   FuseUpdateOpsPass() = default;
   ~FuseUpdateOpsPass() override = default;
 
-  bool IsEnabled() const override {
-    return GlobalJobDesc().job_conf().enable_fuse_model_update_ops();
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().job_conf().enable_fuse_model_update_ops();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -60,7 +67,9 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
     if (user_op_conf.op_type_name() != "sgd_update"
         && user_op_conf.op_type_name() != "momentum_update"
-        && user_op_conf.op_type_name() != "adam_update") {
+        && user_op_conf.op_type_name() != "adam_update"
+        && user_op_conf.op_type_name() != "rmsprop_update"
+        && user_op_conf.op_type_name() != "lars_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -149,23 +158,33 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (scale_by_tensor_lbn != "") {
       fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
     }
+    if (user_op_conf.has_input("skip_if", 0)) {
+      fused_op_builder.Input("skip_if", user_op_conf.input("skip_if", 0));
+    }
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
       fused_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
           .Attr<float>("beta", user_op_conf.attr<float>("beta"));
     } else if (user_op_conf.op_type_name() == "adam_update") {
-      const bool do_bias_correction = user_op_conf.attr<bool>("do_bias_correction");
       fused_op_builder.Input("m", user_op_conf.input("m", 0))
           .Input("v", user_op_conf.input("v", 0))
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+    } else if (user_op_conf.op_type_name() == "rmsprop_update") {
+      const bool centered = user_op_conf.attr<bool>("centered");
+      fused_op_builder.Input("mean_square", user_op_conf.input("mean_square", 0.f))
+          .Attr<bool>("centered", user_op_conf.attr<bool>("centered"))
           .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
-          .Attr<bool>("do_bias_correction", do_bias_correction);
-      if (do_bias_correction) {
-        fused_op_builder.Input("beta1_t", user_op_conf.input("beta1_t", 0))
-            .Input("beta2_t", user_op_conf.input("beta2_t", 0));
+          .Attr<float>("decay_rate", user_op_conf.attr<float>("decay_rate"));
+      if (centered) {
+        fused_op_builder.Input("mean_gradient", user_op_conf.input("mean_gradient", 0.f));
       }
+    } else if (user_op_conf.op_type_name() == "lars_update") {
+      fused_op_builder.Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<float>("lars_coefficient", user_op_conf.attr<float>("lars_coefficient"));
     } else {
       UNIMPLEMENTED();
     }
@@ -178,6 +197,6 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("FuseUpdateOpsPass", FuseUpdateOpsPass);
+REGISTER_JOB_PASS("FuseUpdateOpsPass", FuseUpdateOpsPass);
 
 }  // namespace oneflow

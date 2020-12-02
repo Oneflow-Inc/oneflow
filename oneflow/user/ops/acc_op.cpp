@@ -22,7 +22,7 @@ namespace {
 REGISTER_USER_OP("acc")
     .Input("in")
     .Output("out")
-    .Attr("max_acc_num", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("max_acc_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();

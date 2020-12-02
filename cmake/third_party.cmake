@@ -18,6 +18,8 @@ include(absl)
 include(cares)
 include(openssl)
 include(grpc)
+include(flatbuffers)
+include(lz4)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -115,6 +117,8 @@ set(oneflow_third_party_libs
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
+    ${FLATBUFFERS_STATIC_LIBRARIES}
+    ${LZ4_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -152,6 +156,9 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
+  flatbuffers
+  lz4_copy_libs_to_destination
+  lz4_copy_headers_to_destination
 )
 
 
@@ -173,6 +180,8 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ABSL_INCLUDE_DIR}
     ${CARES_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
+    ${FLATBUFFERS_INCLUDE_DIR}
+    ${LZ4_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)

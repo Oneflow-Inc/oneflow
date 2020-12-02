@@ -91,7 +91,6 @@ def pad(
     else:
         raise ValueError("paddings must be a tuple or a list.")
     if x.dtype in [
-        dtype_util.float,
         dtype_util.float32,
         dtype_util.float16,
         dtype_util.float64,

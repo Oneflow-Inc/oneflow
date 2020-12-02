@@ -18,8 +18,8 @@ from __future__ import absolute_import
 from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
-import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.scope_pb2 as scope_pb
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 import collections
 import re
 
@@ -59,68 +59,90 @@ class ScopeSymbol(Symbol):
     def parent_scope_symbol(self):
         return self.parent_scope_symbol_
 
-    def BuildWithNewParallelDesc(self, builder, device_tag, machine_device_ids):
+    def BuildBySetter(self, instruction_builder, setter):
+        scope_proto = self._CloneScopeProto()
+        setter(scope_proto)
+        return instruction_builder.GetScopeSymbol(scope_proto, self)
+
+    def BuildWithNewParallelDesc(
+        self, instruction_builder, device_tag, machine_device_ids
+    ):
         if isinstance(machine_device_ids, str):
             machine_device_ids = [machine_device_ids]
 
-        parallel_conf = MakeParallelConf(device_tag, machine_device_ids)
-        device_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
-        parallel_conf = MakeParallelConf("cpu", machine_device_ids)
-        host_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
-        scope_proto = self._CloneScopeProto()
-        scope_proto.device_parallel_desc_symbol_id = device_parallel_desc_sym.symbol_id
-        scope_proto.host_parallel_desc_symbol_id = host_parallel_desc_sym.symbol_id
-        return builder.GetScopeSymbol(scope_proto, self)
+        def SetScopeProto(scope_proto):
+            parallel_conf = MakeParallelConf(device_tag, machine_device_ids)
+            device_parallel_desc_sym = instruction_builder.GetParallelDescSymbol(
+                parallel_conf
+            )
+            parallel_conf = MakeParallelConf("cpu", machine_device_ids)
+            host_parallel_desc_sym = instruction_builder.GetParallelDescSymbol(
+                parallel_conf
+            )
+            scope_proto.device_parallel_desc_symbol_id = (
+                device_parallel_desc_sym.symbol_id
+            )
+            scope_proto.host_parallel_desc_symbol_id = host_parallel_desc_sym.symbol_id
 
-    def BuildWithNewParallelConf(self, builder, parallel_conf):
+        return self.BuildBySetter(instruction_builder, SetScopeProto)
+
+    def BuildWithNewParallelConf(self, instruction_builder, parallel_conf):
         tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
             parallel_conf
         )
-        return self.BuildWithNewParallelDesc(builder, *tag_and_dev_ids)
+        return self.BuildWithNewParallelDesc(instruction_builder, *tag_and_dev_ids)
 
-    def BuildWithNewIsMirrored(self, builder, is_mirrored):
-        scope_proto = self._CloneScopeProto()
-        if is_mirrored:
-            scope_proto.opt_mirrored_parallel_conf.mirrored_parallel.SetInParent()
-        else:
-            scope_proto.opt_mirrored_parallel_conf.ClearField("mirrored_parallel")
-        return builder.GetScopeSymbol(scope_proto, self)
+    def BuildWithNewIsMirrored(self, instruction_builder, is_mirrored):
+        def SetScopeProto(scope_proto):
+            if is_mirrored:
+                scope_proto.opt_mirrored_parallel_conf.mirrored_parallel.SetInParent()
+            else:
+                scope_proto.opt_mirrored_parallel_conf.ClearField("mirrored_parallel")
 
-    def BuildWithNewScopeName(self, builder, scope_name):
-        scope_proto = self._CloneScopeProto()
-        scope_proto.scope_op_name_prefixes.append(scope_name)
-        return builder.GetScopeSymbol(scope_proto, self)
+        return self.BuildBySetter(instruction_builder, SetScopeProto)
+
+    def BuildWithNewScopeName(self, instruction_builder, scope_name):
+        def SetScopeProto(scope_proto):
+            scope_proto.scope_op_name_prefixes.append(scope_name)
+
+        return self.BuildBySetter(instruction_builder, SetScopeProto)
 
     def _CloneScopeProto(self):
         scope_proto = scope_pb.ScopeProto()
         scope_proto.CopyFrom(self.data)
-        scope_proto.ClearField("symbol_id")
         return scope_proto
 
 
 def BuildInitialScope(
-    builder, session_id, job_conf, device_tag, machine_device_ids, is_mirrored
+    instruction_builder,
+    session_id,
+    job_conf,
+    device_tag,
+    machine_device_ids,
+    is_mirrored,
 ):
     scope_proto = scope_pb.ScopeProto()
     scope_proto.session_id = session_id
-    job_conf_sym = builder.GetJobConfSymbol(job_conf)
+    job_conf_sym = instruction_builder.GetJobConfSymbol(job_conf)
     scope_proto.job_desc_symbol_id = job_conf_sym.symbol_id
     parallel_conf = MakeParallelConf(device_tag, machine_device_ids)
-    device_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
+    device_parallel_desc_sym = instruction_builder.GetParallelDescSymbol(parallel_conf)
     scope_proto.device_parallel_desc_symbol_id = device_parallel_desc_sym.symbol_id
     parallel_conf = MakeParallelConf("cpu", machine_device_ids)
-    host_parallel_desc_sym = builder.GetParallelDescSymbol(parallel_conf)
+    host_parallel_desc_sym = instruction_builder.GetParallelDescSymbol(parallel_conf)
     scope_proto.host_parallel_desc_symbol_id = host_parallel_desc_sym.symbol_id
     if is_mirrored:
         scope_proto.opt_mirrored_parallel_conf.mirrored_parallel.SetInParent()
     else:
         scope_proto.opt_mirrored_parallel_conf.ClearField("mirrored_parallel")
-    return builder.GetScopeSymbol(scope_proto, None)
+    return instruction_builder.GetScopeSymbol(scope_proto, None)
 
 
 def MakeParallelConf(device_tag, machine_device_ids):
     assert isinstance(machine_device_ids, (list, tuple))
-    device_names = []
+
+    parallel_conf = placement_cfg.ParallelConf()
+    parallel_conf.set_device_tag(device_tag)
     for machine_device_id in machine_device_ids:
         assert isinstance(
             machine_device_id, str
@@ -128,9 +150,6 @@ def MakeParallelConf(device_tag, machine_device_ids):
         assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
             "machine_device_id: %s is not valid" % machine_device_id
         )
-        device_names.append(machine_device_id)
+        parallel_conf.add_device_name(machine_device_id)
 
-    parallel_conf = placement_pb.ParallelConf()
-    parallel_conf.device_tag = device_tag
-    parallel_conf.device_name.extend(device_names)
     return parallel_conf

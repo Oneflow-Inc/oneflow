@@ -330,4 +330,40 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
+std::function<RegstDescProto*(int64_t)> PlanUtil::MakeMutRegstDesc4Id(Plan* plan) {
+  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      int64_t regst_desc_id = pair.second.regst_desc_id();
+      regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
+    }
+  }
+  return [regst_desc_id2regst_desc](int64_t regst_desc_id) -> RegstDescProto* {
+    return regst_desc_id2regst_desc->at(regst_desc_id);
+  };
+}
+
+void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
+  auto RegstDesc4Id = MakeMutRegstDesc4Id(plan);
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->has_force_inplace_consumed_regst_desc_id()) {
+        int64_t force_id = regst_desc->force_inplace_consumed_regst_desc_id();
+        const RegstDescProto* in_regst_desc = RegstDesc4Id(force_id);
+        CHECK(!in_regst_desc->enable_reuse_mem());
+        CHECK(!regst_desc->enable_reuse_mem());
+        CHECK_NE(in_regst_desc->mem_block_id(), -1);
+        CHECK_EQ(in_regst_desc->mem_block_offset(), 0);
+        CHECK_EQ(regst_desc->mem_block_offset(), 0);
+        CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
+        regst_desc->set_mem_block_id(in_regst_desc->mem_block_id());
+        regst_desc->set_inplace_consumed_regst_desc_id(force_id);
+      }
+    }
+  }
+}
+
 }  // namespace oneflow

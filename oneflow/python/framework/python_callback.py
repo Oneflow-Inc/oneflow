@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 import traceback
 
-import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.ofblob as ofblob
+import oneflow_api
 
 
 def GetIdForRegisteredCallback(cb):
@@ -34,9 +34,9 @@ def DeleteRegisteredCallback(cb):
     del unique_id2handler[id(cb)]
 
 
-class PythonCallback(oneflow_internal.ForeignCallback):
+class PythonCallback(oneflow_api.ForeignCallback):
     def __init__(self):
-        oneflow_internal.ForeignCallback.__init__(self)
+        oneflow_api.ForeignCallback.__init__(self)
 
     def OfBlobCall(self, unique_id, of_blob_ptr):
         try:
@@ -53,41 +53,52 @@ class PythonCallback(oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def EagerInterpretCompletedOp(self, op_attribute_str, parallel_conf_str):
+    def EagerInterpretCompletedOp(self, op_attribute, parallel_conf):
         try:
-            interpreter_callback.InterpretCompletedOp(
-                op_attribute_str, parallel_conf_str
+            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
+            interpreter_callback.InterpretCompletedOp(str(op_attribute), parallel_conf)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
+    def EagerMirroredCast(self, op_attribute, parallel_conf):
+        try:
+            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
+            interpreter_callback.MirroredCast(str(op_attribute), parallel_conf)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
+    def EagerCastFromMirrored(self, op_attribute, parallel_conf):
+        try:
+            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
+            interpreter_callback.CastFromMirrored(str(op_attribute), parallel_conf)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
+    def AddScopeToPyStorage(self, scope_symbol_id, scope_proto_str):
+        try:
+            return interpreter_callback.AddScopeToStorage(
+                scope_symbol_id, scope_proto_str
             )
         except Exception as e:
             print(traceback.format_exc())
             raise e
 
-    def EagerMirroredCast(self, op_attribute_str, parallel_conf_str):
+    def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
-            interpreter_callback.MirroredCast(op_attribute_str, parallel_conf_str)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
-    def EagerCastFromMirrored(self, op_attribute_str, parallel_conf_str):
-        try:
-            interpreter_callback.CastFromMirrored(op_attribute_str, parallel_conf_str)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
-    def MakeScopeSymbol(self, job_conf_str, parallel_conf_str, is_mirrored):
-        try:
+            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
             return interpreter_callback.MakeScopeSymbol(
-                job_conf_str, parallel_conf_str, is_mirrored
+                str(job_conf), parallel_conf, is_mirrored
             )
         except Exception as e:
             print(traceback.format_exc())
             raise e
 
-    def MakeParallelDescSymbol(self, parallel_conf_str):
+    def MakeParallelDescSymbol(self, parallel_conf):
         try:
-            return interpreter_callback.MakeParallelDescSymbol(parallel_conf_str)
+            return interpreter_callback.MakeParallelDescSymbol(parallel_conf)
         except Exception as e:
             print(traceback.format_exc())
             raise e

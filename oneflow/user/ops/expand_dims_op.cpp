@@ -31,7 +31,7 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 REGISTER_USER_OP("expand_dims")
     .Input("in")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);

@@ -22,7 +22,7 @@ REGISTER_USER_OP("reduce_sum_like")
     .Input("x")
     .Input("like")
     .Output("y")
-    .Attr("axis", UserOpAttrType::kAtListInt32)
+    .Attr<std::vector<int32_t>>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);

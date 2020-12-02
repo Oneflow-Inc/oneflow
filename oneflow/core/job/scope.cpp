@@ -50,12 +50,21 @@ Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const
   }
 }
 
-Maybe<const ParallelDesc*> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
+Maybe<const ParallelDesc&> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
   if (op_conf.device_tag() == "cpu" || IsCpuOnly(op_conf)) {
-    return host_parallel_desc_.get();
+    return *host_parallel_desc_;
   } else {
-    return device_parallel_desc_.get();
+    return *device_parallel_desc_;
   }
+}
+
+const AttrValue& Scope::GetAttrValue(const std::string& attr_name) const {
+  const auto& iter = scope_proto_.attr_name2attr_value().find(attr_name);
+  if (iter != scope_proto_.attr_name2attr_value().end()) { return iter->second; }
+  const auto& attr_name2attr_def = GlobalScopeConfigDef().attr_name2attr_def();
+  const auto& def_iter = attr_name2attr_def.find(attr_name);
+  CHECK(def_iter != attr_name2attr_def.end());
+  return def_iter->second.default_val();
 }
 
 }  // namespace oneflow

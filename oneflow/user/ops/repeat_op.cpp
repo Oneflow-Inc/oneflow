@@ -22,7 +22,7 @@ namespace {
 REGISTER_USER_OP("repeat")
     .Input("in")
     .Output("out")
-    .Attr("repeat_num", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("repeat_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();

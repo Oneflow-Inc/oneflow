@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -32,19 +33,24 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
+  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1)
+      << "addr: " << addr << ", port: " << port;
   return sa;
 }
 
 int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
   sockaddr_in sa = GetSockAddr("0.0.0.0", listen_port);
+  int reuse = 1;
+  int ret_setopt =
+      setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&reuse, sizeof(int));
+  CHECK_EQ(ret_setopt, 0);
   int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
     LOG(INFO) << "CommNet:Epoll listening on "
               << "0.0.0.0:" + std::to_string(listen_port);
   } else {
-    PCHECK(errno == EACCES || errno == EADDRINUSE);
+    PCHECK(errno == EACCES || errno == EADDRINUSE) << "SockListen errno: " << errno;
   }
   return bind_result;
 }

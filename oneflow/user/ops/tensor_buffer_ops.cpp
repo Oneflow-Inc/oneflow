@@ -22,8 +22,8 @@ namespace {
 REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
     .Input("in")
     .Output("out")
-    .Attr("instance_shape", UserOpAttrType::kAtShape)
-    .Attr("dtype", UserOpAttrType::kAtDataType)
+    .Attr<Shape>("instance_shape")
+    .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -53,7 +53,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
 REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
     .Input("in")
     .Output("out")
-    .Attr("instance_dims", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("instance_dims")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(IsPODDataType(in->data_type()));

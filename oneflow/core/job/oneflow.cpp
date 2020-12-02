@@ -907,10 +907,12 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       CHECK(!job_desc.Bool("__is_user_function__"));
       jobs.emplace_back(new Job(*job));
     };
-    if (Global<const IOConf>::Get()->enable_model_io_v2()) {
-      MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
-    } else {
-      MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
+    if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
+      if (Global<const IOConf>::Get()->enable_model_io_v2()) {
+        MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
+      } else {
+        MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
+      }
     }
   }
   std::vector<std::shared_ptr<Job>> function_jobs;
@@ -949,6 +951,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
+    PlanUtil::SetForceInplaceMemBlock(plan);
     FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;
     std::vector<std::string> identity_tick_op_names;

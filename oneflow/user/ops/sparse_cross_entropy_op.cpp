@@ -135,7 +135,7 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .Input("prediction")                                                             \
       .Input("label")                                                                  \
       .Output("out")                                                                   \
-      .Attr("depth", UserOpAttrType::kAtInt64)                                         \
+      .Attr<int64_t>("depth")                                                          \
       .SetTensorDescInferFn(InferTensorDescFn)                                         \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
                               const user_op::UserOpConfWrapper&) {                     \
@@ -152,7 +152,7 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .Input("label")                                                \
       .Input("dy")                                                   \
       .Output("prediction_diff")                                     \
-      .Attr("depth", UserOpAttrType::kAtInt64)                       \
+      .Attr<int64_t>("depth")                                        \
       .SetTensorDescInferFn(InferGradTensorDescFn)                   \
       .SetBatchAxisInferFn(InferGradBatchAxisFn)                     \
       .SetGetSbpFn(GetSbpFn<sbp_sig>);

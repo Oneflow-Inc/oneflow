@@ -1,29 +1,25 @@
 import sys
 import os
 import argparse
-import importlib
 from jinja2 import Environment, FileSystemLoader
 import util.proto_reflect_util as proto_reflect_util
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-dst_hpp", "--dst_hpp_path", type=str, required=True)
-parser.add_argument("-dst_cpp", "--dst_cpp_path", type=str, required=True)
-parser.add_argument("-dst_pybind", "--dst_pybind_path", type=str, required=True)
-parser.add_argument("-proto_py", "--proto_py_path", type=str, required=True)
+parser.add_argument("-project_build", "--project_build_dir", type=str, required=True)
+parser.add_argument("-proto_file", "--proto_file_path", type=str, required=True)
 parser.add_argument(
-    "-of_proto_python", "--of_proto_python_dir", type=str, required=True
+    "-of_cfg_proto_python", "--of_cfg_proto_python_dir", type=str, required=True
 )
+
 args = parser.parse_args()
 
-sys.path.append(args.of_proto_python_dir)
-sys.path.append(os.path.dirname(args.proto_py_path))
+sys.path.insert(0, args.of_cfg_proto_python_dir)
 
-demo = importlib.import_module((args.proto_py_path).split("/")[-1])
-THIS_DIR = os.path.dirname(os.path.abspath(__file__)) + "/template"
+template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "template")
 
 
 def JinjaRender(module, filename, **kwargs):
-    j2_env = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True)
+    j2_env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True)
     return j2_env.get_template(filename).render(
         module=module.DESCRIPTOR,
         util=proto_reflect_util.ProtoReflectionUtil(),
@@ -31,37 +27,66 @@ def JinjaRender(module, filename, **kwargs):
     )
 
 
-def convert_hpp(dst_hpp_path):
+def render_cfg_file(dst_file_path, template_file, module):
+    with open(dst_file_path, "w") as dst_file:
+        dst_file.write(JinjaRender(module, template_file))
+
+
+def convert_hpp(dst_hpp_path, module=None):
     if not os.path.exists(os.path.dirname(dst_hpp_path)):
         if os.path.dirname(dst_hpp_path):
             os.makedirs(os.path.dirname(dst_hpp_path))
-    dst_file = open(dst_hpp_path, "w")
-    dst_file.write(JinjaRender(demo, "template.cfg.h"))
-    dst_file.close()
+
+    render_cfg_file(dst_hpp_path, "template.cfg.h", module)
 
 
-def convert_cpp(dst_cpp_path):
+def convert_cpp(dst_cpp_path, module=None):
     if not os.path.exists(os.path.dirname(dst_cpp_path)):
         if os.path.dirname(dst_cpp_path):
             os.makedirs(os.path.dirname(dst_cpp_path))
-    dst_file = open(dst_cpp_path, "w")
-    dst_file.write(JinjaRender(demo, "template.cfg.cpp"))
-    dst_file.close()
+
+    render_cfg_file(dst_cpp_path, "template.cfg.cpp", module)
 
 
-def convert_pybind(dst_pybind_path):
+def convert_pybind(dst_pybind_path, module=None):
     if not os.path.exists(os.path.dirname(dst_pybind_path)):
         if os.path.dirname(dst_pybind_path):
             os.makedirs(os.path.dirname(dst_pybind_path))
-    dst_file = open(dst_pybind_path, "w")
-    dst_file.write(JinjaRender(demo, "template.pybind.cpp"))
-    dst_file.close()
+
+    render_cfg_file(dst_pybind_path, "template.cfg.pybind.cpp", module)
+
+
+def render_template(proto_file):
+    rel_proto_file_path, proto_file_name = os.path.split(proto_file)
+
+    proto_py_file_path = os.path.join(args.of_cfg_proto_python_dir, rel_proto_file_path)
+    proto_py_file_name = proto_file_name[:-6] + "_pb2"
+
+    sys.path.insert(0, proto_py_file_path)
+
+    proto_module = __import__(proto_py_file_name)
+
+    dst_hpp_path = os.path.join(
+        args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.h"
+    )
+
+    dst_cpp_path = os.path.join(
+        args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.cpp"
+    )
+
+    dst_pybind_path = os.path.join(
+        args.project_build_dir,
+        rel_proto_file_path,
+        proto_file_name[:-6] + ".cfg.pybind.cpp",
+    )
+
+    convert_hpp(dst_hpp_path, module=proto_module)
+    convert_cpp(dst_cpp_path, module=proto_module)
+    convert_pybind(dst_pybind_path, module=proto_module)
 
 
 def main():
-    convert_hpp(args.dst_hpp_path)
-    convert_cpp(args.dst_cpp_path)
-    convert_pybind(args.dst_pybind_path)
+    render_template(args.proto_file_path)
 
 
 if __name__ == "__main__":

@@ -15,20 +15,28 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 
 namespace oneflow {
 
 namespace {
 
-class DumpVariableInfoPass final : public OpGraphPass {
+class DumpVariableInfoPass final : public JobPass {
  public:
   DumpVariableInfoPass() = default;
   ~DumpVariableInfoPass() override = default;
-  bool IsEnabled() const override {
+
+  bool IsEnabled(const JobPassCtx& ctx) const {
     return Global<ResourceDesc, ForSession>::Get()->enable_debug_mode();
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -75,6 +83,6 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("DumpVariableInfoPass", DumpVariableInfoPass);
+REGISTER_JOB_PASS("DumpVariableInfoPass", DumpVariableInfoPass);
 
 }  // namespace oneflow

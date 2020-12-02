@@ -91,8 +91,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   REGISTER_USER_OP(op_name)                           \
       .Input("input_tensor")                          \
       .Output("output_tensor")                        \
-      .Attr("axis", UserOpAttrType::kAtListInt32)     \
-      .Attr("keepdims", UserOpAttrType::kAtBool)      \
+      .Attr<std::vector<int32_t>>("axis")             \
+      .Attr<bool>("keepdims")                         \
       .SetTensorDescInferFn(InferTensorDescFn)        \
       .SetBatchAxisInferFn(InferBatchAxisFn)          \
       .SetGetSbpFn(GetSbpFn<binary_func>);

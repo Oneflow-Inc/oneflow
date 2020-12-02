@@ -21,12 +21,12 @@ namespace oneflow {
 REGISTER_USER_OP("one_hot")
     .Input("indices")
     .Output("out")
-    .Attr("depth", UserOpAttrType::kAtInt64)
-    .Attr("floating_on_value", UserOpAttrType::kAtDouble)
-    .Attr("integer_on_value", UserOpAttrType::kAtInt64)
-    .Attr("floating_off_value", UserOpAttrType::kAtDouble)
-    .Attr("integer_off_value", UserOpAttrType::kAtInt64)
-    .Attr("dtype", UserOpAttrType::kAtDataType)
+    .Attr<int64_t>("depth")
+    .Attr<double>("floating_on_value")
+    .Attr<int64_t>("integer_on_value")
+    .Attr<double>("floating_off_value")
+    .Attr<int64_t>("integer_off_value")
+    .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t depth = ctx->Attr<int64_t>("depth");
       CHECK_GT_OR_RETURN(depth, 0);

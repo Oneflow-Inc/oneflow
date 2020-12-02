@@ -131,8 +131,8 @@ REGISTER_USER_OP("matmul")
     .Input("b")
     .OptionalInput("_add_to_output")
     .Output("out")
-    .Attr<bool>("transpose_a", UserOpAttrType::kAtBool, false)
-    .Attr<bool>("transpose_b", UserOpAttrType::kAtBool, false)
+    .Attr<bool>("transpose_a", false)
+    .Attr<bool>("transpose_b", false)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
@@ -218,8 +218,8 @@ REGISTER_USER_OP("batch_matmul")
     .Input("b")
     .OptionalInput("_add_to_output")
     .Output("out")
-    .Attr<bool>("transpose_a", UserOpAttrType::kAtBool, false)
-    .Attr<bool>("transpose_b", UserOpAttrType::kAtBool, false)
+    .Attr<bool>("transpose_a", false)
+    .Attr<bool>("transpose_b", false)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {

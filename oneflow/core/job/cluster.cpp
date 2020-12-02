@@ -68,12 +68,16 @@ Maybe<void> Cluster::WorkerLoop() {
       ClusterInstruction::WorkerReceiveInstruction(mut_cluster_instruction.get());
       if (mut_cluster_instruction->has_cluster_ctrl_halt()) {
         break;
+      } else if (mut_cluster_instruction->has_cluster_ctrl_abort()) {
+        LOG(FATAL) << "received abort instruction";
       } else if (mut_cluster_instruction->has_cluster_ctrl_session_start()) {
         ClusterInstruction::NewSessionBarrier();
         AsyncRunLazyJobSet(&lazy_runtime_thread);
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
+      } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
+        ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
       }

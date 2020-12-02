@@ -24,7 +24,7 @@ REGISTER_USER_OP("dropout")
     .Input("mask")
     .OptionalInput("_add_to_output")
     .Output("out")
-    .Attr("scale", UserOpAttrType::kAtFloat)
+    .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
@@ -59,7 +59,7 @@ REGISTER_USER_OP("dropout_grad")
     .Input("dy")
     .Input("mask")
     .Output("dx")
-    .Attr("scale", UserOpAttrType::kAtFloat)
+    .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("dy", 0);
@@ -108,8 +108,8 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
 REGISTER_USER_OP("random_mask_like")
     .Input("like")
     .Output("out")
-    .Attr("rate", UserOpAttrType::kAtFloat)
-    .Attr("seed", UserOpAttrType::kAtInt64)
+    .Attr<float>("rate")
+    .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt8;

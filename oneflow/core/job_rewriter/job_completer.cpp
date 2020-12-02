@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_completer.h"
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/autotick.h"
 #include "oneflow/core/job_rewriter/add_keep_header_only_op_conf.h"
@@ -94,7 +94,8 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
-  FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
+  JobPassCtx job_pass_ctx(GlobalJobDesc());
+  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   if (GlobalJobDesc().enable_keep_header_only()) {
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
@@ -107,7 +108,7 @@ void JobCompleter::Complete(Job* job) const {
   AddGlobalTotalJobCriticalSection(*job);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
-  FunctionPass("DumpTimeShapeAndBlobParallelConfPass")(job);
+  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);

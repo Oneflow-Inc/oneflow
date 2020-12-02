@@ -23,7 +23,7 @@ void CaseCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().output_bns_size();
   FOR_RANGE(int64_t, i, 0, output_bns_size) {
     const int64_t regst_desc_id =
-        exec_kernel_vec().at(0).bn_in_op2regst_desc_id.at(GenRepeatedBn("out", i));
+        exec_kernel_vec().at(0).bn_in_op2blob_info.at(GenRepeatedBn("out", i)).regst_desc_id;
     CHECK(out_bn_id2regst_desc_id_.emplace(i, regst_desc_id).second);
   }
   TakeOverConsumedRegst(task_proto.consumed_regst_desc_id());

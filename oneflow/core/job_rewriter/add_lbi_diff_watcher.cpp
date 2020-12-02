@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -21,10 +21,16 @@ namespace oneflow {
 
 namespace {
 
-class AddLbiDiffWatcherOpConfs final : public OpGraphPass {
+class AddLbiDiffWatcherOpConfs final : public JobPass {
  public:
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
-  Maybe<void> Apply(Job* job) const override;
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
+
+  Maybe<void> Apply(Job* job) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    return Apply(job);
+  }
 };
 
 Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
@@ -54,7 +60,7 @@ Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("AddLbiDiffWatcherOpConfs", AddLbiDiffWatcherOpConfs);
+REGISTER_JOB_PASS("AddLbiDiffWatcherOpConfs", AddLbiDiffWatcherOpConfs);
 
 }  // namespace
 

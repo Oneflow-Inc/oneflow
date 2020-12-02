@@ -21,8 +21,8 @@ REGISTER_USER_OP("l2_normalize")
     .Input("x")
     .Output("y")
     .Output("square_x_sum")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
@@ -67,8 +67,8 @@ REGISTER_USER_OP("l2_normalize_grad")
     .Input("y")
     .Input("square_x_sum")
     .Output("dx")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);

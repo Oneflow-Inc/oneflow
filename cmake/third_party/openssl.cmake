@@ -26,8 +26,11 @@ foreach(LIBRARY_NAME ${OPENSSL_LIBRARY_NAMES})
 endforeach()
 
 if(THIRD_PARTY)
+
+include(ProcessorCount)
+ProcessorCount(PROC_NUM)
 ExternalProject_Add(openssl
-  PREFIX openssl 
+  PREFIX openssl
   URL ${OPENSSL_TAR_URL}
   URL_HASH MD5=${OPENSSL_URL_HASH}
   UPDATE_COMMAND ""

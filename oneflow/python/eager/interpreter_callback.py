@@ -19,23 +19,39 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
+import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.symbol_storage as symbol_storage
 
 
-def MakeScopeSymbol(job_conf_str, parallel_conf_str, is_mirrored):
+def AddScopeToStorage(scope_symbol_id, scope_proto_str):
+    if symbol_storage.HasSymbol4SerializedScopeProto(scope_proto_str):
+        return
+    scope_proto = text_format.Parse(scope_proto_str, scope_pb.ScopeProto())
+    parent_scope_symbol = symbol_storage.GetSymbol4Id(
+        scope_proto.parent_scope_symbol_id
+    )
+    symbol = scope_symbol.ScopeSymbol(scope_symbol_id, scope_proto, parent_scope_symbol)
+    symbol_storage.SetSymbol4Id(scope_symbol_id, symbol)
+    symbol_storage.SetSymbol4SerializedScopeProto(scope_proto_str, symbol)
+
+
+def MakeScopeSymbol(job_conf_str, parallel_conf, is_mirrored):
     job_conf = text_format.Parse(job_conf_str, job_conf_pb.JobConfigProto())
-    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
     return scope_util.MakeInitialScope(
-        job_conf, parallel_conf.device_tag, list(parallel_conf.device_name), is_mirrored
+        job_conf,
+        parallel_conf.device_tag(),
+        list(parallel_conf.device_name()),
+        is_mirrored,
     ).symbol_id
 
 
-def MakeParallelDescSymbol(parallel_conf_str):
-    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+def MakeParallelDescSymbol(parallel_conf):
     symbol_id = None
 
     def BuildInstruction(builder):
@@ -46,7 +62,7 @@ def MakeParallelDescSymbol(parallel_conf_str):
     return symbol_id
 
 
-def MirroredCast(op_attribute_str, parallel_conf_str):
+def MirroredCast(op_attribute_str, parallel_conf):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = blob_register_util.GetDefaultBlobRegister()
     is_cast_to_mirrored = op_attribute.op_conf.HasField("cast_to_mirrored_conf")
@@ -59,15 +75,15 @@ def MirroredCast(op_attribute_str, parallel_conf_str):
     )
 
 
-def InterpretCompletedOp(op_attribute_str, parallel_conf_str):
+def InterpretCompletedOp(op_attribute_str, parallel_conf):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
     blob_register = gradient_util.GetDefaultBackwardBlobRegister()
-    _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register)
+    _InterpretCompletedOp(op_attribute, parallel_conf, blob_register)
     gradient_util.ReleaseUnusedBlobObject(op_attribute, blob_register)
 
 
-def _InterpretCompletedOp(op_attribute, parallel_conf_str, blob_register):
-    return op_executor.Interpret(op_attribute, parallel_conf_str, blob_register)
+def _InterpretCompletedOp(op_attribute, parallel_conf, blob_register):
+    return op_executor.Interpret(op_attribute, parallel_conf, blob_register)
 
 
 def _MirroredCastAndAddOutputBlobReleaser(op_attribute, blob_register):

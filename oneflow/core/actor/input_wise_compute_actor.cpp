@@ -25,10 +25,10 @@ void InputWiseCompActor::Init(const TaskProto& task_proto) {
   for (int64_t i = 0; i < input_bns.size(); ++i) {
     CHECK(ibn2in_bn_id.emplace(input_bns.Get(i), i).second);
   }
-  for (const auto& pair : exec_kernel_vec().at(0).bn_in_op2regst_desc_id) {
+  for (const auto& pair : exec_kernel_vec().at(0).bn_in_op2blob_info) {
     auto it = ibn2in_bn_id.find(pair.first);
     if (it != ibn2in_bn_id.end()) {
-      CHECK(regst_desc_id2in_bn_id_.emplace(pair.second, it->second).second);
+      CHECK(regst_desc_id2in_bn_id_.emplace(pair.second.regst_desc_id, it->second).second);
     }
   }
 

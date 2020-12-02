@@ -147,38 +147,41 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
       cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
     }
   }
-  rt_regst_desc->ForEachBlobDescOffsetInOnRegst(
-      lbis, [&](const LbiBlobDescPair& lbi, int64_t body_offset, int64_t header_offset) {
-        const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
-        std::unique_ptr<Blob> blob_ptr;
-        if (cur_body_pointer == nullptr) {
-          CHECK(rt_regst_desc->is_body_disabled());
-          blob_ptr = std::move(std::make_unique<Blob>(regst->regst_desc()->mem_case(), blob_desc,
-                                                      cur_header_pointer + header_offset, nullptr));
-        } else {
-          CHECK(rt_regst_desc->is_body_disabled() == false);
-          blob_ptr = std::move(std::make_unique<Blob>(regst->regst_desc()->mem_case(), blob_desc,
-                                                      cur_header_pointer + header_offset,
-                                                      cur_body_pointer + body_offset));
-          InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
-        }
-        CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
-        const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();
-        const auto& parallel_ctx = regst_desc_id2parallel_ctx_.at(regst_desc_id);
-        if (parallel_ctx.has_parallel_id()) {
-          const int64_t parallel_id = parallel_ctx.parallel_id();
-          {
-            std::lock_guard<std::mutex> lock(mutex_);
-            lbi2parallel_id2blob_[lbi.lbi()][parallel_id] = regst->GetBlobByLbi(lbi.lbi());
-          }
-        }
-      });
+  rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
+                                                    const RtBlobDesc* blob_desc,
+                                                    int64_t body_offset, int64_t header_offset) {
+    std::unique_ptr<Blob> blob_ptr;
+    if (cur_body_pointer == nullptr) {
+      CHECK(rt_regst_desc->is_body_disabled());
+      blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
+                              cur_header_pointer + header_offset, nullptr));
+    } else {
+      CHECK(rt_regst_desc->is_body_disabled() == false);
+      blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
+                              cur_header_pointer + header_offset, cur_body_pointer + body_offset));
+      InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
+    }
+    regst->SetBlobByOrdinal(ordinal, std::move(blob_ptr));
+    const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();
+    const auto& parallel_ctx = regst_desc_id2parallel_ctx_.at(regst_desc_id);
+    if (parallel_ctx.has_parallel_id()) {
+      const int64_t parallel_id = parallel_ctx.parallel_id();
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        lbi2parallel_id2blob_[lbi][parallel_id] = regst->GetBlobByOrdinal(ordinal);
+      }
+    }
+  });
 }
 
 const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const {
   const auto& it = regst_desc_id2rt_regst_desc_.find(regst_desc_id);
   CHECK(it != regst_desc_id2rt_regst_desc_.end());
   return *it->second;
+}
+
+bool RegstMgr::HasRegstDescId(int64_t regst_desc_id) const {
+  return regst_desc_id2rt_regst_desc_.find(regst_desc_id) != regst_desc_id2rt_regst_desc_.end();
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {

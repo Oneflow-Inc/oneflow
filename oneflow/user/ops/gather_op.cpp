@@ -21,7 +21,7 @@ REGISTER_USER_OP("gather")
     .Input("in")
     .Input("indices")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
@@ -39,7 +39,7 @@ REGISTER_USER_OP("gather")
       dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
                      in->shape().dim_vec().end());
       *out->mut_shape() = Shape(dim_vec);
-      out->set_is_dynamic(indices->is_dynamic());
+      out->set_is_dynamic(indices->is_dynamic() || in->is_dynamic());
       *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })

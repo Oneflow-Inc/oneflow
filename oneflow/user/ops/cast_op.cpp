@@ -38,7 +38,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 
 REGISTER_USER_OP("cast")
     .Input("in")
-    .Attr("dtype", UserOpAttrType::kAtDataType)
+    .Attr<DataType>("dtype")
     .Output("out")
     .SetTensorDescInferFn(TensorDescInfer)
     .SetGetSbpFn(GetSbpSignatures);

@@ -17,8 +17,8 @@ message UserOpDef {
 
   message AttrDef {
     required string name = 1;
-    required UserOpAttrType type = 2;
-    optional UserOpAttrVal default_val = 3;
+    required AttrType type = 2;
+    optional AttrValue default_val = 3;
   }
   repeated AttrDef attr = 4;
 }

@@ -1,6 +1,6 @@
 ARG from
-ARG use_tuna_yum=1
-ARG pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"
+ARG use_tuna_yum=0
+ARG pip_args=""
 FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
@@ -16,10 +16,10 @@ ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
 COPY docker/package/manylinux/CentOS-Base.repo /tmp/CentOS-Base.repo
-RUN if [ "${use_tuna}" = "1" ]; then mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
+RUN if [ "${use_tuna_yum}" = "1" ]; then mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
 # in 10.1, cuda yum repo will update cublas to 10.2 and breaks build
-RUN yum-config-manager --disable cuda
+RUN yum-config-manager --disable cuda nvidia-ml
 ARG MANYLINUX_SHA=f5da004
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
 
@@ -47,7 +47,3 @@ RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.
 RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
     && chmod +x /usr/local/bin/bazel \
     && bazel
-
-RUN echo "source scl_source enable devtoolset-7" >> ~/.bashrc
-
-CMD ["/oneflow-src/docker/package/manylinux/build_wheel.sh"]
