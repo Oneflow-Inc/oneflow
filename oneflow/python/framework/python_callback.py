@@ -18,6 +18,10 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.python.framework.ofblob as ofblob
+import oneflow_api.oneflow.core.operator.op_attribute as op_attribute_cfg
+import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow_api
 
 
@@ -69,18 +73,11 @@ class PythonCallback(oneflow_api.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def EagerCastFromMirrored(self, op_attribute, parallel_conf):
+    def AddScopeToPyStorage(self, scope_symbol_id, scope_proto):
         try:
             # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
-            interpreter_callback.CastFromMirrored(str(op_attribute), parallel_conf)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
-    def AddScopeToPyStorage(self, scope_symbol_id, scope_proto_str):
-        try:
             return interpreter_callback.AddScopeToStorage(
-                scope_symbol_id, scope_proto_str
+                scope_symbol_id, str(scope_proto)
             )
         except Exception as e:
             print(traceback.format_exc())
