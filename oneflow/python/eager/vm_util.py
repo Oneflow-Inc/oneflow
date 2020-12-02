@@ -1095,7 +1095,7 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        # Temporary transformation
+        # TODO(oyy): text_format.Parse will be removed after eager_symbol proto obj is replaced with cfg obj in python side
         eager_symbol.scope_symbol.CopyFrom(
             text_format.Parse(str(scope_proto), scope_pb.ScopeProto())
         )
