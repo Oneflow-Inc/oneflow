@@ -443,7 +443,7 @@ def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lb
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
-    # Temporary transformation
+    # TODO(oyy) change temporary transformation after python code migrated into cpp code
     parallel_conf_cfg = placement_cfg.ParallelConf()
     parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
     for device_name in parallel_conf.device_name:
@@ -550,7 +550,7 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
-    # Temporary transformation
+    # TODO(oyy) change temporary transformation after python code migrated into cpp code
     parallel_conf_cfg = placement_cfg.ParallelConf()
     parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
     for device_name in parallel_conf.device_name:

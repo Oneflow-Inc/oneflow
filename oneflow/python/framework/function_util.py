@@ -54,7 +54,7 @@ class FunctionConfig(object):
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
         flag_name2flag_value = (
-            self.function_desc.job_config_proto.flag_name2flag_value()
+            self.function_desc.job_config_proto.mutable_flag_name2flag_value()
         )
         default_val = name2default[attr_name]
 
@@ -65,16 +65,16 @@ class FunctionConfig(object):
                 if attr_value is None:
                     attr_value = True
                 assert type(attr_value) is bool
-                flag_name2flag_value[attr_name].at_bool = attr_value
+                flag_name2flag_value[attr_name].set_at_bool(attr_value)
             elif default_val.HasField("at_int64"):
                 assert type(attr_value) is int
-                flag_name2flag_value[attr_name].at_int64 = attr_value
+                flag_name2flag_value[attr_name].set_at_int64(attr_value)
             elif default_val.HasField("at_double"):
                 assert type(attr_value) is float
-                flag_name2flag_value[attr_name].at_double = attr_value
+                flag_name2flag_value[attr_name].set_at_double(attr_value)
             elif default_val.HasField("at_string"):
                 assert type(attr_value) is str
-                flag_name2flag_value[attr_name].at_string = attr_value
+                flag_name2flag_value[attr_name].set_at_string(attr_value)
             else:
                 raise NotImplementedError(
                     "config_flag `%s' with type %s is not supported"
