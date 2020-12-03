@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if __GNUG__ && __GNUC__ < 5
 #include "oneflow/core/common/type_traits.h"
-#endif
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include "oneflow/core/register/ofblob.h"

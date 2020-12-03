@@ -18,6 +18,7 @@ limitations under the License.
 
 namespace std {
 
+#if __GNUG__ && __GNUC__ < 5
 // copied from
 // https://llvm.org/doxygen/type__traits_8h_source.html
 namespace detail {
@@ -91,6 +92,7 @@ class is_trivially_copyable {
 };
 template<typename T>
 class is_trivially_copyable<T*> : public true_type {};
+#endif
 
 }  // namespace std
 
