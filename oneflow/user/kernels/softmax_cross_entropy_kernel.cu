@@ -48,28 +48,23 @@ __global__ void ComputeEntropyGpu(const int64_t num_instances, const int64_t num
 
 __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t num_classes,
                                       const half* x, const half* labels, half* y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-  typedef cub::BlockReduce<half, kCrossEntropyGpuBlockSize> BlockReduce;
+  typedef cub::BlockReduce<float, kCrossEntropyGpuBlockSize> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   const int tid = threadIdx.x;
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * num_classes;
     const half* in_row = x + row_offset;
     const half* label_row = labels + row_offset;
-    half result = 0;
+    float result = 0;
     for (int col = tid; col < num_classes; col += kCrossEntropyGpuBlockSize) {
-      half label = label_row[col];
-      half prob = in_row[col];
-      result += __hneg(__hmul(label, SafeLog<half>(prob)));
+      float label = __half2float(label_row[col]);
+      float prob = __half2float(in_row[col]);
+      result += -label * SafeLog(prob);
     }
     __syncthreads();
-    half row_reduce_result = BlockReduce(temp_storage).Reduce(result, cub::Sum());
-    if (0 == tid) { y[row] = row_reduce_result; }
+    float row_reduce_result = BlockReduce(temp_storage).Reduce(result, cub::Sum());
+    if (0 == tid) { y[row] = __float2half(row_reduce_result); }
   }
-#else
-  printf("use half softmax cross entropy need nvcc arch >= 700 and cuda >= 10.0");
-  assert(false);
-#endif /* defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000 */
 }
 
 template<typename T>
