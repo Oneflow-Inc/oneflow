@@ -20,6 +20,7 @@ from contextlib import contextmanager
 
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_pb
 import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -1082,7 +1083,7 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        # Temporary transformation
+        # TODO(oyy) change temporary transformation after python code migrated into cpp code
         eager_symbol.parallel_conf_symbol.CopyFrom(
             text_format.Parse(str(parallel_conf), placement_pb.ParallelConf())
         )
@@ -1108,7 +1109,10 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.job_conf_symbol.CopyFrom(job_conf)
+        # TODO(oyy) change temporary transformation after python code migrated into cpp code
+        eager_symbol.job_conf_symbol.CopyFrom(
+            text_format.Parse(str(job_conf), job_conf_pb.JobConfigProto())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
