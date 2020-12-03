@@ -1860,7 +1860,10 @@ def tanh_grad(
 
 @oneflow_export("math.tril", "nn.tril")
 def tril(
-    x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
+    x: remote_blob_util.BlobDef,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Compute lower triangle of an matrix.
 
@@ -1868,6 +1871,7 @@ def tril(
         x (remote_blob_util.BlobDef): Input Blob.
         diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
                         otherwise, offset downward.
+        fill_value(Union[int, float]): The value filled into the upper triangle.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Attention:
@@ -1897,11 +1901,22 @@ def tril(
                   [1, 2, 3, 4]]
 
     """
+    if isinstance(fill_value, float):
+        is_floating_fill_value = True
+        floating_fill_value = float(fill_value)
+        integer_fill_value = int(0)
+    else:
+        is_floating_fill_value = False
+        floating_fill_value = float(0)
+        integer_fill_value = int(fill_value)
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
         .Op("tril")
         .Input("in", [x])
         .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
         .Output("out")
         .Build()
         .InferAndTryRun()
