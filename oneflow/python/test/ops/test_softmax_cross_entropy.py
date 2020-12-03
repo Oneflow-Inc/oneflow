@@ -45,9 +45,7 @@ def compare_with_tensorflow(device_type, data_type, shape):
         return np.exp(x) / np.sum(np.exp(x), axis=1, keepdims=True)
 
     @flow.global_function(type="train", function_config=func_config)
-    def SoftmaxCrossEntropyWithLogitsJob(
-        labels: oft.Numpy.Placeholder(shape, dtype)
-    ):
+    def SoftmaxCrossEntropyWithLogitsJob(labels: oft.Numpy.Placeholder(shape, dtype)):
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
@@ -57,12 +55,17 @@ def compare_with_tensorflow(device_type, data_type, shape):
                 trainable=True,
             )
             if data_type == "float16":
-              loss = flow.cast(
-                flow.nn.softmax_cross_entropy_with_logits(flow.cast(labels, dtype=flow.float16), flow.cast(x, dtype=flow.float16)),
-                dtype=flow.float,
-              )
+                loss = flow.cast(
+                    flow.nn.softmax_cross_entropy_with_logits(
+                        flow.cast(labels, dtype=flow.float16),
+                        flow.cast(x, dtype=flow.float16),
+                    ),
+                    dtype=flow.float,
+                )
             else:
-              loss = flow.nn.softmax_cross_entropy_with_logits(labels=labels, logits=x)
+                loss = flow.nn.softmax_cross_entropy_with_logits(
+                    labels=labels, logits=x
+                )
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -75,11 +78,11 @@ def compare_with_tensorflow(device_type, data_type, shape):
 
     # fake labels
     if data_type == "float16":
-      labels = np_softmax(np.random.randint(0, 10, size=shape)).astype(np.float32)
+        labels = np_softmax(np.random.randint(0, 10, size=shape)).astype(np.float32)
     else:
-      labels = np_softmax(np.random.randint(0, 10, size=shape)).astype(
-        type_name_to_np_type[data_type]
-      )
+        labels = np_softmax(np.random.randint(0, 10, size=shape)).astype(
+            type_name_to_np_type[data_type]
+        )
 
     # OneFlow
     check_point = flow.train.CheckPoint()
@@ -90,10 +93,12 @@ def compare_with_tensorflow(device_type, data_type, shape):
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
         tf_out = tf.nn.softmax_cross_entropy_with_logits(labels, x)
-        tf16_out = tf.nn.softmax_cross_entropy_with_logits(tf.cast(labels, dtype=tf.float16), tf.cast(x, dtype=tf.float16))
+        tf16_out = tf.nn.softmax_cross_entropy_with_logits(
+            tf.cast(labels, dtype=tf.float16), tf.cast(x, dtype=tf.float16)
+        )
         loss_diff = test_global_storage.Get("loss_diff")
         tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    
+
     if data_type == "float16":
         tolerance = 1e-3
     else:
@@ -101,7 +106,10 @@ def compare_with_tensorflow(device_type, data_type, shape):
 
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=tolerance, atol=tolerance)
     assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=tolerance, atol=tolerance
+        test_global_storage.Get("x_diff"),
+        tf_x_diff.numpy(),
+        rtol=tolerance,
+        atol=tolerance,
     )
     flow.clear_default_session()
 
@@ -117,9 +125,9 @@ class TestSoftmaxCrossEntropy(flow.unittest.TestCase):
         arg_dict["data_type"] = ["double", "float32", "float16"]
         arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
         for arg in GenArgList(arg_dict):
-          if arg[0] == "cpu" and arg[1] == "float16":
-            continue
-          compare_with_tensorflow(*arg)
+            if arg[0] == "cpu" and arg[1] == "float16":
+                continue
+            compare_with_tensorflow(*arg)
 
 
 if __name__ == "__main__":
