@@ -49,18 +49,11 @@ def compare_with_tensorflow(device_type, data_type, shape):
         labels: oft.Numpy.Placeholder(shape, dtype)
     ):
         with flow.scope.placement(device_type, "0:0"):
-            # x = flow.get_variable(
-            #     "x",
-            #     shape=shape,
-            #     dtype=dtype,
-            #     initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
-            #     trainable=True,
-            # )
             x = flow.get_variable(
                 "x",
                 shape=shape,
                 dtype=dtype,
-                initializer=flow.ones_initializer(),
+                initializer=flow.constant_initializer(20),
                 trainable=True,
             )
             if data_type == "float16":
@@ -92,20 +85,10 @@ def compare_with_tensorflow(device_type, data_type, shape):
     check_point = flow.train.CheckPoint()
     check_point.init()
     of_out = SoftmaxCrossEntropyWithLogitsJob(labels).get()
-    
-    # ----------------------Debug code-----------------------
-    x = test_global_storage.Get("x")
-    print("-----------------of_x:", x)
-    print("-----------------of_label:", labels)
 
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
-        
-        #----------------------Debug code-----------------------
-        # print("-----------------tf_x:")
-        # tf.print(x)
-        
         tf_out = tf.nn.softmax_cross_entropy_with_logits(labels, x)
         tf16_out = tf.nn.softmax_cross_entropy_with_logits(tf.cast(labels, dtype=tf.float16), tf.cast(x, dtype=tf.float16))
         loss_diff = test_global_storage.Get("loss_diff")
@@ -115,11 +98,6 @@ def compare_with_tensorflow(device_type, data_type, shape):
         tolerance = 1e-3
     else:
         tolerance = 1e-5
-
-    #--------------------------Debug code--------------------------
-    print("-----------------of_out:", of_out.numpy())
-    print("-----------------tf_out:", tf_out.numpy())
-    print("-----------------tf16_out:", tf16_out.numpy())
 
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=tolerance, atol=tolerance)
     assert np.allclose(
@@ -136,10 +114,8 @@ class TestSoftmaxCrossEntropy(flow.unittest.TestCase):
             return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # arg_dict["data_type"] = ["double", "float32", "float16"]
-        # arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
-        arg_dict["data_type"] = ["float32",]
-        arg_dict["shape"] = [(64, 1000), ]
+        arg_dict["data_type"] = ["double", "float32", "float16"]
+        arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
         for arg in GenArgList(arg_dict):
           if arg[0] == "cpu" and arg[1] == "float16":
             continue
