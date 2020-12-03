@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_HELPER_H_
-#define ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_HELPER_H_
+#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_HELPER_H_
+#define ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_HELPER_H_
 
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/util.h"
@@ -59,4 +59,4 @@ Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_HELPER_H_
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_HELPER_H_
