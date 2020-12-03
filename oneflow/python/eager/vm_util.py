@@ -20,6 +20,8 @@ from contextlib import contextmanager
 
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_pb
 import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
@@ -438,7 +440,7 @@ class InstructionsBuilder(object):
 
     def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
         symbol_id = self._NewSymbolId4Scope(scope_proto)
-        serialized_scope_proto = scope_proto.SerializeToString()
+        serialized_scope_proto = str(scope_proto)
         if symbol_storage.HasSymbol4SerializedScopeProto(serialized_scope_proto):
             return symbol_storage.GetSymbol4SerializedScopeProto(serialized_scope_proto)
         symbol = scope_symbol.ScopeSymbol(symbol_id, scope_proto, parent_scope_symbol)
@@ -1081,7 +1083,7 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        # Temporary transformation
+        # TODO(oyy) change temporary transformation after python code migrated into cpp code
         eager_symbol.parallel_conf_symbol.CopyFrom(
             text_format.Parse(str(parallel_conf), placement_pb.ParallelConf())
         )
@@ -1094,7 +1096,10 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.scope_symbol.CopyFrom(scope_proto)
+        # TODO(oyy): text_format.Parse will be removed after eager_symbol proto obj is replaced with cfg obj in python side
+        eager_symbol.scope_symbol.CopyFrom(
+            text_format.Parse(str(scope_proto), scope_pb.ScopeProto())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitJobConfSymbol(self, symbol_id, job_conf):
@@ -1104,7 +1109,10 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.job_conf_symbol.CopyFrom(job_conf)
+        # TODO(oyy) change temporary transformation after python code migrated into cpp code
+        eager_symbol.job_conf_symbol.CopyFrom(
+            text_format.Parse(str(job_conf), job_conf_pb.JobConfigProto())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
