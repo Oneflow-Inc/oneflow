@@ -2312,3 +2312,28 @@ def amp_white_identity(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("ravel_multi_index")
+def ravel_multi_index(
+    multi_index: Sequence[remote_blob_util.BlobDef], 
+    dims: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    _multi_index_len = len(multi_index)
+    _dim_len = dims.shape[0]
+    assert _multi_index_len == _dim_len, \
+        "The Input sequence length is not matched, {} vs {}".format(_multi_index_len, _dim_len)
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("RavelMultiIndex_")
+        )
+        .Op("ravel_multi_index")
+        .Input("multi_index", multi_index)
+        .Input("dims", [dims])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
