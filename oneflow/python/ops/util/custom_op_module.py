@@ -53,7 +53,6 @@ def compile(compiler, flags, link, inputs, output):
         )
     else:
         cmd = "{} {} {} {} -o {}".format(compiler, inputs, flags, link, output)
-    print(cmd)
     run_cmd(cmd)
     return True
 
@@ -77,18 +76,18 @@ class PythonKernelRegistry(object):
     def __init__(self):
         self.kernels_ = {}
 
-    def Register(self, op_type_name, module):
-        self.kernels_[op_type_name] = module
+    def Register(self, op_module_name, module):
+        self.kernels_[op_module_name] = module
 
 
 _python_kernel_reg = PythonKernelRegistry()
 oneflow_api.RegisterPyKernels(_python_kernel_reg.kernels_)
 
 
-@oneflow_export("experimental.op_lib")
-class OpLib(object):
-    def __init__(self, op_type_name, lib_path=""):
-        self.op_type_name_ = op_type_name
+@oneflow_export("experimental.custom_op_module")
+class CustomOpModule(object):
+    def __init__(self, op_module_name, module_path=""):
+        self.op_module_name_ = op_module_name
         self.api = None
         self.so_path_ = ""
         self.objs_ = []
@@ -99,28 +98,28 @@ class OpLib(object):
         self.has_gpu_kernel_ = False
         self.got_so_ = False
 
-        lib_path = os.path.normpath(lib_path)
+        module_path = os.path.normpath(module_path)
         pwd_path = os.getcwd()
-        if lib_path != "." and lib_path != pwd_path:
-            lib_folder = os.path.join(lib_path, self.op_type_name_)
-            pwd_folder = os.path.join(pwd_path, self.op_type_name_)
+        if module_path != "." and module_path != pwd_path:
+            module_folder = os.path.join(module_path, self.op_module_name_)
+            pwd_folder = os.path.join(pwd_path, self.op_module_name_)
             if os.path.exists(pwd_folder):
                 shutil.rmtree(pwd_folder)
-            shutil.copytree(lib_folder, pwd_folder)
+            shutil.copytree(module_folder, pwd_folder)
 
         self.src_prefix_ = os.path.join(
-            pwd_path, self.op_type_name_, self.op_type_name_
+            pwd_path, self.op_module_name_, self.op_module_name_
         )
 
-        out_path = os.path.join(pwd_path, self.op_type_name_, "out")
+        out_path = os.path.join(pwd_path, self.op_module_name_, "out")
         if not os.path.exists(out_path):
             os.makedirs(out_path)
-        self.out_prefix_ = os.path.join(out_path, self.op_type_name_)
+        self.out_prefix_ = os.path.join(out_path, self.op_module_name_)
 
     def py_api(self):
         assert os.path.exists("{}_py_api.py".format(self.src_prefix_))
         spec = importlib.util.spec_from_file_location(
-            self.op_type_name_, "{}_py_api.py".format(self.src_prefix_)
+            self.op_module_name_, "{}_py_api.py".format(self.src_prefix_)
         )
         self.api = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.api)
@@ -142,12 +141,12 @@ class OpLib(object):
     def py_kernel(self):
         assert os.path.exists("{}_py_kernel.py".format(self.src_prefix_))
         spec = importlib.util.spec_from_file_location(
-            self.op_type_name_, "{}_py_kernel.py".format(self.src_prefix_)
+            self.op_module_name_, "{}_py_kernel.py".format(self.src_prefix_)
         )
         kernel = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(kernel)
-        _python_kernel_reg.Register(self.op_type_name_, kernel)
-        oneflow_api.RegisterPyKernelCaller(self.op_type_name_)
+        _python_kernel_reg.Register(self.op_module_name_, kernel)
+        oneflow_api.RegisterPyKernelCaller(self.op_module_name_)
         self.has_py_kernel_ = True
         return self
 

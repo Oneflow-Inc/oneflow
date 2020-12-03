@@ -20,6 +20,8 @@ from contextlib import contextmanager
 
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_pb
 import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
@@ -41,6 +43,8 @@ from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
 import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
+import oneflow_api.oneflow.core.job.placement as placement_cfg
+from google.protobuf import text_format
 
 oneflow_api = oneflow.oneflow_api
 
@@ -273,7 +277,7 @@ class InstructionsBuilder(object):
     ):
         parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
         machine_id2device_ids = parallel_desc_symbol.machine_id2device_id_list
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag
+        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
         machine_device_ids = set()
         for physical_blob_object in physical_blob_objects:
             phy_paralle_desc_sym = physical_blob_object.parallel_desc_symbol
@@ -307,13 +311,13 @@ class InstructionsBuilder(object):
 
     def GetPhysicalParallelDescSymbols(self, parallel_desc_symbol):
         machine_id2device_ids = parallel_desc_symbol.machine_id2device_id_list
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag
+        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
         phy_parallel_desc_symbols = []
 
         def AppendPhyParallelDescSymbol(machine_id, device_id):
-            parallel_conf = placement_pb.ParallelConf()
-            parallel_conf.device_tag = device_tag
-            parallel_conf.device_name.append("%d:%d" % (machine_id, device_id))
+            parallel_conf = placement_cfg.ParallelConf()
+            parallel_conf.set_device_tag(device_tag)
+            parallel_conf.add_device_name("%d:%d" % (machine_id, device_id))
             phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
 
         for machine_id, device_ids in machine_id2device_ids.items():
@@ -420,7 +424,8 @@ class InstructionsBuilder(object):
         return symbol
 
     def GetParallelDescSymbol(self, parallel_conf):
-        serialized_parallel_conf = parallel_conf.SerializeToString()
+        # parallel_conf is cfg
+        serialized_parallel_conf = str(parallel_conf)
         if symbol_storage.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
             return symbol_storage.GetSymbol4SerializedParallelConf(
                 serialized_parallel_conf
@@ -435,7 +440,7 @@ class InstructionsBuilder(object):
 
     def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
         symbol_id = self._NewSymbolId4Scope(scope_proto)
-        serialized_scope_proto = scope_proto.SerializeToString()
+        serialized_scope_proto = str(scope_proto)
         if symbol_storage.HasSymbol4SerializedScopeProto(serialized_scope_proto):
             return symbol_storage.GetSymbol4SerializedScopeProto(serialized_scope_proto)
         symbol = scope_symbol.ScopeSymbol(symbol_id, scope_proto, parent_scope_symbol)
@@ -1078,7 +1083,10 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.parallel_conf_symbol.CopyFrom(parallel_conf)
+        # TODO(oyy) change temporary transformation after python code migrated into cpp code
+        eager_symbol.parallel_conf_symbol.CopyFrom(
+            text_format.Parse(str(parallel_conf), placement_pb.ParallelConf())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _NewScopeSymbol(self, symbol_id, scope_proto):
@@ -1088,7 +1096,10 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.scope_symbol.CopyFrom(scope_proto)
+        # TODO(oyy): text_format.Parse will be removed after eager_symbol proto obj is replaced with cfg obj in python side
+        eager_symbol.scope_symbol.CopyFrom(
+            text_format.Parse(str(scope_proto), scope_pb.ScopeProto())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitJobConfSymbol(self, symbol_id, job_conf):
@@ -1098,7 +1109,10 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.job_conf_symbol.CopyFrom(job_conf)
+        # TODO(oyy) change temporary transformation after python code migrated into cpp code
+        eager_symbol.job_conf_symbol.CopyFrom(
+            text_format.Parse(str(job_conf), job_conf_pb.JobConfigProto())
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
