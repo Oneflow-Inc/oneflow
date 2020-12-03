@@ -21,6 +21,9 @@ REGISTER_USER_OP("tril")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("diagonal")
+    .Attr<double>("floating_fill_value", 0)
+    .Attr<int64_t>("integer_fill_value", 0)
+    .Attr<bool>("is_floating_fill_value", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
