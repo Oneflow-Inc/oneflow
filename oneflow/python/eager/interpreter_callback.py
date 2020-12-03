@@ -41,8 +41,7 @@ def AddScopeToStorage(scope_symbol_id, scope_proto):
     symbol_storage.SetSymbol4SerializedScopeProto(scope_proto_str, symbol)
 
 
-def MakeScopeSymbol(job_conf_str, parallel_conf, is_mirrored):
-    job_conf = text_format.Parse(job_conf_str, job_conf_pb.JobConfigProto())
+def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
     return scope_util.MakeInitialScope(
         job_conf,
         parallel_conf.device_tag(),
