@@ -33,12 +33,10 @@ class TestSsp(flow.unittest.TestCase):
         shape = (10, 10)
 
         function_config = flow.FunctionConfig()
-        function_config.ssp_placement(
-            flow.stage(
-                flow.scope.placement("gpu", device_name),
-                flow.scope.placement("gpu", device_name),
-            ),
-            flow.stage(flow.scope.placement("gpu", device_name)),
+        placement = flow.scope.placement("gpu", device_name)
+        function_config.ssp_stage(
+            flow.stage(*[placement]*2),
+            flow.stage(placement),
         )
 
         @flow.global_function(type="train", function_config=function_config)

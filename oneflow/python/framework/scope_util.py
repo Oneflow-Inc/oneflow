@@ -102,16 +102,15 @@ def InitScopeStack():
     scope_stack_ = [scope]
 
 
-@contextmanager
-def ScopeContext(scope):
-    old_scope = GetCurrentScope()
-    scope_stack_.append(scope)
-    try:
-        yield
-    finally:
-        assert GetCurrentScope() is scope
+class ScopeContext(object):
+    def __init__(self, scope):
+        self.scope_ = scope
+
+    def __enter__(self):
+        scope_stack_.append(self.scope_)
+
+    def __exit__(self, *args, **kwargs):
         scope_stack_.pop()
-        assert GetCurrentScope() is old_scope
 
 
 def GetCurrentScope():

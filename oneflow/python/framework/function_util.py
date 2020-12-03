@@ -67,7 +67,7 @@ class FunctionConfig(object):
 
         return FunctionConfigSetter
 
-    def ssp_placement(self, *stages, stage_partition_strategy="naive_sequantial"):
+    def ssp_stage(self, *stages, stage_partition_strategy="naive_sequantial"):
         self.enable_stage_partition(True)
         self.stage_partition_scope_ids(_GetScopeSymbolIds(stages))
         self.stage_partition_strategy(stage_partition_strategy)
