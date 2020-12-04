@@ -2044,3 +2044,30 @@ def range(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.swish")
+def swish(
+    x: remote_blob_util.BlobDef, beta: float = 1.0, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""The Swish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x * sigmoid(\beta*x)
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        beta (float, optional): The smooth factor. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Swish_")
+
+    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
