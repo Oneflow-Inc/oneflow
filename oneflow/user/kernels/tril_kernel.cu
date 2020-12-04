@@ -23,13 +23,13 @@ namespace {
 
 template<typename T>
 __global__ void TrilGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
-                        const int64_t diagonal, const T* x, const T zero, T* y) {
+                        const int64_t diagonal, const T* x, const T fill, T* y) {
   int64_t matrix_size = num_rows * num_cols;
   CUDA_1D_KERNEL_LOOP_T(int64_t, k, elem_cnt) {
     int64_t offset_in_matrix = k % matrix_size;
     int64_t i = offset_in_matrix / num_cols;
     int64_t j = offset_in_matrix - num_cols * i;
-    y[k] = j > i + diagonal ? zero : x[k];
+    y[k] = j > i + diagonal ? fill : x[k];
   }
 }
 
@@ -39,19 +39,22 @@ template<typename T>
 class GpuTrilKernel final : public user_op::OpKernel {
  public:
   GpuTrilKernel() = default;
-  ~GpuTrilKernel() = default;
+  ~GpuTrilKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
-    const int64_t diagonal = ctx->Attr<int64_t>("diagonal");
+    const auto diagonal = ctx->Attr<int64_t>("diagonal");
     const int64_t num_rows = shape.At(shape.NumAxes() - 2);
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = shape.elem_cnt();
+    const T fill = ctx->Attr<bool>("is_floating_fill_value")
+                       ? static_cast<T>(ctx->Attr<double>("floating_fill_value"))
+                       : static_cast<T>(ctx->Attr<int64_t>("integer_fill_value"));
     RUN_CUDA_KERNEL((TrilGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows, num_cols,
-                    diagonal, x->dptr<T>(), GetZeroVal<T>(), y->mut_dptr<T>());
+                    diagonal, x->dptr<T>(), fill, y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
