@@ -86,20 +86,30 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
         [&](const OpNode* op_node, int64_t stage_scope_symbol_id) -> Maybe<void> {
           const auto& old_op_conf = op_node->op().op_conf();
           CHECK_OR_RETURN(old_op_conf.has_scope_symbol_id());
+          const auto& old_scope = JUST(
+              Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(old_op_conf.scope_symbol_id()));
           int64_t merged_scope_symbol_id =
               JUST(GetMergedScopeSymbolId(old_op_conf.scope_symbol_id(), stage_scope_symbol_id));
           const auto& merged_scope =
               JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(merged_scope_symbol_id));
           // Sets scope_symbol_id
           std::vector<OperatorConf> op_confs(1);
-          auto* op_conf = &op_confs.at(0);
-          op_conf->CopyFrom(old_op_conf);
-          op_conf->set_scope_symbol_id(merged_scope_symbol_id);
+          auto* new_op_conf = &op_confs.at(0);
+          new_op_conf->CopyFrom(old_op_conf);
+          new_op_conf->set_scope_symbol_id(merged_scope_symbol_id);
           job_builder.MutOpsOnlyOnce(op_confs);
           // Sets parallel_conf
-          const auto& parallel_desc = JUST(merged_scope.GetParallelDesc(*op_conf));
+          const auto& new_parallel_desc = JUST(merged_scope.GetParallelDesc(*new_op_conf));
           const auto& op_name = op_node->op().op_name();
-          job_builder.MutParallelConfOnlyOnce(op_name, parallel_desc.parallel_conf());
+          job_builder.MutParallelConfOnlyOnce(op_name, new_parallel_desc.parallel_conf());
+          const auto& old_parallel_conf = JUST(old_scope.GetParallelDesc(old_op_conf));
+          if (new_parallel_desc != old_parallel_conf) {
+            LOG(INFO) << "======== " << old_op_conf.name() << " ========" << std::endl
+                      << "-------- old --------" << std::endl
+                      << old_parallel_conf.parallel_conf().DebugString() << "-------- new --------"
+                      << std::endl
+                      << new_parallel_desc.parallel_conf().DebugString();
+          }
           return Maybe<void>::Ok();
         }));
     return Maybe<void>::Ok();
