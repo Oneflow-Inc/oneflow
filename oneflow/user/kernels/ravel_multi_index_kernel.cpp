@@ -1,15 +1,11 @@
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
-
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/user/kernels/ravel_multi_index_util.h"
 
 namespace oneflow {
-
-const int ravel_multi_index_max_ndims = 6; 
-
-template<typename IDX_T>
-using RavelMultiIndexHelper = NdIndexOffsetHelper<IDX_T, ravel_multi_index_max_ndims>;
-
+ 
 namespace user_op {
+
 template<DeviceType device_type, typename T>
 class RavelMultiIndexKernel final : public OpKernel {
  public:
@@ -33,32 +29,39 @@ class RavelMultiIndexKernel final : public OpKernel {
     T* output = out->mut_dptr<T>();
 
     const T* dims = dims_tensor->dptr<T>();
+    std::cout<<"Helper Ndim is: "<<ndim<<std::endl;
     RavelMultiIndexHelper<T> helper(dims, ndim);
-    std::vector<T> offset_vec(n);
 
-    for (int32_t elem_idx = 0; elem_idx < n; ++elem_idx){
-        std::vector<T> index_vec(in_num);
-        for (int32_t idx = 0; idx < in_num; ++idx){
-          index_vec[idx] = (in_dptrs.at(idx)[elem_idx]);
-        }
-        T offset = helper.NdIndexToOffset(index_vec.data(), n);
-        output[elem_idx] = offset;
-      }
+    // for (int32_t elem_idx = 0; elem_idx < n; ++elem_idx){
+    //     std::vector<T> index_vec(in_num);
+    //     std::cout<<"Index vector size is: "<<in_num<<std::endl;
+    //     for (int32_t idx = 0; idx < in_num; ++idx){
+    //       std::cout<<"In dptrs element is: "<<in_dptrs.at(idx)[elem_idx]<<std::endl;
+    //       index_vec[idx] = (in_dptrs.at(idx)[elem_idx]);
+    //     }
+    //     std::cout<<"Index vector size is: "<<index_vec[0]<<std::endl;
+    //     std::cout<<"Index vector size is: "<<index_vec[1]<<std::endl;
+    //     std::cout<<"n is: "<<n<<std::endl;
+    //     T offset = helper.NdIndexToOffset(index_vec.data(), in_num);
+    //     std::cout<<"offset is: "<<offset<<std::endl;
+    //     output[elem_idx] = offset;
+    //   }
+
+    RavelMultiIndexFunctor<device_type, T>()(ctx->device_ctx(), n, in_num, helper, in_dptrs, output);
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RAVEL_MULTI_INDEX_KERNEL(device, itype, dtype)    \
+#define REGISTER_RAVEL_MULTI_INDEX_KERNEL(device, dtype)    \
   REGISTER_USER_KERNEL("ravel_multi_index")                 \
-      .SetCreateFn<RavelMultiIndexKernel<device, itype>>()  \
+      .SetCreateFn<RavelMultiIndexKernel<device, dtype>>()  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device) & \
                         (user_op::HobDataType("dims", 0) == GetDataType<dtype>::value));
 
-
-
 #define REGISTER_RAVEL_MULTI_INDEX_KERNELS_WITH_DEVICE(device) \
-  REGISTER_RAVEL_MULTI_INDEX_KERNEL(device, int32_t, int32_t)           \
-  REGISTER_RAVEL_MULTI_INDEX_KERNEL(device, int64_t, int64_t)           \
+  REGISTER_RAVEL_MULTI_INDEX_KERNEL(device, int32_t)           \
+  REGISTER_RAVEL_MULTI_INDEX_KERNEL(device, int64_t)           \
 
 // Register CPU version
 REGISTER_RAVEL_MULTI_INDEX_KERNELS_WITH_DEVICE(DeviceType::kCPU);
