@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/softmax_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/user/kernels/math_unary_elementwise_func.h"
 
 namespace oneflow {
 
@@ -36,6 +37,74 @@ size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
   return GetCudaAlignedSize(n * w * sizeof(T));
 }
 
+constexpr int64_t kSoftmaxGpuBlockSize = 128;
+
+int64_t GetSoftmaxBlockSize() { return kSoftmaxGpuBlockSize; }
+
+int64_t GetSoftmaxNumBlocks(const int64_t num_instances) {
+  return std::min(static_cast<int32_t>(num_instances), kCudaMaxBlocksNum);
+}
+
+template<typename T>
+struct SoftmaxUtil {
+  using ComputeType = T;
+  __device__ static ComputeType ToComputeType(T v) { return v; }
+  __device__ static T FromComputeType(ComputeType v) { return v; }
+};
+
+template<>
+struct SoftmaxUtil<half> {
+  using ComputeType = float;
+  __device__ static ComputeType ToComputeType(half v) { return __half2float(v); }
+  __device__ static half FromComputeType(ComputeType v) { return __float2half(v); }
+};
+
+template<typename T>
+__global__ void BroadcastSubExpGpuImpl(const int64_t num_instances, const int64_t num_classes,
+                                       const T* x, const T* y, T* z) {
+  using SU = SoftmaxUtil<T>;
+  using ComputeType = typename SU::ComputeType;
+  const int64_t tid = threadIdx.x;
+  __shared__ ComputeType row_sub;
+  for (int64_t row = blockIdx.x; row < num_instances; row += gridDim.x) {
+    const int64_t row_offset = row * num_classes;
+    const T* x_row = x + row_offset;
+    T* z_row = z + row_offset;
+    if (tid == 0) { row_sub = SU::ToComputeType(y[row]); }
+    __syncthreads();
+    const ComputeType row_sub_t = row_sub;
+    for (int64_t col = tid; col < num_classes; col += kSoftmaxGpuBlockSize) {
+      z_row[col] = SU::FromComputeType(
+          ExpFunctor<ComputeType>::Forward(SU::ToComputeType(x_row[col]) - row_sub_t));
+    }
+  }
+}
+
+template<typename T>
+__global__ void BroadcastDivGpuImpl(const int64_t num_instances, const int64_t num_classes,
+                                    const T* x, const T* y, T* z) {
+  using SU = SoftmaxUtil<T>;
+  using ComputeType = typename SU::ComputeType;
+  const int64_t tid = threadIdx.x;
+  __shared__ ComputeType inv_row_div;
+  for (int64_t row = blockIdx.x; row < num_instances; row += gridDim.x) {
+    const int64_t row_offset = row * num_classes;
+    const T* x_row = x + row_offset;
+    T* z_row = z + row_offset;
+    if (tid == 0) { inv_row_div = static_cast<ComputeType>(1.0) / SU::ToComputeType(y[row]); }
+    __syncthreads();
+    const ComputeType inv_row_div_t = inv_row_div;
+    for (int64_t col = tid; col < num_classes; col += kSoftmaxGpuBlockSize) {
+      z_row[col] = SU::FromComputeType(SU::ToComputeType(x_row[col]) * inv_row_div_t);
+    }
+  }
+}
+
+template<typename T>
+int64_t GetMinNumClasses() {
+  return 32;
+}
+
 }  // namespace
 
 template<DeviceType device_type, typename T>
@@ -48,6 +117,36 @@ template<DeviceType device_type, typename T>
 size_t SoftmaxKernelUtil<device_type, T>::GetComputeDiffTempStorageSizeInBytes(int64_t n,
                                                                                int64_t w) {
   return GetDiffTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
+}
+
+template<typename T>
+void BroadcastSubExpGpu(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                        const T* x, const T* y, T* z) {
+  BroadcastSubExpGpuImpl<<<GetSoftmaxNumBlocks(num_instances), GetSoftmaxBlockSize(), 0,
+                           ctx->cuda_stream()>>>(num_instances, num_classes, x, y, z);
+}
+
+template<>
+void BroadcastSubExpGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
+                                 const int64_t num_classes, const float16* x, const float16* y,
+                                 float16* z) {
+  BroadcastSubExpGpu<half>(ctx, num_instances, num_classes, reinterpret_cast<const half*>(x),
+                           reinterpret_cast<const half*>(y), reinterpret_cast<half*>(z));
+}
+
+template<typename T>
+void BroadcastDivGpu(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
+                     const T* x, const T* y, T* z) {
+  BroadcastDivGpuImpl<<<GetSoftmaxNumBlocks(num_instances), GetSoftmaxBlockSize(), 0,
+                        ctx->cuda_stream()>>>(num_instances, num_classes, x, y, z);
+}
+
+template<>
+void BroadcastDivGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
+                              const int64_t num_classes, const float16* x, const float16* y,
+                              float16* z) {
+  BroadcastDivGpu<half>(ctx, num_instances, num_classes, reinterpret_cast<const half*>(x),
+                        reinterpret_cast<const half*>(y), reinterpret_cast<half*>(z));
 }
 
 template<DeviceType device_type, typename T>
@@ -70,15 +169,24 @@ void SoftmaxKernelUtil<device_type, T>::ComputeProb(DeviceCtx* ctx, const int64_
   NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
                                          reduce_storage_var);
   // sub | prob[i][j] = in[i][j] - tmp[i]
-  NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, prob), Val({n, w}, in),
-                                            Val({n, 1}, tmp));
   // exp | prob[i][j] = exp(prob[i][j])
-  NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({n, w}, prob));
+  if (w >= GetMinNumClasses<T>()) {
+    BroadcastSubExpGpu(ctx, n, w, in, tmp, prob);
+  } else {
+    NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({n, w}, prob), Val({n, w}, in),
+                                              Val({n, 1}, tmp));
+    NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({n, w}, prob));
+  }
+
   // sum | tmp[i] = Sum_j(prob[i][j])
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                          reduce_storage_var);
   // div | prob[i][j] /= tmp[i]
-  NdarrayUtil<device_type, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
+  if (w >= GetMinNumClasses<T>()) {
+    BroadcastDivGpu(ctx, n, w, prob, tmp, prob);
+  } else {
+    NdarrayUtil<device_type, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -112,7 +220,8 @@ void SoftmaxKernelUtil<device_type, T>::ComputeDiff(DeviceCtx* ctx, const int64_
 
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(device_type, data_type) \
   template struct SoftmaxKernelUtil<device_type, data_type>;
-INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kCPU, float)
-INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kCPU, double)
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kGPU, float16)
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kGPU, float)
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(DeviceType::kGPU, double)
 #undef INSTANTIATE_SOFTMAX_KERNEL_UTIL
 }  // namespace oneflow
