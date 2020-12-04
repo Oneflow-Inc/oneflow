@@ -65,7 +65,7 @@ jobs:
       uses: ./.github/actions/upload_oss
       with:
         src_path: ${wheelhouse_dir}
-        oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cuda
+        oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cuda
         oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
         oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
@@ -148,7 +148,7 @@ jobs:
       uses: ./.github/actions/upload_oss
       with:
         src_path: ${wheelhouse_dir}
-        oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-xla
+        oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-xla
         oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
         oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing
@@ -178,7 +178,7 @@ jobs:
       uses: ./.github/actions/upload_oss
       with:
         src_path: ${wheelhouse_dir}
-        oss_dst_path: oss://oneflow-static/staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cpu
+        oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-cpu
         oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
         oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Build docker image for testing

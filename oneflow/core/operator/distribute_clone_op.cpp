@@ -130,7 +130,7 @@ Maybe<void> DistributeCloneOp::InferSbpSignature(
   CHECK_OR_RETURN(in_hint.parallel_desc() == parallel_desc);
   SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_signature);
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  (*bn2sbp)["in"] = in_hint.sbp_parallel();
+  (*bn2sbp)["in"].mutable_broadcast_parallel();
   return Maybe<void>::Ok();
 }
 
