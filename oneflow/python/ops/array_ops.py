@@ -1713,14 +1713,14 @@ def stack(
 
     """
     if name is None:
-        name = "Stack"
+        name = id_util.UniqueStr("Stack_")
 
     inputs = list(inputs)
 
     _input_shape = inputs[0].shape
     _max_dim = len(_input_shape)
 
-    # The legal axis is -(Rank+1) ~ Rank
+    # The axis must be in range [-(_max_dim +1), _max_dim]
     if axis < 0:
         axis = axis + _max_dim + 1
     assert (axis >= 0) and (axis <= _max_dim)
@@ -1739,7 +1739,7 @@ def stack(
             inputs[i], axis=axis, name=name + "expand_dims_{}".format(i)
         )
 
-    return flow.concat(inputs, axis=axis, name=name + "_concat")
+    return flow.concat(inputs, axis=axis, name=name + "concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")

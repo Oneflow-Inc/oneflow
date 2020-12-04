@@ -53,7 +53,6 @@ def _compare_stack_with_np(input_shape, axis, device_type, machine_ids, device_c
     _np_grad = np_diff(np_random_mul, axis)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        # Evaluate the gradient. Here we only test the reduction type == "mean"
         assert np.allclose(blob, _np_grad)
 
     # if the stack axis is 0, the batch axis will be change to 1
