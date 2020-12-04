@@ -1924,6 +1924,52 @@ def tril(
     )
 
 
+@oneflow_export("math.fuse_scale_tril", "nn.fuse_scale_tril")
+def fuse_scale_tril(
+    x: remote_blob_util.BlobDef,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    scale: Union[int, float] = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    if isinstance(fill_value, float):
+        is_floating_fill_value = True
+        floating_fill_value = float(fill_value)
+        integer_fill_value = int(0)
+    else:
+        is_floating_fill_value = False
+        floating_fill_value = float(0)
+        integer_fill_value = int(fill_value)
+
+    if isinstance(scale, float):
+        is_floating_scale_value = True
+        floating_scale_value = float(scale)
+        integer_scale_value = int(1)
+    else:
+        is_floating_scale_value = False
+        floating_scale_value = float(1)
+        integer_scale_value = int(scale)
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("FuseScaleTril_")
+        )
+        .Op("fuse_scale_tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
+        .Attr("is_floating_scale_value", is_floating_scale_value)
+        .Attr("floating_scale_value", floating_scale_value)
+        .Attr("integer_scale_value", integer_scale_value)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("math.polyval")
 def polyval(
     coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
