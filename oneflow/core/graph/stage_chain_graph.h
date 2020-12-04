@@ -42,6 +42,8 @@ class StageChainNode : public Node<StageChainNode, StageChainEdge> {
   }
 
   int64_t stage_placement_id() const { return stage_placement_id_; }
+  int64_t stage_buffer_size() const { return stage_buffer_size_; }
+  const HashSet<int64_t>& parallel_desc_symbol_ids() const { return *parallel_desc_symbol_ids_; }
 
   const std::list<const ComputeNode*>& compute_nodes() const { return *compute_nodes_; }
 
@@ -49,14 +51,19 @@ class StageChainNode : public Node<StageChainNode, StageChainEdge> {
 
  private:
   StageChainNode() = default;
-  Maybe<void> Init(int64_t stage_placement_id,
+  Maybe<void> Init(int64_t stage_placement_id, int64_t stage_buffer_size,
+                   const std::shared_ptr<HashSet<int64_t>>& parallel_desc_symbol_ids,
                    const std::shared_ptr<std::list<const ComputeNode*>>& compute_nodes) {
     stage_placement_id_ = stage_placement_id;
+    stage_buffer_size_ = stage_buffer_size;
+    parallel_desc_symbol_ids_ = std::move(parallel_desc_symbol_ids);
     compute_nodes_ = compute_nodes;
     return Maybe<void>::Ok();
   }
 
   int64_t stage_placement_id_;
+  int64_t stage_buffer_size_;
+  std::shared_ptr<HashSet<int64_t>> parallel_desc_symbol_ids_;
   std::shared_ptr<std::list<const ComputeNode*>> compute_nodes_;
 };
 

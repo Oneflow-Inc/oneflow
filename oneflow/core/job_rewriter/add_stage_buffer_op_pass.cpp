@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -222,26 +221,66 @@ class AddStageBufferOpPass final : public JobPass {
       const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
       const std::function<Maybe<void>(const LogicalBlobId& lbi, const Operator* consumer_op,
                                       int64_t required_buffer_size)>& DoEach) const {
+    std::function<Maybe<bool>(const ComputeNode&)> IsDescendantOfAnyVar;
+    JUST(MakePredicatorIsDescendantOfAnyVar(compute_graph, &IsDescendantOfAnyVar));
+    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
     std::function<Maybe<int64_t>(const OpBlobArg&)> RequiredBufferSize4Oba;
     JUST(MakeGetterRequiredBufferSize4Oba(stage_chain_graph, &RequiredBufferSize4Oba));
-    JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& node) -> Maybe<void> {
-      const auto& consumer_op = node.op();
+    JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& consumer_node) -> Maybe<void> {
+      const auto& consumer_op = consumer_node.op();
       for (const auto& ibn : consumer_op.input_bns()) {
         const auto& input_modifier = consumer_op.InputBlobModifier4Ibn(ibn);
         if (input_modifier.is_mutable()) { continue; }
         if (input_modifier.use_header_only()) { continue; }
         const auto& lbi = consumer_op.BnInOp2Lbi(ibn);
+        const auto& producer_node = JUST(compute_graph.Node4OpName(lbi.op_name()));
+        if (producer_node.scope().scope_proto().calculation_pass_name() != kForwardPass) {
+          continue;
+        }
+        if (consumer_node.scope().scope_proto().calculation_pass_name() != kForwardPass
+            && !JUST(IsDescendantOfAnyVar(producer_node))) {
+          continue;
+        }
+        const auto& producer_op = producer_node.op();
+        if (producer_op.op_conf().has_variable_conf()) { continue; }
         int64_t required_buffer_size = 0;
         {
           OpBlobArg oba;
           oba.set_op_name(consumer_op.op_name());
           oba.set_bn_in_op(ibn);
           required_buffer_size = JUST(RequiredBufferSize4Oba(oba));
+          int64_t src_scope_symbol_id = producer_op.op_conf().scope_symbol_id();
+          const auto& src_scope = JUST(scope_storage.MaybeGet(src_scope_symbol_id));
+          const auto& src_parallel_desc = JUST(src_scope.GetParallelDesc(producer_op.op_conf()));
+          int64_t dst_scope_symbol_id = consumer_op.op_conf().scope_symbol_id();
+          const auto& dst_scope = JUST(scope_storage.MaybeGet(dst_scope_symbol_id));
+          const auto& dst_parallel_desc = JUST(dst_scope.GetParallelDesc(consumer_op.op_conf()));
+          if (dst_parallel_desc != src_parallel_desc) {
+            // copy op can be regarded as buffer op with buffer_size 1.
+            --required_buffer_size;
+          }
         }
         JUST(DoEach(lbi, &consumer_op, required_buffer_size));
       }
       return Maybe<void>::Ok();
     }));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> MakePredicatorIsDescendantOfAnyVar(
+      const ComputeGraph& compute_graph,
+      std::function<Maybe<bool>(const ComputeNode&)>* IsDescendantOfAnyVar) const {
+    auto var_desendants = std::make_shared<HashMap<const ComputeNode*, bool>>();
+    *IsDescendantOfAnyVar = [var_desendants](const ComputeNode& node) -> Maybe<bool> {
+      return MapAt(*var_desendants, &node);
+    };
+    compute_graph.TopoForEachNode([&](ComputeNode* node) {
+      bool* is_desendant = &(*var_desendants)[node];
+      node->ForEachNodeOnInEdge([&](ComputeNode* in_node) {
+        *is_desendant = *is_desendant || (*var_desendants)[in_node];
+        *is_desendant = *is_desendant || in_node->op().op_conf().has_variable_conf();
+      });
+    });
     return Maybe<void>::Ok();
   }
 
@@ -257,7 +296,7 @@ class AddStageBufferOpPass final : public JobPass {
       return MapAt(*edge2required_buffer_size, iter->second);
     };
 
-    HashMap<StageChainEdge*, HashSet<int64_t>> edge2path_stage_placement_ids;
+    HashMap<StageChainEdge*, HashSet<int64_t>> edge2path_parallel_desc_symbol_ids;
     auto IsReachable = stage_chain_graph.MakePredicatorIsReachable();
     stage_chain_graph.ForEachEdge([&](StageChainEdge* edge) {
       auto* src = edge->src_node();
@@ -274,8 +313,8 @@ class AddStageBufferOpPass final : public JobPass {
           }
         }
       }
-      // update edge2path_stage_placement_ids
-      auto* path_stage_placement_ids = &edge2path_stage_placement_ids[edge];
+      // update edge2path_parallel_desc_symbol_ids
+      auto* path_parallel_desc_symbol_ids = &edge2path_parallel_desc_symbol_ids[edge];
       const auto& ForEachNext = [&](StageChainNode* node,
                                     const std::function<void(StageChainNode*)>& DoEach) {
         node->ForEachNodeOnInOutEdge([&](StageChainNode* next) {
@@ -283,20 +322,15 @@ class AddStageBufferOpPass final : public JobPass {
         });
       };
       stage_chain_graph.BfsForEachNode({src}, ForEachNext, [&](StageChainNode* node) {
-        path_stage_placement_ids->insert(node->stage_placement_id());
+        path_parallel_desc_symbol_ids->insert(node->parallel_desc_symbol_ids().begin(),
+                                              node->parallel_desc_symbol_ids().end());
       });
-      path_stage_placement_ids->insert(dst->stage_placement_id());
     });
-    for (const auto& pair : edge2path_stage_placement_ids) {
+    for (const auto& pair : edge2path_parallel_desc_symbol_ids) {
       auto* edge = pair.first;
-      int64_t copy_op_buffer_size = 0;
-      if (edge->src_node()->stage_placement_id() != edge->dst_node()->stage_placement_id()) {
-        // copy_op will be inserted between the two stages with different stage_placement_id.
-        copy_op_buffer_size = 1;
-      } else {
-        copy_op_buffer_size = 0;
-      }
-      (*edge2required_buffer_size)[edge] = pair.second.size() - copy_op_buffer_size;
+      int64_t required_buffer_size = pair.second.size();
+      required_buffer_size = std::min(required_buffer_size, edge->src_node()->stage_buffer_size());
+      (*edge2required_buffer_size)[edge] = required_buffer_size;
     }
     return Maybe<void>::Ok();
   }
