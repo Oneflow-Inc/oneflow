@@ -2058,6 +2058,25 @@ def swish(
 
         out = x * sigmoid(\beta*x)
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.math.swish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
+        out = swish_job(x)
+
+        # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
+
     Args:
         x (remote_blob_util.BlobDef): The input Blob. 
         beta (float, optional): The smooth factor. Defaults to 1.0.
