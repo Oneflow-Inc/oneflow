@@ -134,6 +134,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
   HashMap<std::string, const OpNode*> checkpointing_op_name2op_node;
   CollectAllCheckpointingOpsInForwardPass(op_graph, &checkpointing_op_name2op_node);
 
+  if (checkpointing_op_name2op_node.empty()) { return Maybe<void>::Ok(); }
+
   // step 2. get all connected subgraphs in checkpointing ops.
   std::vector<HashSet<const OpNode*>> checkpointing_subgraphs;
   GenConnectedCheckpointingSubgraphs(checkpointing_op_name2op_node, &checkpointing_subgraphs);
@@ -277,6 +279,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     total_bw_consumer_op_confs.push_back(pair.second);
   }
   job_builder->MutOpsOnlyOnce(total_bw_consumer_op_confs);
+
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
