@@ -152,9 +152,8 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
 
 
 def _CloneFunctionDesc(func_desc, job_func):
-    new_func_desc = FunctionDesc(job_func=job_func)
-    new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
-    new_func_desc.function_attribute = copy.deepcopy(func_desc.function_attribute)
+    new_func_desc = func_desc.Clone()
+    new_func_desc.job_func = job_func
     return new_func_desc
 
 
