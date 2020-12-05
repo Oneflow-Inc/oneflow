@@ -34,7 +34,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   momentum_var.set_name(momentum_var_op_name);
   momentum_var.mutable_variable_conf()->set_out("out");
   momentum_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {momentum_var});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {momentum_var}));
 
   user_op::UserOpConfWrapperBuilder lars_update_op_builder(op.op_name() + "_optimizer");
   lars_update_op_builder.OpTypeName("lars_update")
@@ -51,7 +51,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &lars_update_op_builder);
   user_op::UserOpConfWrapper lars_update_op = lars_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {lars_update_op.op_conf()});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {lars_update_op.op_conf()}));
 }
 
 }  // namespace

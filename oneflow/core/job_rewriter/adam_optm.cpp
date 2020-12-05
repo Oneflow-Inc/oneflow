@@ -113,7 +113,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
 
   OperatorConf m_var(GenerateAdamHelperVariableOpConf(op, "m", 0.f));
   OperatorConf v_var(GenerateAdamHelperVariableOpConf(op, "v", 0.f));
-  job_builder->AddOps(parallel_conf, {m_var, v_var});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {m_var, v_var}));
 
   user_op::UserOpConfWrapperBuilder adam_update_op_builder(op.op_name() + "_optimizer");
   float beta1;
@@ -168,8 +168,8 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
               .Output("out")
               .ScopeSymbolId(op.op_conf().scope_symbol_id())
               .Build();
-      job_builder->AddOps(bias_correction_parallel_conf,
-                          {adam_bias_correction_learning_rate_op.op_conf()});
+      CHECK_JUST(job_builder->AddOps(bias_correction_parallel_conf,
+                                     {adam_bias_correction_learning_rate_op.op_conf()}));
       return adam_bias_correction_learning_rate_op.output("out", 0);
     };
     lr_lbn = state->GetLbn(beta1, beta2, primary_lr_lbn, train_step_lbn,
@@ -190,7 +190,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &adam_update_op_builder);
   const auto adam_update_op = adam_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {adam_update_op.op_conf()});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {adam_update_op.op_conf()}));
 }
 
 }  // namespace

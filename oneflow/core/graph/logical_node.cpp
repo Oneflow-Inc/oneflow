@@ -114,14 +114,14 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-void LogicalNode::GenSortedCompTaskNodes(
-    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
+Maybe<void> LogicalNode::GenSortedCompTaskNodes(
+    std::function<Maybe<int64_t>(const TaskNode*)> AllocateCpuThrdIdEvenly,
     std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
     std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
-    for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
+    for (int64_t dev_phy_id : JUST(parallel_desc_->sorted_dev_phy_ids(machine_id))) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
@@ -155,24 +155,25 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
             break;
           }
-          default: UNIMPLEMENTED();
+          default: OF_UNIMPLEMENTED();
         }
 #else
-        UNIMPLEMENTED();
+        OF_UNIMPLEMENTED();
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
           nodes->push_back({machine_id, comp_task_node});
         } else {
-          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
+          comp_task_node->set_thrd_id(JUST(AllocateCpuThrdIdEvenly(comp_task_node)));
         }
       } else {
-        UNIMPLEMENTED();
+        OF_UNIMPLEMENTED();
       }
       comp_task_node->set_logical_node(this);
       Handler(comp_task_node);
     }
   }
+  return Maybe<void>::Ok();
 }
 
 bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) const {

@@ -207,8 +207,8 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     }
 
     if (cast_is_consumed) {
-      job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
-                          std::vector<OperatorConf>{cast_op.op_conf()});
+      CHECK_JUST(job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
+                                     std::vector<OperatorConf>{cast_op.op_conf()}));
       LOG(INFO) << "Insert CastOp: " << cast_op.op_name() << " between " << lbn;
     }
   }

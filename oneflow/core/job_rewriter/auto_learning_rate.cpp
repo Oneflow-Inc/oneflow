@@ -45,7 +45,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
     const class oneflow::OpNode* op_node =
         op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
-    CHECK_OR_RETURN(op_node != nullptr) << "op node not fould in op graph, op name: " << op_name;
+    CHECK(op_node != nullptr) << "op node not fould in op graph, op name: " << op_name;
     const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
     const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
     if (model_update_conf.has_warmup_conf() || model_update_conf.has_learning_rate_decay()) {
@@ -63,7 +63,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
         *schedule_conf->mutable_learning_rate_decay() = model_update_conf.learning_rate_decay();
       }
       schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
-      job_builder.AddOps(parallel_conf, {schedule_op_conf});
+      CHECK_JUST(job_builder.AddOps(parallel_conf, {schedule_op_conf}));
       return GenLogicalBlobName(op_name, schedule_conf->out());
     } else {
       const auto constant_op = user_op::UserOpConfWrapperBuilder(op_name)
@@ -76,7 +76,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
                                    .Output("out")
                                    .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
                                    .Build();
-      job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
+      CHECK_JUST(job_builder.AddOps(parallel_conf, {constant_op.op_conf()}));
       return constant_op.output("out", 0);
     }
   };

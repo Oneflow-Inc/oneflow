@@ -40,7 +40,7 @@ void ForEachMachineIdAndDeviceIdInRange(const ParallelDesc& parallel_desc,
   if (machine_id_range.size() < parallel_desc.sorted_machine_ids().size()) {
     FOR_RANGE(int64_t, machine_id, machine_id_range.begin(), machine_id_range.end()) {
       if (parallel_desc.HasMachineId(machine_id)) {
-        for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+        for (int64_t device_id : CHECK_JUST(parallel_desc.sorted_dev_phy_ids(machine_id))) {
           DoEach(machine_id, device_id);
         }
       }
@@ -48,7 +48,7 @@ void ForEachMachineIdAndDeviceIdInRange(const ParallelDesc& parallel_desc,
   } else {
     for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
       if (machine_id >= machine_id_range.begin() && machine_id < machine_id_range.end()) {
-        for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+        for (int64_t device_id : CHECK_JUST(parallel_desc.sorted_dev_phy_ids(machine_id))) {
           DoEach(machine_id, device_id);
         }
       }

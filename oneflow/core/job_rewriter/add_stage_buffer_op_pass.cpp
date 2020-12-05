@@ -122,7 +122,7 @@ class AddStageBufferOpPass final : public JobPass {
 
   Maybe<void> AddBufferOp(JobBuilder* job_builder, const LogicalBlobId& produced_lbi,
                           StageBuffers* stage_buffers) const {
-    std::string op_name = produced_lbi.op_name() + "_buffer_op";
+    std::string op_name = produced_lbi.op_name() + "__" + produced_lbi.blob_name() + "__buffer_op";
     const Scope* scope = nullptr;
     int64_t scope_symbol_id = 0;
     int64_t buffer_size = -1;
@@ -145,7 +145,8 @@ class AddStageBufferOpPass final : public JobPass {
                                .Attr<int64_t>("buffer_size", buffer_size)
                                .Build();
     const auto& parallel_desc = JUST(scope->GetParallelDesc(buffer_op.op_conf()));
-    job_builder->AddOps(parallel_desc.parallel_conf(), {buffer_op.op_conf()});
+    OF_RETURN_IF_ERROR(job_builder->AddOps(parallel_desc.parallel_conf(), {buffer_op.op_conf()}))
+        << buffer_op.op_conf().DebugString();
     for (auto& stage_buffer : *stage_buffers) {
       stage_buffer->buffer_op_out_lbn = op_name + "/out_0";
     }

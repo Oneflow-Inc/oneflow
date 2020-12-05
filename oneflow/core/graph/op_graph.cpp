@@ -108,7 +108,7 @@ std::string OpNode::VisualStr() const {
         UNIMPLEMENTED();
       }
       std::string parallel_desc_str = std::to_string(machine_id) + ":" + dev_type + ":";
-      const auto& dev_phy_ids = parallel_desc().sorted_dev_phy_ids(machine_id);
+      const auto& dev_phy_ids = CHECK_JUST(parallel_desc().sorted_dev_phy_ids(machine_id));
       parallel_desc_str += std::to_string(dev_phy_ids.front());
       if (dev_phy_ids.back() > dev_phy_ids.front()) {
         parallel_desc_str += "-" + std::to_string(dev_phy_ids.back());

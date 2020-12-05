@@ -50,10 +50,12 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public JobPass {
 
 Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                                                         JobBuilder* job_builder) const {
-  op_graph.ForEachNode([&](const OpNode* node) {
+  JUST(op_graph.MaybeForEachNode([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
-    if (!op_conf.has_user_conf()) { return; }
-    if (op_conf.user_conf().op_type_name() != "sparse_softmax_cross_entropy_ms") { return; }
+    if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
+    if (op_conf.user_conf().op_type_name() != "sparse_softmax_cross_entropy_ms") {
+      return Maybe<void>::Ok();
+    }
 
     user_op::UserOpConfWrapper cur_op(op_conf);
     const std::string op_prediction_blob_name = cur_op.input("prediction", 0);
@@ -72,8 +74,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Output("count")
             .Attr("axis", axis_vec)
             .Build();
-    job_builder->AddOps(node->parallel_desc().parallel_conf(),
-                        {reduce_max_device_stage_op.op_conf()});
+    JUST(job_builder->AddOps(node->parallel_desc().parallel_conf(),
+                             {reduce_max_device_stage_op.op_conf()}));
 
     const int32_t split_axis =
         node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("prediction_0")).shape().NumAxes() - 1;
@@ -98,8 +100,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Attr("axis", axis_vec)
             .Attr("keepdims", true)
             .Build();
-    job_builder->AddOps(node->parallel_desc().parallel_conf(),
-                        {reduce_max_global_stage_op.op_conf()});
+    JUST(job_builder->AddOps(node->parallel_desc().parallel_conf(),
+                             {reduce_max_global_stage_op.op_conf()}));
 
     SbpSignature reduce_max_global_stage_sbp_signature;
     (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["in_0"]
@@ -117,14 +119,15 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Input("y", reduce_max_global_stage_op.output("out", 0))
             .Output("z")
             .Build();
-    job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_sub_max_op.op_conf()});
+    JUST(job_builder->AddOps(node->parallel_desc().parallel_conf(),
+                             {broadcast_sub_max_op.op_conf()}));
 
     auto exp_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_exp")
                       .Op("exp")
                       .Input("x", broadcast_sub_max_op.output("z", 0))
                       .Output("y")
                       .Build();
-    job_builder->AddOps(node->parallel_desc().parallel_conf(), {exp_op.op_conf()});
+    JUST(job_builder->AddOps(node->parallel_desc().parallel_conf(), {exp_op.op_conf()}));
 
     auto reduce_sum_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_sum")
                              .Op("reduce_sum")
@@ -133,7 +136,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                              .Attr("axis", axis_vec)
                              .Attr("keepdims", true)
                              .Build();
-    job_builder->AddOps(node->parallel_desc().parallel_conf(), {reduce_sum_op.op_conf()});
+    JUST(job_builder->AddOps(node->parallel_desc().parallel_conf(), {reduce_sum_op.op_conf()}));
 
     auto broadcast_div_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_div")
                                 .Op("broadcast_div")
@@ -141,7 +144,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                                 .Input("y", reduce_sum_op.output("output_tensor", 0))
                                 .Output("z")
                                 .Build();
-    job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_div_op.op_conf()});
+    JUST(job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_div_op.op_conf()}));
     UpdateProbConsumerOpConf(broadcast_div_op.output("z", 0), node, job_builder);
 
     auto sparse_cross_entropy_ms_op = user_op::UserOpConfWrapperBuilder(op_name)
@@ -153,7 +156,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                                           .Build();
 
     job_builder->MutOpsOnlyOnce({sparse_cross_entropy_ms_op.op_conf()});
-  });
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 

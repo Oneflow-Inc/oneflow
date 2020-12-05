@@ -80,8 +80,8 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder) {
         std::string lbn = op_conf.name() + "/" + cur_lbi.blob_name();
         const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, ibn, lbn);
         CHECK_EQ(GenLogicalBlobName(cur_lbi), old_val);
-        job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
-                            std::vector<OperatorConf>{op_conf});
+        CHECK_JUST(job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
+                                       std::vector<OperatorConf>{op_conf}));
       }
     }
     // make sure an op_conf can only be udpated once

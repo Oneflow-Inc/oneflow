@@ -82,7 +82,8 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
 
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf()});
+  JUST(job_builder.AddOps(parallel_conf,
+                          {variable_op_conf, identity_op_conf, scalar_add_op.op_conf()}));
   if (train_conf.has_dynamic_loss_scale_policy()) {
     const auto& dynamic_loss_scale_state =
         JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
@@ -94,7 +95,7 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
             .Input("condition", dynamic_loss_scale_state.count_not_finite_lbn())
             .ScopeSymbolId(scope_symbol_id)
             .Build();
-    job_builder.AddOps(parallel_conf, {assign_op.op_conf()});
+    JUST(job_builder.AddOps(parallel_conf, {assign_op.op_conf()}));
   } else {
     auto assign_op =
         user_op::UserOpConfWrapperBuilder(train_step_name + "-Assign")
@@ -103,7 +104,7 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
             .Input("value", scalar_add_op.output("out", 0))
             .ScopeSymbolId(scope_symbol_id)
             .Build();
-    job_builder.AddOps(parallel_conf, {assign_op.op_conf()});
+    JUST(job_builder.AddOps(parallel_conf, {assign_op.op_conf()}));
   }
 
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);

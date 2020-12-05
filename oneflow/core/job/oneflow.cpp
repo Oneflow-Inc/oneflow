@@ -671,7 +671,7 @@ void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
-  JobBuilder(main_job).AddOps(parallel_conf, op_confs);
+  CHECK_JUST(JobBuilder(main_job).AddOps(parallel_conf, op_confs));
   auto* job_conf = main_job->mutable_job_conf();
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
@@ -834,7 +834,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     auto* blob_conf = input_conf->mutable_blob_conf();
     InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
+    CHECK_JUST(job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf}));
   }
   OperatorConf foreign_output_op_conf;
   {
@@ -845,7 +845,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name("0:0");
-    job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
+    CHECK_JUST(job_builder.AddOps(parallel_conf, {foreign_output_op_conf}));
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
@@ -876,7 +876,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name("0:0");
-    job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
+    CHECK_JUST(job_builder.AddOps(parallel_conf, {foreign_input_op_conf}));
   }
   OperatorConf output_op_conf;
   {
@@ -885,7 +885,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     output_conf->set_in(foreign_input_op_conf.name() + "/out");
     output_conf->set_out("out");
     InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
+    CHECK_JUST(job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf}));
   }
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);

@@ -52,7 +52,7 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
-      job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
+      CHECK_JUST(job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf}));
       SbpSignature identity_sbp_signature;
       (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["in"] = dst_sbp_parallel;
       (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["out"] = dst_sbp_parallel;
