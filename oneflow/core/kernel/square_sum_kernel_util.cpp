@@ -30,7 +30,7 @@ struct SquareSumKernelUtil<DeviceType::kCPU, T> {
     T sum = 0;
     FOR_RANGE(int64_t, i, 0, params.size()) {
       const auto& p = params[i];
-      FOR_RANGE(int64_t, j, 0, p.count) { sum += p.ptr[j]; }
+      FOR_RANGE(int64_t, j, 0, p.count) { sum += p.ptr[j] * p.ptr[j]; }
     }
     *y = sum;
   }
