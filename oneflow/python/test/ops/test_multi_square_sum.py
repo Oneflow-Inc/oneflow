@@ -69,10 +69,9 @@ class TestMultiSquareSum(flow.unittest.TestCase):
         _run_test(test_case, x, 88, flow.float32, "gpu")
         _run_test(test_case, x, 64, flow.float32, "gpu")
 
-
-def test_multi_square_sum_random_cpu(test_case):
-    x = np.random.rand(3, 4, 5).astype(np.float32)
-    _run_test(test_case, x, 5, flow.float32, "cpu")
+    def test_multi_square_sum_random_cpu(test_case):
+        x = np.random.rand(3, 4, 5).astype(np.float32)
+        _run_test(test_case, x, 5, flow.float32, "cpu")
 
 
 if __name__ == "__main__":
