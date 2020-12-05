@@ -34,6 +34,37 @@ __global__ void FuseScaleTrilGpu(const int64_t elem_cnt, const int64_t num_rows,
   }
 }
 
+template<>
+__global__ void FuseScaleTrilGpu<half>(const int64_t elem_cnt, const int64_t num_rows,
+                                       const int64_t num_cols, const int64_t diagonal,
+                                       const half scale, const half* x, const half fill, half* y) {
+  int64_t matrix_size = num_rows * num_cols;
+  const int64_t h2_n = elem_cnt / 2;
+  half2 h2_scale = __half2half2(scale);
+  const auto* x_h2 = reinterpret_cast<const half2*>(x);
+  auto* y_h2 = reinterpret_cast<half2*>(y);
+  CUDA_1D_KERNEL_LOOP_T(int64_t, k, h2_n) {
+    half2 scale_x = __hmul2(h2_scale, x_h2[k]);
+    int64_t offset_in_matrix = (2 * k) % matrix_size;
+    int64_t i = offset_in_matrix / num_cols;
+    int64_t j = offset_in_matrix - num_cols * i;
+    half2 y_val;
+    y_val.x = j > i + diagonal ? fill : scale_x.x;
+    offset_in_matrix = (2 * k + 1) % matrix_size;
+    i = offset_in_matrix / num_cols;
+    j = offset_in_matrix - num_cols * i;
+    y_val.y = j > i + diagonal ? fill : scale_x.y;
+    y_h2[k] = y_val;
+  }
+  if (elem_cnt % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
+    const int64_t last_idx = elem_cnt - 1;
+    int64_t offset_in_matrix = last_idx % matrix_size;
+    int64_t i = offset_in_matrix / num_cols;
+    int64_t j = offset_in_matrix - num_cols * i;
+    y[last_idx] = j > i + diagonal ? fill : x[last_idx];
+  }
+}
+
 template<typename T>
 T GetAttrVal(bool is_floating_val, double floating_value, int64_t integer_value) {
   return is_floating_val ? static_cast<T>(floating_value) : static_cast<T>(integer_value);
@@ -73,7 +104,7 @@ class GpuFuseScaleTrilKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_TRIL_KERNEL(dtype)                                                         \
+#define REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("fuse_scale_tril")                                                       \
       .SetCreateFn<GpuFuseScaleTrilKernel<dtype>>()                                             \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
@@ -84,11 +115,11 @@ class GpuFuseScaleTrilKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_GPU_TRIL_KERNEL(float)
-REGISTER_GPU_TRIL_KERNEL(double)
-REGISTER_GPU_TRIL_KERNEL(int8_t)
-REGISTER_GPU_TRIL_KERNEL(int32_t)
-REGISTER_GPU_TRIL_KERNEL(int64_t)
-REGISTER_GPU_TRIL_KERNEL(half)
+REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(float)
+REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(double)
+REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(int8_t)
+REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(int32_t)
+REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(int64_t)
+REGISTER_GPU_FUSE_SCALE_TRIL_KERNEL(half)
 
 }  // namespace oneflow
