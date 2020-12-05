@@ -65,6 +65,49 @@ __global__ void FusedScaleTrilGpu<half>(const int64_t elem_cnt, const int64_t nu
   }
 }
 
+__global__ void FusedScaleTrilGpuHalf2(const int64_t elem_cnt, const int64_t num_rows,
+                                       const int64_t num_cols, const int64_t diagonal,
+                                       const half scale, const half* x, const half fill, half* y) {
+  const int64_t h2_n = elem_cnt / 2;
+  const int64_t h2_num_cols = num_cols / 2;
+  int64_t h2_matrix_size = num_rows * h2_num_cols;
+  half2 h2_scale = __half2half2(scale);
+  const auto* x_h2 = reinterpret_cast<const half2*>(x);
+  auto* y_h2 = reinterpret_cast<half2*>(y);
+  CUDA_1D_KERNEL_LOOP_T(int64_t, k, h2_n) {
+    half2 scale_x = __hmul2(h2_scale, x_h2[k]);
+    int64_t offset_in_h2_matrix = k % h2_matrix_size;
+    int64_t i = offset_in_h2_matrix / h2_num_cols;
+    int64_t j = offset_in_h2_matrix - h2_num_cols * i;
+    half2 y_val;
+    y_val.x = (2 * j) > i + diagonal ? fill : scale_x.x;
+    y_val.y = (2 * j + 1) > i + diagonal ? fill : scale_x.y;
+    y_h2[k] = y_val;
+  }
+}
+
+template<typename T>
+void FusedScaleTrilGpu(DeviceCtx* ctx, const int64_t elem_cnt, const int64_t num_rows,
+                       const int64_t num_cols, const int64_t diagonal, const T scale, const T* x,
+                       const T fill, T* y) {
+  FusedScaleTrilGpu<T>
+      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          elem_cnt, num_rows, num_cols, diagonal, scale, x, fill, y);
+}
+
+template<>
+void FusedScaleTrilGpu<half>(DeviceCtx* ctx, const int64_t elem_cnt, const int64_t num_rows,
+                             const int64_t num_cols, const int64_t diagonal, const half scale,
+                             const half* x, const half fill, half* y) {
+  if (num_cols % 2 == 0) {
+    FusedScaleTrilGpuHalf2<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                             ctx->cuda_stream()>>>(elem_cnt, num_rows, num_cols, diagonal, scale, x,
+                                                   fill, y);
+  } else {
+    FusedScaleTrilGpu<half>(ctx, elem_cnt, num_rows, num_cols, diagonal, scale, x, fill, y);
+  }
+}
+
 template<typename T>
 T GetAttrVal(bool is_floating_val, double floating_value, int64_t integer_value) {
   return is_floating_val ? static_cast<T>(floating_value) : static_cast<T>(integer_value);
@@ -98,8 +141,8 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
     const T scale = GetAttrVal<T>(ctx->Attr<bool>("is_floating_scale_value"),
                                   ctx->Attr<double>("floating_scale_value"),
                                   ctx->Attr<int64_t>("integer_scale_value"));
-    RUN_CUDA_KERNEL((FusedScaleTrilGpu<T>), ctx->device_ctx(), elem_cnt, elem_cnt, num_rows,
-                    num_cols, diagonal, scale, x->dptr<T>(), fill, y->mut_dptr<T>());
+    FusedScaleTrilGpu<T>(ctx->device_ctx(), elem_cnt, num_rows, num_cols, diagonal, scale,
+                         x->dptr<T>(), fill, y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
