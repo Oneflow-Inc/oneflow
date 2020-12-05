@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import copy
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
@@ -42,7 +43,15 @@ class FunctionDesc(object):
         self.job_config_proto = job_config_proto
         self.job_config_proto.predict_conf.SetInParent()
         self.function_attribute = function_attribute
-        self.stage_placement_ = None
+        self.stage_placement = None
+
+    def Clone(self):
+        new = FunctionDesc()
+        new.job_func = self.job_func
+        new.job_config_proto.CopyFrom(self.job_config_proto)
+        new.function_attribute = copy.deepcopy(self.function_attribute)
+        new.stage_placement = self.stage_placement
+        return new
 
     def IsTrainable(self):
         if self.job_config_proto.HasField("train_conf"):
@@ -91,13 +100,13 @@ class FunctionDesc(object):
     def SetStagePlacement(
         self, get_stage_partition_scope_ids, stage_partition_strategy
     ):
-        self.stage_placement_ = StagePlacement(
+        self.stage_placement = StagePlacement(
             get_stage_partition_scope_ids, stage_partition_strategy
         )
 
     def ApplyAfterEnvInit(self):
-        if self.stage_placement_ is not None:
-            self.stage_placement_.Apply(self)
+        if self.stage_placement is not None:
+            self.stage_placement.Apply(self)
 
 
 class StagePlacement(object):
