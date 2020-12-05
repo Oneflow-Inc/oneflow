@@ -53,26 +53,17 @@ class FunctionConfig(object):
     def __getattr__(
         self, attr_name: str
     ) -> Callable[[Optional[Union[bool, int, float, str]]], None]:
-        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
-        assert attr_name in name2default
-        flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
-        default_val = name2default[attr_name]
-
         def FunctionConfigSetter(
             py_value: Optional[Union[bool, int, float, str, list]] = None
         ) -> None:
-            attr_util.SetAttrValue(
-                flag_name2flag_value[attr_name], py_value, default_val
-            )
+            self.function_desc.SetAttr(attr_name, py_value)
 
         return FunctionConfigSetter
 
     def ssp_stage(self, *stages, stage_partition_strategy="naive_sequantial"):
-        self.enable_stage_partition(True)
-        self.stage_partition_scope_ids(_GetScopeSymbolIds(stages))
-        self.stage_partition_strategy(stage_partition_strategy)
-        self.enable_ssp_variable_proxy(True)
-        self.enable_stage_buffer(True)
+        self.function_desc.SetStagePlacement(
+            lambda: _GetScopeSymbolIds(stages), stage_partition_strategy
+        )
 
 
 @oneflow_export("global_function")

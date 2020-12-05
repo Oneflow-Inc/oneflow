@@ -21,6 +21,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.attr_util as attr_util
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -41,6 +42,7 @@ class FunctionDesc(object):
         self.job_config_proto = job_config_proto
         self.job_config_proto.predict_conf.SetInParent()
         self.function_attribute = function_attribute
+        self.stage_placement_ = None
 
     def IsTrainable(self):
         if self.job_config_proto.HasField("train_conf"):
@@ -78,6 +80,41 @@ class FunctionDesc(object):
             return attr_value.at_list_int64
         else:
             raise NotImplementedError()
+
+    def SetAttr(self, attr_name, py_value):
+        name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
+        assert attr_name in name2default
+        flag_name2flag_value = self.job_config_proto.flag_name2flag_value
+        default_val = name2default[attr_name]
+        attr_util.SetAttrValue(flag_name2flag_value[attr_name], py_value, default_val)
+
+    def SetStagePlacement(
+        self, get_stage_partition_scope_ids, stage_partition_strategy
+    ):
+        self.stage_placement_ = StagePlacement(
+            get_stage_partition_scope_ids, stage_partition_strategy
+        )
+
+    def ApplyAfterEnvInit(self):
+        if self.stage_placement_ is not None:
+            self.stage_placement_.Apply(self)
+
+
+class StagePlacement(object):
+    def __init__(self, get_stage_partition_scope_ids, stage_partition_strategy):
+        self.get_stage_partition_scope_ids_ = get_stage_partition_scope_ids
+        self.stage_partition_strategy_ = stage_partition_strategy
+
+    def Apply(self, function_desc):
+        function_desc.SetAttr("enable_stage_partition", True)
+        function_desc.SetAttr(
+            "stage_partition_scope_ids", self.get_stage_partition_scope_ids_()
+        )
+        function_desc.SetAttr(
+            "stage_partition_strategy", self.stage_partition_strategy_
+        )
+        function_desc.SetAttr("enable_ssp_variable_proxy", True)
+        function_desc.SetAttr("enable_stage_buffer", True)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)

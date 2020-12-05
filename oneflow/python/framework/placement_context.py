@@ -36,7 +36,7 @@ class EmptyPlacementScope(PlacementScope):
             machine_device_ids = [machine_device_ids]
         self.device_tag_ = device_tag
         self.machine_device_ids_ = machine_device_ids
-        self.scope_ctx_ = make_scope_ctx()
+        self.make_scope_ctx_ = make_scope_ctx
 
     @property
     def device_tag(self):
@@ -47,6 +47,7 @@ class EmptyPlacementScope(PlacementScope):
         return self.machine_device_ids_
 
     def __enter__(self):
+        self.scope_ctx_ = self.make_scope_ctx_()
         self.scope_ctx_.__enter__()
 
     def __exit__(self, *args, **kwargs):
