@@ -181,15 +181,14 @@ Maybe<void> Operator::FillLogicalBlobDescSignature(
 Maybe<void> Operator::InferOutParallelDescIf(
     std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
     std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
-  return InferOutParallelDesc(ParallelDesc4Obn, LogicalBlobDesc4Ibn, op_parallel_desc,
-                              sbp_signature);
+    const ParallelDesc& op_parallel_desc) const {
+  return InferOutParallelDesc(ParallelDesc4Obn, LogicalBlobDesc4Ibn, op_parallel_desc);
 }
 
 Maybe<void> Operator::InferOutParallelDesc(
     std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
     std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
+    const ParallelDesc& op_parallel_desc) const {
   for (const auto& obn : output_bns()) { *ParallelDesc4Obn(obn) = op_parallel_desc; }
   return Maybe<void>::Ok();
 }

@@ -582,8 +582,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return &iter->second;
   };
-  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
-                                  JUST(op->sbp_signature())));
+  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc));
   // TODO(lixinqi): replace lbi2parallel_desc_from_producer_view_  with ParallelSignature
   JUST(op->InferParallelSignatureIf());
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));

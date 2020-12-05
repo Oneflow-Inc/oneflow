@@ -29,6 +29,7 @@ class JobCompleter final {
   ~JobCompleter() = default;
 
   void Complete(Job* job) const;
+  void InsertIdentity(Job* job) const;
 };
 
 }  // namespace oneflow
