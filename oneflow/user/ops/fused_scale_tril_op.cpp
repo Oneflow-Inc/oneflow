@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("fuse_scale_tril")
+REGISTER_USER_OP("fused_scale_tril")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("diagonal")
@@ -55,12 +55,12 @@ REGISTER_USER_OP("fuse_scale_tril")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("fuse_scale_tril")
+REGISTER_USER_OP_GRAD("fused_scale_tril")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("fuse_scale_tril")
+            builder.Op("fused_scale_tril")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
                 .Attr("diagonal", op.attr<int64_t>("diagonal"))

@@ -1924,8 +1924,8 @@ def tril(
     )
 
 
-@oneflow_export("math.fuse_scale_tril", "nn.fuse_scale_tril")
-def fuse_scale_tril(
+@oneflow_export("math.fused_scale_tril", "nn.fused_scale_tril")
+def fused_scale_tril(
     x: remote_blob_util.BlobDef,
     diagonal: int = 0,
     fill_value: Union[int, float] = 0,
@@ -1952,9 +1952,9 @@ def fuse_scale_tril(
         integer_scale_value = int(scale)
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("FuseScaleTril_")
+            name if name is not None else id_util.UniqueStr("FusedScaleTril_")
         )
-        .Op("fuse_scale_tril")
+        .Op("fused_scale_tril")
         .Input("in", [x])
         .Attr("diagonal", diagonal)
         .Attr("is_floating_fill_value", is_floating_fill_value)
