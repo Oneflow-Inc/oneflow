@@ -63,8 +63,8 @@ REGISTER_USER_OP("multi_square_sum")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      int64_t min_num_axes = 0;
-      for (int64_t i = 0; i < ctx->user_op_conf().input_size("x"); ++i) {
+      int64_t min_num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
+      for (int64_t i = 1; i < ctx->user_op_conf().input_size("x"); ++i) {
         min_num_axes = std::min(
             min_num_axes, ctx->LogicalTensorDesc4InputArgNameAndIndex("x", i).shape().NumAxes());
       }
