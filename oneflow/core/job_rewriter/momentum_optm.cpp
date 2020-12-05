@@ -50,7 +50,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   momentum_var.set_name(op_name);
   momentum_var.mutable_variable_conf()->set_out("out");
   momentum_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {momentum_var});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {momentum_var}));
 
   user_op::UserOpConfWrapperBuilder momentum_update_op_builder(op.op_name() + "_optimizer");
   momentum_update_op_builder.OpTypeName("momentum_update")
@@ -63,7 +63,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &momentum_update_op_builder);
   user_op::UserOpConfWrapper momentum_update_op = momentum_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {momentum_update_op.op_conf()});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {momentum_update_op.op_conf()}));
 }
 
 }  // namespace

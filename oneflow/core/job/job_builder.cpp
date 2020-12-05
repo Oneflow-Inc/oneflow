@@ -81,20 +81,22 @@ const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const
   return ParallelConf4OpName(lbi.op_name());
 }
 
-void JobBuilder::AddOps(const ParallelConf& parallel_conf,
-                        const std::vector<OperatorConf>& op_confs) {
-  if (op_confs.empty()) { return; }
+Maybe<void> JobBuilder::AddOps(const ParallelConf& parallel_conf,
+                               const std::vector<OperatorConf>& op_confs) {
+  if (op_confs.empty()) { return Maybe<void>::Ok(); }
   auto* placemnt_group = job_->mutable_placement()->add_placement_group();
   *placemnt_group->mutable_parallel_conf() = parallel_conf;
   for (const auto& op_conf : op_confs) {
-    CHECK(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
+    CHECK_OR_RETURN(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
     OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
     *mut_op_conf = op_conf;
-    CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+    CHECK_OR_RETURN(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
     placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
-    CHECK(op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
-              .second);
+    CHECK_OR_RETURN(
+        op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
+            .second);
   }
+  return Maybe<void>::Ok();
 }
 
 PlacementGroup* JobBuilder::FindPlacementGroup(const std::string& op_name) const {
@@ -205,7 +207,7 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
       mut_ops.push_back(op_conf);
     }
   }
-  AddOps(parallel_conf, add_ops);
+  CHECK_JUST(AddOps(parallel_conf, add_ops));
   MutOpsOnlyOnce(mut_ops);
 }
 

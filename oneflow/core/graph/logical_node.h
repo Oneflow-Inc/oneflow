@@ -67,9 +67,10 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
-  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-                              std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
-                              std::function<void(CompTaskNode*)>) const;
+  Maybe<void> GenSortedCompTaskNodes(
+      std::function<Maybe<int64_t>(const TaskNode*)> AllocateCpuThrdIdEvenly,
+      std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
+      std::function<void(CompTaskNode*)>) const;
 
   // other
   virtual int64_t GetAreaId() const = 0;
@@ -97,7 +98,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
    std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
        MutBufTask,                                                                        \
-   std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
+   std::function<Maybe<int64_t>(const TaskNode*)> AllocateCpuThrdIdEvenly)
 
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();

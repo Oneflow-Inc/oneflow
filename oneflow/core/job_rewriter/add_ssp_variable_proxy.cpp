@@ -140,7 +140,7 @@ class AddSspVariableProxyPass final : public JobPass {
                               .Attr<int64_t>("buffer_size", buffer_size)
                               .Build();
     const auto& parallel_desc = JUST(scope.GetParallelDesc(proxy_op.op_conf()));
-    job_builder->AddOps(parallel_desc.parallel_conf(), {proxy_op.op_conf()});
+    JUST(job_builder->AddOps(parallel_desc.parallel_conf(), {proxy_op.op_conf()}));
     *ref_lbn = op_name + "/ref_0";
     *value_lbn = op_name + "/value_0";
     return Maybe<void>::Ok();

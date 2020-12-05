@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
@@ -47,8 +48,8 @@ class ParallelDesc final {
     return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
   }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
-  const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.at(machine_id);
+  Maybe<const std::vector<int64_t>&> sorted_dev_phy_ids(int64_t machine_id) const {
+    return MapAt(machine_id2sorted_dev_phy_ids_, machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
@@ -118,7 +119,7 @@ struct hash<oneflow::ParallelDesc> {
     for (int machine_id : pr.sorted_machine_ids()) {
       int shift = i++ % shift_roundtrip;
       ret ^= machine_id << shift_roundtrip << shift;
-      ret ^= pr.sorted_dev_phy_ids(machine_id).size() << shift;
+      ret ^= CHECK_JUST(pr.sorted_dev_phy_ids(machine_id)).size() << shift;
     }
     return hash<size_t>()(ret);
   }

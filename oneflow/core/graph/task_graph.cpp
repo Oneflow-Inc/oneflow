@@ -239,22 +239,22 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
   std::vector<int64_t> cpu_device_offset(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(),
                                          0);
-  auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
-    CHECK(!task_node->IsIndependent());
-    int64_t& offset = cpu_device_offset.at(task_node->machine_id());
-    int64_t ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-    offset = (offset + 1) % Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
+  auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) -> Maybe<int64_t> {
+    CHECK_OR_RETURN(!task_node->IsIndependent());
+    int64_t* offset = JUST(VectorAt(&cpu_device_offset, task_node->machine_id()));
+    int64_t ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(*offset);
+    *offset = (*offset + 1) % Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
     return ret;
   };
 
   std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
-    logical_node->GenSortedCompTaskNodes(
+    CHECK_JUST(logical_node->GenSortedCompTaskNodes(
         AllocateCpuThrdIdEvenly, &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
           comp_task_node->set_area_id(logical_node->GetAreaId());
-        });
+        }));
   });
 
   GenerateIndependentThrdId(machine_persistence_task_vec);

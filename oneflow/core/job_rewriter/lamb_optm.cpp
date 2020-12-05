@@ -50,7 +50,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
   OperatorConf m_var = GenerateLAMBHelperVariableOpConf(op, "m", 0.f);
   OperatorConf v_var = GenerateLAMBHelperVariableOpConf(op, "v", 0.f);
-  job_builder->AddOps(parallel_conf, {m_var, v_var});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {m_var, v_var}));
 
   OperatorConf beta1_t_var;
   OperatorConf beta2_t_var;
@@ -59,7 +59,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   SetScalarShapeAndSbpConf(&beta1_t_var);
   beta2_t_var = GenerateLAMBHelperVariableOpConf(op, "beta2_t", lamb_conf.beta2());
   SetScalarShapeAndSbpConf(&beta2_t_var);
-  job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var}));
 
   user_op::UserOpConfWrapperBuilder lamb_update_op_builder(op.op_name() + "_optimizer");
   lamb_update_op_builder.OpTypeName("lamb_update")
@@ -77,7 +77,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &lamb_update_op_builder);
   const auto lamb_update_op = lamb_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {lamb_update_op.op_conf()});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {lamb_update_op.op_conf()}));
 }
 
 }  // namespace

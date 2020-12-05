@@ -100,7 +100,7 @@ void MakeModelInitJob(
   const ParallelConf master_parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   const OperatorConf tick_op_conf = GenTickOpConf("System-ModelInit-Tick");
   const OperatorConf foreign_input_op_conf = GenForeignInputOpConf(job_name, 1);
-  job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf});
+  CHECK_JUST(job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf}));
   if (var_op_name2op_conf.empty()) { return; }
   std::string prev_post_model_init_tick_lbn = GenLogicalBlobName(
       foreign_input_op_conf.name(), foreign_input_op_conf.foreign_input_conf().out());
@@ -119,7 +119,8 @@ void MakeModelInitJob(
     *model_init_conf->mutable_out() = "out";
     prev_post_model_init_tick_lbn =
         GenLogicalBlobName(model_init_op_conf.name(), model_init_conf->out());
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf, model_init_op_conf});
+    CHECK_JUST(job_builder.AddOps(parallel_blob_conf.parallel_conf(),
+                                  {new_var_op_conf, model_init_op_conf}));
   }
 }
 
@@ -135,7 +136,7 @@ void MakeModelLoadJob(
   const ParallelConf master_parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   const OperatorConf tick_op_conf = GenTickOpConf("System-ModelLoad-Tick");
   const OperatorConf foreign_input_op_conf = GenForeignInputOpConf(job_name, 65536);
-  job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf});
+  CHECK_JUST(job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf}));
   if (var_op_name2op_conf.empty()) { return; }
   std::string prev_post_model_load_tick_lbn = GenLogicalBlobName(
       foreign_input_op_conf.name(), foreign_input_op_conf.foreign_input_conf().out());
@@ -159,7 +160,8 @@ void MakeModelLoadJob(
     *model_load_conf->mutable_tick() = prev_post_model_load_tick_lbn;
     prev_post_model_load_tick_lbn =
         GenLogicalBlobName(model_load_op_conf.name(), model_load_conf->out());
-    job_builder.AddOps(variable_op_parallel_conf, {new_var_op_conf, model_load_op_conf});
+    CHECK_JUST(
+        job_builder.AddOps(variable_op_parallel_conf, {new_var_op_conf, model_load_op_conf}));
   }
 }
 
@@ -175,7 +177,7 @@ void MakeModelSaveJob(
   ParallelConf master_parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   const OperatorConf tick_op_conf = GenTickOpConf("System-ModelSave-Tick");
   const OperatorConf foreign_input_op_conf = GenForeignInputOpConf(job_name, 65536);
-  job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf});
+  CHECK_JUST(job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf}));
   if (var_op_name2op_conf.empty()) { return; }
   std::string prev_post_model_save_tick_lbn = GenLogicalBlobName(
       foreign_input_op_conf.name(), foreign_input_op_conf.foreign_input_conf().out());
@@ -198,7 +200,8 @@ void MakeModelSaveJob(
     *model_save_conf->mutable_original_variable_conf() = variable_conf;
     prev_post_model_save_tick_lbn =
         GenLogicalBlobName(model_save_op_conf.name(), model_save_conf->out());
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf, model_save_op_conf});
+    CHECK_JUST(job_builder.AddOps(parallel_blob_conf.parallel_conf(),
+                                  {new_var_op_conf, model_save_op_conf}));
   }
 }
 

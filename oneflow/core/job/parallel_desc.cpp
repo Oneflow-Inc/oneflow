@@ -36,7 +36,7 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   auto* features = machine2device_list->mutable_feature();
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
     Int32List* device_id_list = (*features)[std::to_string(machine_id)].mutable_int32_list();
-    for (int64_t device_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+    for (int64_t device_id : JUST(parallel_desc.sorted_dev_phy_ids(machine_id))) {
       device_id_list->add_value(device_id);
     }
   }

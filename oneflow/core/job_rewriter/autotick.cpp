@@ -44,7 +44,7 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, JobBuilder* job_builder) {
     device_tick_op.set_name("System-AutoTick-Prepend-DeviceTick_" + NewUniqueId());
     auto* device_tick_op_conf = device_tick_op.mutable_device_tick_conf();
     device_tick_op_conf->set_out("out");
-    job_builder->AddOps(pair.first.parallel_conf(), {device_tick_op});
+    CHECK_JUST(job_builder->AddOps(pair.first.parallel_conf(), {device_tick_op}));
 
     for (const auto* op_node : pair.second) {
       auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
@@ -60,7 +60,7 @@ void BuildSourceTickOpAndParallelConf(OperatorConf* src_tick_op, JobBuilder* job
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
-  job_builder->AddOps(parallel_conf, {*src_tick_op});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {*src_tick_op}));
 }
 
 void BuildSinkTickOpAndParallelConf(OperatorConf* sink_tick_op, JobBuilder* job_builder) {
@@ -69,14 +69,14 @@ void BuildSinkTickOpAndParallelConf(OperatorConf* sink_tick_op, JobBuilder* job_
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
-  job_builder->AddOps(parallel_conf, {*sink_tick_op});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {*sink_tick_op}));
 }
 
 void BuildPartialTickOp(OperatorConf* partial_tick_op, const ParallelConf& parallel_conf,
                         JobBuilder* job_builder) {
   partial_tick_op->set_name("System-AutoTick-PartialTick_" + NewUniqueId());
   partial_tick_op->mutable_partial_tick_conf()->set_out("out");
-  job_builder->AddOps(parallel_conf, {*partial_tick_op});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {*partial_tick_op}));
 }
 
 void BuildPartialTickOp7SinkTickOp(
@@ -154,7 +154,7 @@ OperatorConf AppendTick(const std::string tick_name, const std::vector<std::stri
                         ParallelConf parallel_conf, JobBuilder* job_builder) {
   OperatorConf device_tick_op_conf = MakeDeviceTickOpConf(tick_name);
   for (const auto& op_name : op_names) { device_tick_op_conf.add_ctrl_in_op_name(op_name); }
-  job_builder->AddOps(parallel_conf, {device_tick_op_conf});
+  CHECK_JUST(job_builder->AddOps(parallel_conf, {device_tick_op_conf}));
   return device_tick_op_conf;
 }
 
@@ -181,7 +181,7 @@ OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job
   job_builder->MutOpsOnlyOnce({op_confs});
   ParallelDesc pd((*op_nodes.begin())->parallel_desc());
   pd.set_device_type(DeviceType::kCPU);
-  job_builder->AddOps(pd.parallel_conf(), {tick_op_conf});
+  CHECK_JUST(job_builder->AddOps(pd.parallel_conf(), {tick_op_conf}));
   return tick_op_conf;
 }
 
@@ -206,8 +206,8 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
     device_tick_conf->add_tick(acc_op_conf.name() + "/acc");
     device_tick_conf->set_out("out");
   }
-  job_builder->AddOps(op_nodes.front()->parallel_desc().parallel_conf(),
-                      {acc_op_conf, last_device_tick_op_conf});
+  CHECK_JUST(job_builder->AddOps(op_nodes.front()->parallel_desc().parallel_conf(),
+                                 {acc_op_conf, last_device_tick_op_conf}));
   return last_device_tick_op_conf;
 }
 

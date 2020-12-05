@@ -110,9 +110,9 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
           .Attr<float>("multiplier", policy.multiplier())
           .ScopeSymbolId(scope_symbol_id)
           .Build();
-  job_builder.AddOps(parallel_conf,
-                     {loss_scale_var_op_conf, loss_scale_val_op_conf, good_step_counter_var_conf,
-                      count_not_finite_stub_op.op_conf(), schedule.op_conf()});
+  JUST(job_builder.AddOps(
+      parallel_conf, {loss_scale_var_op_conf, loss_scale_val_op_conf, good_step_counter_var_conf,
+                      count_not_finite_stub_op.op_conf(), schedule.op_conf()}));
   if (!JUST(ctx->HasState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))) {
     ctx->ResetState("dynamic_loss_scale_state", std::make_unique<DynamicLossScaleJobPassState>());
   }
