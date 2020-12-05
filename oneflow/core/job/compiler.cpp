@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
+#include "oneflow/core/auto_parallel/sbp_constructor.h"
 
 namespace oneflow {
 
@@ -63,9 +64,23 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
+  std::cout << "job name: " << job->job_conf().job_name() << std::endl;
   const JobDesc& job_desc = GlobalJobDesc();
-  if (need_job_complete) { JobCompleter().Complete(job); }
+  if (need_job_complete) { 
+    JobCompleter().Complete(job);
+  }
+  {
+    if (job->job_conf().job_name() == "TrainNet")
+      job->mutable_job_parallel_view_conf()->clear_op_name2sbp_signature_conf();
+    OpGraph op_graph(*job);
+    SbpConstructor sbp_constructor;
+    sbp_constructor.constructSbpGraph(op_graph, *job);
+  }
+  if (need_job_complete) { 
+    JobCompleter().InsertIdentity(job);
+  }
   Global<OpGraph>::New(*job);
+
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())

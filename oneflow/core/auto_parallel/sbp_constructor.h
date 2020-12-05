@@ -32,7 +32,6 @@ class SbpConstructor {
     std::ifstream ifs("/home/liyipeng/OneFlow-Benchmark/Classification/cnns/CostRatioFile.txt");
     if (ifs.is_open()) {
       ifs >> CostRatio;
-      std::cout << "CostRatio is read from file: " << CostRatio << std::endl;
     } else {
       CostRatio = 1e-8;
       std::cout << "CostRatioFile.txt does not exist." << std::endl;
@@ -42,9 +41,11 @@ class SbpConstructor {
   };
   ~SbpConstructor() = default;
 
-  void constructSbpGraph(OpGraph& op_graph, const Job& job);
+  void constructSbpGraph(OpGraph& op_graph, Job& job);
 
   bool OpNodeIsMirrored(OpNode* op_node) const;
+
+  bool is_filter = true;
 
   int32_t FindAllMirroredOpNodes(HashMap<std::string, bool>& op_name2is_mirrored,
                                  OpGraph& op_graph);
@@ -109,7 +110,7 @@ class SbpConstructor {
 
   // Update Sbp Signature in each operator
   Maybe<void> UpdateSbpSignature4Op(
-      OpGraph& op_graph, const Job& job,
+      OpGraph& op_graph, Job& job,
       HashMap<std::string, Algorithm::SbpNode<SbpSignature>*>& op_name2sbp_node,
       HashMap<std::string, bool>& op_name2is_fixed);
 
