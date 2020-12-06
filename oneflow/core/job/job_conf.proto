@@ -14,19 +14,6 @@ message DynamicLossScalePolicy {
   optional float multiplier = 3 [default=2.0];
 }
 
-message OptimizerPlacementOptimizationNonDistributedConf {
-}
-
-message OptimizerPlacementOptimizationDistributedSplitConf {
-}
-
-message OptimizerPlacementOptimizationConf {
-  oneof mode {
-    OptimizerPlacementOptimizationNonDistributedConf non_distributed_conf = 1;
-    OptimizerPlacementOptimizationDistributedSplitConf distributed_split_conf = 2 ;
-  }
-}
-
 message TrainConf {
   optional NormalModelUpdateOpUserConf model_update_conf = 3;
   repeated string loss_lbn = 6;
@@ -37,7 +24,6 @@ message TrainConf {
     float loss_scale_factor = 11 [default = 1];
     DynamicLossScalePolicy dynamic_loss_scale_policy = 12;
   }
-  optional OptimizerPlacementOptimizationConf optimizer_placement_optimization_conf = 13;
   optional float primary_lr = 101;
   optional float secondary_lr = 102;
 }
@@ -106,6 +92,9 @@ message JobConfigProto {
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
   optional bool enable_fuse_model_update_ops = 105 [default = false];
+
+  optional string optimizer_placement_optimization_mode = 107;
+  optional int64 optimizer_placement_optimization_threshold = 108 [default = 1024];
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte

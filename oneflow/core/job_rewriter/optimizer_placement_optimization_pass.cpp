@@ -194,14 +194,6 @@ void ForEachParallelSortedNodeSequence(
   }
 }
 
-void ForEachParallelSortedNodeSequence(
-    const OpGraph& op_graph,
-    const std::function<bool(const SequencePtr&, const SequencePtr&)>& Comp,
-    const std::function<void(const ParallelDesc&, std::vector<SequencePtr>&&)>& Handler) {
-  ForEachParallelSortedNodeSequence(op_graph, [](const OpNode*) -> bool { return true; }, Comp,
-                                    Handler);
-}
-
 bool IsS0Parallel(const SbpParallel& sbp_parallel) {
   return sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0;
 }
@@ -245,11 +237,12 @@ void ForEachModelSizeBalancedPartition(
 }
 
 Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder) {
-  const auto IsAllowed = [](const OpNode* n) -> bool {
+  const int64_t threshold = builder->job().job_conf().optimizer_placement_optimization_threshold();
+  const auto IsAllowed = [threshold](const OpNode* n) -> bool {
     if (n->op().op_conf().has_variable_conf()) {
-      const int64_t dim0_size = n->op().op_conf().variable_conf().shape().dim(0);
+      const Shape shape(n->op().op_conf().variable_conf().shape());
       const int64_t parallel_num = n->parallel_desc().parallel_num();
-      return dim0_size % parallel_num == 0;
+      return shape.At(0) % parallel_num == 0 && shape.elem_cnt() >= threshold * parallel_num;
     } else {
       return IsS0SignatureSupported(n);
     }
@@ -291,7 +284,18 @@ Maybe<void> RewriteNonDistributed(const OpGraph& op_graph, JobBuilder* builder) 
                                     std::vector<SequencePtr>&& sorted_sequences) {
     ForEachModelSizeBalancedPartition(pd, std::move(sorted_sequences), RewritePartition);
   };
-  ForEachParallelSortedNodeSequence(op_graph, SequenceCompSortedByModelSizeDesc, RewriteSequences);
+  const int64_t threshold = builder->job().job_conf().optimizer_placement_optimization_threshold();
+  const auto IsAllowed = [threshold](const OpNode* n) -> bool {
+    if (n->op().op_conf().has_variable_conf()) {
+      const Shape shape(n->op().op_conf().variable_conf().shape());
+      const int64_t parallel_num = n->parallel_desc().parallel_num();
+      return shape.elem_cnt() >= threshold * parallel_num;
+    } else {
+      return true;
+    }
+  };
+  ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByModelSizeDesc,
+                                    RewriteSequences);
 
   for (auto& parallel_desc7sequences : new_parallel_desc2sequences) {
     auto& sequences = parallel_desc7sequences.second;
@@ -315,16 +319,15 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!(ctx->job_desc().IsTrain()
-          && ctx->job_desc().job_conf().train_conf().has_optimizer_placement_optimization_conf())) {
+          && ctx->job_desc().job_conf().has_optimizer_placement_optimization_mode())) {
       return Maybe<void>::Ok();
     }
-    const auto& conf =
-        ctx->job_desc().job_conf().train_conf().optimizer_placement_optimization_conf();
+    const std::string& mode = ctx->job_desc().job_conf().optimizer_placement_optimization_mode();
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
-    if (conf.has_non_distributed_conf()) {
+    if (mode == "non_distributed") {
       return RewriteNonDistributed(op_graph, &job_builder);
-    } else if (conf.has_distributed_split_conf()) {
+    } else if (mode == "distributed_split") {
       return RewriteDistributedSplit(op_graph, &job_builder);
     } else {
       return Error::Unimplemented();
