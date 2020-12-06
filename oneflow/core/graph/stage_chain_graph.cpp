@@ -72,6 +72,7 @@ Maybe<void> StageChainGraph::InitNodes(
   struct StageChainNodeKey {
     int64_t stage_placement_id;
     int64_t parallel_desc_symbol_id;
+    std::string calculation_pass_name;
     std::set<const ComputeNode*> ancestors;
 
     bool operator<(const StageChainNodeKey& that) const {
@@ -80,6 +81,9 @@ Maybe<void> StageChainGraph::InitNodes(
       }
       if (this->parallel_desc_symbol_id != that.parallel_desc_symbol_id) {
         return this->parallel_desc_symbol_id < that.parallel_desc_symbol_id;
+      }
+      if (this->calculation_pass_name != that.calculation_pass_name) {
+        return this->calculation_pass_name < that.calculation_pass_name;
       }
       return this->ancestors < that.ancestors;
     }
@@ -98,6 +102,7 @@ Maybe<void> StageChainGraph::InitNodes(
     StageChainNodeKey key = {
         .stage_placement_id = compute_node.scope().Int64("stage_placement_id"),
         .parallel_desc_symbol_id = JUST(compute_node.GetParallelDescSymbolId()),
+        .calculation_pass_name = compute_node.scope().scope_proto().calculation_pass_name(),
         .ancestors = JUST(OtherStageAncestors4ComputeNode(compute_node)),
     };
     auto* node_info = &key2chain_node_info[key];
@@ -112,9 +117,9 @@ Maybe<void> StageChainGraph::InitNodes(
   }));
   for (const auto& pair : key2chain_node_info) {
     const auto& info = pair.second;
-    auto* stage_chain_node = JUST(
-        StageChainNode::UnsafeNew(pair.first.stage_placement_id, pair.first.parallel_desc_symbol_id,
-                                  info.max_buffer_size, info.compute_nodes));
+    auto* stage_chain_node = JUST(StageChainNode::UnsafeNew(
+        pair.first.stage_placement_id, pair.first.parallel_desc_symbol_id, info.max_buffer_size,
+        pair.first.calculation_pass_name, info.compute_nodes));
     AddAllocatedNode(stage_chain_node);
     for (const auto* compute_node : *info.compute_nodes) {
       const auto& op_name = compute_node->op().op_name();
