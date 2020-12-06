@@ -98,10 +98,15 @@ class FunctionDesc(object):
         attr_util.SetAttrValue(flag_name2flag_value[attr_name], py_value, default_val)
 
     def SetStagePlacement(
-        self, get_stage_partition_scope_ids, stage_partition_strategy
+        self,
+        get_stage_partition_scope_ids,
+        enable_stage_static_scheduling,
+        stage_partition_strategy,
     ):
         self.stage_placement = StagePlacement(
-            get_stage_partition_scope_ids, stage_partition_strategy
+            get_stage_partition_scope_ids,
+            enable_stage_static_scheduling,
+            stage_partition_strategy,
         )
 
     def ApplyAfterEnvInit(self):
@@ -110,8 +115,14 @@ class FunctionDesc(object):
 
 
 class StagePlacement(object):
-    def __init__(self, get_stage_partition_scope_ids, stage_partition_strategy):
+    def __init__(
+        self,
+        get_stage_partition_scope_ids,
+        enable_stage_static_scheduling,
+        stage_partition_strategy,
+    ):
         self.get_stage_partition_scope_ids_ = get_stage_partition_scope_ids
+        self.enable_stage_static_scheduling_ = enable_stage_static_scheduling
         self.stage_partition_strategy_ = stage_partition_strategy
 
     def Apply(self, function_desc):
@@ -124,6 +135,9 @@ class StagePlacement(object):
         )
         function_desc.SetAttr("enable_ssp_variable_proxy", True)
         function_desc.SetAttr("enable_stage_buffer", True)
+        function_desc.SetAttr(
+            "enable_stage_static_scheduling", self.enable_stage_static_scheduling_
+        )
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
