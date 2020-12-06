@@ -1000,7 +1000,7 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
           auto multi_count_not_finite_op_builder =
               user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-MultiCountNotFinite-"
                                                 + NewUniqueId())
-                  .Op("multi_count_not_finite_op")
+                  .Op("multi_count_not_finite")
                   .Output("y")
                   .ScopeSymbolId(scope_symbol_id);
           for (const auto& lbi : lbis) {
