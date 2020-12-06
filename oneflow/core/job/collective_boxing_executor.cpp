@@ -226,9 +226,13 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
     }
   };
   auto CanFuse = [&](const RequestDesc* lhs, const RequestDesc* rhs) -> bool {
+    const bool enable_mixed_fusion = (!collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer())
+                                     && collective_boxing_conf_.nccl_enable_mixed_fusion();
     if (lhs->device_set() != rhs->device_set()) { return false; }
     if (!IsOpFusionEnabled(lhs) || !IsOpFusionEnabled(rhs)) { return false; }
-    if (lhs->op_desc().op_type() != rhs->op_desc().op_type()) { return false; }
+    if (lhs->op_desc().op_type() != rhs->op_desc().op_type() && (!enable_mixed_fusion)) {
+      return false;
+    }
     const OpType op_type = lhs->op_desc().op_type();
     if (op_type == OpType::kOpTypeAllReduce) {
       if (collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer()) {
