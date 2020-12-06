@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/collective_boxing_task_node.h"
+#include "oneflow/core/graph/boxing/collective_boxing_util.h"
 
 namespace oneflow {
 
@@ -26,8 +27,11 @@ void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id, 
 }
 
 void CollectiveBoxingGenericTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
-  this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
+  if (boxing::collective::GenericOpHasOutput(
+          op_conf_.collective_boxing_generic_conf().rank_desc())) {
+    std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
+    this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
+  }
 }
 
 void CollectiveBoxingGenericTaskNode::ConsumeAllRegsts() {
@@ -44,6 +48,7 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   for (const std::string& obn : boxing_op->output_bns()) {
+    CHECK(out_regst != nullptr);
     node->BindBnWithRegst(obn, out_regst);
     out_regst->AddLbi(boxing_op->BnInOp2Lbi(obn));
   }
