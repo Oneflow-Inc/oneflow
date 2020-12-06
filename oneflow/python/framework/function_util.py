@@ -60,9 +60,16 @@ class FunctionConfig(object):
 
         return FunctionConfigSetter
 
-    def ssp_stage(self, *stages, stage_partition_strategy="naive_sequantial"):
+    def ssp_stage(
+        self,
+        *stages,
+        enable_stage_static_scheduling=True,
+        stage_partition_strategy="naive_sequantial"
+    ):
         self.function_desc.SetStagePlacement(
-            lambda: _GetScopeSymbolIds(stages), stage_partition_strategy
+            lambda: _GetScopeSymbolIds(stages),
+            enable_stage_static_scheduling=enable_stage_static_scheduling,
+            stage_partition_strategy=stage_partition_strategy,
         )
 
 

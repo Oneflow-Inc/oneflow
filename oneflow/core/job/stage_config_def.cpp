@@ -23,6 +23,7 @@ REGISTER_FUNCTION_CONFIG_DEF()
     .Bool("enable_stage_partition", false, "enable stage partition")
     .String("stage_partition_strategy", "naive_sequantial",
             "stage partition strategy, Avaiable strategies: naive_sequantial | disable")
+    .Bool("enable_stage_static_scheduling", true, "static scheduling")
     .ListInt64("stage_partition_scope_ids", {},
                "type: list[int64]. stage partition scope symbol ids");
 

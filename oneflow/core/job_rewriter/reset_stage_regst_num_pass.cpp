@@ -48,7 +48,8 @@ class ResetStageRegstNumPass final : public JobPass {
       stage_chain_graph->ToDotWithFilePath(std::string("stage_chain_graph-") + job_name + ".dot");
     }
     JobBuilder job_builder(job);
-    return Apply(*compute_graph, *stage_chain_graph, &job_builder);
+    bool enable_stage_static_scheduling = ctx->job_desc().Bool("enable_stage_static_scheduling");
+    return Apply(*compute_graph, *stage_chain_graph, &job_builder, enable_stage_static_scheduling);
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
@@ -56,7 +57,7 @@ class ResetStageRegstNumPass final : public JobPass {
   }
 
   Maybe<void> Apply(const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
-                    JobBuilder* job_builder) const {
+                    JobBuilder* job_builder, bool enable_stage_static_scheduling) const {
     std::function<Maybe<int64_t>(const LogicalBlobId&)> BufferSize4Lbi;
     JUST(MakeGetterBufferSize4Lbi(compute_graph, &BufferSize4Lbi));
     HashMap<std::string, int64_t> op_name2each_output_regst_num;
@@ -74,14 +75,15 @@ class ResetStageRegstNumPass final : public JobPass {
     for (auto& pair : op_name2each_output_regst_num) {
       JUST(ResetRegstNum(job_builder, pair.first, pair.second));
     }
-    HashMap<std::string, std::list<std::string>> op2ctrl_in_op_names;
-    JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
-      const auto& num_placement_ids = JUST(PathStagePlacementIds4Edge(edge)).size();
-      if (!JUST(NeedStaticScheduling(edge, num_placement_ids))) { return Maybe<void>::Ok(); }
-      AddCtrlInOpNames(job_builder, compute_graph, edge);
-      return Maybe<void>::Ok();
-    }));
-    JUST(job_builder->MutCachedOpConfOnlyOnce());
+    if (enable_stage_static_scheduling) {
+      JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
+        const auto& num_placement_ids = JUST(PathStagePlacementIds4Edge(edge)).size();
+        if (!JUST(NeedStaticScheduling(edge, num_placement_ids))) { return Maybe<void>::Ok(); }
+        AddCtrlInOpNames(job_builder, compute_graph, edge);
+        return Maybe<void>::Ok();
+      }));
+      JUST(job_builder->MutCachedOpConfOnlyOnce());
+    }
     return Maybe<void>::Ok();
   }
 
