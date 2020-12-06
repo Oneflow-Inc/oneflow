@@ -283,7 +283,9 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   current_stream_id_ = (current_stream_id_ + 1) % num_streams_;
   CudaCurrentDeviceGuard device_guard;
   auto& device_id2comm =
-      device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
+      device_set2stream_id2device_id2comm_.size() == 1
+          ? device_set2stream_id2device_id2comm_.begin()->second.at(stream_id)
+          : device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
   auto& device_id2device_ctx = stream_id2device_id2device_ctx_.at(stream_id);
   if (group.front()->op_desc().op_type() == OpType::kOpTypeAllReduce
       && collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer() && group.size() > 1) {
