@@ -226,9 +226,13 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
     }
   };
   auto CanFuse = [&](const RequestDesc* lhs, const RequestDesc* rhs) -> bool {
+    const bool enable_mixed_fusion = (!collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer())
+                                     && collective_boxing_conf_.nccl_enable_mixed_fusion();
     if (lhs->device_set() != rhs->device_set()) { return false; }
     if (!IsOpFusionEnabled(lhs) || !IsOpFusionEnabled(rhs)) { return false; }
-    if (lhs->op_desc().op_type() != rhs->op_desc().op_type()) { return false; }
+    if (lhs->op_desc().op_type() != rhs->op_desc().op_type() && (!enable_mixed_fusion)) {
+      return false;
+    }
     const OpType op_type = lhs->op_desc().op_type();
     if (op_type == OpType::kOpTypeAllReduce) {
       if (collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer()) {
@@ -279,7 +283,9 @@ void NcclCollectiveBoxingExecutorBackend::ExecuteGroup(
   current_stream_id_ = (current_stream_id_ + 1) % num_streams_;
   CudaCurrentDeviceGuard device_guard;
   auto& device_id2comm =
-      device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
+      device_set2stream_id2device_id2comm_.size() == 1
+          ? device_set2stream_id2device_id2comm_.begin()->second.at(stream_id)
+          : device_set2stream_id2device_id2comm_.at(group.front()->device_set()).at(stream_id);
   auto& device_id2device_ctx = stream_id2device_id2device_ctx_.at(stream_id);
   if (group.front()->op_desc().op_type() == OpType::kOpTypeAllReduce
       && collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer() && group.size() > 1) {
