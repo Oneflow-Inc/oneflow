@@ -48,6 +48,8 @@ class ComputeNode final : public Node<ComputeNode, ComputeEdge> {
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const Scope& scope() const { return *scope_; }
 
+  Maybe<int64_t> GetParallelDescSymbolId() const;
+
   std::string VisualStr() const override;
 
  private:
