@@ -541,7 +541,7 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   bool has_job_enable_optimizer_placement_optimization = false;
   const auto IsEnabled = [](const Job& job) {
     return job.job_conf().has_train_conf()
-           && job.job_conf().train_conf().has_optimizer_placement_optimization_conf();
+           && job.job_conf().has_optimizer_placement_optimization_mode();
   };
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     if (IsEnabled(*jobs.at(job_id))) {
