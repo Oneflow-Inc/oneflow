@@ -37,6 +37,27 @@ __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
   }
 }
 
+constexpr int64_t kMultiSquareSumMaxSize = 64;
+
+template<typename T>
+struct MultiSquareSumParams {
+  SquareSumParam<T> params[kMultiSquareSumMaxSize];
+  int32_t size;
+};
+
+template<typename T>
+__global__ void MultiSquareSumGpu(const MultiSquareSumParams<T> params, T* y) {
+  T t_sum = 0;
+  for (int i = 0; i < params.size; ++i) {
+    const SquareSumParam<T> param = params.params[i];
+    CUDA_1D_KERNEL_LOOP(j, param.count) { t_sum += param.ptr[j] * param.ptr[j]; }
+  }
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  T b_sum = BlockReduce(temp_storage).Sum(t_sum);
+  if (threadIdx.x == 0) { gpu_atomic_add<T>(y, b_sum); }
+}
+
 }  // namespace
 
 template<typename T>
@@ -52,6 +73,22 @@ struct SquareSumKernelUtil<DeviceType::kGPU, T> {
       Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
       SquareSumGpu<T, false>
           <<<num_blocks, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+    }
+  }
+
+  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y) {
+    Memset<DeviceType::kGPU>(ctx, y, 0, sizeof(T));
+    for (int64_t start = 0; start < params.size(); start += kMultiSquareSumMaxSize) {
+      MultiSquareSumParams<T> gpu_params{};
+      int64_t max_count = 0;
+      gpu_params.size = std::min<int64_t>(start + kMultiSquareSumMaxSize, params.size()) - start;
+      for (int64_t i = 0; i < gpu_params.size; ++i) {
+        gpu_params.params[i] = params[start + i];
+        max_count = std::max(max_count, gpu_params.params[i].count);
+      }
+      MultiSquareSumGpu<T>
+          <<<BlocksNum4ThreadsNum(max_count), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              gpu_params, y);
     }
   }
 };
