@@ -582,7 +582,7 @@ def set_optimizer_placement_optimization_mode(func_desc, mode=None):
         mode (str, optional): [description]. Defaults to 'non_distributed'.
     """
     assert mode in ["non_distributed", "distributed_split"]
-    func_desc.job_config_proto.set_optimizer_placement_optimization_conf(mode)
+    func_desc.job_config_proto.set_optimizer_placement_optimization_mode(mode)
 
 
 @oneflow_function_config(
