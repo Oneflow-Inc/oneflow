@@ -578,11 +578,13 @@ def set_optimizer_placement_optimization_mode(func_desc, mode=None):
         func_desc ([type]): [description]
         mode (str, optional): [description]. Defaults to 'non_distributed'.
     """
-    conf = func_desc.job_config_proto.train_conf.optimizer_placement_optimization_conf
+    conf = (
+        func_desc.job_config_proto.mutable_train_conf().mutable_optimizer_placement_optimization_conf()
+    )
     if mode is None or mode == "non_distributed":
-        conf.non_distributed_conf.SetInParent()
+        conf.mutable_non_distributed_conf()
     elif mode == "distributed_split":
-        conf.distributed_split_conf.SetInParent()
+        conf.mutable_distributed_split_conf()
     else:
         raise ValueError
 
