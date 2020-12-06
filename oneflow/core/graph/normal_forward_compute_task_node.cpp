@@ -24,10 +24,12 @@ namespace oneflow {
 
 namespace {
 
-size_t RegstNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
-  if (IsClassRegistered<int32_t, RuntimeRegstNum4OpSameOutputBlob>(op_type_case)) {
-    std::unique_ptr<RuntimeRegstNum4OpSameOutputBlob> ptr;
-    ptr.reset(NewObj<int32_t, RuntimeRegstNum4OpSameOutputBlob>(op_type_case));
+int64_t RegstNum4OpEachOutputBlob(const OperatorConf& op_conf) {
+  if (op_conf.has_each_output_regst_num()) { return op_conf.each_output_regst_num(); }
+  OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
+  if (IsClassRegistered<int32_t, RuntimeRegstNum4OpEachOutputBlob>(op_type_case)) {
+    std::unique_ptr<RuntimeRegstNum4OpEachOutputBlob> ptr;
+    ptr.reset(NewObj<int32_t, RuntimeRegstNum4OpEachOutputBlob>(op_type_case));
     return *ptr;
   } else {
     return -1;
@@ -56,7 +58,7 @@ bool NormalForwardCompTaskNode::IsAllOutNodeNormalForward() const {
 }
 
 void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
-                                                                 size_t mem_block_num) {
+                                                                 int64_t mem_block_num) {
   if (mem_block_num != -1) {
     CHECK_GT(mem_block_num, 0);
     ProduceRegst(name, false, mem_block_num, mem_block_num);
@@ -67,7 +69,7 @@ void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::stri
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
-  size_t mem_block_num = RegstNum4OpSameOutputBlob(op.op_conf().op_type_case());
+  int64_t mem_block_num = RegstNum4OpEachOutputBlob(op.op_conf());
   if (op.op_conf().has_user_conf()) {
     const std::string& op_type_name = op.op_conf().user_conf().op_type_name();
     const auto* op_reg_result = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);

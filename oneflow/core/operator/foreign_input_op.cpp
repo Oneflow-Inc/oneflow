@@ -59,6 +59,6 @@ Maybe<void> ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) con
 }
 
 REGISTER_OP(OperatorConf::kForeignInputConf, ForeignInputOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kForeignInputConf, 1);
+REGISTER_OP_EACH_OUTPUT_BLOB_REGST_NUM(OperatorConf::kForeignInputConf, 1);
 
 }  // namespace oneflow

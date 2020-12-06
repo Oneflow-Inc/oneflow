@@ -16,9 +16,25 @@ limitations under the License.
 #include "oneflow/core/graph/stage_chain_graph.h"
 #include "oneflow/core/graph/compute_graph.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
+
+Maybe<void> StageChainNode::ForEachSourceComputeNode(
+    const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const {
+  const auto& IsSource = [&](const ComputeNode* node) {
+    size_t num_inputs = 0;
+    for (const auto* edge : node->in_edges()) {
+      num_inputs += compute_nodes().count(edge->src_node());
+    }
+    return num_inputs == 0;
+  };
+  for (const auto* node : compute_nodes()) {
+    if (IsSource(node)) { JUST(DoEach(*node)); }
+  }
+  return Maybe<void>::Ok();
+}
 
 std::string StageChainNode::VisualStr() const {
   std::string ret;
@@ -56,7 +72,7 @@ Maybe<void> StageChainGraph::InitNodes(
   struct StageChaineNodeInfo {
     int64_t max_buffer_size;
     std::shared_ptr<HashSet<int64_t>> parallel_desc_symbol_ids;
-    std::shared_ptr<std::list<const ComputeNode*>> compute_nodes;
+    std::shared_ptr<HashSet<const ComputeNode*>> compute_nodes;
   };
 
   std::function<Maybe<const std::set<const ComputeNode*>&>(const ComputeNode&)>
@@ -81,8 +97,8 @@ Maybe<void> StageChainGraph::InitNodes(
     (*symbol_ids)->insert(compute_node.scope().scope_proto().device_parallel_desc_symbol_id());
     // Collects compute nodes
     auto* group = &node_info->compute_nodes;
-    if (!*group) { group->reset(new std::list<const ComputeNode*>()); }
-    (*group)->push_back(&compute_node);
+    if (!*group) { group->reset(new HashSet<const ComputeNode*>()); }
+    (*group)->insert(&compute_node);
     return Maybe<void>::Ok();
   }));
   for (const auto& ancestors7node_info : other_stage_ancestors2info) {
@@ -160,6 +176,33 @@ void StageChainGraph::MakeGetterFindOrCreateEdge(
     }
     return *edge_ptr;
   };
+}
+
+Maybe<void> StageChainGraph::MakeGetterPathStagePlacementIds4Edge(
+    std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>*
+        PathStagePlacementIds4Edge) const {
+  using CacheT = HashMap<const StageChainEdge*, HashSet<int64_t>>;
+  auto edge2path_stage_placement_ids = std::make_shared<CacheT>();
+  *PathStagePlacementIds4Edge = [edge2path_stage_placement_ids](
+                                    const StageChainEdge* edge) -> Maybe<const HashSet<int64_t>&> {
+    return MapAt(*edge2path_stage_placement_ids, edge);
+  };
+  auto IsReachable = MakePredicatorIsReachable();
+  ForEachEdge([&](StageChainEdge* edge) {
+    auto* src = edge->src_node();
+    auto* dst = edge->dst_node();
+    auto* path_stage_placement_ids = &(*edge2path_stage_placement_ids)[edge];
+    const auto& ForEachNext = [&](StageChainNode* node,
+                                  const std::function<void(StageChainNode*)>& DoEach) {
+      node->ForEachNodeOnInOutEdge([&](StageChainNode* next) {
+        if (IsReachable(src, next) && IsReachable(next, dst)) { DoEach(next); }
+      });
+    };
+    BfsForEachNode({src}, ForEachNext, [&](StageChainNode* node) {
+      path_stage_placement_ids->insert(node->stage_placement_id());
+    });
+  });
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

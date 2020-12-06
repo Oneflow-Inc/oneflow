@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
@@ -30,12 +31,12 @@ namespace oneflow {
 
 namespace {
 
-class AddStageBufferOpPass final : public JobPass {
+class ResetStageRegstNumPass final : public JobPass {
  public:
-  AddStageBufferOpPass(const AddStageBufferOpPass&) = delete;
-  AddStageBufferOpPass(AddStageBufferOpPass&&) = delete;
-  AddStageBufferOpPass() = default;
-  ~AddStageBufferOpPass() = default;
+  ResetStageRegstNumPass(const ResetStageRegstNumPass&) = delete;
+  ResetStageRegstNumPass(ResetStageRegstNumPass&&) = delete;
+  ResetStageRegstNumPass() = default;
+  ~ResetStageRegstNumPass() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
@@ -54,126 +55,55 @@ class AddStageBufferOpPass final : public JobPass {
     return ctx.job_desc().IsTrain() && ctx.job_desc().Bool("enable_stage_buffer");
   }
 
-  struct StageBuffer {
-    LogicalBlobId produced_lbi;
-    int64_t scope_symbol_id;
-    const Scope* scope;
-    const Operator* consumer_op;
-    int64_t buffer_size;
-
-    // set after buffer_op added
-    std::string buffer_op_out_lbn;
-  };
-
-  using StageBuffers = std::vector<std::shared_ptr<StageBuffer>>;
-
   Maybe<void> Apply(const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
                     JobBuilder* job_builder) const {
-    HashMap<LogicalBlobId, StageBuffers> produced_lbi2stage_buffers;
-    HashMap<const Operator*, StageBuffers> consumer_op2stage_buffers;
-    JUST(ForEachStageBuffer(
-        compute_graph, stage_chain_graph,
-        [&](const std::shared_ptr<StageBuffer>& stage_buffer) -> Maybe<void> {
-          CHECK_GT_OR_RETURN(stage_buffer->buffer_size, 0);
-          produced_lbi2stage_buffers[stage_buffer->produced_lbi].push_back(stage_buffer);
-          consumer_op2stage_buffers[stage_buffer->consumer_op].push_back(stage_buffer);
-          return Maybe<void>::Ok();
-        }));
-    for (auto& pair : produced_lbi2stage_buffers) {
-      JUST(AddBufferOp(job_builder, pair.first, &pair.second));
-    }
-    for (const auto& pair : consumer_op2stage_buffers) {
-      JUST(ReplaceInputWithBufferOutLbn(job_builder, *pair.first, pair.second));
-    }
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> ForEachStageBuffer(
-      const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
-      const std::function<Maybe<void>(const std::shared_ptr<StageBuffer>&)>& DoEach) const {
     std::function<Maybe<int64_t>(const LogicalBlobId&)> BufferSize4Lbi;
     JUST(MakeGetterBufferSize4Lbi(compute_graph, &BufferSize4Lbi));
-    JUST(ForEachLbi7Consumer7RequiredBufferSize(
-        compute_graph, stage_chain_graph,
-        [&](const LogicalBlobId& lbi, const Operator* consumer_op,
-            int64_t required_buffer_size) -> Maybe<void> {
+    HashMap<std::string, int64_t> op_name2each_output_regst_num;
+    std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)> PathStagePlacementIds4Edge;
+    JUST(stage_chain_graph.MakeGetterPathStagePlacementIds4Edge(&PathStagePlacementIds4Edge));
+    JUST(ForEachLbi7RequiredBufferSize(
+        compute_graph, stage_chain_graph, PathStagePlacementIds4Edge,
+        [&](const LogicalBlobId& lbi, int64_t required_buffer_size) -> Maybe<void> {
           int64_t lbi_buffer_size = JUST(BufferSize4Lbi(lbi));
-          CHECK_GT(lbi_buffer_size, 0);
-          // buffer size provided: (stage_buffer->buffer_size + lbi_buffer_size)
-          // buffer size required: required_buffer_size
-          // (stage_buffer->buffer_size + lbi_buffer_size) == required_buffer_size
           if (required_buffer_size <= lbi_buffer_size) { return Maybe<void>::Ok(); }
-          auto stage_buffer = std::make_shared<StageBuffer>();
-          stage_buffer->produced_lbi = lbi;
-          {
-            const auto& producer_op = JUST(compute_graph.Node4OpName(lbi.op_name())).op();
-            int64_t scope_symbol_id = producer_op.op_conf().scope_symbol_id();
-            stage_buffer->scope_symbol_id = scope_symbol_id;
-            stage_buffer->scope =
-                &JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
-          }
-          stage_buffer->consumer_op = consumer_op;
-          stage_buffer->buffer_size = required_buffer_size - lbi_buffer_size;
-          CHECK_GT_OR_RETURN(stage_buffer->buffer_size, 0);
-          return DoEach(stage_buffer);
+          auto* buffer_size = &op_name2each_output_regst_num[lbi.op_name()];
+          *buffer_size = std::max<int64_t>(*buffer_size, required_buffer_size);
+          return Maybe<void>::Ok();
         }));
+    for (auto& pair : op_name2each_output_regst_num) {
+      JUST(ResetRegstNum(job_builder, pair.first, pair.second));
+    }
+    HashMap<std::string, std::list<std::string>> op2ctrl_in_op_names;
+    JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
+      const auto& num_placement_ids = JUST(PathStagePlacementIds4Edge(edge)).size();
+      if (!JUST(NeedStaticScheduling(edge, num_placement_ids))) { return Maybe<void>::Ok(); }
+      AddCtrlInOpNames(job_builder, compute_graph, edge);
+      return Maybe<void>::Ok();
+    }));
+    JUST(job_builder->MutCachedOpConfOnlyOnce());
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> AddBufferOp(JobBuilder* job_builder, const LogicalBlobId& produced_lbi,
-                          StageBuffers* stage_buffers) const {
-    std::string op_name = produced_lbi.op_name() + "__" + produced_lbi.blob_name() + "__buffer_op";
-    const Scope* scope = nullptr;
-    int64_t scope_symbol_id = 0;
-    int64_t buffer_size = -1;
-    CHECK_OR_RETURN(!stage_buffers->empty());
-    for (const auto& stage_buffer : *stage_buffers) {
-      if (scope == nullptr) {
-        scope = stage_buffer->scope;
-        scope_symbol_id = stage_buffer->scope_symbol_id;
-      } else {
-        CHECK_EQ_OR_RETURN(scope, stage_buffer->scope);
-      }
-      buffer_size = std::max(buffer_size, stage_buffer->buffer_size);
-    }
-    CHECK_GT_OR_RETURN(buffer_size, 0);
-    const auto buffer_op = user_op::UserOpConfWrapperBuilder(op_name)
-                               .Op("buffer")
-                               .ScopeSymbolId(scope_symbol_id)
-                               .Input("in", GenLogicalBlobName(produced_lbi))
-                               .Output("out")
-                               .Attr<int64_t>("buffer_size", buffer_size)
-                               .Build();
-    const auto& parallel_desc = JUST(scope->GetParallelDesc(buffer_op.op_conf()));
-    OF_RETURN_IF_ERROR(job_builder->AddOps(parallel_desc.parallel_conf(), {buffer_op.op_conf()}))
-        << buffer_op.op_conf().DebugString();
-    for (auto& stage_buffer : *stage_buffers) {
-      stage_buffer->buffer_op_out_lbn = op_name + "/out_0";
-    }
-    return Maybe<void>::Ok();
+  Maybe<bool> NeedStaticScheduling(StageChainEdge* edge, int64_t num_stage_placement_ids) const {
+    // stage_placement_id is different from parallel_desc_symbol_id. It's configured by user and
+    // there is no related symbol about it.
+    if (num_stage_placement_ids != 2) { return false; }
+    if (edge->src_node()->parallel_desc_symbol_ids().size() != 1) { return false; }
+    if (edge->dst_node()->parallel_desc_symbol_ids().size() != 1) { return false; }
+    int64_t src_parallel_desc_symbol_id = *edge->src_node()->parallel_desc_symbol_ids().begin();
+    int64_t dst_parallel_desc_symbol_id = *edge->dst_node()->parallel_desc_symbol_ids().begin();
+    if (src_parallel_desc_symbol_id == dst_parallel_desc_symbol_id) { return true; }
+    const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
+    const auto& src_parallel_desc = JUST(storage.MaybeGet(src_parallel_desc_symbol_id));
+    const auto& dst_parallel_desc = JUST(storage.MaybeGet(dst_parallel_desc_symbol_id));
+    return src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num();
   }
 
-  Maybe<void> ReplaceInputWithBufferOutLbn(JobBuilder* job_builder, const Operator& op,
-                                           const StageBuffers& stage_buffers) const {
-    const auto& FindStageBuffer = [&](const LogicalBlobId& lbi) -> const StageBuffer* {
-      const auto& iter = std::find_if(stage_buffers.begin(), stage_buffers.end(),
-                                      [&](const std::shared_ptr<StageBuffer>& stage_buffer) {
-                                        return stage_buffer->produced_lbi == lbi;
-                                      });
-      if (iter == stage_buffers.end()) { return nullptr; }
-      return iter->get();
-    };
-    std::unique_ptr<OperatorConf> new_op_conf;
-    for (const auto& ibn : op.input_bns()) {
-      const auto& lbi = op.BnInOp2Lbi(ibn);
-      const StageBuffer* stage_buffer = FindStageBuffer(lbi);
-      if (stage_buffer == nullptr) { continue; }
-      if (op.InputBlobModifier4Ibn(ibn).is_mutable()) { continue; }
-      if (op.InputBlobModifier4Ibn(ibn).use_header_only()) { continue; }
-      if (!new_op_conf) { new_op_conf.reset(new OperatorConf(op.op_conf())); }
-      ReplaceInputLbnInOpCustomizedConf(new_op_conf.get(), ibn, stage_buffer->buffer_op_out_lbn);
-    }
-    if (new_op_conf) { job_builder->MutOpsOnlyOnce({*new_op_conf}); }
+  Maybe<void> ResetRegstNum(JobBuilder* job_builder, const std::string& op_name,
+                            int64_t each_output_regst_num) const {
+    auto* op_conf = JUST(job_builder->CachedMutOpConf4OpName(op_name));
+    op_conf->set_each_output_regst_num(each_output_regst_num);
     return Maybe<void>::Ok();
   }
 
@@ -183,7 +113,7 @@ class AddStageBufferOpPass final : public JobPass {
     auto lbi2buffer_size = std::make_shared<HashMap<LogicalBlobId, int64_t>>();
     JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& node) -> Maybe<void> {
       const auto& op = node.op();
-      int64_t size = JUST(GetSameOutputRegstNum(op.op_conf()));
+      int64_t size = JUST(GetEachOutputRegstNum(op.op_conf()));
       for (const auto& obn : op.output_bns()) { (*lbi2buffer_size)[op.BnInOp2Lbi(obn)] = size; }
       return Maybe<void>::Ok();
     }));
@@ -195,7 +125,9 @@ class AddStageBufferOpPass final : public JobPass {
     return Maybe<void>::Ok();
   }
 
-  Maybe<int64_t> GetSameOutputRegstNum(const OperatorConf& op_conf) const {
+  Maybe<int64_t> GetEachOutputRegstNum(const OperatorConf& op_conf) const {
+    int64_t regst_num = 0;
+    if (op_conf.has_each_output_regst_num()) { regst_num = op_conf.each_output_regst_num(); }
     if (op_conf.has_user_conf()) {
       const std::string& op_type_name = op_conf.user_conf().op_type_name();
       const auto* op_reg_result =
@@ -204,13 +136,15 @@ class AddStageBufferOpPass final : public JobPass {
           << "op_type_name " << op_type_name << " not register";
       if (op_reg_result->same_output_regst_num_getter) {
         user_op::UserOpConfWrapper user_op_conf(op_conf);
-        return JUST((*op_reg_result->same_output_regst_num_getter)(user_op_conf));
+        regst_num = JUST((*op_reg_result->same_output_regst_num_getter)(user_op_conf));
       } else {
-        return 1;
+        regst_num = 1;
       }
     } else {
-      return 1;
+      regst_num = 1;
     }
+    CHECK_GT_OR_RETURN(regst_num, 0);
+    return regst_num;
   }
 
   Maybe<const Scope&> GetScope(const OperatorConf& op_conf) const {
@@ -218,15 +152,35 @@ class AddStageBufferOpPass final : public JobPass {
     return Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(op_conf.scope_symbol_id());
   }
 
-  Maybe<void> ForEachLbi7Consumer7RequiredBufferSize(
+  Maybe<void> AddCtrlInOpNames(JobBuilder* job_builder, const ComputeGraph& compute_graph,
+                               const StageChainEdge* edge) const {
+    JUST(edge->dst_node()->ForEachSourceComputeNode([&](const ComputeNode& dst) -> Maybe<void> {
+      OperatorConf* op_conf = JUST(job_builder->CachedMutOpConf4OpName(dst.op().op_name()));
+      JUST(edge->src_node()->ForEachSourceComputeNode([&](const ComputeNode& src) -> Maybe<void> {
+        const auto& existed = op_conf->ctrl_in_op_name();
+        const auto& op_name = src.op().op_name();
+        if (std::find(existed.begin(), existed.end(), op_name) == existed.end()) {
+          op_conf->add_ctrl_in_op_name(op_name);
+        }
+        return Maybe<void>::Ok();
+      }));
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> ForEachLbi7RequiredBufferSize(
       const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
-      const std::function<Maybe<void>(const LogicalBlobId& lbi, const Operator* consumer_op,
-                                      int64_t required_buffer_size)>& DoEach) const {
+      const std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>&
+          PathStagePlacementIds4Edge,
+      const std::function<Maybe<void>(const LogicalBlobId& lbi, int64_t required_buffer_size)>&
+          DoEach) const {
     std::function<Maybe<bool>(const ComputeNode&)> IsDescendantOfAnyVar;
     JUST(MakePredicatorIsDescendantOfAnyVar(compute_graph, &IsDescendantOfAnyVar));
     const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
     std::function<Maybe<int64_t>(const OpBlobArg&)> RequiredBufferSize4Oba;
-    JUST(MakeGetterRequiredBufferSize4Oba(stage_chain_graph, &RequiredBufferSize4Oba));
+    JUST(MakeGetterRequiredBufferSize4Oba(stage_chain_graph, PathStagePlacementIds4Edge,
+                                          &RequiredBufferSize4Oba));
     JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& consumer_node) -> Maybe<void> {
       const auto& consumer_op = consumer_node.op();
       for (const auto& ibn : consumer_op.input_bns()) {
@@ -261,7 +215,7 @@ class AddStageBufferOpPass final : public JobPass {
             --required_buffer_size;
           }
         }
-        JUST(DoEach(lbi, &consumer_op, required_buffer_size));
+        JUST(DoEach(lbi, required_buffer_size));
       }
       return Maybe<void>::Ok();
     }));
@@ -287,6 +241,8 @@ class AddStageBufferOpPass final : public JobPass {
 
   Maybe<void> MakeGetterRequiredBufferSize4Oba(
       const StageChainGraph& stage_chain_graph,
+      const std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>&
+          PathStagePlacementIds4Edge,
       std::function<Maybe<int64_t>(const OpBlobArg&)>* RequiredBufferSize4Oba) const {
     auto oba2stage_chain_edge = std::make_shared<HashMap<OpBlobArg, StageChainEdge*>>();
     auto edge2required_buffer_size = std::make_shared<HashMap<StageChainEdge*, int64_t>>();
@@ -297,9 +253,7 @@ class AddStageBufferOpPass final : public JobPass {
       return MapAt(*edge2required_buffer_size, iter->second);
     };
 
-    HashMap<StageChainEdge*, HashSet<int64_t>> edge2path_parallel_desc_symbol_ids;
-    auto IsReachable = stage_chain_graph.MakePredicatorIsReachable();
-    stage_chain_graph.ForEachEdge([&](StageChainEdge* edge) {
+    JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
       auto* src = edge->src_node();
       auto* dst = edge->dst_node();
       // set oba2stage_chain_edge
@@ -310,34 +264,21 @@ class AddStageBufferOpPass final : public JobPass {
             OpBlobArg oba;
             oba.set_op_name(compute_node->op().op_name());
             oba.set_bn_in_op(ibn);
-            CHECK(oba2stage_chain_edge->emplace(oba, edge).second);
+            CHECK_OR_RETURN(oba2stage_chain_edge->emplace(oba, edge).second);
           }
         }
       }
-      // update edge2path_parallel_desc_symbol_ids
-      auto* path_parallel_desc_symbol_ids = &edge2path_parallel_desc_symbol_ids[edge];
-      const auto& ForEachNext = [&](StageChainNode* node,
-                                    const std::function<void(StageChainNode*)>& DoEach) {
-        node->ForEachNodeOnInOutEdge([&](StageChainNode* next) {
-          if (IsReachable(src, next) && IsReachable(next, dst)) { DoEach(next); }
-        });
-      };
-      stage_chain_graph.BfsForEachNode({src}, ForEachNext, [&](StageChainNode* node) {
-        path_parallel_desc_symbol_ids->insert(node->parallel_desc_symbol_ids().begin(),
-                                              node->parallel_desc_symbol_ids().end());
-      });
-    });
-    for (const auto& pair : edge2path_parallel_desc_symbol_ids) {
-      auto* edge = pair.first;
-      int64_t required_buffer_size = pair.second.size();
+      // update edge2required_buffer_size
+      int64_t required_buffer_size = JUST(PathStagePlacementIds4Edge(edge)).size();
       required_buffer_size = std::min(required_buffer_size, edge->src_node()->stage_buffer_size());
       (*edge2required_buffer_size)[edge] = required_buffer_size;
-    }
+      return Maybe<void>::Ok();
+    }));
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_JOB_PASS("AddStageBufferOp", AddStageBufferOpPass);
+REGISTER_JOB_PASS("ResetStageRegstNum", ResetStageRegstNumPass);
 
 }  // namespace
 

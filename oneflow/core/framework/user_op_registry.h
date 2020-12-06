@@ -56,7 +56,7 @@ struct OpRegistryResult {
 
   std::string op_type_name;
   bool cpu_only_supported;
-  std::shared_ptr<std::function<Maybe<size_t>(const UserOpConfWrapper&)>>
+  std::shared_ptr<std::function<Maybe<int64_t>(const UserOpConfWrapper&)>>
       same_output_regst_num_getter;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -91,7 +91,7 @@ class OpRegistry final {
 
   OpRegistry& SupportCpuOnly();
   OpRegistry& SetOutputBufferNumGetter(
-      std::function<Maybe<size_t>(const UserOpConfWrapper&)> getter);
+      std::function<Maybe<int64_t>(const UserOpConfWrapper&)> getter);
 
   __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type);
   template<typename T>

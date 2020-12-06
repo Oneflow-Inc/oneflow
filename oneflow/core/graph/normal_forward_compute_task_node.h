@@ -36,7 +36,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
  private:
   bool IsAllOutNodeNormalForward() const;
   bool CanProduceSeperatedRegstsForEachOutBlob() const;
-  void ProduceOutRegstByNameAndBlockNum(const std::string& name, size_t mem_block_num);
+  void ProduceOutRegstByNameAndBlockNum(const std::string& name, int64_t mem_block_num);
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();

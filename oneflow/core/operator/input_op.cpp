@@ -65,7 +65,7 @@ Symbol<OperatorConf> InputOp::GetOpConfWithoutOpNameAndLbn() const {
 }
 
 REGISTER_OP(OperatorConf::kInputConf, InputOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kInputConf, 1);
+REGISTER_OP_EACH_OUTPUT_BLOB_REGST_NUM(OperatorConf::kInputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kInputConf);
 
 }  // namespace oneflow

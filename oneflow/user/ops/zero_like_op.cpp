@@ -21,7 +21,7 @@ namespace oneflow {
 REGISTER_USER_OP("zero_like")
     .Input("like")
     .Output("out")
-    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper&) -> Maybe<size_t> { return 1; })
+    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper&) -> Maybe<int64_t> { return 1; })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);

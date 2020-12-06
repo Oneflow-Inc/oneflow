@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 REGISTER_USER_OP("constant")
     .Output("out")
-    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper&) -> Maybe<size_t> { return 1; })
+    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper&) -> Maybe<int64_t> { return 1; })
     .Attr<double>("floating_value")
     .Attr<int64_t>("integer_value")
     .Attr<bool>("is_floating_value")

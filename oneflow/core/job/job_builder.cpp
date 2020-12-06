@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -65,14 +66,12 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   }
 }
 
-OperatorConf* JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
-  const auto& it = op_name2op_conf_.find(op_name);
-  CHECK(it != op_name2op_conf_.end());
-  return it->second;
+Maybe<OperatorConf*> JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
+  return *JUST(MapAt(&op_name2op_conf_, op_name));
 }
 
-const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const {
-  return *op_name2op_conf_.at(op_name);
+Maybe<const OperatorConf&> JobBuilder::OpConf4OpName(const std::string& op_name) const {
+  return *JUST(MapAt(op_name2op_conf_, op_name));
 }
 
 const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {
@@ -190,10 +189,13 @@ void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
-  for (const auto& op_conf : op_confs) {
-    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second);
-    op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
-  }
+  for (const auto& op_conf : op_confs) { CHECK_JUST(MutOpOnlyOnce(op_conf)); }
+}
+
+Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second);
+  (*JUST(MapAt(&op_name2op_conf_, op_conf.name())))->CopyFrom(op_conf);
+  return Maybe<void>::Ok();
 }
 
 void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
@@ -209,6 +211,21 @@ void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
   }
   CHECK_JUST(AddOps(parallel_conf, add_ops));
   MutOpsOnlyOnce(mut_ops);
+}
+
+Maybe<OperatorConf*> JobBuilder::CachedMutOpConf4OpName(const std::string& op_name) {
+  const auto& op_conf_iter = op_name2op_conf_.find(op_name);
+  CHECK_OR_RETURN(op_conf_iter != op_name2op_conf_.end());
+  const auto& cached_iter = op_name2cached_mut_op_conf_.find(op_name);
+  if (cached_iter != op_name2cached_mut_op_conf_.end()) { return &cached_iter->second; }
+  auto* cached_mut_op_conf = &op_name2cached_mut_op_conf_[op_name];
+  cached_mut_op_conf->CopyFrom(*op_conf_iter->second);
+  return cached_mut_op_conf;
+}
+
+Maybe<void> JobBuilder::MutCachedOpConfOnlyOnce() {
+  for (const auto& pair : op_name2cached_mut_op_conf_) { JUST(MutOpOnlyOnce(pair.second)); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> JobBuilder::ForEachOperator(

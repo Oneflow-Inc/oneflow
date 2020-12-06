@@ -493,7 +493,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   std::string obn = "out";
   std::string lbn;
   {
-    const auto& op_conf = job_builder.OpConf4OpName(op_name);
+    const auto& op_conf = CHECK_JUST(job_builder.OpConf4OpName(op_name));
     if (op_conf.has_variable_conf()) {
       lbn = op_name + "/" + op_conf.variable_conf().out();
     } else if (op_conf.has_input_conf()) {

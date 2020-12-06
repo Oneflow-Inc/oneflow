@@ -24,7 +24,7 @@ REGISTER_USER_OP("buffer")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("buffer_size", 1)
-    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper& op_conf) -> Maybe<size_t> {
+    .SetOutputBufferNumGetter([](const user_op::UserOpConfWrapper& op_conf) -> Maybe<int64_t> {
       return op_conf.attr<int64_t>("buffer_size");
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
