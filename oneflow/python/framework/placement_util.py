@@ -89,9 +89,7 @@ def api_placement(
     return func(device_tag, machine_device_ids)
 
 
-@enable_if.condition(
-    hob.in_normal_mode & ~hob.session_initialized
-)
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def GetEmptyPlacementScope(device_tag, machine_device_ids):
     return placement_ctx.EmptyPlacementScope(
         device_tag,

@@ -43,7 +43,7 @@ Maybe<void> DeviceTickOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kDeviceTickConf, 2);
+REGISTER_OP_EACH_OUTPUT_BLOB_REGST_NUM(OperatorConf::kDeviceTickConf, 2);
 REGISTER_OP(OperatorConf::kDeviceTickConf, DeviceTickOp);
 REGISTER_TICK_TOCK_OP(OperatorConf::kDeviceTickConf);
 

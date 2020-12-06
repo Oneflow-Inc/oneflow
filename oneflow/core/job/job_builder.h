@@ -42,14 +42,18 @@ class JobBuilder final {
     return job_->mutable_job_parallel_view_conf();
   }
 
-  const OperatorConf& OpConf4OpName(const std::string& op_name) const;
-  OperatorConf* MutableOpConf4OpName(const std::string& op_name);
+  Maybe<const OperatorConf&> OpConf4OpName(const std::string& op_name) const;
+  Maybe<OperatorConf*> MutableOpConf4OpName(const std::string& op_name);
 
   Maybe<void> AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
+  Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
                            const std::vector<OperatorConf>& op_confs);
+
+  Maybe<OperatorConf*> CachedMutOpConf4OpName(const std::string& op_name);
+  Maybe<void> MutCachedOpConfOnlyOnce();
 
   void RemoveOpByName(const std::string& op_name);
   void RemoveOpByName(const std::unordered_set<std::string>& removing_names);
@@ -88,6 +92,7 @@ class JobBuilder final {
   HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
   HashMap<std::string, OpTimeShape*> op_name2time_shapes_;
   HashMap<std::string, OptInt64*> lbn2batch_axis_;
+  HashMap<std::string, OperatorConf> op_name2cached_mut_op_conf_;
 };
 
 }  // namespace oneflow

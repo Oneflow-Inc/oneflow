@@ -47,7 +47,7 @@ Maybe<void> PartialTickOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kPartialTickConf, 2);
+REGISTER_OP_EACH_OUTPUT_BLOB_REGST_NUM(OperatorConf::kPartialTickConf, 2);
 REGISTER_OP(OperatorConf::kPartialTickConf, PartialTickOp);
 REGISTER_TICK_TOCK_OP(OperatorConf::kPartialTickConf);
 

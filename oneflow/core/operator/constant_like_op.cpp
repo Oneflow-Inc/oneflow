@@ -60,6 +60,6 @@ class ConstantLikeOp final : public Operator {
 };
 
 REGISTER_OP(OperatorConf::kConstantLikeConf, ConstantLikeOp);
-REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kConstantLikeConf, 1);
+REGISTER_OP_EACH_OUTPUT_BLOB_REGST_NUM(OperatorConf::kConstantLikeConf, 1);
 
 }  // namespace oneflow

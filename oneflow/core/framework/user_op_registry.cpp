@@ -83,8 +83,8 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
 }
 
 OpRegistry& OpRegistry::SetOutputBufferNumGetter(
-    std::function<Maybe<size_t>(const UserOpConfWrapper&)> getter) {
-  auto* copier = new std::function<Maybe<size_t>(const UserOpConfWrapper&)>(getter);
+    std::function<Maybe<int64_t>(const UserOpConfWrapper&)> getter) {
+  auto* copier = new std::function<Maybe<int64_t>(const UserOpConfWrapper&)>(getter);
   result_.same_output_regst_num_getter.reset(copier);
   return *this;
 }

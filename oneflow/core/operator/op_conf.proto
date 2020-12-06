@@ -870,6 +870,7 @@ message OperatorConf {
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
+  optional int64 each_output_regst_num = 9 [default = -1];
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;

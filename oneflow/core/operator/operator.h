@@ -325,9 +325,9 @@ struct OnlyCpuSupportPredicator {
   bool only_cpu_;
 };
 
-struct RuntimeRegstNum4OpSameOutputBlob final {
-  RuntimeRegstNum4OpSameOutputBlob(size_t num) : num_(num) {}
-  RuntimeRegstNum4OpSameOutputBlob(std::function<size_t()> get_num)
+struct RuntimeRegstNum4OpEachOutputBlob final {
+  RuntimeRegstNum4OpEachOutputBlob(size_t num) : num_(num) {}
+  RuntimeRegstNum4OpEachOutputBlob(std::function<size_t()> get_num)
       : get_num_(new std::function<size_t()>(get_num)) {}
   operator size_t() {
     if (!get_num_) { return num_; }
@@ -354,9 +354,9 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_CREATOR(int32_t, op_type_case, Operator, creator, const OperatorConf&)
 
-#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)                 \
-  REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
-                         ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
+#define REGISTER_OP_EACH_OUTPUT_BLOB_REGST_NUM(op_type_case, num)                 \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpEachOutputBlob, \
+                         ([] { return new RuntimeRegstNum4OpEachOutputBlob(num); }))
 
 struct IsInterfaceOpConf4OpTypeCase final {};
 
