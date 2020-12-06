@@ -91,6 +91,10 @@ class ResetStageRegstNumPass final : public JobPass {
     // stage_placement_id is different from parallel_desc_symbol_id. It's configured by user and
     // there is no related symbol about it.
     if (num_stage_placement_ids != 2) { return false; }
+    const auto& src_pass_name = edge->src_node()->calculation_pass_name();
+    if (!(src_pass_name == kForwardPass || src_pass_name == kBackwardPass)) { return false; }
+    const auto& dst_pass_name = edge->dst_node()->calculation_pass_name();
+    if (!(dst_pass_name == kForwardPass || dst_pass_name == kBackwardPass)) { return false; }
     int64_t src_parallel_desc_symbol_id = edge->src_node()->parallel_desc_symbol_id();
     int64_t dst_parallel_desc_symbol_id = edge->dst_node()->parallel_desc_symbol_id();
     if (src_parallel_desc_symbol_id == dst_parallel_desc_symbol_id) { return true; }
