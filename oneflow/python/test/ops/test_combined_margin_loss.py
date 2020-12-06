@@ -119,7 +119,7 @@ def test_combined_margin_loss(
     labels = np.random.randint(0, 1000, size=(*label_shape,)).astype(np.int32)
     test_job(x, labels).get()
 
-    tol = 1e-4
+    tol = 2e-3
 
     y1 = test_global_storage.Get("y1")
     y2 = test_global_storage.Get("y2")
@@ -135,12 +135,12 @@ class TestCombinedMarginLoss(flow.unittest.TestCase):
     def test_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["input_shape"] = [(512, 1000)]
-        arg_dict["label_shape"] = [(512,)]
+        arg_dict["input_shape"] = [(64, 1000)]
+        arg_dict["label_shape"] = [(64,)]
         arg_dict["data_type"] = [flow.float32]
-        arg_dict["m1"] = [1.0]
+        arg_dict["m1"] = [0.3]
         arg_dict["m2"] = [0.5]
-        arg_dict["m3"] = [0.0]
+        arg_dict["m3"] = [0.4]
         arg_dict["s"] = [5]
         for arg in GenArgDict(arg_dict):
             test_combined_margin_loss(test_case, **arg)
