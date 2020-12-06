@@ -25,6 +25,10 @@ namespace oneflow {
 
 std::string ComputeNode::VisualStr() const { return op().op_name(); }
 
+Maybe<int64_t> ComputeNode::GetParallelDescSymbolId() const {
+  return scope().GetParallelDescSymbolId(op().op_conf());
+}
+
 Maybe<void> ComputeNode::Init(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   scope_ = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGetPtr(op_conf.scope_symbol_id()));

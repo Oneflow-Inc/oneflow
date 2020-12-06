@@ -89,14 +89,16 @@ class ResetStageRegstNumPass final : public JobPass {
     // stage_placement_id is different from parallel_desc_symbol_id. It's configured by user and
     // there is no related symbol about it.
     if (num_stage_placement_ids != 2) { return false; }
-    if (edge->src_node()->parallel_desc_symbol_ids().size() != 1) { return false; }
-    if (edge->dst_node()->parallel_desc_symbol_ids().size() != 1) { return false; }
-    int64_t src_parallel_desc_symbol_id = *edge->src_node()->parallel_desc_symbol_ids().begin();
-    int64_t dst_parallel_desc_symbol_id = *edge->dst_node()->parallel_desc_symbol_ids().begin();
+    int64_t src_parallel_desc_symbol_id = edge->src_node()->parallel_desc_symbol_id();
+    int64_t dst_parallel_desc_symbol_id = edge->dst_node()->parallel_desc_symbol_id();
     if (src_parallel_desc_symbol_id == dst_parallel_desc_symbol_id) { return true; }
     const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
     const auto& src_parallel_desc = JUST(storage.MaybeGet(src_parallel_desc_symbol_id));
     const auto& dst_parallel_desc = JUST(storage.MaybeGet(dst_parallel_desc_symbol_id));
+    const auto& src_device_tag = src_parallel_desc.parallel_conf().device_tag();
+    const auto& dst_device_tag = dst_parallel_desc.parallel_conf().device_tag();
+    if (src_device_tag == "cpu") { return false; }
+    if (src_device_tag != dst_device_tag) { return false; }
     return src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num();
   }
 
@@ -254,10 +256,8 @@ class ResetStageRegstNumPass final : public JobPass {
     };
 
     JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
-      auto* src = edge->src_node();
-      auto* dst = edge->dst_node();
       // set oba2stage_chain_edge
-      for (const auto* compute_node : dst->compute_nodes()) {
+      for (const auto* compute_node : edge->dst_node()->compute_nodes()) {
         for (const auto& ibn : compute_node->op().input_bns()) {
           const auto& lbi = compute_node->op().BnInOp2Lbi(ibn);
           if (edge->lbis().count(lbi) > 0) {
