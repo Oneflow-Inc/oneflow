@@ -16,16 +16,18 @@ class RavelMultiIndexKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const Tensor* dims_tensor = ctx->Tensor4ArgNameAndIndex("dims", 0);
     int ndim = dims_tensor->shape().elem_cnt();
-    size_t in_num = ctx->inputs().size() - 1; // ([3, 6, 2], [4, 5, 1]) -> in_num 还有个额外的输入 dim = 3, 所以要减1
+    int32_t in_num = ctx->inputs().size() - 1; // ([3, 6, 2], [4, 5, 1]) -> in_num 还有个额外的输入 dim = 3, 所以要减1
     
-    std::vector<const T*> in_dptrs(in_num);
+    const T* in_dptrs[6]; // The max input num is 6
+    // TODO: Add a check to promise the input num is less than the max legal input num
+
     for (int32_t i = 0; i < in_num; ++i) {
       std::cout<<"Current Loop idx is: "<<i<<std::endl;
-      in_dptrs.at(i) = ctx->Tensor4ArgNameAndIndex("multi_index", i)->dptr<T>();
+      in_dptrs[i] = ctx->Tensor4ArgNameAndIndex("multi_index", i)->dptr<T>();
     }
-
+  
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int n = out->shape().elem_cnt();
+    int32_t n = out->shape().elem_cnt();
     T* output = out->mut_dptr<T>();
 
     const T* dims = dims_tensor->dptr<T>();
@@ -33,16 +35,18 @@ class RavelMultiIndexKernel final : public OpKernel {
     RavelMultiIndexHelper<T> helper(dims, ndim);
 
     // for (int32_t elem_idx = 0; elem_idx < n; ++elem_idx){
-    //     std::vector<T> index_vec(in_num);
+    //     // std::vector<T> index_vec(in_num);
+    //     T index_vec[in_num] = {0};
+
     //     std::cout<<"Index vector size is: "<<in_num<<std::endl;
     //     for (int32_t idx = 0; idx < in_num; ++idx){
-    //       std::cout<<"In dptrs element is: "<<in_dptrs.at(idx)[elem_idx]<<std::endl;
-    //       index_vec[idx] = (in_dptrs.at(idx)[elem_idx]);
+    //       std::cout<<"In dptrs element is: "<<in_dptrs[idx][elem_idx]<<std::endl;
+    //       index_vec[idx] = in_dptrs[idx][elem_idx];
     //     }
     //     std::cout<<"Index vector size is: "<<index_vec[0]<<std::endl;
     //     std::cout<<"Index vector size is: "<<index_vec[1]<<std::endl;
     //     std::cout<<"n is: "<<n<<std::endl;
-    //     T offset = helper.NdIndexToOffset(index_vec.data(), in_num);
+    //     T offset = helper.NdIndexToOffset(index_vec, in_num);
     //     std::cout<<"offset is: "<<offset<<std::endl;
     //     output[elem_idx] = offset;
     //   }
