@@ -51,6 +51,9 @@ class StageChainNode : public Node<StageChainNode, StageChainEdge> {
   Maybe<void> ForEachSourceComputeNode(
       const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const;
 
+  Maybe<void> ForEachSinkComputeNode(
+      const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const;
+
   std::string VisualStr() const override;
 
  private:
@@ -82,12 +85,20 @@ class StageChainEdge : public Edge<StageChainNode, StageChainEdge> {
 
   const HashSet<LogicalBlobId>& lbis() const { return lbis_; }
 
+  Maybe<size_t> NumStagePlacementInPath() const;
+  Maybe<size_t> NumParallelDescInPath() const;
+
   void add_lbi(const LogicalBlobId& lbi) { lbis_.insert(lbi); }
+
+  void add_path_stage_placement_id(int64_t stage_placement_id);
+  void add_path_parallel_desc_symbol_id(int64_t parallel_desc_symbol_id);
 
   std::string VisualStr() const override;
 
  private:
   HashSet<LogicalBlobId> lbis_;
+  std::unique_ptr<HashSet<int64_t>> path_stage_placement_ids_;
+  std::unique_ptr<HashSet<int64_t>> path_parallel_desc_symbol_ids_;
 };
 
 class StageChainGraph : public Graph<StageChainNode, StageChainEdge> {
@@ -104,9 +115,7 @@ class StageChainGraph : public Graph<StageChainNode, StageChainEdge> {
     return graph;
   }
 
-  Maybe<void> MakeGetterPathStagePlacementIds4Edge(
-      std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>*
-          PathStagePlacementIds4Edge) const;
+  Maybe<void> InitEdgeStatistics();
 
  private:
   Maybe<void> Init(const ComputeGraph& compute_graph);

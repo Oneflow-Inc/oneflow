@@ -42,6 +42,7 @@ class ResetStageRegstNumPass final : public JobPass {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     auto compute_graph = JUST(ComputeGraph::New(*job));
     auto stage_chain_graph = JUST(StageChainGraph::New(*compute_graph));
+    stage_chain_graph->InitEdgeStatistics();
     {
       std::string job_name = ctx->job_desc().job_name();
       compute_graph->ToDotWithFilePath(std::string("compute_graph-") + job_name + ".dot");
@@ -61,10 +62,8 @@ class ResetStageRegstNumPass final : public JobPass {
     std::function<Maybe<int64_t>(const LogicalBlobId&)> BufferSize4Lbi;
     JUST(MakeGetterBufferSize4Lbi(compute_graph, &BufferSize4Lbi));
     HashMap<std::string, int64_t> op_name2each_output_regst_num;
-    std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)> PathStagePlacementIds4Edge;
-    JUST(stage_chain_graph.MakeGetterPathStagePlacementIds4Edge(&PathStagePlacementIds4Edge));
     JUST(ForEachLbi7RequiredBufferSize(
-        compute_graph, stage_chain_graph, PathStagePlacementIds4Edge,
+        compute_graph, stage_chain_graph,
         [&](const LogicalBlobId& lbi, int64_t required_buffer_size) -> Maybe<void> {
           int64_t lbi_buffer_size = JUST(BufferSize4Lbi(lbi));
           if (required_buffer_size <= lbi_buffer_size) { return Maybe<void>::Ok(); }
@@ -77,9 +76,9 @@ class ResetStageRegstNumPass final : public JobPass {
     }
     if (enable_stage_static_scheduling) {
       JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
-        const auto& num_placement_ids = JUST(PathStagePlacementIds4Edge(edge)).size();
+        size_t num_placement_ids = JUST(edge->NumStagePlacementInPath());
         if (!JUST(NeedStaticScheduling(edge, num_placement_ids))) { return Maybe<void>::Ok(); }
-        AddCtrlInOpNames(job_builder, compute_graph, edge);
+        JUST(AddCtrlFromSrcSourceToDstSource(job_builder, compute_graph, edge));
         return Maybe<void>::Ok();
       }));
       JUST(job_builder->MutCachedOpConfOnlyOnce());
@@ -93,8 +92,6 @@ class ResetStageRegstNumPass final : public JobPass {
     if (num_stage_placement_ids != 2) { return false; }
     const auto& src_pass_name = edge->src_node()->calculation_pass_name();
     if (!(src_pass_name == kForwardPass || src_pass_name == kBackwardPass)) { return false; }
-    const auto& dst_pass_name = edge->dst_node()->calculation_pass_name();
-    if (!(dst_pass_name == kForwardPass || dst_pass_name == kBackwardPass)) { return false; }
     int64_t src_parallel_desc_symbol_id = edge->src_node()->parallel_desc_symbol_id();
     int64_t dst_parallel_desc_symbol_id = edge->dst_node()->parallel_desc_symbol_id();
     if (src_parallel_desc_symbol_id == dst_parallel_desc_symbol_id) { return true; }
@@ -160,8 +157,9 @@ class ResetStageRegstNumPass final : public JobPass {
     return Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(op_conf.scope_symbol_id());
   }
 
-  Maybe<void> AddCtrlInOpNames(JobBuilder* job_builder, const ComputeGraph& compute_graph,
-                               const StageChainEdge* edge) const {
+  Maybe<void> AddCtrlFromSrcSourceToDstSource(JobBuilder* job_builder,
+                                              const ComputeGraph& compute_graph,
+                                              const StageChainEdge* edge) const {
     JUST(edge->dst_node()->ForEachSourceComputeNode([&](const ComputeNode& dst) -> Maybe<void> {
       OperatorConf* op_conf = JUST(job_builder->CachedMutOpConf4OpName(dst.op().op_name()));
       JUST(edge->src_node()->ForEachSourceComputeNode([&](const ComputeNode& src) -> Maybe<void> {
@@ -179,16 +177,13 @@ class ResetStageRegstNumPass final : public JobPass {
 
   Maybe<void> ForEachLbi7RequiredBufferSize(
       const ComputeGraph& compute_graph, const StageChainGraph& stage_chain_graph,
-      const std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>&
-          PathStagePlacementIds4Edge,
       const std::function<Maybe<void>(const LogicalBlobId& lbi, int64_t required_buffer_size)>&
           DoEach) const {
     std::function<Maybe<bool>(const ComputeNode&)> IsDescendantOfAnyVar;
     JUST(MakePredicatorIsDescendantOfAnyVar(compute_graph, &IsDescendantOfAnyVar));
     const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
     std::function<Maybe<int64_t>(const OpBlobArg&)> RequiredBufferSize4Oba;
-    JUST(MakeGetterRequiredBufferSize4Oba(stage_chain_graph, PathStagePlacementIds4Edge,
-                                          &RequiredBufferSize4Oba));
+    JUST(MakeGetterRequiredBufferSize4Oba(stage_chain_graph, &RequiredBufferSize4Oba));
     JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& consumer_node) -> Maybe<void> {
       const auto& consumer_op = consumer_node.op();
       for (const auto& ibn : consumer_op.input_bns()) {
@@ -249,8 +244,6 @@ class ResetStageRegstNumPass final : public JobPass {
 
   Maybe<void> MakeGetterRequiredBufferSize4Oba(
       const StageChainGraph& stage_chain_graph,
-      const std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>&
-          PathStagePlacementIds4Edge,
       std::function<Maybe<int64_t>(const OpBlobArg&)>* RequiredBufferSize4Oba) const {
     auto oba2stage_chain_edge = std::make_shared<HashMap<OpBlobArg, StageChainEdge*>>();
     auto edge2required_buffer_size = std::make_shared<HashMap<StageChainEdge*, int64_t>>();
@@ -275,7 +268,7 @@ class ResetStageRegstNumPass final : public JobPass {
         }
       }
       // update edge2required_buffer_size
-      int64_t required_buffer_size = JUST(PathStagePlacementIds4Edge(edge)).size();
+      int64_t required_buffer_size = JUST(edge->NumStagePlacementInPath());
       required_buffer_size = std::min(required_buffer_size, edge->src_node()->stage_buffer_size());
       (*edge2required_buffer_size)[edge] = required_buffer_size;
       return Maybe<void>::Ok();
