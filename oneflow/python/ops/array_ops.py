@@ -2312,3 +2312,58 @@ def amp_white_identity(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("zeros")
+def zeros(
+    shape: Sequence[int],
+    dtype: Optional[dtype_util.dtype] = None,
+    trainable: Optional[bool] = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator creates a Blob with the value `0`.
+
+    Args:
+        shape (Sequence[int]): The shape of the Blob. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        trainable (Optional[bool], optional): Whether the variable is trainable. Defaults to False.
+        name (Optional[str], optional): The name for the Blob. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob filled with value `0`
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def zeros_job() -> tp.Numpy: 
+            return flow.zeros(shape=(2, 3), dtype=flow.float32)
+
+
+        check = flow.train.CheckPoint()
+        check.init()
+
+        out = zeros_job()
+
+        # output: [[0. 0. 0.]
+        #          [0. 0. 0.]]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Zeros_")
+
+    if dtype is None:
+        dtype = flow.float32
+
+    return flow.get_variable(
+        name=name + "var",
+        shape=shape,
+        dtype=dtype,
+        initializer=flow.zeros_initializer(), 
+        trainable=trainable,
+    )
