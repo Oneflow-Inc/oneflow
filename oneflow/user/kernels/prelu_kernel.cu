@@ -58,7 +58,7 @@ __global__ void PReluBroadcastedAlphaForwardGpu(const int32_t elem_cnt, const T*
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T alpha_i = alpha[i];
-    y[i] = x[i] > 0 ? x[i] : x[i] * alpha[i];
+    y[i] = x_i > 0 ? x_i : x_i * alpha_i;
   }
 }
 
