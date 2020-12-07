@@ -755,6 +755,18 @@ def set_enable_fuse_model_update_ops(func_desc, value=True):
     func_desc.job_config_proto.set_enable_fuse_model_update_ops(value)
 
 
+@oneflow_function_config("enable_gradients_stats_aggregation")
+def set_enable_gradients_stats_aggregation(func_desc, value=True):
+    r"""Whether enable gradients_stats_aggregation.
+            If enabled, gradients stats ops (norm, finite, ...) will be aggregated.
+
+    Args:
+        func_desc ([type]): [description]
+        value ([type]): [description]
+    """
+    func_desc.job_config_proto.set_enable_gradients_stats_aggregation(value)
+
+
 @oneflow_function_config("train.loss_scale_factor")
 def set_loss_scale_factor(func_desc, value):
     r"""Set scale factor for loss
