@@ -72,6 +72,10 @@ def _of_tensor_list_to_tensor_buffer(test_case, verbose=False):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorListAndTensorBuffer(flow.unittest.TestCase):
+    @unittest.skipIf(
+        True,
+        "tensor_list will be deprecated in future, identity has no need to support tensor_list for now",
+    )
     def test_tensor_list_input_output(test_case):
         _of_tensor_list_identity(test_case)
 
