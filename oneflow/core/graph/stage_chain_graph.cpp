@@ -21,6 +21,15 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+bool IsSspVariableProxy(const ComputeNode& compute_node) {
+  const auto& op_conf = compute_node.op().op_conf();
+  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "ssp_variable_proxy";
+}
+
+}  // namespace
+
 Maybe<void> StageChainNode::ForEachSourceComputeNode(
     const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const {
   const auto& IsSource = [&](const ComputeNode* node) {
@@ -31,7 +40,31 @@ Maybe<void> StageChainNode::ForEachSourceComputeNode(
     return num_inputs == 0;
   };
   for (const auto* node : compute_nodes()) {
-    if (IsSource(node)) { JUST(DoEach(*node)); }
+    if (!IsSource(node)) { continue; }
+    // TODO(lixinqi): Remove this urgly code after the ssp_variable_proxy actor bug fixed
+    CHECK_OR_RETURN(!IsSspVariableProxy(*node));
+    JUST(DoEach(*node));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> StageChainNode::ForEachSinkComputeNode(
+    const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const {
+  const auto& IsSink = [&](const ComputeNode* node) {
+    size_t num_outputs = 0;
+    for (const auto* edge : node->out_edges()) {
+      num_outputs += compute_nodes().count(edge->dst_node());
+    }
+    return num_outputs == 0;
+  };
+  for (const auto* node : compute_nodes()) {
+    if (!IsSink(node)) { continue; }
+    if (IsSspVariableProxy(*node)) {
+      // TODO(lixinqi): Remove this urgly code after the ssp_variable_proxy actor bug fixed
+      JUST(DoEach(*node->SoleInEdge()->src_node()));
+    } else {
+      JUST(DoEach(*node));
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -43,6 +76,28 @@ std::string StageChainNode::VisualStr() const {
     ret += "\\n";
   }
   return ret;
+}
+
+Maybe<size_t> StageChainEdge::NumStagePlacementInPath() const {
+  CHECK_NOTNULL_OR_RETURN(path_stage_placement_ids_.get());
+  return path_stage_placement_ids_->size();
+}
+
+Maybe<size_t> StageChainEdge::NumParallelDescInPath() const {
+  CHECK_NOTNULL_OR_RETURN(path_parallel_desc_symbol_ids_.get());
+  return path_parallel_desc_symbol_ids_->size();
+}
+
+void StageChainEdge::add_path_stage_placement_id(int64_t stage_placement_id) {
+  if (!path_stage_placement_ids_) { path_stage_placement_ids_.reset(new HashSet<int64_t>()); }
+  path_stage_placement_ids_->insert(stage_placement_id);
+}
+
+void StageChainEdge::add_path_parallel_desc_symbol_id(int64_t parallel_desc_symbol_id) {
+  if (!path_parallel_desc_symbol_ids_) {
+    path_parallel_desc_symbol_ids_.reset(new HashSet<int64_t>());
+  }
+  path_parallel_desc_symbol_ids_->insert(parallel_desc_symbol_id);
 }
 
 std::string StageChainEdge::VisualStr() const {
@@ -191,29 +246,24 @@ void StageChainGraph::MakeGetterFindOrCreateEdge(
   };
 }
 
-Maybe<void> StageChainGraph::MakeGetterPathStagePlacementIds4Edge(
-    std::function<Maybe<const HashSet<int64_t>&>(const StageChainEdge*)>*
-        PathStagePlacementIds4Edge) const {
-  using CacheT = HashMap<const StageChainEdge*, HashSet<int64_t>>;
-  auto edge2path_stage_placement_ids = std::make_shared<CacheT>();
-  *PathStagePlacementIds4Edge = [edge2path_stage_placement_ids](
-                                    const StageChainEdge* edge) -> Maybe<const HashSet<int64_t>&> {
-    return MapAt(*edge2path_stage_placement_ids, edge);
-  };
+Maybe<void> StageChainGraph::InitEdgeStatistics() {
   auto IsReachable = MakePredicatorIsReachable();
+  const auto& UpdateEdgeStatistics = [&](StageChainEdge* edge, StageChainNode* node) {
+    edge->add_path_stage_placement_id(node->stage_placement_id());
+    edge->add_path_parallel_desc_symbol_id(node->parallel_desc_symbol_id());
+  };
   ForEachEdge([&](StageChainEdge* edge) {
     auto* src = edge->src_node();
     auto* dst = edge->dst_node();
-    auto* path_stage_placement_ids = &(*edge2path_stage_placement_ids)[edge];
     const auto& ForEachNext = [&](StageChainNode* node,
                                   const std::function<void(StageChainNode*)>& DoEach) {
       node->ForEachNodeOnInOutEdge([&](StageChainNode* next) {
         if (IsReachable(src, next) && IsReachable(next, dst)) { DoEach(next); }
       });
     };
-    BfsForEachNode({src}, ForEachNext, [&](StageChainNode* node) {
-      path_stage_placement_ids->insert(node->stage_placement_id());
-    });
+    BfsForEachNode({src}, ForEachNext,
+                   [&](StageChainNode* node) { UpdateEdgeStatistics(edge, node); });
+    UpdateEdgeStatistics(edge, dst);
   });
   return Maybe<void>::Ok();
 }
