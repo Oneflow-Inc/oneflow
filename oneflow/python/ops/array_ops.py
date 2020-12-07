@@ -2312,3 +2312,56 @@ def amp_white_identity(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("ones")
+def ones(
+    shape: Sequence[int],
+    dtype: Optional[dtype_util.dtype] = None,
+    trainable: Optional[bool] = False,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator creates a Blob with the value `1`. 
+
+    Args:
+        shape (Sequence[int]): The shape of the Blob. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        trainable (Optional[bool], optional): Whether the variable is trainable. Defaults to False.
+        name (Optional[str], optional): The name for the Blob. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob filled with value `1`
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+        @flow.global_function()
+        def ones_job() -> tp.Numpy: 
+            return flow.ones(shape=(2, 3), dtype=flow.float32)
+
+
+        check = flow.train.CheckPoint()
+        check.init()
+        out = ones_job()
+
+        # output: [[1. 1. 1.]
+        #          [1. 1. 1.]]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Ones_")
+
+    if dtype is None:
+        dtype = flow.float32
+
+    return flow.get_variable(
+        name=name + "var",
+        shape=shape,
+        dtype=dtype,
+        initializer=flow.ones_initializer(),
+        trainable=trainable,
+    )
