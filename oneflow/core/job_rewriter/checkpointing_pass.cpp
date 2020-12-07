@@ -63,6 +63,10 @@ bool IsForwardPass7CheckpointingScope(const Scope& scope) {
 
 void CollectAllCheckpointingOpsInForwardPass(
     const OpGraph& op_graph, HashMap<std::string, const OpNode*>* checkpointing_op_name2op_node) {
+  // NOTE(chengcheng):
+  //   ignore batch_norm ops because of recompute bn will repeat the calculation of 'm' and 'v'.
+  //   in the future, we need to support the recomputation version of batch_norm which do NOT
+  //   update forward variables.
   HashSet<std::string> ignore_op_type_names = {"normalization", "normalization_add_relu",
                                                "cudnn_fused_normalization_add_relu"};
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -83,7 +87,6 @@ void GenConnectedCheckpointingSubgraphs(
     std::vector<HashSet<const OpNode*>>* checkpointing_subgraphs) {
   HashSet<const OpNode*> visited_nodes;
   for (const auto& pair : checkpointing_op_name2op_node) {
-    // const std::string& op_name = pair.first;
     const OpNode* node = pair.second;
     if (visited_nodes.find(node) != visited_nodes.end()) { continue; }
 
@@ -117,25 +120,21 @@ void GenConnectedCheckpointingSubgraphs(
 }
 
 Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  std::vector<const OpNode*> ordered_op_nodes;
-  HashMap<const OpNode*, int32_t> op_node2order;
-  int32_t order = 0;
-  op_graph.TopoForEachNode([&](const OpNode* op_node) {
-    ordered_op_nodes.push_back(op_node);
-    op_node2order.emplace(op_node, order);
-    CHECK(ordered_op_nodes.at(op_node2order.at(op_node)) == op_node);
-    ++order;
-  });
-
   // step 1. collect all checkpointing ops in forwardpass.
   HashMap<std::string, const OpNode*> checkpointing_op_name2op_node;
   CollectAllCheckpointingOpsInForwardPass(op_graph, &checkpointing_op_name2op_node);
-
   if (checkpointing_op_name2op_node.empty()) { return Maybe<void>::Ok(); }
 
   // step 2. get all connected subgraphs in checkpointing ops.
   std::vector<HashSet<const OpNode*>> checkpointing_subgraphs;
   GenConnectedCheckpointingSubgraphs(checkpointing_op_name2op_node, &checkpointing_subgraphs);
+
+  HashMap<const OpNode*, int32_t> op_node2order;
+  int32_t order = 0;
+  op_graph.TopoForEachNode([&](const OpNode* op_node) {
+    CHECK(op_node2order.emplace(op_node, order).second);
+    ++order;
+  });
 
   // step 3. for each subgraphs:
 
