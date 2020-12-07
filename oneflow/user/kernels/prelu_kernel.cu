@@ -53,7 +53,7 @@ __global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_siz
 }
 
 template<typename T>
-__global__ void PReluBroadcastedAlphaForwardGpu(const int64_t elem_cnt, const T* x, const T* alpha,
+__global__ void PReluBroadcastedAlphaForwardGpu(const int32_t elem_cnt, const T* x, const T* alpha,
                                                 T* y) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
@@ -63,7 +63,7 @@ __global__ void PReluBroadcastedAlphaForwardGpu(const int64_t elem_cnt, const T*
 }
 
 template<typename T>
-__global__ void PReluBroadcastedAlphaBackwardGpu(const int64_t elem_cnt, const T* x, const T* alpha,
+__global__ void PReluBroadcastedAlphaBackwardGpu(const int32_t elem_cnt, const T* x, const T* alpha,
                                                  const T* dy, T* dx, T* alpha_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
@@ -119,6 +119,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
+    CHECK_LT(elem_cnt, GetMaxVal<int32_t>() / 2);
     if (IsAlphaShapeContiguous(alpha->shape(), x->shape())) {
       int32_t outer_size = x->shape().At(0);
       for (int32_t i = 0; i < alpha->shape().NumAxes(); ++i) {
@@ -181,6 +182,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
+    CHECK_LT(elem_cnt, GetMaxVal<int32_t>() / 2);
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                  + GetCudaAlignedSize(elem_cnt * sizeof(T)));
