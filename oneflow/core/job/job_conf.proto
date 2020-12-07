@@ -92,6 +92,7 @@ message JobConfigProto {
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
   optional bool enable_fuse_model_update_ops = 105 [default = false];
+  optional bool enable_gradients_stats_aggregation = 106 [default = true];
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
