@@ -246,6 +246,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       //   emplace maybe repeated, so do not check the return value
       total_bw_consumers_op_name2conf.emplace(bw_consumer_name, bw_consumer_op_conf);
 
+      CHECK(op_node2order.find(node) != op_node2order.end());
       int32_t this_order = op_node2order.at(node);
       if (this_order < first_bw_order) {
         first_bw_consumer = node;
@@ -258,6 +259,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     std::string end_op_name = kCheckpointingBadOpName;
     int32_t end_order = -1;
     first_bw_consumer->ForEachNodeOnInEdge([&](const OpNode* end_node) {
+      CHECK(op_node2order.find(end_node) != op_node2order.end());
       int32_t this_order = op_node2order.at(end_node);
       if (this_order > end_order) {
         end_order = this_order;
