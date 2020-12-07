@@ -28,8 +28,7 @@ namespace {
 // Do CheckpointingPass will use backward recomputation for sublinear memory cost.
 class CheckpointingPass final : public JobPass {
  public:
-  CheckpointingPass(const CheckpointingPass&) = delete;
-  CheckpointingPass(CheckpointingPass&&) = delete;
+  OF_DISALLOW_COPY_AND_MOVE(CheckpointingPass);
   CheckpointingPass() = default;
   ~CheckpointingPass() = default;
 
@@ -48,20 +47,18 @@ class CheckpointingPass final : public JobPass {
 const std::string kCheckpointingFakeOpNamePrefix = "OneFlow-System-Checkpointing-Fake-Fw-Op_";
 const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEndOpName";
 
-bool IsForwardPass7CheckpointingScope(int64_t scope_symbol_id) {
+const Scope& Scope4OpNode(const OpNode* op_node) {
+  int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
   CHECK(Global<vm::SymbolStorage<Scope>>::Get()->Has(scope_symbol_id));
-  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(scope_symbol_id);
-  if (scope.scope_proto().calculation_pass_name() == kForwardPass && scope.Bool("checkpointing")) {
-    return true;
-  }
-  return false;
+  return Global<vm::SymbolStorage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
-bool IsForwardPassScope(int64_t scope_symbol_id) {
-  CHECK(Global<vm::SymbolStorage<Scope>>::Get()->Has(scope_symbol_id));
-  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(scope_symbol_id);
-  if (scope.scope_proto().calculation_pass_name() == kForwardPass) { return true; }
-  return false;
+bool IsForwardPassScope(const Scope& scope) {
+  return scope.scope_proto().calculation_pass_name() == kForwardPass;
+}
+
+bool IsForwardPass7CheckpointingScope(const Scope& scope) {
+  return IsForwardPassScope(scope) && scope.Bool("checkpointing");
 }
 
 void CollectAllCheckpointingOpsInForwardPass(
@@ -75,7 +72,7 @@ void CollectAllCheckpointingOpsInForwardPass(
         != ignore_op_type_names.end()) {
       return;
     }
-    if (IsForwardPass7CheckpointingScope(op_conf.scope_symbol_id())) {
+    if (IsForwardPass7CheckpointingScope(Scope4OpNode(op_node))) {
       CHECK(checkpointing_op_name2op_node->emplace(op_conf.name(), op_node).second);
     }
   });
@@ -130,7 +127,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     ++order;
   });
 
-  // step 1. collect all checkpointing ops in forwardpass
+  // step 1. collect all checkpointing ops in forwardpass.
   HashMap<std::string, const OpNode*> checkpointing_op_name2op_node;
   CollectAllCheckpointingOpsInForwardPass(op_graph, &checkpointing_op_name2op_node);
 
@@ -142,15 +139,17 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
   // step 3. for each subgraphs:
 
-  // maybe a bw consumer will consume multi subgraph for recompute?
+  // NOTE(chengcheng):
+  //   maybe a bw consumer will consume multi subgraph for recompute.
+  //   so we need collect bw consumer between subgraphs, and update them in job builder only once.
   HashMap<std::string, OperatorConf> total_bw_consumers_op_name2conf;
 
   for (auto& subgraph : checkpointing_subgraphs) {
-    // step 3.1 ignore this subgraph if there is no direct edge to backward pass op
+    // step 3.1 ignore this subgraph if there is no direct edge to backward pass op.
     HashSet<const OpNode*> bw_consumers;
     for (const OpNode* node : subgraph) {
       node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
-        if (!IsForwardPassScope(out_node->op().op_conf().scope_symbol_id())) {
+        if (!IsForwardPassScope(Scope4OpNode(out_node))) {
           bw_consumers.insert(out_node);
           CHECK(subgraph.find(out_node) == subgraph.end());
         }
@@ -219,6 +218,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     for (const OpNode* node : bw_consumers) {
       std::string bw_consumer_name = node->op().op_name();
       OperatorConf bw_consumer_op_conf;
+      // NOTE(chengcheng):
+      //   reuse bw conumer op conf if it has been existed in map.
       if (total_bw_consumers_op_name2conf.find(bw_consumer_name)
           != total_bw_consumers_op_name2conf.end()) {
         bw_consumer_op_conf = total_bw_consumers_op_name2conf.at(bw_consumer_name);
@@ -242,6 +243,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         }
       }
 
+      // NOTE(chengcheng):
+      //   emplace maybe repeated, so do not check the return value
       total_bw_consumers_op_name2conf.emplace(bw_consumer_name, bw_consumer_op_conf);
 
       int32_t this_order = op_node2order.at(node);
@@ -274,6 +277,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     for (auto& pair : fake_op_name2conf) { fake_op_confs.push_back(pair.second); }
     job_builder->AddOps(parallel_conf, fake_op_confs);
   }
+
+  // step 4. update bw consumers in job builder only once
   std::vector<OperatorConf> total_bw_consumer_op_confs;
   for (auto& pair : total_bw_consumers_op_name2conf) {
     total_bw_consumer_op_confs.push_back(pair.second);
