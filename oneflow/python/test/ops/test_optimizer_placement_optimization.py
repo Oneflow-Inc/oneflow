@@ -19,67 +19,32 @@ import oneflow as flow
 import oneflow.typing as oft
 
 
-def _test_two_job_optimizer_placement_optimization(test_case):
+def _test(test_case, mode):
     flow.config.gpu_device_num(2)
     flow.config.enable_debug_mode(True)
-    eval_config = flow.FunctionConfig()
-    eval_config.default_logical_view(flow.scope.consistent_view())
-
-    @flow.global_function(eval_config)
-    def Bar():
-        w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
-        return w
-
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.optimizer_placement_optimization_mode("non_distributed")
+    func_config.optimizer_placement_optimization_mode(mode)
 
     @flow.global_function(type="train", function_config=func_config)
-    def Foo(x: oft.Numpy.Placeholder((2, 10))):
-        w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
+    def Foo(x: oft.Numpy.Placeholder((2, 1024 * 1024))):
+        w = flow.get_variable(
+            "w", (1024 * 1024,), initializer=flow.constant_initializer(100)
+        )
         flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
         ).minimize(x + w)
 
-    Foo(np.ones((2, 10), dtype=np.float32))
-
-
-def _test_optimizer_placement_optimization_var_as_loss(test_case):
-    flow.config.gpu_device_num(2)
-    flow.config.enable_debug_mode(True)
-    func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.optimizer_placement_optimization_mode("non_distributed")
-
-    @flow.global_function(type="train", function_config=func_config)
-    def Foo():
-        w = flow.get_variable("w", (10,), initializer=flow.constant_initializer(100))
-        flow.optimizer.SGD(
-            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
-        ).minimize(w)
-
-    Foo()
+    Foo(np.ones((2, 1024 * 1024), dtype=np.float32))
 
 
 @flow.unittest.skip_unless_1n2d()
 class TestOptimizerPlacementOptimization(flow.unittest.TestCase):
-    def test_optimizer_placement_optimization(test_case):
-        flow.config.gpu_device_num(2)
-        flow.config.enable_debug_mode(True)
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.consistent_view())
-        func_config.optimizer_placement_optimization_mode("non_distributed")
+    def test_non_distributed(test_case):
+        _test(test_case, "non_distributed")
 
-        @flow.global_function(type="train", function_config=func_config)
-        def Foo(x: oft.Numpy.Placeholder((2, 10))):
-            w = flow.get_variable(
-                "w", (10,), initializer=flow.constant_initializer(100)
-            )
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
-            ).minimize(x + w)
-
-        Foo(np.ones((2, 10), dtype=np.float32))
+    def test_distributed_split(test_case):
+        _test(test_case, "distributed_split")
 
 
 if __name__ == "__main__":
