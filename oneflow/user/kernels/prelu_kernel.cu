@@ -21,8 +21,9 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void PReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
-                                const int32_t inner_size, const T* x, const T* alpha, T* y) {
+__global__ void BroadcastPReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
+                                         const int32_t inner_size, const T* x, const T* alpha,
+                                         T* y) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T alpha_i = alpha[(i / inner_size) % alpha_size];
@@ -31,9 +32,9 @@ __global__ void PReluForwardGpu(const int32_t elem_cnt, const int32_t alpha_size
 }
 
 template<typename T>
-__global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
-                                 const int32_t inner_size, const T* x, const T* alpha, const T* dy,
-                                 T* dx, T* alpha_diff) {
+__global__ void BroadcastPReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_size,
+                                          const int32_t inner_size, const T* x, const T* alpha,
+                                          const T* dy, T* dx, T* alpha_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T dy_i = dy[i];
@@ -53,8 +54,7 @@ __global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_siz
 }
 
 template<typename T>
-__global__ void PReluBroadcastedAlphaForwardGpu(const int32_t elem_cnt, const T* x, const T* alpha,
-                                                T* y) {
+__global__ void ElemwisePReluForwardGpu(const int32_t elem_cnt, const T* x, const T* alpha, T* y) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T alpha_i = alpha[i];
@@ -63,8 +63,8 @@ __global__ void PReluBroadcastedAlphaForwardGpu(const int32_t elem_cnt, const T*
 }
 
 template<typename T>
-__global__ void PReluBroadcastedAlphaBackwardGpu(const int32_t elem_cnt, const T* x, const T* alpha,
-                                                 const T* dy, T* dx, T* alpha_diff) {
+__global__ void ElemwisePReluBackwardGpu(const int32_t elem_cnt, const T* x, const T* alpha,
+                                         const T* dy, T* dx, T* alpha_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const T x_i = x[i];
     const T dy_i = dy[i];
@@ -84,20 +84,23 @@ __global__ void PReluBroadcastedAlphaBackwardGpu(const int32_t elem_cnt, const T
 }
 
 bool IsAlphaShapeContiguous(const ShapeView& alpha_shape, const ShapeView& x_shape) {
-  int64_t begin_idx = 0;
+  if (alpha_shape.elem_cnt() == 1) { return true; }
+  int64_t begin_idx = -1;
   for (int64_t i = 0; i < alpha_shape.NumAxes(); ++i) {
     if (alpha_shape.At(i) != 1) {
       begin_idx = i;
       break;
     }
   }
-  int64_t end_idx = 0;
+  CHECK_NE(begin_idx, -1);
+  int64_t end_idx = -1;
   for (int64_t i = alpha_shape.NumAxes(); i > 0; --i) {
     if (alpha_shape.At(i - 1) != 1) {
       end_idx = i;
       break;
     }
   }
+  CHECK_NE(end_idx, -1);
   if (alpha_shape.elem_cnt() == x_shape.Count(begin_idx + 1, end_idx + 1)) {
     return true;
   } else {
@@ -130,8 +133,8 @@ class GpuPReluKernel final : public user_op::OpKernel {
       }
       const int32_t alpha_size = alpha->shape().elem_cnt();
       const int32_t inner_size = elem_cnt / outer_size / alpha_size;
-      PReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                           ctx->device_ctx()->cuda_stream()>>>(
+      BroadcastPReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                    ctx->device_ctx()->cuda_stream()>>>(
           elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
     } else {
       user_op::Tensor* broadcasted_alpha = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -140,8 +143,8 @@ class GpuPReluKernel final : public user_op::OpKernel {
       NdarrayUtil<DeviceType::kGPU, T>::BroadcastTo(
           ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha->mut_dptr<T>()),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
-      PReluBroadcastedAlphaForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-                                           0, ctx->device_ctx()->cuda_stream()>>>(
+      ElemwisePReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                   ctx->device_ctx()->cuda_stream()>>>(
           elem_cnt, x->dptr<T>(), broadcasted_alpha->dptr<T>(), y->mut_dptr<T>());
     }
   }
@@ -197,8 +200,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
         }
       }
       const int32_t inner_size = elem_cnt / outer_size / alpha_size;
-      PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                            ctx->device_ctx()->cuda_stream()>>>(
+      BroadcastPReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                     ctx->device_ctx()->cuda_stream()>>>(
           elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),
           dx->mut_dptr<T>(), broadcasted_alpha_diff);
     } else {
@@ -209,8 +212,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
           ctx->device_ctx(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha),
           XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
 
-      PReluBroadcastedAlphaBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-                                            0, ctx->device_ctx()->cuda_stream()>>>(
+      ElemwisePReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                    ctx->device_ctx()->cuda_stream()>>>(
           elem_cnt, x->dptr<T>(), broadcasted_alpha, dy->dptr<T>(), dx->mut_dptr<T>(),
           broadcasted_alpha_diff);
     }
