@@ -574,12 +574,12 @@ def set_all_reduce_fp16(func_desc, value=True):
     "optimizer_placement_optimization_mode",
     "train.optimizer_placement_optimization_mode",
 )
-def set_optimizer_placement_optimization_mode(func_desc, mode=None):
+def set_optimizer_placement_optimization_mode(func_desc, mode):
     r"""Enable optimizer_placement_optimization with mode 'mode'
 
     Args:
         func_desc ([type]): [description]
-        mode (str, optional): [description]. Defaults to 'non_distributed'.
+        mode (str): [description].
     """
     assert mode in ["non_distributed", "distributed_split"]
     func_desc.job_config_proto.set_optimizer_placement_optimization_mode(mode)
