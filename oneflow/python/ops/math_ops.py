@@ -2105,3 +2105,33 @@ def range(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.hardtanh")
+def hardtanh(
+    x: remote_blob_util.BlobDef,
+    min_val: int = -1,
+    max_val: int = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""The Hard tanh activation function. 
+    
+    The equation is: 
+    
+    .. math:: 
+    
+        hardtanh(x)= \left \{
+                    \begin{array}{ll}
+                        1 & if \space x > 1 \\
+                    -1 & if \space x < -1 \\
+                        x & otherwise
+                    \end{array}
+                    \right.
+     
+    """
+    if name is None:
+        name = id_util.UniqueStr("Hardtanh_")
+
+    return flow.clip_by_value(
+        values=x, min_value=min_val, max_value=max_val, name=name + "clip_value"
+    )
