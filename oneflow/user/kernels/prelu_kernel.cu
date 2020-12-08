@@ -108,6 +108,18 @@ bool IsAlphaShapeContiguous(const ShapeView& alpha_shape, const ShapeView& x_sha
   }
 }
 
+int32_t GetOuterSize(const ShapeView& alpha_shape, const ShapeView& x_shape) {
+  int32_t outer_size = x_shape.At(0);
+  for (int32_t i = 0; i < alpha_shape.NumAxes(); ++i) {
+    if (alpha_shape.At(i) == 1) {
+      outer_size *= x_shape.At(i + 1);
+    } else {
+      break;
+    }
+  }
+  return outer_size;
+}
+
 }  // namespace
 
 template<typename T>
@@ -123,14 +135,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     if (IsAlphaShapeContiguous(alpha->shape(), x->shape())) {
-      int32_t outer_size = x->shape().At(0);
-      for (int32_t i = 0; i < alpha->shape().NumAxes(); ++i) {
-        if (alpha->shape().At(i) == 1) {
-          outer_size *= x->shape().At(i + 1);
-        } else {
-          break;
-        }
-      }
+      const int32_t outer_size = GetOuterSize(alpha->shape(), x->shape());
       const int32_t alpha_size = alpha->shape().elem_cnt();
       const int32_t inner_size = elem_cnt / outer_size / alpha_size;
       BroadcastPReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -190,15 +195,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const Shape& left_extended_shape =
         CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
     if (IsAlphaShapeContiguous(alpha->shape(), x->shape())) {
+      const int32_t outer_size = GetOuterSize(alpha->shape(), x->shape());
       const int32_t alpha_size = alpha->shape().elem_cnt();
-      int32_t outer_size = x->shape().At(0);
-      for (int32_t i = 0; i < alpha->shape().NumAxes(); ++i) {
-        if (alpha->shape().At(i) == 1) {
-          outer_size *= x->shape().At(i + 1);
-        } else {
-          break;
-        }
-      }
       const int32_t inner_size = elem_cnt / outer_size / alpha_size;
       BroadcastPReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                      ctx->device_ctx()->cuda_stream()>>>(
