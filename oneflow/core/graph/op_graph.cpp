@@ -570,7 +570,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     oba2sbp_identical_obas[pair.first()].push_back(pair.second());
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
-  JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+  JUST(MaybeTopoForEachNode([&](OpNode* op_node) -> Maybe<void> {
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
     // Infer batch_axis

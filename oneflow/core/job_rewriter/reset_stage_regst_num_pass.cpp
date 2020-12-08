@@ -232,9 +232,9 @@ class ResetStageRegstNumPass final : public JobPass {
     *IsDescendantOfAnyVar = [var_desendants](const ComputeNode& node) -> Maybe<bool> {
       return MapAt(*var_desendants, &node);
     };
-    compute_graph.TopoForEachNode([&](ComputeNode* node) {
+    compute_graph.TopoForEachNode([&](const ComputeNode* node) {
       bool* is_desendant = &(*var_desendants)[node];
-      node->ForEachNodeOnInEdge([&](ComputeNode* in_node) {
+      node->ForEachNodeOnInEdge([&](const ComputeNode* in_node) {
         *is_desendant = *is_desendant || (*var_desendants)[in_node];
         *is_desendant = *is_desendant || in_node->op().op_conf().has_variable_conf();
       });

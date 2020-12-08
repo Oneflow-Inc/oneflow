@@ -48,7 +48,7 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
                 << "distribute" << sep << "data_type" << sep << "shape" << sep << "elem_cnt" << sep
                 << "size"
                 << "\n";
-  JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
+  JUST(op_graph.MaybeTopoForEachNode([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return Maybe<void>::Ok(); }
     const VariableOpConf& conf = op_conf.variable_conf();
