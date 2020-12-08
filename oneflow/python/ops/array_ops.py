@@ -1854,7 +1854,9 @@ def identity(
     if name is None:
         name = id_util.UniqueStr("Identity_")
 
-    op = flow.user_op_builder(name).Op("identity").Input("in", x).Output("out").Build()
+    op = (
+        flow.user_op_builder(name).Op("identity").Input("in", [x]).Output("out").Build()
+    )
     return op.InferAndTryRun().SoleOutputBlob()
 
 
