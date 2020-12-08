@@ -93,6 +93,8 @@ message JobConfigProto {
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
   optional bool enable_fuse_model_update_ops = 105 [default = false];
   optional bool enable_gradients_stats_aggregation = 106 [default = true];
+  optional string optimizer_placement_optimization_mode = 107;
+  optional int64 optimizer_placement_optimization_threshold = 108 [default = 1024];
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
@@ -110,7 +112,6 @@ message JobConfigProto {
 
   optional bool do_parallel_cast_before_widening_type_cast = 403 [default = true];
 
-  optional bool enable_non_distributed_optimizer = 506 [default = false];
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
 
