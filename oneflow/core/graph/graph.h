@@ -34,8 +34,7 @@ class Graph {
   void ForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   Maybe<void> MaybeForEachNode(std::function<Maybe<void>(NodeType*)> NodeHandler) const;
   void TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
-  Maybe<void> TopoForEachNodeWithErrorCaptured(
-      std::function<Maybe<void>(NodeType*)> NodeHandler) const;
+  Maybe<void> MaybeTopoForEachNode(std::function<Maybe<void>(NodeType*)> NodeHandler) const;
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
   Maybe<void> MaybeForEachEdge(std::function<Maybe<void>(EdgeType*)> EdgeHandler) const;
@@ -59,7 +58,7 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       const std::function<void(NodeType*)>& Handler) const;
 
-  Maybe<void> TopoForEachNodeWithErrorCaptured(
+  Maybe<void> MaybeTopoForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -218,10 +217,10 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> N
 }
 
 template<typename NodeType, typename EdgeType>
-Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
+Maybe<void> Graph<NodeType, EdgeType>::MaybeTopoForEachNode(
     std::function<Maybe<void>(NodeType*)> NodeHandler) const {
-  return TopoForEachNodeWithErrorCaptured(source_nodes(), &NodeType::ForEachNodeOnInEdge,
-                                          &NodeType::ForEachNodeOnOutEdge, NodeHandler);
+  return MaybeTopoForEachNode(source_nodes(), &NodeType::ForEachNodeOnInEdge,
+                              &NodeType::ForEachNodeOnOutEdge, NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -508,15 +507,14 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<void(NodeType*)>& Handler) const {
-  CHECK_JUST(
-      TopoForEachNodeWithErrorCaptured(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
-        Handler(node);
-        return Maybe<void>::Ok();
-      }));
+  CHECK_JUST(MaybeTopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
+    Handler(node);
+    return Maybe<void>::Ok();
+  }));
 }
 
 template<typename NodeType, typename EdgeType>
-Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
+Maybe<void> Graph<NodeType, EdgeType>::MaybeTopoForEachNode(
     const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,

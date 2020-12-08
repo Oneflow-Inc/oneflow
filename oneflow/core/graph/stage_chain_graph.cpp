@@ -190,21 +190,20 @@ Maybe<void> StageChainGraph::MakeGetterOtherStageAncestors4ComputeNode(
         OtherStageAncestors4ComputeNode) const {
   using CacheT = HashMap<const ComputeNode*, std::set<const ComputeNode*>>;
   auto node2other_stage_ancestors = std::make_shared<CacheT>();
-  JUST(
-      compute_graph.TopoForEachNodeWithErrorCaptured([&](ComputeNode* compute_node) -> Maybe<void> {
-        auto* cur_other_stage_ancestors = &(*node2other_stage_ancestors)[compute_node];
-        int64_t cur_stage_placement_id = compute_node->scope().Int64("stage_placement_id");
-        for (auto* edge : compute_node->in_edges()) {
-          auto* in_node = edge->src_node();
-          if (in_node->scope().Int64("stage_placement_id") == cur_stage_placement_id) {
-            const auto& in_ancestors = node2other_stage_ancestors->at(in_node);
-            cur_other_stage_ancestors->insert(in_ancestors.begin(), in_ancestors.end());
-          } else {
-            cur_other_stage_ancestors->insert(in_node);
-          }
-        }
-        return Maybe<void>::Ok();
-      }));
+  JUST(compute_graph.MaybeTopoForEachNode([&](const ComputeNode* compute_node) -> Maybe<void> {
+    auto* cur_other_stage_ancestors = &(*node2other_stage_ancestors)[compute_node];
+    int64_t cur_stage_placement_id = compute_node->scope().Int64("stage_placement_id");
+    for (auto* edge : compute_node->in_edges()) {
+      auto* in_node = edge->src_node();
+      if (in_node->scope().Int64("stage_placement_id") == cur_stage_placement_id) {
+        const auto& in_ancestors = node2other_stage_ancestors->at(in_node);
+        cur_other_stage_ancestors->insert(in_ancestors.begin(), in_ancestors.end());
+      } else {
+        cur_other_stage_ancestors->insert(in_node);
+      }
+    }
+    return Maybe<void>::Ok();
+  }));
   *OtherStageAncestors4ComputeNode =
       [node2other_stage_ancestors](
           const ComputeNode& node) -> Maybe<const std::set<const ComputeNode*>&> {

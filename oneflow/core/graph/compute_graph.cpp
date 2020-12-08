@@ -54,13 +54,14 @@ Maybe<void> ComputeGraph::InitNodes(const Job& job) {
 }
 
 Maybe<void> ComputeGraph::InitEdges(const Job& job) {
-  JUST(MaybeForEachNode([&](ComputeNode* consumer_node) -> Maybe<void> {
+  JUST(MaybeForEachNode([&](const ComputeNode* consumer_node) -> Maybe<void> {
     HashSet<LogicalBlobId> connected_lbis;
     for (const auto& ibn : consumer_node->op().input_bns()) {
       const LogicalBlobId& lbi = consumer_node->op().BnInOp2Lbi(ibn);
       if (connected_lbis.count(lbi) > 0) { continue; }
       auto* producer_node = JUST(MutNode4OpName(lbi.op_name()));
-      Connect(producer_node, NewEdge(), consumer_node);
+      Connect(producer_node, const_cast<ComputeEdge*>(NewEdge()),
+              const_cast<ComputeNode*>(consumer_node));
     }
     return Maybe<void>::Ok();
   }));
@@ -79,8 +80,8 @@ Maybe<void> ComputeGraph::ForEachComputeNode(
 
 Maybe<void> ComputeGraph::TopoForEachComputeNode(
     const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const {
-  return TopoForEachNodeWithErrorCaptured(
-      [&](ComputeNode* node) -> Maybe<void> { return DoEach(*node); });
+  return MaybeTopoForEachNode(
+      [&](const ComputeNode* node) -> Maybe<void> { return DoEach(*node); });
 }
 
 }  // namespace oneflow

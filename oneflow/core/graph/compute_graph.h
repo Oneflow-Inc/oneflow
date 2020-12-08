@@ -69,7 +69,7 @@ class ComputeEdge final : public Edge<ComputeNode, ComputeEdge> {
   ~ComputeEdge() = default;
 };
 
-class ComputeGraph final : public Graph<ComputeNode, ComputeEdge> {
+class ComputeGraph final : public Graph<const ComputeNode, const ComputeEdge> {
  public:
   ComputeGraph(const ComputeGraph&) = delete;
   ComputeGraph(ComputeGraph&&) = delete;
