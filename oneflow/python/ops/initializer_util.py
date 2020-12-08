@@ -990,22 +990,22 @@ def kaiming_initializer(
 
 def _get_variance_norm(mode):
     if mode.lower() == "fan_in":
-        return op_conf_util.kFanIn
+        return initializer_conf_util.kFanIn
     elif mode.lower() == "fan_out":
-        return op_conf_util.kFanOut
+        return initializer_conf_util.kFanOut
     elif mode.lower() == "fan_avg":
-        return op_conf_util.kAverage
+        return initializer_conf_util.kAverage
     else:
         raise ValueError("Invalid variance_norm")
 
 
 def _get_random_distribution(distribution):
     if distribution.lower() == "truncated_normal":
-        return op_conf_util.kTruncatedNormal
+        return initializer_conf_util.kTruncatedNormal
     elif distribution.lower() == "random_normal":
-        return op_conf_util.kRandomNormal
+        return initializer_conf_util.kRandomNormal
     elif distribution.lower() == "random_uniform":
-        return op_conf_util.kRandomUniform
+        return initializer_conf_util.kRandomUniform
     else:
         raise ValueError("Invalid random_distribution")
 
@@ -1176,11 +1176,11 @@ def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
     else:
         fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int).item()
 
-    if variance_norm == op_conf_util.kAverage:
+    if variance_norm == initializer_conf_util.kAverage:
         fan = (fan_in + fan_out) / 2
-    elif variance_norm == op_conf_util.kFanIn:
+    elif variance_norm == initializer_conf_util.kFanIn:
         fan = fan_in
-    elif variance_norm == op_conf_util.kFanOut:
+    elif variance_norm == initializer_conf_util.kFanOut:
         fan = fan_out
     else:
         raise NotImplemented()
@@ -1196,13 +1196,13 @@ def VarianceScalingInitializerImpl(
     scale = initializer_conf.scale / GenInitialFan(initializer_conf, var_blob_shape)
     distribution = initializer_conf.distribution
     rng = np.random.default_rng(random_seed)
-    if distribution == op_conf_util.kTruncatedNormal:
+    if distribution == initializer_conf_util.kTruncatedNormal:
         stddev = math.sqrt(scale) / 0.87962566103423978
         return lambda length: RngTruncatedNormal(0, stddev, length, rng)
-    elif distribution == op_conf_util.kRandomNormal:
+    elif distribution == initializer_conf_util.kRandomNormal:
         stddev = math.sqrt(scale)
         return lambda length: rng.normal(0, stddev, size=length,)
-    elif distribution == op_conf_util.kRandomUniform:
+    elif distribution == initializer_conf_util.kRandomUniform:
         limit = math.sqrt(3.0 * scale)
         return lambda length: rng.uniform(low=-limit, high=limit, size=length)
     else:
