@@ -546,7 +546,7 @@ class PolynomialScheduler(LrScheduler):
                         labels, logits, name="softmax_loss"
                     )
 
-                lr_scheduler = flow.optimizer.PolynomialSchduler(base_lr=0.001,
+                lr_scheduler = flow.optimizer.PolynomialScheduler(base_lr=0.001,
                                                                  steps=5,
                                                                  end_learning_rate=0.00001,
                                                                  power=2)
