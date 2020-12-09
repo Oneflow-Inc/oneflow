@@ -635,7 +635,6 @@ void CollectiveBoxingExecutor::Enqueue(const RankDesc& rank_desc,
 void CollectiveBoxingExecutor::RequestState::AddReadyRank(const RankDesc& rank_desc,
                                                           const RuntimeRequestInfo& request_info) {
   CHECK(local_ranks.find(rank_desc.rank()) != local_ranks.end());
-  CHECK(rank_desc.op_desc() == request_desc->op_desc());
   CHECK_LT(ready_ranks.size(), local_ranks.size());
   CHECK(ready_ranks.emplace(rank_desc.rank(), request_info).second);
 }
