@@ -20,8 +20,15 @@ namespace oneflow {
 
 namespace {
 
-__global__ void FusedCastScaleGpu(const int64_t n, const half* in, const float* scalar,
-                                  float* out) {
+template<typename T, typename U>
+__global__ void FusedCastScaleGpu(const int64_t n, const U* in, const T* scalar, T* out) {
+  const T scalar_val = *scalar;
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = static_cast<T>(in[i]) * scalar_val; }
+}
+
+template<>
+__global__ void FusedCastScaleGpu<float, half>(const int64_t n, const half* in, const float* scalar,
+                                               float* out) {
   const float scalar_val = *scalar;
   const int64_t n_2 = n / 2;
   const auto* in_2 = reinterpret_cast<const half2*>(in);
@@ -37,6 +44,23 @@ __global__ void FusedCastScaleGpu(const int64_t n, const half* in, const float* 
   }
 }
 
+template<>
+__global__ void FusedCastScaleGpu<half, float>(const int64_t n, const float* in, const half* scalar,
+                                               half* out) {
+  const half scalar_val = *scalar;
+  const half2 scalar_h2 = __half2half2(scalar_val);
+  const int64_t n_2 = n / 2;
+  const auto* in_2 = reinterpret_cast<const float2*>(in);
+  auto* out_h2 = reinterpret_cast<half2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, n_2) {
+    half2 in_h2 = __float22half2_rn(in_2[i]);
+    out_h2[i] = __hmul2(in_h2, scalar_h2);
+  }
+  if (n % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[n - 1] = __float2half(in[n - 1]) * scalar_val;
+  }
+}
+
 template<DeviceType device, typename T, typename U>
 class FusedCastScaleKernel final : public user_op::OpKernel {
  public:
@@ -49,7 +73,8 @@ class FusedCastScaleKernel final : public user_op::OpKernel {
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t n = x->shape().elem_cnt();
-    FusedCastScaleGpu<<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0,
+    const int64_t launch_n = ((std::is_same<T, half>::value && std::is_same<U, float>::value) || (std::is_same<T, float>::value && std::is_same<U, half>::value)) ? RoundUp(n, 2) / 2 : n;
+    FusedCastScaleGpu<T, U><<<BlocksNum4ThreadsNum(launch_n), kCudaThreadsNumPerBlock, 0,
                         ctx->device_ctx()->cuda_stream()>>>(n, x->dptr<U>(), scalar->dptr<T>(),
                                                             y->mut_dptr<T>());
   };
@@ -66,5 +91,10 @@ class FusedCastScaleKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
 
 REGISTER_KERNEL(DeviceType::kGPU, half, float);
+REGISTER_KERNEL(DeviceType::kGPU, half, double);
+REGISTER_KERNEL(DeviceType::kGPU, float, half);
+REGISTER_KERNEL(DeviceType::kGPU, float, double);
+REGISTER_KERNEL(DeviceType::kGPU, double, half);
+REGISTER_KERNEL(DeviceType::kGPU, double, float);
 
 }  // namespace oneflow
