@@ -103,7 +103,7 @@ def compare_with_tensorflow(
 class TestFusedCastScale(flow.unittest.TestCase):
     def test_cast(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["input_shape"] = [(5, 4, 3)]
         arg_dict["in_dtype"] = ["float16", "float32", "double"]
         arg_dict["out_dtype"] = ["float16", "float32", "double"]
@@ -112,6 +112,8 @@ class TestFusedCastScale(flow.unittest.TestCase):
             if arg[2] == arg[3]:
                 continue
             if (arg[4] == True) and (arg[2] != "float16" or arg[3] != "float32"):
+                continue
+            if arg[0] == "cpu" and (arg[2] == "float16" or arg[3] == "float16"):
                 continue
             compare_with_tensorflow(*arg)
 

@@ -61,11 +61,11 @@ __global__ void FusedCastScaleGpu<half, float>(const int64_t n, const float* in,
   }
 }
 
-template<DeviceType device, typename T, typename U>
-class FusedCastScaleKernel final : public user_op::OpKernel {
+template<typename T, typename U>
+class FusedCastScaleGpuKernel final : public user_op::OpKernel {
  public:
-  FusedCastScaleKernel() = default;
-  ~FusedCastScaleKernel() override = default;
+  FusedCastScaleGpuKernel() = default;
+  ~FusedCastScaleGpuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -86,18 +86,19 @@ class FusedCastScaleKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_KERNEL(device_type, x_type, y_type)                                  \
+#define REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(x_type, y_type)                          \
   REGISTER_USER_KERNEL("fused_cast_scale")                                            \
-      .SetCreateFn<FusedCastScaleKernel<device_type, y_type, x_type>>()               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type)                       \
+      .SetCreateFn<FusedCastScaleGpuKernel<y_type, x_type>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<y_type>::value) \
                        & (user_op::HobDataType("x", 0) == GetDataType<x_type>::value));
 
-REGISTER_KERNEL(DeviceType::kGPU, half, float);
-REGISTER_KERNEL(DeviceType::kGPU, half, double);
-REGISTER_KERNEL(DeviceType::kGPU, float, half);
-REGISTER_KERNEL(DeviceType::kGPU, float, double);
-REGISTER_KERNEL(DeviceType::kGPU, double, half);
-REGISTER_KERNEL(DeviceType::kGPU, double, float);
+REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(half, float);
+REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(half, double);
+REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(float, half);
+REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(float, double);
+REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(double, half);
+REGISTER_FUSED_CAST_SCALE_GPU_KERNEL(double, float);
+#undef REGISTER_FUSED_CAST_SCALE_GPU_KERNEL
 
 }  // namespace oneflow
