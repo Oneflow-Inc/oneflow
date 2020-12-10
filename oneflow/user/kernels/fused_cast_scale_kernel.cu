@@ -73,10 +73,13 @@ class FusedCastScaleKernel final : public user_op::OpKernel {
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t n = x->shape().elem_cnt();
-    const int64_t launch_n = ((std::is_same<T, half>::value && std::is_same<U, float>::value) || (std::is_same<T, float>::value && std::is_same<U, half>::value)) ? RoundUp(n, 2) / 2 : n;
+    const int64_t launch_n = ((std::is_same<T, half>::value && std::is_same<U, float>::value)
+                              || (std::is_same<T, float>::value && std::is_same<U, half>::value))
+                                 ? RoundUp(n, 2) / 2
+                                 : n;
     FusedCastScaleGpu<T, U><<<BlocksNum4ThreadsNum(launch_n), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(n, x->dptr<U>(), scalar->dptr<T>(),
-                                                            y->mut_dptr<T>());
+                              ctx->device_ctx()->cuda_stream()>>>(
+        n, x->dptr<U>(), scalar->dptr<T>(), y->mut_dptr<T>());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

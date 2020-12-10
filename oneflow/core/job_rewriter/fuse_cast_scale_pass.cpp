@@ -47,7 +47,9 @@ class FuseCastScalePass final : public JobPass {
   FuseCastScalePass() = default;
   ~FuseCastScalePass() override = default;
 
-  bool IsEnabled(const JobPassCtx& ctx) const { return true; }
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().job_conf().enable_fuse_cast_scale();
+  }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {

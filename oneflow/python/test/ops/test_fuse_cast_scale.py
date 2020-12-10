@@ -46,6 +46,7 @@ def compare_with_tensorflow(
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.enable_fuse_cast_scale(True)
 
     @flow.global_function(type="predict", function_config=func_config)
     def FusedCastScaleJob():
