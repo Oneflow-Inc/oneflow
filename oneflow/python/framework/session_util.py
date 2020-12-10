@@ -72,7 +72,7 @@ class Session(object):
         self.var_name2var_blob_ = {}
         # parallel desc symbol id in op attribute does not always correct
         # for lazy ops as parallel conf may be updated in some passes
-        # (like non_distributed_optimizer_pass)
+        # (like optimizer_placement_optimization_pass)
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
         self.lazy_interface_op_name2parallel_conf_ = {}
