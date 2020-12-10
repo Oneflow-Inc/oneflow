@@ -114,6 +114,7 @@ REGISTER_USER_OP("layer_norm_grad")
     .Input("x")
     .Input("mean")
     .Input("inv_variance")
+    .OptionalInput("_add_to_output")
     .Output("dx")
     .Attr<int64_t>("begin_norm_axis")
     .Attr<double>("epsilon")
@@ -134,6 +135,11 @@ REGISTER_USER_OP("layer_norm_grad")
       CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
       CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       *dx = *dy;
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
+        CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
+      }
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
