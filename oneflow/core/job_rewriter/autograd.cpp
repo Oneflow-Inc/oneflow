@@ -167,6 +167,14 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
                                    .Output("out")
                                    .Attr<int32_t>("repeat_num", time_shape_elem_cnt)
                                    .Build();
+        OpBlobArg repeat_in_op_blob_arg;
+        repeat_in_op_blob_arg.set_op_name(repeat_op.op_name());
+        repeat_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
+        job_builder->MutSbpParallel4Oba(repeat_in_op_blob_arg)->mutable_broadcast_parallel();
+        OpBlobArg repeat_out_op_blob_arg;
+        repeat_out_op_blob_arg.set_op_name(repeat_op.op_name());
+        repeat_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
+        job_builder->MutSbpParallel4Oba(repeat_out_op_blob_arg)->mutable_broadcast_parallel();
         op_confs->push_back(repeat_op.op_conf());
         loss_scale_val_lbn = repeat_op.output("out", 0);
       }
