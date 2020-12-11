@@ -167,6 +167,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
                                    .Output("out")
                                    .Attr<int32_t>("repeat_num", time_shape_elem_cnt)
                                    .Build();
+        op_confs->push_back(repeat_op.op_conf());
         loss_scale_val_lbn = repeat_op.output("out", 0);
       }
     }
