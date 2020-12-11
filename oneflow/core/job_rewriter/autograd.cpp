@@ -156,7 +156,20 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
       op_confs->push_back(cast_op.op_conf());
       loss_scale_val_lbn = cast_op.output("out", 0);
     }
-    // TODO(liujuncheng): The time shapes of loss and scale may be different.
+    {
+      const OpNode* loss_node = op_graph.OpNode4OpName(lbi.op_name());
+      const int64_t time_shape_elem_cnt = loss_node->GetInputOutputFastestTimeShape()->elem_cnt();
+      if (time_shape_elem_cnt != 1) {
+        const auto repeat_op = user_op::UserOpConfWrapperBuilder(lbi.op_name() + "_"
+                                                                 + lbi.blob_name() + "_grad_Repeat")
+                                   .OpTypeName("repeat")
+                                   .Input("in", loss_scale_val_lbn)
+                                   .Output("out")
+                                   .Attr<int32_t>("repeat_num", time_shape_elem_cnt)
+                                   .Build();
+        loss_scale_val_lbn = repeat_op.output("out", 0);
+      }
+    }
     auto scalar_mul_op =
         user_op::UserOpConfWrapperBuilder(lbi.op_name() + "_" + lbi.blob_name() + "_grad_Scale")
             .Op("scalar_mul_by_tensor")
