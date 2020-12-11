@@ -27,7 +27,9 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   BuildFwStruct();
   MergeEdge();
   SetNodeDataLbi();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    CHECK_JUST(ToDotWithAutoFilePath());
+  }
 }
 
 template<typename LogicalNodeType>

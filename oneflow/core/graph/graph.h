@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
 #include <stack>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -131,21 +132,23 @@ class Graph {
 
   // ToDot
   template<typename StreamT>
-  void ToDotWithStream(StreamT& out_stream) const;
+  Maybe<void> ToDotWithStream(StreamT& out_stream) const;
   template<typename StreamT>
-  void ToDotWithStream(const std::function<bool(NodeType*)>& IsNodeAllowed,
-                       const std::function<bool(EdgeType*)>& IsEdgeAllowed,
-                       const std::function<std::string(NodeType*)>& AddNodeAttribute,
-                       const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
-                       StreamT& out_stream) const;
-  void ToDotWithFilePath(const std::string& file_path) const;
-  void ToDotWithFilePath(const std::function<std::string(NodeType*)>& AddNodeAttribute,
-                         const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
-                         const std::string& file_path) const;
-  void ToDotWithFilePath(const std::function<bool(NodeType*)>& IsNodeAllowed,
-                         const std::function<bool(EdgeType*)>& IsEdgeAllowed,
-                         const std::string& file_path) const;
-  void ToDotWithAutoFilePath() const;
+  Maybe<void> ToDotWithStream(const std::function<bool(NodeType*)>& IsNodeAllowed,
+                              const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+                              const std::function<std::string(NodeType*)>& AddNodeAttribute,
+                              const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
+                              StreamT& out_stream) const;
+  Maybe<void> ToDotWithFilePath(const std::string& file_path) const;
+  Maybe<void> ToDotWithFilePath(const std::function<std::string(NodeType*)>& AddNodeAttribute,
+                                const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
+                                const std::string& file_path) const;
+  Maybe<void> ToDotWithFilePath(const std::function<bool(NodeType*)>& IsNodeAllowed,
+                                const std::function<bool(EdgeType*)>& IsEdgeAllowed,
+                                const std::string& file_path) const;
+  Maybe<void> ToDotWithAutoFilePath() const;
+  Maybe<std::string> DotEnd() const { return VirtualDotEnd(); }
+  virtual Maybe<std::string> VirtualDotEnd() const { return std::make_shared<std::string>(); }
 
  private:
   std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
@@ -297,14 +300,14 @@ void Graph<NodeType, EdgeType>::DeleteNode(NodeType* node) {
 
 template<typename NodeType, typename EdgeType>
 template<typename StreamT>
-void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
-  ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; },
-                  [](NodeType*) { return ""; }, [](EdgeType*) { return ""; }, out_stream);
+Maybe<void> Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) const {
+  return ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; },
+                         [](NodeType*) { return ""; }, [](EdgeType*) { return ""; }, out_stream);
 }
 
 template<typename NodeType, typename EdgeType>
 template<typename StreamT>
-void Graph<NodeType, EdgeType>::ToDotWithStream(
+Maybe<void> Graph<NodeType, EdgeType>::ToDotWithStream(
     const std::function<bool(NodeType*)>& IsNodeAllowed,
     const std::function<bool(EdgeType*)>& IsEdgeAllowed,
     const std::function<std::string(NodeType*)>& AddNodeAttribute,
@@ -323,41 +326,46 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(
                << "\"" << edge->dst_node()->node_id_str() << "\""
                << "[label=\"" << edge->VisualStr() << "\"" << AddEdgeAttribute(edge) << "];\n";
   });
+  out_stream << *JUST(this->DotEnd()) << "\n";
   out_stream << "}\n";
+  return Maybe<void>::Ok();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) const {
+Maybe<void> Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
-  ToDotWithStream(log_stream);
+  JUST(ToDotWithStream(log_stream));
   log_stream->Flush();
+  return Maybe<void>::Ok();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithFilePath(
+Maybe<void> Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::function<std::string(NodeType*)>& AddNodeAttribute,
     const std::function<std::string(EdgeType*)>& AddEdgeAttribute,
     const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
-  ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; }, AddNodeAttribute,
-                  AddEdgeAttribute, log_stream);
+  JUST(ToDotWithStream([](NodeType*) { return true; }, [](EdgeType*) { return true; },
+                       AddNodeAttribute, AddEdgeAttribute, log_stream));
   log_stream->Flush();
+  return Maybe<void>::Ok();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithFilePath(
+Maybe<void> Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::function<bool(NodeType*)>& IsNodeAllowed,
     const std::function<bool(EdgeType*)>& IsEdgeAllowed, const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
-  ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; },
-                  [](EdgeType*) { return ""; }, log_stream);
+  JUST(ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; },
+                       [](EdgeType*) { return ""; }, log_stream));
   log_stream->Flush();
+  return Maybe<void>::Ok();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() const {
+Maybe<void> Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() const {
   std::string file_path = JoinPath("dot", TypeName(), NewUniqueId() + ".dot");
-  ToDotWithFilePath(file_path);
+  return ToDotWithFilePath(file_path);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -524,7 +532,9 @@ Maybe<void> Graph<NodeType, EdgeType>::MaybeTopoForEachNode(
   for (NodeType* start : starts) {
     queue.push(start);
     has_queued[start] = true;
-    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+    NodeType* non_source_node = nullptr;
+    ForEachInNode(start, [&](NodeType* node) { non_source_node = node; });
+    CHECK_ISNULL_OR_RETURN(non_source_node) << "non source node(s) found in starts";
   }
   while (!queue.empty()) {
     NodeType* cur_node = queue.front();

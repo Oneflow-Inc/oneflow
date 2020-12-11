@@ -41,16 +41,109 @@ class ResetStageRegstNumPass final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     auto compute_graph = JUST(ComputeGraph::New(*job));
+    JUST(compute_graph->InitTopoOrderValue());
     auto stage_chain_graph = JUST(StageChainGraph::New(*compute_graph));
-    stage_chain_graph->InitEdgeStatistics();
-    {
-      std::string job_name = ctx->job_desc().job_name();
-      compute_graph->ToDotWithFilePath(std::string("compute_graph-") + job_name + ".dot");
-      stage_chain_graph->ToDotWithFilePath(std::string("stage_chain_graph-") + job_name + ".dot");
-    }
+    JUST(stage_chain_graph->InitEdgeStatistics());
     JobBuilder job_builder(job);
     bool enable_stage_static_scheduling = ctx->job_desc().Bool("enable_stage_static_scheduling");
-    return Apply(*compute_graph, *stage_chain_graph, &job_builder, enable_stage_static_scheduling);
+    JUST(Apply(*compute_graph, *stage_chain_graph, &job_builder, enable_stage_static_scheduling));
+    {
+      std::string job_name = ctx->job_desc().job_name();
+      const auto& RenderComputeCtrlEdge = [&]() -> Maybe<std::string> {
+        return RenderComputeGraphCtrlEdge(*stage_chain_graph, *job);
+      };
+      const auto& compute_graph_name = std::string("compute_graph-") + job_name + ".dot";
+      JUST(compute_graph->WithDotEndGetter(RenderComputeCtrlEdge, [&]() -> Maybe<void> {
+        return compute_graph->ToDotWithFilePath(compute_graph_name);
+      }));
+      const auto& RenderStageCtrlAndCluster = [&]() -> Maybe<std::string> {
+        return RenderStageGraphCtrlAndCluster(*stage_chain_graph, *job);
+      };
+      const auto& stage_chain_graph_name = std::string("stage_chain_graph-") + job_name + ".dot";
+      JUST(stage_chain_graph->WithDotEndGetter(RenderStageCtrlAndCluster, [&]() -> Maybe<void> {
+        return stage_chain_graph->ToDotWithFilePath(stage_chain_graph_name);
+      }));
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<std::string> RenderStageGraphCtrlAndCluster(const StageChainGraph& stage_chain_graph,
+                                                    const Job& job) {
+    std::stringstream ss;
+    using CtrlEdgeT = std::pair<const StageChainNode*, const StageChainNode*>;
+    HashMap<CtrlEdgeT, int64_t> ctrl_edge2edge_cnt;
+    for (const auto& op_conf : job.net().op()) {
+      const auto& dst_op_name = op_conf.name();
+      for (const auto& src_op_name : op_conf.ctrl_in_op_name()) {
+        const auto* src = &JUST(stage_chain_graph.StageChainNode4OpName(src_op_name));
+        const auto* dst = &JUST(stage_chain_graph.StageChainNode4OpName(dst_op_name));
+        ++ctrl_edge2edge_cnt[std::make_pair(src, dst)];
+      }
+    }
+    for (const auto& pair : ctrl_edge2edge_cnt) {
+      ss << pair.first.first->node_id_str() << " -> " << pair.first.second->node_id_str()
+         << "[label=\"num_ctrl: " << std::to_string(pair.second) << "\" color=red];\n";
+    }
+    using StagePassT = std::pair<int64_t, std::string>;
+    HashMap<StagePassT, std::vector<const StageChainNode*>> stage_pass2nodes;
+    stage_chain_graph.ForEachNode([&](const StageChainNode* node) {
+      StagePassT stage_page(node->stage_placement_id(), node->calculation_pass_name());
+      auto* nodes = &stage_pass2nodes[stage_page];
+      nodes->push_back(node);
+    });
+    for (const auto& pair : stage_pass2nodes) {
+      int64_t stage_placement_id = pair.first.first;
+      const std::string& pass_name = pair.first.second;
+      if (stage_placement_id == -1) {
+        ss << "subgraph cluster_" << pass_name << "_minus_1 {\n";
+      } else if (stage_placement_id >= 0) {
+        ss << "subgraph cluster_" << pass_name << "_" << stage_placement_id << " {\n";
+      } else {
+        OF_UNIMPLEMENTED();
+      }
+      const auto& first_node = **pair.second.begin();
+      const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
+      const auto& parallel_desc = JUST(storage.MaybeGet(first_node.parallel_desc_symbol_id()));
+      const auto& parallel_conf = parallel_desc.parallel_conf();
+      ss << "label = \""
+         << "stage_id: " << stage_placement_id << "\\ncalculation_pass_name: " << pass_name
+         << "\\ndevice_tag: " << parallel_conf.device_tag()
+         << "\\ndevice_name: " << Join(parallel_conf.device_name(), ", ") << "\";\n";
+      for (const auto* node : pair.second) { ss << node->node_id_str() << ";\n"; }
+      ss << "}\n";
+    }
+    return std::make_shared<std::string>(ss.str());
+  }
+
+  Maybe<std::string> RenderComputeGraphCtrlEdge(const StageChainGraph& stage_chain_graph,
+                                                const Job& job) const {
+    std::stringstream ss;
+    for (const auto& op_conf : job.net().op()) {
+      const auto& dst_op_name = op_conf.name();
+      for (const auto& src_op_name : op_conf.ctrl_in_op_name()) {
+        const auto& src_node = JUST(stage_chain_graph.StageChainNode4OpName(src_op_name));
+        const auto& dst_node = JUST(stage_chain_graph.StageChainNode4OpName(dst_op_name));
+        ss << src_node.node_id_str() << " -> " << dst_node.node_id_str() << "[color=red];\n";
+      }
+    }
+    const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
+    JUST(stage_chain_graph.MaybeForEachNode([&](StageChainNode* node) -> Maybe<void> {
+      const auto& parallel_desc = JUST(storage.MaybeGet(node->parallel_desc_symbol_id()));
+      const auto& parallel_conf = parallel_desc.parallel_conf();
+      ss << "subgraph cluster_" << node->node_id_str() << " {\n"
+         << "label = \""
+         << "stage_id: " << node->stage_placement_id()
+         << "\\nstage_buffer_size: " << node->stage_buffer_size()
+         << "\\ncalculation_pass_name: " << node->calculation_pass_name()
+         << "\\ndevice_tag: " << parallel_conf.device_tag()
+         << "\\ndevice_name: " << Join(parallel_conf.device_name(), ", ") << "\";\n";
+      for (const auto* compute_node : node->compute_nodes()) {
+        ss << compute_node->node_id_str() << ";\n";
+      }
+      ss << "}\n";
+      return Maybe<void>::Ok();
+    }));
+    return std::make_shared<std::string>(ss.str());
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
@@ -78,7 +171,7 @@ class ResetStageRegstNumPass final : public JobPass {
       JUST(stage_chain_graph.MaybeForEachEdge([&](StageChainEdge* edge) -> Maybe<void> {
         size_t num_placement_ids = JUST(edge->NumStagePlacementInPath());
         if (!JUST(NeedStaticScheduling(edge, num_placement_ids))) { return Maybe<void>::Ok(); }
-        JUST(AddCtrlFromSrcSourceToDstSource(job_builder, compute_graph, edge));
+        JUST(TryAddCtrlFromSrcSourceToDstSink(job_builder, compute_graph, edge));
         return Maybe<void>::Ok();
       }));
       JUST(job_builder->MutCachedOpConfOnlyOnce());
@@ -91,7 +184,9 @@ class ResetStageRegstNumPass final : public JobPass {
     // there is no related symbol about it.
     if (num_stage_placement_ids != 2) { return false; }
     const auto& src_pass_name = edge->src_node()->calculation_pass_name();
-    if (!(src_pass_name == kForwardPass || src_pass_name == kBackwardPass)) { return false; }
+    const auto& dst_pass_name = edge->dst_node()->calculation_pass_name();
+    if (src_pass_name != kForwardPass) { return false; }
+    if (dst_pass_name != kBackwardPass) { return false; }
     int64_t src_parallel_desc_symbol_id = edge->src_node()->parallel_desc_symbol_id();
     int64_t dst_parallel_desc_symbol_id = edge->dst_node()->parallel_desc_symbol_id();
     if (src_parallel_desc_symbol_id == dst_parallel_desc_symbol_id) { return true; }
@@ -157,22 +252,34 @@ class ResetStageRegstNumPass final : public JobPass {
     return Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(op_conf.scope_symbol_id());
   }
 
-  Maybe<void> AddCtrlFromSrcSourceToDstSource(JobBuilder* job_builder,
-                                              const ComputeGraph& compute_graph,
-                                              const StageChainEdge* edge) const {
-    JUST(edge->dst_node()->ForEachSourceComputeNode([&](const ComputeNode& dst) -> Maybe<void> {
-      OperatorConf* op_conf = JUST(job_builder->CachedMutOpConf4OpName(dst.op().op_name()));
-      JUST(edge->src_node()->ForEachSourceComputeNode([&](const ComputeNode& src) -> Maybe<void> {
-        const auto& existed = op_conf->ctrl_in_op_name();
-        const auto& op_name = src.op().op_name();
-        if (std::find(existed.begin(), existed.end(), op_name) == existed.end()) {
-          op_conf->add_ctrl_in_op_name(op_name);
-        }
-        return Maybe<void>::Ok();
-      }));
+  Maybe<void> TryAddCtrlFromSrcSourceToDstSink(JobBuilder* job_builder,
+                                               const ComputeGraph& compute_graph,
+                                               const StageChainEdge* edge) const {
+    if (edge->src_node()->stage_placement_id() != edge->dst_node()->stage_placement_id()) {
       return Maybe<void>::Ok();
-    }));
-    return Maybe<void>::Ok();
+    }
+    const auto& NeedCtrlEdge = [&](const ComputeNode& dst_node, const std::string& src_op_name) {
+      const auto& existed = dst_node.op().op_conf().ctrl_in_op_name();
+      bool not_ctrl_found = std::find(existed.begin(), existed.end(), src_op_name) == existed.end();
+      const auto& edges = dst_node.in_edges();
+      const auto& WithSrcOpName = [&](const ComputeEdge* edge) {
+        return edge->src_node()->op().op_name() == src_op_name;
+      };
+      bool no_data_consumed =
+          std::find_if(edges.begin(), edges.end(), WithSrcOpName) == edges.end();
+      return not_ctrl_found && no_data_consumed;
+    };
+    const auto& AddCtrlInOpName = [&](const ComputeNode& dst) -> Maybe<void> {
+      OperatorConf* op_conf = JUST(job_builder->CachedMutOpConf4OpName(dst.op().op_name()));
+      JUST(edge->src_node()->ForEachBackboneSourceComputeNode(
+          [&](const ComputeNode& src) -> Maybe<void> {
+            const auto& src_op_name = src.op().op_name();
+            if (NeedCtrlEdge(dst, src_op_name)) { op_conf->add_ctrl_in_op_name(src_op_name); }
+            return Maybe<void>::Ok();
+          }));
+      return Maybe<void>::Ok();
+    };
+    return edge->dst_node()->ForEachSinkComputeNode(AddCtrlInOpName);
   }
 
   Maybe<void> ForEachLbi7RequiredBufferSize(

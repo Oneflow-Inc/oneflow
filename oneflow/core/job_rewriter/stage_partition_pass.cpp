@@ -165,17 +165,17 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
       const OpGraph& op_graph, const JobDesc& job_desc,
       const std::function<Maybe<void>(const OpNode*, int64_t scope_symbol_id)>& Handler) const {
     // Sequantialize trainable forward ops
-    std::list<std::unique_ptr<std::vector<OpNode*>>> sequantial_trainable_fw_ops;
-    JUST(GetSequantialTrainableFwOps(op_graph, &sequantial_trainable_fw_ops));
+    std::list<std::unique_ptr<std::vector<OpNode*>>> sequantialized_fw_ops;
+    JUST(GetSequantialFwOps(op_graph, &sequantialized_fw_ops));
     // Gets stage partition config
     std::vector<int64_t> stage_partition_scope_ids;
     JUST(GetStagePartitionScopeIds(job_desc, &stage_partition_scope_ids));
     // Partition to stages
     std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
     int64_t num_stages = stage_partition_scope_ids.size();
-    JUST(GetStageDepth2Stage(sequantial_trainable_fw_ops, num_stages, &Stage4Depth));
+    JUST(GetStageDepth2Stage(sequantialized_fw_ops, num_stages, &Stage4Depth));
     int64_t depth = 0;
-    for (const auto& fused_vec : sequantial_trainable_fw_ops) {
+    for (const auto& fused_vec : sequantialized_fw_ops) {
       int64_t stage = JUST(Stage4Depth(depth));
       int64_t scope_symbol_id = JUST(VectorAt(stage_partition_scope_ids, stage));
       for (OpNode* op_node : *fused_vec) { JUST(Handler(op_node, scope_symbol_id)); }
@@ -184,46 +184,47 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> GetSequantialTrainableFwOps(
+  Maybe<void> GetSequantialFwOps(
       const OpGraph& op_graph,
-      std::list<std::unique_ptr<std::vector<OpNode*>>>* sequantial_trainable_fw_ops) const {
+      std::list<std::unique_ptr<std::vector<OpNode*>>>* sequantialized_fw_ops) const {
     HashMap<OpNode*, std::unique_ptr<std::vector<OpNode*>>> backbone_op2fused_ops;
     JUST(GetBackboneOp2FusedOps(op_graph, &backbone_op2fused_ops));
-    std::list<OpNode*> starts;
-    {
-      const auto& ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-        node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-          if (backbone_op2fused_ops.count(out_node) > 0) { Handler(out_node); }
-        });
-      };
-      const auto& IsSinkNode = [&](OpNode* node) {
-        size_t out_num = 0;
-        ForEachOut(node, [&](OpNode*) { ++out_num; });
-        return out_num == 0;
-      };
-      for (const auto& pair : backbone_op2fused_ops) {
-        if (IsSinkNode(pair.first)) { starts.push_back(pair.first); }
-      }
-    }
     const auto& ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
       node->ForEachNodeOnInEdge([&](OpNode* in_node) {
         if (backbone_op2fused_ops.count(in_node) > 0) { Handler(in_node); }
       });
     };
-    // Traverses reverserly
-    op_graph.BfsForEachNode(starts, ForEachIn, [&](OpNode* op_node) {
-      const auto& iter = backbone_op2fused_ops.find(op_node);
-      CHECK(iter != backbone_op2fused_ops.end());
-      sequantial_trainable_fw_ops->emplace_front(std::move(iter->second));
-    });
+    std::list<OpNode*> starts;
+    {
+      const auto& IsSourceNode = [&](OpNode* node) {
+        size_t in_num = 0;
+        ForEachIn(node, [&](OpNode*) { ++in_num; });
+        return in_num == 0;
+      };
+      for (const auto& pair : backbone_op2fused_ops) {
+        if (IsSourceNode(pair.first)) { starts.push_back(pair.first); }
+      }
+    }
+    const auto& ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+      node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
+        if (backbone_op2fused_ops.count(out_node) > 0) { Handler(out_node); }
+      });
+    };
+    JUST(op_graph.MaybeTopoForEachNode(
+        starts, ForEachIn, ForEachOut, [&](OpNode* op_node) -> Maybe<void> {
+          const auto& iter = backbone_op2fused_ops.find(op_node);
+          CHECK_OR_RETURN(iter != backbone_op2fused_ops.end());
+          sequantialized_fw_ops->emplace_back(std::move(iter->second));
+          return Maybe<void>::Ok();
+        }));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> GetStageDepth2Stage(
-      const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantial_trainable_fw_ops,
+      const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantialized_fw_ops,
       int64_t num_stages, std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) const {
     int64_t num_ops = 0;
-    for (const auto& vec : sequantial_trainable_fw_ops) { num_ops += vec->size(); }
+    for (const auto& vec : sequantialized_fw_ops) { num_ops += vec->size(); }
     BalancedSplitter bs(num_ops, num_stages);
     std::vector<int64_t> stage2expected_num_ops_from_start(num_stages);
     for (int64_t i = 0; i < num_stages; ++i) {
@@ -235,14 +236,14 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
       int64_t stage = 0;
       int64_t depth = 0;
       int64_t num_ops_from_start = 0;
-      for (const auto& vec : sequantial_trainable_fw_ops) {
+      for (const auto& vec : sequantialized_fw_ops) {
         if (num_ops_from_start > stage2expected_num_ops_from_start.at(stage)) { ++stage; }
         (*depth2stage)[depth] = stage;
         ++depth;
         num_ops_from_start += vec->size();
       }
       CHECK_EQ(stage, num_stages - 1);
-      CHECK_EQ(depth, sequantial_trainable_fw_ops.size());
+      CHECK_EQ(depth, sequantialized_fw_ops.size());
     }
     *Stage4Depth = [depth2stage](int64_t depth) -> Maybe<int64_t> {
       const auto& iter = depth2stage->find(depth);
@@ -270,14 +271,13 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
     // Gets backbone ops.
     HashSet<OpNode*> backbone_op_nodes;
     JUST(GetBackBoneOps(op_graph, trainable_fw_ops, &backbone_op_nodes));
-    // Fuses other forward ops to backbone ops.
-    HashMap<OpNode*, OpNode*> other_fw_op2backbone_op;
-    JUST(FuseOtherFwOpsToBackboneOps(op_graph, backbone_op_nodes, &other_fw_op2backbone_op));
-    for (OpNode* backbone_op_node : backbone_op_nodes) {
-      (*backbone_op2fused_ops)[backbone_op_node].reset(new std::vector<OpNode*>{backbone_op_node});
-    }
-    for (const auto& pair : other_fw_op2backbone_op) {
-      (*backbone_op2fused_ops)[pair.second]->push_back(pair.first);
+    // Fuses forward ops to backbone ops.
+    HashMap<OpNode*, OpNode*> fw_op2backbone_op;
+    JUST(FuseFwOpsToBackboneOps(op_graph, backbone_op_nodes, &fw_op2backbone_op));
+    for (const auto& pair : fw_op2backbone_op) {
+      auto* fused_ops = &(*backbone_op2fused_ops)[pair.second];
+      if (!*fused_ops) { fused_ops->reset(new std::vector<OpNode*>()); }
+      (*fused_ops)->push_back(pair.first);
     }
     return Maybe<void>::Ok();
   }
@@ -316,37 +316,89 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> FuseOtherFwOpsToBackboneOps(
-      const OpGraph& op_graph, const HashSet<OpNode*>& backbone_op_nodes,
-      HashMap<OpNode*, OpNode*>* other_fw_op2backbone_op) const {
-    const auto& ForEachOtherNext = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-      node->ForEachNodeOnInOutEdge([&](OpNode* next_node) {
-        if (backbone_op_nodes.count(next_node) > 0) { return; }
-        // It's safe to update container other_fw_op2backbone_op when traversing.
-        if (other_fw_op2backbone_op->count(next_node) > 0) { return; }
-        // Traverses other nodes.
-        Handler(next_node);
+  Maybe<void> FuseFwOpsToBackboneOps(const OpGraph& op_graph,
+                                     const HashSet<OpNode*>& backbone_op_nodes,
+                                     HashMap<OpNode*, OpNode*>* fw_op2backbone_op) const {
+    using namespace std::placeholders;
+    // Fuses nearest inputs
+    const auto& ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& DoEach) {
+      node->ForEachNodeOnInEdge([&](OpNode* in_node) {
+        if (fw_op2backbone_op->count(in_node) == 0) { DoEach(in_node); }
       });
     };
-    JUST(BfsForEachBackboneOp(op_graph, backbone_op_nodes, [&](OpNode* backbone_op_node) {
-      op_graph.BfsForEachNode({backbone_op_node}, ForEachOtherNext, [&](OpNode* other) {
-        if (backbone_op_nodes.count(other) > 0) { return; }
-        (*other_fw_op2backbone_op)[other] = backbone_op_node;
+    JUST(TopoForEachBackboneOp(op_graph, backbone_op_nodes, [&](OpNode* backbone_op_node) {
+      op_graph.BfsForEachNode({backbone_op_node}, ForEachIn, [&](OpNode* node) {
+        OpNode** backbone_op_node_ptr = &(*fw_op2backbone_op)[node];
+        if (*backbone_op_node_ptr == nullptr) { *backbone_op_node_ptr = backbone_op_node; }
+      });
+    }));
+    // Fuses nearest outputs
+    const auto& ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& DoEach) {
+      node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
+        if (fw_op2backbone_op->count(out_node) == 0) { DoEach(out_node); }
+      });
+    };
+    JUST(ReverseTopoForEachBackboneOp(op_graph, backbone_op_nodes, [&](OpNode* backbone_op_node) {
+      op_graph.BfsForEachNode({backbone_op_node}, ForEachOut, [&](OpNode* node) {
+        OpNode** backbone_op_node_ptr = &(*fw_op2backbone_op)[node];
+        if (*backbone_op_node_ptr == nullptr) { *backbone_op_node_ptr = backbone_op_node; }
+      });
+    }));
+    // Fuses nearest remainder inputs and outputs
+    HashSet<const OpNode*> visisted;
+    const auto& ForEachNext = [&](OpNode* node, const std::function<void(OpNode*)>& DoEach) {
+      node->ForEachNodeOnInOutEdge([&](OpNode* next_node) {
+        if (visisted.count(next_node) == 0) { DoEach(next_node); }
+      });
+    };
+    JUST(ReverseTopoForEachBackboneOp(op_graph, backbone_op_nodes, [&](OpNode* backbone_op_node) {
+      op_graph.BfsForEachNode({backbone_op_node}, ForEachNext, [&](OpNode* node) {
+        OpNode** backbone_op_node_ptr = &(*fw_op2backbone_op)[node];
+        if (*backbone_op_node_ptr == nullptr) { *backbone_op_node_ptr = backbone_op_node; }
+        visisted.insert(node);
       });
     }));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> BfsForEachBackboneOp(const OpGraph& op_graph,
-                                   const HashSet<OpNode*>& backbone_op_nodes,
-                                   const std::function<void(OpNode*)>& Handler) const {
+  Maybe<void> ReverseTopoForEachBackboneOp(const OpGraph& op_graph,
+                                           const HashSet<OpNode*>& backbone_op_nodes,
+                                           const std::function<void(OpNode*)>& Handler) const {
+    const auto& ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+      node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
+        if (backbone_op_nodes.count(out_node) > 0) { Handler(out_node); }
+      });
+    };
     std::list<OpNode*> starts;
     {
-      const auto& ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-        node->ForEachNodeOnInEdge([&](OpNode* in_node) {
-          if (backbone_op_nodes.count(in_node) > 0) { Handler(in_node); }
-        });
+      const auto& IsSink = [&](OpNode* node) {
+        size_t num_outputs = 0;
+        ForEachOut(node, [&](OpNode*) { ++num_outputs; });
+        return num_outputs == 0;
       };
+      for (OpNode* op_node : backbone_op_nodes) {
+        if (IsSink(op_node)) { starts.push_back(op_node); }
+      }
+    }
+    const auto& ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+      node->ForEachNodeOnInEdge([&](OpNode* in_node) {
+        if (backbone_op_nodes.count(in_node) > 0) { Handler(in_node); }
+      });
+    };
+    op_graph.TopoForEachNode(starts, ForEachOut, ForEachIn, Handler);
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> TopoForEachBackboneOp(const OpGraph& op_graph,
+                                    const HashSet<OpNode*>& backbone_op_nodes,
+                                    const std::function<void(OpNode*)>& Handler) const {
+    const auto& ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+      node->ForEachNodeOnInEdge([&](OpNode* in_node) {
+        if (backbone_op_nodes.count(in_node) > 0) { Handler(in_node); }
+      });
+    };
+    std::list<OpNode*> starts;
+    {
       const auto& IsSource = [&](OpNode* node) {
         size_t in_size = 0;
         ForEachIn(node, [&](OpNode*) { ++in_size; });
@@ -361,7 +413,7 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
         if (backbone_op_nodes.count(out_node) > 0) { Handler(out_node); }
       });
     };
-    op_graph.BfsForEachNode(starts, ForEachOut, Handler);
+    op_graph.TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
     return Maybe<void>::Ok();
   }
 

@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <sstream>
 #include "oneflow/core/graph/stage_chain_graph.h"
 #include "oneflow/core/graph/compute_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/ptr_util.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
@@ -28,7 +31,57 @@ bool IsSspVariableProxy(const ComputeNode& compute_node) {
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "ssp_variable_proxy";
 }
 
+Maybe<void> GetBackboneNodes(const HashSet<const ComputeNode*>& compute_nodes,
+                             HashSet<const ComputeNode*>* backbone_nodes) {
+  std::list<const ComputeNode*> starts;
+  {
+    const auto& ForEachIn = [&](const ComputeNode* node,
+                                const std::function<void(const ComputeNode*)>& Handler) {
+      node->ForEachNodeOnInEdge([&](const ComputeNode* in_node) {
+        if (compute_nodes.count(in_node) > 0) { Handler(in_node); }
+      });
+    };
+    const auto& GetInputSize = [&](const ComputeNode* node) {
+      size_t input_size = 0;
+      ForEachIn(node, [&](const ComputeNode*) { ++input_size; });
+      return input_size;
+    };
+    for (const ComputeNode* node : compute_nodes) {
+      if (GetInputSize(node) > 1) { starts.push_back(node); }
+    }
+  }
+  const auto& ForEachOut = [&](const ComputeNode* node,
+                               const std::function<void(const ComputeNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](const ComputeNode* out_node) {
+      if (compute_nodes.count(out_node) > 0) { Handler(out_node); }
+    });
+  };
+  ComputeGraph().BfsForEachNode(starts, ForEachOut,
+                                [&](const ComputeNode* node) { backbone_nodes->insert(node); });
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
+
+Maybe<void> StageChainNode::ForEachBackboneSourceComputeNode(
+    const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const {
+  HashSet<const ComputeNode*> backbone_nodes;
+  JUST(GetBackboneNodes(compute_nodes(), &backbone_nodes));
+  const auto& IsSource = [&](const ComputeNode* node) {
+    size_t num_inputs = 0;
+    for (const auto* edge : node->in_edges()) {
+      num_inputs += backbone_nodes.count(edge->src_node());
+    }
+    return num_inputs == 0;
+  };
+  for (const auto* node : backbone_nodes) {
+    if (!IsSource(node)) { continue; }
+    // TODO(lixinqi): Remove this urgly code after the ssp_variable_proxy actor bug fixed
+    CHECK_OR_RETURN(!IsSspVariableProxy(*node));
+    JUST(DoEach(*node));
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> StageChainNode::ForEachSourceComputeNode(
     const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const {
@@ -59,23 +112,47 @@ Maybe<void> StageChainNode::ForEachSinkComputeNode(
   };
   for (const auto* node : compute_nodes()) {
     if (!IsSink(node)) { continue; }
-    if (IsSspVariableProxy(*node)) {
-      // TODO(lixinqi): Remove this urgly code after the ssp_variable_proxy actor bug fixed
-      JUST(DoEach(*node->SoleInEdge()->src_node()));
-    } else {
-      JUST(DoEach(*node));
-    }
+    // TODO(lixinqi): Remove this urgly code after the ssp_variable_proxy actor bug fixed
+    CHECK_OR_RETURN(!IsSspVariableProxy(*node));
+    JUST(DoEach(*node));
   }
   return Maybe<void>::Ok();
 }
 
 std::string StageChainNode::VisualStr() const {
-  std::string ret;
-  for (const auto* compute_node : compute_nodes()) {
-    ret += compute_node->op().op_name();
-    ret += "\\n";
-  }
-  return ret;
+  const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
+  const auto& parallel_desc = CHECK_JUST(storage.MaybeGet(parallel_desc_symbol_id()));
+  const auto& parallel_conf = parallel_desc.parallel_conf();
+  std::stringstream ss;
+  ss << "calculation_pass_name: " << calculation_pass_name()
+     << "\\nstage_id: " << stage_placement_id() << "\\ndevice_tag: " << parallel_conf.device_tag()
+     << "\\ndevice_name: " << Join(parallel_conf.device_name(), ", ")
+     << "\\nnum_compute_nodes: " << std::to_string(compute_nodes().size())
+     << "\\nstage_buffer_size: " << stage_buffer_size();
+  size_t cnt = 0;
+  const auto& RenderOpName = [&](const ComputeNode& node) -> Maybe<void> {
+    if (cnt < 10) {
+      ss << "\\n" << node.op().op_name();
+    } else if (cnt == 10) {
+      ss << "\\n...";
+    } else {
+      // display nothing
+    }
+    ++cnt;
+    return Maybe<void>::Ok();
+  };
+  ss << "\\n----[ first 10 backbone source op names ]----";
+  cnt = 0;
+  CHECK_JUST(ForEachBackboneSourceComputeNode(RenderOpName));
+  ss << "\\n----[ first 10 sink op names ]----";
+  cnt = 0;
+  CHECK_JUST(ForEachSinkComputeNode(RenderOpName));
+  return ss.str();
+}
+
+void StageChainEdge::add_lbi(const LogicalBlobId& lbi) {
+  lbis_.insert(lbi);
+  op_names_.insert(lbi.op_name());
 }
 
 Maybe<size_t> StageChainEdge::NumStagePlacementInPath() const {
@@ -101,29 +178,30 @@ void StageChainEdge::add_path_parallel_desc_symbol_id(int64_t parallel_desc_symb
 }
 
 std::string StageChainEdge::VisualStr() const {
+  std::stringstream ss;
   std::string ret;
-  for (const auto& lbi : lbis()) {
-    ret += GenLogicalBlobName(lbi);
-    ret += "\\n";
-  }
+  ret += "num_lbis: ";
+  ret += std::to_string(lbis().size());
   return ret;
 }
 
 Maybe<void> StageChainGraph::Init(const ComputeGraph& compute_graph) {
-  std::function<Maybe<StageChainNode*>(const std::string&)> StageChainNode4OpName;
-  JUST(InitNodes(compute_graph, &StageChainNode4OpName));
-  JUST(InitEdges(compute_graph, StageChainNode4OpName));
+  JUST(InitNodes(compute_graph));
+  JUST(InitEdges(compute_graph));
+  get_dot_end_ = []() -> Maybe<std::string> { return std::make_shared<std::string>(); };
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StageChainGraph::InitNodes(
-    const ComputeGraph& compute_graph,
-    std::function<Maybe<StageChainNode*>(const std::string&)>* StageChainNode4OpName) {
-  auto op_name2chain_node = std::make_shared<HashMap<std::string, StageChainNode*>>();
-  *StageChainNode4OpName = [op_name2chain_node](const std::string& op_name) {
-    return MapAt(*op_name2chain_node, op_name);
-  };
+Maybe<const StageChainNode&> StageChainGraph::StageChainNode4OpName(
+    const std::string& op_name) const {
+  return *JUST(MapAt(op_name2chain_node_, op_name));
+}
 
+Maybe<StageChainNode*> StageChainGraph::MutStageChainNode4OpName(const std::string& op_name) {
+  return JUST(MapAt(op_name2chain_node_, op_name));
+}
+
+Maybe<void> StageChainGraph::InitNodes(const ComputeGraph& compute_graph) {
   struct StageChainNodeKey {
     int64_t stage_placement_id;
     int64_t parallel_desc_symbol_id;
@@ -178,7 +256,7 @@ Maybe<void> StageChainGraph::InitNodes(
     AddAllocatedNode(stage_chain_node);
     for (const auto* compute_node : *info.compute_nodes) {
       const auto& op_name = compute_node->op().op_name();
-      CHECK_OR_RETURN(op_name2chain_node->emplace(op_name, stage_chain_node).second);
+      CHECK_OR_RETURN(op_name2chain_node_.emplace(op_name, stage_chain_node).second);
     }
   }
   return Maybe<void>::Ok();
@@ -212,17 +290,15 @@ Maybe<void> StageChainGraph::MakeGetterOtherStageAncestors4ComputeNode(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StageChainGraph::InitEdges(
-    const ComputeGraph& compute_graph,
-    const std::function<Maybe<StageChainNode*>(const std::string&)>& StageChainNode4OpName) {
+Maybe<void> StageChainGraph::InitEdges(const ComputeGraph& compute_graph) {
   std::function<StageChainEdge*(StageChainNode * src, StageChainNode * dst)> FindOrCreateEdge;
   MakeGetterFindOrCreateEdge(&FindOrCreateEdge);
   JUST(compute_graph.ForEachComputeNode([&](const ComputeNode& compute_node) -> Maybe<void> {
     const auto& op = compute_node.op();
-    auto* cur_stage_chain_node = JUST(StageChainNode4OpName(op.op_name()));
+    auto* cur_stage_chain_node = JUST(MutStageChainNode4OpName(op.op_name()));
     for (const auto& ibn : op.input_bns()) {
       const auto& lbi = op.BnInOp2Lbi(ibn);
-      auto* input_stage_chain_node = JUST(StageChainNode4OpName(lbi.op_name()));
+      auto* input_stage_chain_node = JUST(MutStageChainNode4OpName(lbi.op_name()));
       if (input_stage_chain_node == cur_stage_chain_node) { continue; }
       FindOrCreateEdge(input_stage_chain_node, cur_stage_chain_node)->add_lbi(lbi);
     }
@@ -266,5 +342,16 @@ Maybe<void> StageChainGraph::InitEdgeStatistics() {
   });
   return Maybe<void>::Ok();
 }
+
+Maybe<void> StageChainGraph::WithDotEndGetter(
+    const std::function<Maybe<std::string>()>& get_dot_end,
+    const std::function<Maybe<void>()>& Do) {
+  get_dot_end_ = get_dot_end;
+  JUST(Do());
+  get_dot_end_ = []() -> Maybe<std::string> { return std::make_shared<std::string>(); };
+  return Maybe<void>::Ok();
+}
+
+Maybe<std::string> StageChainGraph::VirtualDotEnd() const { return get_dot_end_(); }
 
 }  // namespace oneflow

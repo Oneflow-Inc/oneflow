@@ -19,6 +19,7 @@ limitations under the License.
 #include <utility>
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/ptr_util.h"
 #include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
@@ -49,16 +50,19 @@ class ComputeNode final : public Node<ComputeNode, ComputeEdge> {
   const Scope& scope() const { return *scope_; }
 
   Maybe<int64_t> GetParallelDescSymbolId() const;
+  Maybe<int64_t> topo_order_value() const { return PtrGet(topo_order_value_); }
 
   std::string VisualStr() const override;
 
  private:
+  friend class ComputeGraph;
   ComputeNode() = default;
   Maybe<void> Init(const OperatorConf&);
 
   std::shared_ptr<Scope> scope_;
   std::shared_ptr<ParallelDesc> parallel_desc_;
   std::shared_ptr<Operator> op_;
+  std::unique_ptr<int64_t> topo_order_value_;
 };
 
 class ComputeEdge final : public Edge<ComputeNode, ComputeEdge> {
@@ -92,6 +96,17 @@ class ComputeGraph final : public Graph<const ComputeNode, const ComputeEdge> {
     return *JUST(MapAt(op_name2node_, op_name));
   }
 
+  void ForEachDataAndCtrlInNode(const ComputeNode* node,
+                                const std::function<void(const ComputeNode*)>& Handler) const;
+  void ForEachDataAndCtrlOutNode(const ComputeNode* node,
+                                 const std::function<void(const ComputeNode*)>& Handler) const;
+  Maybe<void> InitTopoOrderValue();
+
+  Maybe<void> WithDotEndGetter(const std::function<Maybe<std::string>()>& get_dot_end,
+                               const std::function<Maybe<void>()>& Do);
+
+  Maybe<std::string> VirtualDotEnd() const override;
+
  private:
   Maybe<void> Init(const Job&);
   Maybe<void> InitNodes(const Job&);
@@ -101,6 +116,8 @@ class ComputeGraph final : public Graph<const ComputeNode, const ComputeEdge> {
 
   std::list<std::string> op_names_;
   HashMap<std::string, ComputeNode*> op_name2node_;
+  HashMap<std::string, std::list<const ComputeNode*>> producer_op_name2ctrl_consumer_nodes_;
+  std::function<Maybe<std::string>()> get_dot_end_;
 };
 
 }  // namespace oneflow

@@ -237,7 +237,7 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   // CheckNoCycle();
   SetChainId4ChainNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
+    CHECK_JUST(ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot")));
   }
 }
 
@@ -248,7 +248,7 @@ void ChainGraph::CheckNoCycle() const {
     auto* ptr = scc.get();
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
     const auto& chain_graph_filename = "job" + job_id + "_cycle_chain_graph.dot";
-    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, chain_graph_filename);
+    CHECK_JUST(ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, chain_graph_filename));
 
     HashMap<int64_t, int32_t> task_id2color = {};
     int32_t chain_node_cnt = 0;
@@ -277,7 +277,7 @@ void ChainGraph::CheckNoCycle() const {
     };
     const std::string colored_task_graph_filename =
         "optimized_dlnet_" + job_id + "_highlighted_cycle_task_nodes_in_chain_graph.dot";
-    task_gph_.ToDotWithFilePath(ColorNode, ColorEdge, colored_task_graph_filename);
+    CHECK_JUST(task_gph_.ToDotWithFilePath(ColorNode, ColorEdge, colored_task_graph_filename));
 
     HashSet<const TaskNode*> tasks;
     for (const auto* chain_node : *scc) {
@@ -287,7 +287,8 @@ void ChainGraph::CheckNoCycle() const {
     }
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
-    task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
+    CHECK_JUST(task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; },
+                                           task_gph_filename));
     LOG(FATAL) << "cycle in graph detected, please check:\n"
                << colored_task_graph_filename << "\n"
                << task_gph_filename << "\n"
