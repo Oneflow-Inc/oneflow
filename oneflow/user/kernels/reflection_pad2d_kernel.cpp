@@ -14,7 +14,7 @@ limitations under the License.
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-//#include "oneflow/user/kernels/reflection_pad2d_kernel_util.h"
+#include "oneflow/user/kernels/reflection_pad2d_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -162,10 +162,11 @@ class ReflectionPad2dKernel final : public OpKernel {
     int64_t pad_left = padding[w_idx];
     int64_t pad_top = padding[h_idx];
 
-    ReflectionPading<device_type, T>(x, y, c_idx, h_idx, w_idx, pad_left, pad_top);
-    // ReflectionPad2dFunctor<device_type, T>()(
-    //     ctx->device_ctx(), x, y, c_idx, h_idx, w_idx, pad_left, pad_top
-    // );
+    //ReflectionPading<device_type, T>(x, y, c_idx, h_idx, w_idx, pad_left, pad_top);
+
+    ReflectionPad2dFunctor<device_type, T>()(
+        ctx->device_ctx(), x, y, c_idx, h_idx, w_idx, pad_left, pad_top
+    );
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
