@@ -48,7 +48,7 @@ jobs:
         if [ "$matrix_release_version" == "cpu" ]; then
             cuda_version="10.2"
             extra_flags="--cpu"
-            cache_dir_name="10.2-cpu"
+            cache_dir_name="cpu"
         elif [ "$matrix_release_version" == "cu100" ]; then
             cuda_version="10.0"
             cache_dir_name="10.0"
@@ -94,6 +94,8 @@ jobs:
           echo "cuda_version empty"
           exit 1
         fi
+        echo "matrix_release_version=${matrix_release_version}" >> $GITHUB_ENV
+
         python3 ci/build/ensure_img.py
         python_version=${python_version:-"3.5,3.6,3.7,3.8"}
         echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
@@ -146,7 +148,7 @@ jobs:
       uses: ./.github/actions/upload_oss
       with:
         src_path: ${bin_dir}
-        oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${cache_dir_name}
+        oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${matrix_release_version}
         oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
         oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
     - name: Update API docs
