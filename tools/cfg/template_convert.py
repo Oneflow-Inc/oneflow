@@ -10,6 +10,7 @@ parser.add_argument("-proto_file", "--proto_file_path", type=str, required=True)
 parser.add_argument(
     "-of_cfg_proto_python", "--of_cfg_proto_python_dir", type=str, required=True
 )
+parser.add_argument("--file_type", type=str, choices=["src", "pybind"], required=True)
 
 args = parser.parse_args()
 
@@ -66,23 +67,30 @@ def render_template(proto_file):
 
     proto_module = __import__(proto_py_file_name)
 
-    dst_hpp_path = os.path.join(
-        args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.h"
-    )
+    if args.file_type == "src":
+        dst_hpp_path = os.path.join(
+            args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.h"
+        )
 
-    dst_cpp_path = os.path.join(
-        args.project_build_dir, rel_proto_file_path, proto_file_name[:-6] + ".cfg.cpp"
-    )
+        dst_cpp_path = os.path.join(
+            args.project_build_dir,
+            rel_proto_file_path,
+            proto_file_name[:-6] + ".cfg.cpp",
+        )
 
-    dst_pybind_path = os.path.join(
-        args.project_build_dir,
-        rel_proto_file_path,
-        proto_file_name[:-6] + ".cfg.pybind.cpp",
-    )
+        convert_hpp(dst_hpp_path, module=proto_module)
+        convert_cpp(dst_cpp_path, module=proto_module)
 
-    convert_hpp(dst_hpp_path, module=proto_module)
-    convert_cpp(dst_cpp_path, module=proto_module)
-    convert_pybind(dst_pybind_path, module=proto_module)
+    elif args.file_type == "pybind":
+        dst_pybind_path = os.path.join(
+            args.project_build_dir,
+            rel_proto_file_path,
+            proto_file_name[:-6] + ".cfg.pybind.cpp",
+        )
+
+        convert_pybind(dst_pybind_path, module=proto_module)
+    else:
+        raise NotImplementedError
 
 
 def main():
