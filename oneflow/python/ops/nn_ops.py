@@ -3245,3 +3245,29 @@ def triplet_margin_loss(
         return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
     else:
         return _triplet_loss
+
+
+@oneflow_export("nn.PixelShuffle")
+def pixel_shuffle(
+    input: remote_blob_util.BlobDef,
+    h_factor: int,
+    w_factor: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    assert h_factor > 0 and w_factor > 0, "The factor of height and width must larger than zero"
+    assert len(input.shape) == 4, "Only Accept 4D Blob"
+
+    _batch, _channel, _height, _width = input.shape
+    assert _channel % (h_factor * w_factor) == 0, "The channels of input must be divided by (h_factor * w_factor)"    
+    
+    if name is None:
+        name = id_util.UniqueStr("PixelShuffle")
+
+    _new_c = int(_channel / (h_factor * w_factor))
+
+    out = flow.reshape(input, [_batch, _new_c, h_factor*w_factor, _height, _width])
+    out = flow.reshape(out, [_batch * _new_c, h_factor, w_factor, _height, _width])
+    out = flow.transpose(out, [0, 3, 1, 4, 2])
+    out = flow.reshape(out, [_batch, _new_c, _height*h_factor, _width*w_factor])
+
+    return out 
