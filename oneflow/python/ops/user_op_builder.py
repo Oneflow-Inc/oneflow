@@ -85,6 +85,7 @@ class UserOp(object):
                     gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(
                         remote_blob_obj.logical_blob_name, remote_blob_obj.blob_object
                     )
+
         return tuple(remote_blob_list)
 
     def RemoteBlobDict(self):
