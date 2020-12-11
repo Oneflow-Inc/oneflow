@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <functional>
 #include "oneflow/core/graph/compute_graph.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -40,6 +42,7 @@ Maybe<void> ComputeNode::Init(const OperatorConf& op_conf) {
 Maybe<void> ComputeGraph::Init(const Job& job) {
   JUST(InitNodes(job));
   JUST(InitEdges(job));
+  get_dot_end_ = []() -> Maybe<std::string> { return std::make_shared<std::string>(); };
   return Maybe<void>::Ok();
 }
 
@@ -49,6 +52,13 @@ Maybe<void> ComputeGraph::InitNodes(const Job& job) {
     auto* node = JUST(ComputeNode::UnsafeNew(op_conf));
     AddAllocatedNode(node);
     CHECK_OR_RETURN(op_name2node_.emplace(node->op().op_name(), node).second);
+  }
+  for (const auto& op_conf : job.net().op()) {
+    const auto* node = &JUST(Node4OpName(op_conf.name()));
+    for (const auto& producer_op_name : op_conf.ctrl_in_op_name()) {
+      auto* consumer_nodes = &producer_op_name2ctrl_consumer_nodes_[producer_op_name];
+      consumer_nodes->push_back(node);
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -68,6 +78,50 @@ Maybe<void> ComputeGraph::InitEdges(const Job& job) {
   return Maybe<void>::Ok();
 }
 
+void ComputeGraph::ForEachDataAndCtrlInNode(
+    const ComputeNode* node, const std::function<void(const ComputeNode*)>& Handler) const {
+  HashSet<const ComputeNode*> visited_nodes;
+  const auto& HandleOnce = [&](const ComputeNode* node) {
+    if (visited_nodes.count(node) > 0) { return; }
+    Handler(node);
+    visited_nodes.insert(node);
+  };
+  node->ForEachNodeOnInEdge(HandleOnce);
+  for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+    HandleOnce(&CHECK_JUST(Node4OpName(ctrl_in_op_name)));
+  }
+}
+
+void ComputeGraph::ForEachDataAndCtrlOutNode(
+    const ComputeNode* node, const std::function<void(const ComputeNode*)>& Handler) const {
+  HashSet<const ComputeNode*> visited_nodes;
+  const auto& HandleOnce = [&](const ComputeNode* node) {
+    if (visited_nodes.count(node) > 0) { return; }
+    Handler(node);
+    visited_nodes.insert(node);
+  };
+  node->ForEachNodeOnOutEdge(HandleOnce);
+  const auto& nodes = MapAtOrDefault(producer_op_name2ctrl_consumer_nodes_, node->op().op_name());
+  for (const auto* consumer_node : nodes) { HandleOnce(consumer_node); }
+}
+
+Maybe<void> ComputeGraph::InitTopoOrderValue() {
+  using namespace std::placeholders;
+  int64_t topo_order_value = 0;
+  const auto& UpdateTopoOrderValue = [&](const ComputeNode* node) -> Maybe<void> {
+    auto* mut_node = const_cast<ComputeNode*>(node);
+    CHECK_ISNULL_OR_RETURN(mut_node->topo_order_value_.get())
+        << "Do not initialize topo_order_value twice";
+    mut_node->topo_order_value_.reset(new int64_t());
+    *mut_node->topo_order_value_ = ++topo_order_value;
+    return Maybe<void>::Ok();
+  };
+  JUST(MaybeTopoForEachNode(
+      source_nodes(), std::bind(&ComputeGraph::ForEachDataAndCtrlInNode, this, _1, _2),
+      std::bind(&ComputeGraph::ForEachDataAndCtrlOutNode, this, _1, _2), UpdateTopoOrderValue));
+  return Maybe<void>::Ok();
+}
+
 Maybe<ComputeNode*> ComputeGraph::MutNode4OpName(const std::string& op_name) {
   return MapAt(op_name2node_, op_name);
 }
@@ -83,5 +137,15 @@ Maybe<void> ComputeGraph::TopoForEachComputeNode(
   return MaybeTopoForEachNode(
       [&](const ComputeNode* node) -> Maybe<void> { return DoEach(*node); });
 }
+
+Maybe<void> ComputeGraph::WithDotEndGetter(const std::function<Maybe<std::string>()>& get_dot_end,
+                                           const std::function<Maybe<void>()>& Do) {
+  get_dot_end_ = get_dot_end;
+  JUST(Do());
+  get_dot_end_ = []() -> Maybe<std::string> { return std::make_shared<std::string>(); };
+  return Maybe<void>::Ok();
+}
+
+Maybe<std::string> ComputeGraph::VirtualDotEnd() const { return get_dot_end_(); }
 
 }  // namespace oneflow

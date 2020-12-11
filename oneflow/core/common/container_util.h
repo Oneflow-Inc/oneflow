@@ -28,6 +28,16 @@ template<typename Key, typename Hash = std::hash<Key>>
 using HashSet = std::unordered_set<Key, Hash>;
 
 template<typename MapT, typename KeyT>
+scalar_or_const_ref_t<typename MapT::mapped_type> MapAtOrDefault(const MapT& map, const KeyT& key) {
+  const auto& iter = map.find(key);
+  if (iter == map.end()) {
+    static typename MapT::mapped_type default_val;
+    return default_val;
+  }
+  return iter->second;
+}
+
+template<typename MapT, typename KeyT>
 Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, const KeyT& key) {
   const auto& iter = map.find(key);
   CHECK_OR_RETURN(iter != map.end());
@@ -53,6 +63,18 @@ Maybe<typename VecT::value_type*> VectorAt(VecT* vec, int64_t index) {
   CHECK_GE_OR_RETURN(index, 0);
   CHECK_LT_OR_RETURN(index, vec->size());
   return &vec->at(index);
+}
+
+template<typename T>
+std::string Join(const T& vec, const std::string& glue) {
+  std::string str;
+  bool not_first = false;
+  for (const auto& elem : vec) {
+    if (not_first) { str += glue; }
+    str += elem;
+    not_first = true;
+  }
+  return str;
 }
 
 }  // namespace oneflow

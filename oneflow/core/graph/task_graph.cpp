@@ -275,7 +275,9 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       });
 
   SetOrderInGraphForEachNode();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    CHECK_JUST(ToDotWithAutoFilePath());
+  }
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -465,10 +467,10 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   InplaceLbiGraph safe_graph(*safe_obas_info, Op4OpName);
   origin_graph.ComputeSafeInplaceObns(safe_obas_info, IsLbiAllConsumersReachable);
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    origin_graph.ToDotWithFilePath(
-        JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
-    safe_graph.ToDotWithFilePath(
-        JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_safe.dot"));
+    CHECK_JUST(origin_graph.ToDotWithFilePath(
+        JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot")));
+    CHECK_JUST(safe_graph.ToDotWithFilePath(
+        JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_safe.dot")));
   }
 }
 

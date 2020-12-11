@@ -48,6 +48,9 @@ class StageChainNode : public Node<StageChainNode, StageChainEdge> {
 
   const HashSet<const ComputeNode*>& compute_nodes() const { return *compute_nodes_; }
 
+  Maybe<void> ForEachBackboneSourceComputeNode(
+      const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const;
+
   Maybe<void> ForEachSourceComputeNode(
       const std::function<Maybe<void>(const ComputeNode&)>& DoEach) const;
 
@@ -83,12 +86,13 @@ class StageChainEdge : public Edge<StageChainNode, StageChainEdge> {
   StageChainEdge() = default;
   ~StageChainEdge() = default;
 
+  const HashSet<std::string>& op_names() const { return op_names_; }
   const HashSet<LogicalBlobId>& lbis() const { return lbis_; }
 
   Maybe<size_t> NumStagePlacementInPath() const;
   Maybe<size_t> NumParallelDescInPath() const;
 
-  void add_lbi(const LogicalBlobId& lbi) { lbis_.insert(lbi); }
+  void add_lbi(const LogicalBlobId& lbi);
 
   void add_path_stage_placement_id(int64_t stage_placement_id);
   void add_path_parallel_desc_symbol_id(int64_t parallel_desc_symbol_id);
@@ -97,6 +101,7 @@ class StageChainEdge : public Edge<StageChainNode, StageChainEdge> {
 
  private:
   HashSet<LogicalBlobId> lbis_;
+  HashSet<std::string> op_names_;
   std::unique_ptr<HashSet<int64_t>> path_stage_placement_ids_;
   std::unique_ptr<HashSet<int64_t>> path_parallel_desc_symbol_ids_;
 };
@@ -115,16 +120,20 @@ class StageChainGraph : public Graph<StageChainNode, StageChainEdge> {
     return graph;
   }
 
+  Maybe<const StageChainNode&> StageChainNode4OpName(const std::string& op_name) const;
+
   Maybe<void> InitEdgeStatistics();
 
+  Maybe<void> WithDotEndGetter(const std::function<Maybe<std::string>()>& get_dot_end,
+                               const std::function<Maybe<void>()>& Do);
+
+  Maybe<std::string> VirtualDotEnd() const override;
+
  private:
+  Maybe<StageChainNode*> MutStageChainNode4OpName(const std::string& op_name);
   Maybe<void> Init(const ComputeGraph& compute_graph);
-  Maybe<void> InitNodes(
-      const ComputeGraph& compute_graph,
-      std::function<Maybe<StageChainNode*>(const std::string&)>* StageChainNode4OpName);
-  Maybe<void> InitEdges(
-      const ComputeGraph& compute_graph,
-      const std::function<Maybe<StageChainNode*>(const std::string&)>& StageChainNode4OpName);
+  Maybe<void> InitNodes(const ComputeGraph& compute_graph);
+  Maybe<void> InitEdges(const ComputeGraph& compute_graph);
 
   void MakeGetterFindOrCreateEdge(
       std::function<StageChainEdge*(StageChainNode* src, StageChainNode* dst)>* FindOrCreateEdge);
@@ -133,6 +142,9 @@ class StageChainGraph : public Graph<StageChainNode, StageChainEdge> {
       const ComputeGraph& compute_graph,
       std::function<Maybe<const std::set<const ComputeNode*>&>(const ComputeNode&)>*
           OtherStageAncestors4ComputeNode) const;
+
+  HashMap<std::string, StageChainNode*> op_name2chain_node_;
+  std::function<Maybe<std::string>()> get_dot_end_;
 };
 
 }  // namespace oneflow

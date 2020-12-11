@@ -272,7 +272,7 @@ ChainActSubGraph::ChainActSubGraph(const HashMap<int64_t, const TaskProto&>& tas
   InitEdges(regst_uid2producer_act_event, &regst_uid2consumer_act_events);
   InitNodeProducedRegstAct(regst_uid2producer_act_event, regst_uid2consumer_act_events);
   InitNodeLastConsumedRegstActGroup();
-  // ToDotWithAutoFilePath();
+  // CHECK_JUST(ToDotWithAutoFilePath());
 }
 
 void ChainActGraph::ForEachChainActSubGraph(
