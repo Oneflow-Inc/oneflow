@@ -15,21 +15,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def OneFlow_FooOp : OneFlow_Op<"foo", [NoSideEffect,
                                              SameOperandsAndResultType]> {
     let summary = "Illustrates how to define an operation.";
-    let description = [{
-        The `oneflow.foo` operation illustrates how to define a new
-        operation in a dialect. It uses an operation trait to declare that it
-        has no side effects.
-
-        This operation takes an integer argument and returns an integer.
-
-        Example:
-
-        ```mlir
-        %0 = constant 2 : i32
-        // Apply the foo operation to %0
-        %1 = oneflow.foo %0 : i32
-        ```
-    }];
 
     let arguments = (ins I32:$input);
     let results = (outs I32:$res);
@@ -37,6 +22,26 @@ def OneFlow_FooOp : OneFlow_Op<"foo", [NoSideEffect,
     let assemblyFormat = [{
         $input attr-dict `:` type($input)
     }];
+}
+
+def ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
+  let summary = "constant";
+  let arguments = (ins F64ElementsAttr:$value);
+
+  let results = (outs F64Tensor);
+
+  let parser = [{ return ::parseConstantOp(parser, result); }];
+
+  let builders = [
+    // Build a constant with a given constant tensor value.
+    OpBuilderDAG<(ins "DenseElementsAttr":$value), [{
+      build($_builder, $_state, value.getType(), value);
+    }]>,
+
+    OpBuilderDAG<(ins "double":$value)>
+  ];
+
+  let verifier = [{ return ::verify(*this); }];
 }
 
 #endif // ONEFLOW_OPS

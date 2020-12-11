@@ -13,6 +13,10 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/StandardTypes.h"
+
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 
