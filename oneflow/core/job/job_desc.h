@@ -58,9 +58,6 @@ class JobDesc final {
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
   };
-  bool enable_non_distributed_optimizer() const {
-    return job_conf_.enable_non_distributed_optimizer();
-  }
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
