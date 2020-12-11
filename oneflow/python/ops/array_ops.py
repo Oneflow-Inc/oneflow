@@ -1853,15 +1853,11 @@ def identity(
     """
     if name is None:
         name = id_util.UniqueStr("Identity_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.identity_conf, "in", x.unique_name)
-    op_conf.identity_conf.out = "out"
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+
+    op = (
+        flow.user_op_builder(name).Op("identity").Input("in", [x]).Output("out").Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("identity_n")

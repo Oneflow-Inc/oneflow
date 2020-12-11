@@ -26,7 +26,9 @@ from test_util import (
 import oneflow.typing as oft
 
 
-def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
+def _test_fused_scale_tril_fw_bw(
+    test_case, device, shape, type_name, diagonal, fill_value, scale
+):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
@@ -39,7 +41,9 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
         np_type = type_name_to_np_type[type_name]
 
     @flow.global_function(type="train", function_config=func_config)
-    def test_tril_fw_bw_job(x: oft.Numpy.Placeholder(shape, dtype=flow_type),):
+    def test_fused_scale_tril_fw_bw_job(
+        x: oft.Numpy.Placeholder(shape, dtype=flow_type),
+    ):
         with flow.scope.placement(device, "0:0"):
             x_var = flow.get_variable(
                 name="xv",
@@ -50,10 +54,13 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
             x += flow.cast(x_var, dtype=flow_type)
             if type_name == "float16":
                 out = flow.cast(
-                    flow.math.tril(flow.cast(x, flow.float16), diagonal), flow.float
+                    flow.math.fused_scale_tril(
+                        flow.cast(x, flow.float16), diagonal, scale=scale
+                    ),
+                    flow.float,
                 )
             else:
-                out = flow.math.tril(x, diagonal)
+                out = flow.math.fused_scale_tril(x, diagonal, scale=scale)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(out)
@@ -67,14 +74,14 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
     check_point = flow.train.CheckPoint()
     check_point.init()
     x = np.random.randint(low=0, high=100, size=shape)
-    test_tril_fw_bw_job(x.astype(np_type)).get()
+    test_fused_scale_tril_fw_bw_job(x.astype(np_type)).get()
 
     np_out = np.where(
         np.tril(np.ones(shape), diagonal),
-        test_global_storage.Get("x"),
+        test_global_storage.Get("x") * scale,
         np.full(shape, fill_value).astype(np_type),
     )
-    np_x_diff = np.tril(test_global_storage.Get("out_diff"), diagonal)
+    np_x_diff = np.tril(test_global_storage.Get("out_diff"), diagonal) * scale
 
     if type_name == "float16":
         tolerance = 1e-3
@@ -93,10 +100,10 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestTril(flow.unittest.TestCase):
-    def test_tril_fw_bw(test_case):
+class TestFusedScaleTril(flow.unittest.TestCase):
+    def test_fused_scale_tril_fw_bw(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "gpu"]
+        arg_dict["device"] = ["gpu"]
         arg_dict["type_name"] = [
             "float32",
             "float16",
@@ -107,6 +114,7 @@ class TestTril(flow.unittest.TestCase):
         arg_dict["shape"] = [(6, 6), (3, 6, 8)]
         arg_dict["diagonal"] = [-8, -1, 0, 1, 8]
         arg_dict["fill_value"] = [1.0, 0]
+        arg_dict["scale"] = [5.0, 3]
         for arg in GenArgDict(arg_dict):
             if arg["device"] == "cpu" and arg["type_name"] == "float16":
                 continue
@@ -116,7 +124,7 @@ class TestTril(flow.unittest.TestCase):
                 "double",
             ]:
                 continue
-            _test_tril_fw_bw(test_case, **arg)
+            _test_fused_scale_tril_fw_bw(test_case, **arg)
 
 
 if __name__ == "__main__":

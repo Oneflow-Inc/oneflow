@@ -19,7 +19,6 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -73,7 +72,7 @@ class Session(object):
         self.var_name2var_blob_ = {}
         # parallel desc symbol id in op attribute does not always correct
         # for lazy ops as parallel conf may be updated in some passes
-        # (like non_distributed_optimizer_pass)
+        # (like optimizer_placement_optimization_pass)
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
         self.lazy_interface_op_name2parallel_conf_ = {}
@@ -423,7 +422,7 @@ def api_find_or_create_module(
 def find_or_create_module(module_name, create, reuse=False):
     assert callable(create)
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
+    job_name = oneflow.current_global_function_desc().job_config_proto.job_name()
     if job_name not in sess.job_name2module_name2module_:
         sess.job_name2module_name2module_[job_name] = {}
     module_name2module = sess.job_name2module_name2module_[job_name]
