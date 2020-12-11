@@ -29,9 +29,8 @@ class GradientAccumulationRewritePass final : public JobPass {
 Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) const {
   const JobConfigProto& job_conf = ctx->job_desc().job_conf();
   if (!job_conf.has_train_conf()) { return Maybe<void>::Ok(); }
-  const TrainConf& train_conf = job_conf.train_conf();
-  if ((!train_conf.has_num_gradient_accumulation_steps())
-      || train_conf.num_gradient_accumulation_steps() <= 1) {
+  if ((!job_conf.has_num_gradient_accumulation_steps())
+      || job_conf.num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
   const OpGraph op_graph(*job);
@@ -46,8 +45,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       return &name2op_conf.at(op_conf.name());
     }
   };
-  const int64_t repeat_num =
-      GlobalJobDesc().job_conf().train_conf().num_gradient_accumulation_steps();
+  const int64_t repeat_num = GlobalJobDesc().job_conf().num_gradient_accumulation_steps();
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
     if (node->in_edges().empty()) {       // sources

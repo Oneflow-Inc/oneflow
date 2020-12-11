@@ -30,10 +30,6 @@ namespace {
 
 const TrainConf& GetTrainConf() { return GlobalJobDesc().job_conf().train_conf(); }
 
-HashSet<std::string> UniqueLossLbns(const PbRpf<std::string>& lbns) {
-  return HashSet<std::string>({lbns.cbegin(), lbns.cend()});
-}
-
 bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
@@ -70,7 +66,7 @@ void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNo
 Maybe<void> GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
   const auto& train_conf = GetTrainConf();
   HashSet<std::string> loss_op_names;
-  for (const std::string& loss_lbn : UniqueLossLbns(train_conf.loss_lbn())) {
+  for (const std::string& loss_lbn : train_conf.loss_lbn()) {
     loss_op_names.emplace(GenLogicalBlobId(loss_lbn).op_name());
   }
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -420,8 +416,7 @@ void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
                            const std::list<OpNode*>& loss_nodes,
                            HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
                            JobBuilder* job_builder) {
-  for (const std::string& loss_lbn :
-       UniqueLossLbns(ctx->job_desc().job_conf().train_conf().loss_lbn())) {
+  for (const std::string& loss_lbn : ctx->job_desc().job_conf().train_conf().loss_lbn()) {
     const LogicalBlobId loss_lbi = GenLogicalBlobId(loss_lbn);
     const auto loss_node_it = std::find_if(
         loss_nodes.cbegin(), loss_nodes.cend(),
@@ -750,7 +745,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
   JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
   const auto& train_conf = GetTrainConf();
   HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
-  for (const auto& loss_lbn : UniqueLossLbns(train_conf.loss_lbn())) {
+  for (const auto& loss_lbn : train_conf.loss_lbn()) {
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
   }

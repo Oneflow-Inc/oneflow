@@ -600,7 +600,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 bool JobBuildAndInferCtx::HasJobConf() const { return has_job_conf_; }
 
 Maybe<void> JobBuildAndInferCtx::SetTrainConf(const TrainConf& train_conf) {
-  job_->mutable_job_conf()->mutable_train_conf()->MergeFrom(train_conf);
+  *job_->mutable_job_conf()->mutable_train_conf() = train_conf;
   return Maybe<void>::Ok();
 }
 
@@ -951,8 +951,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
     JUST(DoPass("SetDefaultVariableConf"));
-    JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-    JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
