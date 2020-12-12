@@ -98,33 +98,43 @@ void ReflectionGradPading(
   const T* src = dy->dptr<T>();
   T * dest = dx->mut_dptr<T>();
 
+  printf("\n c_idx:%ld, h_idx:%ld, w_idx:%ld, pad_left:%ld, pad_top:%ld\n", c_idx, h_idx, w_idx, pad_left, pad_top);
   int64_t ip_x, ip_y;
   for(int64_t n = 0; n<dy->shape().At(0); n++){
     for(int64_t c = 0; c<dy->shape().At(c_idx); c++){
       for(int64_t i = 0; i<dy_vector[h_idx]; i++){
         for(int64_t j = 0; j<dy_vector[w_idx]; j++){
-          printf("n:%ld;  c:%ld, h:%ld, w:%ld\n", n, c, i, j);
+          printf("n:%ld, c:%ld, h:%ld, w:%ld\n", n, c, i, j);
+          printf("\npad_left:%ld >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", pad_left);
           if(j < pad_left){
+            printf("\nif(j < pad_left) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_x = pad_left * 2 - j;
           }else if( j >= pad_left && j < dx_width + pad_left){
+            printf("\nelse if( j >= pad_left && j < dx_width + pad_left)>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_x = j;
           }else{
+            printf("\nip_x = (dx_width + pad_left - 1) * 2 - j;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_x = (dx_width + pad_left - 1) * 2 - j;
           }
         
           if(i<pad_top){
+            printf("\n(i<pad_top)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_y = pad_top * 2 - i;
           }else if(i >= pad_top && i < dx_height + pad_top){
+            printf("\nelse if(i >= pad_top && i < dx_height + pad_top)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_y = i;
           }else{
+            printf("\nip_y = (dx_height + pad_top - 1) * 2 - i;  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_y = (dx_height + pad_top - 1) * 2 - i;
           }
           ip_x = ip_x - pad_left;
           ip_y = ip_y - pad_top;
-
+          printf("\nip_x:%ld;ip_y:%ld >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", ip_x, ip_y);
           int64_t src_index =  c * dy_width * dy_height + i * dy_width + j;
-          int64_t  dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
+          int64_t dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
+          printf("\nexchange >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
           dest[dest_index] += src[src_index];
+          printf("\nexchange Done>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
         }
       }
     }
@@ -223,7 +233,11 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     int64_t pad_left = padding[w_idx];
     int64_t pad_top = padding[h_idx];
 
-    ReflectionGradPading<device_type, T>(dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top);
+    //ReflectionGradPading<device_type, T>(dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top);
+
+    ReflectionPad2dGradFunctor<device_type, T>()(
+        ctx->device_ctx(), dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top
+    );
 
     
 

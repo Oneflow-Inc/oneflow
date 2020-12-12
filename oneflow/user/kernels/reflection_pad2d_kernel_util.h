@@ -26,11 +26,22 @@ namespace oneflow {
   
 #define REFLECTION_PAD2D_DATA_TYPE_CPU_SEQ \
   FLOATING_DATA_TYPE_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 #define REFLECTION_PAD2D_DATA_TYPE_GPU_SEQ \
   REFLECTION_PAD2D_DATA_TYPE_CPU_SEQ   \
+  FLOAT16_DATA_TYPE_SEQ
+
+#define REFLECTION_PAD2D_GRAD_DATA_TYPE_CPU_SEQ \
+  FLOATING_DATA_TYPE_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+
+#define REFLECTION_PAD2D_GRAD_DATA_TYPE_GPU_SEQ \
+  REFLECTION_PAD2D_GRAD_DATA_TYPE_CPU_SEQ   \
   FLOAT16_DATA_TYPE_SEQ
 
 namespace user_op {
@@ -43,11 +54,20 @@ struct ReflectionPad2dFunctor final {
 };
 
 
+template<DeviceType device_type, typename T>
+struct ReflectionPad2dGradFunctor final {
+  void operator()(
+      DeviceCtx* ctx, const Tensor*  dy, Tensor* dx, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+  );
+};
+
+
 template<typename T>
 OF_DEVICE_FUNC void DoReflectionPad2d(
     const Tensor*  x, Tensor* y, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top    
 ) {
 
+  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter util.h >> DoReflectionPad2d()\n");
   int64_t x_height = x->shape().At(h_idx);
   int64_t x_width = x->shape().At(w_idx);
   int64_t y_height = y->shape().At(h_idx);
@@ -61,39 +81,92 @@ OF_DEVICE_FUNC void DoReflectionPad2d(
   int64_t n;
   XPU_1D_KERNEL_LOOP(n, elem_cnt) {
     for(int64_t c = 0; c<y->shape().At(c_idx); c++){
-        for(int64_t i = 0; i<y->shape().At(h_idx); i++){
-          for(int64_t j = 0; j<y->shape().At(w_idx); j++){
-            if(j < pad_left){
-              ip_x = pad_left * 2 - j;
-            }else if( j >= pad_left && j < x_width + pad_left){
-              ip_x = j;
-            }else{
-              ip_x = (x_width + pad_left - 1) * 2 - j;
-            }
-
-            if(i<pad_top){
-              ip_y = pad_top * 2 - i;
-            }else if(i >= pad_top && i < x_height + pad_top){
-              ip_y = i;
-            }else{
-              ip_y = (x_height + pad_top - 1) * 2 - i;
-            }
-            ip_x = ip_x - pad_left;
-            ip_y = ip_y - pad_top;
-            int64_t  dest_index = c * y_width * y_height + i * y_width + j;
-            int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
-            //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
-            dest[dest_index] = src[src_index];
-            //Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
+      for(int64_t i = 0; i<y->shape().At(h_idx); i++){
+        for(int64_t j = 0; j<y->shape().At(w_idx); j++){
+          if(j < pad_left){
+            ip_x = pad_left * 2 - j;
+          }else if( j >= pad_left && j < x_width + pad_left){
+            ip_x = j;
+          }else{
+            ip_x = (x_width + pad_left - 1) * 2 - j;
           }
+
+          if(i<pad_top){
+            ip_y = pad_top * 2 - i;
+          }else if(i >= pad_top && i < x_height + pad_top){
+            ip_y = i;
+          }else{
+            ip_y = (x_height + pad_top - 1) * 2 - i;
+          }
+          ip_x = ip_x - pad_left;
+          ip_y = ip_y - pad_top;
+          int64_t  dest_index = c * y_width * y_height + i * y_width + j;
+          int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
+          //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
+          dest[dest_index] = src[src_index];
+          //Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
         }
+      }
     }
   }
+  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Finish util.h >> DoReflectionPad2d()\n");
 }
+
+
+template<typename T>
+OF_DEVICE_FUNC void DoReflectionPad2dGrad(
+    const Tensor*  dy, Tensor* dx, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top    
+) {
+  int64_t dx_height = dx->shape().At(h_idx);
+  int64_t dx_width = dx->shape().At(w_idx);
+  int64_t dy_height = dy->shape().At(h_idx);
+  int64_t dy_width = dy->shape().At(w_idx);
+
+  const T* src = dy->dptr<T>();
+  T * dest = dx->mut_dptr<T>();
+
+  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter util.h >> DoReflectionPad2dGrad()\n");
+  int64_t ip_x, ip_y, n;
+  XPU_1D_KERNEL_LOOP(n, dy->shape().At(0)){
+    for(int64_t c = 0; c<dy->shape().At(c_idx); c++){
+      for(int64_t i = 0; i<dy->shape().At(h_idx); i++){
+        for(int64_t j = 0; j<dy->shape().At(w_idx); j++){
+          //printf("n:%ld, c:%ld, h:%ld, w:%ld\n", n, c, i, j);
+          // printf("Enter util.h >> DoReflectionPad2dGrad() LOOP!!!!!!!!!!!!!!!!!!!!!!!1");
+          if(j < pad_left){
+            ip_x = pad_left * 2 - j;
+          }else if( j >= pad_left && j < dx_width + pad_left){
+            ip_x = j;
+          }else{
+            ip_x = (dx_width + pad_left - 1) * 2 - j;
+          }
+        
+          if(i<pad_top){
+            ip_y = pad_top * 2 - i;
+          }else if(i >= pad_top && i < dx_height + pad_top){
+            ip_y = i;
+          }else{
+            ip_y = (dx_height + pad_top - 1) * 2 - i;
+          }
+          ip_x = ip_x - pad_left;
+          ip_y = ip_y - pad_top;
+          int64_t src_index =  c * dy_width * dy_height + i * dy_width + j;
+          int64_t dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
+          dest[dest_index] += src[src_index];
+        }
+      }
+    }
+  }
+  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Finish util.h >> DoReflectionPad2dGrad()\n");
+}
+
 
 // macros for functors instantiate(used by reflection_pad2d_kernel_util.cu)
 #define INSTANTIATE_REFLECTION_PAD2D_FUNCTOR(device_type_v, dtype_pair)   \
   template struct ReflectionPad2dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
+
+#define INSTANTIATE_REFLECTION_PAD2D_GRAD_FUNCTOR(device_type_v, dtype_pair)   \
+  template struct ReflectionPad2dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
 }  // namespace user_op
 }  // namespace oneflow
