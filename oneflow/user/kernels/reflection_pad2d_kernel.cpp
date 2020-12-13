@@ -32,26 +32,15 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
 
 template<DeviceType device_type, typename T>
 void ReflectionPading(
-  const user_op::Tensor* x, user_op::Tensor* y,
-  int64_t c_idx, int64_t h_idx, int64_t w_idx, 
-  int64_t pad_left, int64_t pad_top
+  const T* src, T * dest,
+  int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
+  int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
 ){
-  DimVector x_vector = ShapeViewToDimVector(x->shape());
-  DimVector y_vector = ShapeViewToDimVector(y->shape());
-
-  int64_t x_height = x->shape().At(h_idx);
-  int64_t x_width = x->shape().At(w_idx);
-  int64_t y_height = y->shape().At(h_idx);
-  int64_t y_width = y->shape().At(w_idx);
-
   int64_t ip_x, ip_y;
-  T * dest = y->mut_dptr<T>();
-  const T* src = x->dptr<T>();
-
-  for(int64_t n = 0; n<y->shape().At(0); n++){
-      for(int64_t c = 0; c<y->shape().At(c_idx); c++){
-        for(int64_t i = 0; i<y_vector[h_idx]; i++){
-          for(int64_t j = 0; j<y_vector[w_idx]; j++){
+  for(int64_t n = 0; n<n_batch; n++){
+      for(int64_t c = 0; c<n_channel; c++){
+        for(int64_t i = 0; i<y_height; i++){
+          for(int64_t j = 0; j<y_width; j++){
             if(j < pad_left){
               ip_x = pad_left * 2 - j;
             }else if( j >= pad_left && j < x_width + pad_left){
@@ -84,57 +73,36 @@ void ReflectionPading(
 
 template<DeviceType device_type, typename T>
 void ReflectionGradPading(
-  const user_op::Tensor* dy, user_op::Tensor* dx,
-  int64_t c_idx, int64_t h_idx, int64_t w_idx, 
+  const T* src, T * dest, int64_t n_batch, int64_t n_channel,
+  int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, 
   int64_t pad_left, int64_t pad_top
 ){
-  DimVector dx_vector = ShapeViewToDimVector(dx->shape());
-  DimVector dy_vector = ShapeViewToDimVector(dy->shape());
-  int64_t dx_height = dx->shape().At(h_idx);
-  int64_t dx_width = dx->shape().At(w_idx);
-  int64_t dy_height = dy->shape().At(h_idx);
-  int64_t dy_width = dy->shape().At(w_idx);
-
-  const T* src = dy->dptr<T>();
-  T * dest = dx->mut_dptr<T>();
-
-  printf("\n c_idx:%ld, h_idx:%ld, w_idx:%ld, pad_left:%ld, pad_top:%ld\n", c_idx, h_idx, w_idx, pad_left, pad_top);
   int64_t ip_x, ip_y;
-  for(int64_t n = 0; n<dy->shape().At(0); n++){
-    for(int64_t c = 0; c<dy->shape().At(c_idx); c++){
-      for(int64_t i = 0; i<dy_vector[h_idx]; i++){
-        for(int64_t j = 0; j<dy_vector[w_idx]; j++){
+  for(int64_t n = 0; n<n_batch; n++){
+    for(int64_t c = 0; c<n_channel; c++){
+      for(int64_t i = 0; i<dy_height; i++){
+        for(int64_t j = 0; j<dy_width; j++){
           printf("n:%ld, c:%ld, h:%ld, w:%ld\n", n, c, i, j);
-          printf("\npad_left:%ld >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", pad_left);
           if(j < pad_left){
-            printf("\nif(j < pad_left) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_x = pad_left * 2 - j;
           }else if( j >= pad_left && j < dx_width + pad_left){
-            printf("\nelse if( j >= pad_left && j < dx_width + pad_left)>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_x = j;
           }else{
-            printf("\nip_x = (dx_width + pad_left - 1) * 2 - j;>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_x = (dx_width + pad_left - 1) * 2 - j;
           }
         
           if(i<pad_top){
-            printf("\n(i<pad_top)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_y = pad_top * 2 - i;
           }else if(i >= pad_top && i < dx_height + pad_top){
-            printf("\nelse if(i >= pad_top && i < dx_height + pad_top)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_y = i;
           }else{
-            printf("\nip_y = (dx_height + pad_top - 1) * 2 - i;  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
             ip_y = (dx_height + pad_top - 1) * 2 - i;
           }
           ip_x = ip_x - pad_left;
           ip_y = ip_y - pad_top;
-          printf("\nip_x:%ld;ip_y:%ld >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n", ip_x, ip_y);
           int64_t src_index =  c * dy_width * dy_height + i * dy_width + j;
           int64_t dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
-          printf("\nexchange >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
           dest[dest_index] += src[src_index];
-          printf("\nexchange Done>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
         }
       }
     }
@@ -156,7 +124,6 @@ class ReflectionPad2dKernel final : public OpKernel {
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = x->shape().NumAxes();
-    const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(x->data_type()));
     CHECK_EQ(padding.size(), ndims);
     int64_t c_idx, h_idx, w_idx;
     if (data_format == "NCHW") {
@@ -172,10 +139,24 @@ class ReflectionPad2dKernel final : public OpKernel {
     int64_t pad_left = padding[w_idx];
     int64_t pad_top = padding[h_idx];
 
-    //ReflectionPading<device_type, T>(x, y, c_idx, h_idx, w_idx, pad_left, pad_top);
+    int64_t n_batch = y->shape().At(0);
+    int64_t n_channel = y->shape().At(c_idx);
+    int64_t y_height = y->shape().At(h_idx);
+    int64_t y_width = y->shape().At(w_idx);
+    int64_t x_height = x->shape().At(h_idx);
+    int64_t x_width = x->shape().At(w_idx);
+
+    T * dest = y->mut_dptr<T>();
+    const T* src = x->dptr<T>();
+
+    // ReflectionPading<device_type, T>(
+    //   src, dest, n_batch, n_channel, y_height, y_width, 
+    //   x_height, x_width, pad_left, pad_top
+    // );
 
     ReflectionPad2dFunctor<device_type, T>()(
-        ctx->device_ctx(), x, y, c_idx, h_idx, w_idx, pad_left, pad_top
+        ctx->device_ctx(), src, dest, n_batch, n_channel, 
+        y_height, y_width, x_height, x_width, pad_left, pad_top
     );
 
   }
@@ -215,7 +196,6 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = dy->shape().NumAxes();
-    const int64_t sizeof_dtype = static_cast<int64_t>(GetSizeOfDataType(dy->data_type()));
     CHECK_EQ(padding.size(), ndims);
 
     int64_t c_idx, h_idx, w_idx;
@@ -232,11 +212,24 @@ class ReflectionPad2dGradKernel final : public OpKernel {
   
     int64_t pad_left = padding[w_idx];
     int64_t pad_top = padding[h_idx];
+    int64_t n_batch = dy->shape().At(0);
+    int64_t n_channel = dy->shape().At(c_idx);
+    int64_t dy_height = dy->shape().At(h_idx);
+    int64_t dy_width = dy->shape().At(w_idx);
+    int64_t dx_height = dx->shape().At(h_idx);
+    int64_t dx_width = dx->shape().At(w_idx);
 
-    //ReflectionGradPading<device_type, T>(dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top);
+    const T* src = dy->dptr<T>();
+    T * dest = dx->mut_dptr<T>();
 
+    // ReflectionGradPading<device_type, T>(
+    //   src, dest, n_batch, n_channel, dy_height, dy_width, 
+    //   dx_height, dx_width, pad_left, pad_top
+    // );
+    
     ReflectionPad2dGradFunctor<device_type, T>()(
-        ctx->device_ctx(), dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top
+      ctx->device_ctx(), src, dest, n_batch, n_channel, 
+      dy_height, dy_width, dx_height, dx_width, pad_left, pad_top
     );
 
     
