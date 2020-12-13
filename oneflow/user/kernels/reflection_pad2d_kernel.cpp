@@ -60,9 +60,7 @@ void ReflectionPading(
             ip_y = ip_y - pad_top;
             int64_t  dest_index = c * y_width * y_height + i * y_width + j;
             int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
-            //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
             dest[dest_index] = src[src_index];
-            //Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
           }
         }
       }
@@ -149,10 +147,6 @@ class ReflectionPad2dKernel final : public OpKernel {
     T * dest = y->mut_dptr<T>();
     const T* src = x->dptr<T>();
 
-    // ReflectionPading<device_type, T>(
-    //   src, dest, n_batch, n_channel, y_height, y_width, 
-    //   x_height, x_width, pad_left, pad_top
-    // );
 
     ReflectionPad2dFunctor<device_type, T>()(
         ctx->device_ctx(), src, dest, n_batch, n_channel, 
@@ -222,11 +216,6 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const T* src = dy->dptr<T>();
     T * dest = dx->mut_dptr<T>();
 
-    // ReflectionGradPading<device_type, T>(
-    //   src, dest, n_batch, n_channel, dy_height, dy_width, 
-    //   dx_height, dx_width, pad_left, pad_top
-    // );
-    
     ReflectionPad2dGradFunctor<device_type, T>()(
       ctx->device_ctx(), src, dest, n_batch, n_channel, 
       dy_height, dy_width, dx_height, dx_width, pad_left, pad_top

@@ -72,9 +72,10 @@ OF_DEVICE_FUNC void DoReflectionPad2d(
     int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
     int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
 ) {
-  int64_t ip_x, ip_y;
-  int64_t n;
-  XPU_1D_KERNEL_LOOP(n, n_batch) {
+  int64_t dest_num = n_channel * y_height * y_width;
+  int64_t src_num = n_channel * x_height * x_width;
+  XPU_1D_KERNEL_LOOP(n, n_batch){
+    int64_t ip_x, ip_y;
     for(int64_t c = 0; c<n_channel; c++){
       for(int64_t i = 0; i<y_height; i++){
         for(int64_t j = 0; j<y_width; j++){
@@ -95,15 +96,15 @@ OF_DEVICE_FUNC void DoReflectionPad2d(
           }
           ip_x = ip_x - pad_left;
           ip_y = ip_y - pad_top;
-          int64_t  dest_index = c * y_width * y_height + i * y_width + j;
-          int64_t src_index =  c * x_width * x_height + ip_y * x_width + ip_x;
-          //printf("src_index:%ld;  dest_index:%ld\n", src_index, dest_index);
+          int64_t num = n * dest_num + c*n_channel + i*y_height + j;
+          int64_t  dest_index = n * dest_num + c * y_width * y_height + i * y_width + j;
+          int64_t src_index = n * src_num + c * x_width * x_height + ip_y * x_width + ip_x;
           dest[dest_index] = src[src_index];
-          //Memcpy<device_type>(ctx->device_ctx(), y->mut_dptr<T>() + dest_index, x->dptr<T>() + src_index, sizeof_dtype);
         }
       }
     }
   }
+  
 }
 
 
@@ -113,8 +114,10 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(
     int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, 
     int64_t pad_left, int64_t pad_top 
 ) {
-  int64_t ip_x, ip_y, n;
+  int64_t src_num = n_channel * dy_height * dy_width;
+  int64_t dest_num = n_channel * dx_height * dx_width;
   XPU_1D_KERNEL_LOOP(n, n_batch){
+    int64_t ip_x, ip_y;
     for(int64_t c = 0; c<n_channel; c++){
       for(int64_t i = 0; i<dy_height; i++){
         for(int64_t j = 0; j<dy_width; j++){
@@ -135,8 +138,8 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(
           }
           ip_x = ip_x - pad_left;
           ip_y = ip_y - pad_top;
-          int64_t src_index =  c * dy_width * dy_height + i * dy_width + j;
-          int64_t dest_index = c * dx_width *dx_height + ip_y * dx_width + ip_x;
+          int64_t src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j;
+          int64_t dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x;
           dest[dest_index] += src[src_index];
         }
       }
