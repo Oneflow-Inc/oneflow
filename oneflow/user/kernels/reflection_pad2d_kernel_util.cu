@@ -24,32 +24,42 @@ namespace user_op {
 
 template<typename T>
 __global__ void DoCUDAReflectionPad2d(
-    const Tensor*  x, Tensor* y, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+    const T* src, T * dest,
+    int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
+    int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
 ) {
-  printf("\n .cu >>>>>>>>>>>>>>>>>>> DoCUDAReflectionPad2d !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \n");
-  DoReflectionPad2d<T>(x, y, c_idx, h_idx, w_idx, pad_left, pad_top);
-  printf("\n .cu >>>>>>>>>>>>>>>>>>> DoCUDAReflectionPad2d finished !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \n");
+  DoReflectionPad2d<T>(
+    src, dest, n_batch, n_channel, y_height, y_width, 
+    x_height, x_width, pad_left, pad_top
+  );
 };
 
 
 template<typename T>
 __global__ void DoCUDAReflectionPad2dGrad(
-    const Tensor*  dy, Tensor* dx, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+    const T* src, T * dest,
+    int64_t n_batch, int64_t n_channel,int64_t dy_height, int64_t dy_width,
+    int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
 ) {
-  printf("\n .cu >>>>>>>>>>>>>>>>>>> DoCUDAReflectionPad2dGrad !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \n");
-  DoReflectionPad2dGrad<T>(dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top);
+  DoReflectionPad2dGrad<T>(
+    src, dest, n_batch, n_channel, dy_height, dy_width, 
+    dx_height, dx_width, pad_left, pad_top
+  );
 };
 
 
 template<typename T>
 struct ReflectionPad2dFunctor<DeviceType::kGPU, T> final {
   void operator()(
-      DeviceCtx* ctx, const Tensor*  x, Tensor* y, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+      DeviceCtx* ctx, const T* src, T * dest,
+      int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
+      int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
     ){
-    int64_t  elem_cnt = y->shape().elem_cnt();
-    printf("\n.cu >>>>>>>>>>>>>>>>> ReflectionPad2dFunctor >> elem_cnt >>>>>>>>>>>>>>>>>>>>>>>>>>>%ld !\n", elem_cnt);
+    int64_t elem_cnt = n_batch*n_channel*y_height*y_width;
     RUN_CUDA_KERNEL((DoCUDAReflectionPad2d<T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                   x, y, c_idx, h_idx, w_idx, pad_left, pad_top);
+      src, dest, n_batch, n_channel, y_height, y_width, 
+      x_height, x_width, pad_left, pad_top
+    );
   }
 };
 
@@ -57,12 +67,15 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, T> final {
 template<typename T>
 struct ReflectionPad2dGradFunctor<DeviceType::kGPU, T> final {
   void operator()(
-      DeviceCtx* ctx, const Tensor*  dy, Tensor* dx, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+      DeviceCtx* ctx, const T* src, T * dest,
+      int64_t n_batch, int64_t n_channel,int64_t dy_height, int64_t dy_width,
+      int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
     ){
-    int64_t  elem_cnt = dy->shape().elem_cnt();
-    printf("\n.cu >>>>>>>>>>>>>>>>> ReflectionPad2dGradFunctor >> elem_cnt >>>>>>>>>>>>>>>>>>>>>>>>>>>%ld !\n", elem_cnt);
+    int64_t elem_cnt = n_batch*n_channel*dy_height*dy_width;
     RUN_CUDA_KERNEL((DoCUDAReflectionPad2dGrad<T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-                   dy, dx, c_idx, h_idx, w_idx, pad_left, pad_top);
+      src, dest, n_batch, n_channel, dy_height, dy_width, 
+      dx_height, dx_width, pad_left, pad_top
+    );
   }
 };
 

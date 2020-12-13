@@ -49,7 +49,9 @@ namespace user_op {
 template<DeviceType device_type, typename T>
 struct ReflectionPad2dFunctor final {
   void operator()(
-      DeviceCtx* ctx, const Tensor*  x, Tensor* y, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+      DeviceCtx* ctx, const T* src, T * dest,
+      int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
+      int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
   );
 };
 
@@ -57,32 +59,25 @@ struct ReflectionPad2dFunctor final {
 template<DeviceType device_type, typename T>
 struct ReflectionPad2dGradFunctor final {
   void operator()(
-      DeviceCtx* ctx, const Tensor*  dy, Tensor* dx, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top
+      DeviceCtx* ctx, const T* src, T * dest,
+      int64_t n_batch, int64_t n_channel,int64_t dy_height, int64_t dy_width,
+      int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
   );
 };
 
 
 template<typename T>
 OF_DEVICE_FUNC void DoReflectionPad2d(
-    const Tensor*  x, Tensor* y, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top    
+    const T* src, T * dest,
+    int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
+    int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
 ) {
-
-  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter util.h >> DoReflectionPad2d()\n");
-  int64_t x_height = x->shape().At(h_idx);
-  int64_t x_width = x->shape().At(w_idx);
-  int64_t y_height = y->shape().At(h_idx);
-  int64_t y_width = y->shape().At(w_idx);
-
   int64_t ip_x, ip_y;
-  T * dest = y->mut_dptr<T>();
-  const T* src = x->dptr<T>();
-
-  int64_t elem_cnt = y->shape().At(0);
   int64_t n;
-  XPU_1D_KERNEL_LOOP(n, elem_cnt) {
-    for(int64_t c = 0; c<y->shape().At(c_idx); c++){
-      for(int64_t i = 0; i<y->shape().At(h_idx); i++){
-        for(int64_t j = 0; j<y->shape().At(w_idx); j++){
+  XPU_1D_KERNEL_LOOP(n, n_batch) {
+    for(int64_t c = 0; c<n_channel; c++){
+      for(int64_t i = 0; i<y_height; i++){
+        for(int64_t j = 0; j<y_width; j++){
           if(j < pad_left){
             ip_x = pad_left * 2 - j;
           }else if( j >= pad_left && j < x_width + pad_left){
@@ -109,30 +104,20 @@ OF_DEVICE_FUNC void DoReflectionPad2d(
       }
     }
   }
-  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Finish util.h >> DoReflectionPad2d()\n");
 }
 
 
 template<typename T>
 OF_DEVICE_FUNC void DoReflectionPad2dGrad(
-    const Tensor*  dy, Tensor* dx, int64_t c_idx, int64_t h_idx, int64_t w_idx, int64_t pad_left, int64_t pad_top    
+    const T* src, T * dest, int64_t n_batch, int64_t n_channel,
+    int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, 
+    int64_t pad_left, int64_t pad_top 
 ) {
-  int64_t dx_height = dx->shape().At(h_idx);
-  int64_t dx_width = dx->shape().At(w_idx);
-  int64_t dy_height = dy->shape().At(h_idx);
-  int64_t dy_width = dy->shape().At(w_idx);
-
-  const T* src = dy->dptr<T>();
-  T * dest = dx->mut_dptr<T>();
-
-  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter util.h >> DoReflectionPad2dGrad()\n");
   int64_t ip_x, ip_y, n;
-  XPU_1D_KERNEL_LOOP(n, dy->shape().At(0)){
-    for(int64_t c = 0; c<dy->shape().At(c_idx); c++){
-      for(int64_t i = 0; i<dy->shape().At(h_idx); i++){
-        for(int64_t j = 0; j<dy->shape().At(w_idx); j++){
-          //printf("n:%ld, c:%ld, h:%ld, w:%ld\n", n, c, i, j);
-          // printf("Enter util.h >> DoReflectionPad2dGrad() LOOP!!!!!!!!!!!!!!!!!!!!!!!1");
+  XPU_1D_KERNEL_LOOP(n, n_batch){
+    for(int64_t c = 0; c<n_channel; c++){
+      for(int64_t i = 0; i<dy_height; i++){
+        for(int64_t j = 0; j<dy_width; j++){
           if(j < pad_left){
             ip_x = pad_left * 2 - j;
           }else if( j >= pad_left && j < dx_width + pad_left){
@@ -157,7 +142,6 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(
       }
     }
   }
-  printf("\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Finish util.h >> DoReflectionPad2dGrad()\n");
 }
 
 
