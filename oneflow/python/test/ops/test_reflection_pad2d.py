@@ -23,6 +23,41 @@ import oneflow.typing as tp
 from test_util import Args, GenArgDict, GenArgList
 
 
+def flatten_array(input_array):
+        output_array = list()
+        for x in np.nditer(input_array):
+            output_array.append(x.tolist())
+        return output_array
+    
+
+def array_to_numpy(input_array, target_shape):
+    return np.array(input_array).reshape(target_shape, order='C')
+
+
+def index2coordinate(idx, tensor_shape):
+    coordinate = []
+    tmp = idx
+    for i in range(len(tensor_shape) - 1, -1, -1):
+        axis_size = tensor_shape[i]
+        coor = tmp % axis_size
+        coordinate.insert(0, int(coor))
+        tmp = (tmp - coor) / axis_size
+    return coordinate
+
+
+def coordinate2index(coordinate, tensor_shape):
+    if len(coordinate) != len(tensor_shape):
+        raise "wrong coordinate or shape"
+    idx = 0
+    for i, coor in enumerate(coordinate):
+        size_at_axis = coor
+        for j in range(i + 1, len(tensor_shape)):
+            size_at_axis *= tensor_shape[j]
+
+        idx += size_at_axis
+    return idx
+
+
 def _make_op_function(
     test_case,
     input,
@@ -99,59 +134,73 @@ def _make_op_function(
 
 
 def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
-    def _flatten_array(input_array):
-        output_array = list()
-        for x in np.nditer(input_array):
-            output_array.append(x.tolist())
-        return output_array
+    if data_format == "NCHW":
+        c_idx, h_idx, w_idx = 1, 2, 3
+        pad_top = pad_bottom = padding[h_idx]
+        pad_left = pad_right = padding[w_idx]
+        pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
+    elif data_format == "NHWC":
+        h_idx, w_idx, c_idx = 1, 2, 3
+        pad_top = pad_bottom = padding[h_idx]
+        pad_left = pad_right = padding[w_idx]
+        pad_shape = ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+    else:
+        raise "data_format must be 'NCHW' or 'NHWC'"
 
-    def _index2coordinate(idx, tensor_shape):
-        coordinate = []
-        tmp = idx
-        for i in range(len(tensor_shape) - 1, -1, -1):
-            axis_size = tensor_shape[i]
-            coor = tmp % axis_size
-            coordinate.insert(0, int(coor))
-            tmp = (tmp - coor) / axis_size
-        return coordinate
+    
 
-    def _coordinate2index(coordinate, tensor_shape):
-        if len(coordinate) != len(tensor_shape):
-            raise "wrong coordinate or shape"
-        idx = 0
-        for i, coor in enumerate(coordinate):
-            size_at_axis = coor
-            for j in range(i + 1, len(tensor_shape)):
-                size_at_axis *= tensor_shape[j]
-
-            idx += size_at_axis
-        return idx
-
-    def _np_reflection_pad2d(input, padding, data_format):
-        if data_format == "NCHW":
-            pad_top = pad_bottom = padding[2]
-            pad_left = pad_right = padding[3]
-            pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
-        elif data_format == "NHWC":
-            pad_top = pad_bottom = padding[1]
-            pad_left = pad_right = padding[2]
-            pad_shape = ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
-        else:
-            raise "data_format must be 'NCHW' or 'NHWC'"
-
+    def _np_reflection_pad2d(input, pad_shape):
         numpy_reflect = np.pad(input, pad_shape, "reflect")
         return numpy_reflect
 
-    def _np_reflection_pad2d_grad(input, padding, data_format):
-        numpy_reflect = np.ones(input.shape, np.int32)
-        return numpy_reflect
+    def _np_reflection_pad2d_grad(src, dest):
+        dx_height, dx_width = input.shape[h_idx], input.shape[w_idx]
+        dy_height,dy_width = output.shape[h_idx], output.shape[w_idx]
+
+        numpy_src = np.ones(src.shape, np.int32)
+        numpy_dest = np.zeros(dest.shape, np.int32)
+        array_src = flatten_array(numpy_src)
+        array_dest = flatten_array(numpy_dest)
+
+        src_num = src.shape[c_idx] * src.shape[h_idx] * src.shape[w_idx]
+        dest_num = dest.shape[c_idx] * dest.shape[h_idx] * dest.shape[w_idx]
+        elements_num = src.shape[0] * src_num
+        for iter_n in range(elements_num):
+            coords = index2coordinate(iter_n, src.shape)
+            n, c, i, j = coords[0], coords[c_idx], coords[h_idx], coords[w_idx]
+            ip_x = ip_y = 0
+            if (j < pad_left):
+                ip_x = pad_left * 2 - j
+            elif (j >= pad_left and j < (dx_width + pad_left)):
+                ip_x = j
+            else:
+                ip_x = (dx_width + pad_left - 1) * 2 - j
+            
+            
+            if (i<pad_top):
+                ip_y = pad_top * 2 - i
+            elif (i >= pad_top and i < (dx_height + pad_top)):
+                ip_y = i
+            else:
+                ip_y = (dx_height + pad_top - 1) * 2 - i
+
+            ip_x = ip_x - pad_left
+            ip_y = ip_y - pad_top
+            src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
+            dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+            array_dest[dest_index] += array_src[src_index]
+
+        numpy_dest = array_to_numpy(array_dest, dest.shape)
+        return numpy_dest
 
     if is_float:
         input = np.random.random(input_shape).astype(np.float32)
     else:
         input = np.random.randint(0, 100, input_shape)
-    output = _np_reflection_pad2d(input, padding, data_format)
-    grad = _np_reflection_pad2d_grad(input, padding, data_format)
+
+    
+    output = _np_reflection_pad2d(input, pad_shape)
+    grad = _np_reflection_pad2d_grad(output, input)
 
     numpy_results = {
         "input": input,
@@ -160,6 +209,8 @@ def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
         "output": output,
         "grad": grad,
     }
+    # print("input.shape:", input.shape, "padding:", padding, "data_format:", data_format,
+    #     "output.shape:", output.shape, "grad.shape:", grad.shape)
     return numpy_results
 
 
@@ -202,7 +253,7 @@ def _gen_arg_dict(
         gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1], "NCHW")
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((4, 3, 3, 2), [0, 0, 2, 1], "NHWC")
+        gen_numpy_test_sample((4, 3, 3, 2), [0, 0, 2, 1], "NCHW")
     )
     arg_dict["samples"].append(
         gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 2], "NCHW")
@@ -237,13 +288,13 @@ class TestReflectionPad2d1n1d(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_float_gpu(test_case):
-        arg_dict = _gen_arg_dict("gpu", "float", "0:0", 1)
+        arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_int_gpu(test_case):
-        arg_dict = _gen_arg_dict("gpu", "int", "0:0", 1)
+        arg_dict = _gen_arg_dict("cpu", "int", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
