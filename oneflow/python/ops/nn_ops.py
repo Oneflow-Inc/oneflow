@@ -3290,7 +3290,7 @@ def pixel_shuffle(
     _batch, _channel, _height, _width = input.shape
     assert (
         _channel % (upscale_factor * upscale_factor) == 0
-    ), "The channels of input must be divided by (upscale_factor * upscale_factor)"
+    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
 
     if name is None:
         name = id_util.UniqueStr("PixelShuffle")
@@ -3365,7 +3365,7 @@ def pixel_shufflev2(
     _batch, _channel, _height, _width = input.shape
     assert (
         _channel % (h_upscale_factor * w_upscale_factor) == 0
-    ), "The channels of input must be divided by (h_upscale_factor * w_upscale_factor)"
+    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
 
     if name is None:
         name = id_util.UniqueStr("PixelShufflev2")
