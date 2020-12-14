@@ -3280,7 +3280,7 @@ def pixel_shuffle(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: [description]
+        remote_blob_util.BlobDef: The result Blob. 
     """
     assert (
         upscale_factor > 0
@@ -3324,6 +3324,39 @@ def pixel_shufflev2(
     w_upscale_factor: int,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator is similar to `oneflow.nn.PixelShuffle`. The difference is that in 
+    `oneflow.nn.PixelShuffle`, the upscale factor of height and width is the same. But in 
+    `oneflow.nn.PixelShufflev2`, you can set different upscale factor for height and width. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        h_upscale_factor (int): The upscale factor of height. 
+        w_upscale_factor (int): The upscale factor of width. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def PixelShufflev2Job(input: tp.Numpy.Placeholder(shape=(3, 16, 2, 4), dtype=flow.float32))->tp.Numpy:
+            out = flow.nn.PixelShufflev2(input, h_upscale_factor=2, w_upscale_factor=4)
+
+            return out
+
+        input = np.random.uniform(size=(3, 16, 2, 4)).astype(np.float32)
+        out = PixelShuffleJob(input)
+
+        # out.shape (3, 2, 4, 16)
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob.
+    """
     assert (
         h_upscale_factor > 0 and w_upscale_factor > 0
     ), "The factor of height and width must larger than zero"

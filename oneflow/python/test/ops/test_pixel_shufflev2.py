@@ -23,7 +23,7 @@ import os
 
 
 def _compare_pixel_shuffle_with_np(
-    input_shape, upscale_factor, device_type, machine_ids, device_counts
+    input_shape, h_factor, w_factor, device_type, machine_ids, device_counts
 ):
     input_1 = np.random.random(size=input_shape).astype(np.float32)
 
@@ -41,49 +41,33 @@ def _compare_pixel_shuffle_with_np(
 
         _batch, _channel, _height, _width = input.shape
         assert (
-            _channel % (upscale_factor ** 2) == 0
-        ), "The channels of input tensor must be divisible by (upscale_factor * upscale_factor)"
+            _channel % (h_factor * w_factor) == 0
+        ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
+        _new_c = int(_channel / (h_factor * w_factor))
 
-        _new_c = int(_channel / (upscale_factor ** 2))
-
-        out = np.reshape(
-            input, [_batch, _new_c, upscale_factor * upscale_factor, _height, _width]
-        )
-        out = np.reshape(
-            out, [_batch * _new_c, upscale_factor, upscale_factor, _height, _width]
-        )
+        out = np.reshape(input, [_batch, _new_c, h_factor * w_factor, _height, _width])
+        out = np.reshape(out, [_batch * _new_c, h_factor, w_factor, _height, _width])
         out = np.transpose(out, [0, 3, 1, 4, 2])
-        out = np.reshape(
-            out, [_batch, _new_c, _height * upscale_factor, _width * upscale_factor]
-        )
+        out = np.reshape(out, [_batch, _new_c, _height * h_factor, _width * w_factor])
 
         return out
 
     np_out_pixel_shuffle = np_pixel_shuffle(input_1)
 
-    def np_pixel_shuffle_diff(input, upscale_factor):
-        # Set diff as 1
-        diff = np.ones_like(input)
+    def np_pixel_shuffle_diff(input, h_factor, w_factor):
         _batch, _new_channel, _height_mul_factor, _width_mul_factor = input.shape
-        _channel = _new_channel * (upscale_factor ** 2)
-        _height = _height_mul_factor // upscale_factor
-        _width = _width_mul_factor // upscale_factor
+        _channel = _new_channel * (h_factor * w_factor)
+        _height = _height_mul_factor // h_factor
+        _width = _width_mul_factor // w_factor
 
-        bp_result = np.zeros((_batch, _channel, _height, _width)).astype(np.float32)
-        for c in range(_channel):
-            for h in range(_height):
-                for w in range(_width):
-                    out_c_idx = int(c / (upscale_factor ** 2))
-                    inner_c = c - out_c_idx * upscale_factor * upscale_factor
-                    out_h_idx = h * upscale_factor + int(inner_c / upscale_factor)
-                    out_w_idx = w * upscale_factor + int(inner_c % upscale_factor)
-                    bp_result[:, c, h, w] = diff[:, out_c_idx, out_h_idx, out_w_idx]
+        out = np.ones(shape=(_batch, _channel, _height, _width))
+        return out
 
-        return bp_result
-
-    _np_grad = np_pixel_shuffle_diff(np_out_pixel_shuffle, upscale_factor)
+    _np_grad = np_pixel_shuffle_diff(np_out_pixel_shuffle, h_factor, w_factor)
 
     def assert_prediction_grad(blob: tp.Numpy):
+        print("Of grad is: ", blob.shape)
+
         assert np.allclose(blob, _np_grad)
 
     @flow.global_function(
@@ -103,8 +87,8 @@ def _compare_pixel_shuffle_with_np(
 
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        of_pixel_shuffle_out = flow.nn.PixelShuffle(
-            x_var, upscale_factor, name="PixelShuffle"
+        of_pixel_shuffle_out = flow.nn.PixelShufflev2(
+            x_var, h_factor, w_factor, name="PixelShufflev2"
         )
 
         with flow.scope.placement(device_type, machine_ids):
@@ -119,11 +103,12 @@ def _compare_pixel_shuffle_with_np(
     assert np.allclose(of_out_pixel_shuffle, np_out_pixel_shuffle)
 
 
-def _gen_arg_dict(shape, upscale_factor, device_type, machine_ids, device_counts):
+def _gen_arg_dict(shape, h_factor, w_factor, device_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]
-    arg_dict["upscale_factor"] = [upscale_factor]
+    arg_dict["h_factor"] = [h_factor]
+    arg_dict["w_factor"] = [w_factor]
     arg_dict["device_type"] = [device_type]
     arg_dict["machine_ids"] = [machine_ids]
     arg_dict["device_counts"] = [device_counts]
@@ -134,8 +119,9 @@ def _gen_arg_dict(shape, upscale_factor, device_type, machine_ids, device_counts
 class TestPixelShuffle1n1d(flow.unittest.TestCase):
     def test_pixel_shuffle_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 4, 2, 2),
-            upscale_factor=2,
+            shape=(3, 16, 2, 4),
+            h_factor=2,
+            w_factor=4,
             device_type="cpu",
             machine_ids="0:0",
             device_counts=1,
@@ -146,8 +132,9 @@ class TestPixelShuffle1n1d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_pixel_shuffle_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16, 2, 2),
-            upscale_factor=2,
+            shape=(2, 16, 2, 2),
+            h_factor=2,
+            w_factor=2,
             device_type="gpu",
             machine_ids="0:0",
             device_counts=1,
@@ -161,8 +148,9 @@ class TestPixelShuffle1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_pixel_shuffle_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16, 2, 2),
-            upscale_factor=2,
+            shape=(3, 16, 2, 4),
+            h_factor=2,
+            w_factor=4,
             device_type="gpu",
             machine_ids="0:0-1",
             device_counts=1,
