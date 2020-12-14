@@ -278,7 +278,7 @@ template<typename F, typename R, typename X, typename Y, typename Z>
 struct Ternary {
   static cudaError_t Launch(F functor, int64_t n, const X* x, const Y* y, const Z* z, R* r,
                             cudaStream_t stream) {
-    constexpr int pack_size = PackSize<R, X, Y>();
+    constexpr int pack_size = PackSize<R, X, Y, Z>();
     const int64_t n_pack = n / pack_size;
     const int64_t tail_offset = n_pack * pack_size;
     const int64_t n_tail = n - tail_offset;
