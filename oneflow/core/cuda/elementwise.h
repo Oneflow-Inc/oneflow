@@ -31,7 +31,7 @@ namespace elementwise {
 constexpr int kBlockSize = 256;
 constexpr int kNumWaves = 64;
 
-cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
+inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   int dev;
   {
     cudaError_t err = cudaGetDevice(&dev);
@@ -47,9 +47,9 @@ cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   return cudaSuccess;
 }
 
-template<typename T, int pack_siz>
+template<typename T, int pack_size>
 struct SOA {
-  T array[pack_siz];
+  T array[pack_size];
 };
 
 template<typename T, int pack_size>
@@ -99,6 +99,9 @@ template<typename T, int pack_size,
          typename std::enable_if<(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size)>::type* =
              nullptr>
 union Pack {
+  __device__ Pack() {
+    // do nothing
+  }
   PackType<T, pack_size> storage;
   T elem[pack_size];
 };
@@ -139,7 +142,7 @@ template<typename F, typename R, typename X, typename Y, int pack_size, bool tai
 __global__ void __launch_bounds__(kBlockSize)
     ApplyBinary(F functor, int64_t n_pack, const PackType<X, pack_size>* pack_x,
                 const PackType<Y, pack_size>* pack_y, PackType<R, pack_size>* pack_r,
-                int64_t n_tail, const X* tail_x, const X* tail_y, R* tail_r) {
+                int64_t n_tail, const X* tail_x, const Y* tail_y, R* tail_r) {
   Pack<X, pack_size> p_x;
   Pack<Y, pack_size> p_y;
   Pack<R, pack_size> p_r;
@@ -153,6 +156,32 @@ __global__ void __launch_bounds__(kBlockSize)
   }
   if (tail && global_tid < n_tail) {
     tail_r[global_tid] = functor(tail_x[global_tid], tail_y[global_tid]);
+  }
+}
+
+template<typename F, typename R, typename X, typename Y, typename Z, int pack_size, bool tail>
+__global__ void __launch_bounds__(kBlockSize)
+    ApplyTernary(F functor, int64_t n_pack, const PackType<X, pack_size>* pack_x,
+                 const PackType<Y, pack_size>* pack_y, const PackType<Z, pack_size>* pack_z,
+                 PackType<R, pack_size>* pack_r, int64_t n_tail, const X* tail_x, const Y* tail_y,
+                 const Z* tail_z, R* tail_r) {
+  Pack<X, pack_size> p_x;
+  Pack<Y, pack_size> p_y;
+  Pack<Z, pack_size> p_z;
+  Pack<R, pack_size> p_r;
+  const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
+  for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
+    p_x.storage = pack_x[i];
+    p_y.storage = pack_y[i];
+    p_z.storage = pack_z[i];
+#pragma unroll
+    for (int j = 0; j < pack_size; ++j) {
+      p_r.elem[j] = functor(p_x.elem[j], p_y.elem[j], p_z.elem[j]);
+    }
+    pack_r[i] = p_r.storage;
+  }
+  if (tail && global_tid < n_tail) {
+    tail_r[global_tid] = functor(tail_x[global_tid], tail_y[global_tid], tail_z[global_tid]);
   }
 }
 
@@ -205,6 +234,37 @@ struct Binary {
           functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<const PackType<Y, pack_size>*>(y),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, nullptr, nullptr, nullptr);
+    }
+    return cudaSuccess;
+  }
+};
+
+template<typename F, typename R, typename X, typename Y, typename Z>
+struct Ternary {
+  static cudaError_t Launch(F functor, int64_t n, const X* x, const Y* y, const Z* z, R* r,
+                            cudaStream_t stream) {
+    constexpr int pack_size = PackSize<R, X, Y>();
+    const int64_t n_pack = n / pack_size;
+    const int64_t tail_offset = n_pack * pack_size;
+    const int64_t n_tail = n - tail_offset;
+    int num_blocks;
+    {
+      cudaError_t err = GetNumBlocks(n_pack, &num_blocks);
+      if (err != cudaSuccess) { return err; }
+    }
+    if (n_tail > 0) {
+      ApplyTernary<F, R, X, Y, Z, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
+          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+          reinterpret_cast<const PackType<Y, pack_size>*>(y),
+          reinterpret_cast<const PackType<Z, pack_size>*>(z),
+          reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, x + tail_offset, y + tail_offset,
+          z + tail_offset, r + tail_offset);
+    } else {
+      ApplyTernary<F, R, X, Y, Z, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
+          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+          reinterpret_cast<const PackType<Y, pack_size>*>(y),
+          reinterpret_cast<const PackType<Z, pack_size>*>(z),
+          reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, nullptr, nullptr, nullptr, nullptr);
     }
     return cudaSuccess;
   }
