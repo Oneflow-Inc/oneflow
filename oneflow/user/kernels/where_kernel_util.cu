@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/where_kernel_util.h"
-#include "oneflow/core/cuda/elementwise.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 

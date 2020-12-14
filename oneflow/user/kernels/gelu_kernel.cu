@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
-#include "oneflow/core/cuda/elementwise.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
