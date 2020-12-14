@@ -124,7 +124,7 @@ OF_DEVICE_FUNC void DoReflectionPad2d(
 
 template<typename T>
 OF_DEVICE_FUNC void DoReflectionPad2dGrad(
-    const T* src, T * dest, int64_t n_batch, int64_t n_channel,
+    const T* src, T* dest, int64_t n_batch, int64_t n_channel,
     int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, 
     int64_t pad_left, int64_t pad_top 
 ) {
@@ -154,8 +154,8 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(
           ip_y = ip_y - pad_top;
           int64_t src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j;
           int64_t dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x;
-          //DeviceAdd<T>::Invoke(src + src_index, dest + dest_index);
           dest[dest_index] += src[src_index];
+          //DeviceAdd<T>::Invoke(src + s_index, dest + d_index);
         }
       }
     }
