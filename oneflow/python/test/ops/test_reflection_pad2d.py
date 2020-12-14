@@ -288,13 +288,13 @@ class TestReflectionPad2d1n1d(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_float_gpu(test_case):
-        arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)
+        arg_dict = _gen_arg_dict("gpu", "float", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_int_gpu(test_case):
-        arg_dict = _gen_arg_dict("cpu", "int", "0:0", 1)
+        arg_dict = _gen_arg_dict("gpu", "int", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
