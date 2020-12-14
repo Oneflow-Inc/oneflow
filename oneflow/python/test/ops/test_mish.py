@@ -59,7 +59,7 @@ def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):
     def oneflow_mish(
         of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
     ) -> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, machine_ids):
             v = flow.get_variable(
                 shape=input_1.shape,
                 dtype=flow.float32,
@@ -72,7 +72,7 @@ def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):
 
         of_mish_out = flow.math.mish(x_var)
 
-        with flow.scope.placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, machine_ids):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(of_mish_out)
