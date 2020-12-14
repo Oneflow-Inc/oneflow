@@ -92,6 +92,36 @@ struct GetPackType<double, 2> {
   using type = double2;
 };
 
+template<>
+struct GetPackType<int8_t, 2> {
+  using type = char2;
+};
+
+template<>
+struct GetPackType<int8_t, 4> {
+  using type = char4;
+};
+
+template<>
+struct GetPackType<int8_t, 8> {
+  using type = long;
+};
+
+template<>
+struct GetPackType<int32_t, 2> {
+  using type = int2;
+};
+
+template<>
+struct GetPackType<int32_t, 4> {
+  using type = int4;
+};
+
+template<>
+struct GetPackType<int64_t, 2> {
+  using type = longlong2;
+};
+
 template<typename T, int pack_size>
 using PackType = typename GetPackType<T, pack_size>::type;
 
