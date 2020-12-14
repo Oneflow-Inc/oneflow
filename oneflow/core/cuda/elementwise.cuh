@@ -42,8 +42,13 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
     cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
     if (err != cudaSuccess) { return err; }
   }
-  *num_blocks =
-      std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize, sm_count * kNumWaves));
+  int tpm;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
+                                                   sm_count * tpm / kBlockSize * kNumWaves));
   return cudaSuccess;
 }
 
