@@ -3260,6 +3260,8 @@ def pixel_shuffle(
 
         import oneflow as flow
         import oneflow.typing as tp
+        import numpy as np
+
 
         @flow.global_function()
         def PixelShuffleJob(input: tp.Numpy.Placeholder(shape=(3, 4, 2, 2), dtype=flow.float32))->tp.Numpy:
@@ -3283,7 +3285,7 @@ def pixel_shuffle(
     assert (
         upscale_factor > 0
     ), "The scale factor of height and width must be larger than zero"
-    assert len(input.shape) == 4, "Only Accept 4D Blob"
+    assert len(input.shape) == 4, "Only Accept 4D Tensor"
 
     _batch, _channel, _height, _width = input.shape
     assert (
@@ -3309,6 +3311,48 @@ def pixel_shuffle(
     out = flow.reshape(
         out,
         [_batch, _new_c, _height * upscale_factor, _width * upscale_factor],
+        name=name + "_reshape3",
+    )
+
+    return out
+
+
+@oneflow_export("nn.PixelShufflev2")
+def pixel_shufflev2(
+    input: remote_blob_util.BlobDef,
+    h_upscale_factor: int,
+    w_upscale_factor: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    assert (
+        h_upscale_factor > 0 and w_upscale_factor > 0
+    ), "The factor of height and width must larger than zero"
+    assert len(input.shape) == 4, "Only Accept 4D Blob"
+
+    _batch, _channel, _height, _width = input.shape
+    assert (
+        _channel % (h_upscale_factor * w_upscale_factor) == 0
+    ), "The channels of input must be divided by (h_upscale_factor * w_upscale_factor)"
+
+    if name is None:
+        name = id_util.UniqueStr("PixelShufflev2")
+
+    _new_c = int(_channel / (h_upscale_factor * w_upscale_factor))
+
+    out = flow.reshape(
+        input,
+        [_batch, _new_c, h_upscale_factor * w_upscale_factor, _height, _width],
+        name=name + "_reshape1",
+    )
+    out = flow.reshape(
+        out,
+        [_batch * _new_c, h_upscale_factor, w_upscale_factor, _height, _width],
+        name=name + "_reshape2",
+    )
+    out = flow.transpose(out, [0, 3, 1, 4, 2], name=name + "_transpose")
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, _height * h_upscale_factor, _width * w_upscale_factor],
         name=name + "_reshape3",
     )
 
