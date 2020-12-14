@@ -32,7 +32,8 @@ namespace oneflow {
 
 #define REFLECTION_PAD2D_DATA_TYPE_GPU_SEQ \
   REFLECTION_PAD2D_DATA_TYPE_CPU_SEQ   \
-  FLOAT16_DATA_TYPE_SEQ
+  FLOAT16_DATA_TYPE_SEQ \
+  HALF_DATA_TYPE_SEQ
 
 #define REFLECTION_PAD2D_GRAD_DATA_TYPE_CPU_SEQ \
   FLOATING_DATA_TYPE_SEQ                     \
@@ -42,9 +43,23 @@ namespace oneflow {
 
 #define REFLECTION_PAD2D_GRAD_DATA_TYPE_GPU_SEQ \
   REFLECTION_PAD2D_GRAD_DATA_TYPE_CPU_SEQ   \
-  FLOAT16_DATA_TYPE_SEQ
+  FLOAT16_DATA_TYPE_SEQ \
+  HALF_DATA_TYPE_SEQ
 
 namespace user_op {
+
+
+template<typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
+#ifdef __CUDA_ARCH__
+    gpu_atomic_add(y, *x);  // TODO:(ZhaoLuyang), refine add using float16 -> half -> float -> half
+#else
+    *y += *x;
+#endif
+  };
+};
+
 
 template<DeviceType device_type, typename T>
 struct ReflectionPad2dFunctor final {
@@ -140,6 +155,7 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(
           ip_y = ip_y - pad_top;
           int64_t src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j;
           int64_t dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x;
+          //DeviceAdd<T>::Invoke(src + src_index, dest + dest_index);
           dest[dest_index] += src[src_index];
         }
       }
