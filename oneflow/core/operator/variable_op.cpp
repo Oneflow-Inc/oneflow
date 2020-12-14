@@ -66,10 +66,9 @@ Maybe<void> VariableOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VariableOp::UpdateOpconf()
-{
+Maybe<void> VariableOp::UpdateOpconf() {
   const SbpSignature* sbp_sig_conf = JUST(sbp_signature());
-  OptInt64 *split_axis = mut_op_conf()->mutable_variable_conf()->mutable_split_axis();
+  OptInt64* split_axis = mut_op_conf()->mutable_variable_conf()->mutable_split_axis();
   if (sbp_sig_conf->bn_in_op2sbp_parallel().at("out").has_split_parallel())
     split_axis->set_value(sbp_sig_conf->bn_in_op2sbp_parallel().at("out").split_parallel().axis());
   else

@@ -132,10 +132,12 @@ class Operator {
 
   Maybe<void> InferOutParallelDescIf(
       std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&) const;
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+      const ParallelDesc&) const;
   virtual Maybe<void> InferOutParallelDesc(
       std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&) const;
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+      const ParallelDesc&) const;
 
   Maybe<void> InferBatchAxisIf(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -174,7 +176,7 @@ class Operator {
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
-  
+
   virtual Maybe<void> UpdateOpconf() { return Maybe<void>::Ok(); };
 
   const JobDesc& job_desc() const { return *job_desc_; }
