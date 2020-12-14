@@ -130,10 +130,9 @@ struct GetPackType<int64_t, 2> {
 template<typename T, int pack_size>
 using PackType = typename GetPackType<T, pack_size>::type;
 
-template<typename T, int pack_size,
-         typename std::enable_if<(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size)>::type* =
-             nullptr>
+template<typename T, int pack_size>
 union Pack {
+  static_assert(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size, "");
   __device__ Pack() {
     // do nothing
   }
@@ -151,10 +150,9 @@ constexpr int PackSize() {
   return Min(kMaxPackBytes / sizeof(T), kMaxPackSize);
 }
 
-template<typename T, typename... Args,
-         typename std::enable_if<(sizeof...(Args) >= 1)>::type* = nullptr>
+template<typename T, typename U, typename... Args>
 constexpr int PackSize() {
-  return Min(PackSize<T>(), PackSize<Args...>());
+  return Min(PackSize<T>(), PackSize<U, Args...>());
 }
 
 template<typename F, typename R, typename X, int pack_size, bool tail>
