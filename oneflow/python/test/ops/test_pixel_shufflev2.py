@@ -66,8 +66,6 @@ def _compare_pixel_shuffle_with_np(
     _np_grad = np_pixel_shuffle_diff(np_out_pixel_shuffle, h_factor, w_factor)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        print("Of grad is: ", blob.shape)
-
         assert np.allclose(blob, _np_grad)
 
     @flow.global_function(

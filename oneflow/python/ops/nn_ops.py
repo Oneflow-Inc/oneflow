@@ -3282,39 +3282,7 @@ def pixel_shuffle(
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
     """
-    assert (
-        upscale_factor > 0
-    ), "The scale factor of height and width must be larger than zero"
-    assert len(input.shape) == 4, "Only Accept 4D Tensor"
-
-    _batch, _channel, _height, _width = input.shape
-    assert (
-        _channel % (upscale_factor * upscale_factor) == 0
-    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
-
-    if name is None:
-        name = id_util.UniqueStr("PixelShuffle")
-
-    _new_c = int(_channel / (upscale_factor ** 2))
-
-    out = flow.reshape(
-        input,
-        [_batch, _new_c, upscale_factor * upscale_factor, _height, _width],
-        name=name + "_reshape1",
-    )
-    out = flow.reshape(
-        out,
-        [_batch * _new_c, upscale_factor, upscale_factor, _height, _width],
-        name=name + "_reshape2",
-    )
-    out = flow.transpose(out, [0, 3, 1, 4, 2], name=name + "_transpose")
-    out = flow.reshape(
-        out,
-        [_batch, _new_c, _height * upscale_factor, _width * upscale_factor],
-        name=name + "_reshape3",
-    )
-
-    return out
+    return flow.nn.PixelShufflev2(input, upscale_factor, upscale_factor, name=name)
 
 
 @oneflow_export("nn.PixelShufflev2")
@@ -3359,7 +3327,7 @@ def pixel_shufflev2(
     """
     assert (
         h_upscale_factor > 0 and w_upscale_factor > 0
-    ), "The factor of height and width must larger than zero"
+    ), "The scale factor of height and width must larger than zero"
     assert len(input.shape) == 4, "Only Accept 4D Blob"
 
     _batch, _channel, _height, _width = input.shape
