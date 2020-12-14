@@ -538,33 +538,39 @@ void FilterOpName2ParallelBlobConf(
 }
 
 void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>>& jobs) {
-  bool has_job_enable_non_distributed_optimizer;
+  bool has_job_enable_optimizer_placement_optimization = false;
+  const auto IsEnabled = [](const Job& job) {
+    return job.job_conf().has_train_conf()
+           && job.job_conf().has_optimizer_placement_optimization_mode();
+  };
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
-    if (jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) {
-      has_job_enable_non_distributed_optimizer = true;
+    if (IsEnabled(*jobs.at(job_id))) {
+      has_job_enable_optimizer_placement_optimization = true;
       break;
     }
   }
-  if (!has_job_enable_non_distributed_optimizer) { return; }
+  if (!has_job_enable_optimizer_placement_optimization) { return; }
 
   HashSet<std::string> var_names;
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
-    if (!jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) { continue; }
+    if (!IsEnabled(*jobs.at(job_id))) { continue; }
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
       if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
       if (var_names.find(op_conf.name()) == var_names.end()) {
         var_names.emplace(op_conf.name());
       } else {
-        LOG(FATAL) << "Only support non_distribute_optimizer when jobs not sharing same variable";
+        LOG(FATAL)
+            << "Only support optimizer_placement_optimization when jobs not sharing same variable";
       }
     }
   }
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
-    if (jobs.at(job_id)->job_conf().enable_non_distributed_optimizer()) { continue; }
+    if (IsEnabled(*jobs.at(job_id))) { continue; }
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
       if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
       if (var_names.find(op_conf.name()) != var_names.end()) {
-        LOG(FATAL) << "Only support non_distribute_optimizer when jobs not sharing same variable";
+        LOG(FATAL)
+            << "Only support optimizer_placement_optimization when jobs not sharing same variable";
       }
     }
   }
