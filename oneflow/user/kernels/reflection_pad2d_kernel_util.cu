@@ -66,8 +66,7 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, T> final {
 
 // float16 special case of DimScatterAddFunctor template
 template<>
-struct ReflectionPad2dFunctor<DeviceType::kGPU, float16> final {
-  void operator()(
+void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
     DeviceCtx* ctx, const float16* src, float16 * dest,
       int64_t n_batch, int64_t n_channel,int64_t y_height, int64_t y_width,
       int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
@@ -76,8 +75,7 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, float16> final {
       RUN_CUDA_KERNEL((DoCUDAReflectionPad2d<half>), ctx, BlocksNum4ThreadsNum(elem_cnt),
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), n_batch, n_channel, y_height, y_width, 
           x_height, x_width, pad_left, pad_top);
-  }
-};
+}
 
 
 template<typename T>
@@ -97,8 +95,7 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, T> final {
 
 
 template<>
-struct ReflectionPad2dGradFunctor<DeviceType::kGPU, float16> final {
-  void operator()(
+void ReflectionPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
       DeviceCtx* ctx, const float16* src, float16 * dest,
       int64_t n_batch, int64_t n_channel,int64_t dy_height, int64_t dy_width,
       int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
@@ -108,8 +105,7 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, float16> final {
       reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), n_batch, n_channel, dy_height, dy_width, 
       dx_height, dx_width, pad_left, pad_top
     );
-  }
-};
+}
 
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_FUNCTOR,
