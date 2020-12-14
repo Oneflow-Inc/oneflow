@@ -197,16 +197,17 @@ bool CheckSbpParallel(const SbpParallel& sbp_parallel) {
 double ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
                                            const SbpParallel& consumer_sbp_parallel,
                                            const BlobDesc& logical_blob_desc,
-                                           const ParallelDesc& parallel_desc, bool is_mutable_) {
+                                           const ParallelDesc& parallel_desc, bool is_same_sbp) {
   // Checking here.
   if (!(CheckSbpParallel(producer_sbp_parallel) && CheckSbpParallel(consumer_sbp_parallel))) {
+    // TODO: replace assert
     std::cout << "Replace assert here!" << std::endl;
     return GetMaxVal<float>();
   }
   // S->S, B->B, P->P
   if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
   // Will directly modify output blob of source op. Requiring data having same sbp_parallel
-  if (is_mutable_) { return GetMaxVal<float>(); }
+  if (is_same_sbp) { return GetMaxVal<float>(); }
   // Not supporting S->P, B->P for now. Actually yes for boxing op, but it does not work with some
   // other ops.
   if (consumer_sbp_parallel.has_partial_sum_parallel()) { return GetMaxVal<float>(); }
@@ -301,8 +302,10 @@ void SbpConstructor::InitializeCopyCost(
           const SbpParallel& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
           const SbpParallel& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
           const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
-          bool is_mutable_ =
+          bool is_same_sbp =
               input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+          // TODO: recode this
+          if (op_node->op().op_name().find("Return") != std::string::npos) is_same_sbp = true;
           // Look through Edges for SbpEdge(sbp_node_producer->sbp_node_consumer)
           // Might need to use HashMap for sbp_edge
           SbpEdge<SbpSignature>* edge_found = NULL;
@@ -322,10 +325,11 @@ void SbpConstructor::InitializeCopyCost(
             }
           }
           // should use assert or CHECK process here, skip for speeding up for now
+          // TODO: print to error log
           if (edge_found == NULL) std::cout << "SbpEdge not found!" << std::endl;
 
           edge_found->Cost[sbp_id_producer][sbp_id_consumer] += ComputCopyCostBetweenTwoSbpParallel(
-              sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_mutable_);
+              sbp_producer, sbp_consumer, logical_blob_desc, parallel_desc, is_same_sbp);
 
 #ifdef TEST_DEBUG_
           // test debug
@@ -403,13 +407,12 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
     op_node->UpdateLbi2SbpParallel();
     // Update op_conf
     // TODO: add function in op_node
-    std::cout << op_node->op().op_name() << std::endl;
     op_node->mut_op()->UpdateOpconf();
   });
   // check ConstructAndInferOp in operator.cpp, might help
   // update Sbp Parallel for each blob and update them in job configure
-  JobParallelViewConf *job_parallel_view_conf = job.mutable_job_parallel_view_conf();
-  // HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;
+  JobParallelViewConf* job_parallel_view_conf = job.mutable_job_parallel_view_conf();
+  HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;
   for (const auto& pair : job.helper().identical_sbp_oba_pairs().pair()) {
     oba2sbp_identical_obas[pair.first()].push_back(pair.second());
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
@@ -426,9 +429,9 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
      * BUG: It may be processed in `GetEdgeCost` function
      */
     // UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, job_parallel_view_conf);
-    auto *op_name2sbp_signature = job_parallel_view_conf->mutable_op_name2sbp_signature_conf();
+    auto* op_name2sbp_signature = job_parallel_view_conf->mutable_op_name2sbp_signature_conf();
     (*op_name2sbp_signature)[op_node->op().op_name()] = op_node->sbp_signature();
-    
+
     // Infer logical_blob_desc
     JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
@@ -696,16 +699,7 @@ Maybe<void> SbpConstructor::InferSbpSignature(
 
   // filter out those sbp signatures who contain sbp signature configure from sbp signature list
   SbpSignatureList filtered_sbp_sigs_by_conf;
-  // remove matmul filter in sbp_sig_conf
-  // if (is_filter)
-  //   FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
-  // else
-  // if (op_.op_name().find("matmul") == std::string::npos && op_.op_name().find("bias_add") == std::string::npos)
-  // if (is_filter)
-    FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
-  // else {
-  //   filtered_sbp_sigs_by_conf = sbp_sig_list;
-  // }
+  FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
 
   CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
   // Generate Sbp candidates for sbp node with lowest order value

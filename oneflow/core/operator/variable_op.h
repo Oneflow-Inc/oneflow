@@ -31,7 +31,7 @@ class VariableOp final : public Operator {
                              const ParallelContext* parallel_ctx,
                              const SbpSignature* sbp_signature) const override;
   Maybe<void> UpdateOpconf() override;
-  Maybe<double>GetComputeComplexity(
+  Maybe<double> GetComputeComplexity(
       SbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
       const ParallelDesc& parallel_desc) const override;
