@@ -34,6 +34,7 @@ def _compare_ones_with_np(input_shape, device_type, machine_ids, device_counts):
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     np_out_ones = np.ones(shape=input_shape, dtype=np.float32)
 
