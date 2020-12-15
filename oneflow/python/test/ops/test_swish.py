@@ -37,6 +37,7 @@ def _compare_swish_with_np(input_shape, beta, device_type, machine_ids, device_c
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     def np_swish(input, beta):
         def np_sigmoid(sigmoid_input):
