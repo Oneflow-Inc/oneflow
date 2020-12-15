@@ -19,7 +19,7 @@ limitations under the License.
 #define DEBUG_ALGORITHM_
 // #define TEST_DEBUG_
 // #define PRINT_GRAPH_
-#define TEST_DEBUG_2
+// #define TEST_DEBUG_2
 
 #include "sbp_constructor.h"
 
@@ -59,8 +59,7 @@ bool IsSbpSignatureEqual(const SbpSignature& one, const SbpSignature& two) {
 }  // namespace
 
 void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
-  if (job.job_conf().job_name() == "TrainNet")
-    is_filter = false;
+  if (job.job_conf().job_name() == "TrainNet") is_filter = false;
 
   // Seek out mirrored parallel opnode from job parallel view;
   // JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
@@ -305,7 +304,7 @@ void SbpConstructor::InitializeCopyCost(
           bool is_same_sbp =
               input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
           // TODO: recode this
-          if (op_node->op().op_name().find("Return") != std::string::npos) is_same_sbp = true;
+          // if (op_node->op().op_name().find("Return") != std::string::npos) is_same_sbp = true;
           // Look through Edges for SbpEdge(sbp_node_producer->sbp_node_consumer)
           // Might need to use HashMap for sbp_edge
           SbpEdge<SbpSignature>* edge_found = NULL;
@@ -448,7 +447,8 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
       std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
       const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-      if (this_sbp_parallel.has_split_parallel()) std::cout << " S" << this_sbp_parallel.split_parallel().axis();
+      if (this_sbp_parallel.has_split_parallel())
+        std::cout << " S" << this_sbp_parallel.split_parallel().axis();
       if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
       if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
       std::cout << std::endl;
@@ -458,7 +458,8 @@ Maybe<void> SbpConstructor::UpdateSbpSignature4Op(
     for (const auto& ibn : op_node->op().output_bns()) {
       std::cout << "Out Op:" << ibn;
       const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-      if (this_sbp_parallel.has_split_parallel()) std::cout << " S" << this_sbp_parallel.split_parallel().axis();
+      if (this_sbp_parallel.has_split_parallel())
+        std::cout << " S" << this_sbp_parallel.split_parallel().axis();
       if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
       if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
       std::cout << std::endl;
@@ -686,16 +687,20 @@ Maybe<void> SbpConstructor::InferSbpSignature(
   };
   SbpSignatureList sbp_sig_list;
   JUST(op_.GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
+
   // Steal sbp signature from op_graph, if op::GetSbpSignatures do not implement
   if (sbp_sig_list.sbp_signature_size() == 1) {
     *sbp_sig_list.mutable_sbp_signature(0) = *CHECK_JUST(op_.sbp_signature());
   }
+
   // TODO: delete this
-  std::cout << "op filter: " << op_.op_name() << std::endl;
-  std::cout << sbp_sig_conf.DebugString() << std::endl;
-  std::cout << "list: " << std::endl;
-  std::cout << sbp_sig_list.DebugString() << std::endl;
-  std::cout << "================\n";
+  if (op_.op_name().find("Return") != std::string::npos) {
+    std::cout << "op filter: " << op_.op_name() << std::endl;
+    std::cout << sbp_sig_conf.DebugString() << std::endl;
+    std::cout << "list: " << std::endl;
+    std::cout << sbp_sig_list.DebugString() << std::endl;
+    std::cout << "================\n";
+  }
 
   // filter out those sbp signatures who contain sbp signature configure from sbp signature list
   SbpSignatureList filtered_sbp_sigs_by_conf;

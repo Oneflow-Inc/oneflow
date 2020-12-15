@@ -56,6 +56,21 @@ Maybe<void> ReturnOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> ReturnOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+  const BlobDesc& blob = JUST(LogicalBlobDesc4Ibn("in"));
+  for (int32_t i = 0; i < blob.shape().NumAxes(); i++) {
+    SbpSignatureBuilder sbp_sig_builder;
+    sbp_sig_builder.Split(input_bns(), i)
+        .Split(output_bns(), i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  // In a System-Pull-Return_* job. A blob named "tick" will replace the blob "in" and the
+  // SbpParallel will be set as "broadcast" for "tick" automatically.
+  return Maybe<void>::Ok();
+}
+
 Symbol<OperatorConf> ReturnOp::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(this->op_conf());
 }
