@@ -35,6 +35,7 @@ def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     def np_mish(input):
         return input * np.tanh(np.log1p(np.exp(input)))
@@ -59,7 +60,7 @@ def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):
     def oneflow_mish(
         of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
     ) -> tp.Numpy:
-        with flow.scope.placement(device_type, machine_ids):
+        with flow.scope.placement(device_type, "0:0"):
             v = flow.get_variable(
                 shape=input_1.shape,
                 dtype=flow.float32,
@@ -72,7 +73,7 @@ def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):
 
         of_mish_out = flow.math.mish(x_var)
 
-        with flow.scope.placement(device_type, machine_ids):
+        with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(of_mish_out)
