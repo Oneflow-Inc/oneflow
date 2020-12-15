@@ -25,6 +25,15 @@ struct SquareSumKernelUtil<DeviceType::kCPU, T> {
     FOR_RANGE(int64_t, i, 0, n) { sum += x[i] * x[i]; }
     *y = sum;
   }
+
+  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y) {
+    T sum = 0;
+    FOR_RANGE(int64_t, i, 0, params.size()) {
+      const auto& p = params[i];
+      FOR_RANGE(int64_t, j, 0, p.count) { sum += p.ptr[j] * p.ptr[j]; }
+    }
+    *y = sum;
+  }
 };
 
 #define INSTANTIATE_SQUARE_SUM_KERNEL_UTIL_CPU(type_cpp, type_proto) \
