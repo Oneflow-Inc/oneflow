@@ -102,7 +102,7 @@ def _compare_bceloss_with_np(
             v = flow.get_variable(
                 shape=target.shape,
                 dtype=flow.float32,
-                initializer=flow.constant_initializer(1),
+                initializer=flow.zeros_initializer(),
                 name="v",
             )
 

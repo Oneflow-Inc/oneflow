@@ -32,6 +32,7 @@ from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 import oneflow
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 
 oneflow_api = oneflow.oneflow_api
 
@@ -441,7 +442,14 @@ def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lb
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+    parallel_conf = text_format.Parse(parallel_conf_str, placement_pb.ParallelConf())
+    # Temporary transformation
+    parallel_conf_cfg = placement_cfg.ParallelConf()
+    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+    for device_name in parallel_conf.device_name:
+        parallel_conf_cfg.add_device_name(device_name)
+
+    return parallel_conf_cfg
 
 
 def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
@@ -541,11 +549,18 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     error = text_format.Parse(error_str, error_util.ErrorProto())
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
-    return text_format.Parse(parallel_conf, placement_pb.ParallelConf())
+    parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
+    # Temporary transformation
+    parallel_conf_cfg = placement_cfg.ParallelConf()
+    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+    for device_name in parallel_conf.device_name:
+        parallel_conf_cfg.add_device_name(device_name)
+
+    return parallel_conf_cfg
 
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
-    serialized_parallel_conf = str(text_format.MessageToString(parallel_conf))
+    serialized_parallel_conf = str(parallel_conf)
     (
         ofrecord,
         error_str,
@@ -626,6 +641,14 @@ def NewPhysicalSymbolId():
     if error.HasField("error_type"):
         raise JobBuildAndInferError(error)
     return object_id
+
+
+def GetOpAttributes():
+    op_attributes, error_str = oneflow_internal.GetSerializedOpAttributes()
+    error = text_format.Parse(error_str, error_util.ErrorProto())
+    if error.HasField("error_type"):
+        raise JobBuildAndInferError(error)
+    return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
 def GetJobSet():
