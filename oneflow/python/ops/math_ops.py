@@ -2193,4 +2193,3 @@ def swish(
         name = id_util.UniqueStr("Swish_")
 
     return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
-    
