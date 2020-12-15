@@ -2360,6 +2360,6 @@ def zeros(
         name=name + "var",
         shape=shape,
         dtype=dtype,
-        initializer=flow.zeros_initializer(), 
+        initializer=flow.zeros_initializer(),
         trainable=trainable,
     )
