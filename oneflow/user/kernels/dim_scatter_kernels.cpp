@@ -30,9 +30,9 @@ namespace user_op {
    private:                                                                                        \
     void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,                \
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,   \
-                  int32_t dim, const IDX_T* index, const IN_T* src, IN_T* output) const override { \
+                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) const override { \
       DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                      \
-          ctx, input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, src, output);        \
+          ctx, input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);        \
     }                                                                                              \
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                       \
   }
@@ -71,7 +71,7 @@ namespace user_op {
 // ---- REGISTER INPLACE OPS ----
 Maybe<void> SetInplace(const user_op::InferContext&,
                        user_op::AddInplaceArgPair AddInplaceArgPairFn) {
-  OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "like", 0, true));
+  OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "src", 0, true));
   return Maybe<void>::Ok();
 }
 
@@ -114,7 +114,7 @@ class DimScatterBaseKernel : public user_op::OpKernel {
   ~DimScatterBaseKernel() override = default;
   virtual void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                         const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
-                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* src,
+                        int64_t elem_cnt, int32_t dim, const IDX_T* index, const IN_T* input,
                         IN_T* output) const = 0;
 
  private:
@@ -124,7 +124,7 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int32_t dim = ctx->Attr<int32_t>("dim");
 
-    const IN_T* src = input_tensor->dptr<IN_T>();
+    const IN_T* input = input_tensor->dptr<IN_T>();
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
@@ -152,7 +152,7 @@ class DimScatterBaseKernel : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     BinaryOp(ctx->device_ctx(), input_nd_helper, output_nd_helper, ndim,
-             input_tensor->shape().elem_cnt(), dim, index, src, output);
+             input_tensor->shape().elem_cnt(), dim, index, input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -163,6 +163,7 @@ IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Update);
 REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_add_like", Add);
 REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_update_like", Update);
 REGISTER_SCATTER_INTPLACE_KERNEL("dim_scatter_add", Add);
+REGISTER_SCATTER_INTPLACE_KERNEL("dim_scatter_update", Update);
 
 }  // namespace user_op
 }  // namespace oneflow

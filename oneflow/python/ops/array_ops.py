@@ -2337,12 +2337,34 @@ def dim_scatter_update_like(
         .RemoteBlobList()[0]
     )
 
+@oneflow_export("dim_scatter_update")
+def dim_scatter_update_like(
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    input: remote_blob_util.BlobDef,
+    src: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimScatterUpdate_")
+        )
+        .Op("dim_scatter_update")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Input("src", [src])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
 
 @oneflow_export("dim_scatter_add_like")
 def dim_scatter_add_like(
     dim: int,
     index: remote_blob_util.BlobDef,
-    src: remote_blob_util.BlobDef,
+    input: remote_blob_util.BlobDef,
     like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -2351,7 +2373,7 @@ def dim_scatter_add_like(
             name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
         )
         .Op("dim_scatter_add_like")
-        .Input("input", [src])
+        .Input("input", [input])
         .Input("index", [index])
         .Input("like", [like])
         .Output("output")
@@ -2366,8 +2388,8 @@ def dim_scatter_add_like(
 def dim_scatter_add(
     dim: int,
     index: remote_blob_util.BlobDef,
+    input: remote_blob_util.BlobDef,
     src: remote_blob_util.BlobDef,
-    like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     return (
@@ -2375,9 +2397,9 @@ def dim_scatter_add(
             name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
         )
         .Op("dim_scatter_add")
-        .Input("input", [src])
+        .Input("input", [input])
         .Input("index", [index])
-        .Input("like", [like])
+        .Input("src", [src])
         .Output("output")
         .Attr("dim", int(dim))
         .Build()

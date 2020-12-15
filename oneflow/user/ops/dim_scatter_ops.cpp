@@ -150,30 +150,35 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .SetBatchAxisInferFn(InferBatchAxis)            \
       .SetGetSbpFn(SetSbp)
 
-REGISTER_USER_OP_GRAD("dim_scatter_add_like")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-      const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
-
-      ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder
-            .OpTypeName("dim_gather")  // dim_gather(grad, dim, index) -> output
-            .InputBind("index", ctx->FwOp().input("index", 0))  // gather.index <- scatter.index
-            .InputBind("input",
-                       ctx->FwOp().output_grad("output", 0))  // gather.input <- grad of scatter.out
-            .Output("output")
-            .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))
-            .Build();
+#define REGISTER_USER_OP_GRAD_SCATTER(optypename) \
+  REGISTER_USER_OP_GRAD(optypename) \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {\
+        const auto op_grad_name = ctx->FwOp().op_name() + "_grad"; \
+        ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {\
+          return builder\
+              .OpTypeName("dim_gather")  \
+              .InputBind("index", ctx->FwOp().input("index", 0))\
+              .InputBind("input", ctx->FwOp().output_grad("output", 0))\
+              .Output("output")\
+              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))\
+              .Build();\
+        });\
+        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),\
+                                  [&ctx, &op_grad_name]() -> const std::string& {\
+                                    return ctx->GetOp(op_grad_name).output("output", 0);\
+                                  });\
       });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),
-                                [&ctx, &op_grad_name]() -> const std::string& {
-                                  return ctx->GetOp(op_grad_name).output("output", 0);
-                                });
-    });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
 REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
 REGISTER_SCATTER_INPLACE_OP("dim_scatter_add");
+REGISTER_SCATTER_INPLACE_OP("dim_scatter_update");
+
+REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add_like");
+REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update_like");
+REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
+REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
+
 
 }  // namespace user_op
 }  // namespace oneflow
