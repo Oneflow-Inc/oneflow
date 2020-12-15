@@ -24,7 +24,7 @@ namespace oneflow {
 inline int64_t RegulateSliceStart(int64_t start, int64_t size) {
   // slice start must be in range [-size, size)
   // after changing to positive order it should be in range [0, size)
-  start = std::min(std::max(start, -size), std::max(size - 1, int64_t(0)));
+  start = std::min(std::max(start, -size), size - 1);
   return (start < 0) ? (start + size) : start;
 }
 
