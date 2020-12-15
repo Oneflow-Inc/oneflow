@@ -103,8 +103,8 @@ struct CrossEntropyKernelUtil<DeviceType::kGPU, T> {
   static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                              const T* x, const T* labels, T* y) {
     cudaMemset(y, 0, sizeof(T) * num_instances);
-    ComputeEntropyGpu<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(),
-                        0, ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, y);
+    ComputeEntropyGpu<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
+                        ctx->cuda_stream()>>>(num_instances, num_classes, x, labels, y);
   }
 
   static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
@@ -120,10 +120,10 @@ struct CrossEntropyKernelUtil<DeviceType::kGPU, float16> {
   static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                              const float16* x, const float16* labels, float16* y) {
     cudaMemset(y, 0, sizeof(float16) * num_instances);
-    ComputeEntropyGpuHalf<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(),
-                            0, ctx->cuda_stream()>>>(num_instances, num_classes, 
-                            reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(labels), 
-                            reinterpret_cast<half*>(y));
+    ComputeEntropyGpuHalf<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
+                            ctx->cuda_stream()>>>(
+        num_instances, num_classes, reinterpret_cast<const half*>(x),
+        reinterpret_cast<const half*>(labels), reinterpret_cast<half*>(y));
   }
 
   static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
