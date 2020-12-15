@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/user/kernels/dim_gather_scatter_util.h"
@@ -26,8 +28,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
-
-  const Shape& like_shape = like->shape();
+  const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
+  
   int32_t dim = ctx->Attr<int32_t>("dim");
 
   const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
@@ -42,14 +44,23 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   int64_t index_num_axes = index->shape().NumAxes();
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
-  CHECK_EQ_OR_RETURN(input_num_axes, like_shape.NumAxes());
+
+  int64_t output_num_axes = 0;
+  if(src){
+      output_num_axes = src->shape().NumAxes();
+  }else if(like){
+     output_num_axes = like->shape().NumAxes();
+  }else{
+    Error::Unimplemented();
+  }
+  CHECK_EQ_OR_RETURN(input_num_axes, output_num_axes);
 
   FOR_RANGE(int64_t, i, 0, input_num_axes) {
     CHECK_EQ_OR_RETURN(index->shape().At(i), input->shape().At(i));
   }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-  *out->mut_shape() = like_shape;
+  *out->mut_shape() = src?src->shape():like->shape();
   *out->mut_data_type() = input->data_type();
 
   return Maybe<void>::Ok();
@@ -70,9 +81,9 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
 
 Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
                                       const user_op::UserOpConfWrapper&) {
-  user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-  CHECK(like_arg_modifier != nullptr);
-  like_arg_modifier->set_requires_grad(false);
+  user_op::InputArgModifier* src_arg_modifier = GetInputArgModifierFn("src", 0);
+  CHECK(src_arg_modifier != nullptr);
+  src_arg_modifier->set_requires_grad(false);
 
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
@@ -99,6 +110,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
           .Split(user_op::OpArg("input", 0), i)
           .Split(user_op::OpArg("output", 0), i)
           .Split(user_op::OpArg("like", 0), i)
+          .Split(user_op::OpArg("src", 0), i)
           .Build();
     }
   }
@@ -108,6 +120,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .Broadcast(user_op::OpArg("index", 0))
       .PartialSum(user_op::OpArg("output", 0))
       .PartialSum(user_op::OpArg("like", 0))
+      .PartialSum(user_op::OpArg("src", 0))
       .Build();
   return Maybe<void>::Ok();
 }
@@ -115,7 +128,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
 
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
   REGISTER_USER_OP(optypename)                 \
-      .Input("like")                           \
+      .OptionalInput("like")                   \
       .Input("input")                          \
       .Input("index")                          \
       .Output("output")                        \
@@ -127,7 +140,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
 
 #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
   REGISTER_USER_OP(optypename)                        \
-      .Input("like")                                  \
+      .OptionalInput("src")                           \
       .Input("input")                                 \
       .Input("index")                                 \
       .Output("output")                               \

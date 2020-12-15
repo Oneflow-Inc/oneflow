@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
@@ -130,16 +131,13 @@ class DimScatterBaseKernel : public user_op::OpKernel {
         out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
 
     Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
-    if (!like_tensor->dptr()) {
+    Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
+    if(src_tensor){
+      Memcpy<device_type>(ctx->device_ctx(), output, src_tensor->dptr<IN_T>(), out_bytes_size);
+    }else if(like_tensor){
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
-    } else {
-      const IN_T* like = like_tensor->dptr<IN_T>();
-      if (output != like) {
-        // wrong at 1n2c
-        Memcpy<device_type>(ctx->device_ctx(), output, like_tensor->dptr<IN_T>(), out_bytes_size);
-        // right at 1n2c (??)
-        // Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
-      }
+    }else{
+      Error::Unimplemented();
     }
 
     int ndim = input_tensor->shape().NumAxes();
