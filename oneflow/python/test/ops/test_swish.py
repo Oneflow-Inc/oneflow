@@ -22,8 +22,6 @@ from collections import OrderedDict
 from typing import Dict
 import os
 
-# TODO: build swish test case
-
 
 def _compare_swish_with_np(input_shape, beta, device_type, machine_ids, device_counts):
     input_1 = np.random.random(size=input_shape).astype(np.float32)
