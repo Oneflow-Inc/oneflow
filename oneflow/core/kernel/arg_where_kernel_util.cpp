@@ -22,6 +22,10 @@ template<typename T, typename I, size_t NDims>
 struct ArgWhereKernelUtil<DeviceType::kCPU, T, I, NDims> {
   static void ArgWhere(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
                        size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
+    if (in_shape.elem_cnt() == 0) { // deal with empty blob
+      *out_size_ptr = 0;
+      return;
+    }
     CHECK_LE(in_shape.elem_cnt(), std::numeric_limits<I>::max());
     I true_cnt = 0;
     fixed_vector<I, NDims> dims(NDims);
