@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-from typing import Union, Optional, Sequence
+from typing import Union, Optional, Sequence, List, Tuple
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -1860,7 +1860,10 @@ def tanh_grad(
 
 @oneflow_export("math.tril", "nn.tril")
 def tril(
-    x: remote_blob_util.BlobDef, diagonal: int = 0, name: Optional[str] = None
+    x: remote_blob_util.BlobDef,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Compute lower triangle of an matrix.
 
@@ -1868,6 +1871,7 @@ def tril(
         x (remote_blob_util.BlobDef): Input Blob.
         diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
                         otherwise, offset downward.
+        fill_value(Union[int, float]): The value filled into the upper triangle.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Attention:
@@ -1897,16 +1901,122 @@ def tril(
                   [1, 2, 3, 4]]
 
     """
+    if isinstance(fill_value, float):
+        is_floating_fill_value = True
+        floating_fill_value = float(fill_value)
+        integer_fill_value = int(0)
+    else:
+        is_floating_fill_value = False
+        floating_fill_value = float(0)
+        integer_fill_value = int(fill_value)
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Tril_"))
         .Op("tril")
         .Input("in", [x])
         .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
         .Output("out")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.fused_scale_tril", "nn.fused_scale_tril")
+def fused_scale_tril(
+    x: remote_blob_util.BlobDef,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    scale: Union[int, float] = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    if isinstance(fill_value, float):
+        is_floating_fill_value = True
+        floating_fill_value = float(fill_value)
+        integer_fill_value = int(0)
+    else:
+        is_floating_fill_value = False
+        floating_fill_value = float(0)
+        integer_fill_value = int(fill_value)
+
+    if isinstance(scale, float):
+        is_floating_scale_value = True
+        floating_scale_value = float(scale)
+        integer_scale_value = int(1)
+    else:
+        is_floating_scale_value = False
+        floating_scale_value = float(1)
+        integer_scale_value = int(scale)
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("FusedScaleTril_")
+        )
+        .Op("fused_scale_tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
+        .Attr("is_floating_scale_value", is_floating_scale_value)
+        .Attr("floating_scale_value", floating_scale_value)
+        .Attr("integer_scale_value", integer_scale_value)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("math.polyval")
+def polyval(
+    coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""Computes the elementwise value of a polynomial.
+
+    Args:
+        coeffs (Union[List, Tuple]): The coefficients of the polynomial.
+        x (remote_blob_util.BlobDef): A Blob.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: A Blob, has the same data type of x.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        
+        @flow.global_function()
+        def polyval_Job(
+            x: tp.Numpy.Placeholder((3,), dtype=flow.float32)
+        ) -> tp.Numpy:
+            coeffs = [1.0, 3.0, -2.0]
+            return flow.math.polyval(coeffs, x)
+
+        x = np.array([1.0, 2.0, 3.0]).astype(np.float32)
+        out = polyval_Job(x)
+        
+        # output [ 2. 8. 16.]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Polyval_")
+    if not isinstance(coeffs, (list, tuple)):
+        raise ValueError(
+            "Argument coeffs must be list type " "found {}".format(type(coeffs))
+        )
+    if len(coeffs) < 1:
+        return flow.zeros_like(x, name=name)
+    p = flow.zeros_like(x, name=name)
+    for c in coeffs:
+        p = flow.math.add(c, flow.math.multiply(p, x))
+    return p
 
 
 @oneflow_export("range")

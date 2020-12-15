@@ -6,6 +6,7 @@ from pathlib import Path
 
 def build_arg_env(env_var_name):
     val = os.getenv(env_var_name)
+    assert val, f"system environment variable {env_var_name} found empty"
     return f"--build-arg {env_var_name}={val}"
 
 
@@ -251,7 +252,7 @@ if __name__ == "__main__":
                 img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
             if skip_img == False:
                 build_img(
-                    args.cuda_version,
+                    cuda_version,
                     args.oneflow_src_dir,
                     args.use_tuna,
                     args.use_system_proxy,
@@ -320,6 +321,9 @@ gcc --version
         except subprocess.CalledProcessError as e:
             print("failed: ", e.cmd, e.args)
             print("clean: ", cache_dir)
-            assert cache_dir != None
-            force_rm_dir(cache_dir)
-            build()
+            if cache_dir:
+                print("start retrying...")
+                force_rm_dir(cache_dir)
+                build()
+            else:
+                raise ValueError("something went wrong, please look at error above")

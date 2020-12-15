@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -28,9 +29,7 @@ void AddOptimizerOpConf(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* jo
 float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_update_conf,
                                   const VariableOp& op);
 
-template<typename T>
-void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
-                           JobBuilder* job_builder, T*);
+void SetDynamicLossScaleSkipIf(JobPassCtx* ctx, user_op::UserOpConfWrapperBuilder* builder);
 
 class GenerateOptimizerOpConfWrapperStruct final {
  public:

@@ -877,6 +877,37 @@ class NaturalExpScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+class LossScalePolicy:
+    def SetLossScaleFieldsInTrainConf(self, train_conf):
+        raise NotImplementedError()
+
+
+@oneflow_export("optimizer.loss_scale.static_loss_scale")
+class StaticLossScalePolicy(LossScalePolicy):
+    def __init__(self, loss_scale_factor: float):
+        self.loss_scale_factor = loss_scale_factor
+
+    def SetLossScaleFieldsInTrainConf(self, train_conf):
+        train_conf.loss_scale_factor = self.loss_scale_factor
+
+
+@oneflow_export("optimizer.loss_scale.dynamic_loss_scale")
+class DynamicLossScalePolicy(LossScalePolicy):
+    def __init__(
+        self, initial_loss_scale=(2 ** 15), increment_period=2000, multiplier=2.0
+    ):
+        self.initial_loss_scale = initial_loss_scale
+        self.increment_period = increment_period
+        self.multiplier = multiplier
+
+    def SetLossScaleFieldsInTrainConf(self, train_conf):
+        train_conf.dynamic_loss_scale_policy.initial_loss_scale = (
+            self.initial_loss_scale
+        )
+        train_conf.dynamic_loss_scale_policy.increment_period = self.increment_period
+        train_conf.dynamic_loss_scale_policy.multiplier = self.multiplier
+
+
 class Optimizer:
     def __init__(
         self,
@@ -884,9 +915,14 @@ class Optimizer:
         loss_scale_factor: Optional[int] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
+        if loss_scale_factor is not None:
+            assert loss_scale_policy is None
+            self.loss_scale_policy = StaticLossScalePolicy(loss_scale_factor)
+        else:
+            self.loss_scale_policy = loss_scale_policy
         self.lr_scheduler = lr_scheduler
-        self.loss_scale_factor = loss_scale_factor
         self.grad_clipping = grad_clipping
         self.train_step_lbn = train_step_lbn
 
@@ -902,8 +938,8 @@ class Optimizer:
             update_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
         if self.train_step_lbn is not None:
             train_conf.train_step_lbn = self.train_step_lbn
-        if self.loss_scale_factor is not None:
-            update_conf.loss_scale_factor = self.loss_scale_factor
+        if self.loss_scale_policy is not None:
+            self.loss_scale_policy.SetLossScaleFieldsInTrainConf(train_conf)
         self._SetSpecificFieldsInTrainConf(train_conf)
         return train_conf
 
@@ -943,6 +979,7 @@ class SGD(Optimizer):
         momentum (float, optional): Momentum factor (:math:`\beta`). Defaults to 0.9.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     For example:
 
@@ -977,9 +1014,14 @@ class SGD(Optimizer):
         momentum: float = 0.9,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.momentum = momentum
 
@@ -1037,6 +1079,7 @@ class Adam(Optimizer):
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     For example:
 
@@ -1074,9 +1117,14 @@ class Adam(Optimizer):
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.beta1 = beta1
         self.beta2 = beta2
@@ -1144,6 +1192,7 @@ class AdamW(Optimizer):
         weight_decay_excludes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that do not use weight decay. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     Note:
 
@@ -1191,9 +1240,14 @@ class AdamW(Optimizer):
         weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.beta1 = beta1
         self.beta2 = beta2
@@ -1269,6 +1323,7 @@ class RMSProp(Optimizer):
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     For example:
 
@@ -1305,9 +1360,14 @@ class RMSProp(Optimizer):
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.decay_rate = decay_rate
         self.epsilon = epsilon
@@ -1341,6 +1401,7 @@ class LARS(Optimizer):
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     For example:
 
@@ -1377,9 +1438,14 @@ class LARS(Optimizer):
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
@@ -1418,6 +1484,7 @@ class LazyAdam(Optimizer):
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     For example:
 
@@ -1454,9 +1521,14 @@ class LazyAdam(Optimizer):
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.beta1 = beta1
         self.beta2 = beta2
@@ -1481,6 +1553,7 @@ class LAMB(Optimizer):
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
 
     """
 
@@ -1493,9 +1566,14 @@ class LAMB(Optimizer):
         loss_scale_factor: Optional[float] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
         super().__init__(
-            lr_scheduler, loss_scale_factor, grad_clipping, train_step_lbn,
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
         )
         self.beta1 = beta1
         self.beta2 = beta2
