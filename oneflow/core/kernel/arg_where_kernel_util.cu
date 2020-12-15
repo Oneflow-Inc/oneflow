@@ -76,7 +76,7 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, T, I, NDims> {
   static void ArgWhere(DeviceCtx* ctx, const ShapeView& in_shape, const T* in_ptr, void* tmp,
                        size_t tmp_max_bytes, I* out_ptr, I* out_size_ptr) {
     if (in_shape.elem_cnt() == 0) { // deal with empty blob
-      *out_size_ptr = 0;
+      KernelUtil<DeviceType::kGPU, I>::Set(ctx, static_cast<I>(0), out_size_ptr);
       return;
     }
     CHECK_NOTNULL(ctx);
