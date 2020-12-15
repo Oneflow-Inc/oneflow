@@ -24,13 +24,19 @@ struct RavelMultiIndexFunctor final {
 
 template<typename T>
 OF_DEVICE_FUNC void DoIndexToOffset(int32_t n, int32_t in_num,
-                  const RavelMultiIndexHelper<T> helper,
-                  const T** in_dptrs, T* out) {
+                  // const RavelMultiIndexHelper<T> helper,
+                  // const T** in_dptrs, T* out) {
+                  int32_t ndim, const T* dims, 
+                  user_op::KernelComputeContext* kernel_ctx, T* out) {
+
+  RavelMultiIndexHelper<T> helper(dims, ndim);
+  
   XPU_1D_KERNEL_LOOP(elem_idx, n){
     T index_vec[6]; 
     // TODO: Add a check
     XPU_1D_KERNEL_LOOP(idx, in_num){
-        index_vec[idx] = in_dptrs[idx][elem_idx]; // in_dptrs[idx] -> the address of array
+        // index_vec[idx] = in_dptrs[idx][elem_idx]; // in_dptrs[idx] -> the address of array
+        index_vec[idx] = (kernel_ctx->Tensor4ArgNameAndIndex("multi_index", idx)->dptr<T>())[elem_idx];
         printf("Index vector element is: %d \n", index_vec[idx]);
     }
     

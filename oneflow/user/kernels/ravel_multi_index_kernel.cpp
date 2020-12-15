@@ -43,9 +43,9 @@ REGISTER_RAVEL_MULTI_INDEX_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register GPU version
 
-#ifdef WITH_CUDA
-REGISTER_RAVEL_MULTI_INDEX_KERNELS_WITH_DEVICE(DeviceType::kGPU);
-#endif
+// #ifdef WITH_CUDA
+// REGISTER_RAVEL_MULTI_INDEX_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+// #endif
 
 }  // namespace user_op
 }  // namespace oneflow

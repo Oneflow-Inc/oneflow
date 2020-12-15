@@ -2333,3 +2333,29 @@ def ravel_multi_index(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("ravel_index")
+def ravel_index(
+    index: remote_blob_util.BlobDef, 
+    dims: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    _index_len = index.shape[0]
+    _dim_len = dims.shape[0]
+
+    assert _index_len == _dim_len, \
+        "The Input sequence length is not matched, {} vs {}".format(_index_len, _dim_len)
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("RavelIndex_")
+        )
+        .Op("ravel_index")
+        .Input("index", [index])
+        .Input("dims", [dims])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
