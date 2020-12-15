@@ -155,10 +155,11 @@ constexpr int PackSize() {
   return Min(PackSize<T>(), PackSize<U, Args...>());
 }
 
-template<typename F, typename R, typename X, int pack_size, bool tail>
+template<typename FF, typename R, typename X, int pack_size, bool tail>
 __global__ void __launch_bounds__(kBlockSize)
-    ApplyUnary(F functor, int64_t n_pack, const PackType<X, pack_size>* pack_x,
+    ApplyUnary(FF factory, int64_t n_pack, const PackType<X, pack_size>* pack_x,
                PackType<R, pack_size>* pack_r, int64_t n_tail, const X* tail_x, R* tail_r) {
+  auto functor = factory.Create();
   Pack<X, pack_size> p_x;
   Pack<R, pack_size> p_r;
   const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
@@ -171,11 +172,12 @@ __global__ void __launch_bounds__(kBlockSize)
   if (tail && global_tid < n_tail) { tail_r[global_tid] = functor(tail_x[global_tid]); }
 }
 
-template<typename F, typename R, typename X, typename Y, int pack_size, bool tail>
+template<typename FF, typename R, typename X, typename Y, int pack_size, bool tail>
 __global__ void __launch_bounds__(kBlockSize)
-    ApplyBinary(F functor, int64_t n_pack, const PackType<X, pack_size>* pack_x,
+    ApplyBinary(FF factory, int64_t n_pack, const PackType<X, pack_size>* pack_x,
                 const PackType<Y, pack_size>* pack_y, PackType<R, pack_size>* pack_r,
                 int64_t n_tail, const X* tail_x, const Y* tail_y, R* tail_r) {
+  auto functor = factory.Create();
   Pack<X, pack_size> p_x;
   Pack<Y, pack_size> p_y;
   Pack<R, pack_size> p_r;
@@ -192,12 +194,13 @@ __global__ void __launch_bounds__(kBlockSize)
   }
 }
 
-template<typename F, typename R, typename X, typename Y, typename Z, int pack_size, bool tail>
+template<typename FF, typename R, typename X, typename Y, typename Z, int pack_size, bool tail>
 __global__ void __launch_bounds__(kBlockSize)
-    ApplyTernary(F functor, int64_t n_pack, const PackType<X, pack_size>* pack_x,
+    ApplyTernary(FF factory, int64_t n_pack, const PackType<X, pack_size>* pack_x,
                  const PackType<Y, pack_size>* pack_y, const PackType<Z, pack_size>* pack_z,
                  PackType<R, pack_size>* pack_r, int64_t n_tail, const X* tail_x, const Y* tail_y,
                  const Z* tail_z, R* tail_r) {
+  auto functor = factory.Create();
   Pack<X, pack_size> p_x;
   Pack<Y, pack_size> p_y;
   Pack<Z, pack_size> p_z;
@@ -218,9 +221,24 @@ __global__ void __launch_bounds__(kBlockSize)
   }
 }
 
-template<typename F, typename R, typename X>
+template<typename F>
+struct SimpleFactory {
+  explicit SimpleFactory(F functor) : functor_(functor) {}
+  __device__ F Create() const { return functor_; }
+
+ private:
+  F functor_;
+};
+
+template<typename R, typename X>
 struct Unary {
+  template<typename F>
   static cudaError_t Launch(F functor, int64_t n, const X* x, R* r, cudaStream_t stream) {
+    return LaunchWithFactory(SimpleFactory<F>(functor), n, x, r, stream);
+  }
+  template<typename FF>
+  static cudaError_t LaunchWithFactory(FF factory, int64_t n, const X* x, R* r,
+                                       cudaStream_t stream) {
     constexpr int pack_size = PackSize<R, X>();
     const int64_t n_pack = n / pack_size;
     const int64_t tail_offset = n_pack * pack_size;
@@ -231,22 +249,28 @@ struct Unary {
       if (err != cudaSuccess) { return err; }
     }
     if (n_tail > 0) {
-      ApplyUnary<F, R, X, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
-          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+      ApplyUnary<FF, R, X, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
+          factory, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, x + tail_offset, r + tail_offset);
     } else {
-      ApplyUnary<F, R, X, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
-          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+      ApplyUnary<FF, R, X, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
+          factory, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, nullptr, nullptr);
     }
     return cudaSuccess;
   }
 };
 
-template<typename F, typename R, typename X, typename Y>
+template<typename R, typename X, typename Y>
 struct Binary {
+  template<typename F>
   static cudaError_t Launch(F functor, int64_t n, const X* x, const Y* y, R* r,
                             cudaStream_t stream) {
+    return LaunchWithFactory(SimpleFactory<F>(functor), n, x, y, r, stream);
+  }
+  template<typename FF>
+  static cudaError_t LaunchWithFactory(FF factory, int64_t n, const X* x, const Y* y, R* r,
+                                       cudaStream_t stream) {
     constexpr int pack_size = PackSize<R, X, Y>();
     const int64_t n_pack = n / pack_size;
     const int64_t tail_offset = n_pack * pack_size;
@@ -257,14 +281,14 @@ struct Binary {
       if (err != cudaSuccess) { return err; }
     }
     if (n_tail > 0) {
-      ApplyBinary<F, R, X, Y, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
-          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+      ApplyBinary<FF, R, X, Y, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
+          factory, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<const PackType<Y, pack_size>*>(y),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, x + tail_offset, y + tail_offset,
           r + tail_offset);
     } else {
-      ApplyBinary<F, R, X, Y, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
-          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+      ApplyBinary<FF, R, X, Y, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
+          factory, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<const PackType<Y, pack_size>*>(y),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, nullptr, nullptr, nullptr);
     }
@@ -272,10 +296,16 @@ struct Binary {
   }
 };
 
-template<typename F, typename R, typename X, typename Y, typename Z>
+template<typename R, typename X, typename Y, typename Z>
 struct Ternary {
+  template<typename F>
   static cudaError_t Launch(F functor, int64_t n, const X* x, const Y* y, const Z* z, R* r,
                             cudaStream_t stream) {
+    return LaunchWithFactory(SimpleFactory<F>(functor), n, x, y, z, r, stream);
+  }
+  template<typename FF>
+  static cudaError_t LaunchWithFactory(FF factory, int64_t n, const X* x, const Y* y, const Z* z,
+                                       R* r, cudaStream_t stream) {
     constexpr int pack_size = PackSize<R, X, Y, Z>();
     const int64_t n_pack = n / pack_size;
     const int64_t tail_offset = n_pack * pack_size;
@@ -286,15 +316,15 @@ struct Ternary {
       if (err != cudaSuccess) { return err; }
     }
     if (n_tail > 0) {
-      ApplyTernary<F, R, X, Y, Z, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
-          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+      ApplyTernary<FF, R, X, Y, Z, pack_size, true><<<num_blocks, kBlockSize, 0, stream>>>(
+          factory, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<const PackType<Y, pack_size>*>(y),
           reinterpret_cast<const PackType<Z, pack_size>*>(z),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, x + tail_offset, y + tail_offset,
           z + tail_offset, r + tail_offset);
     } else {
-      ApplyTernary<F, R, X, Y, Z, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
-          functor, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
+      ApplyTernary<FF, R, X, Y, Z, pack_size, false><<<num_blocks, kBlockSize, 0, stream>>>(
+          factory, n_pack, reinterpret_cast<const PackType<X, pack_size>*>(x),
           reinterpret_cast<const PackType<Y, pack_size>*>(y),
           reinterpret_cast<const PackType<Z, pack_size>*>(z),
           reinterpret_cast<PackType<R, pack_size>*>(r), n_tail, nullptr, nullptr, nullptr, nullptr);
