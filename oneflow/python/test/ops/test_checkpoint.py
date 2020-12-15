@@ -333,7 +333,6 @@ def _TestAssignmentBetweenMemory(test_case, dtype):
     test_case.assertTrue(np.allclose(flow_res, np_res))
 
 
-@unittest.skip("new checkpoint is disabled temporarily")
 class TestCheckpoint(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(
