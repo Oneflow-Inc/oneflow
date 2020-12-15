@@ -47,13 +47,22 @@ def compare_with_tensorflow(device_type, data_type, shape):
     @flow.global_function(type="train", function_config=func_config)
     def SoftmaxCrossEntropyWithLogitsJob(labels: oft.Numpy.Placeholder(shape, dtype)):
         with flow.scope.placement(device_type, "0:0"):
-            x = flow.get_variable(
-                "x",
-                shape=shape,
-                dtype=dtype,
-                initializer=flow.constant_initializer(20),
-                trainable=True,
-            )
+            if data_type == "float16":
+                x = flow.get_variable(
+                    "x",
+                    shape=shape,
+                    dtype=dtype,
+                    initializer=flow.constant_initializer(20),
+                    trainable=True,
+                )
+            else:
+                x = flow.get_variable(
+                    "x",
+                    shape=shape,
+                    dtype=type_name_to_flow_type[data_type],
+                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                    trainable=True,
+                )
             if data_type == "float16":
                 loss = flow.cast(
                     flow.nn.softmax_cross_entropy_with_logits(
