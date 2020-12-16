@@ -1011,13 +1011,13 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
     return;
   }
+  const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
+  UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, &op_name2ancestors_need_no_grad_);
   // always return true if output_size > 1
   if (op.output_bns().size() > 1) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return true; };
     return;
   }
-  const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
-  UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, &op_name2ancestors_need_no_grad_);
   std::vector<OperatorConf> bw_op_confs;
   LogicalBlobId fake_diff_lbi;
   fake_diff_lbi.set_op_name("fake_op_name");
