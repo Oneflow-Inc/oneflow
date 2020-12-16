@@ -55,15 +55,6 @@ def compare_with_tensorflow(device_type, data_type, shape):
                     initializer=flow.constant_initializer(20),
                     trainable=True,
                 )
-            else:
-                x = flow.get_variable(
-                    "x",
-                    shape=shape,
-                    dtype=type_name_to_flow_type[data_type],
-                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
-                    trainable=True,
-                )
-            if data_type == "float16":
                 loss = flow.cast(
                     flow.nn.softmax_cross_entropy_with_logits(
                         flow.cast(labels, dtype=flow.float16),
@@ -72,9 +63,17 @@ def compare_with_tensorflow(device_type, data_type, shape):
                     dtype=flow.float,
                 )
             else:
+                x = flow.get_variable(
+                    "x",
+                    shape=shape,
+                    dtype=type_name_to_flow_type[data_type],
+                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                    trainable=True,
+                )
                 loss = flow.nn.softmax_cross_entropy_with_logits(
                     labels=labels, logits=x
                 )
+                
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
