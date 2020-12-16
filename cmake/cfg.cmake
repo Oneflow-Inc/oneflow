@@ -87,9 +87,9 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
         --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
         --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
-        --file_type=src
+        --generate_file_type=cfg.cpp
       DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Generating CFG Source file on ${FIL}"
+      COMMENT "Generating cfg.cpp file on ${FIL}"
       VERBATIM)
 
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
@@ -108,9 +108,9 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
         --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
         --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
-        --file_type=pybind
+        --generate_file_type=cfg.pybind.cpp
       DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Running CFG Pybind11 file Compiler on ${FIL}"
+      COMMENT "Generating cfg.pybind.cpp file on ${FIL}"
       VERBATIM)
 
     list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
