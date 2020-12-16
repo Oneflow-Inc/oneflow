@@ -24,9 +24,6 @@ namespace user_op {
 IMPLEMENT_DIMGATHER_GPUFUNCTOR(Update);
 INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Update);
 
-IMPLEMENT_DIMGATHER_GPUFUNCTOR(Add);
-INSTANTIATE_DIM_GATHER_GPUFUNCTORS(Add);
-
 }  // namespace user_op
 }  // namespace oneflow
 

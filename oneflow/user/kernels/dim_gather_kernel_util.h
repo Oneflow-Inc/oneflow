@@ -35,14 +35,13 @@ limitations under the License.
 // 4. Implement kernels in dim_gather_kernels.cpp:
 //    IMPLEMENT_DIMGATHER_KERNEL_CLASS(Mul);
 //
-// 5. Register kernels
+// 5. Register kernels in dim_gather_kernels.cpp:
 //    REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather_mul_like", Mul);
 
 namespace oneflow {
 namespace user_op {
 
 DECLARE_DIMGATHER_FUNCTOR(Update);
-DECLARE_DIMGATHER_FUNCTOR(Add);
 
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimGatherBinop(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,

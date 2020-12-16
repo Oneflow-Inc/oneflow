@@ -37,36 +37,36 @@ namespace user_op {
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                    \
   };
 
-#define REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, dtype, itype, optypename, binop)     \
+#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype, optypename, binop)     \
   REGISTER_USER_KERNEL(optypename)                                                       \
       .SetCreateFn<DimGather##binop##Kernel<device, dtype, itype>>()                     \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-#define REGISTER_DIM_GATHER_BINOP_OUT_KERNELS_DEVICE(device, optypename, binop)    \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, float, int32_t, optypename, binop)   \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, double, int32_t, optypename, binop)  \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, int32_t, int32_t, optypename, binop) \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, float, int64_t, optypename, binop)   \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, double, int64_t, optypename, binop)  \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(device, int32_t, int64_t, optypename, binop)
+#define REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(device, optypename, binop)    \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t, optypename, binop)   \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t, optypename, binop)  \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t, optypename, binop) \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t, optypename, binop)   \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t, optypename, binop)  \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t, optypename, binop)
 
-#define REGISTER_DIM_GATHER_OUTPLACE_CPUKERNELS(optypename, binop) \
-  REGISTER_DIM_GATHER_BINOP_OUT_KERNELS_DEVICE(DeviceType::kCPU, optypename, binop);
+#define REGISTER_DIM_GATHER_CPUKERNELS(optypename, binop) \
+  REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(DeviceType::kCPU, optypename, binop);
 
 #ifdef WITH_CUDA
-#define REGISTER_DIM_GATHER_OUTPLACE_GPUKERNELS(optypename, binop)                            \
-  REGISTER_DIM_GATHER_BINOP_OUT_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);          \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop); \
-  REGISTER_DIM_GATHER_OUTPLACE_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
+#define REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop)                            \
+  REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);          \
+  REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop); \
+  REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
 #else
-#define REGISTER_DIM_GATHER_OUTPLACE_GPUKERNELS(optypename, binop)
+#define REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop)
 #endif  // WITH_CUDA
 
-#define REGISTER_GATHER_OUTPLACE_KERNEL(optypename, binop)    \
-  REGISTER_DIM_GATHER_OUTPLACE_CPUKERNELS(optypename, binop); \
-  REGISTER_DIM_GATHER_OUTPLACE_GPUKERNELS(optypename, binop);
+#define REGISTER_GATHER_KERNEL(optypename, binop)    \
+  REGISTER_DIM_GATHER_CPUKERNELS(optypename, binop); \
+  REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop);
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 class DimGatherBaseKernel : public user_op::OpKernel {
@@ -107,10 +107,7 @@ class DimGatherBaseKernel : public user_op::OpKernel {
 };
 
 IMPLEMENT_DIMGATHER_KERNEL_CLASS(Update);
-IMPLEMENT_DIMGATHER_KERNEL_CLASS(Add);
-
-REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather", Update);
-REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather_add", Add);
+REGISTER_GATHER_KERNEL("dim_gather", Update);
 
 }  // namespace user_op
 }  // namespace oneflow
