@@ -700,27 +700,31 @@ def set_enable_quantization_aware_training(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.enable_quantization_aware_training = value
+    func_desc.job_config_proto.set_enable_quantization_aware_training(value)
 
 
 @oneflow_function_config("qat.per_channel_weight_quantization")
 def set_qat_per_channel(func_desc, value=True):
-    func_desc.job_config_proto.qat_config.per_channel_weight_quantization = value
+    func_desc.job_config_proto.mutable_qat_config().set_per_channel_weight_quantization(
+        value
+    )
 
 
 @oneflow_function_config("qat.symmetric")
 def set_qat_symmetric(func_desc, value=True):
-    func_desc.job_config_proto.qat_config.symmetric = value
+    func_desc.job_config_proto.mutable_qat_config().set_symmetric(value)
 
 
 @oneflow_function_config("qat.moving_min_max_momentum")
 def set_qat_moving_min_max_momentum(func_desc, value: float):
-    func_desc.job_config_proto.qat_config.moving_min_max_momentum = value
+    func_desc.job_config_proto.mutable_qat_config().set_moving_min_max_momentum(value)
 
 
 @oneflow_function_config("qat.moving_min_max_stop_update_after_iters")
 def set_qat_moving_min_max_momentum(func_desc, value: float):
-    func_desc.job_config_proto.qat_config.moving_min_max_stop_update_after_iters = value
+    func_desc.job_config_proto.mutable_qat_config().set_moving_min_max_stop_update_after_iters(
+        value
+    )
 
 
 @oneflow_function_config("enable_auto_mixed_precision")
