@@ -2335,12 +2335,42 @@ def ravel_multi_index(
     )
 
 
-@oneflow_export("ravel_index")
-def ravel_index(
+@oneflow_export("ndindex_to_offset")
+def ndindex_to_offset(
     index: remote_blob_util.BlobDef, 
     dims: remote_blob_util.BlobDef, 
     name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the 1-D offset in N-D Tensor. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+        @flow.global_function()
+        def ndindex_to_offset_job(x: tp.Numpy.Placeholder(shape=(3, ), dtype=flow.int32), 
+                                dims: tp.Numpy.Placeholder(shape=(3, ), dtype=flow.int32))->tp.Numpy:
+            return flow.ndindex_to_offset(x, dims, name="ndindex_to_offset")
+
+
+        index = np.array([3, 4, 2]).astype(np.int32)
+        dims = np.array([8, 8, 8]).astype(np.int32)
+
+        out = ndindex_to_offset_job(index, dims)
+        # output [226]
+
+    Args:
+        index (remote_blob_util.BlobDef): The index Tensor. 
+        dims (remote_blob_util.BlobDef): The dims Tensor. 
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The offset
+    """
     _index_len = index.shape[0]
     _dim_len = dims.shape[0]
 
@@ -2351,7 +2381,7 @@ def ravel_index(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("RavelIndex_")
         )
-        .Op("ravel_index")
+        .Op("ndindex_to_offset")
         .Input("index", [index])
         .Input("dims", [dims])
         .Output("out")

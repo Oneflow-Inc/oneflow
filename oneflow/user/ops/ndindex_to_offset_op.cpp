@@ -3,7 +3,7 @@ namespace oneflow {
 
 namespace user_op {
 
-REGISTER_USER_OP("ravel_index")
+REGISTER_USER_OP("ndindex_to_offset")
     .Input("index")
     .Input("dims")
     .Output("out")
@@ -14,12 +14,9 @@ REGISTER_USER_OP("ravel_index")
       CHECK_GT_OR_RETURN(index_num_axes, 0);
       int64_t dims_num_axes = dims->shape().NumAxes();
       CHECK_GT_OR_RETURN(dims_num_axes, 0);
-      std::cout<<"index shape element count is: "<<(index->shape().elem_cnt());
-      std::cout<<"dim shape element count is: "<<(dims->shape().elem_cnt());
-
-      CHECK_EQ(index->shape().elem_cnt(), dims->shape().elem_cnt());
+      CHECK_EQ(index->shape().elem_cnt(), dims->shape().elem_cnt()); 
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);    
-      *out->mut_shape() = Shape({1});
+      *out->mut_shape() = Shape({1}); // Only return single value
       *out->mut_data_type() = dims->data_type();
       return Maybe<void>::Ok();
     })
