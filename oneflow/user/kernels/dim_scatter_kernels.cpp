@@ -20,21 +20,22 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-#define IMPLEMENT_DIMSCATTER_KERNEL_CLASS(binop)                                                   \
-  template<DeviceType device_type, typename IN_T, typename IDX_T>                                  \
-  class DimScatter##binop##Kernel final : public DimScatterBaseKernel<device_type, IN_T, IDX_T> {  \
-   public:                                                                                         \
-    DimScatter##binop##Kernel() = default;                                                         \
-    ~DimScatter##binop##Kernel() override = default;                                               \
-                                                                                                   \
-   private:                                                                                        \
-    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,                \
-                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,   \
-                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output) const override { \
-      DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                      \
-          ctx, input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);        \
-    }                                                                                              \
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                       \
+#define IMPLEMENT_DIMSCATTER_KERNEL_CLASS(binop)                                                  \
+  template<DeviceType device_type, typename IN_T, typename IDX_T>                                 \
+  class DimScatter##binop##Kernel final : public DimScatterBaseKernel<device_type, IN_T, IDX_T> { \
+   public:                                                                                        \
+    DimScatter##binop##Kernel() = default;                                                        \
+    ~DimScatter##binop##Kernel() override = default;                                              \
+                                                                                                  \
+   private:                                                                                       \
+    void BinaryOp(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,               \
+                  const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim, int64_t elem_cnt,  \
+                  int32_t dim, const IDX_T* index, const IN_T* input,                             \
+                  IN_T* output) const override {                                                  \
+      DimScatter##binop##Functor<device_type, IN_T, IDX_T>()(                                     \
+          ctx, input_nd_helper, output_nd_helper, ndim, elem_cnt, dim, index, input, output);     \
+    }                                                                                             \
+    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                      \
   }
 
 #define REGISTER_DIM_SCATTER_OUTPLACE_KERNEL(device, dtype, itype, optypename, binop)    \
@@ -132,11 +133,11 @@ class DimScatterBaseKernel : public user_op::OpKernel {
 
     Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     Tensor* src_tensor = ctx->Tensor4ArgNameAndIndex("src", 0);
-    if(src_tensor){
+    if (src_tensor) {
       Memcpy<device_type>(ctx->device_ctx(), output, src_tensor->dptr<IN_T>(), out_bytes_size);
-    }else if(like_tensor){
+    } else if (like_tensor) {
       Memset<device_type>(ctx->device_ctx(), output, 0, out_bytes_size);
-    }else{
+    } else {
       Error::Unimplemented();
     }
 

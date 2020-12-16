@@ -37,19 +37,19 @@ namespace user_op {
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }                    \
   };
 
-#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype, optypename, binop)     \
+#define REGISTER_DIM_GATHER_KERNEL(device, dtype, itype, optypename, binop)              \
   REGISTER_USER_KERNEL(optypename)                                                       \
       .SetCreateFn<DimGather##binop##Kernel<device, dtype, itype>>()                     \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("index", 0) == GetDataType<itype>::value));
 
-#define REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(device, optypename, binop)    \
-  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t, optypename, binop)   \
-  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t, optypename, binop)  \
-  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t, optypename, binop) \
-  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t, optypename, binop)   \
-  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t, optypename, binop)  \
+#define REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(device, optypename, binop) \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int32_t, optypename, binop)     \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int32_t, optypename, binop)    \
+  REGISTER_DIM_GATHER_KERNEL(device, int32_t, int32_t, optypename, binop)   \
+  REGISTER_DIM_GATHER_KERNEL(device, float, int64_t, optypename, binop)     \
+  REGISTER_DIM_GATHER_KERNEL(device, double, int64_t, optypename, binop)    \
   REGISTER_DIM_GATHER_KERNEL(device, int32_t, int64_t, optypename, binop)
 
 #define REGISTER_DIM_GATHER_CPUKERNELS(optypename, binop) \
@@ -57,7 +57,7 @@ namespace user_op {
 
 #ifdef WITH_CUDA
 #define REGISTER_DIM_GATHER_GPUKERNELS(optypename, binop)                            \
-  REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);          \
+  REGISTER_DIM_GATHER_BINOP_KERNELS_DEVICE(DeviceType::kGPU, optypename, binop);     \
   REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int32_t, optypename, binop); \
   REGISTER_DIM_GATHER_KERNEL(DeviceType::kGPU, float16, int64_t, optypename, binop);
 #else

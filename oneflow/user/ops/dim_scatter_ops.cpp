@@ -29,7 +29,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
   const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
-  
+
   int32_t dim = ctx->Attr<int32_t>("dim");
 
   const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
@@ -46,11 +46,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
   int64_t output_num_axes = 0;
-  if(src){
-      output_num_axes = src->shape().NumAxes();
-  }else if(like){
-     output_num_axes = like->shape().NumAxes();
-  }else{
+  if (src) {
+    output_num_axes = src->shape().NumAxes();
+  } else if (like) {
+    output_num_axes = like->shape().NumAxes();
+  } else {
     Error::Unimplemented();
   }
   CHECK_EQ_OR_RETURN(input_num_axes, output_num_axes);
@@ -60,7 +60,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-  *out->mut_shape() = src?src->shape():like->shape();
+  *out->mut_shape() = src ? src->shape() : like->shape();
   *out->mut_data_type() = input->data_type();
 
   return Maybe<void>::Ok();
@@ -150,23 +150,22 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .SetBatchAxisInferFn(InferBatchAxis)            \
       .SetGetSbpFn(SetSbp)
 
-#define REGISTER_USER_OP_GRAD_SCATTER(optypename) \
-  REGISTER_USER_OP_GRAD(optypename) \
-      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {\
-        const auto op_grad_name = ctx->FwOp().op_name() + "_grad"; \
-        ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {\
-          return builder\
-              .OpTypeName("dim_gather")  \
-              .InputBind("index", ctx->FwOp().input("index", 0))\
-              .InputBind("input", ctx->FwOp().output_grad("output", 0))\
-              .Output("output")\
-              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))\
-              .Build();\
-        });\
-        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),\
-                                  [&ctx, &op_grad_name]() -> const std::string& {\
-                                    return ctx->GetOp(op_grad_name).output("output", 0);\
-                                  });\
+#define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
+  REGISTER_USER_OP_GRAD(optypename)                                                      \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {                  \
+        const auto op_grad_name = ctx->FwOp().op_name() + "_grad";                       \
+        ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {        \
+          return builder.OpTypeName("dim_gather")                                        \
+              .InputBind("index", ctx->FwOp().input("index", 0))                         \
+              .InputBind("input", ctx->FwOp().output_grad("output", 0))                  \
+              .Output("output")                                                          \
+              .Attr("dim", ctx->FwOp().attr<int32_t>("dim"))                             \
+              .Build();                                                                  \
+        });                                                                              \
+        ctx->FwOp().InputGradBind(user_op::OpArg("input", 0),                            \
+                                  [&ctx, &op_grad_name]() -> const std::string& {        \
+                                    return ctx->GetOp(op_grad_name).output("output", 0); \
+                                  });                                                    \
       });
 
 REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
@@ -178,7 +177,6 @@ REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add_like");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update_like");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
 REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
-
 
 }  // namespace user_op
 }  // namespace oneflow

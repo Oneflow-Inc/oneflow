@@ -2337,6 +2337,7 @@ def dim_scatter_update_like(
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("dim_scatter_update")
 def dim_scatter_update_like(
     dim: int,
@@ -2359,6 +2360,7 @@ def dim_scatter_update_like(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
 
 @oneflow_export("dim_scatter_add_like")
 def dim_scatter_add_like(
