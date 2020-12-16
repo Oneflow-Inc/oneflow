@@ -87,7 +87,13 @@ def _make_op_function(
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: tp.Numpy):
-        test_case.assertTrue(np.allclose(grad, blob))
+        if np.allclose(grad, blob, 1e-3, 1e-3)==True:
+            print("test_case.assertTrue(True)")
+            test_case.assertTrue(True)
+        else:
+            print("grad:\n", grad, "\nblob:\n", blob)
+            test_case.assertTrue(False)
+        # test_case.assertTrue(np.allclose(grad, blob, 1e-3, 1e-3))
 
     if value_type == flow.float32 or value_type == flow.float64:
 
@@ -209,14 +215,14 @@ def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
         "output": output,
         "grad": grad,
     }
-    # print("input.shape:", input.shape, "padding:", padding, "data_format:", data_format,
-    #     "output.shape:", output.shape, "grad.shape:", grad.shape)
+
     return numpy_results
 
 
 def _compare_op_function_with_samples(
     test_case, device_type, sample, value_type, machine_ids, device_count
 ):
+    print("test_case:", test_case, "value_type:", value_type)
     op_function = _make_op_function(
         test_case,
         sample["input"].astype(value_type[0]),
@@ -253,16 +259,15 @@ def _gen_arg_dict(
         gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1], "NCHW")
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((4, 3, 3, 2), [0, 0, 2, 1], "NCHW")
+        gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2], "NCHW")
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 2], "NCHW")
+        gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3], "NCHW")
     )
     if value_type == "float":
         arg_dict["value_type"] = [
-            # (np.float32, flow.float16), #TODO:(ZhaoLuyang) float16 only works fine on ARCH > 700 CUDA > 10000
             (np.float32, flow.float32),
-            (np.float64, flow.float64),
+            (np.float64, flow.float64)
         ]
     elif value_type == "int":
         arg_dict["value_type"] = [(np.float32, flow.int32)]
@@ -276,25 +281,26 @@ def _gen_arg_dict(
 
 @flow.unittest.skip_unless_1n1d()
 class TestReflectionPad2d1n1d(flow.unittest.TestCase):
-    def test_op_function_float_cpu(test_case):
-        arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)
-        for arg in GenArgList(arg_dict):
-            _compare_op_function_with_samples(test_case, *arg)
-
     def test_op_function_int_cpu(test_case):
         arg_dict = _gen_arg_dict("cpu", "int", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_op_function_float_gpu(test_case):
-        arg_dict = _gen_arg_dict("gpu", "float", "0:0", 1)
+
+    def test_op_function_float_cpu(test_case):
+        arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_int_gpu(test_case):
         arg_dict = _gen_arg_dict("gpu", "int", "0:0", 1)
+        for arg in GenArgList(arg_dict):
+            _compare_op_function_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_op_function_float_gpu(test_case):
+        arg_dict = _gen_arg_dict("gpu", "float", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
 
