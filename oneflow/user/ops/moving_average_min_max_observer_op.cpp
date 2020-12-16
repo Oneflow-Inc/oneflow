@@ -28,8 +28,9 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     .Output("zero_point")
     .Attr<bool>("training")
     .Attr<int64_t>("stop_update_after_iters")
-    // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
-    .Attr<int32_t>("quantize_to_bit", 8)
+    // NOTE(Liang Depeng): quantize from float32 to "quantization_bit" bit signed or unsigned
+    // integer
+    .Attr<int32_t>("quantization_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
     .Attr<std::string>("quantize_scheme", "symmetric")
     // NOTE(Liang Depeng): smoothing parameter for exponential moving average operation
@@ -90,9 +91,9 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      int32_t quantize_to_bit = op_conf.attr<int32_t>("quantize_to_bit");
-      CHECK_GT_OR_RETURN(quantize_to_bit, 1);
-      CHECK_LE_OR_RETURN(quantize_to_bit, 8);
+      int32_t quantization_bit = op_conf.attr<int32_t>("quantization_bit");
+      CHECK_GT_OR_RETURN(quantization_bit, 1);
+      CHECK_LE_OR_RETURN(quantization_bit, 8);
 
       std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
       CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");

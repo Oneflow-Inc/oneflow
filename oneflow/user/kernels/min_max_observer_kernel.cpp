@@ -20,26 +20,26 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void GenQuantScaleSymmetric(const T *in_ptr, const int32_t quantize_to_bit,
+void GenQuantScaleSymmetric(const T *in_ptr, const int32_t quantization_bit,
                             const int64_t num_elements, T *scale, T *zero_point) {
   T in_max = *std::max_element(in_ptr, in_ptr + num_elements);
   T in_min = *std::min_element(in_ptr, in_ptr + num_elements);
 
   in_max = std::max(std::abs(in_max), std::abs(in_min));
 
-  T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+  T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
 
   *scale = in_max / denominator;
   *zero_point = 0;
 }
 
 template<typename T>
-void GenQuantScaleAffine(const T *in_ptr, const int32_t quantize_to_bit, const int64_t num_elements,
-                         T *scale, T *zero_point) {
+void GenQuantScaleAffine(const T *in_ptr, const int32_t quantization_bit,
+                         const int64_t num_elements, T *scale, T *zero_point) {
   T in_max = *std::max_element(in_ptr, in_ptr + num_elements);
   T in_min = *std::min_element(in_ptr, in_ptr + num_elements);
 
-  T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+  T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
 
   *scale = (in_max - in_min) / denominator;
   *zero_point = -in_min / (*scale);
@@ -58,7 +58,7 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
-    const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
+    const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const bool per_layer_quantize = ctx->Attr<bool>("per_layer_quantize");
 
     const T *in_ptr = in->dptr<T>();
@@ -75,14 +75,14 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
 
     if (quantize_scheme == "symmetric") {
       FOR_RANGE(int64_t, c, 0, outer_num) {
-        GenQuantScaleSymmetric(in_ptr, quantize_to_bit, inner_num, scale_ptr, zero_point_ptr);
+        GenQuantScaleSymmetric(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
         in_ptr += inner_num;
         scale_ptr += 1;
         zero_point_ptr += 1;
       }
     } else {  // quantize_scheme == "affine"
       FOR_RANGE(int64_t, c, 0, outer_num) {
-        GenQuantScaleAffine(in_ptr, quantize_to_bit, inner_num, scale_ptr, zero_point_ptr);
+        GenQuantScaleAffine(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
         in_ptr += inner_num;
         scale_ptr += 1;
         zero_point_ptr += 1;

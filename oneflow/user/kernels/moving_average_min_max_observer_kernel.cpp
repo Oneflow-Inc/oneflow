@@ -22,7 +22,7 @@ namespace oneflow {
 template<typename T>
 void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_step,
                                     const int64_t stop_update_after_iters, const bool is_training,
-                                    const int32_t quantize_to_bit, const int64_t num_elements,
+                                    const int32_t quantization_bit, const int64_t num_elements,
                                     const float momentum, T *moving_max, T *moving_min, T *scale,
                                     T *zero_point) {
   if (current_train_step <= stop_update_after_iters && is_training) {
@@ -43,7 +43,7 @@ void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_ste
     *moving_min = *moving_max;
   }
 
-  T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+  T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
   *scale = (*moving_max) / denominator;
   *zero_point = 0;
 }
@@ -51,7 +51,7 @@ void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_ste
 template<typename T>
 void GenQuantScalePerLayerAffine(const T *in, const int64_t current_train_step,
                                  const int64_t stop_update_after_iters, const bool is_training,
-                                 const int32_t quantize_to_bit, const int64_t num_elements,
+                                 const int32_t quantization_bit, const int64_t num_elements,
                                  const float momentum, T *moving_max, T *moving_min, T *scale,
                                  T *zero_point) {
   if (current_train_step <= stop_update_after_iters && is_training) {
@@ -73,7 +73,7 @@ void GenQuantScalePerLayerAffine(const T *in, const int64_t current_train_step,
     }
   }
 
-  T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+  T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
   *scale = ((*moving_max) - (*moving_min)) / denominator;
   *zero_point = -(*moving_min) / (*scale);
 }
@@ -95,7 +95,7 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
-    const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
+    const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const float momentum = ctx->Attr<float>("momentum");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
     const bool is_training = ctx->Attr<bool>("training");
@@ -111,11 +111,11 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
 
     if (quantize_scheme == "symmetric") {
       GenQuantScalePerLayerSymmetric(in_ptr, *current_train_step_ptr, stop_update_after_iters,
-                                     is_training, quantize_to_bit, num_elements, momentum,
+                                     is_training, quantization_bit, num_elements, momentum,
                                      moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
     } else {  // quantize_scheme == "affine"
       GenQuantScalePerLayerAffine(in_ptr, *current_train_step_ptr, stop_update_after_iters,
-                                  is_training, quantize_to_bit, num_elements, momentum,
+                                  is_training, quantization_bit, num_elements, momentum,
                                   moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
     }
   }
