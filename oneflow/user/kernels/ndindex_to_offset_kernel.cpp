@@ -18,7 +18,7 @@ class NdIndexToOffsetKernel final : public OpKernel {
     const Tensor* index = ctx->Tensor4ArgNameAndIndex("index", 0);
     
     int ndim = dims_tensor->shape().elem_cnt();
-    int32_t in_num = index->shape().elem_cnt(); // ([3, 6, 2], [4, 5, 1]) -> in_num 
+    int32_t in_num = index->shape().elem_cnt(); 
     
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();

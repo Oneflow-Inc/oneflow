@@ -2379,9 +2379,29 @@ def ndindex_to_offset(
 
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("RavelIndex_")
+            name if name is not None else id_util.UniqueStr("NdIndexToOffset_")
         )
         .Op("ndindex_to_offset")
+        .Input("index", [index])
+        .Input("dims", [dims])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow.export("offset_to_ndindex")
+def offset_to_ndindex(
+    index: remote_blob_util.BlobDef, 
+    dims: remote_blob_util.BlobDef, 
+    name: Optional[str] = None
+): 
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("OffsetToNdIndex_")
+        )
+        .Op("offset_to_ndindex")
         .Input("index", [index])
         .Input("dims", [dims])
         .Output("out")
