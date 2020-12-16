@@ -2350,4 +2350,4 @@ def ones(
     if dtype is None:
         dtype = flow.float32
 
-    return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name+"constant")
+    return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
