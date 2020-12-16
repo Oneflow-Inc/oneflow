@@ -657,9 +657,9 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     //   auto producer_node = op_node->MutSrcNode4Ibn(ibn);
     //   std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
     //   const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-    //   if (this_sbp_parallel.has_split_parallel()) std::cout << " S" << this_sbp_parallel.split_parallel().axis();
-    //   if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
-    //   if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
+    //   if (this_sbp_parallel.has_split_parallel()) std::cout << " S" <<
+    //   this_sbp_parallel.split_parallel().axis(); if (this_sbp_parallel.has_broadcast_parallel())
+    //   std::cout << " B"; if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
     //   std::cout << std::endl;
     //   /* auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0); */
     //   /* std::cout << " shape:" << blob_desc->shape().DebugStr() << std::endl; */
@@ -667,9 +667,9 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     // for (const auto& ibn : op_node->op().output_bns()) {
     //   std::cout << "Out Op:" << ibn;
     //   const SbpParallel& this_sbp_parallel = op_node->SbpParallel4BnInOp(ibn);
-    //   if (this_sbp_parallel.has_split_parallel()) std::cout << " S" << this_sbp_parallel.split_parallel().axis();
-    //   if (this_sbp_parallel.has_broadcast_parallel()) std::cout << " B";
-    //   if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
+    //   if (this_sbp_parallel.has_split_parallel()) std::cout << " S" <<
+    //   this_sbp_parallel.split_parallel().axis(); if (this_sbp_parallel.has_broadcast_parallel())
+    //   std::cout << " B"; if (this_sbp_parallel.has_partial_sum_parallel()) std::cout << " P";
     //   std::cout << std::endl;
     //   /* auto blob_desc = op_node->mut_bn2parallel_id2blob_desc()->at(ibn).at(0); */
     //   /* std::cout << " shape:" << blob_desc->shape().DebugStr() << std::endl; */

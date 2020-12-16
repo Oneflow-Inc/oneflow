@@ -59,8 +59,6 @@ bool IsSbpSignatureEqual(const SbpSignature& one, const SbpSignature& two) {
 }  // namespace
 
 void SbpConstructor::constructSbpGraph(OpGraph& op_graph, Job& job) {
-  if (job.job_conf().job_name() == "TrainNet") is_filter = false;
-
   // Seek out mirrored parallel opnode from job parallel view;
   // JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
   // Find all the mirrored op nodes and store the mapping into op_name2is_fixed.
@@ -267,10 +265,6 @@ void SbpConstructor::InitializeCopyCost(
         sbp_edge->Cost[sbp_id_producer].resize(consumer_sbp_size, 0);
       }
     }
-#ifdef TEST_DEBUG_
-    // test debug
-    std::cout << op_node->op().op_name() << "(0.0):" << std::endl;
-#endif
 
     // Assemble copy cost between two nodes
     // look through input blobs
