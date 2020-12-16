@@ -45,8 +45,6 @@ class SbpConstructor {
 
   bool OpNodeIsMirrored(OpNode* op_node) const;
 
-  bool is_filter = true;
-
   int32_t FindAllMirroredOpNodes(HashMap<std::string, bool>& op_name2is_mirrored,
                                  OpGraph& op_graph);
 
