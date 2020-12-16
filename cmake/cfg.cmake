@@ -28,7 +28,7 @@ include_directories(${CFG_INCLUDE_DIR})
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${CFG_INCLUDE_DIR})
 
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
-  list(APPEND ALL_CFG_CONVERT_PROTO
+  list(APPEND CFG_SOURCE_FILE_CONVERT_PROTO
       oneflow/core/common/error.proto
       oneflow/core/vm/instruction.proto
       oneflow/core/eager/eager_symbol.proto
@@ -67,32 +67,52 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   add_custom_target(copy_pyproto ALL
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${of_cfg_proto_python_dir}"
     COMMAND ${Python_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
-      --src_proto_files="${ALL_CFG_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
+      --src_proto_files="${CFG_SOURCE_FILE_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
     DEPENDS ${Python_EXECUTABLE} of_protoobj
   )
 
-  foreach(FIL ${ALL_CFG_CONVERT_PROTO})
+  set(PYBIND11_FILE_CONVERT_PROTO ${CFG_SOURCE_FILE_CONVERT_PROTO})
+
+  foreach(FIL ${CFG_SOURCE_FILE_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(CFG_HPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
-    set(CFG_PYBIND_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
     
     add_custom_command(
       OUTPUT "${CFG_HPP_FIL}"
              "${CFG_CPP_FIL}"
-             "${CFG_PYBIND_FIL}"
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
         --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
         --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
+        --generate_file_type=cfg.cpp
       DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Running Pybind11 Compiler on ${FIL}"
+      COMMENT "Generating cfg.cpp file on ${FIL}"
       VERBATIM)
 
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
     list(APPEND ${SRCS} ${CFG_CPP_FIL})
+  endforeach()
+
+  foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})
+    set(ABS_FIL ${ROOT_DIR}/${FIL})
+    get_filename_component(FIL_WE ${FIL} NAME_WE)
+    get_filename_component(FIL_DIR ${ABS_FIL} PATH)
+    file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
+    set(CFG_PYBIND_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
+    
+    add_custom_command(
+      OUTPUT "${CFG_PYBIND_FIL}"
+      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+        --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
+        --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
+        --generate_file_type=cfg.pybind.cpp
+      DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
+      COMMENT "Generating cfg.pybind.cpp file on ${FIL}"
+      VERBATIM)
+
     list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
   endforeach()
 
