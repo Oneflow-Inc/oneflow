@@ -57,30 +57,30 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
     user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
-    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
+    const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
-    const bool per_layer_quantize = ctx->Attr<bool>("per_layer_quantize");
+    const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
 
     const T *in_ptr = in->dptr<T>();
     T *scale_ptr = scale->mut_dptr<T>();
     T *zero_point_ptr = zero_point->mut_dptr<T>();
 
-    // NOTE(Liang Depeng): per-layer quantize by default
+    // NOTE(Liang Depeng): per-layer quantization by default
     int64_t outer_num = 1;
     int64_t inner_num = in->shape().elem_cnt();
-    if (!per_layer_quantize) {  // per-channel quantize
+    if (!per_layer_quantization) {  // per-channel quantization
       outer_num = in->shape().At(0);
       inner_num = in->shape().Count(1);
     }
 
-    if (quantize_scheme == "symmetric") {
+    if (quantization_scheme == "symmetric") {
       FOR_RANGE(int64_t, c, 0, outer_num) {
         GenQuantScaleSymmetric(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
         in_ptr += inner_num;
         scale_ptr += 1;
         zero_point_ptr += 1;
       }
-    } else {  // quantize_scheme == "affine"
+    } else {  // quantization_scheme == "affine"
       FOR_RANGE(int64_t, c, 0, outer_num) {
         GenQuantScaleAffine(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
         in_ptr += inner_num;

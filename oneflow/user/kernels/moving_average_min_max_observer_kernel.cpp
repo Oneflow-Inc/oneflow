@@ -94,7 +94,7 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
-    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
+    const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const float momentum = ctx->Attr<float>("momentum");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
@@ -109,11 +109,11 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
 
     int64_t num_elements = in->shape().elem_cnt();
 
-    if (quantize_scheme == "symmetric") {
+    if (quantization_scheme == "symmetric") {
       GenQuantScalePerLayerSymmetric(in_ptr, *current_train_step_ptr, stop_update_after_iters,
                                      is_training, quantization_bit, num_elements, momentum,
                                      moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
-    } else {  // quantize_scheme == "affine"
+    } else {  // quantization_scheme == "affine"
       GenQuantScalePerLayerAffine(in_ptr, *current_train_step_ptr, stop_update_after_iters,
                                   is_training, quantization_bit, num_elements, momentum,
                                   moving_max_ptr, moving_min_ptr, scale_ptr, zero_point_ptr);
