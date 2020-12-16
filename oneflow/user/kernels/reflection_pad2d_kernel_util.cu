@@ -39,11 +39,11 @@ template<typename T>
 __global__ void DoCUDAReflectionPad2dGrad(
     const T* src, T * dest,
     int64_t n_batch, int64_t n_channel,int64_t dy_height, int64_t dy_width,
-    int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top, const int64_t sizeof_dtype
+    int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
 ) {
   DoReflectionPad2dGrad<T>(
     src, dest, n_batch, n_channel, dy_height, dy_width, 
-    dx_height, dx_width, pad_left, pad_top, sizeof_dtype
+    dx_height, dx_width, pad_left, pad_top
   );
 };
 
