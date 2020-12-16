@@ -33,8 +33,8 @@ template<typename T, typename CondT>
 struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
   static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out) {
-    cuda::elementwise::Ternary::Launch(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
-                                       ctx->cuda_stream());
+    cuda::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
+                               ctx->cuda_stream());
   }
 };
 

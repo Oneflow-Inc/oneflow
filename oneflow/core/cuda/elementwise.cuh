@@ -146,43 +146,40 @@ struct GenericLauncher {
   }
 };
 
-struct Unary {
-  template<typename FunctorT, typename R, typename X>
-  static cudaError_t Launch(FunctorT functor, int64_t n, R* r, const X* x, cudaStream_t stream) {
-    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, stream);
-  }
-  template<typename FactoryT, typename R, typename X>
-  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, R* r, const X* x,
-                                       cudaStream_t stream) {
-    return GenericLauncher<FactoryT, R, X>::Launch(factory, n, r, x, stream);
-  }
-};
+template<typename FactoryT, typename R, typename X>
+inline cudaError_t UnaryWithFactory(FactoryT factory, int64_t n, R* r, const X* x,
+                                    cudaStream_t stream) {
+  return GenericLauncher<FactoryT, R, X>::Launch(factory, n, r, x, stream);
+}
 
-struct Binary {
-  template<typename FunctorT, typename R, typename X, typename Y>
-  static cudaError_t Launch(FunctorT functor, int64_t n, R* r, const X* x, const Y* y,
-                            cudaStream_t stream) {
-    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, y, stream);
-  }
-  template<typename FactoryT, typename R, typename X, typename Y>
-  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, R* r, const X* x, const Y* y,
-                                       cudaStream_t stream) {
-    return GenericLauncher<FactoryT, R, X, Y>::Launch(factory, n, r, x, y, stream);
-  }
-};
+template<typename FunctorT, typename R, typename X>
+inline cudaError_t Unary(FunctorT functor, int64_t n, R* r, const X* x, cudaStream_t stream) {
+  return UnaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, stream);
+}
 
-struct Ternary {
-  template<typename FunctorT, typename R, typename X, typename Y, typename Z>
-  static cudaError_t Launch(FunctorT functor, int64_t n, R* r, const X* x, const Y* y, const Z* z,
-                            cudaStream_t stream) {
-    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, y, z, stream);
-  }
-  template<typename FactoryT, typename R, typename X, typename Y, typename Z>
-  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, R* r, const X* x, const Y* y,
-                                       const Z* z, cudaStream_t stream) {
-    return GenericLauncher<FactoryT, R, X, Y, Z>::Launch(factory, n, r, x, y, z, stream);
-  }
-};
+template<typename FactoryT, typename R, typename X, typename Y>
+inline cudaError_t BinaryWithFactory(FactoryT factory, int64_t n, R* r, const X* x, const Y* y,
+                                     cudaStream_t stream) {
+  return GenericLauncher<FactoryT, R, X, Y>::Launch(factory, n, r, x, y, stream);
+}
+
+template<typename FunctorT, typename R, typename X, typename Y>
+inline cudaError_t Binary(FunctorT functor, int64_t n, R* r, const X* x, const Y* y,
+                          cudaStream_t stream) {
+  return BinaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, y, stream);
+}
+
+template<typename FactoryT, typename R, typename X, typename Y, typename Z>
+inline cudaError_t TernaryWithFactory(FactoryT factory, int64_t n, R* r, const X* x, const Y* y,
+                                      const Z* z, cudaStream_t stream) {
+  return GenericLauncher<FactoryT, R, X, Y, Z>::Launch(factory, n, r, x, y, z, stream);
+}
+
+template<typename FunctorT, typename R, typename X, typename Y, typename Z>
+inline cudaError_t Ternary(FunctorT functor, int64_t n, R* r, const X* x, const Y* y, const Z* z,
+                           cudaStream_t stream) {
+  return TernaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, y, z, stream);
+}
 
 }  // namespace elementwise
 
