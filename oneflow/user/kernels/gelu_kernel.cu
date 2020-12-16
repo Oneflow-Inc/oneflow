@@ -68,9 +68,9 @@ class GpuGeluKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK((cuda::elementwise::Unary<T, T>::Launch(GeluFunctor<T>(), elem_cnt, x->dptr<T>(),
-                                                          y->mut_dptr<T>(),
-                                                          ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK(
+        (cuda::elementwise::Unary::Launch(GeluFunctor<T>(), elem_cnt, y->mut_dptr<T>(),
+                                          x->dptr<T>(), ctx->device_ctx()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -97,9 +97,9 @@ class GpuGeluGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    OF_CUDA_CHECK((cuda::elementwise::Binary<T, T, T>::Launch(
-        GeluGradFunctor<T>(), elem_cnt, x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
-        ctx->device_ctx()->cuda_stream())));
+    OF_CUDA_CHECK((cuda::elementwise::Binary::Launch(GeluGradFunctor<T>(), elem_cnt,
+                                                     dx->mut_dptr<T>(), x->dptr<T>(), dy->dptr<T>(),
+                                                     ctx->device_ctx()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_CUDA_ELEMENTWISE_H_
 
 #include <cuda_runtime.h>
-#include <cuda_fp16.h>
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
@@ -126,7 +125,7 @@ struct SimpleFactory {
 template<typename FactoryT, typename R, typename... IN>
 struct GenericLauncher {
   constexpr static int pack_size = PackSize<R, IN...>();
-  static cudaError_t Launch(FactoryT factory, int64_t n, const IN*... in, R* r,
+  static cudaError_t Launch(FactoryT factory, int64_t n, R* r, const IN*... in,
                             cudaStream_t stream) {
     constexpr int pack_size = PackSize<R, IN...>();
     const int64_t n_pack = n / pack_size;
@@ -147,44 +146,41 @@ struct GenericLauncher {
   }
 };
 
-template<typename R, typename X>
 struct Unary {
-  template<typename FunctorT>
-  static cudaError_t Launch(FunctorT functor, int64_t n, const X* x, R* r, cudaStream_t stream) {
-    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, x, r, stream);
+  template<typename FunctorT, typename R, typename X>
+  static cudaError_t Launch(FunctorT functor, int64_t n, R* r, const X* x, cudaStream_t stream) {
+    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, stream);
   }
-  template<typename FactoryT>
-  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, const X* x, R* r,
+  template<typename FactoryT, typename R, typename X>
+  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, R* r, const X* x,
                                        cudaStream_t stream) {
-    return GenericLauncher<FactoryT, R, X>::Launch(factory, n, x, r, stream);
+    return GenericLauncher<FactoryT, R, X>::Launch(factory, n, r, x, stream);
   }
 };
 
-template<typename R, typename X, typename Y>
 struct Binary {
-  template<typename FunctorT>
-  static cudaError_t Launch(FunctorT functor, int64_t n, const X* x, const Y* y, R* r,
+  template<typename FunctorT, typename R, typename X, typename Y>
+  static cudaError_t Launch(FunctorT functor, int64_t n, R* r, const X* x, const Y* y,
                             cudaStream_t stream) {
-    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, x, y, r, stream);
+    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, y, stream);
   }
-  template<typename FactoryT>
-  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, const X* x, const Y* y, R* r,
+  template<typename FactoryT, typename R, typename X, typename Y>
+  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, R* r, const X* x, const Y* y,
                                        cudaStream_t stream) {
-    return GenericLauncher<FactoryT, R, X, Y>::Launch(factory, n, x, y, r, stream);
+    return GenericLauncher<FactoryT, R, X, Y>::Launch(factory, n, r, x, y, stream);
   }
 };
 
-template<typename R, typename X, typename Y, typename Z>
 struct Ternary {
-  template<typename FunctorT>
-  static cudaError_t Launch(FunctorT functor, int64_t n, const X* x, const Y* y, const Z* z, R* r,
+  template<typename FunctorT, typename R, typename X, typename Y, typename Z>
+  static cudaError_t Launch(FunctorT functor, int64_t n, R* r, const X* x, const Y* y, const Z* z,
                             cudaStream_t stream) {
-    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, x, y, z, r, stream);
+    return LaunchWithFactory(SimpleFactory<FunctorT>(functor), n, r, x, y, z, stream);
   }
-  template<typename FactoryT>
-  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, const X* x, const Y* y,
-                                       const Z* z, R* r, cudaStream_t stream) {
-    return GenericLauncher<FactoryT, R, X, Y, Z>::Launch(factory, n, x, y, z, r, stream);
+  template<typename FactoryT, typename R, typename X, typename Y, typename Z>
+  static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, R* r, const X* x, const Y* y,
+                                       const Z* z, cudaStream_t stream) {
+    return GenericLauncher<FactoryT, R, X, Y, Z>::Launch(factory, n, r, x, y, z, stream);
   }
 };
 
