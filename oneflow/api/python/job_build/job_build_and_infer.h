@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
+#define ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
+
 #include <utility>
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/record/record.pb.h"
@@ -190,3 +193,5 @@ JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(const std::string& 
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn)
       .GetDataAndErrorProto(std::string(""));
 }
+
+#endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
