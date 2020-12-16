@@ -155,104 +155,94 @@ constexpr int PackSize() {
   return Min(PackSize<T>(), PackSize<U, Args...>());
 }
 
-template<typename FactoryT, typename R, typename X, int pack_size, bool tail>
+template<template<int, typename, typename, typename...> typename PrimitiveT, int pack_size,
+         bool tail, typename FactoryT, typename R, typename... IN>
 __global__ void __launch_bounds__(kBlockSize)
-    ApplyUnary(FactoryT factory, int64_t n_pack, const PackType<X, pack_size>* pack_x,
-               PackType<R, pack_size>* pack_r, int64_t n_tail, const X* tail_x, R* tail_r) {
-  auto functor = factory.Create();
-  Pack<X, pack_size> p_x;
-  Pack<R, pack_size> p_r;
+    ApplyGeneric(FactoryT factory, int64_t n_pack, PackType<R, pack_size>* pack_r,
+                 const PackType<IN, pack_size>*... pack_in, int64_t n_tail, R* tail_r,
+                 const IN*... tail_in) {
+  PrimitiveT<pack_size, FactoryT, R, IN...> primitive(factory);
   const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
   for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
-    p_x.storage = pack_x[i];
-#pragma unroll
-    for (int j = 0; j < pack_size; ++j) { p_r.elem[j] = functor(p_x.elem[j]); }
-    pack_r[i] = p_r.storage;
-  }
-  if (tail && global_tid < n_tail) { tail_r[global_tid] = functor(tail_x[global_tid]); }
-}
-
-template<int pack_size, bool tail, typename FactoryT, typename R, typename X>
-struct UnaryLauncher {
-  static void Launch(int num_blocks, cudaStream_t stream, FactoryT factory, int64_t n_pack,
-                     const PackType<X, pack_size>* pack_x, PackType<R, pack_size>* pack_r,
-                     int64_t n_tail, const X* tail_x, R* tail_r) {
-    ApplyUnary<FactoryT, R, X, pack_size, tail><<<num_blocks, kBlockSize, 0, stream>>>(
-        factory, n_pack, pack_x, pack_r, n_tail, tail_x, tail_r);
-  }
-};
-
-template<typename FactoryT, typename R, typename X, typename Y, int pack_size, bool tail>
-__global__ void __launch_bounds__(kBlockSize)
-    ApplyBinary(FactoryT factory, int64_t n_pack, const PackType<X, pack_size>* pack_x,
-                const PackType<Y, pack_size>* pack_y, PackType<R, pack_size>* pack_r,
-                int64_t n_tail, const X* tail_x, const Y* tail_y, R* tail_r) {
-  auto functor = factory.Create();
-  Pack<X, pack_size> p_x;
-  Pack<Y, pack_size> p_y;
-  Pack<R, pack_size> p_r;
-  const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
-  for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
-    p_x.storage = pack_x[i];
-    p_y.storage = pack_y[i];
-#pragma unroll
-    for (int j = 0; j < pack_size; ++j) { p_r.elem[j] = functor(p_x.elem[j], p_y.elem[j]); }
-    pack_r[i] = p_r.storage;
+    primitive.ApplyPack(pack_r + i, (pack_in + i)...);
   }
   if (tail && global_tid < n_tail) {
-    tail_r[global_tid] = functor(tail_x[global_tid], tail_y[global_tid]);
+    primitive.ApplyElem(tail_r + global_tid, (tail_in + global_tid)...);
   }
 }
 
-template<int pack_size, bool tail, typename FactoryT, typename R, typename X, typename Y>
-struct BinaryLauncher {
-  static void Launch(int num_blocks, cudaStream_t stream, FactoryT factory, int64_t n_pack,
-                     const PackType<X, pack_size>* pack_x, const PackType<Y, pack_size>* pack_y,
-                     PackType<R, pack_size>* pack_r, int64_t n_tail, const X* tail_x,
-                     const Y* tail_y, R* tail_r) {
-    ApplyBinary<FactoryT, R, X, Y, pack_size, tail><<<num_blocks, kBlockSize, 0, stream>>>(
-        factory, n_pack, pack_x, pack_y, pack_r, n_tail, tail_x, tail_y, tail_r);
+template<int pack_size, typename FactoryT, typename R, typename X>
+struct UnaryPrimitive {
+  using FunctorT = typename std::result_of<decltype (&FactoryT::Create)(FactoryT)>::type;
+
+  __device__ explicit UnaryPrimitive(FactoryT factory) : functor(factory.Create()) {}
+
+  __device__ void ApplyPack(PackType<R, pack_size>* pack_r, const PackType<X, pack_size>* pack_x) {
+    p_x.storage = *pack_x;
+#pragma unroll
+    for (int j = 0; j < pack_size; ++j) { p_r.elem[j] = functor(p_x.elem[j]); }
+    *pack_r = p_r.storage;
   }
+
+  __device__ void ApplyElem(R* r, const X* x) { *r = functor(*x); }
+
+ private:
+  Pack<R, pack_size> p_r;
+  Pack<X, pack_size> p_x;
+  FunctorT functor;
 };
 
-template<typename FactoryT, typename R, typename X, typename Y, typename Z, int pack_size,
-         bool tail>
-__global__ void __launch_bounds__(kBlockSize)
-    ApplyTernary(FactoryT factory, int64_t n_pack, const PackType<X, pack_size>* pack_x,
-                 const PackType<Y, pack_size>* pack_y, const PackType<Z, pack_size>* pack_z,
-                 PackType<R, pack_size>* pack_r, int64_t n_tail, const X* tail_x, const Y* tail_y,
-                 const Z* tail_z, R* tail_r) {
-  auto functor = factory.Create();
+template<int pack_size, typename FactoryT, typename R, typename X, typename Y>
+struct BinaryPrimitive {
+  using FunctorT = typename std::result_of<decltype (&FactoryT::Create)(FactoryT)>::type;
+
+  __device__ explicit BinaryPrimitive(FactoryT factory) : functor(factory.Create()) {}
+
+  __device__ void ApplyPack(PackType<R, pack_size>* pack_r, const PackType<X, pack_size>* pack_x,
+                            const PackType<Y, pack_size>* pack_y) {
+    p_x.storage = *pack_x;
+    p_y.storage = *pack_y;
+#pragma unroll
+    for (int j = 0; j < pack_size; ++j) { p_r.elem[j] = functor(p_x.elem[j], p_y.elem[j]); }
+    *pack_r = p_r.storage;
+  }
+
+  __device__ void ApplyElem(R* r, const X* x, const Y* y) { *r = functor(*x, *y); }
+
+ private:
+  Pack<R, pack_size> p_r;
   Pack<X, pack_size> p_x;
   Pack<Y, pack_size> p_y;
-  Pack<Z, pack_size> p_z;
-  Pack<R, pack_size> p_r;
-  const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
-  for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
-    p_x.storage = pack_x[i];
-    p_y.storage = pack_y[i];
-    p_z.storage = pack_z[i];
+  FunctorT functor;
+};
+
+template<int pack_size, typename FactoryT, typename R, typename X, typename Y, typename Z>
+struct TernaryPrimitive {
+  using FunctorT = typename std::result_of<decltype (&FactoryT::Create)(FactoryT)>::type;
+
+  __device__ explicit TernaryPrimitive(FactoryT factory) : functor(factory.Create()) {}
+
+  __device__ void ApplyPack(PackType<R, pack_size>* pack_r, const PackType<X, pack_size>* pack_x,
+                            const PackType<Y, pack_size>* pack_y,
+                            const PackType<Z, pack_size>* pack_z) {
+    p_x.storage = *pack_x;
+    p_y.storage = *pack_y;
+    p_z.storage = *pack_z;
 #pragma unroll
     for (int j = 0; j < pack_size; ++j) {
       p_r.elem[j] = functor(p_x.elem[j], p_y.elem[j], p_z.elem[j]);
     }
-    pack_r[i] = p_r.storage;
+    *pack_r = p_r.storage;
   }
-  if (tail && global_tid < n_tail) {
-    tail_r[global_tid] = functor(tail_x[global_tid], tail_y[global_tid], tail_z[global_tid]);
-  }
-}
 
-template<int pack_size, bool tail, typename FactoryT, typename R, typename X, typename Y,
-         typename Z>
-struct TernaryLauncher {
-  static void Launch(int num_blocks, cudaStream_t stream, FactoryT factory, int64_t n_pack,
-                     const PackType<X, pack_size>* pack_x, const PackType<Y, pack_size>* pack_y,
-                     const PackType<Z, pack_size>* pack_z, PackType<R, pack_size>* pack_r,
-                     int64_t n_tail, const X* tail_x, const Y* tail_y, const Z* tail_z, R* tail_r) {
-    ApplyTernary<FactoryT, R, X, Y, Z, pack_size, tail><<<num_blocks, kBlockSize, 0, stream>>>(
-        factory, n_pack, pack_x, pack_y, pack_z, pack_r, n_tail, tail_x, tail_y, tail_z, tail_r);
-  }
+  __device__ void ApplyElem(R* r, const X* x, const Y* y, const Z* z) { *r = functor(*x, *y, *z); }
+
+ private:
+  Pack<R, pack_size> p_r;
+  Pack<X, pack_size> p_x;
+  Pack<Y, pack_size> p_y;
+  Pack<Z, pack_size> p_z;
+  FunctorT functor;
 };
 
 template<typename T, int pack_size>
@@ -267,14 +257,14 @@ inline PackType<T, pack_size>* ToPackType(T* ptr) {
 
 template<typename FunctorT>
 struct SimpleFactory {
-  explicit SimpleFactory(FunctorT functor) : functor_(functor) {}
-  __device__ FunctorT Create() const { return functor_; }
+  explicit SimpleFactory(FunctorT functor) : tpl(functor) {}
+  __device__ FunctorT Create() const { return tpl; }
 
  private:
-  FunctorT functor_;
+  FunctorT tpl;
 };
 
-template<template<int, bool, typename, typename, typename...> typename LauncherT, typename FactoryT,
+template<template<int, typename, typename, typename...> typename PrimitiveT, typename FactoryT,
          typename R, typename... IN>
 struct GenericLauncher {
   constexpr static int pack_size = PackSize<R, IN...>();
@@ -289,10 +279,11 @@ struct GenericLauncher {
       cudaError_t err = GetNumBlocks(n_pack, &num_blocks);
       if (err != cudaSuccess) { return err; }
     }
-    auto func = n_tail > 0 ? LauncherT<pack_size, true, FactoryT, R, IN...>::Launch
-                           : LauncherT<pack_size, false, FactoryT, R, IN...>::Launch;
-    func(num_blocks, stream, factory, n_pack, ToPackType<IN, pack_size>(in)...,
-         ToPackType<R, pack_size>(r), n_tail, (in + tail_offset)..., r + tail_offset);
+    auto func = n_tail > 0 ? ApplyGeneric<PrimitiveT, pack_size, true, FactoryT, R, IN...>
+                           : ApplyGeneric<PrimitiveT, pack_size, false, FactoryT, R, IN...>;
+    func<<<num_blocks, kBlockSize, 0, stream>>>(factory, n_pack, ToPackType<R, pack_size>(r),
+                                                ToPackType<IN, pack_size>(in)..., n_tail,
+                                                r + tail_offset, (in + tail_offset)...);
     return cudaPeekAtLastError();
   }
 };
@@ -306,7 +297,7 @@ struct Unary {
   template<typename FactoryT>
   static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, const X* x, R* r,
                                        cudaStream_t stream) {
-    return GenericLauncher<UnaryLauncher, FactoryT, R, X>::Launch(factory, n, x, r, stream);
+    return GenericLauncher<UnaryPrimitive, FactoryT, R, X>::Launch(factory, n, x, r, stream);
   }
 };
 
@@ -320,7 +311,7 @@ struct Binary {
   template<typename FactoryT>
   static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, const X* x, const Y* y, R* r,
                                        cudaStream_t stream) {
-    return GenericLauncher<BinaryLauncher, FactoryT, R, X, Y>::Launch(factory, n, x, y, r, stream);
+    return GenericLauncher<BinaryPrimitive, FactoryT, R, X, Y>::Launch(factory, n, x, y, r, stream);
   }
 };
 
@@ -334,8 +325,8 @@ struct Ternary {
   template<typename FactoryT>
   static cudaError_t LaunchWithFactory(FactoryT factory, int64_t n, const X* x, const Y* y,
                                        const Z* z, R* r, cudaStream_t stream) {
-    return GenericLauncher<TernaryLauncher, FactoryT, R, X, Y, Z>::Launch(factory, n, x, y, z, r,
-                                                                          stream);
+    return GenericLauncher<TernaryPrimitive, FactoryT, R, X, Y, Z>::Launch(factory, n, x, y, z, r,
+                                                                           stream);
   }
 };
 
