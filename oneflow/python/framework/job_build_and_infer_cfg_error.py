@@ -31,9 +31,6 @@ class JobBuildAndInferCfgError(Exception):
         self.error_cfg_.clear_error_summary()
         self.msg_ = self.error_cfg_.msg()
         self.error_cfg_.clear_msg()
-        resource = session_ctx.GetDefaultSession().config_proto.resource
-        if resource.enable_debug_mode == False:
-            self.error_cfg_.clear_stack_frame()
 
         def get_op_kernel_not_found_error_str(error_cfg):
             error_msg = str(self.error_cfg_.op_kernel_not_found_error())
