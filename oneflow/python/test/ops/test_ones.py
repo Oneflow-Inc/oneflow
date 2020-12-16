@@ -50,7 +50,7 @@ def _compare_ones_with_np(input_shape, device_type, machine_ids, device_counts):
                 name="x_var",
             )
 
-        of_ones = flow.ones(shape=input_shape, trainable=True, dtype=flow.float32)
+        of_ones = flow.ones(shape=input_shape, dtype=flow.float32)
         of_out = of_ones + v
 
         with flow.scope.placement(device_type, "0:0"):

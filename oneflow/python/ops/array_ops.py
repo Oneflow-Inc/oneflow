@@ -2314,15 +2314,13 @@ def amp_white_identity(
 def ones(
     shape: Sequence[int],
     dtype: Optional[dtype_util.dtype] = None,
-    trainable: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator creates a Blob with the value `1`. 
+    """This operator creates a Tensor filled with the scalar value `1`. 
 
     Args:
-        shape (Sequence[int]): The shape of the Blob. 
+        shape (Sequence[int]): The shape of the Tensor. 
         dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
-        trainable (Optional[bool], optional): Whether the variable is trainable. Defaults to False.
         name (Optional[str], optional): The name for the Blob. Defaults to None.
 
     Returns:
@@ -2340,8 +2338,6 @@ def ones(
             return flow.ones(shape=(2, 3), dtype=flow.float32)
 
 
-        check = flow.train.CheckPoint()
-        check.init()
         out = ones_job()
 
         # output: [[1. 1. 1.]
@@ -2354,10 +2350,4 @@ def ones(
     if dtype is None:
         dtype = flow.float32
 
-    return flow.get_variable(
-        name=name + "var",
-        shape=shape,
-        dtype=dtype,
-        initializer=flow.ones_initializer(),
-        trainable=trainable,
-    )
+    return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name+"constant")
