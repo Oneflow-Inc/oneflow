@@ -50,7 +50,7 @@ def _compare_zeros_with_np(input_shape, device_type, machine_ids, device_counts)
                 name="x_var",
             )
 
-        of_zeros = flow.zeros(shape=input_shape, trainable=True, dtype=flow.float32)
+        of_zeros = flow.zeros(shape=input_shape, dtype=flow.float32)
         of_out = of_zeros + v
 
         with flow.scope.placement(device_type, "0:0"):

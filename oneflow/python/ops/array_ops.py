@@ -2317,16 +2317,16 @@ def zeros(
     trainable: Optional[bool] = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator creates a Blob with the value `0`.
+    """This operator creates a Tensor filled with the scalar value `0`.
 
     Args:
-        shape (Sequence[int]): The shape of the Blob. 
+        shape (Sequence[int]): The shape of the Tensor. 
         dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
         trainable (Optional[bool], optional): Whether the variable is trainable. Defaults to False.
-        name (Optional[str], optional): The name for the Blob. Defaults to None.
+        name (Optional[str], optional): The name for the Tensor. Defaults to None.
     
     Returns:
-        remote_blob_util.BlobDef: The result Blob filled with value `0`
+        remote_blob_util.BlobDef: The result Tensor filled with value `0`
     
     For example: 
 
@@ -2341,9 +2341,6 @@ def zeros(
             return flow.zeros(shape=(2, 3), dtype=flow.float32)
 
 
-        check = flow.train.CheckPoint()
-        check.init()
-
         out = zeros_job()
 
         # output: [[0. 0. 0.]
@@ -2356,10 +2353,4 @@ def zeros(
     if dtype is None:
         dtype = flow.float32
 
-    return flow.get_variable(
-        name=name + "var",
-        shape=shape,
-        dtype=dtype,
-        initializer=flow.zeros_initializer(),
-        trainable=trainable,
-    )
+    return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name+"constant")
