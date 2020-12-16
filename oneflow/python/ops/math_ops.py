@@ -2105,3 +2105,47 @@ def range(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.mish")
+def mish(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """The Mish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x*tanh(ln(1+e^x))
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def mish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.math.mish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1.0, 1.5]).astype(np.float32)
+        out = mish_job(x)
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Mish_")
+
+    return x * flow.math.tanh(
+        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
+    )
