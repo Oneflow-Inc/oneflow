@@ -27,17 +27,17 @@ REGISTER_USER_OP("min_max_observer")
     // integer
     .Attr<int32_t>("quantization_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
-    .Attr<std::string>("quantize_scheme", "symmetric")
-    // NOTE(Liang Depeng): "true" or "false": per-layer or per-channel quantize.
-    .Attr<bool>("per_layer_quantize", true)
+    .Attr<std::string>("quantization_scheme", "symmetric")
+    // NOTE(Liang Depeng): "true" or "false": per-layer or per-channel quantization.
+    .Attr<bool>("per_layer_quantization", true)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
 
-      if (ctx->Attr<bool>("per_layer_quantize") == true) {
+      if (ctx->Attr<bool>("per_layer_quantization") == true) {
         *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
         *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
       } else {
-        // NOTE(Liang Depeng): For now per-channel quantize only support axis 0
+        // NOTE(Liang Depeng): For now per-channel quantization only support axis 0
         *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({in_shape->At(0)});
         *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({in_shape->At(0)});
       }
@@ -73,8 +73,8 @@ REGISTER_USER_OP("min_max_observer")
       CHECK_GT_OR_RETURN(quantization_bit, 1);
       CHECK_LE_OR_RETURN(quantization_bit, 8);
 
-      std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
-      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
+      std::string quantization_scheme = op_conf.attr<std::string>("quantization_scheme");
+      CHECK_OR_RETURN(quantization_scheme == "symmetric" || quantization_scheme == "affine");
       return Maybe<void>::Ok();
     });
 

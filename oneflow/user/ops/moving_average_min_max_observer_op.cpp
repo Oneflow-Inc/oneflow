@@ -32,7 +32,7 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     // integer
     .Attr<int32_t>("quantization_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
-    .Attr<std::string>("quantize_scheme", "symmetric")
+    .Attr<std::string>("quantization_scheme", "symmetric")
     // NOTE(Liang Depeng): smoothing parameter for exponential moving average operation
     .Attr<float>("momentum", 0.95)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -40,8 +40,8 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       Shape* moving_min_shape = ctx->Shape4ArgNameAndIndex("moving_min", 0);
       Shape* current_train_step = ctx->Shape4ArgNameAndIndex("current_train_step", 0);
 
-      // NOTE(Liang Depeng): for now only support per-layer quantize
-      // TODO(Liang Depeng): depthwise convolution support per-channel quantize
+      // NOTE(Liang Depeng): for now only support per-layer quantization
+      // TODO(Liang Depeng): depthwise convolution support per-channel quantization
       CHECK_OR_RETURN(moving_max_shape->NumAxes() == 1 && moving_max_shape->At(0) == 1);
       CHECK_OR_RETURN(moving_min_shape->NumAxes() == 1 && moving_min_shape->At(0) == 1);
 
@@ -95,8 +95,8 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       CHECK_GT_OR_RETURN(quantization_bit, 1);
       CHECK_LE_OR_RETURN(quantization_bit, 8);
 
-      std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
-      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
+      std::string quantization_scheme = op_conf.attr<std::string>("quantization_scheme");
+      CHECK_OR_RETURN(quantization_scheme == "symmetric" || quantization_scheme == "affine");
 
       int64_t stop_update_after_iters = op_conf.attr<int64_t>("stop_update_after_iters");
       CHECK_GT_OR_RETURN(stop_update_after_iters, 0);

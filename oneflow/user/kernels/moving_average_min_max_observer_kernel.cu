@@ -186,7 +186,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
 
     const bool is_training = ctx->Attr<bool>("training");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
-    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
+    const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const float momentum = ctx->Attr<float>("momentum");
 
@@ -206,7 +206,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
                          min_ptr);
     }
 
-    if (quantize_scheme == "symmetric") {
+    if (quantization_scheme == "symmetric") {
       if (*host_current_train_step_ptr <= stop_update_after_iters) {
         LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
@@ -217,7 +217,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
                            static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }
-    } else {  // quantize_scheme == "affine"
+    } else {  // quantization_scheme == "affine"
       if (*host_current_train_step_ptr <= stop_update_after_iters) {
         LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,

@@ -48,10 +48,10 @@ def _check_min_max_observer(
     scale_of,
     zero_point_of,
     quantization_bit,
-    quantize_scheme,
-    per_layer_quantize,
+    quantization_scheme,
+    per_layer_quantization,
 ):
-    if per_layer_quantize:
+    if per_layer_quantization:
         outer_num = 1
         inner_num = product(weight.shape[0:])
     else:
@@ -63,7 +63,7 @@ def _check_min_max_observer(
 
     weight_flatten = weight.flatten()
 
-    if quantize_scheme == "symmetric":
+    if quantization_scheme == "symmetric":
         for c in range(outer_num):
             (scale_np[c], zero_point_np[c],) = gen_quant_scale_for_min_max_symmetric(
                 weight_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
@@ -89,8 +89,8 @@ def _run_test_min_max_observer(
     dtype,
     weight_shape,
     quantization_bit,
-    quantize_scheme,
-    per_layer_quantize,
+    quantization_scheme,
+    per_layer_quantization,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -104,8 +104,8 @@ def _run_test_min_max_observer(
         weight: oft.Numpy.Placeholder(weight_shape, dtype=type_name_to_flow_type[dtype])
     ):
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
-            scale, zero_point = flow.quantization.MinMaxObserver(
-                weight, quantization_bit, quantize_scheme, per_layer_quantize
+            scale, zero_point = flow.quantization.min_max_observer(
+                weight, quantization_bit, quantization_scheme, per_layer_quantization
             )
         return scale, zero_point
 
@@ -119,8 +119,8 @@ def _run_test_min_max_observer(
         scale.numpy(),
         zero_point.numpy(),
         quantization_bit,
-        quantize_scheme,
-        per_layer_quantize,
+        quantization_scheme,
+        per_layer_quantization,
     )
 
 
@@ -173,10 +173,10 @@ def _check_moving_average_min_max_observer(
     moving_max_np,
     moving_min_np,
     quantization_bit,
-    quantize_scheme,
+    quantization_scheme,
     momentum,
 ):
-    if quantize_scheme == "symmetric":
+    if quantization_scheme == "symmetric":
         scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_symmetric(
             activation.flatten(),
             quantization_bit,
@@ -204,7 +204,7 @@ def _run_test_moving_average_min_max_observer(
     dtype,
     activation_shape,
     quantization_bit,
-    quantize_scheme,
+    quantization_scheme,
     momentum,
 ):
     assert device_type in ["gpu", "cpu"]
@@ -228,8 +228,8 @@ def _run_test_moving_average_min_max_observer(
                 initializer=flow.zeros_initializer(activation.dtype),
                 trainable=True,
             )
-            scale, zero_point = flow.quantization.MovingAverageMinMaxObserver(
-                activation, quantization_bit, quantize_scheme, momentum,
+            scale, zero_point = flow.quantization.moving_average_min_maxObserver(
+                activation, quantization_bit, quantization_scheme, momentum,
             )
             fake = x + activation
             loss = flow.math.reduce_mean(fake)
@@ -257,7 +257,7 @@ def _run_test_moving_average_min_max_observer(
             moving_max_np,
             moving_min_np,
             quantization_bit,
-            quantize_scheme,
+            quantization_scheme,
             momentum,
         )
 
@@ -283,10 +283,10 @@ def _check_fake_quantize(
     input_diff_of,
     out_of,
     quantization_bit,
-    quantize_scheme,
-    per_layer_quantize,
+    quantization_scheme,
+    per_layer_quantization,
 ):
-    if per_layer_quantize:
+    if per_layer_quantization:
         outer_num = 1
         inner_num = product(input.shape[0:])
     else:
@@ -300,7 +300,7 @@ def _check_fake_quantize(
     input_flatten = input.flatten()
     input_diff_np = np.full((inner_num * outer_num,), 1.0 / (inner_num * outer_num))
 
-    if quantize_scheme == "symmetric":
+    if quantization_scheme == "symmetric":
         for c in range(outer_num):
             (scale_np[c], zero_point_np[c],) = gen_quant_scale_for_min_max_symmetric(
                 input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
@@ -340,8 +340,8 @@ def _run_test_fake_quantize(
     dtype,
     in_shape,
     quantization_bit,
-    quantize_scheme,
-    per_layer_quantize,
+    quantization_scheme,
+    per_layer_quantization,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -367,11 +367,11 @@ def _run_test_fake_quantize(
         flow.watch_diff(input_x, test_global_storage.Setter("input_diff"))
 
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
-            scale, zero_point = flow.quantization.MinMaxObserver(
-                input_x, quantization_bit, quantize_scheme, per_layer_quantize
+            scale, zero_point = flow.quantization.min_max_observer(
+                input_x, quantization_bit, quantization_scheme, per_layer_quantization
             )
-            out = flow.quantization.FakeQuantize(
-                input_x, scale, zero_point, quantization_bit, quantize_scheme
+            out = flow.quantization.fake_quantization(
+                input_x, scale, zero_point, quantization_bit, quantization_scheme
             )
             loss = flow.math.reduce_mean(out)
 
@@ -395,8 +395,8 @@ def _run_test_fake_quantize(
         input_diff.flatten(),
         out.numpy().flatten(),
         quantization_bit,
-        quantize_scheme,
-        per_layer_quantize,
+        quantization_scheme,
+        per_layer_quantization,
     )
 
 
@@ -410,8 +410,8 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["weight_shape"] = [(89, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
-        arg_dict["quantize_scheme"] = ["symmetric", "affine"]
-        arg_dict["per_layer_quantize"] = [True, False]
+        arg_dict["quantization_scheme"] = ["symmetric", "affine"]
+        arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
             _run_test_min_max_observer(*arg)
@@ -427,7 +427,7 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["activation_shape"] = [(89, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
-        arg_dict["quantize_scheme"] = ["symmetric", "affine"]
+        arg_dict["quantization_scheme"] = ["symmetric", "affine"]
         arg_dict["momentum"] = [0.95]
 
         for arg in GenArgList(arg_dict):
@@ -444,8 +444,8 @@ class TestFakeQuantize(flow.unittest.TestCase):
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["in_shape"] = [(89, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
-        arg_dict["quantize_scheme"] = ["symmetric", "affine"]
-        arg_dict["per_layer_quantize"] = [True, False]
+        arg_dict["quantization_scheme"] = ["symmetric", "affine"]
+        arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
             _run_test_fake_quantize(*arg)
