@@ -2318,7 +2318,7 @@ def amp_white_identity(
 def dim_scatter_update_like(
     dim: int,
     index: remote_blob_util.BlobDef,
-    src: remote_blob_util.BlobDef,
+    input: remote_blob_util.BlobDef,
     like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -2327,7 +2327,7 @@ def dim_scatter_update_like(
             name if name is not None else id_util.UniqueStr("DimScatterUpdateLike_")
         )
         .Op("dim_scatter_update_like")
-        .Input("input", [src])
+        .Input("input", [input])
         .Input("index", [index])
         .Input("like", [like])
         .Output("output")
@@ -2339,7 +2339,7 @@ def dim_scatter_update_like(
 
 
 @oneflow_export("dim_scatter_update")
-def dim_scatter_update_like(
+def dim_scatter_update(
     dim: int,
     index: remote_blob_util.BlobDef,
     input: remote_blob_util.BlobDef,
