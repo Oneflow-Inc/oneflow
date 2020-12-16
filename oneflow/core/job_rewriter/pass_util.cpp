@@ -17,10 +17,10 @@ limitations under the License.
 
 namespace oneflow {
 
-bool IsNodeInList(const HashSet<std::string>& amp_list, OpNode* node) {
+bool IsNodeInList(const HashSet<std::string>& op_list, OpNode* node) {
   if (node->op().op_conf().has_user_conf() == false) { return false; }
   const std::string op_type = node->op().op_conf().user_conf().op_type_name();
-  return IsKeyFound(amp_list, op_type);
+  return IsKeyFound(op_list, op_type);
 }
 
 std::string ReplaceSlashToDash4Lbn(std::string lbn) {

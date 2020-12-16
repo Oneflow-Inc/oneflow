@@ -54,8 +54,8 @@ const std::string observer_suffix = "-fake-quant-observer";
 
 namespace {
 
-void VerifyQATList(const QATList& amp_list) {
-  for (const auto& op_type : amp_list) {
+void VerifyQATList(const QATList& op_list) {
+  for (const auto& op_type : op_list) {
     CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) != nullptr)
         << "Cannot find " << op_type << " of QuantAwareTraining list in OpRegistry.";
   }

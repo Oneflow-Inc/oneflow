@@ -26,7 +26,7 @@ bool IsKeyFound(const MapT& m, const KeyT& k) {
   return m.find(k) != m.end();
 }
 
-bool IsNodeInList(const HashSet<std::string>& amp_list, OpNode* node);
+bool IsNodeInList(const HashSet<std::string>& op_list, OpNode* node);
 
 template<typename ContainerT, typename ElemT>
 std::string Container2Str(const ContainerT& container,
