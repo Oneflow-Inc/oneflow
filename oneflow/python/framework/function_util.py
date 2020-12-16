@@ -462,6 +462,18 @@ def set_enable_fuse_add_to_output(func_desc, value):
     func_desc.job_config_proto.set_enable_fuse_add_to_output(value)
 
 
+@oneflow_function_config("enable_fuse_cast_scale")
+def set_enable_fuse_cast_scale(func_desc, value=True):
+    r"""Whether enable fuse_cast_scale.
+            If enabled, try to fuse cast and scalar_mul_by_tensor to improve performance.
+
+    Args:
+        func_desc ([type]): [description]
+        value ([type]): [description]
+    """
+    func_desc.job_config_proto.set_enable_fuse_cast_scale(value)
+
+
 @oneflow_function_config("cudnn_conv_use_deterministic_algo_only")
 def set_cudnn_conv_use_deterministic_algo_only(func_desc, value):
     r"""Set value to cudnn conv_use_deterministic_only algorithm
@@ -570,6 +582,29 @@ def set_all_reduce_fp16(func_desc, value=True):
     )
 
 
+@oneflow_function_config(
+    "optimizer_placement_optimization_mode",
+    "train.optimizer_placement_optimization_mode",
+)
+def set_optimizer_placement_optimization_mode(func_desc, mode):
+    r"""Enable optimizer_placement_optimization with mode 'mode'
+
+    Args:
+        func_desc ([type]): [description]
+        mode (str): [description].
+    """
+    assert mode in ["non_distributed", "distributed_split"]
+    func_desc.job_config_proto.set_optimizer_placement_optimization_mode(mode)
+
+
+@oneflow_function_config(
+    "optimizer_placement_optimization_threshold",
+    "train.optimizer_placement_optimization_threshold",
+)
+def set_optimizer_placement_optimization_threshold(func_desc, value):
+    func_desc.job_config_proto.set_optimizer_placement_optimization_threshold(value)
+
+
 @oneflow_function_config("enable_non_distributed_optimizer")
 def set_enable_non_distributed_optimizer(func_desc, value=True):
     r"""Whether enable non_distributed optimizer or not
@@ -578,7 +613,8 @@ def set_enable_non_distributed_optimizer(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_non_distributed_optimizer(value)
+    if value:
+        set_optimizer_placement_optimization_mode(func_desc, "non_distributed")
 
 
 @oneflow_function_config("disable_all_reduce_sequence")
@@ -729,6 +765,18 @@ def set_enable_fuse_model_update_ops(func_desc, value=True):
         value ([type]): [description]
     """
     func_desc.job_config_proto.set_enable_fuse_model_update_ops(value)
+
+
+@oneflow_function_config("enable_gradients_stats_aggregation")
+def set_enable_gradients_stats_aggregation(func_desc, value=True):
+    r"""Whether enable gradients_stats_aggregation.
+            If enabled, gradients stats ops (norm, finite, ...) will be aggregated.
+
+    Args:
+        func_desc ([type]): [description]
+        value ([type]): [description]
+    """
+    func_desc.job_config_proto.set_enable_gradients_stats_aggregation(value)
 
 
 @oneflow_function_config("train.loss_scale_factor")

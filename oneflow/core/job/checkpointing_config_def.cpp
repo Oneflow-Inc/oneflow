@@ -13,25 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_SQUARE_SUM_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_SQUARE_SUM_KERNEL_UTIL_H_
-
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
-template<typename T>
-struct SquareSumParam {
-  const T* ptr;
-  int64_t count;
-};
+namespace {
 
-template<DeviceType device_type, typename T>
-struct SquareSumKernelUtil {
-  static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y);
-  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y);
-};
+REGISTER_SCOPE_CONFIG_DEF().Bool(
+    "checkpointing", false,
+    "enable checkpointing op/tensor for backward recomputation to sublinear memory cost");
+
+}  // namespace
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_SQUARE_SUM_KERNEL_UTIL_H_
