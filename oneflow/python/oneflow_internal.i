@@ -12,7 +12,6 @@
   
 #include "oneflow/python/oneflow_internal.h"
 #include "oneflow/python/oneflow_internal.e.h.expanded.h"
-#include "oneflow/python/job_build_and_infer_if.h"
 
 %}
 %feature("director:except") {
@@ -20,5 +19,3 @@
 }
 %include "oneflow/python/oneflow_internal.h"
 %include "oneflow/python/oneflow_internal.e.h.expanded.h"
-
-%include "oneflow/python/job_build_and_infer_if.h"
