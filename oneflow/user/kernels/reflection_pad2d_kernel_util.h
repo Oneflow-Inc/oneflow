@@ -18,9 +18,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 #endif  // WITH_CUDA
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/xpu_util.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
   
@@ -45,10 +43,13 @@ namespace oneflow {
 namespace user_op {
 
 
+const int32_t kCudaThreadsNumPerBlock = 256;
+
+
 template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__)
     gpu_atomic_add(y, *x);  // TODO:(ZhaoLuyang), refine add using float16 -> half -> float -> half
 #else
     *y += *x;
@@ -117,7 +118,7 @@ OF_DEVICE_FUNC void DoReflectionPad2d(
   
 }
 
-// dest[dest_index] += src[src_index];
+
 template<typename T>
 OF_DEVICE_FUNC void DoReflectionPad2dGrad(
     const T* src, T* dest, int64_t n_batch, int64_t n_channel,

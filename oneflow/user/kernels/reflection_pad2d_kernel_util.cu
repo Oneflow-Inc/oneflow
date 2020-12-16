@@ -56,7 +56,7 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, T> final {
       int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
     ){
     int64_t elem_cnt = n_batch*n_channel*y_height*y_width;
-    RUN_CUDA_KERNEL((DoCUDAReflectionPad2d<T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+    RUN_CUDA_KERNEL((DoCUDAReflectionPad2d<T>), ctx, n_batch,
       src, dest, n_batch, n_channel, y_height, y_width, 
       x_height, x_width, pad_left, pad_top
     );
@@ -72,7 +72,7 @@ void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
       int64_t x_height, int64_t x_width, int64_t pad_left, int64_t pad_top
     ) {
       int64_t elem_cnt = n_batch*n_channel*y_height*y_width;
-      RUN_CUDA_KERNEL((DoCUDAReflectionPad2d<half>), ctx, BlocksNum4ThreadsNum(elem_cnt),
+      RUN_CUDA_KERNEL((DoCUDAReflectionPad2d<half>), ctx, n_batch,
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), n_batch, n_channel, y_height, y_width, 
           x_height, x_width, pad_left, pad_top);
 }
@@ -86,10 +86,10 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, T> final {
       int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
     ){
     int64_t elem_cnt = n_batch*n_channel*dy_height*dy_width;
-    RUN_CUDA_KERNEL((DoCUDAReflectionPad2dGrad<T>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-      src, dest, n_batch, n_channel, dy_height, dy_width, 
-      dx_height, dx_width, pad_left, pad_top
-    );
+    DoCUDAReflectionPad2dGrad<T>
+      <<<BlocksNum4ThreadsNum(elem_cnt), n_batch, 0, ctx->cuda_stream()>>>(
+          src, dest, n_batch, n_channel, dy_height, dy_width, 
+          dx_height, dx_width, pad_left, pad_top);
   }
 };
 
@@ -101,10 +101,10 @@ void ReflectionPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
       int64_t dx_height, int64_t dx_width, int64_t pad_left, int64_t pad_top
     ){
     int64_t elem_cnt = n_batch*n_channel*dy_height*dy_width;
-    RUN_CUDA_KERNEL((DoCUDAReflectionPad2dGrad<half>), ctx, BlocksNum4ThreadsNum(elem_cnt),
-      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), n_batch, n_channel, dy_height, dy_width, 
-      dx_height, dx_width, pad_left, pad_top
-    );
+    DoCUDAReflectionPad2dGrad<half>
+      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), n_batch, 
+          n_channel, dy_height, dy_width, dx_height, dx_width, pad_left, pad_top);
 }
 
 
