@@ -98,6 +98,10 @@ def moving_average_min_max_observer(
         name if name is not None else id_util.UniqueStr("MovingAverageMinMaxObserver_")
     )
 
+    training = True
+    if not flow.current_global_function_desc().IsTrainable():
+        training = False
+
     with flow.scope.namespace(op_name):
         moving_max = flow.get_variable(
             "moving_max",
@@ -130,6 +134,7 @@ def moving_average_min_max_observer(
         .Input("moving_min", [moving_min])
         .Output("scale")
         .Output("zero_point")
+        .Attr("training", training)
         .Attr("stop_update_after_iters", stop_update_after_iters)
         .Attr("quantize_to_bit", quantize_to_bit)
         .Attr("quantize_scheme", quantize_scheme)

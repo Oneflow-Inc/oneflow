@@ -26,6 +26,7 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     .Input("moving_min")  // NOTE(Liang Depeng): needs to be initialized as 0
     .Output("scale")
     .Output("zero_point")
+    .Attr<bool>("training")
     .Attr<int64_t>("stop_update_after_iters")
     // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
     .Attr<int32_t>("quantize_to_bit", 8)
