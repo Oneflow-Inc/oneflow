@@ -2353,4 +2353,4 @@ def zeros(
     if dtype is None:
         dtype = flow.float32
 
-    return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name+"constant")
+    return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")
