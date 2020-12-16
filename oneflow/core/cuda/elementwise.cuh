@@ -53,78 +53,8 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
 }
 
 template<typename T, int pack_size>
-struct SOA {
-  T array[pack_size];
-};
-
-template<typename T, int pack_size>
 struct GetPackType {
-  using type = SOA<T, pack_size>;
-};
-
-template<typename T>
-struct GetPackType<T, 1> {
-  using type = T;
-};
-
-template<>
-struct GetPackType<half, 2> {
-  using type = half2;
-};
-
-template<>
-struct GetPackType<half, 4> {
-  using type = short4;
-};
-
-template<>
-struct GetPackType<half, 8> {
-  using type = ulonglong2;
-};
-
-template<>
-struct GetPackType<float, 2> {
-  using type = float2;
-};
-
-template<>
-struct GetPackType<float, 4> {
-  using type = float4;
-};
-
-template<>
-struct GetPackType<double, 2> {
-  using type = double2;
-};
-
-template<>
-struct GetPackType<int8_t, 2> {
-  using type = char2;
-};
-
-template<>
-struct GetPackType<int8_t, 4> {
-  using type = char4;
-};
-
-template<>
-struct GetPackType<int8_t, 8> {
-  using type = long;
-};
-
-template<>
-struct GetPackType<int32_t, 2> {
-  using type = int2;
-};
-
-template<>
-struct GetPackType<int32_t, 4> {
-  using type = int4;
-};
-
-template<>
-struct GetPackType<int64_t, 2> {
-  using type = longlong2;
+  using type = typename std::aligned_storage<pack_size * sizeof(T), pack_size * sizeof(T)>::type;
 };
 
 template<typename T, int pack_size>
