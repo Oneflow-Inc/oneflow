@@ -2321,7 +2321,7 @@ def ones(
     Args:
         shape (Sequence[int]): The shape of the Tensor. 
         dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
-        name (Optional[str], optional): The name for the Blob. Defaults to None.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
 
     Returns:
         remote_blob_util.BlobDef: The result Blob filled with value `1`
