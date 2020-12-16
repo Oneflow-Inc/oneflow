@@ -24,12 +24,12 @@ namespace {
 template<typename T>
 __global__ void FakeQuantizationSymmetric(const T *in_ptr, const T *scale_ptr,
                                           const int64_t scale_size, const int64_t elements,
-                                          const int64_t panel_size, const double quantize_to_bit,
+                                          const int64_t panel_size, const double quantization_bit,
                                           T *out_ptr) {
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
   T lower_bound = -upper_bound;
 
   while (gid < elements) {
@@ -50,12 +50,12 @@ __global__ void FakeQuantizationSymmetric(const T *in_ptr, const T *scale_ptr,
 template<typename T>
 __global__ void FakeQuantizationAffine(const T *in_ptr, const T *scale_ptr, const T *zero_point_ptr,
                                        const int64_t scale_size, const int64_t elements,
-                                       const int64_t panel_size, const double quantize_to_bit,
+                                       const int64_t panel_size, const double quantization_bit,
                                        T *out_ptr) {
   int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int64_t step = gridDim.x * blockDim.x;
 
-  T upper_bound = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+  T upper_bound = static_cast<T>(pow(2.0, quantization_bit)) - 1;
   T lower_bound = 0;
 
   while (gid < elements) {
@@ -90,7 +90,7 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
     user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
-    const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
+    const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
 
     const int64_t elements = in->shape().elem_cnt();
     const int64_t panel_size = in->shape().Count(1);
@@ -98,12 +98,12 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
 
     if (quantize_scheme == "symmetric") {
       RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
-                      scale->dptr<T>(), scale_size, elements, panel_size, quantize_to_bit,
+                      scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
                       out->mut_dptr<T>());
     } else {  // quantize_scheme == "affine"
       RUN_CUDA_KERNEL((FakeQuantizationAffine<T>), ctx->device_ctx(), elements, in->dptr<T>(),
                       scale->dptr<T>(), zero_point->dptr<T>(), scale_size, elements, panel_size,
-                      quantize_to_bit, out->mut_dptr<T>());
+                      quantization_bit, out->mut_dptr<T>());
     }
   }
 

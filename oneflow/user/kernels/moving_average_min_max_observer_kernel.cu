@@ -71,7 +71,7 @@ __global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
 }
 
 template<typename T>
-__global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double quantize_to_bit,
+__global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double quantization_bit,
                                            const float momentum, const T *max_ptr, const T *min_ptr,
                                            T *moving_max_ptr, T *moving_min_ptr, T *scale,
                                            T *zero_point) {
@@ -80,7 +80,7 @@ __global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double 
 
   while (gid < elements) {
     T activation_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
-    T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
 
     if (moving_max_ptr[gid] == 0)
       moving_max_ptr[gid] = activation_max;
@@ -98,13 +98,14 @@ __global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double 
 
 template<typename T>
 __global__ void CalFreezeScaleZeroPointSymmetric(const int64_t elements,
-                                                 const double quantize_to_bit, const float momentum,
-                                                 const T *moving_max_ptr, T *scale, T *zero_point) {
+                                                 const double quantization_bit,
+                                                 const float momentum, const T *moving_max_ptr,
+                                                 T *scale, T *zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
     scale[gid] = moving_max_ptr[gid] / denominator;
     zero_point[gid] = 0;
     gid += gridDim.x * blockDim.x;
@@ -112,7 +113,7 @@ __global__ void CalFreezeScaleZeroPointSymmetric(const int64_t elements,
 }
 
 template<typename T>
-__global__ void CalScaleZeroPointAffine(const int64_t elements, const double quantize_to_bit,
+__global__ void CalScaleZeroPointAffine(const int64_t elements, const double quantization_bit,
                                         const float momentum, const T *max_ptr, const T *min_ptr,
                                         T *moving_max_ptr, T *moving_min_ptr, T *scale,
                                         T *zero_point) {
@@ -120,7 +121,7 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
 
     if (moving_max_ptr[gid] == 0)
       moving_max_ptr[gid] = max_ptr[gid];
@@ -142,14 +143,14 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
 }
 
 template<typename T>
-__global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const double quantize_to_bit,
+__global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const double quantization_bit,
                                               const float momentum, const T *moving_max_ptr,
                                               const T *moving_min_ptr, T *scale, T *zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
 
     T min = moving_min_ptr[gid];
     T s = (moving_max_ptr[gid] - min) / denominator;
@@ -186,7 +187,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const bool is_training = ctx->Attr<bool>("training");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
     const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
-    const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
+    const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const float momentum = ctx->Attr<float>("momentum");
 
     int64_t elements = in->shape().elem_cnt();
@@ -208,23 +209,23 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     if (quantize_scheme == "symmetric") {
       if (*host_current_train_step_ptr <= stop_update_after_iters) {
         LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
-                           static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
+                           static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                            moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       } else {
         LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
-                           static_cast<double>(quantize_to_bit), momentum, moving_max->dptr<T>(),
+                           static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }
     } else {  // quantize_scheme == "affine"
       if (*host_current_train_step_ptr <= stop_update_after_iters) {
         LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
-                           static_cast<double>(quantize_to_bit), momentum, max_ptr, min_ptr,
+                           static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                            moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       } else {
         LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
-                           static_cast<double>(quantize_to_bit), momentum, moving_max->dptr<T>(),
+                           static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                            moving_min->dptr<T>(), scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }
     }

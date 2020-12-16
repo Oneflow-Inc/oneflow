@@ -23,16 +23,16 @@ import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-def gen_quant_scale_for_min_max_symmetric(weight, quantize_to_bit):
+def gen_quant_scale_for_min_max_symmetric(weight, quantization_bit):
     weight_max = np.max(np.abs(weight))
-    denominator = 2.0 ** (quantize_to_bit - 1) - 1
+    denominator = 2.0 ** (quantization_bit - 1) - 1
     return weight_max / denominator, 0
 
 
-def gen_quant_scale_for_min_max_affine(weight, quantize_to_bit):
+def gen_quant_scale_for_min_max_affine(weight, quantization_bit):
     weight_max = np.max(weight)
     weight_min = np.min(weight)
-    denominator = 2.0 ** (quantize_to_bit) - 1
+    denominator = 2.0 ** (quantization_bit) - 1
     scale = (weight_max - weight_min) / denominator
     zero_point = -weight_min / scale
     return scale, zero_point
@@ -47,7 +47,7 @@ def _check_min_max_observer(
     weight,
     scale_of,
     zero_point_of,
-    quantize_to_bit,
+    quantization_bit,
     quantize_scheme,
     per_layer_quantize,
 ):
@@ -66,12 +66,12 @@ def _check_min_max_observer(
     if quantize_scheme == "symmetric":
         for c in range(outer_num):
             (scale_np[c], zero_point_np[c],) = gen_quant_scale_for_min_max_symmetric(
-                weight_flatten[c * inner_num : (c + 1) * inner_num], quantize_to_bit
+                weight_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
             )
     else:  # "affine"
         for c in range(outer_num):
             scale_np[c], zero_point_np[c] = gen_quant_scale_for_min_max_affine(
-                weight_flatten[c * inner_num : (c + 1) * inner_num], quantize_to_bit
+                weight_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
             )
 
     test_case.assertTrue(np.allclose(scale_of, scale_np, rtol=1e-3))
@@ -88,7 +88,7 @@ def _run_test_min_max_observer(
     device_num,
     dtype,
     weight_shape,
-    quantize_to_bit,
+    quantization_bit,
     quantize_scheme,
     per_layer_quantize,
 ):
@@ -105,7 +105,7 @@ def _run_test_min_max_observer(
     ):
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.MinMaxObserver(
-                weight, quantize_to_bit, quantize_scheme, per_layer_quantize
+                weight, quantization_bit, quantize_scheme, per_layer_quantize
             )
         return scale, zero_point
 
@@ -118,18 +118,18 @@ def _run_test_min_max_observer(
         weight,
         scale.numpy(),
         zero_point.numpy(),
-        quantize_to_bit,
+        quantization_bit,
         quantize_scheme,
         per_layer_quantize,
     )
 
 
 def gen_quant_scale_for_moving_average_min_max_symmetric(
-    activation, quantize_to_bit, momentum, moving_max, moving_min
+    activation, quantization_bit, momentum, moving_max, moving_min
 ):
     activation_max = np.max(np.abs(activation))
 
-    denominator = 2.0 ** (quantize_to_bit - 1) - 1
+    denominator = 2.0 ** (quantization_bit - 1) - 1
 
     if moving_max[0] == 0:
         moving_max[0] = activation_max
@@ -142,12 +142,12 @@ def gen_quant_scale_for_moving_average_min_max_symmetric(
 
 
 def gen_quant_scale_for_moving_average_min_max_affine(
-    activation, quantize_to_bit, momentum, moving_max, moving_min
+    activation, quantization_bit, momentum, moving_max, moving_min
 ):
     activation_max = np.max(activation)
     activation_min = np.min(activation)
 
-    denominator = 2.0 ** (quantize_to_bit) - 1
+    denominator = 2.0 ** (quantization_bit) - 1
 
     if moving_max[0] == 0:
         moving_max[0] = activation_max
@@ -172,14 +172,14 @@ def _check_moving_average_min_max_observer(
     zero_point_of,
     moving_max_np,
     moving_min_np,
-    quantize_to_bit,
+    quantization_bit,
     quantize_scheme,
     momentum,
 ):
     if quantize_scheme == "symmetric":
         scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_symmetric(
             activation.flatten(),
-            quantize_to_bit,
+            quantization_bit,
             momentum,
             moving_max_np,
             moving_min_np,
@@ -187,7 +187,7 @@ def _check_moving_average_min_max_observer(
     else:  # "affine"
         scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_affine(
             activation.flatten(),
-            quantize_to_bit,
+            quantization_bit,
             momentum,
             moving_max_np,
             moving_min_np,
@@ -203,7 +203,7 @@ def _run_test_moving_average_min_max_observer(
     device_num,
     dtype,
     activation_shape,
-    quantize_to_bit,
+    quantization_bit,
     quantize_scheme,
     momentum,
 ):
@@ -229,7 +229,7 @@ def _run_test_moving_average_min_max_observer(
                 trainable=True,
             )
             scale, zero_point = flow.quantization.MovingAverageMinMaxObserver(
-                activation, quantize_to_bit, quantize_scheme, momentum,
+                activation, quantization_bit, quantize_scheme, momentum,
             )
             fake = x + activation
             loss = flow.math.reduce_mean(fake)
@@ -256,20 +256,20 @@ def _run_test_moving_average_min_max_observer(
             zero_point.numpy(),
             moving_max_np,
             moving_min_np,
-            quantize_to_bit,
+            quantization_bit,
             quantize_scheme,
             momentum,
         )
 
 
-def fake_quant_per_layer_symmetric(input, quantize_to_bit, scale):
-    upper_bound = 2.0 ** (quantize_to_bit - 1) - 1
+def fake_quant_per_layer_symmetric(input, quantization_bit, scale):
+    upper_bound = 2.0 ** (quantization_bit - 1) - 1
     lower_bound = -upper_bound
     return np.clip(np.rint(input / scale), lower_bound, upper_bound) * scale
 
 
-def fake_quant_per_layer_affine(input, quantize_to_bit, scale, zero_point):
-    upper_bound = 2.0 ** (quantize_to_bit) - 1
+def fake_quant_per_layer_affine(input, quantization_bit, scale, zero_point):
+    upper_bound = 2.0 ** (quantization_bit) - 1
     lower_bound = 0
     return (
         np.clip(np.rint(input / scale + zero_point), lower_bound, upper_bound)
@@ -282,7 +282,7 @@ def _check_fake_quantize(
     input,
     input_diff_of,
     out_of,
-    quantize_to_bit,
+    quantization_bit,
     quantize_scheme,
     per_layer_quantize,
 ):
@@ -303,11 +303,11 @@ def _check_fake_quantize(
     if quantize_scheme == "symmetric":
         for c in range(outer_num):
             (scale_np[c], zero_point_np[c],) = gen_quant_scale_for_min_max_symmetric(
-                input_flatten[c * inner_num : (c + 1) * inner_num], quantize_to_bit
+                input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
             )
             out = fake_quant_per_layer_symmetric(
                 input_flatten[c * inner_num : (c + 1) * inner_num],
-                quantize_to_bit,
+                quantization_bit,
                 scale_np[c],
             )
             out_np[c * inner_num : (c + 1) * inner_num] = out
@@ -315,11 +315,11 @@ def _check_fake_quantize(
     else:  # "affine"
         for c in range(outer_num):
             scale_np[c], zero_point_np[c] = gen_quant_scale_for_min_max_affine(
-                input_flatten[c * inner_num : (c + 1) * inner_num], quantize_to_bit
+                input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
             )
             out = fake_quant_per_layer_affine(
                 input_flatten[c * inner_num : (c + 1) * inner_num],
-                quantize_to_bit,
+                quantization_bit,
                 scale_np[c],
                 zero_point_np[c],
             )
@@ -329,7 +329,7 @@ def _check_fake_quantize(
     # The slightly different rounding results between C++ and Python will make
     # the dequantize results very differently. So enlarge the tolerant to
     # avoid the test failure.
-    test_case.assertTrue(np.mean(out_of - out_np) < 1e-5)
+    test_case.assertTrue(np.mean(np.abs(out_of - out_np)) < 1e-5)
     test_case.assertTrue(np.allclose(input_diff_of, input_diff_np, rtol=1e-3))
 
 
@@ -339,7 +339,7 @@ def _run_test_fake_quantize(
     device_num,
     dtype,
     in_shape,
-    quantize_to_bit,
+    quantization_bit,
     quantize_scheme,
     per_layer_quantize,
 ):
@@ -363,16 +363,15 @@ def _run_test_fake_quantize(
                 trainable=True,
             )
             input_x = input + x
-            # input_x = flow.cast_to_current_logical_view(input_x)
 
         flow.watch_diff(input_x, test_global_storage.Setter("input_diff"))
 
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.MinMaxObserver(
-                input_x, quantize_to_bit, quantize_scheme, per_layer_quantize
+                input_x, quantization_bit, quantize_scheme, per_layer_quantize
             )
             out = flow.quantization.FakeQuantize(
-                input_x, scale, zero_point, quantize_to_bit, quantize_scheme
+                input_x, scale, zero_point, quantization_bit, quantize_scheme
             )
             loss = flow.math.reduce_mean(out)
 
@@ -395,7 +394,7 @@ def _run_test_fake_quantize(
         input,
         input_diff.flatten(),
         out.numpy().flatten(),
-        quantize_to_bit,
+        quantization_bit,
         quantize_scheme,
         per_layer_quantize,
     )
@@ -410,7 +409,7 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["weight_shape"] = [(89, 40, 20, 10)]
-        arg_dict["quantize_to_bit"] = [8, 2]
+        arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantize_scheme"] = ["symmetric", "affine"]
         arg_dict["per_layer_quantize"] = [True, False]
 
@@ -427,7 +426,7 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["activation_shape"] = [(89, 40, 20, 10)]
-        arg_dict["quantize_to_bit"] = [8, 2]
+        arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantize_scheme"] = ["symmetric", "affine"]
         arg_dict["momentum"] = [0.95]
 
@@ -444,7 +443,7 @@ class TestFakeQuantize(flow.unittest.TestCase):
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
         arg_dict["in_shape"] = [(89, 40, 20, 10)]
-        arg_dict["quantize_to_bit"] = [8, 2]
+        arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantize_scheme"] = ["symmetric", "affine"]
         arg_dict["per_layer_quantize"] = [True, False]
 
