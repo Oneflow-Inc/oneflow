@@ -71,23 +71,46 @@ Maybe<std::string> GetScaleLbn(const std::string& lbn) {
 Maybe<bool> IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn,
                            std::string* conv_weight_scale_lbn) {
   const auto* dst_node = edge->dst_node();
-  if (dst_node->op().op_conf().user_conf().op_type_name() != "bias_add") { return false; }
-  for (const OpEdge* edge : dst_node->in_edges()) {
-    const auto* src_node = edge->src_node();
-    if (src_node->op().op_conf().user_conf().op_type_name() == "conv2d") {
-      for (const OpEdge* in_edge : src_node->in_edges()) {
-        CHECK_EQ_OR_RETURN(in_edge->lbis().size(), 1);
-        const auto lbi = in_edge->lbis().front();
-        const auto ibn = in_edge->lbi2ibns().at(lbi);
-        CHECK_EQ_OR_RETURN(ibn.size(), 1);
-        CHECK_OR_RETURN(ibn[0] == "in_0" || ibn[0] == "weight_0");
-        if (ibn[0] == "in_0") {
-          *conv_input_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
-        } else if (ibn[0] == "weight_0") {
-          *conv_weight_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
-        }
+
+  const auto dst_op_type = dst_node->op().op_conf().user_conf().op_type_name();
+
+  auto GetInputAndWeightScaleLbn4ConvNode = [](const OpNode* conv_node,
+                                               std::string* conv_input_scale_lbn,
+                                               std::string* conv_weight_scale_lbn) -> Maybe<void> {
+    for (const OpEdge* in_edge : conv_node->in_edges()) {
+      CHECK_EQ_OR_RETURN(in_edge->lbis().size(), 1);
+      const auto lbi = in_edge->lbis().front();
+      const auto ibn = in_edge->lbi2ibns().at(lbi);
+      CHECK_EQ_OR_RETURN(ibn.size(), 1);
+      CHECK_OR_RETURN(ibn[0] == "in_0" || ibn[0] == "weight_0");
+      if (ibn[0] == "in_0") {
+        *conv_input_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
+      } else if (ibn[0] == "weight_0") {
+        *conv_weight_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
       }
+    }
+    return Maybe<void>::Ok();
+  };
+
+  if (dst_op_type == "conv2d") {
+    CHECK_EQ_OR_RETURN(edge->lbis().size(), 1);
+    const auto lbi = edge->lbis().front();
+    const auto ibn = edge->lbi2ibns().at(lbi);
+    CHECK_EQ_OR_RETURN(ibn.size(), 1);
+    if (ibn[0] == "bias_0") {
+      JUST(GetInputAndWeightScaleLbn4ConvNode(dst_node, conv_input_scale_lbn,
+                                              conv_weight_scale_lbn));
       return true;
+    }
+  } else if (dst_op_type == "bias_add") {
+    // check whether the bias_add corresponds to a conv
+    for (const OpEdge* edge : dst_node->in_edges()) {
+      const auto* src_node = edge->src_node();
+      if (src_node->op().op_conf().user_conf().op_type_name() == "conv2d") {
+        JUST(GetInputAndWeightScaleLbn4ConvNode(src_node, conv_input_scale_lbn,
+                                                conv_weight_scale_lbn));
+        return true;
+      }
     }
   }
   return false;

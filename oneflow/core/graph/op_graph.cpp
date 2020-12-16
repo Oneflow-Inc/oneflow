@@ -441,6 +441,7 @@ void OpGraph::InitEdges() {
       auto producer_it = lbi2producer.find(lbis->front());
       CHECK(producer_it != lbi2producer.end())
           << "producer not found: " << GenLogicalBlobName(lbis->front());
+          // FIXME:
       Connect(producer_it->second, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
   });
