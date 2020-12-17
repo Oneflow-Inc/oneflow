@@ -27,7 +27,6 @@ import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.oneflow_internal as oneflow_internal
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
