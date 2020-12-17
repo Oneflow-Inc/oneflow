@@ -1924,6 +1924,52 @@ def tril(
     )
 
 
+@oneflow_export("math.fused_scale_tril", "nn.fused_scale_tril")
+def fused_scale_tril(
+    x: remote_blob_util.BlobDef,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    scale: Union[int, float] = 1,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+
+    if isinstance(fill_value, float):
+        is_floating_fill_value = True
+        floating_fill_value = float(fill_value)
+        integer_fill_value = int(0)
+    else:
+        is_floating_fill_value = False
+        floating_fill_value = float(0)
+        integer_fill_value = int(fill_value)
+
+    if isinstance(scale, float):
+        is_floating_scale_value = True
+        floating_scale_value = float(scale)
+        integer_scale_value = int(1)
+    else:
+        is_floating_scale_value = False
+        floating_scale_value = float(1)
+        integer_scale_value = int(scale)
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("FusedScaleTril_")
+        )
+        .Op("fused_scale_tril")
+        .Input("in", [x])
+        .Attr("diagonal", diagonal)
+        .Attr("is_floating_fill_value", is_floating_fill_value)
+        .Attr("floating_fill_value", floating_fill_value)
+        .Attr("integer_fill_value", integer_fill_value)
+        .Attr("is_floating_scale_value", is_floating_scale_value)
+        .Attr("floating_scale_value", floating_scale_value)
+        .Attr("integer_scale_value", integer_scale_value)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("math.polyval")
 def polyval(
     coeffs: Union[List, Tuple], x: remote_blob_util.BlobDef, name: Optional[str] = None
@@ -2059,3 +2105,91 @@ def range(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("math.mish")
+def mish(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """The Mish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x*tanh(ln(1+e^x))
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def mish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.math.mish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1.0, 1.5]).astype(np.float32)
+        out = mish_job(x)
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Mish_")
+
+    return x * flow.math.tanh(
+        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
+    )
+
+
+@oneflow_export("math.swish")
+def swish(
+    x: remote_blob_util.BlobDef, beta: float = 1.0, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""The Swish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x * sigmoid(\beta*x)
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.math.swish(x)
+        x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
+
+
+        out = swish_job(x)
+        # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
+    
+    Args:
+        x (remote_blob_util.BlobDef): The input Blob. 
+        beta (float, optional): The smooth factor. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Swish_")
+
+    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")

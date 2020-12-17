@@ -59,7 +59,9 @@ class OfBlob(object):
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
         while not oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_):
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
-            oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
+            oneflow_api.OfBlob_CurTensorCopyShapeTo(
+                self.of_blob_ptr_, shape_tensor
+            )
             assert len(shape_tensor.shape) == 1
             assert shape_tensor.size == num_axes
             tensor_shape_list.append(tuple(shape_tensor.tolist()))
@@ -144,9 +146,13 @@ class OfBlob(object):
         copy_method = getattr(oneflow_api, method_name)
         tensor_list = []
         oneflow_api.OfBlob_ResetTensorIterator(self.of_blob_ptr_)
-        while oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_) == False:
+        while (
+            oneflow_api.OfBlob_CurTensorIteratorEqEnd(self.of_blob_ptr_) == False
+        ):
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
-            oneflow_api.OfBlob_CurTensorCopyShapeTo(self.of_blob_ptr_, shape_tensor)
+            oneflow_api.OfBlob_CurTensorCopyShapeTo(
+                self.of_blob_ptr_, shape_tensor
+            )
             shape = tuple(shape_tensor.tolist())
             tensor = np.zeros(
                 shape, dtype=flow.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
@@ -207,4 +213,6 @@ class OfBlob(object):
             self.of_blob_ptr_
         )
         num_slices = reduce(lambda a, b: a + b, is_new_slice_start_mask, 0)
-        assert num_slices == oneflow_api.OfBlob_NumOfTensorListSlices(self.of_blob_ptr_)
+        assert num_slices == oneflow_api.OfBlob_NumOfTensorListSlices(
+            self.of_blob_ptr_
+        )

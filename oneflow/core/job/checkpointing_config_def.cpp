@@ -13,15 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
-#define ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
-class ForeignCallback;
+namespace {
 
-void RegisterForeignCallbackOnlyOnce(ForeignCallback* callback);
+REGISTER_SCOPE_CONFIG_DEF().Bool(
+    "checkpointing", false,
+    "enable checkpointing op/tensor for backward recomputation to sublinear memory cost");
+
+}  // namespace
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_FOREIGN_CALLACK_MGR_H_
