@@ -462,6 +462,18 @@ def set_enable_fuse_add_to_output(func_desc, value):
     func_desc.job_config_proto.set_enable_fuse_add_to_output(value)
 
 
+@oneflow_function_config("enable_fuse_cast_scale")
+def set_enable_fuse_cast_scale(func_desc, value=True):
+    r"""Whether enable fuse_cast_scale.
+            If enabled, try to fuse cast and scalar_mul_by_tensor to improve performance.
+
+    Args:
+        func_desc ([type]): [description]
+        value ([type]): [description]
+    """
+    func_desc.job_config_proto.set_enable_fuse_cast_scale(value)
+
+
 @oneflow_function_config("cudnn_conv_use_deterministic_algo_only")
 def set_cudnn_conv_use_deterministic_algo_only(func_desc, value):
     r"""Set value to cudnn conv_use_deterministic_only algorithm
