@@ -19,8 +19,16 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
+// Fill ShapeView into dim vector
+DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
+  int64_t ndims = tensor_shape.NumAxes();
+  DimVector shape_vec(ndims);
+  for (int64_t i = 0; i < ndims; ++i) { shape_vec[i] = tensor_shape.At(i); }
+  shape_vec[ndims - 1] = shape_vec[ndims - 1];
+  return shape_vec;
+}
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN_T>
 class ReflectionPad2dKernel final : public OpKernel {
  public:
   ReflectionPad2dKernel() = default;
@@ -31,19 +39,12 @@ class ReflectionPad2dKernel final : public OpKernel {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
     int64_t c_idx, h_idx, w_idx;
-    if (data_format == "NCHW") {
-      c_idx = 1; 
-      h_idx = 2;
-      w_idx = 3;
-    } else {
-      h_idx = 1;
-      w_idx = 2;
-      c_idx = 3;
-    }
+    c_idx = 1; 
+    h_idx = 2;
+    w_idx = 3;
 
     int64_t pad_left = padding[w_idx];
     int64_t pad_top = padding[h_idx];
@@ -55,12 +56,13 @@ class ReflectionPad2dKernel final : public OpKernel {
     int64_t x_height = x->shape().At(h_idx);
     int64_t x_width = x->shape().At(w_idx);
 
-    T * dest = y->mut_dptr<T>();
-    const T* src = x->dptr<T>();
+    IN_T * dest = y->mut_dptr<IN_T>();
+    const IN_T* src = x->dptr<IN_T>();
+    DimVector y_vector = ShapeViewToDimVector(y->shape());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-
-    ReflectionPad2dFunctor<device_type, T>()(
-        ctx->device_ctx(), src, dest, n_batch, n_channel, 
+    ReflectionPad2dFunctor<device_type, IN_T>()(
+        ctx->device_ctx(), src, dest, index_helper, n_batch, n_channel, 
         y_height, y_width, x_height, x_width, pad_left, pad_top
     );
 
@@ -84,7 +86,7 @@ REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kCPU, float)
 REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kCPU, double)
 REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kCPU, int32_t)
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename IN_T>
 class ReflectionPad2dGradKernel final : public OpKernel {
  public:
   ReflectionPad2dGradKernel() = default;
@@ -95,20 +97,13 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const std::string data_format = ctx->Attr<std::string>("data_format");
     const int64_t ndims = dy->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
     int64_t c_idx, h_idx, w_idx;
-    if (data_format == "NCHW") {
-      c_idx = 1; 
-      h_idx = 2;
-      w_idx = 3;
-    } else {
-      h_idx = 1;
-      w_idx = 2;
-      c_idx = 3;
-    }
+    c_idx = 1; 
+    h_idx = 2;
+    w_idx = 3;
 
   
     int64_t pad_left = padding[w_idx];
@@ -120,16 +115,15 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     int64_t dx_height = dx->shape().At(h_idx);
     int64_t dx_width = dx->shape().At(w_idx);
 
-    const T* src = dy->dptr<T>();
-    T * dest = dx->mut_dptr<T>();
+    const IN_T* src = dy->dptr<IN_T>();
+    IN_T * dest = dx->mut_dptr<IN_T>();
+    DimVector dy_vector = ShapeViewToDimVector(dy->shape());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
-    ReflectionPad2dGradFunctor<device_type, T>()(
-      ctx->device_ctx(), src, dest, n_batch, n_channel, 
+    ReflectionPad2dGradFunctor<device_type, IN_T>()(
+      ctx->device_ctx(), src, dest, index_helper, n_batch, n_channel, 
       dy_height, dy_width, dx_height, dx_width, pad_left, pad_top
     );
-
-    
-
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
