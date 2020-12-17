@@ -7,7 +7,7 @@ namespace user_op{
 REGISTER_USER_OP("offset_to_ndindex")
     .Input("index")
     .Input("dims")
-    .Output("output")
+    .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx)-> Maybe<void> {
         const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0); 
         const TensorDesc* dims = ctx->TensorDesc4ArgNameAndIndex("dims", 0); 

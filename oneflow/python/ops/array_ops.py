@@ -2391,7 +2391,7 @@ def ndindex_to_offset(
     )
 
 
-@oneflow.export("offset_to_ndindex")
+@oneflow_export("offset_to_ndindex")
 def offset_to_ndindex(
     index: remote_blob_util.BlobDef, 
     dims: remote_blob_util.BlobDef, 

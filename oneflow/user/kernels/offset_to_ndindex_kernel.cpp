@@ -15,8 +15,7 @@ class OffsetToNdIndexKernel final : public OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const Tensor* index = ctx->Tensor4ArgNameAndIndex("index", 0);
-    Tensor* dims_tensor = ctx->Tensor4ArgNameAndIndex("dims", 0);
-    T* dims = dims_tensor->dptr<T>();
+    const Tensor* dims_tensor = ctx->Tensor4ArgNameAndIndex("dims", 0);
 
     int ndim = dims_tensor->shape().elem_cnt();
     int32_t in_num = index->shape().elem_cnt(); 
@@ -24,7 +23,7 @@ class OffsetToNdIndexKernel final : public OpKernel {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
     
-    OffsetToNdIndexFunctor<device_type, T>()(ctx->device_ctx(), in_num, ndim, index->dptr<T>(), dims, output);
+    OffsetToNdIndexFunctor<device_type, T>()(ctx->device_ctx(), in_num, ndim, index->dptr<T>(), dims_tensor->dptr<T>(), output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -42,6 +41,10 @@ class OffsetToNdIndexKernel final : public OpKernel {
 // Register CPU version
 REGISTER_OFFSET_TO_NDINDEX_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
+// Register GPU version
+# ifdef WITH_CUDA
+REGISTER_OFFSET_TO_NDINDEX_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+# endif
 
 }  // namespace user_op
 }  // namespace oneflow

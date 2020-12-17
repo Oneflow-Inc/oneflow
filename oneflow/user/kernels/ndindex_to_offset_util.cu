@@ -10,6 +10,7 @@ namespace user_op {
 template<typename T>
 __global__ void IndexToOffsetForwardGpuKernel(int32_t in_num, 
   int32_t ndim, const T* index, const T* dims_tensor, T* out) {
+  // printf("RUN CUDA KERNEL");
   DoIndexToOffset<T>(in_num, ndim, index, dims_tensor, out);
 }
 
@@ -17,6 +18,7 @@ template<typename T>
 struct NdIndexToOffsetFunctor<DeviceType::kGPU, T> final {
     void operator()(DeviceCtx* ctx, int32_t in_num,
         int32_t ndim, const T* index, const T* dims_tensor, T* out) {
+    printf("Enter Cuda operator");
     RUN_CUDA_KERNEL((IndexToOffsetForwardGpuKernel<T>), ctx, in_num, in_num, ndim, index, dims_tensor, out);
   }
 };
