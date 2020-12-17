@@ -61,9 +61,9 @@ def _compare_pixel_shuffle_with_np(
 
     np_out_pixel_shuffle = np_pixel_shuffle(input_1)
 
-    def np_pixel_shuffle_diff(input, upscale_factor):
-        # Set diff as 1
-        diff = np.ones_like(input)
+    np_random_mul = np.random.random(size=np_out_pixel_shuffle.shape).astype(np.float32)
+
+    def np_pixel_shuffle_diff(input, np_diff, upscale_factor):
         _batch, _new_channel, _height_mul_factor, _width_mul_factor = input.shape
         _channel = _new_channel * (upscale_factor ** 2)
         _height = _height_mul_factor // upscale_factor
@@ -77,11 +77,11 @@ def _compare_pixel_shuffle_with_np(
                     inner_c = c - out_c_idx * upscale_factor * upscale_factor
                     out_h_idx = h * upscale_factor + int(inner_c / upscale_factor)
                     out_w_idx = w * upscale_factor + int(inner_c % upscale_factor)
-                    bp_result[:, c, h, w] = diff[:, out_c_idx, out_h_idx, out_w_idx]
+                    bp_result[:, c, h, w] = np_diff[:, out_c_idx, out_h_idx, out_w_idx]
 
         return bp_result
 
-    _np_grad = np_pixel_shuffle_diff(np_out_pixel_shuffle, upscale_factor)
+    _np_grad = np_pixel_shuffle_diff(np_out_pixel_shuffle, np_random_mul, upscale_factor)
 
     def assert_prediction_grad(blob: tp.Numpy):
         assert np.allclose(blob, _np_grad)
@@ -90,7 +90,8 @@ def _compare_pixel_shuffle_with_np(
         type="train", function_config=func_config,
     )
     def oneflow_pixel_shuffle(
-        of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
+        of_input_1: tp.Numpy.Placeholder(shape=input_1.shape), 
+        of_mul: tp.Numpy.Placeholder(shape=np_random_mul.shape)
     ) -> tp.Numpy:
         with flow.scope.placement(device_type, machine_ids):
             v = flow.get_variable(
@@ -107,14 +108,16 @@ def _compare_pixel_shuffle_with_np(
             x_var, upscale_factor, name="PixelShuffle"
         )
 
+        out = of_pixel_shuffle_out * of_mul
+
         with flow.scope.placement(device_type, machine_ids):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(of_pixel_shuffle_out)
+            ).minimize(out)
 
         return of_pixel_shuffle_out
 
-    of_out_pixel_shuffle = oneflow_pixel_shuffle(input_1)
+    of_out_pixel_shuffle = oneflow_pixel_shuffle(input_1, np_random_mul)
 
     assert np.allclose(of_out_pixel_shuffle, np_out_pixel_shuffle)
 
