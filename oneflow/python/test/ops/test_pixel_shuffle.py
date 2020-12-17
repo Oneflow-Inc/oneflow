@@ -168,7 +168,7 @@ class TestPixelShuffle1n2d(flow.unittest.TestCase):
             upscale_factor=2,
             device_type="gpu",
             machine_ids="0:0-1",
-            device_counts=1,
+            device_counts=2,
         )
         for arg in GenArgList(arg_dict):
             _compare_pixel_shuffle_with_np(*arg)
