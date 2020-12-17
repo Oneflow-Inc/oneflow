@@ -81,7 +81,9 @@ def _compare_pixel_shuffle_with_np(
 
         return bp_result
 
-    _np_grad = np_pixel_shuffle_diff(np_out_pixel_shuffle, np_random_mul, upscale_factor)
+    _np_grad = np_pixel_shuffle_diff(
+        np_out_pixel_shuffle, np_random_mul, upscale_factor
+    )
 
     def assert_prediction_grad(blob: tp.Numpy):
         assert np.allclose(blob, _np_grad)
@@ -90,8 +92,8 @@ def _compare_pixel_shuffle_with_np(
         type="train", function_config=func_config,
     )
     def oneflow_pixel_shuffle(
-        of_input_1: tp.Numpy.Placeholder(shape=input_1.shape), 
-        of_mul: tp.Numpy.Placeholder(shape=np_random_mul.shape)
+        of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
+        of_mul: tp.Numpy.Placeholder(shape=np_random_mul.shape),
     ) -> tp.Numpy:
         with flow.scope.placement(device_type, machine_ids):
             v = flow.get_variable(
