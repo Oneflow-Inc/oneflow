@@ -62,7 +62,6 @@ def _make_op_function(
     test_case,
     input,
     padding,
-    data_format,
     grad,
     device_type,
     value_type,
@@ -88,12 +87,10 @@ def _make_op_function(
 
     def _compare_diff(blob: tp.Numpy):
         if np.allclose(grad, blob, 1e-3, 1e-3)==True:
-            print("test_case.assertTrue(True)")
             test_case.assertTrue(True)
         else:
             print("grad:\n", grad, "\nblob:\n", blob)
             test_case.assertTrue(False)
-        # test_case.assertTrue(np.allclose(grad, blob, 1e-3, 1e-3))
 
     if value_type == flow.float32 or value_type == flow.float64:
 
@@ -106,7 +103,7 @@ def _make_op_function(
                     dtype=value_type,
                     initializer=flow.zeros_initializer(),
                 )
-                out = flow.reflection_pad2d(x, padding, data_format)
+                out = flow.reflection_pad2d(x, padding)
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
                 ).minimize(out)
@@ -127,7 +124,7 @@ def _make_op_function(
                     dtype=flow.float32,
                     initializer=flow.zeros_initializer(),
                 )
-                y_int32 = flow.reflection_pad2d(x, padding, data_format)
+                y_int32 = flow.reflection_pad2d(x, padding)
                 y_fp32 = flow.cast(y_int32, dtype=flow.float32)
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
@@ -139,21 +136,11 @@ def _make_op_function(
         return op_function
 
 
-def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
-    if data_format == "NCHW":
-        c_idx, h_idx, w_idx = 1, 2, 3
-        pad_top = pad_bottom = padding[h_idx]
-        pad_left = pad_right = padding[w_idx]
-        pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
-    elif data_format == "NHWC":
-        h_idx, w_idx, c_idx = 1, 2, 3
-        pad_top = pad_bottom = padding[h_idx]
-        pad_left = pad_right = padding[w_idx]
-        pad_shape = ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
-    else:
-        raise "data_format must be 'NCHW' or 'NHWC'"
-
-    
+def gen_numpy_test_sample(input_shape, padding, is_float=True):
+    c_idx, h_idx, w_idx = 1, 2, 3
+    pad_top = pad_bottom = padding[h_idx]
+    pad_left = pad_right = padding[w_idx]
+    pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))    
 
     def _np_reflection_pad2d(input, pad_shape):
         numpy_reflect = np.pad(input, pad_shape, "reflect")
@@ -211,7 +198,6 @@ def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
     numpy_results = {
         "input": input,
         "padding": padding,
-        "data_format": data_format,
         "output": output,
         "grad": grad,
     }
@@ -222,12 +208,10 @@ def gen_numpy_test_sample(input_shape, padding, data_format, is_float=True):
 def _compare_op_function_with_samples(
     test_case, device_type, sample, value_type, machine_ids, device_count
 ):
-    print("test_case:", test_case, "value_type:", value_type)
     op_function = _make_op_function(
         test_case,
         sample["input"].astype(value_type[0]),
         sample["padding"],
-        sample["data_format"],
         sample["grad"].astype(value_type[0]),
         device_type,
         value_type[1],
@@ -256,18 +240,18 @@ def _gen_arg_dict(
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
     arg_dict["samples"].append(
-        gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1], "NCHW")
+        gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1])
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2], "NCHW")
+        gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2])
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3], "NCHW")
+        gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3])
     )
     if value_type == "float":
         arg_dict["value_type"] = [
-            (np.float32, flow.float32),
-            (np.float64, flow.float64)
+            (np.float32, flow.float32)
+            #,(np.float32, flow.float16) 
         ]
     elif value_type == "int":
         arg_dict["value_type"] = [(np.float32, flow.int32)]
