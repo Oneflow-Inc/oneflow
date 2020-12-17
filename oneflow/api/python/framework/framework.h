@@ -16,51 +16,97 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
 #define ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
 
-#include "oneflow/api/python/framework/framework_helper.h"
+#include <string>
+#include <google/protobuf/text_format.h>
+#include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/foreign_watcher.h"
+#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/oneflow.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/load_library.h"
 
-std::shared_ptr<oneflow::cfg::ErrorProto> RegisterForeignCallbackOnlyOnce(
-    oneflow::ForeignCallback* callback) {
-  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndErrorProto();
+namespace oneflow {
+
+inline Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
+  Global<ForeignCallback>::SetAllocated(callback);
+  return Maybe<void>::Ok();
 }
 
-std::shared_ptr<oneflow::cfg::ErrorProto> RegisterWatcherOnlyOnce(
-    oneflow::ForeignWatcher* watcher) {
-  return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndErrorProto();
+inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
+  Global<ForeignWatcher>::SetAllocated(watcher);
+  return Maybe<void>::Ok();
 }
 
-std::shared_ptr<oneflow::cfg::ErrorProto> LaunchJob(
-    const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  return oneflow::LaunchJob(cb).GetDataAndErrorProto();
+inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
+  const auto& job_name = cb->job_name();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
+  int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
+  if (IsPullJob(job_name, *Global<InterUserJobInfo>::Get())) {
+    buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb);
+  }
+  if (IsPushJob(job_name, *Global<InterUserJobInfo>::Get())) {
+    buffer_mgr->Get(GetForeignInputBufferName(job_name))->Send(cb);
+  }
+  buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(cb);
+  Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(job_id);
+  return Maybe<void>::Ok();
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetSerializedInterUserJobInfo() {
-  return oneflow::GetSerializedInterUserJobInfo().GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetSerializedStructureGraph() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return job_ctx_mgr->structure_graph();
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetSerializedJobSet() {
-  return oneflow::GetSerializedJobSet().GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetSerializedInterUserJobInfo() {
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
+  return ret;
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetSerializedStructureGraph() {
-  return oneflow::GetSerializedStructureGraph().GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetSerializedJobSet() {
+  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  return PbMessage2TxtString(job_ctx_mgr->job_set());
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetFunctionConfigDef() {
-  return oneflow::GetFunctionConfigDef().GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetFunctionConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);
+  return ret;
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetScopeConfigDef() {
-  return oneflow::GetScopeConfigDef().GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetScopeConfigDef() {
+  std::string ret;
+  google::protobuf::TextFormat::PrintToString(GlobalScopeConfigDef(), &ret);
+  return ret;
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>>
-GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf) {
-  return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
-      .GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
+    const std::string& parallel_conf_str) {
+  ParallelConf parallel_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+      << "parallel conf parse failed";
+  return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
-std::shared_ptr<oneflow::cfg::ErrorProto> LoadLibraryNow(const std::string& lib_path) {
-  return oneflow::LoadLibraryNow(lib_path).GetDataAndErrorProto();
-}
+inline Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_

@@ -13,20 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
+#ifndef ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
+#define ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
 
-namespace py = pybind11;
+#include "oneflow/api/python/calibration/calibration.h"
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &CurrentResource);
-  m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
-
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("DestroyEnv", &DestroyEnv);
-
-  m.def("CurrentMachineId", &CurrentMachineId);
+inline std::shared_ptr<oneflow::cfg::ErrorProto> CacheInt8Calibration() {
+  return oneflow::CacheInt8Calibration().GetDataAndErrorProto();
 }
+
+inline std::shared_ptr<oneflow::cfg::ErrorProto> WriteInt8Calibration(const std::string& path) {
+  return oneflow::WriteInt8Calibration(path).GetDataAndErrorProto();
+}
+
+#endif  // ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_ENV_H_

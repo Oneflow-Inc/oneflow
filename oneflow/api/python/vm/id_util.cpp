@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/id_util.h"
+#include "oneflow/api/python/vm/id_util_api.h"
 
 namespace py = pybind11;
 

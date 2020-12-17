@@ -13,20 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/python/vm/id_util_helper.h"
+#ifndef ONEFLOW_API_PYTHON_VM_ID_UTIL_H_
+#define ONEFLOW_API_PYTHON_VM_ID_UTIL_H_
 
-std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewLogicalObjectId() {
-  return oneflow::NewLogicalObjectId().GetDataAndErrorProto(0LL);
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/vm/id_util.h"
+
+namespace oneflow {
+
+inline Maybe<long long> NewLogicalObjectId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalObjectId();
 }
 
-std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewLogicalSymbolId() {
-  return oneflow::NewLogicalSymbolId().GetDataAndErrorProto(0LL);
+inline Maybe<long long> NewLogicalSymbolId() {
+  CHECK_OR_RETURN(JUST(GlobalMaybe<MachineCtx>())->IsThisMachineMaster());
+  return vm::IdUtil::NewLogicalSymbolId();
 }
 
-std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewPhysicalObjectId() {
-  return oneflow::NewPhysicalObjectId().GetDataAndErrorProto(0LL);
+inline Maybe<long long> NewPhysicalObjectId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalObjectId(Global<MachineCtx>::Get()->this_machine_id());
 }
 
-std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewPhysicalSymbolId() {
-  return oneflow::NewPhysicalSymbolId().GetDataAndErrorProto(0LL);
+inline Maybe<long long> NewPhysicalSymbolId() {
+  CHECK_NOTNULL_OR_RETURN(Global<MachineCtx>::Get());
+  return vm::IdUtil::NewPhysicalSymbolId(Global<MachineCtx>::Get()->this_machine_id());
 }
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_VM_ID_UTIL_H_

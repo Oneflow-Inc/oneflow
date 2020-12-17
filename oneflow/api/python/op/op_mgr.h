@@ -13,45 +13,89 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/python/op/op_mgr_helper.h"
+#ifndef ONEFLOW_API_PYTHON_OP_OP_MGR_H_
+#define ONEFLOW_API_PYTHON_OP_OP_MGR_H_
 
-std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsOpTypeCaseCpuSupportOnly(
-    int64_t op_type_case) {
-  return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case).GetDataAndErrorProto(false);
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/eager/eager_symbol_storage.h"
+
+namespace oneflow {
+
+inline Maybe<bool> IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
+  using OnlyCpuSupport = OnlyCpuSupportPredicator;
+  CHECK_OR_RETURN((IsClassRegistered<int32_t, OnlyCpuSupport>(op_type_case)))
+      << ": op_type_case = " << op_type_case;
+  return static_cast<bool>(
+      *std::unique_ptr<OnlyCpuSupport>(NewObj<int32_t, OnlyCpuSupport>(op_type_case)));
 }
 
-std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsOpTypeNameCpuSupportOnly(
-    const std::string& op_type_name) {
-  return oneflow::IsOpTypeNameCpuSupportOnly(op_type_name).GetDataAndErrorProto(false);
+inline Maybe<bool> IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+  CHECK_OR_RETURN(val != nullptr) << "op_type_name " << op_type_name << " not register";
+  return val->cpu_only_supported;
 }
 
-std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> GetUserOpAttrType(
-    const std::string& op_type_name, const std::string& attr_name) {
-  return oneflow::GetUserOpAttrType(op_type_name, attr_name).GetDataAndErrorProto(0LL);
+inline Maybe<long long> GetUserOpAttrType(const std::string& op_type_name,
+                                          const std::string& attr_name) {
+  return JUST(GetAttrTypeImpl(op_type_name, attr_name));
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> InferOpConf(
-    const std::string& serialized_op_conf, const std::string& serialized_op_input_signature) {
-  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature)
-      .GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> InferOpConf(const std::string& op_conf_str,
+                                      const std::string& upstream_signature_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  OpNodeSignature upstream_signature;
+  CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
+      << "OpNodeSignature parse failed";
+  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
+  const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
+  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
+  return PbMessage2TxtString(*op_attribute);
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetSerializedOpAttributes() {
-  return oneflow::GetSerializedOpAttributes().GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> GetSerializedOpAttributes() {
+  OpAttributeList op_attribute_list;
+  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
+  for (int i = 0; i < job_ctx_mgr->job_set().job_size(); i++) {
+    const Job& job = job_ctx_mgr->job_set().job(i);
+    auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
+    const auto& op_graph = JUST(OpGraph::New(job));
+    op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
+      const auto& op_attribute = op_node->op().GetOpAttributeWithoutOpNameAndLbn();
+      op_attribute_list.mutable_op_attribute()->Add()->CopyFrom(*op_attribute);
+    });
+  }
+  return PbMessage2TxtString(op_attribute_list);
 }
 
-std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsInterfaceOpTypeCase(
-    int64_t op_type_case) {
-  return oneflow::IsInterfaceOpTypeCase(op_type_case).GetDataAndErrorProto(false);
+inline Maybe<bool> IsInterfaceOpTypeCase(int64_t op_type_case) {
+  return oneflow::IsClassRegistered<int32_t, oneflow::IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
-std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> GetOpParallelSymbolId(
-    const std::string& serialized_op_conf) {
-  return oneflow::GetOpParallelSymbolId(serialized_op_conf).GetDataAndErrorProto(0LL);
+inline Maybe<long long> GetOpParallelSymbolId(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 
-std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> CheckAndCompleteUserOpConf(
-    const std::string& serialized_op_conf) {
-  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
-      .GetDataAndErrorProto(std::string(""));
+inline Maybe<std::string> CheckAndCompleteUserOpConf(const std::string& op_conf_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
+  return PbMessage2TxtString(*JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
 }
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_OP_OP_MGR_H_

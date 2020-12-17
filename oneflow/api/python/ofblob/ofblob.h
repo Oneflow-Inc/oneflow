@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_H_
+#define ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_H_
+
 #include "oneflow/core/common/type_traits.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -20,91 +23,91 @@ limitations under the License.
 
 namespace py = pybind11;
 
-int Ofblob_GetDataType(uint64_t of_blob_ptr) {
+inline int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->data_type();
 }
 
-size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
+inline size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->NumAxes();
 }
 
-bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
+inline bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->is_dynamic();
 }
 
-bool OfBlob_IsTensorList(uint64_t of_blob_ptr) {
+inline bool OfBlob_IsTensorList(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->is_tensor_list();
 }
 
-long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {
+inline long OfBlob_TotalNumOfTensors(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->TotalNumOfTensors();
 }
 
-long OfBlob_NumOfTensorListSlices(uint64_t of_blob_ptr) {
+inline long OfBlob_NumOfTensorListSlices(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->NumOfTensorListSlices();
 }
 
-long OfBlob_TensorIndex4SliceId(uint64_t of_blob_ptr, int32_t slice_id) {
+inline long OfBlob_TensorIndex4SliceId(uint64_t of_blob_ptr, int32_t slice_id) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->TensorIndex4SliceId(slice_id);
 }
 
-void OfBlob_AddTensorListSlice(uint64_t of_blob_ptr) {
+inline void OfBlob_AddTensorListSlice(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->AddTensorListSlice();
 }
 
-void OfBlob_ResetTensorIterator(uint64_t of_blob_ptr) {
+inline void OfBlob_ResetTensorIterator(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->ResetTensorIterator();
 }
 
-void OfBlob_IncTensorIterator(uint64_t of_blob_ptr) {
+inline void OfBlob_IncTensorIterator(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->IncTensorIterator();
 }
 
-bool OfBlob_CurTensorIteratorEqEnd(uint64_t of_blob_ptr) {
+inline bool OfBlob_CurTensorIteratorEqEnd(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurTensorIteratorEqEnd();
 }
 
-void OfBlob_ClearTensorLists(uint64_t of_blob_ptr) {
+inline void OfBlob_ClearTensorLists(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->ClearTensorLists();
 }
 
-void OfBlob_AddTensor(uint64_t of_blob_ptr) {
+inline void OfBlob_AddTensor(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->AddTensor();
 }
 
-bool OfBlob_CurMutTensorAvailable(uint64_t of_blob_ptr) {
+inline bool OfBlob_CurMutTensorAvailable(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurMutTensorAvailable();
 }
 
-void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;
@@ -113,7 +116,7 @@ void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array)
   return of_blob->CopyShapeFrom(buf_ptr, size);
 }
 
-void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;
@@ -122,7 +125,7 @@ void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   return of_blob->CopyShapeTo(buf_ptr, size);
 }
 
-void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;
@@ -131,7 +134,7 @@ void OfBlob_CopyStaticShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) 
   return of_blob->CopyStaticShapeTo(buf_ptr, size);
 }
 
-void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;
@@ -140,7 +143,7 @@ void OfBlob_CurTensorCopyShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> arra
   return of_blob->CurTensorCopyShapeTo(buf_ptr, size);
 }
 
-void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;
@@ -148,3 +151,5 @@ void OfBlob_CurMutTensorCopyShapeFrom(uint64_t of_blob_ptr, py::array_t<int64_t>
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->CurMutTensorCopyShapeFrom(buf_ptr, size);
 }
+
+#endif  // ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_H_

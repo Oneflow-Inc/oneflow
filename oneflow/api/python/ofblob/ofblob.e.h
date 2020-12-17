@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_
+#define ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_
+
 #include "oneflow/core/common/type_traits.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -22,37 +25,37 @@ limitations under the License.
 
 namespace py = pybind11;
 
-#define DEFINE_COPIER(T, type_proto)                                                       \
-  void OfBlob_CurTensorCopyToBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) {      \
-    py::buffer_info buf = array.request();                                                 \
-    T* buf_ptr = (T*)buf.ptr;                                                              \
-    size_t size = buf.size;                                                                \
-    using namespace oneflow;                                                               \
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                \
-    of_blob->CurTensorAutoMemCopyTo<T>(buf_ptr, size);                                     \
-  }                                                                                        \
-  void OfBlob_CurMutTensorCopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) { \
-    py::buffer_info buf = array.request();                                                 \
-    T* buf_ptr = (T*)buf.ptr;                                                              \
-    size_t size = buf.size;                                                                \
-    using namespace oneflow;                                                               \
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                \
-    of_blob->CurMutTensorAutoMemCopyFrom<T>(buf_ptr, size);                                \
-  }                                                                                        \
-  void OfBlob_StaticTensorCopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) { \
-    py::buffer_info buf = array.request();                                                 \
-    T* buf_ptr = (T*)buf.ptr;                                                              \
-    size_t size = buf.size;                                                                \
-    using namespace oneflow;                                                               \
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                \
-    of_blob->StaticTensorAutoMemCopyFrom<T>(buf_ptr, size);                                \
+#define DEFINE_COPIER(T, type_proto)                                                              \
+  inline void OfBlob_CurTensorCopyToBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) {      \
+    py::buffer_info buf = array.request();                                                        \
+    T* buf_ptr = (T*)buf.ptr;                                                                     \
+    size_t size = buf.size;                                                                       \
+    using namespace oneflow;                                                                      \
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                       \
+    of_blob->CurTensorAutoMemCopyTo<T>(buf_ptr, size);                                            \
+  }                                                                                               \
+  inline void OfBlob_CurMutTensorCopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) { \
+    py::buffer_info buf = array.request();                                                        \
+    T* buf_ptr = (T*)buf.ptr;                                                                     \
+    size_t size = buf.size;                                                                       \
+    using namespace oneflow;                                                                      \
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                       \
+    of_blob->CurMutTensorAutoMemCopyFrom<T>(buf_ptr, size);                                       \
+  }                                                                                               \
+  inline void OfBlob_StaticTensorCopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) { \
+    py::buffer_info buf = array.request();                                                        \
+    T* buf_ptr = (T*)buf.ptr;                                                                     \
+    size_t size = buf.size;                                                                       \
+    using namespace oneflow;                                                                      \
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                                       \
+    of_blob->StaticTensorAutoMemCopyFrom<T>(buf_ptr, size);                                       \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
 
 #undef DEFINE_COPIER
 
-std::string Dtype_GetOfBlobCurTensorCopyToBufferFuncName(int64_t dtype) {
+inline std::string Dtype_GetOfBlobCurTensorCopyToBufferFuncName(int64_t dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -63,7 +66,7 @@ std::string Dtype_GetOfBlobCurTensorCopyToBufferFuncName(int64_t dtype) {
   return data_type2func_name.at(dtype);
 }
 
-std::string Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(int64_t dtype) {
+inline std::string Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(int64_t dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -74,7 +77,7 @@ std::string Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName(int64_t dtype) {
   return data_type2func_name.at(dtype);
 }
 
-std::string Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(int64_t dtype) {
+inline std::string Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(int64_t dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -84,3 +87,5 @@ std::string Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName(int64_t dtype) {
   };
   return data_type2func_name.at(dtype);
 }
+
+#endif  // ONEFLOW_API_PYTHON_OFBLOB_OFBLOB_E_H_

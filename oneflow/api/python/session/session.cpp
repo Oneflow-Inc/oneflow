@@ -17,7 +17,7 @@ limitations under the License.
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/session.h"
-#include "oneflow/api/python/session/session.h"
+#include "oneflow/api/python/session/session_api.h"
 
 namespace py = pybind11;
 
