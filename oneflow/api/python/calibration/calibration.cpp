@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,15 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from __future__ import absolute_import
+*/
+#include <pybind11/pybind11.h>
+#include <string>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/calibration/calibration_api.h"
 
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+namespace py = pybind11;
 
-
-@oneflow_export("tensorrt.write_int8_calibration")
-def write_int8_calibration(path):
-    oneflow_api.WriteInt8Calibration(path)
-
-
-@oneflow_export("tensorrt.cache_int8_calibration")
-def cache_int8_calibration():
-    oneflow_api.CacheInt8Calibration()
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("CacheInt8Calibration", &CacheInt8Calibration);
+  m.def("WriteInt8Calibration", &WriteInt8Calibration);
+}
