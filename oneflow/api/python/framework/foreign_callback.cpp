@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/foreign_callback_mgr.h"
 
 namespace py = pybind11;
 
@@ -63,8 +62,8 @@ class PyForeignCallback : public ForeignCallback {
 
   // TODO(lixinqi): remove this urgly api after python code migrated into cpp code
   void AddScopeToPyStorage(int64_t scope_symbol_id,
-                           const std::string& scope_proto_str) const override {
-    PYBIND11_OVERRIDE(void, ForeignCallback, AddScopeToPyStorage, scope_symbol_id, scope_proto_str);
+                           const std::shared_ptr<cfg::ScopeProto>& scope_proto) const override {
+    PYBIND11_OVERRIDE(void, ForeignCallback, AddScopeToPyStorage, scope_symbol_id, scope_proto);
   }
 
   int64_t MakeParallelDescSymbol(
@@ -85,6 +84,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("OfBlobCall", &ForeignCallback::OfBlobCall)
       .def("RemoveForeignCallback", &ForeignCallback::RemoveForeignCallback)
       .def("MakeScopeSymbol", &ForeignCallback::MakeScopeSymbol)
+      .def("AddScopeToPyStorage", &ForeignCallback::AddScopeToPyStorage)
       .def("MakeParallelDescSymbol", &ForeignCallback::MakeParallelDescSymbol);
-  m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
 }
