@@ -86,7 +86,7 @@ class Testones1n1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_ones_with_np(*arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_ones_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 16, 32), device_type="gpu", machine_ids="0:0", device_counts=1,
