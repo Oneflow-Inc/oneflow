@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOW_API_PYTHON_VM_RUN_INSTRUCTION_H_
-#define ONEFLOW_ONEFLOW_API_PYTHON_VM_RUN_INSTRUCTION_H_
+#ifndef ONEFLOW_API_PYTHON_VM_RUN_INSTRUCTION_H_
+#define ONEFLOW_API_PYTHON_VM_RUN_INSTRUCTION_H_
 
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/eager/eager_oneflow.h"
@@ -39,4 +39,4 @@ std::shared_ptr<oneflow::cfg::ErrorProto> RunPhysicalInstruction(
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_ONEFLOW_API_PYTHON_VM_RUN_INSTRUCTION_H_
+#endif  // ONEFLOW_API_PYTHON_VM_RUN_INSTRUCTION_H_

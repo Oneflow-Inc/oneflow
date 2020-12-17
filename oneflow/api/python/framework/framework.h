@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
-#define ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
+#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
+#define ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
 
 #include "oneflow/api/python/framework/framework_helper.h"
 
@@ -63,4 +63,4 @@ std::shared_ptr<oneflow::cfg::ErrorProto> LoadLibraryNow(const std::string& lib_
   return oneflow::LoadLibraryNow(lib_path).GetDataAndErrorProto();
 }
 
-#endif  // ONEFLOW_ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_
