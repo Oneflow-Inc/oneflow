@@ -3245,3 +3245,36 @@ def triplet_margin_loss(
         return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
     else:
         return _triplet_loss
+
+
+@oneflow_export("nn.KLDivLoss")
+def kldivloss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    log_target: bool = False, 
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("KLDivLoss_")
+
+    if log_target: 
+        _kl_div_loss = flow.math.exp(target, name=name+"exp")*(target - input)
+    else: 
+        _kl_div_loss = target*(flow.math.log(target, name=name+"log") - input)
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(_kl_div_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_kl_div_loss, name=name + "_reduce_sum")
+    else:
+        return _kl_div_loss
