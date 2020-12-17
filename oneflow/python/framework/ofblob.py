@@ -20,7 +20,6 @@ from functools import reduce
 
 import numpy as np
 import oneflow as flow
-import oneflow.oneflow_internal as oneflow_internal
 import oneflow_api
 from google.protobuf import text_format
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
