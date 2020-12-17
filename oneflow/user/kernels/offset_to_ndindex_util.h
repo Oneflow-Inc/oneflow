@@ -1,20 +1,17 @@
 #ifndef ONEFLOW_USER_KERNELS_OFFSET_TO_INDEX_UTIL_H_
 #define ONEFLOW_USER_KERNELS_OFFSET_TO_INDEX_UTIL_H_
 
-// #ifdef __CUDA_ARCH__
-// #include <cub/cub.cuh>
-// #endif
-// #include <math.h>
-// #include "oneflow/core/device/cuda_util.h"
-// #include "oneflow/core/kernel/kernel.h"
-// #include "oneflow/core/kernel/kernel_util.h"
-// #include "oneflow/core/kernel/new_kernel_util.h"
-// #include "oneflow/core/kernel/kernel_util.cuh"
-
+#ifdef __CUDA_ARCH__
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/device/device_context.h"
-// #include "oneflow/core/device/cuda_util.h" It has already in device_context.h 
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/xpu_util.h"
+#endif
+
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow{
@@ -35,17 +32,14 @@ struct OffsetToNdIndexFunctor final {
                     int32_t ndim, const T* index, const T* dims_tensor, T* out);
 };
 
+#ifdef __CUDA_ARCH__
 // TODO: Two versions of check
-// __device__ void checkOffsetGPU(int32_t offset, int32_t dims_elem_cnt) {
-//   if(offset > dims_elem_cnt){
-//     __trap();
-//   }
-//   // printf("SKIP GPU CHECK!!");
-// }
+__device__ void checkOffsetGPU(int32_t offset, int32_t dims_elem_cnt);
+#endif
 
-// void checkOffsetCPU(int32_t offset, int32_t dims_elem_cnt) {
-//   CHECK_LE(offset, dims_elem_cnt);
-// }
+inline void checkOffsetCPU(int32_t offset, int32_t dims_elem_cnt) {
+  CHECK_LE(offset, dims_elem_cnt);
+}
 
 template<typename T>
 OF_DEVICE_FUNC void DoOffsetToIndex(int32_t in_num, 
@@ -59,11 +53,11 @@ OF_DEVICE_FUNC void DoOffsetToIndex(int32_t in_num,
     // printf("Dims elem cnt is %d", dims_elem_cnt);
     
     // TODO： Add Check(zhengzekang)
-    // #ifdef __CUDA_ARCH__
-    // checkOffsetGPU(offset, dims_elem_cnt);
-    // #else
-    // checkOffsetCPU(offset, dims_elem_cnt);
-    // #endif
+#ifdef __CUDA_ARCH__
+    checkOffsetGPU(offset, dims_elem_cnt);
+#else
+    checkOffsetCPU(offset, dims_elem_cnt);
+#endif
 
     helper.OffsetToNdIndex(offset, out);
 }
