@@ -13,9 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_
-#define ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_
+#ifndef ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_HELPER_H_
+#define ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_HELPER_H_
 
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/record/record.pb.h"
@@ -97,6 +98,13 @@ Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(const std::str
   auto* ctx = JUST(GetCurInferCtx());
   const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
+}
+
+Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
+    const std::string& job_name, const std::string& lbn) {
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  return PbMessage2TxtString(
+      JUST(ctx->MirroredBlobGetParallelDescFromProducerView(lbn))->parallel_conf());
 }
 
 Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
@@ -217,13 +225,6 @@ Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(lbn)));
 }
 
-Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(
-      JUST(ctx->MirroredBlobGetParallelDescFromProducerView(lbn))->parallel_conf());
-}
-
 }  // namespace oneflow
 
-#endif  // ONEFLOW_PYTHON_JOB_BUILD_AND_INFER_HELPER_H_
+#endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_HELPER_H_

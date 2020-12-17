@@ -21,4 +21,4 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow_api
 
 python_callback.interpreter_callback = interpreter_callback
-oneflow_api.RegisterForeignCallbackOnlyOnce(python_callback.global_python_callback)
+c_api_util.RegisterForeignCallbackOnlyOnce(python_callback.global_python_callback)
