@@ -99,4 +99,6 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   return Maybe<void>::Ok();
 }
 
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
+
 }  // namespace oneflow

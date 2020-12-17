@@ -25,8 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-inline bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
-
 namespace {
 
 inline Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
