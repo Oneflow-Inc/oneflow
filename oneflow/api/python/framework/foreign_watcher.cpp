@@ -13,15 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <pybind11/pybind11.h>
+#include <string>
+#include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/foreign_callback_mgr.h"
+#include "oneflow/core/job/foreign_watcher.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-void RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
-}
+class PyForeignWatcher : public ForeignWatcher {
+ public:
+  using ForeignWatcher::ForeignWatcher;
+
+  void Call(const std::string& handler_uuid, int64_t ofblob_ptr) const override {
+    PYBIND11_OVERRIDE(void, ForeignWatcher, Call, handler_uuid, ofblob_ptr);
+  }
+};
 
 }  // namespace oneflow
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  using namespace oneflow;
+
+  py::class_<ForeignWatcher, PyForeignWatcher>(m, "ForeignWatcher")
+      .def(py::init<>())
+      .def("Call", &ForeignWatcher::Call);
+}

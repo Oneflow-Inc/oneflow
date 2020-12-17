@@ -17,10 +17,6 @@ limitations under the License.
 #include "oneflow/python/oneflow_internal_helper.h"
 #include "oneflow/core/job/resource_desc.h"
 
-void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher, std::string* error_str) {
-  return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndSerializedErrorProto(error_str);
-}
-
 bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case, std::string* error_str) {
   return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case)
       .GetDataAndSerializedErrorProto(error_str, false);
@@ -84,6 +80,11 @@ std::string GetSerializedInterUserJobInfo(std::string* error_str) {
                                                                                  std::string(""));
 }
 
+std::string GetSerializedOpAttributes(std::string* error_str) {
+  return oneflow::GetSerializedOpAttributes().GetDataAndSerializedErrorProto(error_str,
+                                                                             std::string(""));
+}
+
 std::string GetSerializedJobSet(std::string* error_str) {
   return oneflow::GetSerializedJobSet().GetDataAndSerializedErrorProto(error_str, std::string(""));
 }
@@ -99,10 +100,6 @@ std::string GetFunctionConfigDef(std::string* error_str) {
 
 std::string GetScopeConfigDef(std::string* error_str) {
   return oneflow::GetScopeConfigDef().GetDataAndSerializedErrorProto(error_str, std::string(""));
-}
-
-void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb, std::string* error_str) {
-  return oneflow::LaunchJob(cb).GetDataAndSerializedErrorProto(error_str);
 }
 
 std::string GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf,

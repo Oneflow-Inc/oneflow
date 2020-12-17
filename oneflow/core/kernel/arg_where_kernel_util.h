@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
