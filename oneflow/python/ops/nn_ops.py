@@ -3270,7 +3270,9 @@ def kldivloss(
     if log_target: 
         _kl_div_loss = flow.math.exp(target, name=name+"exp")*(target - input)
     else: 
-        _kl_div_loss = target*(flow.math.log(target, name=name+"log") - input)
+        _kl_div_out_loss = target*(flow.math.log(target, name=name+"log") - input)
+        _zeros = flow.zeros_like(_kl_div_out_loss, dtype=_kl_div_out_loss.dtype, name=name+"zeros")
+        _kl_div_loss = flow.where(flow.math.maximum(target, _zeros), _kl_div_out_loss, _zeros)
 
     if reduction == "mean":
         return flow.math.reduce_mean(_kl_div_loss, name=name + "_reduce_mean")
