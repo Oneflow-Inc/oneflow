@@ -3277,7 +3277,7 @@ def kldivloss(
         # when target < 0, we set to `0`, when target > 0, we set to `1`.
         _condition = flow.cast(
             flow.math.rint(target + 0.5, name=name + "rint"),
-            dtype=flow.int32,
+            dtype=flow.int8,
             name=name + "cast2int",
         )
         # set the element in _kl_div_loss as `0` to avoid `nan` value.
