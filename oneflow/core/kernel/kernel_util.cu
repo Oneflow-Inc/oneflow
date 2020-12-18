@@ -742,12 +742,24 @@ __global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
 
 template<>
 __global__ void CastOnGpu<float, half>(const float* in, half* out, int64_t elem_num) {
-  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __float2half(in[i]); }
+  const int64_t elem_num_2 = elem_num / 2;
+  const auto* in_2 = reinterpret_cast<const float2*>(in);
+  auto* out_2 = reinterpret_cast<half2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __float22half2_rn(in_2[i]); }
+  if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[elem_num - 1] = __float2half(in[elem_num - 1]);
+  }
 }
 
 template<>
 __global__ void CastOnGpu<half, float>(const half* in, float* out, int64_t elem_num) {
-  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __half2float(in[i]); }
+  const int64_t elem_num_2 = elem_num / 2;
+  const auto* in_2 = reinterpret_cast<const half2*>(in);
+  auto* out_2 = reinterpret_cast<float2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __half22float2(in_2[i]); }
+  if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[elem_num - 1] = __half2float(in[elem_num - 1]);
+  }
 }
 
 template<typename T, typename U>
@@ -765,16 +777,16 @@ template<>
 void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<float, half>
-      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
 }
 
 template<>
 void CopyElemOnGpu<float16, float>(DeviceCtx* ctx, const float16* in_dptr, float* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<half, float>
-      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
 }
 
 #define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \

@@ -18,13 +18,13 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.core.record.record_pb2 as record_util
-import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
+import oneflow_api
 from google.protobuf import text_format
 
 
@@ -33,9 +33,9 @@ def BindUuidAndHandler(uuid, blob_watched, handler):
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
 
-class _Watcher(oneflow_internal.ForeignWatcher):
+class _Watcher(oneflow_api.ForeignWatcher):
     def __init__(self):
-        oneflow_internal.ForeignWatcher.__init__(self)
+        oneflow_api.ForeignWatcher.__init__(self)
 
     def Call(self, handler_uuid, of_blob_ptr):
         try:

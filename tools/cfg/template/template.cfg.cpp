@@ -598,8 +598,8 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator<(co
 }
 
 using _{{ util.class_name(cls) }}_ =  Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_;
-Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data): data_(data) {}
-Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(): data_(::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>()) {}
+Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& data): data_(data) {}
+Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(): data_(::std::make_shared<_{{ util.class_name(cls) }}_>()) {}
 Const{{ util.class_name(cls) }}::Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }}) {
   BuildFromProto(proto_{{ util.class_name(cls).lower() }});
 }
@@ -616,7 +616,7 @@ void Const{{ util.class_name(cls) }}::ToProto(PbMessage* proto_{{ util.class_nam
 }
 
 bool Const{{ util.class_name(cls) }}::__Empty__() const {
-  return !*data_;
+  return !data_;
 }
 
 int Const{{ util.class_name(cls) }}::FieldNumber4FieldName(const ::std::string& field_name) const  {
@@ -778,24 +778,21 @@ bool Const{{ util.class_name(cls) }}::operator<(const Const{{ util.class_name(cl
   return *__SharedPtrOrDefault__() < *other.__SharedPtrOrDefault__();
 }
 
-const ::std::unique_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(cls) }}::__SharedPtrOrDefault__() const {
-  if (*data_) { return *data_; }
-  static const ::std::unique_ptr<_{{ util.class_name(cls) }}_> default_ptr(new _{{ util.class_name(cls) }}_());
+const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(cls) }}::__SharedPtrOrDefault__() const {
+  if (data_) { return data_; }
+  static const ::std::shared_ptr<_{{ util.class_name(cls) }}_> default_ptr = std::make_shared<_{{ util.class_name(cls) }}_>();
   return default_ptr;
 }
-const ::std::unique_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(cls) }}::__SharedPtr__() {
-  return *__SharedUniquePtr__();
-}
-const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& Const{{ util.class_name(cls) }}::__SharedUniquePtr__() {
-  if (!*data_) { data_->reset(new _{{ util.class_name(cls) }}_()); }
+const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& Const{{ util.class_name(cls) }}::__SharedPtr__() {
+  if (!data_) { data_.reset(new _{{ util.class_name(cls) }}_()); }
   return data_;
 }
 // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
 void Const{{ util.class_name(cls) }}::BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) {
-  data_ = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>(new _{{ util.class_name(cls) }}_(dynamic_cast<const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}&>(proto_{{ util.class_name(cls).lower() }})));
+  data_ = ::std::make_shared<_{{ util.class_name(cls) }}_>(dynamic_cast<const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}&>(proto_{{ util.class_name(cls).lower() }}));
 }
 
-{{ util.class_name(cls) }}::{{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data)
+{{ util.class_name(cls) }}::{{ util.class_name(cls) }}(const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& data)
   : Const{{ util.class_name(cls) }}(data) {}
 {{ util.class_name(cls) }}::{{ util.class_name(cls) }}(const {{ util.class_name(cls) }}& other) { CopyFrom(other); }
 // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize
@@ -828,13 +825,13 @@ bool {{ util.class_name(cls) }}::operator<(const {{ util.class_name(cls) }}& oth
   return *__SharedPtrOrDefault__() < *other.__SharedPtrOrDefault__();
 }
 void {{ util.class_name(cls) }}::Clear() {
-  if (data_) { data_->reset(); }
+  if (data_) { data_.reset(); }
 }
 void {{ util.class_name(cls) }}::CopyFrom(const {{ util.class_name(cls) }}& other) {
   if (other.__Empty__()) {
     Clear();
   } else {
-    __SharedPtr__()->CopyFrom(**other.data_);
+    __SharedPtr__()->CopyFrom(*other.data_);
   }
 }
 {{ util.class_name(cls) }}& {{ util.class_name(cls) }}::operator=(const {{ util.class_name(cls) }}& other) {
@@ -939,7 +936,7 @@ const {{ util.field_map_container_name(field) }} & {{ util.class_name(cls) }}::{
 {% endfor %}{# field #}
 
 ::std::shared_ptr<{{ util.class_name(cls) }}> {{ util.class_name(cls) }}::__SharedMutable__() {
-  return ::std::make_shared<{{ util.class_name(cls) }}>(__SharedUniquePtr__());
+  return ::std::make_shared<{{ util.class_name(cls) }}>(__SharedPtr__());
 }
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}

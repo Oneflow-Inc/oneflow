@@ -33,6 +33,10 @@ message OpAttribute {
   optional ParallelSignature parallel_signature = 108;
 }
 
+message OpAttributeList {
+  repeated OpAttribute op_attribute = 1;
+}
+
 message OpNodeSignature {
   optional SbpSignature sbp_signature = 1;
   optional MirroredSignature mirrored_signature = 2;
