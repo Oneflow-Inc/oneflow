@@ -42,6 +42,10 @@ bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
   return IsKeyFound(amp_list, op_type);
 }
 
+bool IsParallelCastNode(const OpNode* node) {
+  return node->op().op_conf().has_parallel_cast_conf();
+}
+
 template<typename ContainerT, typename ElemT>
 std::string Container2Str(const ContainerT& container,
                           std::function<std::string(const ElemT&)> elem2str) {
@@ -297,7 +301,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
       [&](OpNode* node) {
         return IsNodeInList(black_list_, node) || IsNodeInList(gray_list_, node);
       },
-      [&](OpNode* node) { return IsNodeInList(clear_list_, node); },
+      [&](OpNode* node) { return IsNodeInList(clear_list_, node) || IsParallelCastNode(node); },
       [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_black_and_gray, node); },
       [&](OpNode* node) {
         INSERT_CHECK(upstream_or_part_of_black_and_gray.insert(node));
@@ -324,18 +328,19 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
   auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
     return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
   };
-  DfsTopoGraphTraversal(
-      op_graph, true, IsWhiteAndAllowedToRunHalf,
-      [&](OpNode* node) {
-        return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
-               && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node));
-      },
-      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-      [&](OpNode* node) {
-        INSERT_CHECK(upstream_or_part_of_white.insert(node));
-        VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name()
-                << " to upstream_or_part_of_white";
-      });
+  DfsTopoGraphTraversal(op_graph, true, IsWhiteAndAllowedToRunHalf,
+                        [&](OpNode* node) {
+                          return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
+                                 && (IsNodeInList(gray_list_, node)
+                                     || IsNodeInList(clear_list_, node)
+                                     || IsParallelCastNode(node));
+                        },
+                        [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
+                        [&](OpNode* node) {
+                          INSERT_CHECK(upstream_or_part_of_white.insert(node));
+                          VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name()
+                                  << " to upstream_or_part_of_white";
+                        });
 
   DfsTopoGraphTraversal(op_graph, false, IsWhiteAndAllowedToRunHalf,
                         [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
@@ -354,7 +359,7 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
                           [&](OpNode* node) {
                             return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                                   && IsNodeInList(clear_list_, node)
+                                   && (IsNodeInList(clear_list_, node) || IsParallelCastNode(node))
                                    && IsAllowedToRunWithHalf(node);
                           },
                           [&](OpNode* node) { return IsKeyFound(*white_set, node); },

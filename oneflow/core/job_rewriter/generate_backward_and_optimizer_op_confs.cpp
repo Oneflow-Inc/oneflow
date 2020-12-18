@@ -133,21 +133,16 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
   }
   const auto& GetNewScopeSymbolId = [&](int64_t old_scope_symbol_id) -> Maybe<int64_t> {
     const auto& old_scope = JUST(scope_storage.MaybeGet(old_scope_symbol_id));
-    cfg::ScopeProto new_scope;
-    new_scope.InitFromProto(old_scope.scope_proto());
-    new_scope.set_parent_scope_symbol_id(old_scope_symbol_id);
-    new_scope.set_calculation_pass_name(pass_name);
+    std::shared_ptr<cfg::ScopeProto> new_scope = std::make_shared<cfg::ScopeProto>();
+    new_scope->InitFromProto(old_scope.scope_proto());
+    new_scope->set_parent_scope_symbol_id(old_scope_symbol_id);
+    new_scope->set_calculation_pass_name(pass_name);
     int64_t symbol_id = 0;
     JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
-      symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(new_scope));
+      symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
       return Maybe<void>::Ok();
     }));
-    // Remove this urgly code after most python code migrated into cpp code
-    {
-      ScopeProto scope_proto;
-      new_scope.ToProto(&scope_proto);
-      Global<ForeignCallback>::Get()->AddScopeToPyStorage(symbol_id, scope_proto.DebugString());
-    }
+    Global<ForeignCallback>::Get()->AddScopeToPyStorage(symbol_id, new_scope);
     return symbol_id;
   };
   for (const auto& pair : scope_id2op_names) {
@@ -181,9 +176,9 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-    JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
+    JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     const NormalModelUpdateOpUserConf& model_update_conf =
         job->job_conf().train_conf().model_update_conf();
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);

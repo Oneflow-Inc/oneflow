@@ -486,30 +486,50 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
     NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), mean->shape().elem_cnt(),
                                           static_cast<BNParamT>(1),
                                           reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr));
+    const void* sp_alpha = CudnnSPOnePtr<T>();
+    const void* sp_beta;
+    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), dx->data_type());
+      CHECK_EQ(add_to_output->shape(), dx->shape());
+      Memcpy<DeviceType::kGPU>(
+          ctx->device_ctx(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      sp_beta = CudnnSPOnePtr<T>();
+    } else {
+      sp_beta = CudnnSPZeroPtr<T>();
+    }
     const double epsilon = ctx->Attr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
     LayerNormCudnnBnCtx bn_ctx(x->shape(), mean->shape(), x->data_type());
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
-        ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(),
-        CudnnSPOnePtr<T>(), CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(),
-        bn_ctx.data_tensor_desc(), dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), reinterpret_cast<const BNParamT*>(cudnn_bn_scale_ones_dptr),
+        ctx->device_ctx()->cudnn_handle(), bn_ctx.mode(), sp_alpha, sp_beta, CudnnSPOnePtr<T>(),
+        CudnnSPZeroPtr<T>(), bn_ctx.data_tensor_desc(), x->dptr<T>(), bn_ctx.data_tensor_desc(),
+        dy->dptr<T>(), bn_ctx.data_tensor_desc(), dx->mut_dptr<T>(), bn_ctx.param_tensor_desc(),
+        reinterpret_cast<const BNParamT*>(cudnn_bn_scale_ones_dptr),
         reinterpret_cast<BNParamT*>(cudnn_bn_scale_diff_buf_dptr),
         reinterpret_cast<BNParamT*>(cudnn_bn_bias_diff_buf_dptr), epsilon, mean->dptr(),
         inv_variance->dptr()));
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                     \
-  REGISTER_USER_KERNEL("layer_norm_grad")                                              \
-      .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                     \
-        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);        \
-        const DataType& data_type = mean->data_type();                                 \
-        const int64_t elem_cnt = mean->shape().elem_cnt();                             \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 3;        \
+#define REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(dtype, bn_param_dtype)                              \
+  REGISTER_USER_KERNEL("layer_norm_grad")                                                       \
+      .SetCreateFn<LayerNormGradGpuKernel<dtype, bn_param_dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
+                       & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                              \
+        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);                 \
+        const DataType& data_type = mean->data_type();                                          \
+        const int64_t elem_cnt = mean->shape().elem_cnt();                                      \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 3;                 \
+      })                                                                                        \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));          \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
       });
 
 REGISTER_LAYER_NORM_GRAD_GPU_KERNEL(float, float)

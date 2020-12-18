@@ -22,17 +22,6 @@ namespace oneflow {
 
 namespace {
 
-template<typename K>
-__device__ int64_t GetOffset(const int64_t batch_idx, const int64_t num_classes,
-                             const int64_t lower_bound, const K* label) {
-  const int64_t idx = label[batch_idx] - lower_bound;
-  if (idx >= 0 && idx < num_classes) {
-    return batch_idx * num_classes + idx;
-  } else {
-    return -1;
-  }
-}
-
 template<typename T, typename K>
 __global__ void GpuForward(const int64_t n, const int64_t num_classes, const int64_t lower_bound,
                            const T m1, const T m2, const T m3, const T* in, const K* labels, T* out,
@@ -47,7 +36,7 @@ __global__ void GpuForward(const int64_t n, const int64_t num_classes, const int
       const T theta_data = AcosFunctor<T>::Forward(in_data);
       out_data = CosFunctor<T>::Forward(theta_data * m1 + m2) - m3;
       theta[row_id] = theta_data;
-    } else if (label < 0 && col_id == 0) {
+    } else if ((label < 0 || label >= num_classes) && col_id == 0) {
       theta[row_id] = 0;
     }
     out[i] = out_data;
@@ -94,7 +83,9 @@ std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
     CHECK(ctx->SbpParallel4ArgNameAndIndex("label", 0).has_broadcast_parallel());
     const user_op::TensorDesc* in_logical_desc =
         ctx->LogicalTensorDesc4ArgNameAndIndex(in_arg_name, 0);
-    BalancedSplitter bs(ctx->Attr<int64_t>("depth"), ctx->parallel_ctx().parallel_num());
+    const auto depth = ctx->Attr<int64_t>("depth");
+    CHECK_EQ(depth, in_logical_desc->shape().At(1));
+    BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
     return std::make_shared<CombinedMarginLossOpKernelState>(
         bs.At(ctx->parallel_ctx().parallel_id()).begin(),
         bs.At(ctx->parallel_ctx().parallel_id()).end());
@@ -141,7 +132,7 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_KERNEL(in_type, indices_type)                   \
+#define REGISTER_COMBINED_MARGIN_LOSS_GPU_KERNEL(in_type, indices_type)               \
   REGISTER_USER_KERNEL("combined_margin_loss")                                        \
       .SetCreateFn<CombinedMarginLossGpuKernel<OF_PP_PAIR_FIRST(in_type),             \
                                                OF_PP_PAIR_FIRST(indices_type)>>()     \
@@ -149,7 +140,7 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_KERNEL, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GPU_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
@@ -188,7 +179,7 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_KERNEL(dy_type, indices_type)               \
+#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_GPU_KERNEL(dy_type, indices_type)           \
   REGISTER_USER_KERNEL("combined_margin_loss_grad")                                    \
       .SetCreateFn<CombinedMarginLossGradGpuKernel<OF_PP_PAIR_FIRST(dy_type),          \
                                                    OF_PP_PAIR_FIRST(indices_type)>>()  \
@@ -196,7 +187,7 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_KERNEL, FLOATING_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_GPU_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

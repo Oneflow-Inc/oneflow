@@ -1675,39 +1675,71 @@ def sync_dynamic_resize(
 
 @oneflow_export("stack")
 def stack(
-    inputs: Sequence[remote_blob_util.BlobDef], axis: int, name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef],
+    axis: int = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator stacks the multiple Blobs on the specified axis. 
-
-    Still Unavailable. 
 
     Args:
         inputs (Sequence[remote_blob_util.BlobDef]): A list of input Blob. 
         axis (int): The stack axis. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def stack_job(x: tp.Numpy.Placeholder(shape=(2, 4, 6)), 
+                    y: tp.Numpy.Placeholder(shape=(2, 4, 6)))->tp.Numpy:
+            out = flow.stack([x, y], axis=2) 
+            return out 
+
+        x = np.ones(shape=(2, 4, 6), dtype=np.float32)
+        y = np.ones(shape=(2, 4, 6), dtype=np.float32)
+
+        out = stack_job(x, y)
+
+        # output.shape (2, 4, 2, 6)
+
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
 
     """
-    if not isinstance(inputs, (list, tuple)):
-        inputs = [inputs]
+    if name is None:
+        name = id_util.UniqueStr("Stack_")
 
+    inputs = list(inputs)
+
+    _input_shape = inputs[0].shape
+    _max_dim = len(_input_shape)
+
+    # The axis must be in range [-(_max_dim +1), _max_dim]
     if axis < 0:
-        axis = axis + len(inputs[0].shape)
+        axis = axis + _max_dim + 1
+    assert (axis >= 0) and (axis <= _max_dim)
 
-    assert axis == 0, "Only support dim0 stack now."
+    # All input tensors must have the same shape
+    _input_list_length = len(inputs)
+    for i in range(_input_list_length):
+        _current_shape = inputs[i].shape
+        assert (
+            _input_shape == _current_shape
+        ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+            _current_shape
+        )
+        # Expand dims for each tensor
+        inputs[i] = flow.expand_dims(
+            inputs[i], axis=axis, name=name + "expand_dims_{}".format(i)
+        )
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
-    setattr(op_conf.stack_conf, "axis", axis)
-    setattr(op_conf.stack_conf, "out", "out")
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.concat(inputs, axis=axis, name=name + "concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
@@ -1853,15 +1885,11 @@ def identity(
     """
     if name is None:
         name = id_util.UniqueStr("Identity_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.identity_conf, "in", x.unique_name)
-    op_conf.identity_conf.out = "out"
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+
+    op = (
+        flow.user_op_builder(name).Op("identity").Input("in", [x]).Output("out").Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("identity_n")
