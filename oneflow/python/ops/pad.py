@@ -96,9 +96,9 @@ def pad(
         dtype_util.float64,
     ]:
         floating_constant_value = float(constant_value)
-        integral_constant_value = 0
+        integral_constant_value = int(0)
     else:
-        floating_constant_value = 0
+        floating_constant_value = float(0)
         integral_constant_value = int(constant_value)
     return (
         oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Pad_"))

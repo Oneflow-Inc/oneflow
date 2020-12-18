@@ -351,15 +351,6 @@ message NormalModelUpdateOpUserConf {
   }
 }
 
-message NormalModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string model_diff = 2;
-  required string model = 4;
-  required string train_step = 5;
-  required string learning_rate = 6;
-  optional float weight_decay = 7 [default = 0.0];
-}
-
 message AccumulateOpConf {
 }
 
@@ -873,6 +864,12 @@ message ImageDecoderRandomCropResizeOpConf {
   optional float random_aspect_ratio_max = 13 [default = 1.333333];
 }
 
+message BoxingZerosOpConf {
+  required LogicalBlobId lbi = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -888,7 +885,6 @@ message OperatorConf {
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
     AccumulateOpConf accumulate_conf = 117;
-    NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
@@ -924,6 +920,7 @@ message OperatorConf {
     CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
     BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
     BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
+    BoxingZerosOpConf boxing_zeros_conf = 176;
     UserOpConf user_conf = 199;
 
     // domain op
