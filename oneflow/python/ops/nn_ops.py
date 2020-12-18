@@ -3251,11 +3251,11 @@ def triplet_margin_loss(
 def kldivloss(
     input: remote_blob_util.BlobDef,
     target: remote_blob_util.BlobDef,
-    log_target: bool = False, 
+    log_target: bool = False,
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    
+
     assert reduction in [
         "none",
         "mean",
@@ -3267,12 +3267,23 @@ def kldivloss(
     if name is None:
         name = id_util.UniqueStr("KLDivLoss_")
 
-    if log_target: 
-        _kl_div_loss = flow.math.exp(target, name=name+"exp")*(target - input)
-    else: 
-        _kl_div_out_loss = target*(flow.math.log(target, name=name+"log") - input)
-        _zeros = flow.zeros_like(_kl_div_out_loss, dtype=_kl_div_out_loss.dtype, name=name+"zeros")
-        _kl_div_loss = flow.where(flow.math.maximum(target, _zeros), _kl_div_out_loss, _zeros)
+    if log_target:
+        _kl_div_loss = flow.math.exp(target, name=name + "exp") * (target - input)
+    else:
+        _kl_div_out_loss = target * (flow.math.log(target, name=name + "log") - input)
+        _zeros = flow.zeros_like(
+            _kl_div_out_loss, dtype=_kl_div_out_loss.dtype, name=name + "zeros"
+        )
+        # when target < 0, we set to `0`, when target > 0, we set to `1`.
+        _condition = flow.cast(
+            flow.math.rint(target + 0.5, name=name + "rint"),
+            dtype=flow.int32,
+            name=name + "cast2int",
+        )
+        # set the element in _kl_div_loss as `0` to avoid `nan` value.
+        _kl_div_loss = flow.where(
+            _condition, _kl_div_out_loss, _zeros, name=name + "where"
+        )
 
     if reduction == "mean":
         return flow.math.reduce_mean(_kl_div_loss, name=name + "_reduce_mean")
