@@ -50,7 +50,7 @@ template __device__ double SafeLog(double x);
 template<>
 __device__ half SafeLog(half x) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  hlog(MaxWithLogThreshold<half>(x));
+  return hlog(MaxWithLogThreshold<half>(x));
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
