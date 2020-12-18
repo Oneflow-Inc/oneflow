@@ -26,6 +26,8 @@ const ShapeView& BlobTensorView::shape() const { return blob_->shape(); }
 
 MutShapeView* BlobTensorView::mut_shape() { return blob_->mut_shape_view(); }
 
+MutShapeView* BlobTensorView::force_mut_shape() { return blob_->ForceMutShapeView(); }
+
 DataType BlobTensorView::data_type() const { return blob_->data_type(); }
 
 const MemoryCase& BlobTensorView::mem_case() const { return blob_->mem_case(); }

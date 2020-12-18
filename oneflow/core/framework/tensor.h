@@ -32,6 +32,7 @@ class Tensor {
 
   virtual const ShapeView& shape() const = 0;
   virtual MutShapeView* mut_shape() = 0;
+  virtual MutShapeView* force_mut_shape() = 0;
   virtual DataType data_type() const = 0;
   virtual const MemoryCase& mem_case() const = 0;
   virtual const void* raw_dptr() const = 0;
