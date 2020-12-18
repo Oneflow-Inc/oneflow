@@ -3255,7 +3255,65 @@ def kldivloss(
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    """This operator computes the Kullback-Leiber divergence loss. 
 
+    The equation is: 
+
+    If :math:`log\_target = True`: 
+
+    .. math:: 
+    
+            loss = e^{target}*(target-input)
+        
+    If :math:`log\_target = False`: 
+
+    .. math:: 
+            
+            loss = target*(log(target)-input) 
+    
+    Attention: 
+        In `log_target = False` case, the element in loss will set to be `0` when the element in target is less than `0`
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def of_kldivloss(input: tp.Numpy.Placeholder(shape=(3, 3)), 
+                        target: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy: 
+            return flow.nn.KLDivLoss(input, target, log_target=False, reduction='none')
+
+
+        input = np.array([[0.1, 0.2, 0.7], 
+                    [0.8, 0.9, 0.5], 
+                    [0.5, 0.15, 0.35]]).astype(np.float32)
+
+        target = np.array([[0.3, 0.1, 0.6], 
+                    [-0.3, 0.4, 0.4], 
+                    [0.35, 0.25, 0.4]]).astype(np.float32)
+
+
+        out = of_kldivloss(input, target)
+
+        # output [[-0.39119187 -0.25025854 -0.7264954 ]
+        #         [ 0.         -0.72651625 -0.56651634]
+        #         [-0.54243773 -0.3840736  -0.5065163 ]]
+
+    Args:
+        input (remote_blob_util.BlobDef): The input tensor. 
+        target (remote_blob_util.BlobDef): The target tensor. 
+        log_target (bool, optional): Whether the `target` is passed in the log space. Defaults to False.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result tensor. 
+    """
     assert reduction in [
         "none",
         "mean",
