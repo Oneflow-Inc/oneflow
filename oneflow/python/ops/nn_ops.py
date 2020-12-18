@@ -3347,10 +3347,10 @@ def pixel_shufflev2(
     )
     out = flow.reshape(
         out,
-        [_batch * _new_c, h_upscale_factor, w_upscale_factor, _height, _width],
+        [_batch, _new_c, h_upscale_factor, w_upscale_factor, _height, _width],
         name=name + "_reshape2",
     )
-    out = flow.transpose(out, [0, 3, 1, 4, 2], name=name + "_transpose")
+    out = flow.transpose(out, [0, 1, 4, 2, 5, 3], name=name + "_transpose")
     out = flow.reshape(
         out,
         [_batch, _new_c, _height * h_upscale_factor, _width * w_upscale_factor],

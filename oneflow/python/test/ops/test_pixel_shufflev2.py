@@ -46,8 +46,8 @@ def _compare_pixel_shuffle_with_np(
         _new_c = int(_channel / (h_factor * w_factor))
 
         out = np.reshape(input, [_batch, _new_c, h_factor * w_factor, _height, _width])
-        out = np.reshape(out, [_batch * _new_c, h_factor, w_factor, _height, _width])
-        out = np.transpose(out, [0, 3, 1, 4, 2])
+        out = np.reshape(out, [_batch, _new_c, h_factor, w_factor, _height, _width])
+        out = np.transpose(out, [0, 1, 4, 2, 5, 3])
         out = np.reshape(out, [_batch, _new_c, _height * h_factor, _width * w_factor])
 
         return out
@@ -146,7 +146,7 @@ class TestPixelShuffle1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_pixel_shuffle_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16, 2, 4),
+            shape=(4, 16, 2, 4),
             h_factor=2,
             w_factor=4,
             device_type="gpu",

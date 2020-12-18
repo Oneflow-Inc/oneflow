@@ -166,7 +166,7 @@ class TestPixelShuffle1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_pixel_shuffle_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16, 2, 2),
+            shape=(4, 16, 2, 2),
             upscale_factor=2,
             device_type="gpu",
             machine_ids="0:0-1",
