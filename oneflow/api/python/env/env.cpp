@@ -14,16 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/job/session.h"
+#include "oneflow/api/python/env/env_api.h"
 
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  using namespace oneflow;
-  m.def("NewSessionId", &NewSessionId);
-  py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
-      .def(py::init<const std::string&>());
-  ;
+  m.def("CurrentResource", &CurrentResource);
+  m.def("EnvResource", &EnvResource);
+  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
+
+  m.def("IsEnvInited", &IsEnvInited);
+  m.def("InitEnv", &InitEnv);
+  m.def("DestroyEnv", &DestroyEnv);
+
+  m.def("CurrentMachineId", &CurrentMachineId);
 }

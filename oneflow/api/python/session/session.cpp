@@ -16,23 +16,22 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/framework/framework_api.h"
+#include "oneflow/core/job/session.h"
+#include "oneflow/api/python/session/session_api.h"
 
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
-  m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
-  m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
+  m.def("IsSessionInited", &IsSessionInited);
+  m.def("InitLazyGlobalSession", &InitLazyGlobalSession);
+  m.def("DestroyLazyGlobalSession", &DestroyLazyGlobalSession);
 
-  m.def("GetSerializedInterUserJobInfo", &GetSerializedInterUserJobInfo);
-  m.def("GetSerializedJobSet", &GetSerializedJobSet);
-  m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph);
+  m.def("StartLazyGlobalSession", &StartLazyGlobalSession);
+  m.def("StopLazyGlobalSession", &StopLazyGlobalSession);
 
-  m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
-  m.def("GetScopeConfigDef", &GetScopeConfigDef);
-  m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
-        &GetMachine2DeviceIdListOFRecordFromParallelConf);
-
-  m.def("LoadLibraryNow", &LoadLibraryNow);
+  using namespace oneflow;
+  m.def("NewSessionId", &NewSessionId);
+  py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
+      .def(py::init<const std::string&>());
+  ;
 }
