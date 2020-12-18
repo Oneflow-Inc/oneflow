@@ -36,6 +36,7 @@ def _compare_pixel_shuffle_with_np(
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     def np_pixel_shuffle(input):
 
@@ -74,7 +75,7 @@ def _compare_pixel_shuffle_with_np(
     def oneflow_pixel_shuffle(
         of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
     ) -> tp.Numpy:
-        with flow.scope.placement(device_type, machine_ids):
+        with flow.scope.placement(device_type, "0:0"):
             v = flow.get_variable(
                 shape=input_1.shape,
                 dtype=flow.float32,
@@ -89,7 +90,7 @@ def _compare_pixel_shuffle_with_np(
             x_var, h_factor, w_factor, name="PixelShufflev2"
         )
 
-        with flow.scope.placement(device_type, machine_ids):
+        with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(of_pixel_shuffle_out)
@@ -146,12 +147,12 @@ class TestPixelShuffle1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_pixel_shuffle_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16, 2, 4),
+            shape=(3, 4, 2, 2),
             h_factor=2,
-            w_factor=4,
+            w_factor=2,
             device_type="gpu",
             machine_ids="0:0-1",
-            device_counts=1,
+            device_counts=2,
         )
         for arg in GenArgList(arg_dict):
             _compare_pixel_shuffle_with_np(*arg)
