@@ -49,6 +49,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
       .Attr<float>("lars_coefficient", model_update_conf.lars_conf().lars_coefficient())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &lars_update_op_builder);
   user_op::UserOpConfWrapper lars_update_op = lars_update_op_builder.Build();
   job_builder->AddOps(parallel_conf, {lars_update_op.op_conf()});
 }

@@ -19,7 +19,6 @@ enum TaskType {
   kUnpack = 32;
   kRepeat = 34;
   kAcc = 37;
-  kOptimizer = 38;
   kSourceTick = 40;
   kTick = 41;
   kAccTick = 42;
@@ -39,6 +38,7 @@ enum TaskType {
   kBoxingS2SAll2AllPack = 61;
   kBoxingS2SAll2AllUnpack = 62;
   kSspVariableProxy = 63;
+  kBoxingZeros = 64;
 };
 
 enum AreaType {

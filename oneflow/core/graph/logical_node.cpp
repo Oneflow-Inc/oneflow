@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/optimizer_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
@@ -293,12 +292,6 @@ int64_t NormalForwardLogicalNode::GetAreaId() const {
     return AreaType::kDataForwardArea;
   }
 }
-
-std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
-
-CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
-
-int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;
