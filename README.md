@@ -83,7 +83,7 @@
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
       rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
       yum update -y && yum install -y epel-release && \
-      yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
+      yum install -y intel-mkl-64bit-2020.0-088 nasm rdma-core-devel
       ```
 
       On CentOS, if you have MKL installed, please update the environment variable:
