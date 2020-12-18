@@ -26,11 +26,11 @@ Scope::Scope(const ScopeProto& scope_proto) : scope_proto_(scope_proto) {
 
 Maybe<void> Scope::Init() {
   {
-    const auto& storage = *Global<vm::SymbolStorage<JobDesc>>::Get();
+    const auto& storage = *Global<symbol::Storage<JobDesc>>::Get();
     job_desc_ = storage.GetPtr(scope_proto_.job_desc_symbol_id());
   }
   {
-    const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
+    const auto& storage = *Global<symbol::Storage<ParallelDesc>>::Get();
     device_parallel_desc_ = storage.GetPtr(scope_proto_.device_parallel_desc_symbol_id());
     host_parallel_desc_ = storage.GetPtr(scope_proto_.host_parallel_desc_symbol_id());
   }

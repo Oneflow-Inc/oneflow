@@ -230,4 +230,10 @@ Error Error::GradientFunctionNotFound() {
   return error;
 }
 
+Error Error::SymbolIdUninitialized() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_symbol_id_uninitialized_error();
+  return error;
+}
+
 }  // namespace oneflow

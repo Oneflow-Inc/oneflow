@@ -43,9 +43,16 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
+    : symbol_id_(Error::SymbolIdUninitialized()) {
   CHECK_JUST(MaybeInit(user_conf));
   CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
+}
+
+Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& parallel_conf) {
+  std::shared_ptr<ParallelDesc> parallel_desc(new ParallelDesc(symbol_id));
+  parallel_desc->MaybeInit(parallel_conf);
+  return parallel_desc;
 }
 
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {

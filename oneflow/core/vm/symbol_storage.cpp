@@ -13,33 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
-#define ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
-
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
-class Scope;
-class ScopeProto;
-
-class JobDesc;
-class JobConfigProto;
-
 namespace symbol {
 
-template<>
-struct ConstructArgType4Symbol<JobDesc> final {
-  using type = JobConfigProto;
-};
+namespace detail {
 
 template<>
-struct ConstructArgType4Symbol<Scope> final {
-  using type = ScopeProto;
-};
+Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data) {
+  return ParallelDesc::New(symbol_id, data);
+}
+
+}  // namespace detail
 
 }  // namespace symbol
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
+}  // namespace oneflow

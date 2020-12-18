@@ -39,9 +39,13 @@ class ParallelDesc final {
 
   ParallelDesc(const ParallelDesc&) = default;
   ParallelDesc(const ParallelConf& user_conf);
+
+  static Maybe<ParallelDesc> New(int64_t symbol_id, const ParallelConf& parallel_conf);
+
   Maybe<void> MaybeInit(const ParallelConf& user_conf);
 
   // Getters
+  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
   DeviceType device_type() const { return device_type_; }
   bool HasMachineId(int64_t machine_id) const {
     return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
@@ -75,11 +79,13 @@ class ParallelDesc final {
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
-  ParallelDesc() = default;
+  ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
+  ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
 
+  Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
   ParallelConf parallel_conf_;
   std::vector<int64_t> sorted_machine_ids_;

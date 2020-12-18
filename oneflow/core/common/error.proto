@@ -115,6 +115,8 @@ message ErrorStackFrame {
   required string error_msg = 3;
 }
 
+message SymbolIdUninitializedError {}
+
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
@@ -151,6 +153,7 @@ message ErrorProto {
     BlobSplitAxisInferError blob_split_axis_infer_error = 480;
     UnknownJobBuildAndInferError unknown_job_build_and_infer_error = 500;
     RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
+    SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
     UnkownError unknown_error = 900;
   }
 }

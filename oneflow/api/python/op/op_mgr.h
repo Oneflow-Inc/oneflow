@@ -55,7 +55,7 @@ inline Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   OpNodeSignature upstream_signature;
   CHECK_OR_RETURN(TxtString2PbMessage(upstream_signature_str, &upstream_signature))
       << "OpNodeSignature parse failed";
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = scope_storage.Get(op_conf.scope_symbol_id());
   const auto& op = JUST(ConstructAndInferOp(op_conf, upstream_signature, scope));
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
@@ -86,7 +86,7 @@ inline Maybe<long long> GetOpParallelSymbolId(const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "OperatorConf parse failed";
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  const auto& scope = Global<vm::SymbolStorage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   return JUST(scope.GetParallelDescSymbolId(op_conf));
 }
 

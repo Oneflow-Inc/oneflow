@@ -28,6 +28,12 @@ class Error final {
   Error(const Error&) = default;
   ~Error() = default;
 
+  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
+  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
+  cfg::ErrorProto* operator->() { return error_proto_.get(); }
+  operator std::string() const;
+  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
   // "Bar") << "invalid value"` because operator<<() need r-value reference
   Error&& AddStackFrame(const std::string& location, const std::string& function);
@@ -69,11 +75,8 @@ class Error final {
   // gradient
   static Error GradientFunctionNotFound();
 
-  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
-  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
-  cfg::ErrorProto* operator->() { return error_proto_.get(); }
-  operator std::string() const;
-  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  // symbol
+  static Error SymbolIdUninitialized();
 
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;
