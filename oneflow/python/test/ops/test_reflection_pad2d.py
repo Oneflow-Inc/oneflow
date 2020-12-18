@@ -24,14 +24,14 @@ from test_util import Args, GenArgDict, GenArgList
 
 
 def flatten_array(input_array):
-        output_array = list()
-        for x in np.nditer(input_array):
-            output_array.append(x.tolist())
-        return output_array
-    
+    output_array = list()
+    for x in np.nditer(input_array):
+        output_array.append(x.tolist())
+    return output_array
+
 
 def array_to_numpy(input_array, target_shape):
-    return np.array(input_array).reshape(target_shape, order='C')
+    return np.array(input_array).reshape(target_shape, order="C")
 
 
 def index2coordinate(idx, tensor_shape):
@@ -86,7 +86,7 @@ def _make_op_function(
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: tp.Numpy):
-        if np.allclose(grad, blob, 1e-3, 1e-3)==True:
+        if np.allclose(grad, blob, 1e-3, 1e-3) == True:
             test_case.assertTrue(True)
         else:
             print("grad:\n", grad, "\nblob:\n", blob)
@@ -140,7 +140,7 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
     c_idx, h_idx, w_idx = 1, 2, 3
     pad_top = pad_bottom = padding[h_idx]
     pad_left = pad_right = padding[w_idx]
-    pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))    
+    pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_reflection_pad2d(input, pad_shape):
         numpy_reflect = np.pad(input, pad_shape, "reflect")
@@ -148,7 +148,7 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
 
     def _np_reflection_pad2d_grad(src, dest):
         dx_height, dx_width = input.shape[h_idx], input.shape[w_idx]
-        dy_height,dy_width = output.shape[h_idx], output.shape[w_idx]
+        dy_height, dy_width = output.shape[h_idx], output.shape[w_idx]
 
         numpy_src = np.ones(src.shape, np.int32)
         numpy_dest = np.zeros(dest.shape, np.int32)
@@ -162,17 +162,16 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
             coords = index2coordinate(iter_n, src.shape)
             n, c, i, j = coords[0], coords[c_idx], coords[h_idx], coords[w_idx]
             ip_x = ip_y = 0
-            if (j < pad_left):
+            if j < pad_left:
                 ip_x = pad_left * 2 - j
-            elif (j >= pad_left and j < (dx_width + pad_left)):
+            elif j >= pad_left and j < (dx_width + pad_left):
                 ip_x = j
             else:
                 ip_x = (dx_width + pad_left - 1) * 2 - j
-            
-            
-            if (i<pad_top):
+
+            if i < pad_top:
                 ip_y = pad_top * 2 - i
-            elif (i >= pad_top and i < (dx_height + pad_top)):
+            elif i >= pad_top and i < (dx_height + pad_top):
                 ip_y = i
             else:
                 ip_y = (dx_height + pad_top - 1) * 2 - i
@@ -180,7 +179,9 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
             ip_x = ip_x - pad_left
             ip_y = ip_y - pad_top
             src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
-            dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+            dest_index = (
+                n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+            )
             array_dest[dest_index] += array_src[src_index]
 
         numpy_dest = array_to_numpy(array_dest, dest.shape)
@@ -191,7 +192,6 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
     else:
         input = np.random.randint(0, 100, input_shape)
 
-    
     output = _np_reflection_pad2d(input, pad_shape)
     grad = _np_reflection_pad2d_grad(output, input)
 
@@ -239,19 +239,13 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(
-        gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1])
-    )
-    arg_dict["samples"].append(
-        gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2])
-    )
-    arg_dict["samples"].append(
-        gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3])
-    )
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1]))
+    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3]))
     if value_type == "float":
         arg_dict["value_type"] = [
             (np.float32, flow.float32)
-            #,(np.float32, flow.float16) 
+            # ,(np.float32, flow.float16)
         ]
     elif value_type == "int":
         arg_dict["value_type"] = [(np.float32, flow.int32)]
@@ -269,7 +263,6 @@ class TestReflectionPad2d1n1d(flow.unittest.TestCase):
         arg_dict = _gen_arg_dict("cpu", "int", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
-
 
     def test_op_function_float_cpu(test_case):
         arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)

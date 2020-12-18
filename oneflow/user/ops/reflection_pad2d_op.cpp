@@ -49,8 +49,8 @@ REGISTER_USER_OP("reflection_pad2d")
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
       CHECK_EQ_OR_RETURN(padding.size(), x_shape->NumAxes());
-      int64_t channel_h_idx=2;
-      int64_t channel_w_idx=3;
+      int64_t channel_h_idx = 2;
+      int64_t channel_w_idx = 3;
       CHECK_LT_OR_RETURN(padding[channel_h_idx], x_shape->At(channel_h_idx));
       CHECK_LT_OR_RETURN(padding[channel_w_idx], x_shape->At(channel_w_idx));
 
@@ -62,7 +62,6 @@ REGISTER_USER_OP("reflection_pad2d")
       y_dim_vec[1] = x_shape->At(1);
       y_dim_vec[channel_h_idx] = h_x + 2 * padding[channel_h_idx];
       y_dim_vec[channel_w_idx] = w_x + 2 * padding[channel_w_idx];
-      
 
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);
       *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
@@ -84,8 +83,8 @@ REGISTER_USER_OP("reflection_pad2d_grad")
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
       CHECK_EQ_OR_RETURN(padding.size(), dy_shape->NumAxes());
-      int64_t channel_h_idx=2;
-      int64_t channel_w_idx=3;
+      int64_t channel_h_idx = 2;
+      int64_t channel_w_idx = 3;
 
       CHECK_LT_OR_RETURN(padding[channel_h_idx], dy_shape->At(channel_h_idx));
       CHECK_LT_OR_RETURN(padding[channel_w_idx], dy_shape->At(channel_w_idx));
