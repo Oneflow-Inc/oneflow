@@ -32,7 +32,7 @@ class Trainer(object):
     ):
         r""" Runs the full optimization routine.
         """
-        pass
+        print("trainer fit")
 
     def train(self):
-        pass
+        print("trainer train")

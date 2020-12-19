@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from __future__ import absolute_import
 from abc import ABC
 
-from __future__ import absolute_import
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.module import Module
 from oneflow.python.ops.optimizer import Optimizer
