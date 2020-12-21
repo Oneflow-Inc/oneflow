@@ -23,7 +23,8 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <iostream>
 
-using namespace mlir;
+namespace mlir {
+
 namespace {
 using PbMessage = google::protobuf::Message;
 
@@ -35,24 +36,28 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   for (size_t i = 0; i < job.net().op_size(); i++) {
     ::oneflow::OperatorConf op = job.net().op(i);
-    if (op.has_user_conf()) { std::cout << "loading user op: " << op.name() << "\n"; }
+    if (op.has_user_conf()) {
+      std::cout << "loading user op: " << op.name() << "\n";
+      std::cout << op.DebugString() << "\n";
+    }
   }
   return module;
 }
 }  // namespace
-namespace mlir {
+
 void registerFromOneFlowJobTranslation() {
   TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",
                                              [](llvm::StringRef str, MLIRContext *context) {
-                                               return ::translateOneFlowJobToModule(str, context);
+                                               return translateOneFlowJobToModule(str, context);
                                              });
 }
+
 }  // namespace mlir
 
 int main(int argc, char **argv) {
   mlir::registerAllTranslations();
 
-  registerFromOneFlowJobTranslation();
+  mlir::registerFromOneFlowJobTranslation();
 
   return failed(mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
 }
