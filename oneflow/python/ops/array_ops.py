@@ -2384,3 +2384,123 @@ def zeros(
         dtype = flow.float32
 
     return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")
+
+
+@oneflow_export("ndindex_to_offset")
+def ndindex_to_offset(
+    index: remote_blob_util.BlobDef,
+    dims: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator computes the 1-D offset in N-D Tensor.
+
+    Args:
+        index (remote_blob_util.BlobDef): The index Tensor. 
+        dims (remote_blob_util.BlobDef): The dims Tensor. 
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Attention:
+        The `index` Tensor must be in the range of `dims` Tensor. 
+
+    Returns:
+        remote_blob_util.BlobDef: The offset
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def ndindex_to_offset_job(x: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32), 
+                                dims: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32))->tp.Numpy:
+            return flow.ndindex_to_offset(x, dims, name="ndindex_to_offset")
+
+
+        index = np.array([3, 4]).astype(np.int32)
+        dims = np.array([8, 8]).astype(np.int32)
+
+        out = ndindex_to_offset_job(index, dims)
+        # output [28]
+
+
+    """
+    _index_len = index.shape[0]
+    _dim_len = dims.shape[0]
+
+    assert (
+        _index_len == _dim_len
+    ), "The Input sequence length is not matched, {} vs {}".format(_index_len, _dim_len)
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("RavelIndex_")
+        )
+        .Op("ravel_index")
+        .Op("ndindex_to_offset")
+        .Input("index", [index])
+        .Input("dims", [dims])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("offset_to_ndindex")
+def offset_to_ndindex(
+    offset: remote_blob_util.BlobDef,
+    dims: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator converts the 1-D offset to N-D index Tensor.
+
+    Args:
+        offset (remote_blob_util.BlobDef): The 1-D offset Tensor. 
+        dims (remote_blob_util.BlobDef): The N-D dims Tensor. 
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+
+    Attention: 
+        The `offset` Tensor must be in the range of `dims` Tensor.
+
+    Returns:
+        remote_blob_util.BlobDef: The N-D index Tensor. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def offset_to_ndindex_job(offset: tp.Numpy.Placeholder(shape=(1, ), dtype=flow.int32), 
+                                dims: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32))->tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"): 
+                out = flow.offset_to_ndindex(offset, dims, name="offset_to_ndindex")
+            return out 
+
+        offset = np.array([5]).astype(np.int32)
+        dims = np.array([3, 3]).astype(np.int32)
+
+        out = offset_to_ndindex_job(offset, dims)
+
+        # output [1 2]
+
+    """
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("OffsetToNdIndex_")
+        )
+        .Op("offset_to_ndindex")
+        .Input("offset", [offset])
+        .Input("dims", [dims])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

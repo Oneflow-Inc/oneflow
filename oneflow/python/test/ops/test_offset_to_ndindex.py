@@ -23,7 +23,7 @@ from typing import Dict
 import os
 
 
-def _compare_ndindex_to_offset_with_np(
+def _compare_offset_to_ndindex_with_np(
     input, dims, device_type, machine_ids, device_counts
 ):
     assert device_type in ["cpu", "gpu"]
@@ -37,10 +37,11 @@ def _compare_ndindex_to_offset_with_np(
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
-    def np_ndindex_to_offset(input, dims):
-        return np.ravel_multi_index(input, dims)
+    def np_offset_to_ndindex(input, dims):
+        out = np.unravel_index(input, dims)
+        return np.array(out).flatten()  # Flatten as 1-D array
 
-    np_out_ndindex_to_offset = np_ndindex_to_offset(input, dims)
+    np_out_offset_to_ndindex = np_offset_to_ndindex(input, dims)
 
     # Convert Tuple to numpy.array for job_function
     of_dims = np.array(dims).astype(np.int32)
@@ -48,17 +49,17 @@ def _compare_ndindex_to_offset_with_np(
     @flow.global_function(
         type="predict", function_config=func_config,
     )
-    def oneflow_ndindex_to_offset(
-        of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=flow.int32),
+    def oneflow_offset_to_ndindex(
+        of_offset: tp.Numpy.Placeholder(shape=input.shape, dtype=flow.int32),
         of_dims: tp.Numpy.Placeholder(shape=of_dims.shape, dtype=flow.int32),
     ) -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
-            of_ndindex_to_offset_out = flow.ndindex_to_offset(of_input, of_dims)
+            of_offset_to_ndindex_out = flow.offset_to_ndindex(of_offset, of_dims)
 
-        return of_ndindex_to_offset_out
+        return of_offset_to_ndindex_out
 
-    of_out_ndindex_to_offset = oneflow_ndindex_to_offset(input, of_dims)
-    assert np.allclose(of_out_ndindex_to_offset, np_out_ndindex_to_offset)
+    of_out_offset_to_ndindex = oneflow_offset_to_ndindex(input, of_dims)
+    assert np.allclose(of_out_offset_to_ndindex, np_out_offset_to_ndindex)
 
 
 def _gen_arg_dict(input, dims, device_type, machine_ids, device_counts):
@@ -73,38 +74,38 @@ def _gen_arg_dict(input, dims, device_type, machine_ids, device_counts):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestNdIndexToOffset1n1d(flow.unittest.TestCase):
-    def test_ndindex_to_offset_cpu(test_case):
-        x = np.array([3, 6, 2]).astype(np.int32)
+class TestOffsetToNdIndex1n1d(flow.unittest.TestCase):
+    def test_offset_to_ndindex_cpu(test_case):
+        x = np.array([64]).astype(np.int32)
         dims = (8, 8, 8)
         arg_dict = _gen_arg_dict(
             input=x, dims=dims, device_type="cpu", machine_ids="0:0", device_counts=1
         )
         for arg in GenArgList(arg_dict):
-            _compare_ndindex_to_offset_with_np(*arg)
+            _compare_offset_to_ndindex_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_ndindex_to_offset_gpu(test_case):
-        x = np.array([3, 6]).astype(np.int32)
+    def test_offset_to_ndindex_gpu(test_case):
+        x = np.array([13]).astype(np.int32)
         dims = (8, 8)
         arg_dict = _gen_arg_dict(
             input=x, dims=dims, device_type="gpu", machine_ids="0:0", device_counts=1
         )
         for arg in GenArgList(arg_dict):
-            _compare_ndindex_to_offset_with_np(*arg)
+            _compare_offset_to_ndindex_with_np(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestNdIndexToOffset1n2d(flow.unittest.TestCase):
+class TestOffsetToNdIndex1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_ndindex_to_offset_gpu_1n2d(test_case):
-        x = np.array([3, 5]).astype(np.int32)
+    def test_offset_to_ndindex_gpu_1n2d(test_case):
+        x = np.array([25]).astype(np.int32)
         dims = (8, 8)
         arg_dict = _gen_arg_dict(
             input=x, dims=dims, device_type="gpu", machine_ids="0:0-1", device_counts=2
         )
         for arg in GenArgList(arg_dict):
-            _compare_ndindex_to_offset_with_np(*arg)
+            _compare_offset_to_ndindex_with_np(*arg)
 
 
 if __name__ == "__main__":
