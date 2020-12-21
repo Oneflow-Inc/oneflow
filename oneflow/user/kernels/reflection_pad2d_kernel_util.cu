@@ -32,7 +32,6 @@ __global__ void DoCUDAReflectionPad2d(const IN_T* src, IN_T* dest,
                           x_height, x_width, pad_left, pad_top);
 };
 
-
 template<typename IN_T>
 __global__ void DoCUDAReflectionPad2dGrad(const IN_T* src, IN_T* dest,
                                           const NdIndexOffsetHelper<int64_t, 4> index_helper,
@@ -59,7 +58,6 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, IN_T> final {
   }
 };
 
-
 // float16 implementation
 template<>
 void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
@@ -76,7 +74,6 @@ void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
           src_num, dest_num, y_height, y_width, x_height, x_width, pad_left, pad_top);
 }
 
-
 template<typename IN_T>
 struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
   void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
@@ -92,7 +89,6 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
             dx_width, pad_left, pad_top);
   }
 };
-
 
 // float16 implementation
 template<>

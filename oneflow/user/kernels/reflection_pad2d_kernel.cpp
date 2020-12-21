@@ -83,7 +83,6 @@ class ReflectionPad2dKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-
 template<DeviceType device_type, typename IN_T>
 class ReflectionPad2dGradKernel final : public OpKernel {
  public:
@@ -117,8 +116,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     DimVector dy_vector = ShapeViewToDimVector(dy->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
-    size_t out_bytes_size =
-        dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
     ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
@@ -128,27 +126,26 @@ class ReflectionPad2dGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REFLECTION_PAD2D_KERNELS(device, dtype)   \
-  REGISTER_USER_KERNEL("reflection_pad2d")                 \
-      .SetCreateFn<ReflectionPad2dKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
+#define REGISTER_REFLECTION_PAD2D_KERNELS(device, dtype)                               \
+  REGISTER_USER_KERNEL("reflection_pad2d")                                             \
+      .SetCreateFn<ReflectionPad2dKernel<device, dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("reflection_pad2d_grad")             \
-      .SetCreateFn<ReflectionPad2dGradKernel<device, dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)   \
-       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-                       
-#define REGISTER_REFLECTION_PAD2D_WITH_DEVICE(device)      \
-  REGISTER_REFLECTION_PAD2D_KERNELS(device, float)         \
-  REGISTER_REFLECTION_PAD2D_KERNELS(device, double)        \
-  REGISTER_REFLECTION_PAD2D_KERNELS(device, int32_t)          
+  REGISTER_USER_KERNEL("reflection_pad2d_grad")                                        \
+      .SetCreateFn<ReflectionPad2dGradKernel<device, dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_REFLECTION_PAD2D_WITH_DEVICE(device) \
+  REGISTER_REFLECTION_PAD2D_KERNELS(device, float)    \
+  REGISTER_REFLECTION_PAD2D_KERNELS(device, double)   \
+  REGISTER_REFLECTION_PAD2D_KERNELS(device, int32_t)
 
 REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
-
 
 }  // namespace user_op
 }  // namespace oneflow

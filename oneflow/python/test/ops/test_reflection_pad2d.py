@@ -140,7 +140,7 @@ def _make_op_function(
                     name="v1",
                     shape=input.shape,
                     dtype=flow.float32,
-                    initializer=flow.constant_initializer(0)
+                    initializer=flow.constant_initializer(0),
                 )
                 x_var = flow.cast_to_current_logical_view(x_var)
                 input_x = x_var + x
@@ -154,6 +154,7 @@ def _make_op_function(
 
                 flow.watch_diff(x_fp32, _compare_diff)
             return y_fp32
+
         return op_function
 
 
@@ -265,7 +266,10 @@ def _gen_arg_dict(
     arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3]))
     if value_type == "float":
         if device_type == "gpu":
-            arg_dict["value_type"] = [(np.float32, flow.float32),(np.float16, flow.float16)]
+            arg_dict["value_type"] = [
+                (np.float32, flow.float32),
+                (np.float16, flow.float16),
+            ]
         else:
             arg_dict["value_type"] = [(np.float32, flow.float32)]
 

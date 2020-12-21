@@ -41,7 +41,6 @@ namespace oneflow {
 
 namespace user_op {
 
-
 template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
@@ -105,7 +104,6 @@ OF_DEVICE_FUNC void DoReflectionPad2d(const IN_T* src, IN_T* dest,
     dest[dest_index] = src[src_index];
   }
 }
-
 
 template<typename IN_T>
 OF_DEVICE_FUNC void DoReflectionPad2dGrad(const IN_T* src, IN_T* dest,
