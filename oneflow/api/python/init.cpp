@@ -70,40 +70,39 @@ PYBIND11_MODULE(oneflow_api, m) {
   using Int2IntListMap = std::unordered_map<int64_t, std::shared_ptr<IntList>>;
 
   py::class_<IntList, std::shared_ptr<IntList>>(m, "IntList")
-    .def(py::init<>())
-    .def("__len__", [](const std::shared_ptr<IntList>& v) { return v->size(); })
-    .def("items",
-          [](std::shared_ptr<IntList>& v) { return py::make_iterator(v->begin(), v->end()); },
-          py::keep_alive<0, 1>())
-    .def("__getitem__", (IntList::reference & (IntList::*)(IntList::size_type pos)) & IntList::at)
-    .def("__iter__",
-          [](std::shared_ptr<IntList>& v) { return py::make_iterator(v->begin(), v->end()); },
-          py::keep_alive<0, 1>())
-    .def("__eq__",
-          [](std::shared_ptr<IntList>& lhs, std::shared_ptr<IntList>& rhs) {
-            return *lhs == *rhs;
-          });
+      .def(py::init<>())
+      .def("__len__", [](const std::shared_ptr<IntList>& v) { return v->size(); })
+      .def("items",
+           [](std::shared_ptr<IntList>& v) { return py::make_iterator(v->begin(), v->end()); },
+           py::keep_alive<0, 1>())
+      .def("__getitem__", (IntList::reference & (IntList::*)(IntList::size_type pos)) & IntList::at)
+      .def("__iter__",
+           [](std::shared_ptr<IntList>& v) { return py::make_iterator(v->begin(), v->end()); },
+           py::keep_alive<0, 1>())
+      .def("__eq__", [](std::shared_ptr<IntList>& lhs, std::shared_ptr<IntList>& rhs) {
+        return *lhs == *rhs;
+      });
 
   py::class_<Int2IntListMap, std::shared_ptr<Int2IntListMap>>(m, "Int2IntListMap")
-    .def(py::init<>())
-    .def("__len__", [](const std::shared_ptr<Int2IntListMap>& v) { return v->size(); })
-    .def("items",
-          [](std::shared_ptr<Int2IntListMap>& v) {
-            return py::make_iterator(v->begin(), v->end());
-          },
-          py::keep_alive<0, 1>())
-    .def("__getitem__",
-          (Int2IntListMap::mapped_type & (Int2IntListMap::*)(const Int2IntListMap::key_type& pos))
-              & Int2IntListMap::operator[])
-    .def("__iter__",
-          [](std::shared_ptr<Int2IntListMap>& v) {
-            return py::make_iterator(v->begin(), v->end());
-          },
-          py::keep_alive<0, 1>())
-    .def("__eq__",
-          [](std::shared_ptr<Int2IntListMap>& lhs, std::shared_ptr<Int2IntListMap>& rhs) {
-            return Int2IntListMapContaining(*lhs, *rhs) && Int2IntListMapContaining(*rhs, *lhs);
-          });
+      .def(py::init<>())
+      .def("__len__", [](const std::shared_ptr<Int2IntListMap>& v) { return v->size(); })
+      .def("items",
+           [](std::shared_ptr<Int2IntListMap>& v) {
+             return py::make_iterator(v->begin(), v->end());
+           },
+           py::keep_alive<0, 1>())
+      .def("__getitem__",
+           (Int2IntListMap::mapped_type & (Int2IntListMap::*)(const Int2IntListMap::key_type& pos))
+               & Int2IntListMap::operator[])
+      .def("__iter__",
+           [](std::shared_ptr<Int2IntListMap>& v) {
+             return py::make_iterator(v->begin(), v->end());
+           },
+           py::keep_alive<0, 1>())
+      .def("__eq__",
+           [](std::shared_ptr<Int2IntListMap>& lhs, std::shared_ptr<Int2IntListMap>& rhs) {
+             return Int2IntListMapContaining(*lhs, *rhs) && Int2IntListMapContaining(*rhs, *lhs);
+           });
 
   ::oneflow::cfg::Pybind11ModuleRegistry().ImportAll(m);
   ::oneflow::OneflowModuleRegistry().ImportAll(m);
