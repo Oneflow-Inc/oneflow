@@ -157,7 +157,7 @@ else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
 
-# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
+# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
   include(oneflow)
 endif()
