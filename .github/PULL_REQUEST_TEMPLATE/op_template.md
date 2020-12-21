@@ -36,7 +36,9 @@
  - [ ] 单机单卡  CPU Test Case 
  - [ ] 单机单卡  GPU Test Case 
  - [ ] 单机多卡  CPU Test Case 
- - [ ] 单机多卡  GPU Test Case 
+ - [ ] 单机多卡  GPU Test Case
+ - [ ] 分布式  CPU Test Case  
+ - [ ] 分布式  GPU Test Case  
 
 ## GPU 有效带宽
 带 GPU 的 Op，请参考 https://github.com/Oneflow-Inc/OneTeam/issues/167 测试有效带宽，并附带测试报告。
