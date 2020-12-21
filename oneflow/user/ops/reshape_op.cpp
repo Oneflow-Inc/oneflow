@@ -65,15 +65,27 @@ REGISTER_USER_OP("reshape")
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
+    const auto& in_desc = op.TensorDesc4ArgNameAndIndex("in", 0);
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper reshape_grad_op =
-        builder.Op("reshape_like")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("like", op.input("in", 0))
-            .Output("out")
-            .Build();
-    op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
-    AddOp(reshape_grad_op);
+    if (in_desc.is_dynamic()) {
+      user_op::UserOpConfWrapper reshape_grad_op =
+          builder.Op("reshape_like")
+              .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+              .Input("like", op.input("in", 0))
+              .Output("out")
+              .Build();
+      op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
+      AddOp(reshape_grad_op);
+    } else {
+      user_op::UserOpConfWrapper reshape_grad_op =
+          builder.Op("reshape")
+              .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+              .Attr("shape", in_desc.shape())
+              .Output("out")
+              .Build();
+      op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
+      AddOp(reshape_grad_op);
+    }
   }
 });
 
