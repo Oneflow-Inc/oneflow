@@ -28,7 +28,4 @@ def OneFlow_Dialect : Dialect {
 // Base oneflow operation definition.
 //===----------------------------------------------------------------------===//
 
-class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, traits>;
-
 #endif // ONEFLOW_DIALECT

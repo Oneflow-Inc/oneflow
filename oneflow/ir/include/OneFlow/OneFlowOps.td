@@ -12,6 +12,12 @@
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, traits>;
+
+class OneFlow_UserOp<string mnemonic, list<OpTrait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, traits>;
+
 def OneFlow_FooOp : OneFlow_Op<"foo", [NoSideEffect,
                                              SameOperandsAndResultType]> {
     let summary = "Illustrates how to define an operation.";
