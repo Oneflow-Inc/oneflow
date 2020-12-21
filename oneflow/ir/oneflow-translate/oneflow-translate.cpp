@@ -23,6 +23,8 @@
 
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include <iostream>
 
 using namespace mlir;
 namespace {
@@ -30,10 +32,14 @@ using PbMessage = google::protobuf::Message;
 
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
-  ::oneflow::Job proto;
-  google::protobuf::TextFormat::ParseFromString(cpp_str, &proto);
+  ::oneflow::Job job;
+  google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+  for (size_t i = 0; i < job.net().op_size(); i++) {
+    ::oneflow::OperatorConf op = job.net().op(i);
+    if (op.has_user_conf()) { std::cout << "loading user op: " << op.name() << "\n"; }
+  }
   return module;
 }
 }  // namespace
