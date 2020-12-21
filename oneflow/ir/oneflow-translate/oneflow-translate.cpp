@@ -35,6 +35,7 @@ class Importer {
  public:
   Importer(MLIRContext *context, ModuleOp module) : b(context), context(context), module(module) {}
   LogicalResult processJob(::oneflow::Job *job);
+  LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
 
  private:
   /// The current builder, pointing at where the next Instruction should be
@@ -52,10 +53,13 @@ LogicalResult Importer::processJob(::oneflow::Job *job) {
     if (op.has_user_conf()) {
       std::cout << "processing user op: " << op.name() << "\n";
       std::cout << op.DebugString() << "\n";
+      if (failed(processUserOp(op))) { return failure(); }
     }
   }
   return success();
 }
+
+LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) { return success(); }
 
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
