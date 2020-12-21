@@ -1675,39 +1675,71 @@ def sync_dynamic_resize(
 
 @oneflow_export("stack")
 def stack(
-    inputs: Sequence[remote_blob_util.BlobDef], axis: int, name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef],
+    axis: int = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator stacks the multiple Blobs on the specified axis. 
-
-    Still Unavailable. 
 
     Args:
         inputs (Sequence[remote_blob_util.BlobDef]): A list of input Blob. 
         axis (int): The stack axis. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def stack_job(x: tp.Numpy.Placeholder(shape=(2, 4, 6)), 
+                    y: tp.Numpy.Placeholder(shape=(2, 4, 6)))->tp.Numpy:
+            out = flow.stack([x, y], axis=2) 
+            return out 
+
+        x = np.ones(shape=(2, 4, 6), dtype=np.float32)
+        y = np.ones(shape=(2, 4, 6), dtype=np.float32)
+
+        out = stack_job(x, y)
+
+        # output.shape (2, 4, 2, 6)
+
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
 
     """
-    if not isinstance(inputs, (list, tuple)):
-        inputs = [inputs]
+    if name is None:
+        name = id_util.UniqueStr("Stack_")
 
+    inputs = list(inputs)
+
+    _input_shape = inputs[0].shape
+    _max_dim = len(_input_shape)
+
+    # The axis must be in range [-(_max_dim +1), _max_dim]
     if axis < 0:
-        axis = axis + len(inputs[0].shape)
+        axis = axis + _max_dim + 1
+    assert (axis >= 0) and (axis <= _max_dim)
 
-    assert axis == 0, "Only support dim0 stack now."
+    # All input tensors must have the same shape
+    _input_list_length = len(inputs)
+    for i in range(_input_list_length):
+        _current_shape = inputs[i].shape
+        assert (
+            _input_shape == _current_shape
+        ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+            _current_shape
+        )
+        # Expand dims for each tensor
+        inputs[i] = flow.expand_dims(
+            inputs[i], axis=axis, name=name + "expand_dims_{}".format(i)
+        )
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
-    setattr(op_conf.stack_conf, "axis", axis)
-    setattr(op_conf.stack_conf, "out", "out")
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.concat(inputs, axis=axis, name=name + "concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
@@ -2310,102 +2342,45 @@ def amp_white_identity(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("ravel_multi_index")
-def ravel_multi_index(
-    multi_index: Sequence[remote_blob_util.BlobDef], 
-    dims: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
+@oneflow_export("zeros")
+def zeros(
+    shape: Sequence[int],
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    _multi_index_len = len(multi_index)
-    _dim_len = dims.shape[0]
-    assert _multi_index_len == _dim_len, \
-        "The Input sequence length is not matched, {} vs {}".format(_multi_index_len, _dim_len)
+    """This operator creates a Tensor filled with the scalar value `0`.
 
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("RavelMultiIndex_")
-        )
-        .Op("ravel_multi_index")
-        .Input("multi_index", multi_index)
-        .Input("dims", [dims])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-@oneflow_export("ndindex_to_offset")
-def ndindex_to_offset(
-    index: remote_blob_util.BlobDef, 
-    dims: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
-    """This operator computes the 1-D offset in N-D Tensor. 
-
+    Args:
+        shape (Sequence[int]): The shape of the Tensor. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Tensor filled with value `0`
+    
     For example: 
 
     .. code-block:: python 
 
         import oneflow as flow
         import oneflow.typing as tp 
-        import numpy as np 
+
 
         @flow.global_function()
-        def ndindex_to_offset_job(x: tp.Numpy.Placeholder(shape=(3, ), dtype=flow.int32), 
-                                dims: tp.Numpy.Placeholder(shape=(3, ), dtype=flow.int32))->tp.Numpy:
-            return flow.ndindex_to_offset(x, dims, name="ndindex_to_offset")
+        def zeros_job() -> tp.Numpy: 
+            return flow.zeros(shape=(2, 3), dtype=flow.float32)
 
 
-        index = np.array([3, 4, 2]).astype(np.int32)
-        dims = np.array([8, 8, 8]).astype(np.int32)
+        out = zeros_job()
 
-        out = ndindex_to_offset_job(index, dims)
-        # output [226]
+        # output: [[0. 0. 0.]
+        #          [0. 0. 0.]]
 
-    Args:
-        index (remote_blob_util.BlobDef): The index Tensor. 
-        dims (remote_blob_util.BlobDef): The dims Tensor. 
-        name (Optional[str], optional): The name for the operator. Defaults to None.
-
-    Returns:
-        remote_blob_util.BlobDef: The offset
     """
-    _index_len = index.shape[0]
-    _dim_len = dims.shape[0]
+    if name is None:
+        name = id_util.UniqueStr("Zeros_")
 
-    assert _index_len == _dim_len, \
-        "The Input sequence length is not matched, {} vs {}".format(_index_len, _dim_len)
+    if dtype is None:
+        dtype = flow.float32
 
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("NdIndexToOffset_")
-        )
-        .Op("ndindex_to_offset")
-        .Input("index", [index])
-        .Input("dims", [dims])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-@oneflow_export("offset_to_ndindex")
-def offset_to_ndindex(
-    index: remote_blob_util.BlobDef, 
-    dims: remote_blob_util.BlobDef, 
-    name: Optional[str] = None
-): 
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("OffsetToNdIndex_")
-        )
-        .Op("offset_to_ndindex")
-        .Input("index", [index])
-        .Input("dims", [dims])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+    return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")

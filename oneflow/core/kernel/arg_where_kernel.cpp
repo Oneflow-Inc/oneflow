@@ -31,7 +31,6 @@ class ArgWhereKernel : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in = BnInOp2Blob("in");
-    if (in->shape().elem_cnt() == 0) { return; }
     Blob* out = BnInOp2Blob("out");
     Blob* out_size = BnInOp2Blob("out_size");
     Blob* tmp = BnInOp2Blob("tmp");
