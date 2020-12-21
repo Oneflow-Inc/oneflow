@@ -359,7 +359,7 @@ def _compare_with_samples(case):
             padding = "SAME_UPPER"
         y = unfold_f(
             x,
-            ksize=kernel_size,
+            kernel_size=kernel_size,
             strides=strides,
             dilation_rate=dilation_rate,
             padding=padding,
