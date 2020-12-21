@@ -6,22 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is a command line utility that translates a file from/to MLIR using one
-// of the registered translations.
+// Translate a list of OneFlow user ops to MLIR.
+// In principle, the list of user ops should be a graph
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/Module.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
 
 #include "OneFlow/OneFlowDialect.h"
 
+using namespace mlir;
+namespace {
+OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
+  OwningModuleRef module(
+      ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+  return module;
+}
+}  // namespace
+namespace mlir {
+void registerFromOneFlowJobTranslation() {
+  TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",
+                                             [](llvm::StringRef str, MLIRContext *context) {
+                                               return ::translateOneFlowJobToModule(str, context);
+                                             });
+}
+}  // namespace mlir
+
 int main(int argc, char **argv) {
   mlir::registerAllTranslations();
 
-  // TODO: Register oneflow translations here.
+  registerFromOneFlowJobTranslation();
 
-  return failed(
-      mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
+  return failed(mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
 }
