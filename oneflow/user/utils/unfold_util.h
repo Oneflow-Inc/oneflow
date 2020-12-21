@@ -36,7 +36,6 @@ class ParamsUnfold3D {
                  const std::vector<int32_t>& strides, const std::vector<int32_t>& dilation_rate,
                  const bool ceil_mode);
   ~ParamsUnfold3D() = default;
-  void Reset(const ShapeView& x_shape);
 
   Shape GetYShape() const;
   Shape GetXShape5D() const;

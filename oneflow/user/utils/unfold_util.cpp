@@ -80,13 +80,6 @@ ParamsUnfold3D::ParamsUnfold3D(const int32_t dim, const ShapeView& x_shape,
   batch_num_ = x_shape.At(0);
 }
 
-void ParamsUnfold3D::Reset(const ShapeView& x_shape) {
-  x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
-           GetInDim(x_shape, data_format_, 2, dim_)};
-  Get3DOutputSize(x_3d_, kernel_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_rate_3d_,
-                  &y_3d_, &padding_before_3d_, &padding_after_3d_);
-}
-
 Shape ParamsUnfold3D::GetYShape() const {
   if (dim_ < 1 || dim_ > 3) { UNIMPLEMENTED(); }
   DimVector y_dim_vec{batch_num_, 0, 0};

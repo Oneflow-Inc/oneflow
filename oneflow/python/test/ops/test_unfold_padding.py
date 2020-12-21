@@ -27,7 +27,7 @@ import oneflow.typing as oft
 unfold_confs = [
     {
         "x_shape": (2, 3, 6, 6),
-        "ksize": 1,
+        "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "VALID",
@@ -35,7 +35,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 3, 7, 7),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 2,
         "dilation_rate": 1,
         "padding": "VALID",
@@ -43,7 +43,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 5, 6, 6),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 2,
         "dilation_rate": 2,
         "padding": "VALID",
@@ -51,7 +51,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 7, 5, 5),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "VALID",
@@ -59,7 +59,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 3, 3, 3),
-        "ksize": 1,
+        "kernel_size": 1,
         "strides": 2,
         "dilation_rate": 3,
         "padding": "VALID",
@@ -67,7 +67,7 @@ unfold_confs = [
     },
     {
         "x_shape": (4, 1, 9, 9),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 3,
         "dilation_rate": 2,
         "padding": "VALID",
@@ -75,7 +75,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 1, 6, 6),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
@@ -83,7 +83,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 3, 7, 7),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
@@ -91,7 +91,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 5, 6, 6),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 1,
         "dilation_rate": 2,
         "padding": "SAME",
@@ -99,7 +99,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 7, 5, 5),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
@@ -107,7 +107,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 3, 3, 3),
-        "ksize": 1,
+        "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 3,
         "padding": "SAME",
@@ -115,7 +115,7 @@ unfold_confs = [
     },
     {
         "x_shape": (4, 1, 9, 9),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 1,
         "dilation_rate": 2,
         "padding": "SAME",
@@ -123,7 +123,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 3, 3, 3),
-        "ksize": 1,
+        "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 3,
         "padding": (0, 0),
@@ -131,7 +131,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 2, 8, 8),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": 2,
@@ -139,7 +139,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 2, 8, 8),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": (2, 2),
@@ -147,7 +147,7 @@ unfold_confs = [
     },
     {
         "x_shape": (1, 2, 8, 8),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": ((1, 1), (2, 2)),
@@ -155,7 +155,7 @@ unfold_confs = [
     },
     {
         "x_shape": (3, 2, 8, 8),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": [(1, 2), (1, 2)],
@@ -167,7 +167,7 @@ unfold_confs = [
 unfold_confs_1n2d = [
     {
         "x_shape": (2, 2, 6, 6),
-        "ksize": 1,
+        "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "VALID",
@@ -175,7 +175,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (2, 5, 6, 6),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 2,
         "dilation_rate": 2,
         "padding": "VALID",
@@ -183,7 +183,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (4, 3, 3, 3),
-        "ksize": 1,
+        "kernel_size": 1,
         "strides": 2,
         "dilation_rate": 3,
         "padding": "VALID",
@@ -191,7 +191,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (2, 3, 7, 7),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
@@ -199,7 +199,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (4, 7, 5, 5),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
@@ -207,7 +207,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (4, 3, 9, 9),
-        "ksize": 2,
+        "kernel_size": 2,
         "strides": 2,
         "dilation_rate": 2,
         "padding": "SAME",
@@ -215,7 +215,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (6, 2, 8, 8),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": 2,
@@ -223,7 +223,7 @@ unfold_confs_1n2d = [
     },
     {
         "x_shape": (3, 2, 8, 8),
-        "ksize": 3,
+        "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": ((1, 1), (2, 2)),
@@ -250,7 +250,7 @@ def _GetSequence(value, n, name):
         )
 
 
-def _GetTorchPadding(padding, dim, in_dhw, ksize, strides, dilation_rate):
+def _GetTorchPadding(padding, dim, in_dhw, kernel_size, strides, dilation_rate):
     valid_case = True
     torch_padding = [0 for _ in range(dim)]
     if isinstance(padding, int):
@@ -270,7 +270,7 @@ def _GetTorchPadding(padding, dim, in_dhw, ksize, strides, dilation_rate):
         if padding.startswith("SAME"):
             out_dhw = in_dhw.copy()
             for i in range(dim):
-                torch_padding[i] = (ksize[i] - 1) * dilation_rate[i]
+                torch_padding[i] = (kernel_size[i] - 1) * dilation_rate[i]
                 if strides[i] != 1 or torch_padding[i] % 2 != 0:
                     valid_case = False
                 torch_padding[i] //= 2
@@ -283,7 +283,7 @@ def _compare_with_samples(case):
     (device_type, device_count, machine_ids, unfold_conf, data_type) = case
     torch_device = torch.device("cuda" if device_type == "gpu" else "cpu")
     x_shape = unfold_conf["x_shape"]
-    ksize = unfold_conf["ksize"]
+    kernel_size = unfold_conf["kernel_size"]
     strides = unfold_conf["strides"]
     dilation_rate = unfold_conf["dilation_rate"]
     padding = unfold_conf["padding"]
@@ -291,12 +291,12 @@ def _compare_with_samples(case):
     flow.clear_default_session()
 
     dim = len(x_shape) - 2
-    ksize = _GetSequence(ksize, dim, "ksize")
+    kernel_size = _GetSequence(kernel_size, dim, "kernel_size")
     strides = _GetSequence(strides, dim, "strides")
     dilation_rate = _GetSequence(dilation_rate, dim, "dilation_rate")
     in_dhw = list(x_shape)[-dim:]
     valid_case, torch_padding = _GetTorchPadding(
-        padding, 2, in_dhw, ksize, strides, dilation_rate
+        padding, 2, in_dhw, kernel_size, strides, dilation_rate
     )
 
     # Random inputs
@@ -307,7 +307,7 @@ def _compare_with_samples(case):
         x, requires_grad=True, device=torch_device, dtype=torch.float
     )
     model = torch.nn.Unfold(
-        ksize, stride=strides, padding=torch_padding, dilation=dilation_rate,
+        kernel_size=kernel_size, stride=strides, padding=torch_padding, dilation=dilation_rate,
     )
     model.to(torch_device)
     y_torch = model(x_torch)
@@ -359,7 +359,7 @@ def _compare_with_samples(case):
             padding = "SAME_UPPER"
         y = unfold_f(
             x,
-            ksize=ksize,
+            ksize=kernel_size,
             strides=strides,
             dilation_rate=dilation_rate,
             padding=padding,

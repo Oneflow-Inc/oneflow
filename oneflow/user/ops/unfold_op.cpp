@@ -39,7 +39,7 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
     CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
-    for (int32_t kdim : kernel_size) { CHECK_GT_OR_RETURN(kdim, 0); }
+    for (int32_t kernel_dim : kernel_size) { CHECK_GT_OR_RETURN(kernel_dim, 0); }
     CHECK_EQ_OR_RETURN(strides.size(), dim);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
     CHECK_EQ_OR_RETURN(dilation_rate.size(), dim);
