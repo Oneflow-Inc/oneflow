@@ -25,7 +25,9 @@ Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    if (padding[i] == 0){
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -34,7 +36,9 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
   FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    if (padding[i] == 0){
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
   }
   return Maybe<void>::Ok();
 }
