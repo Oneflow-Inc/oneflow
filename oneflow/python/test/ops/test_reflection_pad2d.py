@@ -86,11 +86,7 @@ def _make_op_function(
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: tp.Numpy):
-        if np.allclose(grad, blob, 1e-3, 1e-3) == True:
-            test_case.assertTrue(True)
-        else:
-            print("grad:\n", grad, "\nblob:\n", blob)
-            test_case.assertTrue(False)
+        test_case.assertTrue(np.allclose(grad, blob, 1e-3, 1e-3))
 
     if value_type == flow.float32 or value_type == flow.float64:
 
@@ -133,6 +129,31 @@ def _make_op_function(
                 flow.watch_diff(x, _compare_diff)
             return y_fp32
 
+        return op_function
+
+    elif value_type == flow.float16:
+
+        @flow.global_function(type="train", function_config=func_config)
+        def op_function(x: tp.Numpy.Placeholder(input.shape, dtype=flow.float32)):
+            with flow.scope.placement(device_type, "0:0"):
+                x_var = flow.get_variable(
+                    name="v1",
+                    shape=input.shape,
+                    dtype=flow.float32,
+                    initializer=flow.constant_initializer(0)
+                )
+                x_var = flow.cast_to_current_logical_view(x_var)
+                input_x = x_var + x
+                x_fp32 = flow.cast(input_x, flow.float32)
+                x_fp16 = flow.cast(input_x, dtype=flow.float16)
+                y_fp16 = flow.reflection_pad2d(x_fp16, padding)
+                y_fp32 = flow.cast(y_fp16, dtype=flow.float32)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
+                ).minimize(y_fp32)
+
+                flow.watch_diff(x_fp32, _compare_diff)
+            return y_fp32
         return op_function
 
 
@@ -243,10 +264,11 @@ def _gen_arg_dict(
     arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2]))
     arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3]))
     if value_type == "float":
-        arg_dict["value_type"] = [
-            (np.float32, flow.float32)
-            # ,(np.float32, flow.float16)
-        ]
+        if device_type == "gpu":
+            arg_dict["value_type"] = [(np.float32, flow.float32),(np.float16, flow.float16)]
+        else:
+            arg_dict["value_type"] = [(np.float32, flow.float32)]
+
     elif value_type == "int":
         arg_dict["value_type"] = [(np.float32, flow.int32)]
     else:
