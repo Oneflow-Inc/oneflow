@@ -44,7 +44,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
   static AMPList clear_list = {
       "gather",    "max_pool_1d",      "max_pool_2d", "max_pool_3d", "reshape",      "relu",
       "transpose", "random_mask_like", "concat",      "pad",         "same_padding", "tril",
-      "slice",     "fused_scale_tril", "identity"};
+      "slice",     "fused_scale_tril", "identity",    "flatten",     "squeeze",      "expand_dims"};
 
   return clear_list;
 }
