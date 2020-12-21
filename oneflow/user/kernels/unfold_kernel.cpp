@@ -84,8 +84,9 @@ class UnfoldKernelImpl {
     if (data_format == "channels_first") {
       UnfoldKernelUtil<device_type, T>::CFirstBackward(
           ctx->device_ctx(), params_3d.GetXShape5D(), params_3d.GetYShape5D(),
-          params_3d.kernel_size_3d(), params_3d.strides_3d(), params_3d.dilation_rate_3d(),
-          params_3d.padding_before_3d(), dy->dptr<T>(), dx->mut_dptr<T>());
+          params_3d.GetYShape(), params_3d.kernel_size_3d(), params_3d.strides_3d(),
+          params_3d.dilation_rate_3d(), params_3d.padding_before_3d(), dy->dptr<T>(),
+          dx->mut_dptr<T>());
     } else {
       UNIMPLEMENTED();
     }

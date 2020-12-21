@@ -30,10 +30,10 @@ class UnfoldKernelUtil<DeviceType::kCPU, T> {
                             const std::vector<int32_t>& padding_before, const T* data_im,
                             T* data_col) {
     std::memset(data_col, T(0), out.elem_cnt() * sizeof(T));
-    const int64_t channels_col =
-        in.At(1) * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
     for (int64_t n = 0; n < in.At(0); ++n) {
-      for (int64_t c_col = 0; c_col < channels_col; ++c_col) {
+      const T* data_im_batch = data_im + n * in.Count(1);
+      T* data_col_batch = data_col + n * out.Count(1);
+      for (int64_t c_col = 0; c_col < out.At(1); ++c_col) {
         const int64_t w_offset = c_col % kernel_size.at(2);
         const int64_t h_offset = (c_col / kernel_size.at(2)) % kernel_size.at(1);
         const int64_t d_offset =
@@ -51,11 +51,12 @@ class UnfoldKernelUtil<DeviceType::kCPU, T> {
             for (int64_t w_col = 0; w_col < out_5d.At(4); ++w_col) {
               const int64_t w_im =
                   w_col * strides.at(2) - padding_before.at(2) + w_offset * dilation_rate.at(2);
-              data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4)
-                       + w_col] =
+              data_col_batch[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4)
+                             + w_col] =
                   (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3)
                    && w_im < in.At(4))
-                      ? data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im]
+                      ? data_im_batch[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4)
+                                      + w_im]
                       : static_cast<T>(0);
             }
           }
@@ -65,16 +66,16 @@ class UnfoldKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void CFirstBackward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
-                             const std::vector<int32_t>& kernel_size,
+                             const Shape& out, const std::vector<int32_t>& kernel_size,
                              const std::vector<int32_t>& strides,
                              const std::vector<int32_t>& dilation_rate,
                              const std::vector<int32_t>& padding_before, const T* data_col,
                              T* data_im) {
     std::memset(data_im, T(0), in.elem_cnt() * sizeof(T));
-    const int64_t channels_col =
-        in.At(1) * kernel_size.at(0) * kernel_size.at(1) * kernel_size.at(2);
     for (int64_t n = 0; n < in.At(0); ++n) {
-      for (int64_t c_col = 0; c_col < channels_col; ++c_col) {
+      T* data_im_batch = data_im + n * in.Count(1);
+      const T* data_col_batch = data_col + n * out.Count(1);
+      for (int64_t c_col = 0; c_col < out.At(1); ++c_col) {
         const int64_t d_offset = c_col % kernel_size.at(0);
         const int64_t h_offset = (c_col / kernel_size.at(0)) % kernel_size.at(1);
         const int64_t w_offset =
@@ -95,9 +96,10 @@ class UnfoldKernelUtil<DeviceType::kCPU, T> {
 
               if (d_im >= 0 && h_im >= 0 && w_im >= 0 && d_im < in.At(2) && h_im < in.At(3)
                   && w_im < in.At(4)) {
-                data_im[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im] +=
-                    data_col[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col) * out_5d.At(4)
-                             + w_col];
+                data_im_batch[((c_im * in.At(2) + d_im) * in.At(3) + h_im) * in.At(4) + w_im] +=
+                    data_col_batch[((c_col * out_5d.At(2) + d_col) * out_5d.At(3) + h_col)
+                                       * out_5d.At(4)
+                                   + w_col];
               }
             }
           }

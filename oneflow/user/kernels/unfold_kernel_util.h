@@ -32,7 +32,7 @@ class UnfoldKernelUtil {
                             T* data_col);
 
   static void CFirstBackward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
-                             const std::vector<int32_t>& kernel_size,
+                             const Shape& out, const std::vector<int32_t>& kernel_size,
                              const std::vector<int32_t>& strides,
                              const std::vector<int32_t>& dilation_rate,
                              const std::vector<int32_t>& padding_before, const T* data_col,

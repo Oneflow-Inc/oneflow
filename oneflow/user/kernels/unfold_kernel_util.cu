@@ -46,15 +46,14 @@ __global__ void UnfoldCFirstForward(const int64_t elem_cnt, const T* data_im, co
     idx /= height_col;
     int64_t d_out = idx % depth_col;
 
-    int64_t channel_in = idx / depth_col;
-    int64_t channel_out = channel_in * kernel_depth * kernel_height * kernel_width;
+    int64_t n_c_in = idx / depth_col;
+    int64_t n_c_out = n_c_in * kernel_depth * kernel_height * kernel_width;
     int64_t d_in = d_out * stride_depth - pad_depth;
     int64_t h_in = h_out * stride_height - pad_height;
     int64_t w_in = w_out * stride_width - pad_width;
 
-    T* col =
-        data_col + ((channel_out * depth_col + d_out) * height_col + h_out) * width_col + w_out;
-    const T* im = data_im + ((channel_in * depth + d_in) * height + h_in) * width + w_in;
+    T* col = data_col + ((n_c_out * depth_col + d_out) * height_col + h_out) * width_col + w_out;
+    const T* im = data_im + ((n_c_in * depth + d_in) * height + h_in) * width + w_in;
 
     for (int64_t i = 0; i < kernel_depth; ++i) {
       for (int64_t j = 0; j < kernel_height; ++j) {
@@ -157,7 +156,7 @@ class UnfoldKernelUtil<DeviceType::kGPU, T> {
   }
 
   static void CFirstBackward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
-                             const std::vector<int32_t>& kernel_size,
+                             const Shape& out, const std::vector<int32_t>& kernel_size,
                              const std::vector<int32_t>& strides,
                              const std::vector<int32_t>& dilation_rate,
                              const std::vector<int32_t>& padding_before, const T* data_col,
