@@ -23,6 +23,7 @@
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <iostream>
+#include <new>
 
 namespace mlir {
 
@@ -33,6 +34,7 @@ using PbMessage = google::protobuf::Message;
 class Importer {
  public:
   Importer(MLIRContext *context, ModuleOp module) : b(context), context(context), module(module) {}
+  LogicalResult processJob(::oneflow::Job *job);
 
  private:
   /// The current builder, pointing at where the next Instruction should be
@@ -44,6 +46,17 @@ class Importer {
   ModuleOp module;
 };
 
+LogicalResult Importer::processJob(::oneflow::Job *job) {
+  for (size_t i = 0; i < job->net().op_size(); i++) {
+    ::oneflow::OperatorConf op = job->net().op(i);
+    if (op.has_user_conf()) {
+      std::cout << "processing user op: " << op.name() << "\n";
+      std::cout << op.DebugString() << "\n";
+    }
+  }
+  return success();
+}
+
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
@@ -51,13 +64,8 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   Importer imp(context, module.get());
-  for (size_t i = 0; i < job.net().op_size(); i++) {
-    ::oneflow::OperatorConf op = job.net().op(i);
-    if (op.has_user_conf()) {
-      std::cout << "loading user op: " << op.name() << "\n";
-      std::cout << op.DebugString() << "\n";
-    }
-  }
+  imp.processJob(&job);
+
   return module;
 }
 }  // namespace
