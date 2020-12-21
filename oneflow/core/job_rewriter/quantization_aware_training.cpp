@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_conf.pb.h"
 #ifdef WITH_CUDA
 
-#include "oneflow/core/job_rewriter/auto_mixed_precision_lists.h"
-
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include <algorithm>
 
 #include "oneflow/core/device/cuda_util.h"
@@ -30,31 +28,22 @@ limitations under the License.
 
 namespace oneflow {
 
-using QATList = HashSet<std::string>;
-
-const QATList& Int8List() {
-  static QATList int8_list = {"add_n",  "matmul",      "batch_matmul",
-                              "conv2d", "avg_pool_2d", "max_pool_2d"};
-  return int8_list;
-}
-
-const QATList& TransparentList() {
-  static QATList transparent_list = {
-      "reshape",
-  };
-  return transparent_list;
-}
-
-const std::string fake_quant_suffix = "-fake-quant";
-const std::string zp_suffix = "-fake-quant-zp";
-const std::string moving_max_suffix = "-fake-quant-moving-max";
-const std::string moving_min_suffix = "-fake-quant-moving-min";
-const std::string mul_bias_suffix = "-fake-quant-mul-bias";
-const std::string observer_suffix = "-fake-quant-observer";
-
 namespace {
 
-void VerifyQATList(const QATList& op_list) {
+using OpTypeSet = HashSet<std::string>;
+
+OpTypeSet INT8_OP_TYPES = {"add_n",  "matmul",      "batch_matmul",
+                           "conv2d", "avg_pool_2d", "max_pool_2d"};
+OpTypeSet TRANSPARENT_OP_TYPES = {"reshape"};
+
+const std::string FAKE_QUANT_SUFFIX = "-fake-quant";
+const std::string ZP_SUFFIX = "-fake-quant-zp";
+const std::string MOVING_MAX_SUFFIX = "-fake-quant-moving-max";
+const std::string MOVING_MIN_SUFFIX = "-fake-quant-moving-min";
+const std::string MUL_BIAS_SUFFIX = "-fake-quant-mul-bias";
+const std::string OBSERVER_SUFFIX = "-fake-quant-observer";
+
+void VerifyQATList(const OpTypeSet& op_list) {
   for (const auto& op_type : op_list) {
     CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) != nullptr)
         << "Cannot find " << op_type << " of QuantAwareTraining list in OpRegistry.";
@@ -68,15 +57,17 @@ Maybe<std::string> GetScaleLbn(const std::string& lbn) {
   return scale_map[lbn];
 }
 
-Maybe<bool> IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn,
-                           std::string* conv_weight_scale_lbn) {
+Maybe<bool> IsConvBiasEdge(const QatConfig& qat_config, const OpEdge* edge,
+                           std::string* conv_input_scale_lbn, std::string* conv_weight_scale_lbn,
+                           int64_t* weight_scale_length) {
   const auto* dst_node = edge->dst_node();
 
   const auto dst_op_type = dst_node->op().op_conf().user_conf().op_type_name();
 
-  auto GetInputAndWeightScaleLbn4ConvNode = [](const OpNode* conv_node,
-                                               std::string* conv_input_scale_lbn,
-                                               std::string* conv_weight_scale_lbn) -> Maybe<void> {
+  auto GetInputAndWeightScaleLbnAndWeightScaleLen4ConvNode =
+      [](const QatConfig& qat_config, const OpNode* conv_node, std::string* conv_input_scale_lbn,
+         std::string* conv_weight_scale_lbn, int64_t* weight_scale_length) -> Maybe<void> {
+    *weight_scale_length = 1;
     for (const OpEdge* in_edge : conv_node->in_edges()) {
       CHECK_EQ_OR_RETURN(in_edge->lbis().size(), 1);
       const auto lbi = in_edge->lbis().front();
@@ -86,6 +77,9 @@ Maybe<bool> IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn
       if (ibn[0] == "in_0") {
         *conv_input_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
       } else if (ibn[0] == "weight_0") {
+        if (qat_config.has_per_channel_weight_quantization()) {
+          *weight_scale_length = conv_node->LogicalBlobDesc4Lbi(lbi).shape().At(0);
+        }
         *conv_weight_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
       }
     }
@@ -98,8 +92,8 @@ Maybe<bool> IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn
     const auto ibn = edge->lbi2ibns().at(lbi);
     CHECK_EQ_OR_RETURN(ibn.size(), 1);
     if (ibn[0] == "bias_0") {
-      JUST(GetInputAndWeightScaleLbn4ConvNode(dst_node, conv_input_scale_lbn,
-                                              conv_weight_scale_lbn));
+      JUST(GetInputAndWeightScaleLbnAndWeightScaleLen4ConvNode(
+          qat_config, dst_node, conv_input_scale_lbn, conv_weight_scale_lbn, weight_scale_length));
       return true;
     }
   } else if (dst_op_type == "bias_add") {
@@ -107,8 +101,9 @@ Maybe<bool> IsConvBiasEdge(const OpEdge* edge, std::string* conv_input_scale_lbn
     for (const OpEdge* edge : dst_node->in_edges()) {
       const auto* src_node = edge->src_node();
       if (src_node->op().op_conf().user_conf().op_type_name() == "conv2d") {
-        JUST(GetInputAndWeightScaleLbn4ConvNode(src_node, conv_input_scale_lbn,
-                                                conv_weight_scale_lbn));
+        JUST(GetInputAndWeightScaleLbnAndWeightScaleLen4ConvNode(
+            qat_config, src_node, conv_input_scale_lbn, conv_weight_scale_lbn,
+            weight_scale_length));
         return true;
       }
     }
@@ -133,13 +128,13 @@ std::string OpTypeName4OpNode(const OpNode* node) {
 using OpConfMap = HashMap<std::string, OperatorConf>;
 
 OperatorConf Get1DZeroVariableOpConf(std::string name, const int64_t scope_symbol_id,
-                                     OpConfMap* inserted_ops) {
+                                     const int64_t length, OpConfMap* inserted_ops) {
   OperatorConf variable_op_conf{};
   variable_op_conf.set_name(name);
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
-  *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
+  *variable_conf->mutable_shape()->mutable_dim()->Add() = length;
   variable_conf->set_data_type(DataType::kFloat);
   variable_conf->mutable_split_axis()->clear_value();
   variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(0);
@@ -171,10 +166,10 @@ user_op::UserOpConfWrapper MultiplyOp(const std::string& name, const std::string
                                       const std::string& y, const int64_t scope_symbol_id,
                                       OpConfMap* inserted_ops) {
   const auto op_wrapper = user_op::UserOpConfWrapperBuilder(name)
-                              .Op("multiply")
+                              .Op("broadcast_mul")
                               .Input("x", x)
                               .Input("y", y)
-                              .Output("out")
+                              .Output("z")
                               .ScopeSymbolId(scope_symbol_id)
                               .Build();
   (*inserted_ops)[name] = op_wrapper.op_conf();
@@ -190,8 +185,8 @@ user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::st
           .Input("in", input)
           .Output("scale")
           .Output("zero_point")
-          .Attr<std::string>("quantize_scheme", symmetric ? "symmetric" : "affine")
-          .Attr("per_layer_quantize", !per_channel)
+          .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
+          .Attr("per_layer_quantization", !per_channel)
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   (*inserted_ops)[name] = op_wrapper.op_conf();
@@ -203,12 +198,12 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
                                                 int64_t stop_update_after_iters, float momentum,
                                                 const int64_t scope_symbol_id,
                                                 OpConfMap* inserted_ops) {
-  const std::string moving_max_name = name + moving_max_suffix;
-  const std::string moving_min_name = name + moving_min_suffix;
+  const std::string moving_max_name = name + MOVING_MAX_SUFFIX;
+  const std::string moving_min_name = name + MOVING_MIN_SUFFIX;
   const auto moving_max_var =
-      Get1DZeroVariableOpConf(moving_max_name, scope_symbol_id, inserted_ops);
+      Get1DZeroVariableOpConf(moving_max_name, scope_symbol_id, 1, inserted_ops);
   const auto moving_min_var =
-      Get1DZeroVariableOpConf(moving_min_name, scope_symbol_id, inserted_ops);
+      Get1DZeroVariableOpConf(moving_min_name, scope_symbol_id, 1, inserted_ops);
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
           .Op("moving_average_min_max_observer")
@@ -221,7 +216,7 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
           .Output("scale")
           .Output("zero_point")
           .Attr("stop_update_after_iters", stop_update_after_iters)
-          .Attr<std::string>("quantize_scheme", symmetric ? "symmetric" : "affine")
+          .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
           .Attr("momentum", momentum)
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -239,7 +234,7 @@ user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::strin
           .Input("in", input)
           .Input("scale", scale)
           .Input("zero_point", zero_point)
-          .Attr<std::string>("quantize_scheme", symmetric ? "symmetric" : "affine")
+          .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
           .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -254,19 +249,22 @@ Maybe<void> GetScaleAndZeroPointLbn4Edge(OpEdge* edge, const std::string train_s
   std::string lbn = GenLogicalBlobName(edge->lbis().front());
   std::string conv_input_scale_lbn;
   std::string conv_weight_scale_lbn;
-  if (JUST(IsConvBiasEdge(edge, &conv_input_scale_lbn, &conv_weight_scale_lbn))) {
+  int64_t weight_scale_length;
+  if (JUST(IsConvBiasEdge(qat_config, edge, &conv_input_scale_lbn, &conv_weight_scale_lbn,
+                          &weight_scale_length))) {
     // mul scale
-    const std::string mul_scale_op_name = ReplaceSlashToDash4Lbn(lbn) + mul_bias_suffix;
-    CHECK_OR_RETURN(inserted_ops->find(mul_scale_op_name) != inserted_ops->end());
+    const std::string mul_scale_op_name = ReplaceSlashToDash4Lbn(lbn) + MUL_BIAS_SUFFIX;
+    CHECK_OR_RETURN(inserted_ops->find(mul_scale_op_name) == inserted_ops->end());
     const auto mul_scale_op = MultiplyOp(mul_scale_op_name, conv_input_scale_lbn,
                                          conv_weight_scale_lbn, scope_symbol_id, inserted_ops);
 
-    *scale = mul_scale_op.output("out", 0);
-    const std::string zp_var_name = ReplaceSlashToDash4Lbn(lbn) + zp_suffix;
-    const auto zp_var = Get1DZeroVariableOpConf(zp_var_name, scope_symbol_id, inserted_ops);
+    *scale = mul_scale_op.output("z", 0);
+    const std::string zp_var_name = ReplaceSlashToDash4Lbn(lbn) + ZP_SUFFIX;
+    const auto zp_var =
+        Get1DZeroVariableOpConf(zp_var_name, scope_symbol_id, weight_scale_length, inserted_ops);
     *zero_point = GenLogicalBlobName(zp_var.name(), zp_var.variable_conf().out());
   } else {
-    const std::string observer_op_name = ReplaceSlashToDash4Lbn(lbn) + observer_suffix;
+    const std::string observer_op_name = ReplaceSlashToDash4Lbn(lbn) + OBSERVER_SUFFIX;
     if (IsWeightEdge(edge)) {
       const auto observer_op = MinMaxObserver(observer_op_name, lbn, qat_config.symmetric(),
                                               qat_config.per_channel_weight_quantization(),
@@ -302,7 +300,7 @@ Maybe<void> ReplaceInputLbn4DstNodeOfEdge(OpEdge* edge, const std::string& new_l
 class QuantAwareTraining final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(QuantAwareTraining);
-  QuantAwareTraining() : int8_list_(Int8List()), transparent_list_(TransparentList()) {}
+  QuantAwareTraining() : int8_list_(INT8_OP_TYPES), transparent_list_(TRANSPARENT_OP_TYPES) {}
   ~QuantAwareTraining() = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
@@ -313,11 +311,11 @@ class QuantAwareTraining final : public JobPass {
 
  private:
   Maybe<void> InsertFakeQuantOp(const QatConfig& qat_config, const OpGraph& op_graph,
-                                const QATList& int8_list, HashSet<OpNode*> downstream_white,
+                                const OpTypeSet& int8_list, HashSet<OpNode*> downstream_white,
                                 Job* job) const;
 
-  const QATList& int8_list_;
-  const QATList& transparent_list_;
+  const OpTypeSet& int8_list_;
+  const OpTypeSet& transparent_list_;
 };
 
 Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
@@ -369,7 +367,8 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
 }
 
 Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
-                                                  const OpGraph& op_graph, const QATList& int8_list,
+                                                  const OpGraph& op_graph,
+                                                  const OpTypeSet& int8_list,
                                                   HashSet<OpNode*> white_set, Job* job) const {
   JobBuilder job_builder(job);
   HashSet<OpEdge*> white_set_edges;
@@ -381,7 +380,7 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
     VLOG(3) << "insert " << EdgeName4Edge(edge);
     CHECK_EQ_OR_RETURN(edge->lbis().size(), 1);
     const std::string lbn = GenLogicalBlobName(edge->lbis().front());
-    scale_map[lbn] = ReplaceSlashToDash4Lbn(lbn) + observer_suffix + "/scale_0";
+    scale_map[lbn] = ReplaceSlashToDash4Lbn(lbn) + OBSERVER_SUFFIX + "/scale_0";
     VLOG(3) << "set " << lbn << " to " << scale_map[lbn];
     INSERT_CHECK(white_set_edges.insert(edge));
     return Maybe<void>::Ok();
@@ -448,7 +447,7 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
       const int64_t scope_symbol_id = edge->src_node()->op().op_conf().scope_symbol_id();
       JUST(GetScaleAndZeroPointLbn4Edge(edge, job->job_conf().train_conf().train_step_lbn(), &scale,
                                         &zero_point, qat_config, scope_symbol_id, &inserted_ops));
-      const std::string fake_quant_op_name = ReplaceSlashToDash4Lbn(lbn) + fake_quant_suffix;
+      const std::string fake_quant_op_name = ReplaceSlashToDash4Lbn(lbn) + FAKE_QUANT_SUFFIX;
       const auto fake_quant_op =
           FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, qat_config.symmetric(),
                       scope_symbol_id, &inserted_ops);
