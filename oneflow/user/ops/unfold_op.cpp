@@ -70,21 +70,30 @@ Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+
+  ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+  if (data_format == "channels_first") {
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), 1).Split(user_op::OpArg("y", 0), 1).Build();
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+  const std::string& data_format = ctx->Attr<std::string>("data_format");
+
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("y", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Build();
+  if (data_format == "channels_first") {
     ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
-        .Split(user_op::OpArg("dy", 0), i)
-        .Split(user_op::OpArg("dx", 0), i)
+        .Split(user_op::OpArg("x", 0), 1)
+        .Split(user_op::OpArg("y", 0), 1)
+        .Split(user_op::OpArg("dy", 0), 1)
+        .Split(user_op::OpArg("dx", 0), 1)
         .Build();
   }
   return Maybe<void>::Ok();

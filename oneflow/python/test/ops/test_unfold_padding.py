@@ -26,7 +26,7 @@ import oneflow.typing as oft
 
 unfold_confs = [
     {
-        "x_shape": (1, 1, 6, 6),
+        "x_shape": (2, 3, 6, 6),
         "ksize": 1,
         "strides": 1,
         "dilation_rate": 1,
@@ -66,7 +66,7 @@ unfold_confs = [
         "data_format": "NCHW",
     },
     {
-        "x_shape": (1, 1, 9, 9),
+        "x_shape": (4, 1, 9, 9),
         "ksize": 2,
         "strides": 3,
         "dilation_rate": 2,
@@ -114,7 +114,7 @@ unfold_confs = [
         "data_format": "NCHW",
     },
     {
-        "x_shape": (1, 1, 9, 9),
+        "x_shape": (4, 1, 9, 9),
         "ksize": 2,
         "strides": 1,
         "dilation_rate": 2,
@@ -154,11 +154,79 @@ unfold_confs = [
         "data_format": "NCHW",
     },
     {
-        "x_shape": (1, 2, 8, 8),
+        "x_shape": (3, 2, 8, 8),
         "ksize": 3,
         "strides": 1,
         "dilation_rate": 2,
         "padding": [(1, 2), (1, 2)],
+        "data_format": "NCHW",
+    },
+]
+
+
+unfold_confs_1n2d = [
+    {
+        "x_shape": (2, 2, 6, 6),
+        "ksize": 1,
+        "strides": 1,
+        "dilation_rate": 1,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (2, 5, 6, 6),
+        "ksize": 2,
+        "strides": 2,
+        "dilation_rate": 2,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (4, 3, 3, 3),
+        "ksize": 1,
+        "strides": 2,
+        "dilation_rate": 3,
+        "padding": "VALID",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (2, 3, 7, 7),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 1,
+        "padding": "SAME",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (4, 7, 5, 5),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 1,
+        "padding": "SAME",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (4, 3, 9, 9),
+        "ksize": 2,
+        "strides": 2,
+        "dilation_rate": 2,
+        "padding": "SAME",
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (6, 2, 8, 8),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 2,
+        "padding": 2,
+        "data_format": "NCHW",
+    },
+    {
+        "x_shape": (3, 2, 8, 8),
+        "ksize": 3,
+        "strides": 1,
+        "dilation_rate": 2,
+        "padding": ((1, 1), (2, 2)),
         "data_format": "NCHW",
     },
 ]
@@ -263,10 +331,10 @@ def _compare_with_samples(case):
         flow.config.cpu_device_num(device_count)
     else:
         flow.config.gpu_device_num(device_count)
-    
+
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    #func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
     func_config.default_logical_view(flow.scope.consistent_view())
 
     dtype = type_name_to_flow_type[data_type]
@@ -274,34 +342,35 @@ def _compare_with_samples(case):
 
     @flow.global_function(type="train", function_config=func_config)
     def unfold_job(x: tensor_def(x_shape, dtype=dtype)):
-        v = flow.get_variable(
-            "x",
-            shape=x_shape,
-            dtype=dtype,
-            initializer=flow.constant_initializer(0),
-            trainable=True,
-        )
-        v = flow.cast_to_current_logical_view(v)
-        flow.watch_diff(v, assert_grad)
-        x += v
-        with flow.scope.placement(device_type, machine_ids):
-            unfold_f = getattr(flow.nn, "unfold{}d".format(dim))
-
-            padding = unfold_conf["padding"]
-            if padding == "SAME":
-                padding = "SAME_UPPER"
-            y = unfold_f(
-                x,
-                ksize=ksize,
-                strides=strides,
-                dilation_rate=dilation_rate,
-                padding=padding,
-                data_format=data_format,
+        with flow.scope.placement(device_type, "0:0"):
+            v = flow.get_variable(
+                "x",
+                shape=x_shape,
+                dtype=dtype,
+                initializer=flow.constant_initializer(0),
+                trainable=True,
             )
+            v = flow.cast_to_current_logical_view(v)
+            x += v
+
+        unfold_f = getattr(flow.nn, "unfold{}d".format(dim))
+        padding = unfold_conf["padding"]
+        if padding == "SAME":
+            padding = "SAME_UPPER"
+        y = unfold_f(
+            x,
+            ksize=ksize,
+            strides=strides,
+            dilation_rate=dilation_rate,
+            padding=padding,
+            data_format=data_format,
+        )
+        with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]),
-                momentum=0,
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0,
             ).minimize(y)
+
+        flow.watch_diff(v, assert_grad)
         return y
 
     y = unfold_job(x).get()
@@ -354,7 +423,7 @@ class TestUnfoldPadding1n2d(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu"]
         arg_dict["device_count"] = [2]
         arg_dict["machine_ids"] = ["0:0-1"]
-        arg_dict["unfold_conf"] = unfold_confs
+        arg_dict["unfold_conf"] = unfold_confs_1n2d
         arg_dict["data_type"] = ["float32", "double"]
 
         for case in GenArgList(arg_dict):
