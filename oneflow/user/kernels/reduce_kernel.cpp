@@ -80,7 +80,49 @@ REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kGPU)
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
-REGISTER_REDUCE_XPU_KERNEL("reduce_sum", BinaryFuncSum, DeviceType::kGPU, float16)
+
+template<template<typename> class BinaryFunc>
+class ReduceHalfKernel final : public user_op::OpKernel {
+ public:
+  ReduceHalfKernel() = default;
+  ~ReduceHalfKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
+    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+    const Shape& reduced_shape =
+        CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
+    float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
+    float* out_tmp_buffer = in_tmp_buffer + input_tensor->shape().elem_cnt();
+    float* reduce_tmp_buffer = out_tmp_buffer + reduced_shape.elem_cnt();
+    CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
+                                  input_tensor->shape().elem_cnt());
+
+    NdarrayReduce<DeviceType::kGPU, float, BinaryFunc>::Reduce(
+        ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+        XpuVarNdarray<const float>(input_tensor->shape(), in_tmp_buffer),
+        XpuVarNdarray<float>(input_tensor->shape(), reduce_tmp_buffer));
+
+    CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
+                                  output_tensor->mut_dptr<float16>(),
+                                  output_tensor->shape().elem_cnt());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("reduce_sum")
+    .SetCreateFn<ReduceHalfKernel<BinaryFuncSum>>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+                     & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+      const Shape* out_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
+      return (2 * in_shape->elem_cnt() + out_shape->elem_cnt()) * sizeof(float);
+    });
+
 #endif
 
 }  // namespace oneflow
