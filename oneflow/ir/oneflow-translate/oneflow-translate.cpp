@@ -15,6 +15,7 @@
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
+#include "mlir/IR/Builders.h"
 
 #include "OneFlow/OneFlowDialect.h"
 
@@ -26,7 +27,22 @@
 namespace mlir {
 
 namespace {
+
 using PbMessage = google::protobuf::Message;
+
+class Importer {
+ public:
+  Importer(MLIRContext *context, ModuleOp module) : b(context), context(context), module(module) {}
+
+ private:
+  /// The current builder, pointing at where the next Instruction should be
+  /// generated.
+  OpBuilder b;
+  /// The current context.
+  MLIRContext *context;
+  /// The current module being created.
+  ModuleOp module;
+};
 
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
@@ -34,6 +50,7 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+  Importer imp(context, module.get());
   for (size_t i = 0; i < job.net().op_size(); i++) {
     ::oneflow::OperatorConf op = job.net().op(i);
     if (op.has_user_conf()) {
