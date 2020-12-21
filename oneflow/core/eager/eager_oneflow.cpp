@@ -47,8 +47,7 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   } else if (symbol.has_job_conf_symbol()) {
     JUST(Global<symbol::Storage<JobDesc>>::Get()->Add(symbol_id, symbol.job_conf_symbol()));
   } else if (symbol.has_parallel_conf_symbol()) {
-    JUST(Global<symbol::Storage<ParallelDesc>>::Get()->Add(symbol_id,
-                                                           symbol.parallel_conf_symbol()));
+    return Maybe<void>::Ok();
   } else if (symbol.has_op_conf_symbol()) {
     JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol()));
   } else if (symbol.has_op_node_signature_symbol()) {

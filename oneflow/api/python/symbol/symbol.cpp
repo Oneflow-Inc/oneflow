@@ -36,7 +36,26 @@ Maybe<SymbolT> GetSymbol(const SymbolConfT& symbol_conf) {
   const auto& id_cache = *Global<symbol::IdCache<SymbolConfT>>::Get();
   const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
   int64_t symbol_id = JUST(id_cache.Get(symbol_conf));
-  return symbol_storage.MaybeGetPtr(symbol_id);
+  const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
+  JUST(ptr->symbol_id());
+  return ptr;
+}
+
+// TODO(hanbibin): the second template arg will be moved after symbol_storage is prefect
+template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
+Maybe<void> AddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
+  SymbolPbT symbol_pb;
+  symbol_conf.ToProto(&symbol_pb);
+  JUST(Global<symbol::Storage<SymbolT>>::Get()->Add(symbol_id, symbol_pb));
+  auto* id_cache = Global<symbol::IdCache<SymbolConfT>>::Get();
+  CHECK_OR_RETURN(!id_cache->Has(symbol_conf));
+  JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
+  return Maybe<void>::Ok();
+}
+
+template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
+std::shared_ptr<cfg::ErrorProto> ApiAddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
+  return AddSymbol<SymbolConfT, SymbolPbT, SymbolT>(symbol_id, symbol_conf).GetDataAndErrorProto();
 }
 
 template<typename SymbolConfT, typename SymbolT>
@@ -45,11 +64,32 @@ std::pair<std::shared_ptr<SymbolT>, std::shared_ptr<cfg::ErrorProto>> ApiGetSymb
   return GetSymbol<SymbolConfT, SymbolT>(symbol_conf).GetDataPtrAndErrorProto();
 }
 
+template<typename SymbolConfT, typename SymbolT>
+Maybe<SymbolT> GetSymbol(int64_t symbol_id) {
+  const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
+  const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
+  JUST(ptr->symbol_id());
+  return ptr;
+}
+
+template<typename SymbolConfT, typename SymbolT>
+std::pair<std::shared_ptr<SymbolT>, std::shared_ptr<cfg::ErrorProto>> ApiGetSymbol(
+    int64_t symbol_id) {
+  return GetSymbol<SymbolConfT, SymbolT>(symbol_id).GetDataPtrAndErrorProto();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("HasPlacementSymbol", &ApiHasSymbol<cfg::ParallelConf>);
-  m.def("GetPlacementSymbol", &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>);
+  m.def("AddPlacementSymbol", &ApiAddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>);
+
+  m.def("GetPlacementSymbol",
+        static_cast<std::pair<std::shared_ptr<ParallelDesc>, std::shared_ptr<cfg::ErrorProto>> (*)(
+            const cfg::ParallelConf&)>(&ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
+  m.def("GetPlacementSymbol",
+        static_cast<std::pair<std::shared_ptr<ParallelDesc>, std::shared_ptr<cfg::ErrorProto>> (*)(
+            int64_t)>(&ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
 }
 
 }  // namespace oneflow
