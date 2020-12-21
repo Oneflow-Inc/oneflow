@@ -31,7 +31,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 3, 7, 7),
@@ -39,7 +38,6 @@ unfold_confs = [
         "strides": 2,
         "dilation_rate": 1,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 5, 6, 6),
@@ -47,7 +45,6 @@ unfold_confs = [
         "strides": 2,
         "dilation_rate": 2,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 7, 5, 5),
@@ -55,7 +52,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 3, 3, 3),
@@ -63,7 +59,6 @@ unfold_confs = [
         "strides": 2,
         "dilation_rate": 3,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (4, 1, 9, 9),
@@ -71,7 +66,6 @@ unfold_confs = [
         "strides": 3,
         "dilation_rate": 2,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 1, 6, 6),
@@ -79,7 +73,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 3, 7, 7),
@@ -87,7 +80,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 5, 6, 6),
@@ -95,7 +87,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 7, 5, 5),
@@ -103,7 +94,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 3, 3, 3),
@@ -111,7 +101,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 3,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (4, 1, 9, 9),
@@ -119,7 +108,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 3, 3, 3),
@@ -127,7 +115,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 3,
         "padding": (0, 0),
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 2, 8, 8),
@@ -135,7 +122,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": 2,
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 2, 8, 8),
@@ -143,7 +129,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": (2, 2),
-        "data_format": "NCHW",
     },
     {
         "x_shape": (1, 2, 8, 8),
@@ -151,7 +136,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": ((1, 1), (2, 2)),
-        "data_format": "NCHW",
     },
     {
         "x_shape": (3, 2, 8, 8),
@@ -159,7 +143,6 @@ unfold_confs = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": [(1, 2), (1, 2)],
-        "data_format": "NCHW",
     },
 ]
 
@@ -171,7 +154,6 @@ unfold_confs_1n2d = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (2, 5, 6, 6),
@@ -179,7 +161,6 @@ unfold_confs_1n2d = [
         "strides": 2,
         "dilation_rate": 2,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (4, 3, 3, 3),
@@ -187,7 +168,6 @@ unfold_confs_1n2d = [
         "strides": 2,
         "dilation_rate": 3,
         "padding": "VALID",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (2, 3, 7, 7),
@@ -195,7 +175,6 @@ unfold_confs_1n2d = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (4, 7, 5, 5),
@@ -203,7 +182,6 @@ unfold_confs_1n2d = [
         "strides": 1,
         "dilation_rate": 1,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (4, 3, 9, 9),
@@ -211,7 +189,6 @@ unfold_confs_1n2d = [
         "strides": 2,
         "dilation_rate": 2,
         "padding": "SAME",
-        "data_format": "NCHW",
     },
     {
         "x_shape": (6, 2, 8, 8),
@@ -219,7 +196,6 @@ unfold_confs_1n2d = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": 2,
-        "data_format": "NCHW",
     },
     {
         "x_shape": (3, 2, 8, 8),
@@ -227,7 +203,6 @@ unfold_confs_1n2d = [
         "strides": 1,
         "dilation_rate": 2,
         "padding": ((1, 1), (2, 2)),
-        "data_format": "NCHW",
     },
 ]
 
@@ -287,7 +262,6 @@ def _compare_with_samples(case):
     strides = unfold_conf["strides"]
     dilation_rate = unfold_conf["dilation_rate"]
     padding = unfold_conf["padding"]
-    data_format = unfold_conf["data_format"]
     flow.clear_default_session()
 
     dim = len(x_shape) - 2
@@ -353,7 +327,7 @@ def _compare_with_samples(case):
             v = flow.cast_to_current_logical_view(v)
             x += v
 
-        unfold_f = getattr(flow.nn, "unfold{}d".format(dim))
+        unfold_f = getattr(flow.nn, "unfold".format(dim))
         padding = unfold_conf["padding"]
         if padding == "SAME":
             padding = "SAME_UPPER"
@@ -363,7 +337,6 @@ def _compare_with_samples(case):
             strides=strides,
             dilation_rate=dilation_rate,
             padding=padding,
-            data_format=data_format,
         )
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(

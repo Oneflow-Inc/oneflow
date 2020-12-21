@@ -39,45 +39,13 @@ def calc_unfold_padding(padding, dhw_offset, ndims):
     return calc_pool_padding(padding, dhw_offset, ndims)
 
 
-@oneflow_export("nn.unfold1d")
-def unfold1d(
-    input: remote_blob_util.BlobDef,
-    kernel_size: Union[int, Sequence[int]],
-    strides: Union[int, Sequence[int]],
-    dilation_rate: Union[int, Sequence[int]],
-    padding: Union[str, int, Sequence[Sequence[int]]],
-    data_format: str = "NCW",
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    r"""Performs the unfold on the input `Blob`.
-
-    Args:
-        input (remote_blob_util.BlobDef): A 3-D `Blob` of the format specified by data_format.
-        kernel_size (Union[int, Sequence[int]]): An int or list of ints that has length 1. The size of the window for each dimension of the input `Blob`.
-        strides (Union[int, Sequence[int]]): An int or list of ints that has length 1. The stride of the sliding window for each dimension of the input `Blob`.
-        dilation_rate (Union[int, Sequence[int]]): An int or list of ints that has length 1. The dilation_rate of the sliding window for each dimension of the input `Blob`.
-        padding (Union[str, int, Sequence[Sequence[int]]]): '`VALID'` or '`SAME'` or '`SAME_LOWER'`, or '`int'`, or '`SAME_UPPER or Sequence[Sequence[int]]'`.
-        data_format (str, optional): '`NCW'`.
-        name (Optional[str], optional):  This operator's name(optional). Defaults to None.
-
-    Raises:
-        NotImplementedError: not implement unfold1d currently
-
-    Returns:
-        remote_blob_util.BlobDef: A `Blob` of format specified by data_format. The unfold output `Blob`.
-    """
-    raise NotImplementedError
-
-
-@oneflow_export("nn.unfold2d")
-def unfold2d(
+@oneflow_export("nn.unfold")
+def unfold(
     input: remote_blob_util.BlobDef,
     kernel_size: Union[int, IntPair],
     strides: Union[int, IntPair],
     dilation_rate: Union[int, IntPair],
     padding: Union[str, int, Sequence[Sequence[int]]],
-    data_format: str = "NCHW",
-    ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Performs the unfold on the input. 
@@ -88,7 +56,6 @@ def unfold2d(
         strides (Union[int, IntPair]): An int or list of ints that has length 2. The stride of the sliding window for each dimension of the input `Blob`.
         dilation_rate (Union[int, IntPair]): An int or list of ints that has length 2. The dilation_rate of the sliding window for each dimension of the input `Blob`.
         padding (Union[str, int, Sequence[Sequence[int]]]): '`VALID'` or '`SAME'` or '`SAME_LOWER'`, or '`int'`, or '`SAME_UPPER or Sequence[Sequence[int]]'`.
-        data_format (str, optional): '`NCHW'`.
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
     Returns:
@@ -105,13 +72,12 @@ def unfold2d(
         @flow.global_function()
         def unfold2d_Job(x: tp.Numpy.Placeholder((1, 3, 8, 8))
         ) -> tp.Numpy:
-            unfold_out = flow.nn.unfold2d(
+            unfold_out = flow.nn.unfold(
                 input=x,
                 kernel_size=3,
                 strides=2,
                 dilation_rate=1,
                 padding='SAME',
-                data_format='NCHW'
             )
 
             return unfold_out
@@ -131,6 +97,8 @@ def unfold2d(
         .Input("x", [input])
         .Output("y")
     )
+    data_format = "NCHW"
+    ceil_mode = False
     assert data_format in ["NHWC", "NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
@@ -149,34 +117,3 @@ def unfold2d(
     op.Attr("padding_after", padding_after)
     op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
-
-
-@oneflow_export("nn.unfold3d")
-def unfold3d(
-    input: remote_blob_util.BlobDef,
-    kernel_size: Union[int, Sequence[int]],
-    strides: Union[int, Sequence[int]],
-    dilation_rate: Union[int, Sequence[int]],
-    padding: Union[str, int, Sequence[Sequence[int]]],
-    data_format: str = "NCDHW",
-    ceil_mode: bool = False,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    r"""Performs the unfold on the input. 
-
-    Args:
-        input (remote_blob_util.BlobDef): A 5-D `Blob` of shape [batch, height, width, channels].
-        kernel_size (Union[int, Sequence[int]]): An int or list of ints that has length 3. The size of the window for each dimension of the input `Blob`.
-        strides (Union[int, Sequence[int]]): An int or list of ints that has length 3. The stride of the sliding window for each dimension of the input `Blob`.
-        dilation_rate (Union[int, Sequence[int]]): An int or list of ints that has length 3. The dilation_rate of the sliding window for each dimension of the input `Blob`.
-        padding (Union[str, int, Sequence[Sequence[int]]]): '`VALID'` or '`SAME'` or '`SAME_LOWER'`, or '`int'`, or '`SAME_UPPER or Sequence[Sequence[int]]'`.
-        data_format (str, optional): '`NCDHW'`.
-        name (Optional[str], optional):  This operator's name(optional).Defaults to None.
-
-    Raises:
-        NotImplementedError: not implement unfold3d currently
-
-    Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as value. The unfold output `Blob`.
-    """
-    raise NotImplementedError
