@@ -24,10 +24,11 @@ REGISTER_USER_OP("fake_quantization")
     .Input("scale")
     .Input("zero_point")
     .Output("out")
-    // NOTE(Liang Depeng): quantize from float32 to "quantize_to_bit" bit signed or unsigned integer
-    .Attr<int32_t>("quantize_to_bit", 8)
+    // NOTE(Liang Depeng): quantize from float32 to "quantization_bit" bit signed or unsigned
+    // integer
+    .Attr<int32_t>("quantization_bit", 8)
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
-    .Attr<std::string>("quantize_scheme", "symmetric")
+    .Attr<std::string>("quantization_scheme", "symmetric")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       const Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
@@ -93,12 +94,12 @@ REGISTER_USER_OP("fake_quantization")
     })
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      const int32_t quantize_to_bit = op_conf.attr<int32_t>("quantize_to_bit");
-      CHECK_GT_OR_RETURN(quantize_to_bit, 1);
-      CHECK_LE_OR_RETURN(quantize_to_bit, 8);
+      const int32_t quantization_bit = op_conf.attr<int32_t>("quantization_bit");
+      CHECK_GT_OR_RETURN(quantization_bit, 1);
+      CHECK_LE_OR_RETURN(quantization_bit, 8);
 
-      std::string quantize_scheme = op_conf.attr<std::string>("quantize_scheme");
-      CHECK_OR_RETURN(quantize_scheme == "symmetric" || quantize_scheme == "affine");
+      std::string quantization_scheme = op_conf.attr<std::string>("quantization_scheme");
+      CHECK_OR_RETURN(quantization_scheme == "symmetric" || quantization_scheme == "affine");
       return Maybe<void>::Ok();
     });
 

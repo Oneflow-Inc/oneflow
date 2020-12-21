@@ -115,14 +115,14 @@ __global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
 
 template<typename T>
 __global__ void CalScaleZeroPointSymmetric(const T *max_ptr, const T *min_ptr,
-                                           const int64_t elements, const double quantize_to_bit,
+                                           const int64_t elements, const double quantization_bit,
                                            T *scale, T *zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
     T weight_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
-    T denominator = static_cast<T>(pow(2.0, quantize_to_bit - 1)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
     scale[gid] = weight_max / denominator;
     zero_point[gid] = 0;
     gid += gridDim.x * blockDim.x;
@@ -131,12 +131,12 @@ __global__ void CalScaleZeroPointSymmetric(const T *max_ptr, const T *min_ptr,
 
 template<typename T>
 __global__ void CalScaleZeroPointAffine(const T *max_ptr, const T *min_ptr, const int64_t elements,
-                                        const double quantize_to_bit, T *scale, T *zero_point) {
+                                        const double quantization_bit, T *scale, T *zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
   while (gid < elements) {
-    T denominator = static_cast<T>(pow(2.0, quantize_to_bit)) - 1;
+    T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
@@ -164,9 +164,9 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
     user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
     user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const std::string quantize_scheme = ctx->Attr<std::string>("quantize_scheme");
-    const int32_t quantize_to_bit = ctx->Attr<int32_t>("quantize_to_bit");
-    const bool per_layer_quantize = ctx->Attr<bool>("per_layer_quantize");
+    const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
+    const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
+    const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
 
     const int64_t elements = in->shape().elem_cnt();
     const int64_t channel = scale->shape().At(0);
@@ -176,11 +176,11 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
 
     LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), channel, 0, channel, max_ptr, min_ptr);
 
-    if (per_layer_quantize) {
+    if (per_layer_quantization) {
       LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
                          kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
                          min_ptr);
-    } else {  // per-channel quantize
+    } else {  // per-channel quantization
       // NOTE(Liang Depeng): each block of threads will be responsible for
       //                     computing the max and min values of the whole channel.
       LAUNCH_CUDA_KERNEL((ReduceMaxMinPerChannel<T>), ctx->device_ctx(),
@@ -188,13 +188,13 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
                          in->dptr<T>(), elements, channel, panel_size, max_ptr, min_ptr);
     }
 
-    if (quantize_scheme == "symmetric") {
+    if (quantization_scheme == "symmetric") {
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), channel, 0, max_ptr,
-                         min_ptr, channel, static_cast<double>(quantize_to_bit),
+                         min_ptr, channel, static_cast<double>(quantization_bit),
                          scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
-    } else {  // quantize_scheme == "affine"
+    } else {  // quantization_scheme == "affine"
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), channel, 0, max_ptr,
-                         min_ptr, channel, static_cast<double>(quantize_to_bit),
+                         min_ptr, channel, static_cast<double>(quantization_bit),
                          scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
     }
   }
@@ -209,7 +209,7 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t {                    \
         size_t tmp_buffer_size = 1;                                                    \
-        if (ctx->Attr<bool>("per_layer_quantize") == false) {                          \
+        if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \
           const Shape *in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                 \
           tmp_buffer_size = in_shape->At(0);                                           \
         }                                                                              \
