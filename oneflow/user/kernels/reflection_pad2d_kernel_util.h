@@ -41,13 +41,12 @@ namespace oneflow {
 
 namespace user_op {
 
-// const int32_t kCudaThreadsNumPerBlock = 256;
 
 template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
 #if defined(__CUDA_ARCH__)
-    gpu_atomic_add(y, *x);  // TODO:(ZhaoLuyang), refine add using float16 -> half -> float -> half
+    gpu_atomic_add(y, *x);
 #else
     *y += *x;
 #endif
@@ -106,6 +105,7 @@ OF_DEVICE_FUNC void DoReflectionPad2d(const IN_T* src, IN_T* dest,
     dest[dest_index] = src[src_index];
   }
 }
+
 
 template<typename IN_T>
 OF_DEVICE_FUNC void DoReflectionPad2dGrad(const IN_T* src, IN_T* dest,

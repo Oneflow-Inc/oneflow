@@ -16,6 +16,7 @@ limitations under the License.
 #include <cstdint>
 #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/reflection_pad2d_kernel_util.h"
 
 namespace oneflow {
@@ -30,6 +31,7 @@ __global__ void DoCUDAReflectionPad2d(const IN_T* src, IN_T* dest,
   DoReflectionPad2d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_height, y_width,
                           x_height, x_width, pad_left, pad_top);
 };
+
 
 template<typename IN_T>
 __global__ void DoCUDAReflectionPad2dGrad(const IN_T* src, IN_T* dest,
@@ -57,7 +59,8 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, IN_T> final {
   }
 };
 
-// float16 special case of DimScatterAddFunctor template
+
+// float16 implementation
 template<>
 void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
     DeviceCtx* ctx, const float16* src, float16* dest,
@@ -72,6 +75,7 @@ void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,
           src_num, dest_num, y_height, y_width, x_height, x_width, pad_left, pad_top);
 }
+
 
 template<typename IN_T>
 struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
@@ -89,6 +93,8 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
   }
 };
 
+
+// float16 implementation
 template<>
 void ReflectionPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
     DeviceCtx* ctx, const float16* src, float16* dest,
