@@ -57,11 +57,13 @@ class ScalarMulUserKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
+REGISTER_KERNEL(CPU, int8_t)
 REGISTER_KERNEL(CPU, int32_t)
 REGISTER_KERNEL(CPU, int64_t)
 REGISTER_KERNEL(CPU, float)
 REGISTER_KERNEL(CPU, double)
 #ifdef WITH_CUDA
+REGISTER_KERNEL(GPU, int8_t)
 REGISTER_KERNEL(GPU, int32_t)
 REGISTER_KERNEL(GPU, int64_t)
 REGISTER_KERNEL(GPU, float)

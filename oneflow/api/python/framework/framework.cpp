@@ -16,7 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/framework/framework.h"
+#include "oneflow/api/python/framework/framework_api.h"
 
 namespace py = pybind11;
 
@@ -24,4 +24,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
   m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
   m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
+
+  m.def("GetSerializedInterUserJobInfo", &GetSerializedInterUserJobInfo);
+  m.def("GetSerializedJobSet", &GetSerializedJobSet);
+  m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph);
+
+  m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
+  m.def("GetScopeConfigDef", &GetScopeConfigDef);
+  m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
+        &GetMachine2DeviceIdListOFRecordFromParallelConf);
+
+  m.def("LoadLibraryNow", &LoadLibraryNow);
 }
