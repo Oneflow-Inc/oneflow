@@ -34,7 +34,6 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 include(util)
 include(proto2cpp)
-include(swig)
 
 if (NOT DEFINED USE_CXX11_ABI)
   check_cxx11_abi(CXX11_ABI_AVAILABLE)
@@ -158,7 +157,7 @@ else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
 
-# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
+# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
   include(oneflow)
 endif()
