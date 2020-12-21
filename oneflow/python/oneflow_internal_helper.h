@@ -179,18 +179,24 @@ Maybe<std::string> GetSerializedInterUserJobInfo() {
   return ret;
 }
 
-Maybe<std::string> GetSerializedJobSet() {
-  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+Maybe<const JobSet&> GetJobSet() {
+  JobBuildAndInferCtxMgr* job_ctx_mgr;
+  if (*Global<bool, EagerExecution>::Get()) {
+    job_ctx_mgr = Global<EagerJobBuildAndInferCtxMgr>::Get();
+  } else {
+    job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  }
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  return PbMessage2TxtString(job_ctx_mgr->job_set());
+  return job_ctx_mgr->job_set();
 }
+
+Maybe<std::string> GetSerializedJobSet() { return PbMessage2TxtString(JUST(GetJobSet())); }
 
 Maybe<std::string> GetSerializedOpAttributes() {
   OpAttributeList op_attribute_list;
-  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  for (int i = 0; i < job_ctx_mgr->job_set().job_size(); i++) {
-    const Job& job = job_ctx_mgr->job_set().job(i);
+  const JobSet& job_set = JUST(GetJobSet());
+  for (int i = 0; i < job_set.job_size(); i++) {
+    const Job& job = job_set.job(i);
     auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
     const auto& op_graph = JUST(OpGraph::New(job));
     op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
