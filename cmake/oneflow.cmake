@@ -1,5 +1,5 @@
 include(python)
-add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
+
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
 
@@ -384,3 +384,5 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 add_dependencies(pip_install of_include_copy)
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)

@@ -18,9 +18,20 @@
 
 #include "OneFlow/OneFlowDialect.h"
 
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+
+#include <google/protobuf/text_format.h>
+#include "oneflow/core/job/job.pb.h"
+
 using namespace mlir;
 namespace {
+using PbMessage = google::protobuf::Message;
+
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
+  std::string cpp_str = str.str();
+  ::oneflow::Job proto;
+  google::protobuf::TextFormat::ParseFromString(cpp_str, &proto);
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   return module;
