@@ -34,8 +34,8 @@ using PbMessage = google::protobuf::Message;
 class Importer {
  public:
   Importer(MLIRContext *context, ModuleOp module) : b(context), context(context), module(module) {}
-  LogicalResult processJob(::oneflow::Job *job);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
+  LogicalResult processJob(::oneflow::Job *job);
 
  private:
   /// The current builder, pointing at where the next Instruction should be
@@ -46,6 +46,18 @@ class Importer {
   /// The current module being created.
   ModuleOp module;
 };
+
+LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
+  if (op.has_user_conf() == false) { return failure(); }
+  const std::string &type_name = op.user_conf().op_type_name();
+  if (type_name == "relu") {
+    return success();
+  } else if (type_name == "constant") {
+    return success();
+  } else {
+    return failure();
+  }
+}
 
 LogicalResult Importer::processJob(::oneflow::Job *job) {
   for (size_t i = 0; i < job->net().op_size(); i++) {
@@ -58,8 +70,6 @@ LogicalResult Importer::processJob(::oneflow::Job *job) {
   }
   return success();
 }
-
-LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) { return success(); }
 
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
