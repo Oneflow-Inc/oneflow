@@ -355,12 +355,6 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
 }
-KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }
-}
-KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -431,9 +425,6 @@ KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 }
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
-}
-KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }
 }
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = static_cast<T>(1.0) / x[i]; }

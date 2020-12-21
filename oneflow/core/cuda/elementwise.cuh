@@ -124,7 +124,6 @@ struct SimpleFactory {
 
 template<typename FactoryT, typename R, typename... IN>
 struct GenericLauncher {
-  constexpr static int pack_size = PackSize<R, IN...>();
   static cudaError_t Launch(FactoryT factory, int64_t n, R* r, const IN*... in,
                             cudaStream_t stream) {
     constexpr int pack_size = PackSize<R, IN...>();
