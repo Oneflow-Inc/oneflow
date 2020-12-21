@@ -78,7 +78,7 @@ def _compare_kldivloss_with_np(
     np_grad_dict = np_kldivloss_diff(input, target, log_target)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        # Evaluate the gradient
+        # validate the correstness of gradient
         assert np.allclose(blob, np_grad_dict["np_kldivloss_grad_mean"], rtol=1e-4)
 
     @flow.global_function(
