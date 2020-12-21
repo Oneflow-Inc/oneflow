@@ -1407,26 +1407,17 @@ def argwhere(
     if name is None:
         name = id_util.UniqueStr("ArgWhere_")
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.arg_where_conf, "in", condition.unique_name)
-    setattr(op_conf.arg_where_conf, "out", "out")
-    setattr(op_conf.arg_where_conf, "out_size", "out_size")
-    if dtype is not None:
-        setattr(op_conf.arg_where_conf, "data_type", dtype.oneflow_proto_dtype)
-    interpret_util.Forward(op_conf)
-
-    arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(arg_where_out_lbi, "op_name", op_conf.name)
-    setattr(arg_where_out_lbi, "blob_name", "out")
-
-    arg_where_out_size_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(arg_where_out_size_lbi, "op_name", op_conf.name)
-    setattr(arg_where_out_size_lbi, "blob_name", "out_size")
-
-    arg_where_out = remote_blob_util.RemoteBlob(arg_where_out_lbi)
-    arg_where_out_size = remote_blob_util.RemoteBlob(arg_where_out_size_lbi)
-    return sync_dynamic_resize(arg_where_out, arg_where_out_size)
+    op = (
+        flow.user_op_builder(name)
+        .Op("argwhere")
+        .Input("input", [condition])
+        .Attr("dtype", dtype)
+        .Output("output")
+        .Output("output_size")
+        .Build()
+    )
+    output, output_size = op.InferAndTryRun().RemoteBlobList()
+    return sync_dynamic_resize(output, output_size)
 
 
 @oneflow_export("nonzero")
