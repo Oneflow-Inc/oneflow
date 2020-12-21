@@ -2386,7 +2386,6 @@ def zeros(
     return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")
 
 
-
 @oneflow_export("ones")
 def ones(
     shape: Sequence[int],
