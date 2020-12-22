@@ -95,15 +95,15 @@ class UnfoldKernelImpl {
 
 }  // namespace
 
-template<DeviceType device_type, typename T>
-class Unfold1DKernel final : public user_op::OpKernel {
+template<size_t NDims, DeviceType device_type, typename T>
+class UnfoldKernel final : public user_op::OpKernel {
  public:
-  Unfold1DKernel() = default;
-  ~Unfold1DKernel() = default;
+  UnfoldKernel() = default;
+  ~UnfoldKernel() = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, 1);
+    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, NDims);
   }
 
  private:
@@ -113,15 +113,15 @@ class Unfold1DKernel final : public user_op::OpKernel {
   };
 };
 
-template<DeviceType device_type, typename T>
-class Unfold1DGradKernel final : public user_op::OpKernel {
+template<size_t NDims, DeviceType device_type, typename T>
+class UnfoldGradKernel final : public user_op::OpKernel {
  public:
-  Unfold1DGradKernel() = default;
-  ~Unfold1DGradKernel() = default;
+  UnfoldGradKernel() = default;
+  ~UnfoldGradKernel() = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, 1);
+    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, NDims);
   }
 
  private:
@@ -131,110 +131,22 @@ class Unfold1DGradKernel final : public user_op::OpKernel {
   };
 };
 
-template<DeviceType device_type, typename T>
-class Unfold2DKernel final : public user_op::OpKernel {
- public:
-  Unfold2DKernel() = default;
-  ~Unfold2DKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, 2);
-  }
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    UnfoldKernelImpl<device_type, T>::FWCompute(ctx, state);
-  };
-};
-
-template<DeviceType device_type, typename T>
-class Unfold2DGradKernel final : public user_op::OpKernel {
- public:
-  Unfold2DGradKernel() = default;
-  ~Unfold2DGradKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, 2);
-  }
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    UnfoldKernelImpl<device_type, T>::BWCompute(ctx, state);
-  };
-};
-
-template<DeviceType device_type, typename T>
-class Unfold3DKernel final : public user_op::OpKernel {
- public:
-  Unfold3DKernel() = default;
-  ~Unfold3DKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, 3);
-  }
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    UnfoldKernelImpl<device_type, T>::FWCompute(ctx, state);
-  };
-};
-
-template<DeviceType device_type, typename T>
-class Unfold3DGradKernel final : public user_op::OpKernel {
- public:
-  Unfold3DGradKernel() = default;
-  ~Unfold3DGradKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, 3);
-  }
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    UnfoldKernelImpl<device_type, T>::BWCompute(ctx, state);
-  };
-};
-
-#define REGISTER_UNFOLD_KERNEL(device, dtype)                                          \
-  REGISTER_USER_KERNEL("unfold_1d")                                                    \
-      .SetCreateFn<Unfold1DKernel<device, dtype>>()                                    \
+#define REGISTER_UNFOLD_KERNEL_NDIMS(dim, device, dtype)                               \
+  REGISTER_USER_KERNEL("unfold_" + std::to_string(dim) + "d")                          \
+      .SetCreateFn<UnfoldKernel<dim, device, dtype>>()                                 \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_1d_grad")                                               \
-      .SetCreateFn<Unfold1DGradKernel<device, dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_2d")                                                    \
-      .SetCreateFn<Unfold2DKernel<device, dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_2d_grad")                                               \
-      .SetCreateFn<Unfold2DGradKernel<device, dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_3d")                                                    \
-      .SetCreateFn<Unfold3DKernel<device, dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_3d_grad")                                               \
-      .SetCreateFn<Unfold3DGradKernel<device, dtype>>()                                \
+  REGISTER_USER_KERNEL("unfold_" + std::to_string(dim) + "d_grad")                     \
+      .SetCreateFn<UnfoldGradKernel<dim, device, dtype>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, float)
-REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)
+REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kCPU, float)
+REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
-REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, float)
-REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, double)
+REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kGPU, float)
+REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kGPU, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

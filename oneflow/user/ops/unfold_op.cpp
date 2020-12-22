@@ -26,8 +26,9 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
-TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
-  return [dim](user_op::InferContext* ctx) -> Maybe<void> {
+template<size_t NDims>
+TensorDescInferFn MakeFwTensorDescInferFn() {
+  return [](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
@@ -38,14 +39,14 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
-    CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
+    CHECK_EQ_OR_RETURN(kernel_size.size(), NDims);
     for (int32_t kernel_dim : kernel_size) { CHECK_GT_OR_RETURN(kernel_dim, 0); }
-    CHECK_EQ_OR_RETURN(strides.size(), dim);
+    CHECK_EQ_OR_RETURN(strides.size(), NDims);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
-    CHECK_EQ_OR_RETURN(dilation_rate.size(), dim);
+    CHECK_EQ_OR_RETURN(dilation_rate.size(), NDims);
     for (int32_t dilation_dim : dilation_rate) { CHECK_GT_OR_RETURN(dilation_dim, 0); }
 
-    const ParamsUnfold3D params_3d(dim, *x_shape, data_format, padding, padding_before,
+    const ParamsUnfold3D params_3d(NDims, *x_shape, data_format, padding, padding_before,
                                    padding_after, kernel_size, strides, dilation_rate, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -99,12 +100,13 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn MakeGenBackwardOpConfFn(const int32_t dim) {
-  return [dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+template<size_t NDims>
+GenBackwardOpConfFn MakeGenBackwardOpConfFn() {
+  return [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
-          builder.Op("unfold_" + std::to_string(dim) + "d_grad")
+          builder.Op("unfold_" + std::to_string(NDims) + "d_grad")
               .Input("x", op.input("x", 0))
               .Input("y", op.output("y", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
@@ -126,107 +128,43 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const int32_t dim) {
 
 }  // namespace
 
-REGISTER_USER_OP("unfold_1d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+#define REGISTER_UNFOLD_OP_NDIMS(dim)                          \
+  REGISTER_USER_OP("unfold_" + std::to_string(dim) + "d")      \
+      .Input("x")                                              \
+      .Output("y")                                             \
+      .Attr<std::string>("padding")                            \
+      .Attr<std::vector<int32_t>>("padding_before")            \
+      .Attr<std::vector<int32_t>>("padding_after")             \
+      .Attr<std::string>("data_format")                        \
+      .Attr<std::vector<int32_t>>("kernel_size")               \
+      .Attr<std::vector<int32_t>>("strides")                   \
+      .Attr<std::vector<int32_t>>("dilation_rate")             \
+      .Attr<bool>("ceil_mode")                                 \
+      .SetTensorDescInferFn(MakeFwTensorDescInferFn<dim>())    \
+      .SetBatchAxisInferFn(FwBatchAxisInferFn)                 \
+      .SetGetSbpFn(FwGetSbpFn);                                \
+                                                               \
+  REGISTER_USER_OP("unfold_" + std::to_string(dim) + "d_grad") \
+      .Input("x")                                              \
+      .Input("y")                                              \
+      .Input("dy")                                             \
+      .Output("dx")                                            \
+      .Attr<std::string>("padding")                            \
+      .Attr<std::vector<int32_t>>("padding_before")            \
+      .Attr<std::vector<int32_t>>("padding_after")             \
+      .Attr<std::string>("data_format")                        \
+      .Attr<std::vector<int32_t>>("kernel_size")               \
+      .Attr<std::vector<int32_t>>("strides")                   \
+      .Attr<std::vector<int32_t>>("dilation_rate")             \
+      .Attr<bool>("ceil_mode")                                 \
+      .SetTensorDescInferFn(BwTensorDescInferFn)               \
+      .SetBatchAxisInferFn(BwBatchAxisInferFn)                 \
+      .SetGetSbpFn(BwGetSbpFn);                                \
+                                                               \
+  REGISTER_USER_OP_GRAD("unfold_" + std::to_string(dim) + "d") \
+      .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn<dim>());
 
-REGISTER_USER_OP("unfold_1d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
-
-REGISTER_USER_OP_GRAD("unfold_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn(1));
-
-REGISTER_USER_OP("unfold_2d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
-
-REGISTER_USER_OP("unfold_2d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
-
-REGISTER_USER_OP_GRAD("unfold_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn(2));
-
-REGISTER_USER_OP("unfold_3d")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
-
-REGISTER_USER_OP("unfold_3d_grad")
-    .Input("x")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .Attr<std::string>("padding")
-    .Attr<std::vector<int32_t>>("padding_before")
-    .Attr<std::vector<int32_t>>("padding_after")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
-
-REGISTER_USER_OP_GRAD("unfold_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn(3));
+REGISTER_UNFOLD_OP_NDIMS(2)
 
 }  // namespace user_op
 
