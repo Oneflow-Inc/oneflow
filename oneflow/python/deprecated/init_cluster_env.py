@@ -92,8 +92,11 @@ def delete_worker(ssh_port=22) -> None:
             + machine.addr
             + " "
         )
-        _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
-        print("temp run dir removed at: {}".format(machine.addr), flush=True)
+        if os.getenv("ONEFLOW_WORKER_KEEP_LOG"):
+            print("worker log kept at: {}".format(machine.addr), flush=True)
+        else:
+            _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
+            print("temp run dir removed at: {}".format(machine.addr), flush=True)
 
 
 def _SendBinaryAndConfig2Worker(
