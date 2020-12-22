@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OneFlow/OneFlowOps.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Module.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
@@ -33,7 +35,11 @@ using PbMessage = google::protobuf::Message;
 
 class Importer {
  public:
-  Importer(MLIRContext *context, ModuleOp module) : b(context), context(context), module(module) {}
+  Importer(MLIRContext *context, ModuleOp module)
+      : b(context),
+        context(context),
+        module(module),
+        unknownLoc(FileLineColLoc::get("imported-protobuf", 0, 0, context)) {}
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob(::oneflow::Job *job);
 
@@ -45,6 +51,8 @@ class Importer {
   MLIRContext *context;
   /// The current module being created.
   ModuleOp module;
+  /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
+  Location unknownLoc;
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
@@ -53,6 +61,13 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (type_name == "relu") {
     return success();
   } else if (type_name == "constant") {
+    if (op.user_conf().attr().at("is_floating_value").at_bool()) {
+      b.create<oneflow::ConstantOp>(unknownLoc,
+                                    op.user_conf().attr().at("floating_value").at_double());
+      std::cout << "processed user op: " << op.name() << "\n\n";
+    } else {
+      // b.create<ConstantOp>(unknownLoc, op.user_conf().attr().at("integer_value").at_int64());
+    }
     return success();
   } else {
     return failure();
@@ -75,11 +90,11 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
+  context->loadDialect<oneflow::OneFlowDialect>();
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   Importer imp(context, module.get());
-  imp.processJob(&job);
-
+  if (failed(imp.processJob(&job))) { return {}; }
   return module;
 }
 }  // namespace
@@ -95,7 +110,6 @@ void registerFromOneFlowJobTranslation() {
 
 int main(int argc, char **argv) {
   mlir::registerAllTranslations();
-
   mlir::registerFromOneFlowJobTranslation();
 
   return failed(mlir::mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));

@@ -21,6 +21,7 @@ target_link_libraries(oneflow-translate
   MLIRSPIRV
   MLIRTranslation
   MLIRSupport
+  MLIROneFlow
   of_protoobj
   )
 
