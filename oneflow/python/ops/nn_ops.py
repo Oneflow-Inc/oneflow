@@ -2856,8 +2856,7 @@ def bce_loss(
         name = id_util.UniqueStr("BCELoss")
 
     _cross_entropy_loss = flow.math.negative(
-        target * flow.math.log(input)
-        + (1 - target) * flow.math.log(1 - input)
+        target * flow.math.log(input) + (1 - target) * flow.math.log(1 - input)
     )
 
     if weight is not None:
@@ -2867,6 +2866,72 @@ def bce_loss(
         _weighted_loss = weight * _cross_entropy_loss
     else:
         _weighted_loss = _cross_entropy_loss
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_weighted_loss, name=name + "_reduce_sum")
+    else:
+        # Do no reduction
+        return _weighted_loss
+
+
+@oneflow_export("nn.BCEWithLogitsLoss")
+def bce_with_logits_loss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    weight: remote_blob_util = None,
+    pos_weight: remote_blob_util = None,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    assert (
+        input.shape == target.shape
+    ), "The Input shape must be the same as Target shape"
+    
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+    
+    assert pos_weight.shape[0] == input.shape[-1], (
+        "The length of `pos_weight` must be equal to the number of classes. "
+        "Found the length of pos_weight {} vs classes {}".format(
+            pos_weight.shape[0], input.shape[-1]
+        )
+    )
+    
+    if name is None:
+        name = id_util.UniqueStr("BCEWithLogitsLoss")
+
+    _neg_input = flow.math.negative(input)
+    _max_val = flow.clip(_neg_input, min_value=0)
+    _neg_max_val = flow.math.negative(_max_val)
+
+    if pos_weight:
+        _log_weight = ((pos_weight - 1) * target) + 1
+        _loss = (1 - target) * input + _log_weight * (
+            flow.math.log(
+                flow.math.exp(_neg_max_val) + flow.math.exp(_neg_input - _max_val)
+            )
+            + _max_val
+        )
+    else:
+        _loss = (1 - target) * input + _max_val
+        _loss += flow.math.log(
+            flow.math.exp(_neg_max_val) + flow.math.exp(_neg_input - _max_val)
+        )
+
+    if weight is not None:
+        assert (
+            weight.shape == input.shape
+        ), "The weight shape must be the same as Input shape"
+        _weighted_loss = weight * _loss
+    else:
+        _weighted_loss = _loss
 
     if reduction == "mean":
         return flow.math.reduce_mean(_weighted_loss, name=name + "_reduce_mean")

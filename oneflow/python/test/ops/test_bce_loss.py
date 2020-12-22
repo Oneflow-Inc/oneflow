@@ -42,13 +42,9 @@ def _compare_bceloss_with_np(
 
     func_config = flow.FunctionConfig()
 
-
     def np_bceloss(np_input, np_target, np_weight):
         np_bce = -np_weight * (
-            (
-                np_target * np.log(np_input)
-                + (1 - np_target) * (np.log(1 - np_input))
-            )
+            (np_target * np.log(np_input) + (1 - np_target) * (np.log(1 - np_input)))
         )
 
         np_bce_mean = np.mean(np_bce)
@@ -64,7 +60,11 @@ def _compare_bceloss_with_np(
         # Use numpy to compute diff
         elemcnt = np_target.size
 
-        np_bce_grad_mean = -(np_weight / elemcnt) * (np_target-np_input) / ((1-np_input)*np_input)
+        np_bce_grad_mean = (
+            -(np_weight / elemcnt)
+            * (np_target - np_input)
+            / ((1 - np_input) * np_input)
+        )
 
         return {
             "np_bce_grad_mean": np_bce_grad_mean,
@@ -162,6 +162,7 @@ class Testbceloss1n1d(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             _compare_bceloss_with_np(*arg)
+
 
 #     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 #     def test_bceloss_gpu(test_case):
