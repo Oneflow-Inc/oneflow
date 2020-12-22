@@ -123,7 +123,7 @@ sleep {survival_time}
         subprocess.check_call(
             f"scp {f_name} {hostname}:{workspace_dir}/launch_ssh_server.sh", shell=True,
         )
-    docker_cmd = f"""docker run --privileged --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
+    docker_cmd = f"""docker run --privileged --cidfile {workspace_dir}/worker.cid --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
     print(ssh_cmd)
