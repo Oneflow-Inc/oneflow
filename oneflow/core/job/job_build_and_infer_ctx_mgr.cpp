@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/common/util.h"
 #include <json.hpp>
@@ -98,5 +99,7 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
   clear_job_name2infer_ctx();
   return Maybe<void>::Ok();
 }
+
+bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 }  // namespace oneflow

@@ -13,15 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/foreign_callback_mgr.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/vm/id_util_api.h"
 
-namespace oneflow {
+namespace py = pybind11;
 
-void RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("NewLogicalObjectId", &NewLogicalObjectId);
+  m.def("NewLogicalSymbolId", &NewLogicalSymbolId);
+
+  m.def("NewPhysicalObjectId", &NewPhysicalObjectId);
+  m.def("NewPhysicalSymbolId", &NewPhysicalSymbolId);
 }
-
-}  // namespace oneflow
