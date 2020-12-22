@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
