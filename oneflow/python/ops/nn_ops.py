@@ -1278,6 +1278,53 @@ def calc_pool_padding(padding, dhw_offset, ndims):
     return padding_type, ndim_pads_list
 
 
+@oneflow_export("nn.MaxPool2d")
+def MaxPool2d(
+    input: remote_blob_util.BlobDef,
+    kernel_size: Union[int, IntPair],
+    stride: Union[int, IntPair],
+    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    dilation: Union[int, IntPair],
+    return_indices: bool = False,
+    ceil_mode: bool = False,
+    data_format: str = "NCHW",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("TorchMaxPool2d_")
+        )
+        .Op("maxpool_2d")
+        .Input("x", [input])
+        .Output("y")
+    )
+    assert data_format in ["NHWC", "NCHW"]
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    print("channel_pos >>>>>>>>>>>>>>>>>>>>> ", channel_pos)
+    op.Attr("data_format", channel_pos)
+    kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
+    dilation = _GetSequence(dilation, 2, "dilation")
+    print("kernel_size >>>>>>>>>>>>>>>>>>>>> ", kernel_size)
+    print("dilation >>>>>>>>>>>>>>>>>>>>> ", dilation)
+    op.Attr("kernel_size", kernel_size)
+    stride = _GetSequence(stride, 2, "stride")
+    print("stride >>>>>>>>>>>>>>>>>>>>> ", stride)
+    op.Attr("stride", stride)
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    print("padding_type, pads_list >>>>>>>>>>>>>>>>>>>>> ", padding_type, pads_list)
+    assert len(pads_list) == len(input.shape) - 2
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+    assert len(pads_list) == len(input.shape) - 2
+    op.Attr("padding", padding_type)
+    op.Attr("padding_before", padding_before)
+    op.Attr("padding_after", padding_after)
+    op.Attr("dilation", dilation)
+    op.Attr("return_indices", return_indices)
+    op.Attr("ceil_mode", ceil_mode)
+    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+
+
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(
     input: remote_blob_util.BlobDef,
