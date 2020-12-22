@@ -75,6 +75,11 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
 }
 
 LogicalResult Importer::processJob(::oneflow::Job *job) {
+  auto func_type = b.getFunctionType(llvm::None, llvm::None);
+  auto function = mlir::FuncOp::create(unknownLoc, job->job_conf().job_name(), func_type);
+  auto &entryBlock = *function.addEntryBlock();
+  b.setInsertionPointToStart(&entryBlock);
+
   for (size_t i = 0; i < job->net().op_size(); i++) {
     ::oneflow::OperatorConf op = job->net().op(i);
     if (op.has_user_conf()) {
@@ -83,6 +88,10 @@ LogicalResult Importer::processJob(::oneflow::Job *job) {
       if (failed(processUserOp(op))) { return failure(); }
     }
   }
+  ReturnOp returnOp;
+  if (!entryBlock.empty()) { returnOp = dyn_cast<ReturnOp>(entryBlock.back()); }
+  if (!returnOp) { b.create<ReturnOp>(unknownLoc); }
+  module.push_back(function);
   return success();
 }
 
@@ -91,6 +100,7 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   context->loadDialect<oneflow::OneFlowDialect>();
+  context->loadDialect<StandardOpsDialect>();
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   Importer imp(context, module.get());

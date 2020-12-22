@@ -35,7 +35,6 @@ static void print(mlir::OpAsmPrinter &printer, ConstantOp op) {
   printer << "oneflow.constant ";
   printer.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"value"});
   printer << op.value();
-  assert(false);
 }
 
 #define GET_OP_CLASSES
