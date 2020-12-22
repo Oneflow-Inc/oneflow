@@ -790,13 +790,6 @@ message SyncDynamicResizeOpConf {
   optional bool eager = 5 [default = false];
 }
 
-message ArgWhereOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string out_size = 3;
-  optional DataType data_type = 4 [default = kInt32];
-}
-
 message BroadcastToCompatibleWithOpConf {
   required string x = 1;
   repeated string compatible = 2;
@@ -941,7 +934,6 @@ message OperatorConf {
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
-    ArgWhereOpConf arg_where_conf = 342;
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
