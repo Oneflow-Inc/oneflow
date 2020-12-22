@@ -174,7 +174,7 @@ class Test_KLDivLoss_1n1d(flow.unittest.TestCase):
             _compare_kldivloss_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_kldivloss_cpu(test_case):
+    def test_kldivloss_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 4),
             log_target=[False],
