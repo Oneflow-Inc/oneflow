@@ -2840,6 +2840,7 @@ def bce_loss(
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
     """
+    # TODO: Check the input and target value range is in (0, 1)
     assert (
         input.shape == target.shape
     ), "The Input shape must be the same as Target shape"
@@ -2854,10 +2855,9 @@ def bce_loss(
     if name is None:
         name = id_util.UniqueStr("BCELoss")
 
-    _sigmiod_value = flow.math.sigmoid(input, name=name + "_sigmoided_input")
     _cross_entropy_loss = flow.math.negative(
-        target * flow.math.log(_sigmiod_value)
-        + (1 - target) * flow.math.log(1 - _sigmiod_value)
+        target * flow.math.log(input)
+        + (1 - target) * flow.math.log(1 - input)
     )
 
     if weight is not None:
