@@ -173,6 +173,10 @@ class SliceKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    if (x_tensor->shape().elem_cnt() == 0) {
+      y_tensor->mut_shape()->set_shape(Shape(DimVector(y_tensor->shape().NumAxes(), 0)));
+      return;
+    }
     SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
     SliceKernelUtil<device_type, T>::Forward(ctx->device_ctx(), params, x_tensor->dptr<T>(),
                                              y_tensor->mut_dptr<T>());
