@@ -2786,19 +2786,19 @@ def bce_loss(
 
     .. math:: 
 
-        out = -(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+        out = -(Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i))
     
     if reduction = "mean": 
 
     .. math:: 
         
-        out = -\frac{1}{n}\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+        out = -\frac{1}{n}\sum_{i=1}^n(Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i))
     
     if reduction = "sum": 
     
     .. math:: 
         
-        out = -\sum_{i=1}^n(Target_i*ln(Input_i) + (1-Target_i)*ln(1-Input_i))
+        out = -\sum_{i=1}^n(Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i))
     
     For example: 
 
@@ -2810,25 +2810,23 @@ def bce_loss(
 
 
         @flow.global_function()
-        def bceloss_job(
-            of_input: tp.Numpy.Placeholder(shape=(3, 3)),
-            of_target: tp.Numpy.Placeholder(shape=(3, 3))
-        ) -> tp.Numpy:
-            out = flow.nn.BCELoss(of_input, of_target)
-            return out 
+        def bce_loss_job(input: tp.Numpy.Placeholder(shape=(2, 3)), 
+                                target: tp.Numpy.Placeholder(shape=(2, 3)), 
+                                weight: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
+            sigmoid_input = flow.math.sigmoid(input) 
+            return flow.nn.BCELoss(sigmoid_input, target, weight, reduction='mean')
 
 
-        np_input = np.array([[1, 2, 3],
-                            [4, 5, 6],
-                            [7, 8, 9]]).astype(np.float32)
+        np_input = np.array([[1.2, 0.2, -0.3],
+                             [0.7, 0.6, -2]]).astype(np.float32)
 
         np_target = np.array([[0, 1, 0],
-                            [1, 0, 0],
-                            [0, 0, 1]]).astype(np.float32)
+                              [1, 0, 1]]).astype(np.float32)
 
-        out = bceloss_job(np_input, np_target)
+        np_weight = np.array([[2, 2, 2],
+                              [2, 2, 2]]).astype(np.float32)
 
-        # output [3.390836]
+        # output [2.0611262]
 
     Args:
         input (remote_blob_util.BlobDef): The input Blob. 
@@ -2837,6 +2835,9 @@ def bce_loss(
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
     
+    Attention: 
+        The input value must be in the range of (0, 1). Or the loss function may return `nan` value. 
+
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
     """
@@ -2885,10 +2886,76 @@ def bce_with_logits_loss(
     reduction: str = "mean",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability, 
+    we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`. 
+
+    The equation is: 
+
+    if reduction = "none": 
+
+    .. math:: 
+
+        out = -(Pos\_weight*Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i)) 
+    
+    if reduction = "mean": 
+
+    .. math:: 
+        
+        out = -\frac{1}{n}\sum_{i=1}^n(Pos\_weight*Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i)
+
+    if reduction = "sum": 
+    
+    .. math:: 
+        
+        out = -\sum_{i=1}^n(Pos\_weight*Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i)
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def bce_with_logits_loss_job(input: tp.Numpy.Placeholder(shape=(2, 3)), 
+                                     target: tp.Numpy.Placeholder(shape=(2, 3)), 
+                                     weight: tp.Numpy.Placeholder(shape=(2, 3)), 
+                                     pos_weight: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.BCEWithLogitsLoss(input, target, weight, pos_weight, reduction='mean')
+
+
+        np_input = np.array([[1.2, 0.2, -0.3],
+                             [0.7, 0.6, -2]]).astype(np.float32)
+
+        np_target = np.array([[0, 1, 0],
+                              [1, 0, 1]]).astype(np.float32)
+
+        np_weight = np.array([[2, 2, 2],
+                              [2, 2, 2]]).astype(np.float32)
+
+        np_pos_weight = np.array([1.2, 1.3, 1.4]).astype(np.float32)
+
+        out = bce_with_logits_loss_job(np_input, np_target, np_weight, np_pos_weight)
+
+        # output [2.4314096]
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Tensor. 
+        target (remote_blob_util.BlobDef): The target Tensor. 
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Defaults to None.
+        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples. Defaults to None.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
     assert (
         input.shape == target.shape
     ), "The Input shape must be the same as Target shape"
-    
+
     assert reduction in [
         "none",
         "mean",
@@ -2896,14 +2963,14 @@ def bce_with_logits_loss(
     ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
         reduction
     )
-    
+
     assert pos_weight.shape[0] == input.shape[-1], (
         "The length of `pos_weight` must be equal to the number of classes. "
         "Found the length of pos_weight {} vs classes {}".format(
             pos_weight.shape[0], input.shape[-1]
         )
     )
-    
+
     if name is None:
         name = id_util.UniqueStr("BCEWithLogitsLoss")
 
