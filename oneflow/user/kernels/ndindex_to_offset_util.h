@@ -38,7 +38,8 @@ struct NdIndexToOffsetFunctor final {
 };
 
 #ifdef __CUDA_ARCH__
-__forceinline__ __device__ void checkIndexGPU(int32_t index, int32_t dim) {
+template<typename T>
+__forceinline__ __device__ void checkIndexGPU(T index, T dim) {
   if (index > dim) {
     // Quit the Cuda kernel
     __trap();
@@ -46,7 +47,10 @@ __forceinline__ __device__ void checkIndexGPU(int32_t index, int32_t dim) {
 }
 #endif
 
-inline void checkIndexCPU(int32_t index, int32_t dim) { CHECK_LE(index, dim); }
+template<typename T>
+inline void checkIndexCPU(T index, T dim) {
+  CHECK_LE(index, dim);
+}
 
 template<typename T>
 OF_DEVICE_FUNC void DoIndexToOffset(int32_t in_num, int32_t ndim, const T* index, const T* dims,
