@@ -802,6 +802,75 @@ def moments(
         )
 
 
+@oneflow_export("nn.InstanceNorm2d")
+def instance_normalization(
+    x: remote_blob_util.BlobDef,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Applies Instance Normalization over a 4D input.
+
+    Args:
+        x (remote_blob_util.BlobDef): 4D input tensor with NCHW data layout.
+        eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
+        affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
+                       initialized the same way as done for batch normalization. Default: True.
+        name (Optional[str], optional): Name of this op.
+
+    Returns:
+        remote_blob_util.BlobDef: The normalized input tensor.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32, 32))
+        ) -> tp.Numpy:
+            instance_norm = flow.nn.instance_normalization(
+                x,
+                eps=1e-5,
+                affine=True,
+            )
+            return instance_norm
+
+        x = np.random.random(size=(4, 2, 32, 32)).astype(np.float32)
+        out = instance_norm_Job(x)
+
+    """
+    assert len(x.shape) == 4
+
+    if name is None:
+        name = id_util.UniqueStr("InstanceNorm2D_")
+
+    channel = x.shape[1]
+    (mean, variance) = flow.nn.moments(x, [2, 3], keepdims=True)
+    normalized = (x - mean) / flow.math.sqrt(variance + eps)
+    if affine == True:
+        gamma = flow.get_variable(
+            name + "_gamma",
+            shape=(1, channel, 1, 1),
+            dtype=x.dtype,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
+        beta = flow.get_variable(
+            name + "_beta",
+            shape=(1, channel, 1, 1),
+            dtype=x.dtype,
+            initializer=flow.zeros_initializer(),
+            trainable=True,
+        )
+        return gamma * normalized + beta
+    else:
+        return normalized
+
+
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
     x: remote_blob_util.BlobDef,
