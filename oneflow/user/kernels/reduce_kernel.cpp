@@ -96,8 +96,18 @@ class ReduceHalfKernel final : public user_op::OpKernel {
     const Shape& reduced_shape =
         CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
-    float* out_tmp_buffer = in_tmp_buffer + input_tensor->shape().elem_cnt();
-    float* reduce_tmp_buffer = out_tmp_buffer + reduced_shape.elem_cnt();
+    const size_t in_tmp_buffer_bytes =
+        GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
+    float* out_tmp_buffer =
+        reinterpret_cast<float*>(tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes);
+    const size_t out_tmp_buffer_bytes =
+        GetCudaAlignedSize(reduced_shape.elem_cnt() * sizeof(float));
+    float* reduce_tmp_buffer = reinterpret_cast<float*>(
+        tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes + out_tmp_buffer_bytes);
+    const size_t reduce_tmp_buffer_bytes =
+        GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
+    CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
+             tmp_buffer->shape().elem_cnt() * sizeof(float));
     CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
                                   input_tensor->shape().elem_cnt());
 
@@ -120,7 +130,8 @@ REGISTER_USER_KERNEL("reduce_sum")
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
       const Shape* out_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
-      return (2 * in_shape->elem_cnt() + out_shape->elem_cnt()) * sizeof(float);
+      return (2 * GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(float))
+              + GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float)));
     });
 
 #endif
