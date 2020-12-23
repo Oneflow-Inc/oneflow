@@ -97,15 +97,16 @@ struct PoolingCpuKernelUtil {
             if (in == out) { in_diff += out_diff; }
           });
     } else if (data_format == "channels_last") {
-      CLastBackward(
-          pool_state->GetParams3D(), dy, y, x, dx,
-          [](const int64_t out_col, const int64_t in_col, const int64_t size,
-             ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
-             ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) {
-            in_diff_arr.col(in_col) +=
-                out_diff_arr.col(out_col)
-                * (in_arr.col(in_col).cwiseEqual(out_arr.col(out_col)).template cast<T>());
-          });
+      UNIMPLEMENTED();
+      // CLastBackward(
+      //     pool_state->GetParams3D(), dy, y, x, dx,
+      //     [](const int64_t out_col, const int64_t in_col, const int64_t size,
+      //        ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
+      //        ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) {
+      //       in_diff_arr.col(in_col) +=
+      //           out_diff_arr.col(out_col)
+      //           * (in_arr.col(in_col).cwiseEqual(out_arr.col(out_col)).template cast<T>());
+      //     });
     } else {
       UNIMPLEMENTED();
     }
@@ -170,7 +171,7 @@ struct PoolingCpuKernelUtil {
     const Shape& in = params_3d.GetXShape5D();
     const Shape& out = params_3d.GetYShape5D();
     const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
-    const std::vector<int32_t>& strides = params_3d.strides_3d();
+    const std::vector<int32_t>& stride = params_3d.strides_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
     const std::vector<int32_t>& dilation = params_3d.dilation_3d();
 
@@ -182,17 +183,17 @@ struct PoolingCpuKernelUtil {
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
         FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-          int64_t dstart = pd * strides.at(0) - padding_before.at(0);
+          int64_t dstart = pd * stride.at(0) - padding_before.at(0);
           int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
           dstart = std::max(dstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-            int64_t hstart = ph * strides.at(1) - padding_before.at(1);
+            int64_t hstart = ph * stride.at(1) - padding_before.at(1);
             int64_t hend = std::min(hstart + (kernel_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
             while(hstart < 0)
               hstart += dilation.at(1); // hstart = std::max(hstart, static_cast<int64_t>(0));
 
             FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-              int64_t wstart = pw * strides.at(2) - padding_before.at(2);
+              int64_t wstart = pw * stride.at(2) - padding_before.at(2);
               int64_t wend = std::min(wstart + (kernel_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
               while(wstart < 0)
                 wstart += dilation.at(2); //wstart = std::max(wstart, static_cast<int64_t>(0));
@@ -226,22 +227,22 @@ struct PoolingCpuKernelUtil {
     const Shape& in = params_3d.GetXShape5D();
     const Shape& out = params_3d.GetYShape5D();
     const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
-    const std::vector<int32_t>& strides = params_3d.strides_3d();
+    const std::vector<int32_t>& stride = params_3d.strides_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
 
     ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
     EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
     FOR_RANGE(int64_t, n, 0, in.At(0)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-        int64_t dstart = pd * strides.at(0) - padding_before.at(0);
+        int64_t dstart = pd * stride.at(0) - padding_before.at(0);
         int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
         dstart = std::max(dstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-          int64_t hstart = ph * strides.at(1) - padding_before.at(1);
+          int64_t hstart = ph * stride.at(1) - padding_before.at(1);
           int64_t hend = std::min(hstart + kernel_size.at(1), in.At(3));
           hstart = std::max(hstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-            int64_t wstart = pw * strides.at(2) - padding_before.at(2);
+            int64_t wstart = pw * stride.at(2) - padding_before.at(2);
             int64_t wend = std::min(wstart + kernel_size.at(2), in.At(4));
             wstart = std::max(wstart, static_cast<int64_t>(0));
             const int out_col = ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
