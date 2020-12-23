@@ -87,7 +87,8 @@ jobs:
           --build_docker_img \
           --oneflow_wheel_path=${wheelhouse_dir} \
           --oneflow_worker_bin=${bin_dir}/oneflow_worker
-    - name: Upload log
+    - name: Upload log (distributed test)
+      if: always()
       uses: ./.github/actions/upload_oss
       with:
         src_path: oneflow_temp
