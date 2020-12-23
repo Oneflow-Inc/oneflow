@@ -103,8 +103,8 @@ def _compare_instance_norm_2d_with_np(
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testzeros1n1d(flow.unittest.TestCase):
-    def test_zeros_cpu(test_case):
+class TestInstanceNorm1n1d(flow.unittest.TestCase):
+    def test_instance_norm(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_shape"] = [(4, 2, 32, 32)]
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -117,8 +117,8 @@ class Testzeros1n1d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class Testzeros1n2d(flow.unittest.TestCase):
-    def test_zeros_cpu(test_case):
+class TestInstanceNorm1n2d(flow.unittest.TestCase):
+    def test_instance_norm(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_shape"] = [(4, 2, 32, 32)]
         arg_dict["device_type"] = ["cpu", "gpu"]
