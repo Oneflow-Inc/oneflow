@@ -215,6 +215,7 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
                  GenLogicalBlobName(moving_min_var.name(), moving_min_var.variable_conf().out()))
           .Output("scale")
           .Output("zero_point")
+          .Attr("training", GlobalJobDesc().IsTrain())
           .Attr("stop_update_after_iters", stop_update_after_iters)
           .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
           .Attr("momentum", momentum)
@@ -341,7 +342,7 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
                             OpNode* next_node = node->SoleOutEdge()->dst_node();
                             if (OpTypeName4OpNode(next_node) == "bias_add") {
                               INSERT_CHECK(white_set.insert(next_node));
-                              // TODO: mark these special nodes
+                              // TODO(daquexian): mark these special nodes
                               if (next_node->out_edges().size() == 1) {
                                 next_node = next_node->SoleOutEdge()->dst_node();
                               }
