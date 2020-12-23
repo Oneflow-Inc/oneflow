@@ -82,6 +82,9 @@ class Error final {
   std::shared_ptr<cfg::ErrorProto> error_proto_;
 };
 
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
+const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
+
 // r-value reference is used to supporting expressions like `Error() << "invalid value"`
 template<typename T>
 Error&& operator<<(Error&& error, const T& x) {

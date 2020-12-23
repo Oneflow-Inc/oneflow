@@ -83,6 +83,17 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is
     }
   }
 
+  template<typename Type = T>
+  Type GetOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+  }
+
+  std::shared_ptr<T> GetPtrOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+  }
+
  private:
   EitherPtr<T, cfg::ErrorProto> data_or_error_;
 };
@@ -123,6 +134,11 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
     }
   }
 
+  void GetOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+  }
+
  private:
   Maybe() : error_or_scalar_(nullptr) {}
   void CheckError() const {
@@ -142,7 +158,7 @@ class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
-  Maybe& operator=(const Maybe& rhs) { error_or_scalar_ = rhs.error_or_scalar_; }
+  void operator=(const Maybe& rhs) { error_or_scalar_ = rhs.error_or_scalar_; }
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
@@ -173,6 +189,11 @@ class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
     } else {
       return std::make_pair(default_for_error, error());
     }
+  }
+
+  T GetOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
  private:
