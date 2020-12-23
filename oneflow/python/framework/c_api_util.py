@@ -29,7 +29,6 @@ import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
-from oneflow.python.framework.job_build_and_infer_error import JobBuildAndInferError
 from oneflow.python.framework.job_build_and_infer_cfg_error import (
     JobBuildAndInferCfgError,
 )
@@ -346,19 +345,6 @@ def JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn):
     ret, error = oneflow_api.JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn)
     if error.has_error_type():
         raise JobBuildAndInferCfgError(error)
-    return ret
-
-
-def JobBuildAndInferCtx_MirroredBlobDisableBoxing(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    # TODO(hanbinbin): this api dose not exist and will be del after confirmed
-    ret, error_str = oneflow_internal.JobBuildAndInferCtx_MirroredBlobDisableBoxing(
-        job_name, lbn
-    )
-    error = text_format.Parse(error_str, error_util.ErrorProto())
-    if error.HasField("error_type"):
-        raise JobBuildAndInferError(error)
     return ret
 
 
