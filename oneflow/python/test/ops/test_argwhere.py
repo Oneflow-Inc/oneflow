@@ -48,13 +48,27 @@ def _random_input(shape, dtype):
         raise NotImplementedError
 
 
-def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
+def _of_argwhere(x, index_dtype, device_type="gpu", device_num=1, dynamic=False):
     data_type = _np_dtype_to_of_dtype(x.dtype)
     out_data_type = _np_dtype_to_of_dtype(index_dtype)
 
     flow.clear_default_session()
+    if device_num > 1:
+        if device_type == "gpu":
+            flow.config.gpu_device_num(device_num)
+        elif device_type == "cpu":
+            flow.config.cpu_device_num(device_num)
+            flow.config.gpu_device_num(0)
+        else:
+            raise ValueError
+
     func_config = flow.FunctionConfig()
     func_config.default_data_type(data_type)
+
+    def do_argwhere(x):
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+            y = flow.argwhere(x, dtype=out_data_type)
+        return y
 
     if dynamic is True:
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -63,11 +77,9 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
         def argwhere_fn(
             x: flow.typing.ListNumpy.Placeholder(x.shape, dtype=data_type)
         ) -> flow.typing.ListNumpy:
-            with flow.scope.placement(device_type, "0:0"):
-                y = flow.argwhere(x, dtype=out_data_type)
-            return y
+            return do_argwhere(x)
 
-        return argwhere_fn([x])[0]
+        return argwhere_fn([x] * device_num)[0]
 
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -76,19 +88,24 @@ def _of_argwhere(x, index_dtype, device_type="gpu", dynamic=False):
         def argwhere_fn(
             x: flow.typing.Numpy.Placeholder(x.shape, dtype=data_type)
         ) -> flow.typing.ListNumpy:
-            with flow.scope.placement(device_type, "0:0"):
-                y = flow.argwhere(x, dtype=out_data_type)
-            return y
+            return do_argwhere(x)
 
         return argwhere_fn(x)[0]
 
 
 def _compare_with_np(
-    test_case, shape, value_dtype, index_dtype, device_type, dynamic, verbose=False
+    test_case,
+    shape,
+    value_dtype,
+    index_dtype,
+    device_type="gpu",
+    device_num=1,
+    dynamic=False,
+    verbose=False,
 ):
     x = _random_input(shape, value_dtype)
     y = np.argwhere(x)
-    of_y = _of_argwhere(x, index_dtype, device_type, dynamic)
+    of_y = _of_argwhere(x, index_dtype, device_type, device_num, dynamic)
     if verbose is True:
         print("input:", x)
         print("np result:", y)
@@ -105,6 +122,21 @@ class TestArgwhere(flow.unittest.TestCase):
         arg_dict["index_dtype"] = [np.int32, np.int64]
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["dynamic"] = [True, False]
+        arg_dict["verbose"] = [False]
+        for arg in GenArgList(arg_dict):
+            _compare_with_np(test_case, *arg)
+
+
+@flow.unittest.skip_unless_1n4d()
+class TestArgwhere4D(flow.unittest.TestCase):
+    def test_argwhere(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(10, 5)]
+        arg_dict["value_dtype"] = [np.float32, np.int32, np.int8]
+        arg_dict["index_dtype"] = [np.int32, np.int64]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_num"] = [4]
+        arg_dict["dynamic"] = [True]
         arg_dict["verbose"] = [False]
         for arg in GenArgList(arg_dict):
             _compare_with_np(test_case, *arg)
