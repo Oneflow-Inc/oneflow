@@ -123,7 +123,7 @@ sleep {survival_time}
         subprocess.check_call(
             f"scp {f_name} {hostname}:{workspace_dir}/launch_ssh_server.sh", shell=True,
         )
-    docker_cmd = f"""docker run --privileged --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
+    docker_cmd = f"""docker run --privileged --cidfile {workspace_dir}/worker.cid --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
     print(ssh_cmd)
@@ -159,6 +159,7 @@ export ONEFLOW_TEST_DATA_PORT={data_port}
 export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+export ONEFLOW_WORKER_KEEP_LOG=1
 export NCCL_DEBUG=INFO
 """
     if oneflow_worker_bin:
