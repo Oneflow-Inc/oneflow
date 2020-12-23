@@ -117,7 +117,7 @@ struct PoolingCpuKernelUtil {
                             const CFirstProcess& process, const CFirstFinalize& finalize) {
     const Shape& in = params_3d.GetXShape5D();
     const Shape& out = params_3d.GetYShape5D();
-    const std::vector<int32_t>& pool_size = params_3d.pool_size_3d();
+    const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
     const std::vector<int32_t>& strides = params_3d.strides_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
     const std::vector<int32_t>& dilation = params_3d.dilation_3d();
@@ -128,16 +128,16 @@ struct PoolingCpuKernelUtil {
       FOR_RANGE(int64_t, c, 0, in.At(1)) {
         FOR_RANGE(int64_t, pd, 0, out.At(2)) {
           int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-          int64_t dend = std::min(dstart + pool_size.at(0), in.At(2));
+          int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
           dstart = std::max(dstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, ph, 0, out.At(3)) {
             int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            int64_t hend = std::min(hstart + (pool_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
+            int64_t hend = std::min(hstart + (kernel_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
             while(hstart < 0)
               hstart += dilation.at(1); // hstart = std::max(hstart, static_cast<int64_t>(0));
             FOR_RANGE(int64_t, pw, 0, out.At(4)) {
               int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              int64_t wend = std::min(wstart + (pool_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
+              int64_t wend = std::min(wstart + (kernel_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
               while(wstart < 0)
                 wstart += dilation.at(2); //wstart = std::max(wstart, static_cast<int64_t>(0));
               const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
@@ -172,6 +172,7 @@ struct PoolingCpuKernelUtil {
     const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
     const std::vector<int32_t>& strides = params_3d.strides_3d();
     const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
+    const std::vector<int32_t>& dilation = params_3d.dilation_3d();
 
     const T* output_diff = out_diff_blob->dptr<T>();
     const T* output = out_blob->dptr<T>();
@@ -186,12 +187,15 @@ struct PoolingCpuKernelUtil {
           dstart = std::max(dstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, ph, 0, out.At(3)) {
             int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            int64_t hend = std::min(hstart + kernel_size.at(1), in.At(3));
-            hstart = std::max(hstart, static_cast<int64_t>(0));
+            int64_t hend = std::min(hstart + (kernel_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
+            while(hstart < 0)
+              hstart += dilation.at(1); // hstart = std::max(hstart, static_cast<int64_t>(0));
+
             FOR_RANGE(int64_t, pw, 0, out.At(4)) {
               int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              int64_t wend = std::min(wstart + kernel_size.at(2), in.At(4));
-              wstart = std::max(wstart, static_cast<int64_t>(0));
+              int64_t wend = std::min(wstart + (kernel_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
+              while(wstart < 0)
+                wstart += dilation.at(2); //wstart = std::max(wstart, static_cast<int64_t>(0));
 
               const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
               const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
