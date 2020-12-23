@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import oneflow as flow
 
-from test_util import GenArgList
+from test_util import GenArgDict
 
 
 def _np_dtype_to_of_dtype(np_dtype):
@@ -105,7 +105,9 @@ def _compare_with_np(
 ):
     x = _random_input(shape, value_dtype)
     y = np.argwhere(x)
-    of_y = _of_argwhere(x, index_dtype, device_type, device_num, dynamic)
+    of_y = _of_argwhere(
+        x, index_dtype, device_type=device_type, device_num=device_num, dynamic=dynamic
+    )
     if verbose is True:
         print("input:", x)
         print("np result:", y)
@@ -123,8 +125,8 @@ class TestArgwhere(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["dynamic"] = [True, False]
         arg_dict["verbose"] = [False]
-        for arg in GenArgList(arg_dict):
-            _compare_with_np(test_case, *arg)
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
 
 @flow.unittest.skip_unless_1n4d()
@@ -138,8 +140,8 @@ class TestArgwhere4D(flow.unittest.TestCase):
         arg_dict["device_num"] = [4]
         arg_dict["dynamic"] = [True]
         arg_dict["verbose"] = [False]
-        for arg in GenArgList(arg_dict):
-            _compare_with_np(test_case, *arg)
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
 
 if __name__ == "__main__":
