@@ -3289,3 +3289,218 @@ def triplet_margin_loss(
         return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
     else:
         return _triplet_loss
+
+
+@oneflow_export("nn.PixelShuffle")
+def pixel_shuffle(
+    input: remote_blob_util.BlobDef, upscale_factor: int, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator do the pixel shuffle, the shape of input(B, C*r*r, H, W) is arranged to 
+    (B, C, H*r, W*r). It can be used to do the sub-pixel convolution. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def PixelShuffleJob(input: tp.Numpy.Placeholder(shape=(3, 4, 2, 2), dtype=flow.float32))->tp.Numpy:
+            out = flow.nn.PixelShuffle(input, upscale_factor=2)
+
+            return out
+
+        input = np.random.uniform(size=(3, 4, 2, 2)).astype(np.float32)
+        out = PixelShuffleJob(input)
+
+        # out.shape (3, 1, 4, 4)
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        upscale_factor (int): The upscale factor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    return flow.nn.PixelShufflev2(input, upscale_factor, upscale_factor, name=name)
+
+
+@oneflow_export("nn.PixelShufflev2")
+def pixel_shufflev2(
+    input: remote_blob_util.BlobDef,
+    h_upscale_factor: int,
+    w_upscale_factor: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator is similar to `oneflow.nn.PixelShuffle`. The difference is that in 
+    `oneflow.nn.PixelShuffle`, the upscale factor of height and width is the same. But in 
+    `oneflow.nn.PixelShufflev2`, you can set different upscale factor for height and width. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        h_upscale_factor (int): The upscale factor of height. 
+        w_upscale_factor (int): The upscale factor of width. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def PixelShufflev2Job(input: tp.Numpy.Placeholder(shape=(3, 16, 2, 4), dtype=flow.float32))->tp.Numpy:
+            out = flow.nn.PixelShufflev2(input, h_upscale_factor=2, w_upscale_factor=4)
+
+            return out
+
+        input = np.random.uniform(size=(3, 16, 2, 4)).astype(np.float32)
+        out = PixelShuffleJob(input)
+
+        # out.shape (3, 2, 4, 16)
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob.
+    """
+    assert (
+        h_upscale_factor > 0 and w_upscale_factor > 0
+    ), "The scale factor of height and width must larger than zero"
+    assert len(input.shape) == 4, "Only Accept 4D Blob"
+
+    _batch, _channel, _height, _width = input.shape
+    assert (
+        _channel % (h_upscale_factor * w_upscale_factor) == 0
+    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
+
+    if name is None:
+        name = id_util.UniqueStr("PixelShufflev2")
+
+    _new_c = int(_channel / (h_upscale_factor * w_upscale_factor))
+
+    out = flow.reshape(
+        input,
+        [_batch, _new_c, h_upscale_factor * w_upscale_factor, _height, _width],
+        name=name + "_reshape1",
+    )
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, h_upscale_factor, w_upscale_factor, _height, _width],
+        name=name + "_reshape2",
+    )
+    out = flow.transpose(out, [0, 1, 4, 2, 5, 3], name=name + "_transpose")
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, _height * h_upscale_factor, _width * w_upscale_factor],
+        name=name + "_reshape3",
+    )
+
+    return out
+
+
+@oneflow_export("nn.KLDivLoss")
+def kldivloss(
+    input: remote_blob_util.BlobDef,
+    target: remote_blob_util.BlobDef,
+    log_target: bool = False,
+    reduction: str = "mean",
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator computes the Kullback-Leiber divergence loss. 
+    
+    The equation is: 
+    
+    If :math:`log\_target = True`: 
+    
+    .. math:: 
+    
+            loss = e^{target}*(target-input)
+        
+    If :math:`log\_target = False`: 
+    
+    .. math:: 
+            
+            loss = target*(log(target)-input) 
+    
+    Attention: 
+        In `log_target = False` case, the element in loss will set to be `0` when the element in target is less than `0`
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+    
+    
+        @flow.global_function()
+        def of_kldivloss(input: tp.Numpy.Placeholder(shape=(3, 3)), 
+                        target: tp.Numpy.Placeholder(shape=(3, 3))) -> tp.Numpy: 
+            return flow.nn.KLDivLoss(input, target, log_target=False, reduction='none')
+    
+
+        input = np.array([[0.1, 0.2, 0.7], 
+                    [0.8, 0.9, 0.5], 
+                    [0.5, 0.15, 0.35]]).astype(np.float32)
+        target = np.array([[0.3, 0.1, 0.6], 
+                    [-0.3, 0.4, 0.4], 
+                    [0.35, 0.25, 0.4]]).astype(np.float32)
+    
+        out = of_kldivloss(input, target)
+    
+        # output [[-0.39119187 -0.25025854 -0.7264954 ]
+        #         [ 0.         -0.72651625 -0.56651634]
+        #         [-0.54243773 -0.3840736  -0.5065163 ]]
+    
+    Args:
+        input (remote_blob_util.BlobDef): The input tensor. 
+        target (remote_blob_util.BlobDef): The target tensor. 
+        log_target (bool, optional): Whether the `target` is passed in the log space. Defaults to False.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        remote_blob_util.BlobDef: The result tensor. 
+    """
+    assert reduction in [
+        "none",
+        "mean",
+        "sum",
+    ], "{} is not a valid value for reduction, The reduction must be the one of `none`, `mean`, `sum`. ".format(
+        reduction
+    )
+
+    if name is None:
+        name = id_util.UniqueStr("KLDivLoss_")
+
+    if log_target:
+        _kl_div_loss = flow.math.exp(target, name=name + "exp") * (target - input)
+    else:
+        _kl_div_out_loss = target * (flow.math.log(target, name=name + "log") - input)
+        _zeros = flow.zeros_like(
+            _kl_div_out_loss, dtype=_kl_div_out_loss.dtype, name=name + "zeros"
+        )
+        # when target < 0, we set to `0`, when target > 0, we set to `1`.
+        _condition = flow.cast(
+            flow.math.rint(target + 0.5, name=name + "rint"),
+            dtype=flow.int8,
+            name=name + "cast2int",
+        )
+        # To avoid the `nan` value in log operation
+        # We set those positions which `target` is less than zero as `0`
+        _kl_div_loss = flow.where(
+            _condition, _kl_div_out_loss, _zeros, name=name + "where"
+        )
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(_kl_div_loss, name=name + "_reduce_mean")
+    elif reduction == "sum":
+        return flow.math.reduce_sum(_kl_div_loss, name=name + "_reduce_sum")
+    else:
+        return _kl_div_loss
