@@ -183,6 +183,7 @@ mkdir -p oneflow_temp
 rm -rf oneflow_temp/{remote_host}
 scp -P {ssh_port} -r {remote_host}:~/oneflow_temp oneflow_temp/{remote_host}
 rm -f oneflow_temp/{remote_host}/*/oneflow_worker
+chmod -R o+w oneflow_temp
 """
     returncode = None
 
