@@ -122,6 +122,8 @@ void JobCompleter::Complete(Job* job) const {
 void JobCompleter::InsertIdentity(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   CheckOpGraph(OpGraph(*job));
+  JobPassCtx job_pass_ctx(GlobalJobDesc());
+  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
 }
 
 }  // namespace oneflow

@@ -37,6 +37,10 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
       const SbpParallel& producer_sbp = producer.SbpParallel4Lbi(lbi);
       const SbpParallel& consumer_sbp = node->SbpParallel4BnInOp(ibn);
+#ifdef COVER_BY_B_
+      // We actually don't have any copy cost for an upstream opeartor with Broadcast SBPParallel.
+      if(producer_sbp.has_broadcast_parallel()) continue;
+#endif  // COVER_BY_B_
       // if we have downstream placement different from upstream placement
       if (producer.parallel_desc() != node->parallel_desc() || producer_sbp != consumer_sbp) {
         // put the pair of node and input blob name into a grouped vector
@@ -56,8 +60,6 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
     HashMap<std::pair<ParallelDesc, SbpParallel>,
             std::vector<std::pair<const OpNode*, std::string>>>& ParallelPairs2NodeBlobs =
         lbi7groups.second;
-    std::cout << "map size of " << lbi.DebugString() << ": " << ParallelPairs2NodeBlobs.size()
-              << std::endl;
     if (ParallelPairs2NodeBlobs.size() < 2) { continue; }
     // Suppose all the parallel num is the same for different groups
     const ParallelDesc& dst_parallel_desc = ParallelPairs2NodeBlobs.begin()->first.first;
@@ -73,10 +75,12 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       // If we find any B as SBP Parallel in downstream, we should directly use B as SBP of a proxy.
       transfer2B = true;
     } else {
+      // test debug
       // Check if hashmap works
       for (auto& parallel7group : ParallelPairs2NodeBlobs) {
         const SbpParallel& dst_sbp_parallel = parallel7group.first.second;
         if (dst_sbp_parallel.has_broadcast_parallel()) {
+          // should replace print out message with assert.
           std::cout << "Different broadcast type" << std::endl;
         }
       }
@@ -101,36 +105,6 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
         }
       }
     }
-
-    /*
-    for (auto& parallel7group : ParallelPairs2NodeBlobs) {
-      // Suppose all the parallel num is the same for different groups
-      const ParallelDesc& dst_parallel_desc = parallel7group.first.first;
-      SbpParallel& dst_sbp_parallel = parallel7group.first.second;
-      // If we have a lot of sbp patterns in downstream, suppose we have n SBP patterns and N
-      // devices. Then the copy cost from upstream under any SBP Parallel to multiple
-      // downstreams upstream -> multiple downstream >= n * min(copy cost) >=
-      // n * CopyCost(S(i)->S(j)) >= N * CopyCost(S(i)->S(j)) = CopyCost(S(i)->B)
-      // = upstream -> proxy(B) -> multiple downstream
-      if (ParallelPairs2NodeBlobs.size() >= dst_parallel_desc.parallel_num())
-        dst_sbp_parallel.mutable_broadcast_parallel();
-      // If we find any B as SBP Parallel in downstream, we should directly use B as SBP of a proxy.
-      if (dst_sbp_parallel.has_broadcast_parallel()) {
-        const std::vector<std::pair<const OpNode*, std::string>>& dst_node_blobs =
-            parallel7group.second;
-        for (auto it = ParallelPairs2NodeBlobs.begin(); it != ParallelPairs2NodeBlobs.end();) {
-          if (it->first == parallel7group.first) {
-            it++;
-          } else {
-            // erase the other SBP patterns
-            dst_node_blobs.insert(dst_node_blobs.end(), it->second.begin(), it->second.end());
-            it = ParallelPairs2NodeBlobs.erase(it);
-          }
-        }
-        // All the SBP patterns except B have been erased.
-        break;
-      }
-    }*/
   }
 #endif  // COVER_BY_B_
   // Why 7???
