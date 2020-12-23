@@ -45,7 +45,7 @@ OF_DEVICE_FUNC T SafeLog(T x) {
 #if defined(__CUDACC__)
 __device__ __forceinline__ half SafeLog(half x) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  return hlog(MaxWithLogThreshold<half>(x));
+  return hlog(MaxWithLogThreshold(x));
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
