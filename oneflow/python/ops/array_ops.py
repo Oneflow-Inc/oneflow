@@ -1675,39 +1675,71 @@ def sync_dynamic_resize(
 
 @oneflow_export("stack")
 def stack(
-    inputs: Sequence[remote_blob_util.BlobDef], axis: int, name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef],
+    axis: int = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator stacks the multiple Blobs on the specified axis. 
-
-    Still Unavailable. 
 
     Args:
         inputs (Sequence[remote_blob_util.BlobDef]): A list of input Blob. 
         axis (int): The stack axis. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def stack_job(x: tp.Numpy.Placeholder(shape=(2, 4, 6)), 
+                    y: tp.Numpy.Placeholder(shape=(2, 4, 6)))->tp.Numpy:
+            out = flow.stack([x, y], axis=2) 
+            return out 
+
+        x = np.ones(shape=(2, 4, 6), dtype=np.float32)
+        y = np.ones(shape=(2, 4, 6), dtype=np.float32)
+
+        out = stack_job(x, y)
+
+        # output.shape (2, 4, 2, 6)
+
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
 
     """
-    if not isinstance(inputs, (list, tuple)):
-        inputs = [inputs]
+    if name is None:
+        name = id_util.UniqueStr("Stack_")
 
+    inputs = list(inputs)
+
+    _input_shape = inputs[0].shape
+    _max_dim = len(_input_shape)
+
+    # The axis must be in range [-(_max_dim +1), _max_dim]
     if axis < 0:
-        axis = axis + len(inputs[0].shape)
+        axis = axis + _max_dim + 1
+    assert (axis >= 0) and (axis <= _max_dim)
 
-    assert axis == 0, "Only support dim0 stack now."
+    # All input tensors must have the same shape
+    _input_list_length = len(inputs)
+    for i in range(_input_list_length):
+        _current_shape = inputs[i].shape
+        assert (
+            _input_shape == _current_shape
+        ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+            _current_shape
+        )
+        # Expand dims for each tensor
+        inputs[i] = flow.expand_dims(
+            inputs[i], axis=axis, name=name + "expand_dims_{}".format(i)
+        )
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
-    setattr(op_conf.stack_conf, "axis", axis)
-    setattr(op_conf.stack_conf, "out", "out")
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.concat(inputs, axis=axis, name=name + "concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
@@ -1853,15 +1885,11 @@ def identity(
     """
     if name is None:
         name = id_util.UniqueStr("Identity_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.identity_conf, "in", x.unique_name)
-    op_conf.identity_conf.out = "out"
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+
+    op = (
+        flow.user_op_builder(name).Op("identity").Input("in", [x]).Output("out").Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("identity_n")
@@ -2209,6 +2237,95 @@ def masked_fill(
     return flow.where(condition=mask, x=value_like_x, y=x, name=name + "_Where")
 
 
+@oneflow_export("dim_gather")
+def dim_gather(
+    input: remote_blob_util.BlobDef,
+    dim: int,
+    index: remote_blob_util.BlobDef,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r""" This operator gathers elements from `input` according to `index` along with the axis `dim`.
+
+    Take a 3-D blob as example, the output is specified by:
+
+    .. code-block:: python
+
+        output[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+        output[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+        output[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+
+
+    The shape of `input` and `index` should be the same except in the `dim` dimension. 
+    
+    That is, if `input` is a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, x_i, x_{i+1}, \dots, x_n)`,
+    and `dim = i`, then `index` must be a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, k, x_{i+1}, \dots, x_n)` 
+    where :math:`k \geq 1`.
+
+    The return Blob `output` will have the same shape with `index`.
+
+    Args:
+        input (remote_blob_util.BlobDef): The input blob
+        dim (int): The axis along which to index
+        index (remote_blob_util.BlobDef): The index blob of elements to gather
+        name (Optional[str], optional): The name of the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The elements gathered from `input` will be returned as the output Blob.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def dim_gather_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float64), 
+                        index:tp.Numpy.Placeholder((2, 2), dtype=flow.int32))->tp.Numpy:
+            return flow.dim_gather(input, 1, index)
+
+        input = np.array([[1, 2], [3, 4]]).astype(np.float64)
+        index = np.array([[1, 0], [0, 1]]).astype(np.int32)
+
+        out = dim_gather_Job(input, index)       
+        # output 
+        # [[2. 1.]
+        #  [3. 4.]]
+
+    """
+    if len(input.shape) != len(index.shape):
+        raise ValueError("Dimensions of input and index should equal")
+
+    for i in range(0, len(input.shape)):
+        if dim == i:
+            continue
+        else:
+            if input.shape[i] != index.shape[i]:
+                raise ValueError(
+                    "Dimensions of input and index should be same except at dim"
+                )
+
+    if dim >= len(index.shape):
+        raise ValueError(
+            "Value of dim is out of range(dim should be less than len(index.shape))"
+        )
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("DimGather_")
+        )
+        .Op("dim_gather")
+        .Input("input", [input])
+        .Input("index", [index])
+        .Output("output")
+        .Attr("dim", int(dim))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("amp_white_identity")
 def amp_white_identity(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
@@ -2223,3 +2340,47 @@ def amp_white_identity(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("zeros")
+def zeros(
+    shape: Sequence[int],
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator creates a Tensor filled with the scalar value `0`.
+
+    Args:
+        shape (Sequence[int]): The shape of the Tensor. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Tensor filled with value `0`
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def zeros_job() -> tp.Numpy: 
+            return flow.zeros(shape=(2, 3), dtype=flow.float32)
+
+
+        out = zeros_job()
+
+        # output: [[0. 0. 0.]
+        #          [0. 0. 0.]]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Zeros_")
+
+    if dtype is None:
+        dtype = flow.float32
+
+    return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")

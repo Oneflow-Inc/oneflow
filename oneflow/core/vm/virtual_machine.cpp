@@ -90,6 +90,9 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
                                       /*out*/ NewInstructionList* new_instruction_list) {
   auto IsStreamInParallelDesc = [](const ParallelDesc* parallel_desc, const Stream& stream) {
     if (parallel_desc == nullptr) { return true; }
+    if (stream.stream_type().SharingVirtualMachineThread()) {
+      return parallel_desc->ContainingMachineId(stream.machine_id());
+    }
     return parallel_desc->Containing(stream.machine_id(), stream.device_id());
   };
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {

@@ -235,18 +235,23 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(large_slice_param.size);
   SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(small_slice_param.dims);
   SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(small_slice_param.size);
+  // Calculate the length of continuous part
+  int cnt = 1;
+  for (int i = NDIM - 1; i >= 0; i--) {
+    if (large_slice_param.step[i] == 1) { cnt *= large_slice_param.size[i]; }
+    if (!large_slice_param.IsFullSlice(i) || !small_slice_param.IsFullSlice(i)) { break; }
+  }
   const auto* src_ptr = src->dptr<T>();
   auto* dst_ptr = dst->mut_dptr<T>();
-  FOR_RANGE(int, i, 0, elem_cnt) {
+  for (int i = 0; i < elem_cnt; i += cnt) {
     const int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(
         i, large_slice_param, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
     const int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(
         i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
     const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
     const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
-    // TODO(jianhao): optimize the performance by dedicated kernels
     AutoMemcpy(ctx->device_ctx(), dst_ptr + dst_offset, src_ptr + src_offset,
-               GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
+               cnt * GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
   }
 }
 

@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import, print_function
 
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
@@ -37,6 +38,22 @@ def load_library(val):
     assert type(val) is str
     sess = session_ctx.GetDefaultSession()
     sess.config_proto.load_lib_path.append(val)
+
+
+@oneflow_export("config.load_library_now")
+def api_load_library_now(val: str) -> None:
+    r"""Load necessary library for job now
+
+    Args:
+        val (str): path to shared object file
+    """
+    return enable_if.unique([load_library_now, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def load_library_now(val):
+    assert type(val) is str
+    c_api_util.LoadLibraryNow(val)
 
 
 @oneflow_export("config.machine_num")
@@ -323,6 +340,29 @@ def persistence_buf_byte(val):
     sess.config_proto.io_conf.persistence_buf_byte = val
 
 
+@oneflow_export("config.legacy_model_io_enabled")
+def api_legacy_model_io_enabled():
+    sess = session_ctx.GetDefaultSession()
+    return sess.config_proto.io_conf.enable_legacy_model_io
+
+
+@oneflow_export("config.enable_legacy_model_io")
+def api_enable_legacy_model_io(val: bool = True):
+    r"""Whether or not use legacy model io.
+
+    Args:
+        val ([type]): True or False
+    """
+    return enable_if.unique([enable_legacy_model_io, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_legacy_model_io(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.io_conf.enable_legacy_model_io = val
+
+
 @oneflow_export("config.enable_model_io_v2")
 def api_enable_model_io_v2(val):
     r"""Whether or not use version2  of model input/output function.
@@ -562,6 +602,23 @@ def nccl_enable_all_to_all(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     sess.config_proto.resource.collective_boxing_conf.nccl_enable_all_to_all = val
+
+
+@oneflow_export("config.collective_boxing.nccl_enable_mixed_fusion")
+def api_nccl_enable_mixed_fusion(val: bool) -> None:
+    r"""Whether or not use nccl mixed fusion
+
+    Args:
+        val (bool): True or False
+    """
+    return enable_if.unique([nccl_enable_mixed_fusion, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_enable_mixed_fusion(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.collective_boxing_conf.nccl_enable_mixed_fusion = val
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)

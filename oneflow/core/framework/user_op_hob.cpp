@@ -52,11 +52,16 @@ hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string&
 }
 
 HobStringContextGetter<KernelRegContext> HobDeviceTag() {
-  std::ostringstream string_stream;
-  string_stream << "device_tag";
   return HobStringContextGetter<KernelRegContext>(
-      string_stream.str(),
+      "device_tag",
       [](const KernelRegContext& ctx) -> const std::string& { return ctx.device_tag(); });
+}
+
+HobStringContextGetter<KernelRegContext> HobDeviceSubTag() {
+  return HobStringContextGetter<KernelRegContext>(
+      "device_sub_tag", [](const KernelRegContext& ctx) -> const std::string& {
+        return ctx.Attr<std::string>("device_sub_tag");
+      });
 }
 
 }  // namespace user_op

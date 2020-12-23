@@ -15,8 +15,8 @@ args = parser.parse_args()
 
 def copy_proto_files(src_proto_files, of_proto_python_dir, dst_proto_python_dir):
     for proto_files in src_proto_files:
-        src_file = of_proto_python_dir + "/" + proto_files[:-6] + "_pb2.py"
-        dst_file = dst_proto_python_dir + "/" + proto_files[:-6] + "_pb2.py"
+        src_file = os.path.join(of_proto_python_dir, proto_files[:-6] + "_pb2.py")
+        dst_file = os.path.join(dst_proto_python_dir, proto_files[:-6] + "_pb2.py")
         dst_file_dir = os.path.dirname(dst_file)
 
         if not os.path.exists(dst_file_dir):

@@ -2,6 +2,9 @@
 #include <pybind11/operators.h>
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "{{ util.module_cfg_header_name(module) }}"
+{% for dependency in util.module_dependencies(module) %}
+#include "{{ util.module_cfg_header_name(dependency) }}"
+{% endfor %}
 
 ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", m) {
 {% if util.module_has_package(module) %}
@@ -130,8 +133,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% if not util.class_is_map_entry(cls) %}
   {
     pybind11::class_<Const{{ util.class_name(cls) }}, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
-    // the data of `self` will be moved to the result which is always mutable
-    registry.def("Move", &Const{{ util.class_name(cls) }}::__Move__);
     registry.def("__id__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
@@ -195,7 +196,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
     registry.def("Clear", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::Clear);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const Const{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const {{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
-    registry.def("Move", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Move__);
     registry.def("__id__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
