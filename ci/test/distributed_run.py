@@ -173,13 +173,32 @@ cp -r /dotssh ~/.ssh
 {FIX_SSH_PERMISSION}
 bash {bash_script}
 """
+artifact_cmd = f"""set -ex
+{exports}
+rm -rf ~/.ssh
+cp -r /dotssh ~/.ssh
+{FIX_SSH_PERMISSION}
+mkdir -p oneflow_temp
+scp -r {remote_host}:~/oneflow_temp/ oneflow_temp/{remote_host}
+rm oneflow_temp/{remote_host}/*/oneflow_worker
+"""
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         f_name = f.name
         f.write(bash_cmd)
         f.flush()
-        docker_cmd = f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
-        print(docker_cmd)
-        subprocess.check_call(docker_cmd, shell=True, timeout=timeout)
+        def get_docker_cmd():
+            return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+        run_docker_cmd = get_docker_cmd()
+        print(run_docker_cmd)
+        returncode = subprocess.call(run_docker_cmd, shell=True, timeout=timeout)
+
+        f.write(artifact_cmd)
+        f.flush()
+        artifact_docker_cmd = get_docker_cmd()
+        print(artifact_docker_cmd)
+        subprocess.check_call(artifact_docker_cmd, shell=True, timeout=timeout)
+        if returncode != 0:
+            raise ValueError(run_docker_cmd)
 
 
 if __name__ == "__main__":
