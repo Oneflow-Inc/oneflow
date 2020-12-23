@@ -160,6 +160,7 @@ def _gen_arg_dict(shape, log_target, device_type, machine_ids, device_counts):
     return arg_dict
 
 
+@flow.unittest.skip_unless_1n1d()
 class Test_KLDivLoss_1n1d(flow.unittest.TestCase):
     def test_kldivloss_cpu(test_case):
         arg_dict = _gen_arg_dict(
