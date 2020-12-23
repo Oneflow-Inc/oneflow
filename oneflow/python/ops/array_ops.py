@@ -1407,6 +1407,9 @@ def argwhere(
     if name is None:
         name = id_util.UniqueStr("ArgWhere_")
 
+    if dtype is None:
+        dtype = flow.int32
+
     op = (
         flow.user_op_builder(name)
         .Op("argwhere")
