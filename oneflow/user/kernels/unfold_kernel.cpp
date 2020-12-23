@@ -66,9 +66,8 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
                             &padding_before.at(i), &padding_after.at(i));
     }
 
-    state->idx_offset_ = idx_offset;
-    state->in_5d_shape_ = Gen5DShape(x_shape, state->idx_offset_);
-    state->out_5d_shape_ = Gen5DShape(Shape(native_shape), state->idx_offset_);
+    state->in_5d_shape_ = Gen5DShape(x_shape, idx_offset);
+    state->out_5d_shape_ = Gen5DShape(Shape(native_shape), idx_offset);
     state->out_shape_ = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
     state->kernel_size_3d_ = Gen3DVec(kernel_size, 1);
     state->strides_3d_ = Gen3DVec(strides, 1);
@@ -87,9 +86,7 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
   std::vector<int32_t> strides_3d_;
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
-  std::string data_format_;
   std::string padding_;
-  int64_t idx_offset_;
   bool ceil_mode_;
 };
 

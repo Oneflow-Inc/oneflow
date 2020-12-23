@@ -281,7 +281,10 @@ def _compare_with_samples(case):
         x, requires_grad=True, device=torch_device, dtype=torch.float
     )
     model = torch.nn.Unfold(
-        kernel_size=kernel_size, stride=strides, padding=torch_padding, dilation=dilation_rate,
+        kernel_size=kernel_size,
+        stride=strides,
+        padding=torch_padding,
+        dilation=dilation_rate,
     )
     model.to(torch_device)
     y_torch = model(x_torch)

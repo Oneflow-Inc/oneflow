@@ -33,6 +33,7 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, _GetSequence
 
 IntPair = Tuple[int, int]
 
+
 def calc_unfold_padding(padding, dhw_offset, ndims):
     if isinstance(padding, int):
         padding = _GetSequence(padding, ndims, "padding")
