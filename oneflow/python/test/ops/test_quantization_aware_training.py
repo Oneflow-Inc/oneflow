@@ -19,30 +19,37 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow as flow
-import oneflow.typing as oft
+import oneflow.typing as tp
 from test_util import GenArgList
 
 
 def _test(test_case, per_channel, symmetric, build_backbone_fn):
-    flow.clear_default_session()
 
-    flow.config.enable_debug_mode(True)
-    func_config = flow.FunctionConfig()
-    func_config.enable_qat(True)
-    func_config.qat.symmetric(symmetric)
-    func_config.qat.per_channel_weight_quantization(per_channel)
-    func_config.qat.moving_min_max_stop_update_after_iters(1000)
+    def run_with_func_config(build_backbone_fn, func_config):
+        flow.clear_default_session()
 
-    INPUT_SHAPE = (2, 8, 10, 12)
+        flow.config.enable_debug_mode(True)
 
-    @flow.global_function(type="train", function_config=func_config)
-    def Foo(x: oft.Numpy.Placeholder(INPUT_SHAPE)):
-        y = build_backbone_fn(x)
-        flow.optimizer.SGD(
-            flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
-        ).minimize(y)
+        INPUT_SHAPE = (2, 3, 4, 5)
 
-    Foo(np.ones(INPUT_SHAPE, dtype=np.float32))
+        @flow.global_function(type="train", function_config=func_config)
+        def Foo(x: tp.Numpy.Placeholder(INPUT_SHAPE)) -> tp.Numpy:
+            y = build_backbone_fn(x)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [5]), momentum=0
+            ).minimize(y)
+            return y
+
+        res = Foo(np.ones(INPUT_SHAPE, dtype=np.float32))
+        return res
+
+    qat_func_config = flow.FunctionConfig()
+    qat_func_config.enable_qat(True)
+    qat_func_config.qat.symmetric(symmetric)
+    qat_func_config.qat.per_channel_weight_quantization(per_channel)
+    qat_func_config.qat.moving_min_max_stop_update_after_iters(1000)
+
+    res_qat = run_with_func_config(build_backbone_fn, qat_func_config)
 
 
 class TestQAT(flow.unittest.TestCase):
