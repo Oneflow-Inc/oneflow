@@ -23,7 +23,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("exception", m) {
-  m.def("GetLastThreadLocalError", &ThreadLocalError);
+  m.def("GetThreadLocalLastError", &ThreadLocalError);
   py::register_exception<oneflow::Exception>(m, "Exception");
 #define REGISTER_EXCEPTION(cls) \
   py::register_exception<oneflow::OF_PP_CAT(cls, Exception)>(m, OF_PP_STRINGIZE(cls) "Exception");

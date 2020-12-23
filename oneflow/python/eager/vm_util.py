@@ -434,13 +434,13 @@ class InstructionsBuilder(object):
                 parallel_conf_cfg.add_device_name(device_name)
             parallel_conf = parallel_conf_cfg
 
-        if c_api_util.HasPlacementSymbol(parallel_conf):
-            return c_api_util.GetPlacementSymbol(parallel_conf)
+        if oneflow_api.HasPlacementSymbol(parallel_conf):
+            return oneflow_api.GetPlacementSymbol(parallel_conf)
 
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
-        c_api_util.AddPlacementSymbol(symbol_id, parallel_conf)
+        oneflow_api.AddPlacementSymbol(symbol_id, parallel_conf)
 
-        return c_api_util.GetPlacementSymbol(parallel_conf)
+        return oneflow_api.GetPlacementSymbol(parallel_conf)
 
     def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
         symbol_id = self._NewSymbolId4Scope(scope_proto)
@@ -498,7 +498,7 @@ class InstructionsBuilder(object):
         scope_symbol = symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
         op_conf_sym = self._GetOpConfSymbol(op_conf)
         parallel_desc_sym_id = c_api_util.GetOpParallelSymbolId(op_conf)
-        parallel_desc_symbol = c_api_util.GetPlacementSymbol(parallel_desc_sym_id)
+        parallel_desc_symbol = oneflow_api.GetPlacementSymbol(parallel_desc_sym_id)
         object_id = self._NewOpKernelObject(
             parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
         )
@@ -596,7 +596,7 @@ class InstructionsBuilder(object):
         assert callable(get_delegate_blob_object)
         if op_attribute.parallel_signature.HasField("op_parallel_desc_symbol_id"):
             symbol_id = op_attribute.parallel_signature.op_parallel_desc_symbol_id
-            op_parallel_desc_sym = c_api_util.GetPlacementSymbol(symbol_id)
+            op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(symbol_id)
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
@@ -785,7 +785,7 @@ class InstructionsBuilder(object):
             parallel_signature = op_attribute.parallel_signature
             bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id
             if obn in bn2symbol_id:
-                return c_api_util.GetPlacementSymbol(bn2symbol_id[obn])
+                return oneflow_api.GetPlacementSymbol(bn2symbol_id[obn])
             else:
                 return parallel_desc_sym
 
@@ -835,7 +835,7 @@ class InstructionsBuilder(object):
             parallel_signature = op_attribute.parallel_signature
             bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id
             if obn in bn2symbol_id:
-                return c_api_util.GetPlacementSymbol(bn2symbol_id[obn])
+                return oneflow_api.GetPlacementSymbol(bn2symbol_id[obn])
             else:
                 return parallel_desc_sym
 

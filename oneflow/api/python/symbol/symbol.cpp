@@ -54,14 +54,13 @@ Maybe<void> AddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
 }
 
 template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
-std::shared_ptr<cfg::ErrorProto> ApiAddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
-  return AddSymbol<SymbolConfT, SymbolPbT, SymbolT>(symbol_id, symbol_conf).GetDataAndErrorProto();
+void ApiAddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
+  return AddSymbol<SymbolConfT, SymbolPbT, SymbolT>(symbol_id, symbol_conf).GetOrThrow();
 }
 
 template<typename SymbolConfT, typename SymbolT>
-std::pair<std::shared_ptr<SymbolT>, std::shared_ptr<cfg::ErrorProto>> ApiGetSymbol(
-    const SymbolConfT& symbol_conf) {
-  return GetSymbol<SymbolConfT, SymbolT>(symbol_conf).GetDataPtrAndErrorProto();
+std::shared_ptr<SymbolT> ApiGetSymbol(const SymbolConfT& symbol_conf) {
+  return GetSymbol<SymbolConfT, SymbolT>(symbol_conf).GetPtrOrThrow();
 }
 
 template<typename SymbolConfT, typename SymbolT>
@@ -73,9 +72,8 @@ Maybe<SymbolT> GetSymbol(int64_t symbol_id) {
 }
 
 template<typename SymbolConfT, typename SymbolT>
-std::pair<std::shared_ptr<SymbolT>, std::shared_ptr<cfg::ErrorProto>> ApiGetSymbol(
-    int64_t symbol_id) {
-  return GetSymbol<SymbolConfT, SymbolT>(symbol_id).GetDataPtrAndErrorProto();
+std::shared_ptr<SymbolT> ApiGetSymbol(int64_t symbol_id) {
+  return GetSymbol<SymbolConfT, SymbolT>(symbol_id).GetPtrOrThrow();
 }
 
 }  // namespace
@@ -85,11 +83,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("AddPlacementSymbol", &ApiAddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>);
 
   m.def("GetPlacementSymbol",
-        static_cast<std::pair<std::shared_ptr<ParallelDesc>, std::shared_ptr<cfg::ErrorProto>> (*)(
-            const cfg::ParallelConf&)>(&ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
-  m.def("GetPlacementSymbol",
-        static_cast<std::pair<std::shared_ptr<ParallelDesc>, std::shared_ptr<cfg::ErrorProto>> (*)(
-            int64_t)>(&ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
+        static_cast<std::shared_ptr<ParallelDesc> (*)(const cfg::ParallelConf&)>(
+            &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
+  m.def("GetPlacementSymbol", static_cast<std::shared_ptr<ParallelDesc> (*)(int64_t)>(
+                                  &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
 }
 
 }  // namespace oneflow

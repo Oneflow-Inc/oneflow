@@ -18,20 +18,12 @@ limitations under the License.
 
 #include "oneflow/api/python/vm/id_util.h"
 
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewLogicalObjectId() {
-  return oneflow::NewLogicalObjectId().GetDataAndErrorProto(0LL);
-}
+inline long long NewLogicalObjectId() { return oneflow::NewLogicalObjectId().GetOrThrow(); }
 
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewLogicalSymbolId() {
-  return oneflow::NewLogicalSymbolId().GetDataAndErrorProto(0LL);
-}
+inline long long NewLogicalSymbolId() { return oneflow::NewLogicalSymbolId().GetOrThrow(); }
 
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewPhysicalObjectId() {
-  return oneflow::NewPhysicalObjectId().GetDataAndErrorProto(0LL);
-}
+inline long long NewPhysicalObjectId() { return oneflow::NewPhysicalObjectId().GetOrThrow(); }
 
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> NewPhysicalSymbolId() {
-  return oneflow::NewPhysicalSymbolId().GetDataAndErrorProto(0LL);
-}
+inline long long NewPhysicalSymbolId() { return oneflow::NewPhysicalSymbolId().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_VM_ID_UTIL_API_H_

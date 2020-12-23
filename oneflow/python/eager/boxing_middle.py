@@ -15,11 +15,11 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 import random
 
 
@@ -143,7 +143,7 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     for device_name in parallel_desc_symbol.parallel_conf.device_name():
         parallel_conf.add_device_name(device_name)
     if builder is None:
-        return c_api_util.CreatePlacementSymbol(
+        return oneflow_api.CreatePlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:
@@ -160,7 +160,7 @@ def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=No
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
         parallel_conf.add_device_name("%s:%s" % (machine_id, dev_id))
     if builder is None:
-        return c_api_util.CreatePlacementSymbol(
+        return oneflow_api.CreatePlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:

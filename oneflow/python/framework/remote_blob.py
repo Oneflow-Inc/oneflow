@@ -32,6 +32,7 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 import traceback
 import sys
 
@@ -45,7 +46,7 @@ def RemoteBlob(lbi, **kw):
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerLogicalBlob(lbi, **kw):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
         return EagerMirroredBlob(lbi, **kw)
@@ -55,7 +56,7 @@ def EagerLogicalBlob(lbi, **kw):
 
 @enable_if.condition(~hob.eager_execution_enabled)
 def LazyRemoteBlob(lbi, **kw):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
     blob_type = LazyConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
@@ -69,7 +70,7 @@ class BlobDef(
     def __init__(self, lbi, job_name=None, **kw):
         blob_desc.BlobDesc.__init__(self, lbi, **kw)
         if job_name is None:
-            job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+            job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         self.job_name_ = job_name
         self.parallel_size_ = 0
 
@@ -115,7 +116,7 @@ class ConsistentBlob(BlobDef):
 class LazyConsistentBlob(ConsistentBlob):
     def __init__(self, lbi, **kw):
         ConsistentBlob.__init__(self, lbi, **kw)
-        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        self.job_name_ = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
 
     @property
     def shape(self):
@@ -184,7 +185,7 @@ class MirroredBlob(BlobDef):
 class LazyMirroredBlob(MirroredBlob):
     def __init__(self, lbi, **kw):
         MirroredBlob.__init__(self, lbi, **kw)
-        self.job_name_ = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        self.job_name_ = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         self.sub_consistent_blob_list_ = []
         lbn = self.logical_blob_name
         num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(

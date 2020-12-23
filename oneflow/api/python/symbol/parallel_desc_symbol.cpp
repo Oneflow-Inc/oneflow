@@ -30,9 +30,9 @@ Maybe<ParallelDesc> CreatePlacementSymbol(int64_t symbol_id,
   return ParallelDesc::New(symbol_id, symbol_pb);
 }
 
-std::pair<std::shared_ptr<ParallelDesc>, std::shared_ptr<cfg::ErrorProto>> ApiCreatePlacementSymbol(
+std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
-  return CreatePlacementSymbol(symbol_id, symbol_conf).GetDataPtrAndErrorProto();
+  return CreatePlacementSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

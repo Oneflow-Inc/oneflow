@@ -18,9 +18,9 @@ from __future__ import absolute_import
 from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.parallel_conf_util as parallel_conf_util
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 import collections
 import re
 
@@ -32,10 +32,10 @@ class ScopeSymbol(Symbol):
         self.job_desc_symbol_ = symbol_storage.GetSymbol4Id(
             scope_proto.job_desc_symbol_id()
         )
-        self.device_parallel_desc_symbol_ = c_api_util.GetPlacementSymbol(
+        self.device_parallel_desc_symbol_ = oneflow_api.GetPlacementSymbol(
             scope_proto.device_parallel_desc_symbol_id()
         )
-        self.host_parallel_desc_symbol_ = c_api_util.GetPlacementSymbol(
+        self.host_parallel_desc_symbol_ = oneflow_api.GetPlacementSymbol(
             scope_proto.host_parallel_desc_symbol_id()
         )
         self.auto_increment_id_ = 0
