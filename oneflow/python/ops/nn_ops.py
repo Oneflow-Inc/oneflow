@@ -3346,3 +3346,116 @@ def triplet_margin_loss(
         return flow.math.reduce_sum(_triplet_loss, name=name + "_reduce_sum")
     else:
         return _triplet_loss
+
+
+@oneflow_export("nn.PixelShuffle")
+def pixel_shuffle(
+    input: remote_blob_util.BlobDef, upscale_factor: int, name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator do the pixel shuffle, the shape of input(B, C*r*r, H, W) is arranged to 
+    (B, C, H*r, W*r). It can be used to do the sub-pixel convolution. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np
+
+
+        @flow.global_function()
+        def PixelShuffleJob(input: tp.Numpy.Placeholder(shape=(3, 4, 2, 2), dtype=flow.float32))->tp.Numpy:
+            out = flow.nn.PixelShuffle(input, upscale_factor=2)
+
+            return out
+
+        input = np.random.uniform(size=(3, 4, 2, 2)).astype(np.float32)
+        out = PixelShuffleJob(input)
+
+        # out.shape (3, 1, 4, 4)
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        upscale_factor (int): The upscale factor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob. 
+    """
+    return flow.nn.PixelShufflev2(input, upscale_factor, upscale_factor, name=name)
+
+
+@oneflow_export("nn.PixelShufflev2")
+def pixel_shufflev2(
+    input: remote_blob_util.BlobDef,
+    h_upscale_factor: int,
+    w_upscale_factor: int,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator is similar to `oneflow.nn.PixelShuffle`. The difference is that in 
+    `oneflow.nn.PixelShuffle`, the upscale factor of height and width is the same. But in 
+    `oneflow.nn.PixelShufflev2`, you can set different upscale factor for height and width. 
+
+    Args:
+        input (remote_blob_util.BlobDef): The input Blob. 
+        h_upscale_factor (int): The upscale factor of height. 
+        w_upscale_factor (int): The upscale factor of width. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def PixelShufflev2Job(input: tp.Numpy.Placeholder(shape=(3, 16, 2, 4), dtype=flow.float32))->tp.Numpy:
+            out = flow.nn.PixelShufflev2(input, h_upscale_factor=2, w_upscale_factor=4)
+
+            return out
+
+        input = np.random.uniform(size=(3, 16, 2, 4)).astype(np.float32)
+        out = PixelShuffleJob(input)
+
+        # out.shape (3, 2, 4, 16)
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob.
+    """
+    assert (
+        h_upscale_factor > 0 and w_upscale_factor > 0
+    ), "The scale factor of height and width must larger than zero"
+    assert len(input.shape) == 4, "Only Accept 4D Blob"
+
+    _batch, _channel, _height, _width = input.shape
+    assert (
+        _channel % (h_upscale_factor * w_upscale_factor) == 0
+    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
+
+    if name is None:
+        name = id_util.UniqueStr("PixelShufflev2")
+
+    _new_c = int(_channel / (h_upscale_factor * w_upscale_factor))
+
+    out = flow.reshape(
+        input,
+        [_batch, _new_c, h_upscale_factor * w_upscale_factor, _height, _width],
+        name=name + "_reshape1",
+    )
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, h_upscale_factor, w_upscale_factor, _height, _width],
+        name=name + "_reshape2",
+    )
+    out = flow.transpose(out, [0, 1, 4, 2, 5, 3], name=name + "_transpose")
+    out = flow.reshape(
+        out,
+        [_batch, _new_c, _height * h_upscale_factor, _width * w_upscale_factor],
+        name=name + "_reshape3",
+    )
+
+    return out

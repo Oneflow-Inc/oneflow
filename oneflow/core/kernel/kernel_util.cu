@@ -66,21 +66,6 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 }
 
 template<typename T>
-__global__ void MulByScalarGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[0]; }
-}
-
-template<typename T>
-__global__ void AddByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y; }
-}
-
-template<typename T>
-__global__ void MulByScalarParaGpu(const int64_t n, const T* x, const T y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y; }
-}
-
-template<typename T>
 __global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
@@ -427,14 +412,6 @@ KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   ReplicateGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, x);
 }
-KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  AddByScalarGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
-KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  MulByScalarParaGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -531,10 +508,6 @@ KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, 
 }
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
-KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  MulByScalarGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
 }
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
@@ -742,12 +715,24 @@ __global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
 
 template<>
 __global__ void CastOnGpu<float, half>(const float* in, half* out, int64_t elem_num) {
-  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __float2half(in[i]); }
+  const int64_t elem_num_2 = elem_num / 2;
+  const auto* in_2 = reinterpret_cast<const float2*>(in);
+  auto* out_2 = reinterpret_cast<half2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __float22half2_rn(in_2[i]); }
+  if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[elem_num - 1] = __float2half(in[elem_num - 1]);
+  }
 }
 
 template<>
 __global__ void CastOnGpu<half, float>(const half* in, float* out, int64_t elem_num) {
-  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __half2float(in[i]); }
+  const int64_t elem_num_2 = elem_num / 2;
+  const auto* in_2 = reinterpret_cast<const half2*>(in);
+  auto* out_2 = reinterpret_cast<float2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __half22float2(in_2[i]); }
+  if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[elem_num - 1] = __half2float(in[elem_num - 1]);
+  }
 }
 
 template<typename T, typename U>
@@ -765,16 +750,16 @@ template<>
 void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<float, half>
-      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
 }
 
 template<>
 void CopyElemOnGpu<float16, float>(DeviceCtx* ctx, const float16* in_dptr, float* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<half, float>
-      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
 }
 
 #define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \
