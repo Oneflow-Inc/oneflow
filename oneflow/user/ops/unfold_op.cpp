@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/utils/unfold_util.h"
+#include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/operator/operator_util.h"
 
 namespace oneflow {
 
@@ -29,16 +30,21 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
 template<size_t NDims>
 TensorDescInferFn MakeFwTensorDescInferFn() {
   return [](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
-    const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const std::vector<int32_t> strides = ctx->Attr<std::vector<int32_t>>("strides");
-    const std::vector<int32_t> dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+    std::vector<int32_t> padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+    const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+    const int32_t idx_offset = IdxOffset(data_format);
+    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
 
+    CHECK_GE_OR_RETURN(NDims, 1);
+    CHECK_LE_OR_RETURN(NDims, 3);
+    CHECK_EQ_OR_RETURN(NDims + 2, x_shape.NumAxes());
     CHECK_EQ_OR_RETURN(kernel_size.size(), NDims);
     for (int32_t kernel_dim : kernel_size) { CHECK_GT_OR_RETURN(kernel_dim, 0); }
     CHECK_EQ_OR_RETURN(strides.size(), NDims);
@@ -46,11 +52,22 @@ TensorDescInferFn MakeFwTensorDescInferFn() {
     CHECK_EQ_OR_RETURN(dilation_rate.size(), NDims);
     for (int32_t dilation_dim : dilation_rate) { CHECK_GT_OR_RETURN(dilation_dim, 0); }
 
-    const ParamsUnfold3D params_3d(NDims, *x_shape, data_format, padding, padding_before,
-                                   padding_after, kernel_size, strides, dilation_rate, ceil_mode);
+    std::vector<int64_t> dhw_shape(NDims);
+    for (int32_t i = 0; i < NDims; ++i) {
+      GetWindowedOutputSize(x_shape.At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                            strides.at(i), padding, ceil_mode, &dhw_shape.at(i),
+                            &padding_before.at(i), &padding_after.at(i));
+    }
+    DimVector y_shape(3);
+    y_shape.at(0) = x_shape.At(0);
+    y_shape.at(1) =
+        x_shape.At(c_dim)
+        * std::accumulate(kernel_size.begin(), kernel_size.end(), 1, std::multiplies<int>());
+    y_shape.at(2) = std::accumulate(dhw_shape.begin(), dhw_shape.end(), 1, std::multiplies<int>());
+
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
+    *y_desc->mut_shape() = Shape(y_shape);
     return Maybe<void>::Ok();
   };
 }

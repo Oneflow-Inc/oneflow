@@ -17,7 +17,6 @@ limitations under the License.
 
 #include "oneflow/core/kernel/util/cuda_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/utils/unfold_util.h"
 #include "oneflow/user/kernels/unfold_kernel_util.h"
 
 namespace oneflow {

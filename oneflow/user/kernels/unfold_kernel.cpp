@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/user/utils/unfold_util.h"
+#include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/operator/operator_util.h"
 #include "oneflow/user/kernels/unfold_kernel_util.h"
 
 namespace oneflow {
@@ -26,29 +26,71 @@ namespace {
 
 class UnfoldOpKernelState final : public user_op::OpKernelState {
  public:
-  UnfoldOpKernelState(ParamsUnfold3D params_3d) : params_3d(params_3d) {}
-  const ParamsUnfold3D& GetParams3D() { return params_3d; }
+  UnfoldOpKernelState() {}
 
+  template<size_t NDims>
   static std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(
-      user_op::KernelInitContext* ctx, const int32_t& dim) {
-    if (2 != dim) { UNIMPLEMENTED(); }
+      user_op::KernelInitContext* ctx) {
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+    std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+    std::vector<int32_t> padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-    ParamsUnfold3D params_3d =
-        ParamsUnfold3D(dim, x_shape, data_format, padding, padding_before, padding_after,
-                       kernel_size, strides, dilation_rate, ceil_mode);
-    std::shared_ptr<UnfoldOpKernelState> state(new UnfoldOpKernelState(params_3d));
+    const int32_t idx_offset = IdxOffset(data_format);
+    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
+    std::shared_ptr<UnfoldOpKernelState> state(new UnfoldOpKernelState());
+
+    auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
+      DimVector ret_vec(shape.dim_vec());
+      int32_t ndims = ret_vec.size() - 2;
+      ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
+      return Shape(ret_vec);
+    };
+    auto Gen3DVec = [](const std::vector<int32_t>& origin_vec,
+                       int32_t num) -> std::vector<int32_t> {
+      std::vector<int32_t> ret_vec = origin_vec;
+      ret_vec.insert(ret_vec.begin(), 3 - ret_vec.size(), num);
+      return ret_vec;
+    };
+
+    DimVector native_shape(NDims + 2);
+    native_shape.at(0) = x_shape.At(0);
+    native_shape.at(c_dim) = x_shape.At(c_dim);
+    for (int32_t i = 0; i < NDims; ++i) {
+      GetWindowedOutputSize(x_shape.At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
+                            strides.at(i), padding, ceil_mode, &native_shape.at(idx_offset + i),
+                            &padding_before.at(i), &padding_after.at(i));
+    }
+
+    state->idx_offset_ = idx_offset;
+    state->in_5d_shape_ = Gen5DShape(x_shape, state->idx_offset_);
+    state->out_5d_shape_ = Gen5DShape(Shape(native_shape), state->idx_offset_);
+    state->out_shape_ = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+    state->kernel_size_3d_ = Gen3DVec(kernel_size, 1);
+    state->strides_3d_ = Gen3DVec(strides, 1);
+    state->dilation_rate_3d_ = Gen3DVec(dilation_rate, 1);
+    state->padding_before_3d_ = Gen3DVec(padding_before, 0);
+    state->ceil_mode_ = ceil_mode;
+
     return std::move(state);
   }
 
-  ParamsUnfold3D params_3d;
+ public:
+  Shape in_5d_shape_;
+  Shape out_5d_shape_;
+  Shape out_shape_;
+  std::vector<int32_t> kernel_size_3d_;
+  std::vector<int32_t> strides_3d_;
+  std::vector<int32_t> dilation_rate_3d_;
+  std::vector<int32_t> padding_before_3d_;
+  std::string data_format_;
+  std::string padding_;
+  int64_t idx_offset_;
+  bool ceil_mode_;
 };
 
 template<DeviceType device_type, typename T>
@@ -60,13 +102,12 @@ class UnfoldKernelImpl {
     auto* unfold_state = dynamic_cast<UnfoldOpKernelState*>(state);
     CHECK(unfold_state != nullptr);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-    const ParamsUnfold3D& params_3d = unfold_state->GetParams3D();
 
     if (data_format == "channels_first") {
       UnfoldKernelUtil<device_type, T>::CFirstForward(
-          ctx->device_ctx(), params_3d.GetXShape5D(), params_3d.GetYShape5D(),
-          params_3d.GetYShape(), params_3d.kernel_size_3d(), params_3d.strides_3d(),
-          params_3d.dilation_rate_3d(), params_3d.padding_before_3d(), x->dptr<T>(),
+          ctx->device_ctx(), unfold_state->in_5d_shape_, unfold_state->out_5d_shape_,
+          unfold_state->out_shape_, unfold_state->kernel_size_3d_, unfold_state->strides_3d_,
+          unfold_state->dilation_rate_3d_, unfold_state->padding_before_3d_, x->dptr<T>(),
           y->mut_dptr<T>());
     } else {
       UNIMPLEMENTED();
@@ -79,13 +120,12 @@ class UnfoldKernelImpl {
     auto* unfold_state = dynamic_cast<UnfoldOpKernelState*>(state);
     CHECK(unfold_state != nullptr);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-    const ParamsUnfold3D& params_3d = unfold_state->GetParams3D();
 
     if (data_format == "channels_first") {
       UnfoldKernelUtil<device_type, T>::CFirstBackward(
-          ctx->device_ctx(), params_3d.GetXShape5D(), params_3d.GetYShape5D(),
-          params_3d.GetYShape(), params_3d.kernel_size_3d(), params_3d.strides_3d(),
-          params_3d.dilation_rate_3d(), params_3d.padding_before_3d(), dy->dptr<T>(),
+          ctx->device_ctx(), unfold_state->in_5d_shape_, unfold_state->out_5d_shape_,
+          unfold_state->out_shape_, unfold_state->kernel_size_3d_, unfold_state->strides_3d_,
+          unfold_state->dilation_rate_3d_, unfold_state->padding_before_3d_, dy->dptr<T>(),
           dx->mut_dptr<T>());
     } else {
       UNIMPLEMENTED();
@@ -103,7 +143,7 @@ class UnfoldKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, NDims);
+    return UnfoldOpKernelState::DoCreateOpKernelState<NDims>(ctx);
   }
 
  private:
@@ -121,7 +161,7 @@ class UnfoldGradKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState(ctx, NDims);
+    return UnfoldOpKernelState::DoCreateOpKernelState<NDims>(ctx);
   }
 
  private:

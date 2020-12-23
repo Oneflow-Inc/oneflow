@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_UNFOLD_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_UNFOLD_KERNEL_UTIL_H_
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
