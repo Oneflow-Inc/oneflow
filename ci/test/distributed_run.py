@@ -173,7 +173,7 @@ cp -r /dotssh ~/.ssh
 {FIX_SSH_PERMISSION}
 bash {bash_script}
 """
-artifact_cmd = f"""set -ex
+    artifact_cmd = f"""set -ex
 {exports}
 rm -rf ~/.ssh
 cp -r /dotssh ~/.ssh
@@ -186,8 +186,10 @@ rm oneflow_temp/{remote_host}/*/oneflow_worker
         f_name = f.name
         f.write(bash_cmd)
         f.flush()
+
         def get_docker_cmd():
             return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+
         run_docker_cmd = get_docker_cmd()
         print(run_docker_cmd)
         returncode = subprocess.call(run_docker_cmd, shell=True, timeout=timeout)
