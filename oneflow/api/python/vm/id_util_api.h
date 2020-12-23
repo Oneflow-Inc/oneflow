@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_VM_ID_UTIL_API_H_
 #define ONEFLOW_API_PYTHON_VM_ID_UTIL_API_H_
 
+#include <atomic>
 #include "oneflow/api/python/vm/id_util.h"
 
 inline long long NewLogicalObjectId() { return oneflow::NewLogicalObjectId().GetOrThrow(); }
@@ -25,5 +26,11 @@ inline long long NewLogicalSymbolId() { return oneflow::NewLogicalSymbolId().Get
 inline long long NewPhysicalObjectId() { return oneflow::NewPhysicalObjectId().GetOrThrow(); }
 
 inline long long NewPhysicalSymbolId() { return oneflow::NewPhysicalSymbolId().GetOrThrow(); }
+
+inline uint64_t NewTokenId() {
+  static std::atomic<uint64_t> token_id(0);
+  token_id++;
+  return token_id;
+}
 
 #endif  // ONEFLOW_API_PYTHON_VM_ID_UTIL_API_H_

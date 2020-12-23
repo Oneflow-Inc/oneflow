@@ -13,13 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <atomic>
 #include <vector>
 #include <unordered_map>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -51,20 +49,12 @@ bool Int2IntListMapContaining(const Int2IntListMap& bigger, const Int2IntListMap
 
 }  // namespace
 
-uint64_t NewTokenId() {
-  static std::atomic<uint64_t> token_id(0);
-  token_id++;
-  return token_id;
-}
-
 PYBIND11_MODULE(oneflow_api, m) {
-  m.def("EagerExecutionEnabled", []() { return EagerExecutionEnabled(); });
   m.def("MasterSendAbort", []() {
     if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
       return ClusterInstruction::MasterSendAbort();
     }
   });
-  m.def("NewTokenId", &NewTokenId);
 
   using IntList = std::vector<int64_t>;
   using Int2IntListMap = std::unordered_map<int64_t, std::shared_ptr<IntList>>;

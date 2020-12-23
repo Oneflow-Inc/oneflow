@@ -30,13 +30,11 @@ Maybe<ParallelDesc> CreatePlacementSymbol(int64_t symbol_id,
   return ParallelDesc::New(symbol_id, symbol_pb);
 }
 
-std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
-    int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
-  return CreatePlacementSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<ParallelDesc, std::shared_ptr<ParallelDesc>>(m, "ParallelDesc")
+  py::class_<ParallelDesc, std::shared_ptr<ParallelDesc>>(m, "PlacementSymbol")
+      .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
+        return CreatePlacementSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
+      }))
       .def_property_readonly("symbol_id",
                              [](std::shared_ptr<ParallelDesc> parallel_desc) {
                                const auto& symbol_id = CHECK_JUST(parallel_desc->symbol_id());
@@ -54,8 +52,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("Containing", &ParallelDesc::Bigger)
       .def(py::self == py::self)
       .def(py::hash(py::self));
-
-  m.def("CreatePlacementSymbol", &ApiCreatePlacementSymbol);
 }
 
 }  // namespace oneflow
