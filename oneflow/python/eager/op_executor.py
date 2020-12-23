@@ -91,7 +91,7 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
     def GetInBlobObject(builder, ibn, bn_in_op2blob_object):
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
+        in_op_parallel_desc_sym = c_api_util.GetPlacementSymbol(parallel_sig[ibn])
         in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
             in_op_parallel_desc_sym, op_attribute, ibn
         )
@@ -111,7 +111,7 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
 
 def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
-    op_parallel_desc_sym = symbol_storage.GetSymbol4Id(
+    op_parallel_desc_sym = c_api_util.GetPlacementSymbol(
         op_attribute.parallel_signature.op_parallel_desc_symbol_id
     )
     parallel_size = len(op_attribute.input_bns)
@@ -124,7 +124,7 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
     def GetInBlobObject(builder, i, bn_in_op2blob_object):
         ibn = "in_%s" % i
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
+        in_op_parallel_desc_sym = c_api_util.GetPlacementSymbol(parallel_sig[ibn])
         in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
             in_op_parallel_desc_sym, op_attribute, ibn
         )

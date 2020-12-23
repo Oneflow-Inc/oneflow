@@ -47,12 +47,18 @@ class ParallelDesc final {
   // Getters
   const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
   DeviceType device_type() const { return device_type_; }
+  std::string device_tag() const { return parallel_conf_.device_tag(); }
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
+  machine_id2sorted_dev_phy_ids() const {
+    return machine_id2sorted_dev_phy_ids_;
+  }
   bool HasMachineId(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
+    return machine_id2sorted_dev_phy_ids_->find(machine_id)
+           != machine_id2sorted_dev_phy_ids_->end();
   }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
   const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.at(machine_id);
+    return *machine_id2sorted_dev_phy_ids_->at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
@@ -75,6 +81,8 @@ class ParallelDesc final {
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
+  // this api is exported to python as Containing
+  bool Bigger(const ParallelDesc& rhs) const;
   bool ContainingMachineId(int64_t machine_id) const;
 
  private:
@@ -84,12 +92,14 @@ class ParallelDesc final {
   void ClearUp();
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
+  bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
 
   Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
   ParallelConf parallel_conf_;
   std::vector<int64_t> sorted_machine_ids_;
-  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
+      machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
   HashMap<int64_t, int64_t> parallel_id2machine_id_;

@@ -107,7 +107,7 @@ message LossBlobNotFoundError { }
 
 message RwMutexedObjectNotFoundError { }
 
-message UnkownError { }
+message UnknownError { }
 
 message ErrorStackFrame {
   required string location = 1;
@@ -154,6 +154,6 @@ message ErrorProto {
     UnknownJobBuildAndInferError unknown_job_build_and_infer_error = 500;
     RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
     SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
-    UnkownError unknown_error = 900;
+    UnknownError unknown_error = 900;
   }
 }

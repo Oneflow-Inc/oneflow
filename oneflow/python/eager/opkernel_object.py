@@ -52,4 +52,4 @@ def _GetScopeSymbol(op_conf):
 def _GetOpParallelSymbol(op_conf):
     assert op_conf.HasField("scope_symbol_id")
     symbol_id = c_api_util.GetOpParallelSymbolId(op_conf)
-    return symbol_storage.GetSymbol4Id(symbol_id)
+    return c_api_util.GetPlacementSymbol(symbol_id)

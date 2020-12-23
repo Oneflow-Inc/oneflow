@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -24,6 +25,11 @@ namespace {
 void LogError(const Error& error) {
   // gdb break point
   LOG(ERROR) << error->msg();
+}
+
+std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
+  thread_local std::shared_ptr<cfg::ErrorProto> error;
+  return &error;
 }
 
 }  // namespace
@@ -235,5 +241,22 @@ Error Error::SymbolIdUninitialized() {
   error->mutable_symbol_id_uninitialized_error();
   return error;
 }
+
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  *MutThreadLocalError() = error;
+  CHECK(error->has_error_type());
+  switch (error->error_type_case()) {
+#define MAKE_ENTRY(cls)                                      \
+  case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
+    throw OF_PP_CAT(cls, Exception)(error->DebugString());
+
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
+
+#undef MAKE_ENTRY
+    default: UNIMPLEMENTED();
+  }
+}
+
+const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }
 
 }  // namespace oneflow

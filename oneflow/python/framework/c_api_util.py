@@ -614,3 +614,28 @@ def LoadLibraryNow(lib_path):
     error = oneflow_api.LoadLibraryNow(lib_path)
     if error is not None:
         raise JobBuildAndInferCfgError(error)
+
+
+def HasPlacementSymbol(parallel_conf):
+    return oneflow_api.HasPlacementSymbol(parallel_conf)
+
+
+def GetPlacementSymbol(parallel_conf_or_symbol_id):
+    parallel_desc, error = oneflow_api.GetPlacementSymbol(parallel_conf_or_symbol_id)
+    if error is not None:
+        raise JobBuildAndInferCfgError(error)
+    return parallel_desc
+
+
+def AddPlacementSymbol(symbol_id, parallel_conf):
+    error = oneflow_api.AddPlacementSymbol(symbol_id, parallel_conf)
+    if error is not None:
+        print(error)
+        raise JobBuildAndInferCfgError(error)
+
+
+def CreatePlacementSymbol(symbol_id, parallel_conf):
+    parallel_desc, error = oneflow_api.CreatePlacementSymbol(symbol_id, parallel_conf)
+    if error is not None:
+        raise JobBuildAndInferCfgError(error)
+    return parallel_desc

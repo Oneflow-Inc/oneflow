@@ -138,8 +138,8 @@ class InstructionsBuilder(object):
             assert from_pd.device_tag == "cpu"
             assert to_pd.device_tag == "cpu"
             assert from_pd.parallel_num == to_pd.parallel_num
-            from_machine_ids = from_pd.machine_id2device_id_list.keys()
-            to_machine_ids = to_pd.machine_id2device_id_list.keys()
+            from_machine_ids = dict(from_pd.machine_id2device_id_list).keys()
+            to_machine_ids = dict(to_pd.machine_id2device_id_list).keys()
             if (
                 len(from_pd.machine_id2device_id_list) == from_pd.parallel_num
                 and from_machine_ids == to_machine_ids
@@ -425,18 +425,22 @@ class InstructionsBuilder(object):
 
     def GetParallelDescSymbol(self, parallel_conf):
         # parallel_conf is cfg
-        serialized_parallel_conf = str(parallel_conf)
-        if symbol_storage.HasSymbol4SerializedParallelConf(serialized_parallel_conf):
-            return symbol_storage.GetSymbol4SerializedParallelConf(
-                serialized_parallel_conf
-            )
+        if not isinstance(
+            parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
+        ):
+            parallel_conf_cfg = placement_cfg.ParallelConf()
+            parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+            for device_name in parallel_conf.device_name:
+                parallel_conf_cfg.add_device_name(device_name)
+            parallel_conf = parallel_conf_cfg
+
+        if c_api_util.HasPlacementSymbol(parallel_conf):
+            return c_api_util.GetPlacementSymbol(parallel_conf)
+
         symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
-        symbol = symbol_util.ParallelDescSymbol(symbol_id, parallel_conf)
-        symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4SerializedParallelConf(
-            serialized_parallel_conf, symbol
-        )
-        return symbol
+        c_api_util.AddPlacementSymbol(symbol_id, parallel_conf)
+
+        return c_api_util.GetPlacementSymbol(parallel_conf)
 
     def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
         symbol_id = self._NewSymbolId4Scope(scope_proto)
@@ -494,7 +498,7 @@ class InstructionsBuilder(object):
         scope_symbol = symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
         op_conf_sym = self._GetOpConfSymbol(op_conf)
         parallel_desc_sym_id = c_api_util.GetOpParallelSymbolId(op_conf)
-        parallel_desc_symbol = symbol_storage.GetSymbol4Id(parallel_desc_sym_id)
+        parallel_desc_symbol = c_api_util.GetPlacementSymbol(parallel_desc_sym_id)
         object_id = self._NewOpKernelObject(
             parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
         )
@@ -592,7 +596,7 @@ class InstructionsBuilder(object):
         assert callable(get_delegate_blob_object)
         if op_attribute.parallel_signature.HasField("op_parallel_desc_symbol_id"):
             symbol_id = op_attribute.parallel_signature.op_parallel_desc_symbol_id
-            op_parallel_desc_sym = symbol_storage.GetSymbol4Id(symbol_id)
+            op_parallel_desc_sym = c_api_util.GetPlacementSymbol(symbol_id)
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
@@ -781,7 +785,7 @@ class InstructionsBuilder(object):
             parallel_signature = op_attribute.parallel_signature
             bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id
             if obn in bn2symbol_id:
-                return symbol_storage.GetSymbol4Id(bn2symbol_id[obn])
+                return c_api_util.GetPlacementSymbol(bn2symbol_id[obn])
             else:
                 return parallel_desc_sym
 
@@ -831,7 +835,7 @@ class InstructionsBuilder(object):
             parallel_signature = op_attribute.parallel_signature
             bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id
             if obn in bn2symbol_id:
-                return symbol_storage.GetSymbol4Id(bn2symbol_id[obn])
+                return c_api_util.GetPlacementSymbol(bn2symbol_id[obn])
             else:
                 return parallel_desc_sym
 

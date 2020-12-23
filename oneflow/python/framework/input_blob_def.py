@@ -152,7 +152,7 @@ class FixedTensorDef(ArgBlobDef):
         parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
         if (
             parallel_symbol.device_tag == "gpu"
-            and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
+            and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0]
             and parallel_symbol.parallel_num == 1
         ):
             device_tag = "gpu"

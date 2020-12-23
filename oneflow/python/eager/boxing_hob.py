@@ -103,21 +103,21 @@ class ComposeHob(BoolFunctor):
 
 @bool_functor("SingleMachine")
 def SingleMachine(ctx):
-    blob_device_ids = (
+    blob_device_ids = dict(
         ctx.produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     )
     arg_parallel_desc_symbol = ctx.consumer_op_arg_parallel_attr.parallel_desc_symbol
-    op_arg_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
+    op_arg_device_ids = dict(arg_parallel_desc_symbol.machine_id2device_id_list)
     return list(blob_device_ids.keys()) == [0] and list(op_arg_device_ids.keys()) == [0]
 
 
 @bool_functor("MatchDeviceOneToOnePerMachine")
 def MatchDeviceOneToOnePerMachine(ctx):
-    blob_device_ids = (
+    blob_device_ids = dict(
         ctx.produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     )
     arg_parallel_desc_symbol = ctx.consumer_op_arg_parallel_attr.parallel_desc_symbol
-    op_arg_device_ids = arg_parallel_desc_symbol.machine_id2device_id_list
+    op_arg_device_ids = dict(arg_parallel_desc_symbol.machine_id2device_id_list)
     if blob_device_ids.keys() != op_arg_device_ids.keys():
         return False
     for key in blob_device_ids.keys():
