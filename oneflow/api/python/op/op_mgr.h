@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_OP_OP_MGR_H_
 #define ONEFLOW_API_PYTHON_OP_OP_MGR_H_
 
+#include "oneflow/api/python/framework/framework.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/job/scope.h"
@@ -64,10 +65,9 @@ inline Maybe<std::string> InferOpConf(const std::string& op_conf_str,
 
 inline Maybe<std::string> GetSerializedOpAttributes() {
   OpAttributeList op_attribute_list;
-  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  for (int i = 0; i < job_ctx_mgr->job_set().job_size(); i++) {
-    const Job& job = job_ctx_mgr->job_set().job(i);
+  const JobSet& job_set = JUST(GetJobSet());
+  for (int i = 0; i < job_set.job_size(); i++) {
+    const Job& job = job_set.job(i);
     auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
     const auto& op_graph = JUST(OpGraph::New(job));
     op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
