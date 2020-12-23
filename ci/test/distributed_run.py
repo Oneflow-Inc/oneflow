@@ -126,7 +126,7 @@ sleep {survival_time}
     docker_cmd = f"""docker run --privileged --cidfile {workspace_dir}/worker.cid --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
-    print(ssh_cmd)
+    print(ssh_cmd, flush=True)
     proc = subprocess.Popen(ssh_cmd, shell=True,)
     try:
         proc.wait(timeout=10)
@@ -135,7 +135,8 @@ sleep {survival_time}
         survival_time_min = survival_time / 60
         survival_time_min = int(survival_time_min)
         print(
-            f"remote container launched, host: {hostname}, ssh port: {docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
+            f"remote container launched, host: {hostname}, ssh port: {docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins",
+            flush=True,
         )
 
 
@@ -179,25 +180,24 @@ rm -rf ~/.ssh
 cp -r /dotssh ~/.ssh
 {FIX_SSH_PERMISSION}
 mkdir -p oneflow_temp
-scp -r {remote_host}:~/oneflow_temp/ oneflow_temp/{remote_host}
-rm oneflow_temp/{remote_host}/*/oneflow_worker
+scp -P {ssh_port} -r {remote_host}:~/oneflow_temp oneflow_temp/{remote_host}
+rm -f oneflow_temp/{remote_host}/*/oneflow_worker
 """
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
-        f_name = f.name
-        f.write(bash_cmd)
-        f.flush()
 
-        def get_docker_cmd():
+        def get_docker_cmd(cmd):
+            f_name = f.name
+            print(cmd, flush=True)
+            f.truncate(0)
+            f.flush()
+            f.write(cmd)
+            f.flush()
             return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
 
-        run_docker_cmd = get_docker_cmd()
-        print(run_docker_cmd)
+        run_docker_cmd = get_docker_cmd(bash_cmd)
         returncode = subprocess.call(run_docker_cmd, shell=True, timeout=timeout)
 
-        f.write(artifact_cmd)
-        f.flush()
-        artifact_docker_cmd = get_docker_cmd()
-        print(artifact_docker_cmd)
+        artifact_docker_cmd = get_docker_cmd(artifact_cmd)
         subprocess.check_call(artifact_docker_cmd, shell=True, timeout=timeout)
         if returncode != 0:
             raise ValueError(run_docker_cmd)
@@ -255,7 +255,7 @@ if __name__ == "__main__":
         remote_host = affiliations[0]
         remote_host = socket.gethostbyname(remote_host)
 
-    print(f"this_host: {this_host}, remote_host: {remote_host}")
+    print(f"this_host: {this_host}, remote_host: {remote_host}", flush=True)
     workspace_dir = os.path.join(
         os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
     )
