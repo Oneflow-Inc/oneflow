@@ -41,8 +41,14 @@ def get_simple_momentum_training_model(dtype):
     assert dtype == flow.float32
 
     @flow.global_function(type="train")
-    def model(x: tp.Numpy.Placeholder((4, 5))) -> tp.Numpy:
+    def model() -> tp.Numpy:
         with get_placement():
+            x = flow.get_variable(
+                name="x",
+                shape=(4, 5),
+                dtype=flow.float32,
+                initializer=flow.random_normal_initializer(mean=10, stddev=1),
+            )
             w = flow.get_variable(
                 name="w",
                 shape=(5, 6),
@@ -300,15 +306,13 @@ def _TestMixedModel(test_case, dtype):
 
 def _TestResumeTraining(test_case):
     with tempfile.TemporaryDirectory() as save_dir:
-        x = np.random.random((4, 5)).astype(np.float32)
-
         refresh_session()
         model = get_checkpoint_ready_model(
             get_simple_momentum_training_model, flow.float32
         )
-        model(x)
+        model()
         flow.checkpoint.save(save_dir)
-        model(x)
+        model()
         w1 = flow.get_all_variables()["w"].numpy()
 
         refresh_session()
@@ -316,7 +320,7 @@ def _TestResumeTraining(test_case):
             get_simple_momentum_training_model, flow.float32
         )
         flow.load_variables(flow.checkpoint.get(save_dir))
-        model(x)
+        model()
         w2 = flow.get_all_variables()["w"].numpy()
 
         test_case.assertTrue(np.array_equal(w1, w2))
