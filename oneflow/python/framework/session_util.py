@@ -185,7 +185,7 @@ class Session(object):
             self.Init()
         return self
 
-    def _UpdateInfo4LazyInterfaceOp(self):
+    def UpdateInfo4InterfaceOp(self):
         for op_attr in c_api_util.GetOpAttributes().op_attribute:
             op_conf = op_attr.op_conf
             if c_api_util.IsInterfaceOpConf(op_conf):
@@ -221,7 +221,7 @@ class Session(object):
             c_api_util.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
             # Get latest op_attr and job_name after compiler.Compile
-            self._UpdateInfo4LazyInterfaceOp()
+            self.UpdateInfo4InterfaceOp()
             if not config_util.api_legacy_model_io_enabled():
                 check_point_v2.Init()
         else:
