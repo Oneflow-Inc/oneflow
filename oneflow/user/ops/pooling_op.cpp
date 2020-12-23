@@ -25,8 +25,6 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
     GenBackwardOpConfFn;
 
 
-// ========================================lyon==========================================
-
 TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
@@ -39,11 +37,17 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
     const bool return_indices = ctx->Attr<bool>("return_indices");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+   
 
     CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
     for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
     CHECK_EQ_OR_RETURN(stride.size(), dim);
     for (int32_t stride_dim : stride) { CHECK_GT_OR_RETURN(stride_dim, 0); }
+
+    for (int32_t i=0; i<padding_after.size(); i++) {
+      CHECK_GT_OR_RETURN(kernel_size[i], 2 * padding_after[i])
+         << "pad should be smaller than half of kernel size";
+    }
 
     const PoolingParams3D params_3d(dim, *x_shape, data_format, padding, padding_before, padding_after,
                              kernel_size, stride, dilation, return_indices, ceil_mode);
@@ -115,11 +119,9 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
     }
   };
 }
-// ========================================lyon==========================================
 
 }  // namespace
 
-// ========================================lyon==========================================
 REGISTER_USER_OP("maxpool_2d")
     .Input("x")
     .Output("y")
@@ -155,6 +157,5 @@ REGISTER_USER_OP("maxpool_2d_grad")
     .SetGetSbpFn(BackwardGetSbpFn);
 
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 2));
-// ========================================lyon=========================================
 
 }  // namespace oneflow

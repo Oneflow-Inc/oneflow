@@ -1300,21 +1300,18 @@ def MaxPool2d(
     )
     assert data_format in ["NHWC", "NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
-    print("channel_pos >>>>>>>>>>>>>>>>>>>>> ", channel_pos)
     op.Attr("data_format", channel_pos)
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
     dilation = _GetSequence(dilation, 2, "dilation")
-    print("kernel_size >>>>>>>>>>>>>>>>>>>>> ", kernel_size)
-    print("dilation >>>>>>>>>>>>>>>>>>>>> ", dilation)
     op.Attr("kernel_size", kernel_size)
     stride = _GetSequence(stride, 2, "stride")
-    print("stride >>>>>>>>>>>>>>>>>>>>> ", stride)
     op.Attr("stride", stride)
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
-    print("padding_type, pads_list >>>>>>>>>>>>>>>>>>>>> ", padding_type, pads_list)
+    
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
+    print("kernel_size:", kernel_size, "dilation:", dilation, "stride:", stride, "\npadding_before, padding_after >>>>>>>>>>>>>>>>>>>>> ", padding_before, padding_after)
     assert len(pads_list) == len(input.shape) - 2
     op.Attr("padding", padding_type)
     op.Attr("padding_before", padding_before)

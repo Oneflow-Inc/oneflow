@@ -132,21 +132,20 @@ struct PoolingCpuKernelUtil {
           dstart = std::max(dstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, ph, 0, out.At(3)) {
             int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            while(hstart < 0)
-              hstart += dilation.at(1);
             int64_t hend = std::min(hstart + (pool_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
-            //hstart = std::max(hstart, static_cast<int64_t>(0));
+            while(hstart < 0)
+              hstart += dilation.at(1); // hstart = std::max(hstart, static_cast<int64_t>(0));
             FOR_RANGE(int64_t, pw, 0, out.At(4)) {
               int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              while(wstart < 0)
-                wstart += dilation.at(2);
               int64_t wend = std::min(wstart + (pool_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
-              //wstart = std::max(wstart, static_cast<int64_t>(0));
+              while(wstart < 0)
+                wstart += dilation.at(2); //wstart = std::max(wstart, static_cast<int64_t>(0));
               const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
+
               T res = initialize();
               FOR_RANGE(int64_t, d, dstart, dend) {
-                FOR_RANGE(int64_t, h, hstart, hend) {
-                  FOR_RANGE(int64_t, w, wstart, wend) {
+                for(int64_t h=hstart;h<hend; h++) {
+                  for(int64_t w=wstart; w<wend; w++) {
                     const int64_t input_index = d * in.Count(3) + h * in.At(4) + w;
                     process(input[input_index], res);
                   }
@@ -154,6 +153,8 @@ struct PoolingCpuKernelUtil {
               }
               finalize((dend - dstart) * (hend - hstart) * (wend - wstart), res);
               output[pool_index] = res;
+              //printf("\nhstart:%ld, hend:%ld, wstart:%ld, wend:%ld; pool_index:%ld\n", hstart, hend, wstart, wend, pool_index);
+        
             }
           }
         }
@@ -335,14 +336,12 @@ class Maxpool2dCpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    printf("Enter methor Maxpool2dCpuKernel >>>>>>>>>>>>>>>>>>>>>>>>>>>>> CreateOpKernelState()\n");
     return DoCreateKernelState(ctx, 2);
   }
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    printf("Enter methor Maxpool2dCpuKernel >>>>>>>>>>>>>>>>>>>>>>>>>>>>> Compute()\n");
     PoolingCpuKernelUtil<T>::MaxFWCompute(ctx, state);
   };
 };
@@ -355,14 +354,12 @@ class Maxpool2dGradCpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    printf("Enter methor Maxpool2dGradCpuKernel >>>>>>>>>>>>>>>>>>>>>>>>>>>>> CreateOpKernelState()\n");
     return DoCreateKernelState(ctx, 2);
   }
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    printf("Enter methor Maxpool2dGradCpuKernel >>>>>>>>>>>>>>>>>>>>>>>>>>>>> Compute()\n");
     PoolingCpuKernelUtil<T>::MaxBWCompute(ctx, state);
   };
 };
