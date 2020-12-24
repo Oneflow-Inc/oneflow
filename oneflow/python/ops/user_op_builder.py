@@ -79,7 +79,12 @@ class UserOp(object):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = "{}_{}".format(output_arg_name, i)
-                remote_blob_list.append(self.MakeRemoteBlob(lbi))
+                remote_blob_obj = self.MakeRemoteBlob(lbi)
+                remote_blob_list.append(remote_blob_obj)
+                if flow.eager_execution_enabled():
+                    gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(
+                        remote_blob_obj.logical_blob_name, remote_blob_obj.blob_object
+                    )
 
         return tuple(remote_blob_list)
 

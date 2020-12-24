@@ -954,12 +954,13 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
-    JUST(DoPass("NonDistributedOptimizerPass"));
+    JUST(DoPass("OptimizerPlacementOptimizationPass"));
     JUST(DoPass("DynamicLossScaleSchedulePass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("AddSspVariableProxy"));
+    JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     JUST(DoPass("FuseAddToOutputPass"));
@@ -967,6 +968,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
     JUST(DoPass("AddLbiDiffWatcherOpConfs"));
+    JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
@@ -1011,6 +1013,11 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   }
   const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
   UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, &op_name2ancestors_need_no_grad_);
+  // always return true if output_size > 1
+  if (op.output_bns().size() > 1) {
+    *IsLbiBackwardUsed = [](const LogicalBlobId&) { return true; };
+    return;
+  }
   std::vector<OperatorConf> bw_op_confs;
   LogicalBlobId fake_diff_lbi;
   fake_diff_lbi.set_op_name("fake_op_name");

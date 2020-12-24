@@ -300,7 +300,7 @@ def GenerateVariableOpConf(
         root_path = None
     else:
         root_path = (
-            compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+            compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path()
         )
         dir_path = os.path.join(root_path, name)
         file_path = os.path.join(dir_path, "out")

@@ -19,12 +19,6 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-__device__ T gpu_atomic_add(T* address, const T val);
-
-template<typename T>
-__device__ T gpu_atomic_max(T* address, const T val);
-
-template<typename T>
 __device__ T MaxWithLogThreshold(T x);
 
 template<typename T>
