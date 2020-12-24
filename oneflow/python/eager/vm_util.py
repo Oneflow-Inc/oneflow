@@ -44,6 +44,7 @@ import oneflow.python.vm.id_util as vm_id_util
 import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
 from google.protobuf import text_format
 
 oneflow_api = oneflow.oneflow_api
@@ -417,13 +418,20 @@ class InstructionsBuilder(object):
         return symbol
 
     def GetJobConfSymbol(self, job_conf):
-        if symbol_storage.HasSymbol4JobConf(job_conf):
-            return symbol_storage.GetSymbol4JobConf(job_conf)
+        if not isinstance(job_conf, job_conf_cfg.JobConfigProto):
+            print(type(job_conf))
+            raise "Job_conf type error"
+        # if symbol_storage.HasSymbol4JobConf(job_conf):
+        #     return symbol_storage.GetSymbol4JobConf(job_conf)
+        if oneflow_api.HasJobConfSymbol(job_conf):
+            return oneflow_api.GetJobConfSymbol(job_conf)
+
         symbol_id = self._NewSymbolId4JobConf(job_conf)
-        symbol = symbol_util.Symbol(symbol_id, job_conf)
-        symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4JobConf(job_conf, symbol)
-        return symbol
+        oneflow_api.AddJobConfSymbol(symbol_id, job_conf)
+        # symbol = symbol_util.Symbol(symbol_id, job_conf)
+        # symbol_storage.SetSymbol4Id(symbol_id, symbol)
+        # symbol_storage.SetSymbol4JobConf(job_conf, symbol)
+        return oneflow_api.GetJobConfSymbol(job_conf)
 
     def GetParallelDescSymbol(self, parallel_conf):
         # parallel_conf is cfg

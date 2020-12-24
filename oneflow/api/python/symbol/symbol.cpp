@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace py = pybind11;
 
@@ -87,6 +88,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
   m.def("GetPlacementSymbol", static_cast<std::shared_ptr<ParallelDesc> (*)(int64_t)>(
                                   &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
+
+  m.def("HasJobConfSymbol", &ApiHasSymbol<cfg::JobConfigProto>);
+  m.def("AddJobConfSymbol", &ApiAddSymbol<cfg::JobConfigProto, JobConfigProto, JobDesc>);
+
+  m.def("GetJobConfSymbol", static_cast<std::shared_ptr<JobDesc> (*)(const cfg::JobConfigProto&)>(
+                                &ApiGetSymbol<cfg::JobConfigProto, JobDesc>));
+  m.def("GetJobConfSymbol", static_cast<std::shared_ptr<JobDesc> (*)(int64_t)>(
+                                &ApiGetSymbol<cfg::JobConfigProto, JobDesc>));
 }
 
 }  // namespace oneflow

@@ -61,7 +61,6 @@ JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
 Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
   auto job_desc = std::make_shared<JobDesc>(job_conf);
   job_desc->symbol_id_ = Maybe<int64_t>(symbol_id);
-  JUST(job_desc->Init());
   return job_desc;
 }
 
