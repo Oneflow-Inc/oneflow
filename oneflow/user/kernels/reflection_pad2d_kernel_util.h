@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_REFLECTION_PAD2D_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_REFLECTION_PAD2D_KERNEL_UTIL_H_
 #ifdef WITH_CUDA
-#include "oneflow/core/kernel/util/cuda_kernel_util.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -45,7 +45,7 @@ template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
 #if defined(__CUDA_ARCH__)
-    gpu_atomic_add(y, *x);
+    cuda::atomic::Add(y, *x);
 #else
     *y += *x;
 #endif
