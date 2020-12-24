@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/square_sum_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -32,7 +32,7 @@ __global__ void SquareSumGpu(int64_t n, const T* x, T* y) {
     if (ONE_BLOCK) {
       *y = b_sum;
     } else {
-      gpu_atomic_add<T>(y, b_sum);
+      cuda::atomic::Add(y, b_sum);
     }
   }
 }
@@ -55,7 +55,7 @@ __global__ void MultiSquareSumGpu(const MultiSquareSumParams<T> params, T* y) {
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) { gpu_atomic_add<T>(y, b_sum); }
+  if (threadIdx.x == 0) { cuda::atomic::Add(y, b_sum); }
 }
 
 }  // namespace
