@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -78,6 +79,7 @@ Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& par
 
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
+  cfg_parallel_conf_.reset(new cfg::ParallelConf(user_conf));
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
   const std::string& device_tag = parallel_conf_.device_tag();

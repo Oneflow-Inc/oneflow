@@ -33,6 +33,10 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
 
 class ParallelContext;
 
+namespace cfg {
+class ParallelConf;
+}
+
 class ParallelDesc final {
  public:
   ~ParallelDesc() = default;
@@ -85,6 +89,8 @@ class ParallelDesc final {
   bool Bigger(const ParallelDesc& rhs) const;
   bool ContainingMachineId(int64_t machine_id) const;
 
+  const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
+
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
   ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
@@ -105,6 +111,9 @@ class ParallelDesc final {
   HashMap<int64_t, int64_t> parallel_id2machine_id_;
   HashMap<int64_t, int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
+  // TODO(lixinqi): merge cfg_parallel_conf_ and parallel_conf_ after cfg::ParallelConf taken as the
+  // constructor argument
+  std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
