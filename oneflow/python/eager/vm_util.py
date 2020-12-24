@@ -418,9 +418,6 @@ class InstructionsBuilder(object):
         return symbol
 
     def GetJobConfSymbol(self, job_conf):
-        if not isinstance(job_conf, job_conf_cfg.JobConfigProto):
-            print(type(job_conf))
-            raise "Job_conf type error"
         if oneflow_api.HasJobConfSymbol(job_conf):
             return oneflow_api.GetJobConfSymbol(job_conf)
 
