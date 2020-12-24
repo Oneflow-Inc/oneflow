@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/offset_to_ndindex_util.h"
+#include "oneflow/user/kernels/ndindex_offset_util.h"
 
 namespace oneflow {
 
@@ -21,12 +21,12 @@ namespace user_op {
 template<typename T>
 struct OffsetToNdIndexFunctor<DeviceType::kCPU, T> final {
   void operator()(DeviceCtx* ctx, int32_t dims_num, const T* offset, const T* dims, T* out) {
-    DoOffsetToIndex<T>(dims_num, offset, dims, out);
+    DoOffsetToNdIndex<T>(dims_num, offset, dims, out);
   }
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_OFFSET_TO_NDINDEX_FUNCTOR, (DeviceType::kCPU),
-                                 OFFSET_TO_NDINDEX_DATA_TYPE_SEQ);
+                                 NDINDEX_OFFSET_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

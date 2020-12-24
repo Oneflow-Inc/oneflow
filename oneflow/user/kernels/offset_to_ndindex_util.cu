@@ -14,34 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
-#include <cub/cub.cuh>
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/offset_to_ndindex_util.h"
+#include "oneflow/user/kernels/ndindex_offset_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<typename T>
-__global__ void OffsetToIndexForwardGpuKernel(int32_t dims_num, const T* offset, const T* dims,
-                                              T* out) {
-  DoOffsetToIndex<T>(dims_num, offset, dims, out);
+__global__ void OffsetToNdIndexForwardGpuKernel(int32_t dims_num, const T* offset, const T* dims,
+                                                T* out) {
+  DoOffsetToNdIndex<T>(dims_num, offset, dims, out);
 }
 
 template<typename T>
 struct OffsetToNdIndexFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, int32_t dims_num, const T* offset, const T* dims, T* out) {
-    RUN_CUDA_KERNEL((OffsetToIndexForwardGpuKernel<T>), ctx, dims_num, dims_num, offset, dims, out);
+    RUN_CUDA_KERNEL((OffsetToNdIndexForwardGpuKernel<T>), ctx, dims_num, dims_num, offset, dims,
+                    out);
   }
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_OFFSET_TO_NDINDEX_FUNCTOR, (DeviceType::kGPU),
-                                 OFFSET_TO_NDINDEX_DATA_TYPE_SEQ);
+                                 NDINDEX_OFFSET_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 

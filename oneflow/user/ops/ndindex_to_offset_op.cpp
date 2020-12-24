@@ -25,13 +25,11 @@ REGISTER_USER_OP("ndindex_to_offset")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       const TensorDesc* dims = ctx->TensorDesc4ArgNameAndIndex("dims", 0);
-      int64_t index_num_axes = index->shape().NumAxes();
-      CHECK_GT_OR_RETURN(index_num_axes, 0);
-      int64_t dims_num_axes = dims->shape().NumAxes();
-      CHECK_GT_OR_RETURN(dims_num_axes, 0);
+      CHECK_GT_OR_RETURN(index->shape().NumAxes(), 0);
+      CHECK_GT_OR_RETURN(dims->shape().NumAxes(), 0);
       CHECK_EQ(index->shape().elem_cnt(), dims->shape().elem_cnt());
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out->mut_shape() = Shape({1});  // Only return single value
+      *out->mut_shape() = Shape({1});  // Out tensor only contains a single offset
       *out->mut_data_type() = dims->data_type();
       return Maybe<void>::Ok();
     })

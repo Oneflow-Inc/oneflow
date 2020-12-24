@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/user/kernels/ndindex_to_offset_util.h"
+#include "oneflow/user/kernels/ndindex_offset_util.h"
 
 namespace oneflow {
 
@@ -37,7 +37,7 @@ class NdIndexToOffsetKernel final : public OpKernel {
     CHECK_EQ(ndim, in_num);                             // Check the numbers of shape is equal
 
     // // To avoid the dims of index is larger than the oneflow default max ndim.
-    CHECK_LE(in_num, oneflow::index_max_ndims);
+    CHECK_LE(in_num, oneflow::kMaxDims);
 
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
@@ -54,16 +54,11 @@ class NdIndexToOffsetKernel final : public OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
                        & (user_op::HobDataType("dims", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_NDINDEX_TO_OFFSET_KERNELS_WITH_DEVICE(device) \
-  REGISTER_NDINDEX_TO_OFFSET_KERNEL(device, int32_t)           \
-  REGISTER_NDINDEX_TO_OFFSET_KERNEL(device, int64_t)
-
-// Register CPU version
-REGISTER_NDINDEX_TO_OFFSET_KERNELS_WITH_DEVICE(DeviceType::kCPU);
-
-// Register GPU version
+REGISTER_NDINDEX_TO_OFFSET_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_NDINDEX_TO_OFFSET_KERNEL(DeviceType::kCPU, int64_t);
 #ifdef WITH_CUDA
-REGISTER_NDINDEX_TO_OFFSET_KERNELS_WITH_DEVICE(DeviceType::kGPU);
+REGISTER_NDINDEX_TO_OFFSET_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_NDINDEX_TO_OFFSET_KERNEL(DeviceType::kGPU, int64_t);
 #endif
 
 }  // namespace user_op

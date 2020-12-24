@@ -26,10 +26,8 @@ REGISTER_USER_OP("offset_to_ndindex")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* offset = ctx->TensorDesc4ArgNameAndIndex("offset", 0);
       const TensorDesc* dims = ctx->TensorDesc4ArgNameAndIndex("dims", 0);
-      int64_t offset_num_axes = offset->shape().NumAxes();
-      int64_t dims_num_axes = dims->shape().NumAxes();
-      CHECK_GT_OR_RETURN(offset_num_axes, 0);
-      CHECK_GT_OR_RETURN(dims_num_axes, 0);
+      CHECK_GT_OR_RETURN(offset->shape().NumAxes(), 0);
+      CHECK_GT_OR_RETURN(dims->shape().NumAxes(), 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out->mut_shape() = dims->shape();
       *out->mut_data_type() = dims->data_type();
