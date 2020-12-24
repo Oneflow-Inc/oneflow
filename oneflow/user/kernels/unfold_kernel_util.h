@@ -63,16 +63,18 @@ UnfoldParams<INDEX_T, NDIM, SDIM>::UnfoldParams(const int64_t batch_size, const 
   output_dims[0] = batch_size;
   input_dims[kInputChannelDim] = channels;
   output_dims[kOutputChannelDim] = channels;
-  for (int i = 0; i < NDIM; ++i) {
-    this->elem_cnt *= spatial_dims[i];
-    this->dims[i] = spatial_dims[i];
-    this->padding[i] = padding_before[i];
-    this->stride[i] = stride[i];
-    this->dilation[i] = dilation[i];
-    input_dims[SDIM + i] = spatial_dims[i];
-    output_dims[SDIM + i] = kernel_size[i];
-    output_dims[SDIM + NDIM + i] =
-        (spatial_dims[i] + padding_before[i] + padding_after[i]) / kernel_size[i];
+  for (int d = 0; d < NDIM; ++d) {
+    this->elem_cnt *= spatial_dims[d];
+    this->dims[d] = spatial_dims[d];
+    this->padding[d] = padding_before[d];
+    this->stride[d] = stride[d];
+    this->dilation[d] = dilation[d];
+    input_dims[SDIM + d] = spatial_dims[d];
+    output_dims[SDIM + d] = kernel_size[d];
+    output_dims[SDIM + NDIM + d] = (spatial_dims[d] + padding_before[d] + padding_after[d]
+                                    - dilation[d] * (kernel_size[d] - 1) - 1)
+                                       / stride[d]
+                                   + 1;
   }
   in_index_helper = NdIndexOffsetHelper<INDEX_T, kInputNDim>(input_dims);
   out_index_helper = NdIndexOffsetHelper<INDEX_T, kOutputNDim>(output_dims);
@@ -95,11 +97,11 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
 #pragma unroll
 #endif
   // D,H,W spatial dim index transform
-  for (int64_t i = 0; i < NDIM; ++i) {
-    INDEX_T idx = index_a[SDIM + NDIM + i] * params.stride[i]
-                  + index_a[SDIM + i] * params.dilation[i] - params.padding[i];
-    out_bound = out_bound && (idx < 0 || idx >= params.dims[i]);
-    if (!out_bound) { index_b[i] = idx; }
+  for (int64_t d = 0; d < NDIM; ++d) {
+    INDEX_T idx = index_a[SDIM + NDIM + d] * params.stride[d]
+                  + index_a[SDIM + d] * params.dilation[d] - params.padding[d];
+    out_bound = out_bound && (idx < 0 || idx >= params.dims[d]);
+    if (!out_bound) { index_b[d] = idx; }
   }
   return out_bound;
 }

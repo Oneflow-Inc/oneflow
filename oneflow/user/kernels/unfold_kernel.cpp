@@ -251,6 +251,14 @@ class UnfoldKernelV2 final : public OpKernel {
     return spatial_dim;
   }
 
+#define SWITCH_ENTRY(func_name, itype, ndim, sdim) \
+  UnfoldKernelUtilV2<device_type, T, itype, ndim, sdim>::func_name
+  DEFINE_STATIC_SWITCH_FUNC(void, Forward, SWITCH_ENTRY,
+                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
+                            MAKE_NDIM_CTRV_SEQ(SPATIAL_NDIM_SEQ),
+                            MAKE_NDIM_CTRV_SEQ(SPATIAL_DIM_SEQ));
+#undef SWITCH_ENTRY
+
   void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -274,14 +282,6 @@ class UnfoldKernelV2 final : public OpKernel {
     const void* params = SwitchGetUnfoldParams(switch_case, state);
     SwitchForward(switch_case, ctx->device_ctx(), params, input->dptr<T>(), output->mut_dptr<T>());
   }
-
-#define SWITCH_ENTRY(func_name, itype, ndim, sdim) \
-  UnfoldKernelUtilV2<device_type, T, itype, ndim, sdim>::func_name
-  DEFINE_STATIC_SWITCH_FUNC(void, Forward, SWITCH_ENTRY,
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(SPATIAL_NDIM_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(SPATIAL_DIM_SEQ));
-#undef SWITCH_ENTRY
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
