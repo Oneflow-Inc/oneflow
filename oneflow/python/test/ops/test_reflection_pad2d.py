@@ -94,8 +94,8 @@ def _make_op_function(
         def op_function(x: tp.Numpy.Placeholder(input.shape, dtype=value_type)):
             with flow.scope.placement(device_type, "0:0"):
                 x += flow.get_variable(
-                    name="v1",
-                    shape=(1,),
+                    name="input",
+                    shape=input.shape,
                     dtype=value_type,
                     initializer=flow.zeros_initializer(),
                 )
@@ -115,8 +115,8 @@ def _make_op_function(
         def op_function(x: tp.Numpy.Placeholder(input.shape, dtype=flow.float32)):
             with flow.scope.placement(device_type, "0:0"):
                 x += flow.get_variable(
-                    name="v1",
-                    shape=(1,),
+                    name="input",
+                    shape=input.shape,
                     dtype=flow.float32,
                     initializer=flow.zeros_initializer(),
                 )
@@ -137,7 +137,7 @@ def _make_op_function(
         def op_function(x: tp.Numpy.Placeholder(input.shape, dtype=flow.float32)):
             with flow.scope.placement(device_type, "0:0"):
                 x_var = flow.get_variable(
-                    name="v1",
+                    name="input",
                     shape=input.shape,
                     dtype=flow.float32,
                     initializer=flow.constant_initializer(0),
