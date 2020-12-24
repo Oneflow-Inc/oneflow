@@ -36,7 +36,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-const int dim_max_ndims = 6;
+constexpr int kMaxDims = 6;
 template<typename IDX_T>
 using IndexHelper = NdIndexOffsetHelper<IDX_T, dim_max_ndims>;
 
