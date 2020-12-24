@@ -79,11 +79,18 @@ inline Maybe<std::string> GetSerializedInterUserJobInfo() {
   return ret;
 }
 
-inline Maybe<std::string> GetSerializedJobSet() {
-  const auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+inline Maybe<const JobSet&> GetJobSet() {
+  JobBuildAndInferCtxMgr* job_ctx_mgr;
+  if (*Global<bool, EagerExecution>::Get()) {
+    job_ctx_mgr = Global<EagerJobBuildAndInferCtxMgr>::Get();
+  } else {
+    job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  }
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  return PbMessage2TxtString(job_ctx_mgr->job_set());
+  return job_ctx_mgr->job_set();
 }
+
+inline Maybe<std::string> GetSerializedJobSet() { return PbMessage2TxtString(JUST(GetJobSet())); }
 
 inline Maybe<std::string> GetFunctionConfigDef() {
   std::string ret;

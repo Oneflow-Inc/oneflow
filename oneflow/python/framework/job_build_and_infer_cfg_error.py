@@ -32,7 +32,7 @@ class JobBuildAndInferCfgError(Exception):
         self.msg_ = self.error_cfg_.msg()
         self.error_cfg_.clear_msg()
 
-        def get_op_kernel_not_found_error_str(error_cfg):
+        def get_op_kernel_not_found_error_str():
             error_msg = str(self.error_cfg_.op_kernel_not_found_error())
             error_msg = error_msg.replace("\\", "")
             error_msg = error_msg.replace("op_kernels_not_found_debug_str:", "")
@@ -45,7 +45,7 @@ class JobBuildAndInferCfgError(Exception):
                 % error_msg
             )
 
-        def get_multiple_op_kernels_matched_error_str(error_cfg):
+        def get_multiple_op_kernels_matched_error_str():
             error_msg = str(self.error_cfg_.multiple_op_kernels_matched_error())
             error_msg = error_msg.replace("\\", "")
             error_msg = error_msg.replace("matched_op_kernels_debug_str:", "")
@@ -64,11 +64,11 @@ class JobBuildAndInferCfgError(Exception):
             "\n\nerror msg: \n\n\033[1;31m%s\033[0m" % str(self.error_summary_).strip()
         )
 
-        if error_cfg_.has_op_kernel_not_found_error():
-            ret += self.get_op_kernel_not_found_error_str(self.error_cfg_)
+        if self.error_cfg_.has_op_kernel_not_found_error():
+            ret += self.get_op_kernel_not_found_error_str()
             self.error_cfg_.clear_op_kernel_not_found_error()
-        elif error_cfg_.multiple_op_kernels_matched_error():
-            ret += self.get_multiple_op_kernels_matched_error_str(self.error_cfg_)
+        elif self.error_cfg_.has_multiple_op_kernels_matched_error():
+            ret += self.get_multiple_op_kernels_matched_error_str()
             self.error_cfg_.clear_multiple_op_kernels_matched_error()
 
         ret += "\n%s" % str(self.error_cfg_)
