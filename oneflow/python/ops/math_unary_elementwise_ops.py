@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
+import traceback
 from typing import Optional
 
 import oneflow as flow
@@ -1386,3 +1387,31 @@ def tanh(
 
     """
     return build_unary_elemwise_math_op("tanh", x, name)
+
+
+@oneflow_export("math.tanh_v2")
+def tanh_v2(
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""This operator computes the hyperbolic tangent value of Blob.
+
+    The equation is:
+
+    .. math::
+
+        out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
+
+    Args:
+        x (remote_blob_util.BlobDef): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The result Blob
+    """
+
+    print(
+        """WARNING: flow.math.tanh_v2 has been deprecated. Please replace it by flow.math.tanh.
+        """
+    )
+    print(traceback.format_stack()[-2])
+    return flow.math.tanh(x, name)

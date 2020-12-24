@@ -96,7 +96,7 @@ class TestActivations(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         #    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
-        arg_dict["activation_type"] = ["tanh"]
+        arg_dict["activation_type"] = ["relu", "sigmoid", "tanh"]
         arg_dict["shape"] = [(1024, 1024)]
         arg_dict["data_type"] = [flow.float, flow.double]
         for arg in GenArgList(arg_dict):
