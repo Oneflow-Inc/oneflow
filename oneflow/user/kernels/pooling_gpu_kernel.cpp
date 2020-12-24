@@ -16,7 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/utils/pooling_util.h"
+#include "oneflow/user/kernels/pooling_kernel_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {

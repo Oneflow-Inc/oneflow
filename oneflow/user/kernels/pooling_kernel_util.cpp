@@ -13,12 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/utils/pooling_util.h"
-#include "oneflow/core/operator/operator_util.h"
+#include "oneflow/user/kernels/pooling_kernel_util.h"
 
 namespace oneflow {
-
-namespace {
 
 std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
   std::vector<int32_t> vec;
@@ -45,8 +42,6 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
   }
   return vec;
 }
-
-}  // namespace
 
 
 PoolingParams3D::PoolingParams3D(
@@ -79,8 +74,6 @@ PoolingParams3D::PoolingParams3D(
   }
   batch_num_ = x_shape.At(0);
 }
-
-
 
 void PoolingParams3D::Reset(const ShapeView& x_shape) {
   x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
@@ -118,6 +111,5 @@ Shape PoolingParams3D::GetXShape5D() const {
 Shape PoolingParams3D::GetYShape5D() const {
   return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
 }
-
 
 }  // namespace oneflow
