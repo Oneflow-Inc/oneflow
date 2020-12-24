@@ -145,6 +145,19 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn() {
 
 }  // namespace
 
+REGISTER_USER_OP("unfold")
+    .Input("x")
+    .Output("y")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::vector<int32_t>>("padding_after")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .SetTensorDescInferFn(MakeFwTensorDescInferFn<2>())
+    .SetBatchAxisInferFn(FwBatchAxisInferFn)
+    .SetGetSbpFn(FwGetSbpFn);
+
 #define REGISTER_UNFOLD_OP_NDIMS(dim)                          \
   REGISTER_USER_OP("unfold_" + std::to_string(dim) + "d")      \
       .Input("x")                                              \
