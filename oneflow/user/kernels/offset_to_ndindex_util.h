@@ -49,7 +49,7 @@ struct OffsetToNdIndexFunctor final {
 #ifdef __CUDA_ARCH__
 template<typename T>
 __forceinline__ __device__ void checkOffsetGPU(T offset, T dims_elem_cnt) {
-  if (offset > dims_elem_cnt) {
+  if (offset >= dims_elem_cnt) {
     // Quit the Cuda kernel
     __trap();
   }
