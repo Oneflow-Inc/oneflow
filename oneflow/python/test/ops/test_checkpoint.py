@@ -21,7 +21,6 @@ import tempfile
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
-import traceback
 
 
 def refresh_session():
@@ -415,8 +414,4 @@ class TestCheckpoint(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    try:
         unittest.main()
-    except:
-        print(traceback.format_stack())
-        raise
