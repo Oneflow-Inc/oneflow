@@ -2895,19 +2895,19 @@ def bce_with_logits_loss(
 
     .. math:: 
 
-        out = -(Pos\_weight*Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i)) 
+        out = -weight*[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]    
     
     if reduction = "mean": 
 
     .. math:: 
         
-        out = -\frac{1}{n}\sum_{i=1}^n(Pos\_weight*Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i)
+        out = -\frac{weight}{n}\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))] 
 
     if reduction = "sum": 
     
     .. math:: 
         
-        out = -\sum_{i=1}^n(Pos\_weight*Target_i*log(Input_i) + (1-Target_i)*log(1-Input_i)
+        out = -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
     
     For example: 
 

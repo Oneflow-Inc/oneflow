@@ -50,16 +50,16 @@ def _compare_bce_with_logits_loss_np(
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     def np_bce_with_logits_loss(np_input, np_target, np_weight, np_pos_weight):
-        max_val = np.clip(-input, a_min=0, a_max=1e6)
+        max_val = np.clip(-np_input, a_min=0, a_max=1e6)
         if pos_weight.any():
-            log_weight = ((pos_weight - 1) * target) + 1
-            loss = (1 - target) * input
-            loss_1 = np.log(np.exp(-max_val) + np.exp(-input - max_val)) + max_val
+            log_weight = ((np_pos_weight - 1) * np_target) + 1
+            loss = (1 - np_target) * np_input
+            loss_1 = np.log(np.exp(-max_val) + np.exp(-np_input - max_val)) + max_val
             loss += log_weight * loss_1
         else:
-            loss = (1 - target) * input
+            loss = (1 - np_target) * np_input
             loss += max_val
-            loss += np.log(np.exp(-max_val) + np.exp(-input - max_val))
+            loss += np.log(np.exp(-max_val) + np.exp(-np_input - max_val))
 
         np_bce = loss * np_weight
 
