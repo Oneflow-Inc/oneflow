@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -328,15 +328,15 @@ __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T
     const I elem_id = i % instance_size;
     T dy_val = dy[i];
     T normalized_val = normalized[i];
-    gpu_atomic_add(&gamma_diff_sum_buf[elem_id], dy_val * normalized_val);
-    gpu_atomic_add(&beta_diff_sum_buf[elem_id], dy_val);
+    cuda::atomic::Add(&gamma_diff_sum_buf[elem_id], dy_val * normalized_val);
+    cuda::atomic::Add(&beta_diff_sum_buf[elem_id], dy_val);
     T gamma_val = gamma[elem_id];
     normalized_diff[i] = gamma_val * dy_val;
   }
   __syncthreads();
   for (I elem_id = tid; elem_id < instance_size; elem_id += blockDim.x) {
-    gpu_atomic_add(gamma_diff + elem_id, gamma_diff_sum_buf[elem_id]);
-    gpu_atomic_add(beta_diff + elem_id, beta_diff_sum_buf[elem_id]);
+    cuda::atomic::Add(gamma_diff + elem_id, gamma_diff_sum_buf[elem_id]);
+    cuda::atomic::Add(beta_diff + elem_id, beta_diff_sum_buf[elem_id]);
   }
 }
 
@@ -358,9 +358,9 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
     const I elem_id = i % instance_size;
     half dy_val = dy[i];
     half normalized_val = normalized[i];
-    gpu_atomic_add(&gamma_diff_sum_buf[elem_id],
-                   __half2float(dy_val) * __half2float(normalized_val));
-    gpu_atomic_add(&beta_diff_sum_buf[elem_id], __half2float(dy_val));
+    cuda::atomic::Add(&gamma_diff_sum_buf[elem_id],
+                      __half2float(dy_val) * __half2float(normalized_val));
+    cuda::atomic::Add(&beta_diff_sum_buf[elem_id], __half2float(dy_val));
     half gamma_val = gamma[elem_id];
     normalized_diff[i] = __hmul(gamma_val, dy_val);
   }
