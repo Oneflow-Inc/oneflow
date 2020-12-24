@@ -32,9 +32,11 @@ def _compare_bce_with_logits_loss_np(
     machine_ids,
     device_counts,
 ):
-    # random is clip to 0-1
-    input = np.random.random(size=input_shape).astype(np.float32)
-    target = np.random.random(size=target_shape).astype(np.float32)
+    # random samples from a uniform distribution over [0, 1)
+    input = (
+        np.random.random(size=input_shape).astype(np.float32) - 0.5
+    )  # change the distribution to [-0.5, 0.5)
+    target = np.random.random(size=target_shape).astype(np.float32) - 0.5
     pos_weight = np.random.random(size=pos_weight_shape).astype(np.float32)
     weight = np.random.random(size=weight_shape).astype(np.float32)
 
