@@ -52,7 +52,7 @@ struct ReflectionPad2dFunctor<DeviceType::kGPU, IN_T> final {
     int64_t src_num = n_channel * x_height * x_width;
     int64_t elem_num = n_batch * dest_num;
     DoCUDAReflectionPad2d<IN_T>
-        <<<SMBlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             src, dest, index_helper, elem_num, src_num, dest_num, y_height, y_width, x_height,
             x_width, pad_left, pad_top);
   }
@@ -69,7 +69,7 @@ void ReflectionPad2dFunctor<DeviceType::kGPU, float16>::operator()(
   int64_t src_num = n_channel * x_height * x_width;
   int64_t elem_num = n_batch * dest_num;
   DoCUDAReflectionPad2d<half>
-      <<<SMBlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,
           src_num, dest_num, y_height, y_width, x_height, x_width, pad_left, pad_top);
 }
@@ -84,7 +84,7 @@ struct ReflectionPad2dGradFunctor<DeviceType::kGPU, IN_T> final {
     int64_t src_num = n_channel * dy_height * dy_width;
     int64_t elem_num = n_batch * src_num;
     DoCUDAReflectionPad2dGrad<IN_T>
-        <<<SMBlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             src, dest, index_helper, elem_num, src_num, dest_num, dy_height, dy_width, dx_height,
             dx_width, pad_left, pad_top);
   }
@@ -101,7 +101,7 @@ void ReflectionPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
   int64_t src_num = n_channel * dy_height * dy_width;
   int64_t elem_num = n_batch * src_num;
   DoCUDAReflectionPad2dGrad<half>
-      <<<SMBlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,
           src_num, dest_num, dy_height, dy_width, dx_height, dx_width, pad_left, pad_top);
 }
