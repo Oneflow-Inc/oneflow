@@ -1345,8 +1345,8 @@ def tan(
     return build_unary_elemwise_math_op("tan", x, name)
 
 
-@oneflow_export("math.tanh_v2")
-def tanh_v2(
+@oneflow_export("math.tanh")
+def tanh(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
     r"""This operator computes the hyperbolic tangent value of Blob.
@@ -1374,15 +1374,15 @@ def tanh_v2(
 
 
         @flow.global_function()
-        def tanhv2_Job(x: tp.Numpy.Placeholder((3,))
+        def tanh_Job(x: tp.Numpy.Placeholder((3,))
         ) -> tp.Numpy:
-            return flow.math.tanh_v2(x)
+            return flow.math.tanh(x)
 
 
         x = np.array([-1, 0, 1]).astype(np.float32)
-        out = tanhv2_Job(x)
+        out = tanh_Job(x)
     
         # out [-0.7615942  0.         0.7615942]
 
     """
-    return build_unary_elemwise_math_op("tanh_v2", x, name)
+    return build_unary_elemwise_math_op("tanh", x, name)
