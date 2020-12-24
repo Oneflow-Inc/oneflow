@@ -36,15 +36,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreatePlacementSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id",
-                             [](std::shared_ptr<ParallelDesc> parallel_desc) {
-                               const auto& symbol_id = CHECK_JUST(parallel_desc->symbol_id());
-                               return symbol_id;
-                             })
-      .def_property_readonly(
-          "parallel_conf",
-          [](std::shared_ptr<ParallelDesc> parallel_desc) {
-            return std::make_shared<cfg::ParallelConf>(parallel_desc->parallel_conf());
-          })
+                             [](const ParallelDesc& x) { return x.symbol_id().GetOrThrow(); })
+      .def_property_readonly("parallel_conf", &ParallelDesc::cfg_parallel_conf)
       .def_property_readonly("parallel_num", &ParallelDesc::parallel_num)
       .def_property_readonly("device_tag", &ParallelDesc::device_tag)
       .def_property_readonly("machine_id2device_id_list",
