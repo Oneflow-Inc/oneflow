@@ -24,7 +24,12 @@ namespace user_op {
 template<typename T>
 struct Relu6Functor {
   OF_DEVICE_FUNC T operator()(T x) const {
-    return min(max(static_cast<T>(0), x), static_cast<T>(6));
+    if (x <= static_cast<T>(0))
+      return static_cast<T>(0);
+    else if (x >= static_cast<T>(6))
+      return static_cast<T>(6);
+    else
+      return x;
   }
 };
 
@@ -32,24 +37,6 @@ template<typename T>
 struct Relu6GradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return (x > static_cast<T>(0) && x < static_cast<T>(6)) ? dy : static_cast<T>(0);
-  }
-};
-
-// Add Forward float16 template
-template<>
-struct Relu6Functor<half> {
-  Relu6Functor<float> float_functor;
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-};
-
-// Add Backward float16 template
-template<>
-struct Relu6GradFunctor<half> {
-  Relu6GradFunctor<float> float_functor;
-  OF_DEVICE_FUNC half operator()(half x, half dy) const {
-    return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
 };
 

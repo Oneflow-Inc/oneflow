@@ -35,7 +35,13 @@ class CpuRelu6Kernel final : public OpKernel {
 
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      out_ptr[i] = std::min(std::max(static_cast<T>(0), in_ptr[i]), static_cast<T>(6));
+      // out_ptr[i] = std::min(std::max(static_cast<T>(0), in_ptr[i]), static_cast<T>(6));
+      if (in_ptr[i] <= static_cast<T>(0))
+        out_ptr[i] = static_cast<T>(0);
+      else if (in_ptr[i] >= static_cast<T>(6))
+        out_ptr[i] = static_cast<T>(6);
+      else
+        out_ptr[i] = in_ptr[i];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
