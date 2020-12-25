@@ -97,16 +97,6 @@ __global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) 
 }
 
 template<typename T>
-__global__ void TanHForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
-}
-
-template<typename T>
-__global__ void TanHBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * (1.0 - y[i] * y[i]); }
-}
-
-template<typename T>
 __global__ void ReluForwardGpu(const int n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
 }
@@ -538,17 +528,6 @@ KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                    const T* dy, T* dx) {
   SigmoidBackwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
-}
-
-KU_FLOATING_METHOD TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-  TanHForwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
-}
-
-KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                const T* dy, T* dx) {
-  TanHBackwardGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
