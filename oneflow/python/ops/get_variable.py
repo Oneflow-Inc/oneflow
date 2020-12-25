@@ -24,6 +24,8 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
@@ -41,8 +43,8 @@ def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
     dtype: Optional[dtype_util.dtype] = dtype_util.float32,
-    initializer: Optional[op_conf_util.InitializerConf] = None,
-    regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
