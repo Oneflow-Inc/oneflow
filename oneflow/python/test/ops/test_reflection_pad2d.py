@@ -268,7 +268,7 @@ def _gen_arg_dict(
         if device_type == "gpu":
             arg_dict["value_type"] = [
                 (np.float32, flow.float32),
-                (np.float16, flow.float16),
+                # (np.float16, flow.float16),
             ]
         else:
             arg_dict["value_type"] = [(np.float32, flow.float32)]
