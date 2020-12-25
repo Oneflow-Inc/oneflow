@@ -447,13 +447,6 @@ KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, 
                                    const T* dy, T* dx) {
   for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
 }
-KU_FLOATING_METHOD TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
-}
-KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                const T* dy, T* dx) {
-  for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
-}
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
