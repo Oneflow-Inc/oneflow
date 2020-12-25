@@ -22,6 +22,7 @@
 #include "OneFlow/OneFlowDialect.h"
 
 #include <google/protobuf/text_format.h>
+#include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <iostream>
@@ -60,22 +61,23 @@ class Importer {
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) { return failure(); }
-  const std::string &type_name = op.user_conf().op_type_name();
+  const ::oneflow::UserOpConf &user_conf = op.user_conf();
+  const std::string &type_name = user_conf.op_type_name();
   if (type_name == "relu") {
-    mlir::Value in = lbn2result.at(op.user_conf().input().at("in").s(0));
+    mlir::Value in = lbn2result.at(user_conf.input().at("in").s(0));
     mlir::Value created = b.create<oneflow::ReluOp>(unknownLoc, in).getResult();
-    const std::string &lbn = op.user_conf().output().at("out").s(0);
+    const std::string &lbn = user_conf.output().at("out").s(0);
     lbn2result.insert({lbn, created});
     return success();
   } else if (type_name == "constant") {
-    if (op.user_conf().attr().at("is_floating_value").at_bool()) {
+    if (user_conf.attr().at("is_floating_value").at_bool()) {
       mlir::Value created = b.create<oneflow::ConstantOp>(
-                                 unknownLoc, op.user_conf().attr().at("floating_value").at_double())
+                                 unknownLoc, user_conf.attr().at("floating_value").at_double())
                                 .getResult();
-      const std::string &lbn = op.user_conf().output().at("out").s(0);
+      const std::string &lbn = user_conf.output().at("out").s(0);
       lbn2result.insert({lbn, created});
     } else {
-      // b.create<ConstantOp>(unknownLoc, op.user_conf().attr().at("integer_value").at_int64());
+      // b.create<ConstantOp>(unknownLoc, user_conf.attr().at("integer_value").at_int64());
     }
     return success();
   } else {
