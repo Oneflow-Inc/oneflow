@@ -72,7 +72,7 @@ REGISTER_USER_OP("batch_gather")
             .PartialSum(user_op::OpArg("out", 0))
             .Build();
       } else {
-        std::shared_ptr<ErrorProto> err;
+        std::shared_ptr<cfg::ErrorProto> err;
         err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
                      + " (should be bigger than 1).");
         err->mutable_check_failed_error();

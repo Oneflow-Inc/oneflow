@@ -29,6 +29,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
@@ -51,13 +52,14 @@ def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
         ret = _InterpretGlobalFunction(function_desc, args)
         c_api_util.CurJobBuildAndInferCtx_Complete()
+        session_ctx.GetDefaultSession().UpdateInfo4InterfaceOp()
     return ret
 
 
 @contextmanager
 def InterpretScope(session, function_desc, config_proto):
     job_conf = function_desc.job_config_proto
-    job_conf.job_name = function_desc.job_func.__name__
+    job_conf.set_job_name(function_desc.job_func.__name__)
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
@@ -74,7 +76,7 @@ def InterpretScope(session, function_desc, config_proto):
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
     scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
-    with _JobBuildAndInferCtx(job_conf.job_name), distribute_strategy:
+    with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
             with scope_util.ScopeContext(scope):

@@ -159,7 +159,7 @@ def LazyConsistentWatch(blob_watched, handler):
     op_conf.name = id_util.UniqueStr("ForeignWatch_")
     setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
     op_conf.foreign_watch_conf.handler_uuid = handler_uuid
-    device_name = blob_watched.parallel_conf.device_name[0]
+    device_name = blob_watched.parallel_conf.device_name(0)
     with oneflow.scope.placement("cpu", "0:0"):
         compile_context.CurJobAddOp(op_conf)
     watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)

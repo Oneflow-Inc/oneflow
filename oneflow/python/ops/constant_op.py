@@ -83,8 +83,12 @@ def constant(
 
     if isinstance(value, float):
         is_floating_value = True
+        floating_value = float(value)
+        integer_value = int(0)
     else:
         is_floating_value = False
+        floating_value = float(0)
+        integer_value = int(value)
     if shape is not None:
         assert isinstance(shape, (list, tuple))
     else:
@@ -93,8 +97,8 @@ def constant(
         flow.user_op_builder(name)
         .Op("constant")
         .Output("out")
-        .Attr("floating_value", float(value))
-        .Attr("integer_value", int(value))
+        .Attr("floating_value", floating_value)
+        .Attr("integer_value", integer_value)
         .Attr("is_floating_value", is_floating_value)
         .Attr("dtype", dtype)
         .Attr("shape", shape)
