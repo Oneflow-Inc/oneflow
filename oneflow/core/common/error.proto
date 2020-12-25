@@ -109,6 +109,8 @@ message RwMutexedObjectNotFoundError { }
 
 message UnknownError { }
 
+message CompileOptionWrongError { }
+
 message ErrorStackFrame {
   required string location = 1;
   required string function = 2;
@@ -155,5 +157,6 @@ message ErrorProto {
     RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
     SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
     UnknownError unknown_error = 900;
+    CompileOptionWrongError compile_option_wrong_error = 950;
   }
 }

@@ -242,6 +242,12 @@ Error Error::SymbolIdUninitialized() {
   return error;
 }
 
+Error Error::CompileOptionWrong() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_compile_option_wrong_error();
+  return error;
+}
+
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
   *MutThreadLocalError() = error;
   CHECK(error->has_error_type());

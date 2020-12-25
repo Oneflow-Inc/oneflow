@@ -296,6 +296,10 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 #define OF_UNIMPLEMENTED() \
   return Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
 
+#define OF_COMPLIEOPTIONWRONG()                                                    \
+  return Error::CompileOptionWrong().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
+         << " Compile option wrong: "
+
 #define CHECK_OR_RETURN(expr)                                                    \
   if (!(expr))                                                                   \
   return Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
