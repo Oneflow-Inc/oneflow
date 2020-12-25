@@ -18,10 +18,13 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/symbol_id_cache.h"
 
 namespace oneflow {
 
@@ -114,6 +117,18 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
+// TODO(lixinqi): Refactor this function after symbol::IdCache and symbol::Storage merged
+template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
+Maybe<void> AddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
+  SymbolPbT symbol_pb;
+  symbol_conf.ToProto(&symbol_pb);
+  JUST(Global<symbol::Storage<SymbolT>>::Get()->Add(symbol_id, symbol_pb));
+  auto* id_cache = Global<symbol::IdCache<SymbolConfT>>::Get();
+  CHECK_OR_RETURN(!id_cache->Has(symbol_conf));
+  JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
+  return Maybe<void>::Ok();
+}
+
 Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* job,
                                            const std::function<Maybe<void>()>& Handler) {
   HashSet<std::string> exists_op_names;
@@ -142,7 +157,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
       symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
       return Maybe<void>::Ok();
     }));
-    Global<ForeignCallback>::Get()->AddScopeToPyStorage(symbol_id, new_scope);
+    JUST(AddSymbol<cfg::ScopeProto, ScopeProto, Scope>(symbol_id, *new_scope));
     return symbol_id;
   };
   for (const auto& pair : scope_id2op_names) {

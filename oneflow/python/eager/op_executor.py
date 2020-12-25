@@ -237,7 +237,7 @@ def _Assign(var_blob_object, value_blob_object):
 
 
 def _BuildNotMirroredScope(old_scope, builder):
-    return old_scope.BuildWithNewIsMirrored(builder, False)
+    return builder.BuildScopeWithNewIsMirrored(old_scope, False)
 
 
 def _EagerRunModelInit(var_op_conf):

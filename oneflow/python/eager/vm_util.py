@@ -31,9 +31,10 @@ import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow.python.framework.parallel_conf_util as parallel_conf_util
+import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.placement_context as placement_ctx
@@ -444,15 +445,83 @@ class InstructionsBuilder(object):
 
         return oneflow_api.GetPlacementSymbol(parallel_conf)
 
+    def BuildInitialScope(
+        self, session_id, job_conf, device_tag, machine_device_ids, is_mirrored,
+    ):
+        scope_proto = scope_cfg.ScopeProto()
+        scope_proto.set_session_id(session_id)
+        job_conf_sym = self.GetJobConfSymbol(job_conf)
+        scope_proto.set_job_desc_symbol_id(job_conf_sym.symbol_id)
+        parallel_conf = parallel_conf_util.MakeParallelConf(
+            device_tag, machine_device_ids
+        )
+        device_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        scope_proto.set_device_parallel_desc_symbol_id(
+            device_parallel_desc_sym.symbol_id
+        )
+        parallel_conf = parallel_conf_util.MakeParallelConf("cpu", machine_device_ids)
+        host_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+        scope_proto.set_host_parallel_desc_symbol_id(host_parallel_desc_sym.symbol_id)
+        if is_mirrored:
+            scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
+        else:
+            scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
+        return self.GetScopeSymbol(scope_proto, None)
+
+    def BuildScopeWithNewParallelDesc(self, scope, device_tag, machine_device_ids):
+        if isinstance(machine_device_ids, str):
+            machine_device_ids = [machine_device_ids]
+
+        def SetScopeProto(scope_proto):
+            parallel_conf = parallel_conf_util.MakeParallelConf(
+                device_tag, machine_device_ids
+            )
+            device_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+            parallel_conf = parallel_conf_util.MakeParallelConf(
+                "cpu", machine_device_ids
+            )
+            host_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
+            scope_proto.set_device_parallel_desc_symbol_id(
+                device_parallel_desc_sym.symbol_id
+            )
+            scope_proto.set_host_parallel_desc_symbol_id(
+                host_parallel_desc_sym.symbol_id
+            )
+
+        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
+
+    def BuildScopeWithNewParallelConf(self, scope, parallel_conf):
+        tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+            parallel_conf
+        )
+        return self.BuildScopeWithNewParallelDesc(scope, *tag_and_dev_ids)
+
+    def BuildScopeWithNewIsMirrored(self, scope, is_mirrored):
+        def SetScopeProto(scope_proto):
+            if is_mirrored:
+                scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
+            else:
+                scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
+
+        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
+
+    def BuildScopeWithNewScopeName(self, scope, scope_name):
+        def SetScopeProto(scope_proto):
+            scope_proto.add_scope_op_name_prefixes(scope_name)
+
+        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
+
+    def BuildScopeByProtoSetter(self, scope, setter):
+        scope_proto = scope.MakeChildScopeProto()
+        setter(scope_proto)
+        return self.GetScopeSymbol(scope_proto, scope)
+
     def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
+        if oneflow_api.HasScopeSymbol(scope_proto):
+            return oneflow_api.GetScopeSymbol(scope_proto)
         symbol_id = self._NewSymbolId4Scope(scope_proto)
-        serialized_scope_proto = str(scope_proto)
-        if symbol_storage.HasSymbol4SerializedScopeProto(serialized_scope_proto):
-            return symbol_storage.GetSymbol4SerializedScopeProto(serialized_scope_proto)
-        symbol = scope_symbol.ScopeSymbol(symbol_id, scope_proto, parent_scope_symbol)
-        symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4SerializedScopeProto(serialized_scope_proto, symbol)
-        return symbol
+        oneflow_api.AddScopeSymbol(symbol_id, scope_proto)
+        return oneflow_api.GetScopeSymbol(symbol_id, scope_proto)
 
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
         if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
@@ -497,7 +566,7 @@ class InstructionsBuilder(object):
 
     def NewOpKernelObject(self, op_conf):
         assert op_conf.HasField("scope_symbol_id")
-        scope_symbol = symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
+        scope_symbol = oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
         op_conf_sym = self._GetOpConfSymbol(op_conf)
         parallel_desc_sym_id = c_api_util.GetOpParallelSymbolId(op_conf)
         parallel_desc_symbol = oneflow_api.GetPlacementSymbol(parallel_desc_sym_id)
@@ -611,7 +680,7 @@ class InstructionsBuilder(object):
 
         op_conf = op_attribute.op_conf
         assert op_conf.HasField("scope_symbol_id"), op_conf
-        scope_symbol = symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
+        scope_symbol = oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
         job_desc_sym = scope_symbol.job_desc_symbol
         op_conf_sym = self._GetOpConfSymbol(op_conf)
         op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
@@ -33,6 +34,12 @@ template<>
 Maybe<JobDesc> NewSymbol<JobDesc>(int64_t symbol_id,
                                   const typename ConstructArgType4Symbol<JobDesc>::type& data) {
   return JobDesc::New(symbol_id, data);
+}
+
+template<>
+Maybe<Scope> NewSymbol<Scope>(int64_t symbol_id,
+                              const typename ConstructArgType4Symbol<Scope>::type& data) {
+  return Scope::New(symbol_id, data);
 }
 
 }  // namespace detail

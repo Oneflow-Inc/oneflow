@@ -31,6 +31,9 @@ class JobConfigProto;
 class OpNodeSignatureDesc;
 class OpNodeSignature;
 
+class Scope;
+class ScopeProto;
+
 namespace symbol {
 
 template<typename T>
@@ -53,6 +56,11 @@ struct ConstructArgType4Symbol<JobDesc> final {
   using type = JobConfigProto;
 };
 
+template<>
+struct ConstructArgType4Symbol<Scope> final {
+  using type = ScopeProto;
+};
+
 namespace detail {
 
 template<typename T>
@@ -67,6 +75,10 @@ Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
 template<>
 Maybe<JobDesc> NewSymbol<JobDesc>(int64_t symbol_id,
                                   const typename ConstructArgType4Symbol<JobDesc>::type& data);
+
+template<>
+Maybe<Scope> NewSymbol<Scope>(int64_t symbol_id,
+                              const typename ConstructArgType4Symbol<Scope>::type& data);
 
 }  // namespace detail
 
