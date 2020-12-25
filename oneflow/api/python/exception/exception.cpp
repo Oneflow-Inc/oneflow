@@ -14,17 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/core/common/exception.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/id_util_api.h"
 
 namespace py = pybind11;
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("NewLogicalObjectId", &NewLogicalObjectId);
-  m.def("NewLogicalSymbolId", &NewLogicalSymbolId);
+namespace oneflow {
 
-  m.def("NewPhysicalObjectId", &NewPhysicalObjectId);
-  m.def("NewPhysicalSymbolId", &NewPhysicalSymbolId);
+ONEFLOW_API_PYBIND11_MODULE("exception", m) {
+  m.def("GetThreadLocalLastError", &ThreadLocalError);
+  py::register_exception<oneflow::Exception>(m, "Exception");
+#define REGISTER_EXCEPTION(cls) \
+  py::register_exception<oneflow::OF_PP_CAT(cls, Exception)>(m, OF_PP_STRINGIZE(cls) "Exception");
 
-  m.def("NewTokenId", &NewTokenId);
+  OF_PP_FOR_EACH_TUPLE(REGISTER_EXCEPTION, EXCEPTION_SEQ)
+
+#undef REGISTER_EXCEPTION
 }
+
+}  // namespace oneflow

@@ -18,25 +18,16 @@ limitations under the License.
 
 #include "oneflow/api/python/session/session.h"
 
-inline std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsSessionInited() {
-  return oneflow::IsSessionInited().GetDataAndErrorProto(false);
+inline bool IsSessionInited() { return oneflow::IsSessionInited().GetOrThrow(); }
+
+inline void InitLazyGlobalSession(const std::string& config_proto_str) {
+  return oneflow::InitLazyGlobalSession(config_proto_str).GetOrThrow();
 }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> InitLazyGlobalSession(
-    const std::string& config_proto_str) {
-  return oneflow::InitLazyGlobalSession(config_proto_str).GetDataAndErrorProto();
-}
+inline void DestroyLazyGlobalSession() { return oneflow::DestroyLazyGlobalSession().GetOrThrow(); }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> DestroyLazyGlobalSession() {
-  return oneflow::DestroyLazyGlobalSession().GetDataAndErrorProto();
-}
+inline void StartLazyGlobalSession() { return oneflow::StartLazyGlobalSession().GetOrThrow(); }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> StartLazyGlobalSession() {
-  return oneflow::StartLazyGlobalSession().GetDataAndErrorProto();
-}
-
-inline std::shared_ptr<oneflow::cfg::ErrorProto> StopLazyGlobalSession() {
-  return oneflow::StopLazyGlobalSession().GetDataAndErrorProto();
-}
+inline void StopLazyGlobalSession() { return oneflow::StopLazyGlobalSession().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_SESSION_SESSION_API_H_
