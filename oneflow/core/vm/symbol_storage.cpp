@@ -29,15 +29,12 @@ Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
   return ParallelDesc::New(symbol_id, data);
 }
 
-<<<<<<< HEAD
 template<>
 Maybe<JobDesc> NewSymbol<JobDesc>(int64_t symbol_id,
                                   const typename ConstructArgType4Symbol<JobDesc>::type& data) {
   return JobDesc::New(symbol_id, data);
 }
 
-=======
->>>>>>> 4e01d184c6801ba727f244aad8bd361e11e75f1a
 }  // namespace detail
 
 }  // namespace symbol
