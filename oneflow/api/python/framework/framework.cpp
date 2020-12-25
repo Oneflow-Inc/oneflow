@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/api/python/framework/framework_api.h"
 
 namespace py = pybind11;
@@ -34,5 +35,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
         &GetMachine2DeviceIdListOFRecordFromParallelConf);
 
+  m.def("EagerExecutionEnabled", []() { return oneflow::EagerExecutionEnabled(); });
   m.def("LoadLibraryNow", &LoadLibraryNow);
 }

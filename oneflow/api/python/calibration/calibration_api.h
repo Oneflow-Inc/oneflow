@@ -18,12 +18,10 @@ limitations under the License.
 
 #include "oneflow/api/python/calibration/calibration.h"
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> CacheInt8Calibration() {
-  return oneflow::CacheInt8Calibration().GetDataAndErrorProto();
-}
+inline void CacheInt8Calibration() { return oneflow::CacheInt8Calibration().GetOrThrow(); }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> WriteInt8Calibration(const std::string& path) {
-  return oneflow::WriteInt8Calibration(path).GetDataAndErrorProto();
+inline void WriteInt8Calibration(const std::string& path) {
+  return oneflow::WriteInt8Calibration(path).GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_ENV_H_
