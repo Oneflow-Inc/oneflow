@@ -36,8 +36,6 @@ int GetNumBlocks(int64_t elem_cnt) {
   return num_blocks;
 }
 
-constexpr int kPaddingValue = 0;
-
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
 __global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, const T* in, T* out) {
   CUDA_1D_KERNEL_LOOP_T(INDEX_T, out_offset, params.elem_cnt) {
@@ -49,7 +47,7 @@ __global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, cons
       INDEX_T in_offset = params.in_index_helper.NdIndexToOffset(in_index);
       out[out_offset] = in[in_offset];
     } else {
-      out[out_offset] = static_cast<T>(kPaddingValue);
+      out[out_offset] = static_cast<T>(kUnfoldPaddingValue);
     }
   }
 }

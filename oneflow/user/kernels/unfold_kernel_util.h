@@ -26,6 +26,8 @@ namespace oneflow {
 
 namespace user_op {
 
+constexpr int kUnfoldPaddingValue = 0;
+
 // NDIM range: (1, 2, 3)
 // SDIM range: (1, 2), 1 indicates channels_last, 2 indicates channels_first
 template<typename INDEX_T, int NDIM, int SDIM>
