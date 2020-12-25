@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/square_sum_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
