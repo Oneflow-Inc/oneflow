@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 
 #include <float.h>
 
@@ -53,8 +53,8 @@ __global__ void ReduceMaxMinPerLayer(const T *input_ptr, const int64_t elements,
   }
 
   if (tid == 0) {
-    gpu_atomic_max(max_ptr, shared_max[0]);
-    gpu_atomic_max(min_ptr, shared_min[0]);
+    cuda::atomic::Max(max_ptr, shared_max[0]);
+    cuda::atomic::Max(min_ptr, shared_min[0]);
   }
 }
 
@@ -92,8 +92,8 @@ __global__ void ReduceMaxMinPerChannel(const T *input_ptr, const int64_t element
     }
 
     if (tid == 0) {
-      gpu_atomic_max(&max_ptr[cur_channel], shared_max[0]);
-      gpu_atomic_max(&min_ptr[cur_channel], shared_min[0]);
+      cuda::atomic::Max(&max_ptr[cur_channel], shared_max[0]);
+      cuda::atomic::Max(&min_ptr[cur_channel], shared_min[0]);
     }
 
     // __syncthreads();
