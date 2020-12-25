@@ -104,7 +104,7 @@ def _make_op_function(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
                 ).minimize(out)
 
-                flow.watch_diff(x, _compare_diff)
+            flow.watch_diff(x, _compare_diff)
             return out
 
         return op_function
@@ -126,7 +126,7 @@ def _make_op_function(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
                 ).minimize(y_fp32)
 
-                flow.watch_diff(x, _compare_diff)
+            flow.watch_diff(x, _compare_diff)
             return y_fp32
 
         return op_function
@@ -152,7 +152,7 @@ def _make_op_function(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
                 ).minimize(y_fp32)
 
-                flow.watch_diff(x_fp32, _compare_diff)
+            flow.watch_diff(x_fp32, _compare_diff)
             return y_fp32
 
         return op_function
