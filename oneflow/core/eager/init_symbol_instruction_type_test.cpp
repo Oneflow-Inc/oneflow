@@ -46,7 +46,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = vm::IdUtil::NewLogicalSymbolId();
-  Global<vm::SymbolStorage<T>>::Get()->Add(symbol_id, SerializedT());
+  CHECK_JUST(Global<symbol::Storage<T>>::Get()->Add(symbol_id, SerializedT()));
   list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);

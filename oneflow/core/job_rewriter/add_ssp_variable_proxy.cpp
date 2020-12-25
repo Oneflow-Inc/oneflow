@@ -115,14 +115,14 @@ class AddSspVariableProxyPass final : public JobPass {
   }
 
   Maybe<bool> IsInOptimizerPass(int64_t scope_symbol_id) const {
-    const auto& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    const auto& scope = JUST(Global<symbol::Storage<Scope>>::Get()->MaybeGet(scope_symbol_id));
     return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
   }
 
   Maybe<void> AddSspVarProxyOp(const LogicalBlobId& old_var_out_lbi, int64_t scope_symbol_id,
                                JobBuilder* job_builder, std::string* ref_lbn,
                                std::string* value_lbn) const {
-    const Scope& scope = JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(scope_symbol_id));
+    const Scope& scope = JUST(Global<symbol::Storage<Scope>>::Get()->MaybeGet(scope_symbol_id));
     int64_t buffer_size = 0;
     {
       int64_t num_stages = scope.Int64("ssp_num_stages");

@@ -102,7 +102,7 @@ Maybe<void> Operator::InferParallelSignatureIf() {
 }
 
 Maybe<void> Operator::InferParallelSignature() {
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();

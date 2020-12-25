@@ -39,19 +39,20 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
+import oneflow_api
 import inspect
 
 
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(function_desc)
-        c_api_util.CurJobBuildAndInferCtx_Complete()
+        oneflow_api.CurJobBuildAndInferCtx_Complete()
 
 
 def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
         ret = _InterpretGlobalFunction(function_desc, args)
-        c_api_util.CurJobBuildAndInferCtx_Complete()
+        oneflow_api.CurJobBuildAndInferCtx_Complete()
         session_ctx.GetDefaultSession().UpdateInfo4InterfaceOp()
     return ret
 
@@ -137,7 +138,7 @@ def _JobBuildAndInferCtx(job_name):
     try:
         yield
     finally:
-        c_api_util.JobBuildAndInferCtx_Close()
+        oneflow_api.JobBuildAndInferCtx_Close()
 
 
 def _GetArgDefault(func):
