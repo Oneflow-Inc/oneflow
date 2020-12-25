@@ -43,9 +43,7 @@ __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
-    if (label >= 0 && label < num_classes) {
-      y[i] = __hneg(SafeLog<half>(x[i * num_classes + label]));
-    }
+    if (label >= 0 && label < num_classes) { y[i] = __hneg(SafeLog(x[i * num_classes + label])); }
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -77,8 +75,8 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
     if (label >= 0 && label < num_classes) {
-      dx[i * num_classes + label] = __hneg(
-          __hdiv(__float2half(dy[i]), MaxWithLogThreshold<half>(x[i * num_classes + label])));
+      dx[i * num_classes + label] =
+          __hneg(__hdiv(__float2half(dy[i]), MaxWithLogThreshold(x[i * num_classes + label])));
     }
   }
 #else
