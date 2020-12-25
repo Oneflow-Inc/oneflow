@@ -78,6 +78,8 @@ class Error final {
   // symbol
   static Error SymbolIdUninitialized();
 
+  static Error CompileOptionWrong();
+
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;
 };

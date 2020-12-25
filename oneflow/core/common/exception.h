@@ -66,7 +66,8 @@ class Exception : public std::exception {
   OF_PP_MAKE_TUPLE_SEQ(UnknownJobBuildAndInfer)   \
   OF_PP_MAKE_TUPLE_SEQ(RwMutexedObjectNotFound)   \
   OF_PP_MAKE_TUPLE_SEQ(SymbolIdUninitialized)     \
-  OF_PP_MAKE_TUPLE_SEQ(Unknown)
+  OF_PP_MAKE_TUPLE_SEQ(Unknown)                   \
+  OF_PP_MAKE_TUPLE_SEQ(CompileOptionWrong)
 
 #define DEFINE_EXCEPTION_CLASS(cls)                                         \
   class OF_PP_CAT(cls, Exception) : public Exception {                      \
