@@ -212,6 +212,9 @@ def _test_slice_dynamic(
     slice_func = _make_slice_dynamic_func(slice_args, static_shape, dtype, func_cfg)
     of_outputs = slice_func([input])
     for out, of_out in zip(outputs, of_outputs):
+        print("xxxxxxxxxxxxxxxxxxx")
+        print(of_out[0].shape)
+        print(out.shape)
         test_case.assertTrue(np.array_equal(out, of_out[0]))
 
 
@@ -499,6 +502,14 @@ class TestSliceV2(flow.unittest.TestCase):
         slice_args = [[(None, None, None), (2, None, None)]]
         outputs = [input[:, 2:]]
         _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
+
+    def test_slice_dynamic_empty_blob(test_case):
+        input = np.random.rand(5, 0, 5)
+        slice_args = [[(None, None, None), (None, None, None), (2, 3, None)]]
+        outputs = [input[:, :, 2:3]]
+        _test_slice_dynamic(
+            test_case, input, slice_args, outputs, static_shape=(8, 2, 10)
+        )
 
     """This test case will raise fatal error, error infomation is like below:
     F0808 00:20:19.768465 23960 user_kernel.cpp:451] Check failed: shape_view.elem_cnt() <= static_shape.elem_cnt() (12 vs. 9)
