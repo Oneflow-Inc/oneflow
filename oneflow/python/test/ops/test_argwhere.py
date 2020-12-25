@@ -53,22 +53,19 @@ def _of_argwhere(x, index_dtype, device_type="gpu", device_num=1, dynamic=False)
     out_data_type = _np_dtype_to_of_dtype(index_dtype)
 
     flow.clear_default_session()
-    if device_num > 1:
-        if device_type == "gpu":
-            flow.config.gpu_device_num(device_num)
-        elif device_type == "cpu":
-            flow.config.cpu_device_num(device_num)
-            flow.config.gpu_device_num(0)
-        else:
-            raise ValueError
+    if device_type == "gpu":
+        flow.config.gpu_device_num(device_num)
+    elif device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        raise ValueError
 
+    assert device_num > 0
     func_config = flow.FunctionConfig()
     func_config.default_data_type(data_type)
-
-    def do_argwhere(x):
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
-            y = flow.argwhere(x, dtype=out_data_type)
-        return y
+    func_config.default_placement_scope(
+        flow.scope.placement(device_type, "0:0-{}".format(device_num - 1))
+    )
 
     if dynamic is True:
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -77,7 +74,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", device_num=1, dynamic=False)
         def argwhere_fn(
             x: flow.typing.ListNumpy.Placeholder(x.shape, dtype=data_type)
         ) -> flow.typing.ListNumpy:
-            return do_argwhere(x)
+            return flow.argwhere(x, dtype=out_data_type)
 
         return argwhere_fn([x] * device_num)[0]
 
@@ -88,7 +85,7 @@ def _of_argwhere(x, index_dtype, device_type="gpu", device_num=1, dynamic=False)
         def argwhere_fn(
             x: flow.typing.Numpy.Placeholder(x.shape, dtype=data_type)
         ) -> flow.typing.ListNumpy:
-            return do_argwhere(x)
+            return flow.argwhere(x, dtype=out_data_type)
 
         return argwhere_fn(x)[0]
 
@@ -103,6 +100,14 @@ def _compare_with_np(
     dynamic=False,
     verbose=False,
 ):
+    if verbose:
+        print("shape:", shape)
+        print("value_dtype:", value_dtype)
+        print("index_dtype:", index_dtype)
+        print("device_type:", device_type)
+        print("device_num:", device_num)
+        print("dynamic:", dynamic)
+
     x = _random_input(shape, value_dtype)
     y = np.argwhere(x)
     of_y = _of_argwhere(
