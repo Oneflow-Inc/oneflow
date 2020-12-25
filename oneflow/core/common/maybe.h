@@ -296,7 +296,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 #define OF_UNIMPLEMENTED() \
   return Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
 
-#define OF_COMPLIEOPTIONWRONG()                                                    \
+#define OF_COMPLIE_OPTION_EEEOR()                                                  \
   return Error::CompileOptionWrong().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
          << " Compile option wrong: "
 
