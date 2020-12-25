@@ -26,15 +26,8 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser, mlir::Operat
 static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
 void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, double value) {
-  auto dataType = RankedTensorType::get({}, builder.getF64Type());
-  auto dataAttribute = DenseElementsAttr::get(dataType, value);
-  ConstantOp::build(builder, state, dataType, dataAttribute);
-}
-
-static void print(mlir::OpAsmPrinter &printer, ConstantOp op) {
-  printer << "oneflow.constant ";
-  printer.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"value"});
-  printer << op.value();
+  ConstantOp::build(builder, state, RankedTensorType::get({}, builder.getF32Type()),
+                    builder.getFloatAttr(builder.getF64Type(), value));
 }
 
 #define GET_OP_CLASSES
