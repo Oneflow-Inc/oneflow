@@ -940,7 +940,6 @@ class StaticLossScalePolicy(LossScalePolicy):
                 loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
                     labels, logits, name="softmax_loss"
                 )
-                
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
             static_loss_scale = flow.optimizer.loss_scale.static_loss_scale(2)
             flow.optimizer.SGD(lr_scheduler, loss_scale_policy=static_loss_scale).minimize(loss)
@@ -982,7 +981,6 @@ class DynamicLossScalePolicy(LossScalePolicy):
                 loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
                     labels, logits, name="softmax_loss"
                 )
-            
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
             dynamic_loss_scale = flow.optimizer.loss_scale.dynamic_loss_scale()
             flow.optimizer.SGD(lr_scheduler, loss_scale_policy=dynamic_loss_scale).minimize(loss)
@@ -1640,8 +1638,21 @@ class LazyAdam(Optimizer):
 
 @oneflow_export("optimizer.LAMB")
 class LAMB(Optimizer):
+    r"""The LAMB (Layer-wise Adaptive Moments optimizer for Batching training) Optimizer.
 
-    r"""
+    LAMB Optimizer is designed to scale up the batch size of training without losing accuracy, 
+
+    The equation is: 
+
+    .. math:: 
+
+        & m_t = \beta_1*m_{t-1} + (1-\beta_1)*g_t 
+
+        & v_t = \beta_2*v_{t-1} + (1-\beta_2)*{g_t}^2 
+
+        & r_t = \frac{m_t}{\sqrt{v_t}+\epsilon}
+        
+        & w_t = w_{t-1} - learning\_rate*\frac{||w_{t-1}||}{||r_t+*w_{t-1}||}*(r_t+w_{t-1})
 
     Args:
         lr_scheduler (LrScheduler): The scheduler of learning rate.
@@ -1652,6 +1663,25 @@ class LAMB(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+
+    For example: 
+
+    .. code-block:: python 
+        
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+            flow.optimizer.LAMB(lr_scheduler).minimize(loss)
+            
+            return loss
 
     """
 
