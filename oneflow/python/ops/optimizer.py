@@ -498,6 +498,20 @@ class PiecewiseScalingScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
+@oneflow_export("optimizer.PolynomialSchduler")
+@oneflow_deprecate()
+def deprecated_polynomial_schduler():
+    print(
+        "WARNING:",
+        "oneflow.optimizer.PolynomialSchduler",
+        "will be removed in the future, use {} instead.".format(
+            "oneflow.optimizer.PolynomialScheduler"
+        ),
+    )
+    print(traceback.format_stack()[-2])
+    return PolynomialScheduler()
+
+
 @oneflow_export("optimizer.PolynomialScheduler")
 class PolynomialScheduler(LrScheduler):
     r"""This operator creates a polynomial decayed learning rate scheduler.
