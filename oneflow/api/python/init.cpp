@@ -59,7 +59,9 @@ PYBIND11_MODULE(oneflow_api, m) {
   using IntList = std::vector<int64_t>;
   using Int2IntListMap = std::unordered_map<int64_t, std::shared_ptr<IntList>>;
 
-  py::class_<IntList, std::shared_ptr<IntList>>(m, "IntList")
+  py::module_ oneflow_api_util = m.def_submodule("util");
+
+  py::class_<IntList, std::shared_ptr<IntList>>(oneflow_api_util, "IntList")
       .def(py::init<>())
       .def("__len__", [](const std::shared_ptr<IntList>& v) { return v->size(); })
       .def("items",
@@ -73,7 +75,7 @@ PYBIND11_MODULE(oneflow_api, m) {
         return *lhs == *rhs;
       });
 
-  py::class_<Int2IntListMap, std::shared_ptr<Int2IntListMap>>(m, "Int2IntListMap")
+  py::class_<Int2IntListMap, std::shared_ptr<Int2IntListMap>>(oneflow_api_util, "Int2IntListMap")
       .def(py::init<>())
       .def("__len__", [](const std::shared_ptr<Int2IntListMap>& v) { return v->size(); })
       .def("items",
