@@ -13,18 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/id_util_api.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/job/parallel_desc.h"
 
-namespace py = pybind11;
+namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("NewLogicalObjectId", &NewLogicalObjectId);
-  m.def("NewLogicalSymbolId", &NewLogicalSymbolId);
+namespace symbol {
 
-  m.def("NewPhysicalObjectId", &NewPhysicalObjectId);
-  m.def("NewPhysicalSymbolId", &NewPhysicalSymbolId);
+namespace detail {
 
-  m.def("NewTokenId", &NewTokenId);
+template<>
+Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data) {
+  return ParallelDesc::New(symbol_id, data);
 }
+
+}  // namespace detail
+
+}  // namespace symbol
+
+}  // namespace oneflow

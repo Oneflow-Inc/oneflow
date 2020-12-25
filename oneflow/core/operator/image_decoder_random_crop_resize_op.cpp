@@ -104,7 +104,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     if (device_type() == DeviceType::kCPU) {
       return Operator::InferParallelSignature();
     } else if (device_type() == DeviceType::kGPU) {
-      const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+      const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
       const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
       const int64_t device_parallel_desc_symbol_id =
           scope.scope_proto().device_parallel_desc_symbol_id();

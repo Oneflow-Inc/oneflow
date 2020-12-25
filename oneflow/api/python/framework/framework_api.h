@@ -18,51 +18,39 @@ limitations under the License.
 
 #include "oneflow/api/python/framework/framework.h"
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> RegisterForeignCallbackOnlyOnce(
-    oneflow::ForeignCallback* callback) {
-  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetDataAndErrorProto();
+inline void RegisterForeignCallbackOnlyOnce(oneflow::ForeignCallback* callback) {
+  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetOrThrow();
 }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> RegisterWatcherOnlyOnce(
-    oneflow::ForeignWatcher* watcher) {
-  return oneflow::RegisterWatcherOnlyOnce(watcher).GetDataAndErrorProto();
+inline void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher) {
+  return oneflow::RegisterWatcherOnlyOnce(watcher).GetOrThrow();
 }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> LaunchJob(
-    const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  return oneflow::LaunchJob(cb).GetDataAndErrorProto();
+inline void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+  return oneflow::LaunchJob(cb).GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>>
-GetSerializedInterUserJobInfo() {
-  return oneflow::GetSerializedInterUserJobInfo().GetDataAndErrorProto(std::string(""));
+inline std::string GetSerializedInterUserJobInfo() {
+  return oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetSerializedJobSet() {
-  return oneflow::GetSerializedJobSet().GetDataAndErrorProto(std::string(""));
+inline std::string GetSerializedJobSet() { return oneflow::GetSerializedJobSet().GetOrThrow(); }
+
+inline std::string GetSerializedStructureGraph() {
+  return oneflow::GetSerializedStructureGraph().GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>>
-GetSerializedStructureGraph() {
-  return oneflow::GetSerializedStructureGraph().GetDataAndErrorProto(std::string(""));
+inline std::string GetFunctionConfigDef() { return oneflow::GetFunctionConfigDef().GetOrThrow(); }
+
+inline std::string GetScopeConfigDef() { return oneflow::GetScopeConfigDef().GetOrThrow(); }
+
+inline std::string GetMachine2DeviceIdListOFRecordFromParallelConf(
+    const std::string& parallel_conf) {
+  return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf).GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetFunctionConfigDef() {
-  return oneflow::GetFunctionConfigDef().GetDataAndErrorProto(std::string(""));
-}
-
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> GetScopeConfigDef() {
-  return oneflow::GetScopeConfigDef().GetDataAndErrorProto(std::string(""));
-}
-
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>>
-GetMachine2DeviceIdListOFRecordFromParallelConf(const std::string& parallel_conf) {
-  return oneflow::GetSerializedMachineId2DeviceIdListOFRecord(parallel_conf)
-      .GetDataAndErrorProto(std::string(""));
-}
-
-inline std::shared_ptr<oneflow::cfg::ErrorProto> LoadLibraryNow(const std::string& lib_path) {
-  return oneflow::LoadLibraryNow(lib_path).GetDataAndErrorProto();
+inline void LoadLibraryNow(const std::string& lib_path) {
+  return oneflow::LoadLibraryNow(lib_path).GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_API_H_
