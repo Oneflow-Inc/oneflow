@@ -105,20 +105,20 @@ class WarmupConf:
 class constant(WarmupConf):
     r"""This operator use the constant warmup strategy to adjust the learning rate.
 
-    Before the steps are specified by user, the learning rate is:
+    Before the iterations are specified by user, the learning rate is:
 
     .. math::
 
         learning\_rate = base\_learning\_rate*multiplier
 
-    After the steps are specified by user, the learning rate is:
+    After the iterations are specified by user, the learning rate is:
 
     .. math::
 
         learning\_rate = base\_learning\_rate
 
     Args:
-        steps (int): [description]
+        steps (int): The warmup iterations.
         multiplier (float): The scale factor :math:`multiplier`, it should be greater than 0. and less than 1.
 
     For example:
@@ -139,8 +139,8 @@ class constant(WarmupConf):
                     labels, logits, name="softmax_loss"
                 )
 
-            # Before 10 epochs, the learning rate is 0.001
-            # After 10 epochs, the learning rate is 0.01
+            # Before 10 iterations, the learning rate is 0.001
+            # After 10 iterations, the learning rate is 0.01
             warmup_scheduler = flow.optimizer.warmup.constant(10, 0.1)
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.01], warmup=warmup_scheduler)
             flow.optimizer.Adam(lr_scheduler).minimize(loss)
@@ -165,16 +165,16 @@ class constant(WarmupConf):
 class linear(WarmupConf):
     r"""This operator uses the linear warmup strategy to adjust the learning rate.
 
-    When current train step is less than warmup steps, the learning rate will be updated as:
+    When current train iterations is less than warmup iterations, the learning rate will be updated as:
 
     .. math::
 
-        & current\_multiplier = start\_multiplier + (1-start\_multiplier)*\frac{train\_step}{warmup\_step}
+        & current\_multiplier = start\_multiplier + (1-start\_multiplier)*\frac{train\_iter}{warmup\_iter}
 
         & current\_learning\_rate = learning\_rate*current\_multiplier
 
     Args:
-        steps (int): The warmup steps.
+        steps (int): The warmup iterations.
         start_multiplier (float): The start multiplier(:math:`start\_multiplier`). It should be greater than 0. and less than 1.
 
     For example:
@@ -195,7 +195,7 @@ class linear(WarmupConf):
                     labels, logits, name="softmax_loss"
                 )
 
-            # Before 10 epochs, the learning rate will increase from 0.001 to 0.01 in linear.
+            # Before 10 iterations, the learning rate will increase from 0.001 to 0.01 in linear.
             warmup_scheduler = flow.optimizer.warmup.linear(10, 0.1)
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.01], warmup=warmup_scheduler)
             flow.optimizer.Adam(lr_scheduler).minimize(loss)
@@ -260,25 +260,25 @@ class LrScheduler:
 class CosineScheduler(LrScheduler):
     r"""This operator creates a Cosine decayed learning rate scheduler.
 
-    Before the steps are specified by user, the learning rate will be updated as:
+    Before the iterations are specified by user, the learning rate will be updated as:
 
     .. math::
 
-        & cos\_decay = 0.5*(1+cos(\pi*\frac{current\_batch}{decayed\_batch}))
+        & cos\_decay = 0.5*(1+cos(\pi*\frac{current\_iter}{decayed\_iter}))
 
         & decay\_factor = (1-\alpha)*cos\_decay+\alpha
 
         & learning\_rate = base\_learning\_rate*decay\_factor
 
-    After the steps specified by user, the learning rate will be :
+    After the iterations specified by user, the learning rate will be :
 
     .. math::
 
         learning\_rate = {base\_learning\_rate}*{\alpha}
 
     Args:
-        base_lr (float): The base learning rate (:math:`base\_learning\_rate`)
-        steps (int): The decay steps in the scheduler (:math:`decayed\_batch`)
+        base_lr (float): The base learning rate (:math:`base\_learning\_rate`).
+        steps (int): The decay iterations in the scheduler (:math:`decayed\_iter`).
         alpha (float, optional): The learning rate scale factor (:math:`\alpha`). Defaults to 0.0.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
@@ -355,16 +355,16 @@ class PiecewiseConstantScheduler(LrScheduler):
         boundaries = [1000, 2000]
         values = [0.1, 0.01, 0.001]
 
-        if current_step < 1000:
+        if current_iter < 1000:
             learning_rate = 0.1
-        elif 1000 < current_step < 2000:
+        elif 1000 < current_iter < 2000:
             learning_rate = 0.01
         else:
             learning_rate = 0.001
 
     Args:
-        boundaries (Sequence[int]): A list of train steps.
-        values (Sequence[float]): A list of learning rate values during the different train step boundary.
+        boundaries (Sequence[int]): A list of train iterations.
+        values (Sequence[float]): A list of learning rate values during the different train iteration boundary.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
     For example:
@@ -430,17 +430,17 @@ class PiecewiseScalingScheduler(LrScheduler):
         scale = [0.1, 0.01]
         base_lr = 0.1
 
-        if current_step < 1000:
+        if current_iter < 1000:
             learning_rate = base_lr
-        elif 1000 < current_step < 2000:
+        elif 1000 < current_iter < 2000:
             learning_rate = 0.1*base_lr
         else:
             learning_rate = 0.01*base_lr
 
     Args:
-        base_lr (float): The base learning rate
-        boundaries (Sequence[int]): A list of train steps.
-        scale (Union[float, Sequence[float]]): A list of learning rate scaled factors during the different train step boundary.
+        base_lr (float): The base learning rate.
+        boundaries (Sequence[int]): A list of train iterations.
+        scale (Union[float, Sequence[float]]): A list of learning rate scaled factors during the different train iteration boundary.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
     For example:
@@ -508,24 +508,24 @@ class PolynomialScheduler(LrScheduler):
 
     .. math::
 
-        & decay\_batch = decay\_batch*ceil(\frac{current\_batch}{decay\_batch})
+        & decay\_iter = decay\_iter*ceil(\frac{current\_iter}{decay\_iter})
 
-        & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+        & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_iter}{decay\_iter})^{pow}+end\_lr
 
     If cycle is `False`, the equation is:
 
     .. math::
 
-        & decay\_batch = min(decay\_batch, current\_batch)
+        & decay\_iter = min(decay\_iter, current\_iter)
 
-        & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{pow}+end\_lr
+        & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_iter}{decay\_iter})^{pow}+end\_lr
 
     Args:
-        base_lr (float): The base learning rate
-        steps (int): The decayed steps
+        base_lr (float): The base learning rate.
+        steps (int): The decayed iterations.
         end_learning_rate (float, optional): The final learning rate. Defaults to 0.0001.
         power (float, optional): The power of polynomial. Defaults to 1.0.
-        cycle (bool, optional): If cycle is true, the scheduler will decay the learning rate every decay steps. Defaults to False.
+        cycle (bool, optional): If cycle is true, the scheduler will decay the learning rate every decay iteration. Defaults to False.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
     For example:
@@ -595,19 +595,19 @@ class LinearCosineScheduler(LrScheduler):
 
     .. math::
 
-        & current\_batch = min(current\_batch, decay\_batch)
+        & current\_iter = min(current\_iter, decay\_iter)
 
-        & linear\_decay = \frac{(decay\_batch - current\_batch)}{decay\_batch}
+        & linear\_decay = \frac{(decay\_iter - current\_iter)}{decay\_iter}
 
-        & cosine\_decay = 0.5*(1.0+cos(2*\pi*num\_periods*\frac{current\_batch}{decay\_batch}))
+        & cosine\_decay = 0.5*(1.0+cos(2*\pi*num\_periods*\frac{current\_iter}{decay\_iter}))
 
         & decay\_factor = (\alpha+linear\_decay)*cosine\_decay + \beta
 
         & learning\_rate = base\_learning\_rate*decay\_factor
 
     Args:
-        base_lr (float): The base learning rate
-        steps (int): The decay steps
+        base_lr (float): The base learning rate.
+        steps (int): The decay iterations.
         num_periods (float, optional): The number of decay periods. Defaults to 0.5.
         alpha (float, optional): The :math:`\alpha` in equation. Defaults to 0.0.
         beta (float, optional): The :math:`\beta` in equation. Defaults to 0.001.
@@ -678,7 +678,7 @@ class ExponentialScheduler(LrScheduler):
 
     .. math::
 
-        & pow = \frac{current\_batch}{decay\_batch}
+        & pow = \frac{current\_iter}{decay\_iter}
 
         & learning\_rate = base\_learning\_rate*decay\_rate^{pow}
 
@@ -686,14 +686,14 @@ class ExponentialScheduler(LrScheduler):
 
     .. math::
 
-        & pow = floor(\frac{current\_batch}{decay\_batch})
+        & pow = floor(\frac{current\_iter}{decay\_iter})
 
         & learning\_rate = base\_learning\_rate*decay\_rate^{pow}
 
     Args:
-        base_lr (float): The base learning rate
-        steps (int): The decay steps
-        decay_rate (float): The decay rate
+        base_lr (float): The base learning rate. 
+        steps (int): The decay iterations. 
+        decay_rate (float): The decay rate. 
         staircase (bool, optional): If staircase is True, the scheduler decay the learning rate at discrete intervals. Defaults to False.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
@@ -760,22 +760,22 @@ class InverseTimeScheduler(LrScheduler):
 
     .. math::
 
-        & step\_ratio = \frac{current\_batch}{decay\_batch}
+        & iter\_ratio = \frac{current\_iter}{decay\_iter}
 
-        & learning\_rate = \frac{base\_learning\_rate}{1+decay\_rate*step\_ratio}
+        & learning\_rate = \frac{base\_learning\_rate}{1+decay\_rate*iter\_ratio}
 
     If staircase is set to True, the equation is:
 
     .. math::
 
-        & step\_ratio = \frac{current\_batch}{decay\_batch}
+        & iter\_ratio = \frac{current\_iter}{decay\_iter}
 
-        & learning\_rate = \frac{base\_learning\_rate}{1+floor(decay\_rate*step\_ratio)}
+        & learning\_rate = \frac{base\_learning\_rate}{1+floor(decay\_rate*iter\_ratio)}
 
     Args:
-        base_lr (float): The base learning rate
-        steps (int): The decay steps
-        decay_rate (float): The decay rate
+        base_lr (float): The base learning rate. 
+        steps (int): The decay iterations. 
+        decay_rate (float): The decay rate. 
         staircase (bool, optional): If staircase is True, the scheduler decay the learning rate at discrete intervals. Defaults to False.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
@@ -842,22 +842,22 @@ class NaturalExpScheduler(LrScheduler):
 
     .. math::
 
-        & step\_ratio = \frac{current\_batch}{decay\_batch}
+        & iter\_ratio = \frac{current\_iter}{decay\_iter}
 
-        & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*step\_ratio}
+        & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*iter\_ratio}
 
     If staircase is set to True, the equation is:
 
     .. math::
 
-        & step\_ratio = \frac{current\_batch}{decay\_batch}
+        & iter\_ratio = \frac{current\_batch}{decay\_batch}
 
-        & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*floor(step\_ratio)}
+        & learning\_rate = {base\_learning\_rate}*e^{-decay\_rate*floor(iter\_ratio)}
 
     Args:
-        base_lr (float): The base learning rate
-        steps (int): The decay steps
-        decay_rate (float): The decay rate
+        base_lr (float): The base learning rate. 
+        steps (int): The decay iterations. 
+        decay_rate (float): The decay rate. 
         staircase (bool, optional): If staircase is True, the scheduler decay the learning rate at discrete intervals. Defaults to False.
         warmup (Optional[WarmupConf], optional): The warmup strategy. Defaults to None.
 
@@ -921,6 +921,33 @@ class LossScalePolicy:
 
 @oneflow_export("optimizer.loss_scale.static_loss_scale")
 class StaticLossScalePolicy(LossScalePolicy):
+    """This operator scales the loss with a fixed value.
+
+    Args:
+        loss_scale_factor (float): The loss scaled factor. 
+    
+    For example: 
+
+    .. code-block:: python 
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+                
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            static_loss_scale = flow.optimizer.loss_scale.static_loss_scale(2)
+            flow.optimizer.SGD(lr_scheduler, loss_scale_policy=static_loss_scale).minimize(loss)
+            
+            return loss
+    """
+
     def __init__(self, loss_scale_factor: float):
         self.loss_scale_factor = loss_scale_factor
 
@@ -930,6 +957,40 @@ class StaticLossScalePolicy(LossScalePolicy):
 
 @oneflow_export("optimizer.loss_scale.dynamic_loss_scale")
 class DynamicLossScalePolicy(LossScalePolicy):
+    r"""This operator scales the loss dynamically to adjust itself. 
+
+    Args:
+        initial_loss_scale (tuple, optional): The loss scale factor to use at the beginning. 
+          It's better to start the `initial_loss_scale` at a high number, 
+          because a loss scale that is too high gets lowered far more quickly 
+          than a loss scale that is too low gets raised. Defaults to (2 ** 15).
+        increment_period (int, optional): Increases loss scale every increment_period consecutive steps that finite gradients are encountered. 
+          If a nonfinite gradient is encountered, the count is reset back to zero. Defaults to 2000.
+        multiplier (float, optional): The multiplier to use when increasing or decreasing the loss scale. . Defaults to 2.0.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            dynamic_loss_scale = flow.optimizer.loss_scale.dynamic_loss_scale()
+            flow.optimizer.SGD(lr_scheduler, loss_scale_policy=dynamic_loss_scale).minimize(loss)
+            
+            return loss
+    
+    """
+
     def __init__(
         self, initial_loss_scale=(2 ** 15), increment_period=2000, multiplier=2.0
     ):

@@ -12,3 +12,6 @@ Optimizers
 .. automodule:: oneflow.optimizer.grad_clipping
     :members:
     :imported-members:
+.. automodule:: oneflow.optimizer.loss_scale
+    :members:
+    :imported-members:
