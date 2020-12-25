@@ -19,6 +19,8 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
@@ -33,10 +35,10 @@ def dense(
         Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
     ] = None,
     use_bias: bool = True,
-    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
-    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
-    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Dense",
     model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
@@ -50,10 +52,10 @@ def dense(
         units (int): A positive integer for the dimensionality of the output space.
         activation (Optional[remote_blob_util.BlobDef], optional):  Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
-        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
-        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
-        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer function applied to the kernel weights matrix. Defaults to None.
-        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
+        kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer function applied to the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
         model_distribute (distribute_util.Distribute, optional): Define the way to ditribute the model. Defaults to distribute_util.broadcast().
@@ -171,10 +173,10 @@ def conv1d(
         Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
     ] = None,
     use_bias: bool = True,
-    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
-    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
-    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Conv1d",
     weight_name: Optional[str] = None,
@@ -198,10 +200,10 @@ def conv1d(
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
         activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
-        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
-        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
-        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
-        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
+        kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
 
@@ -365,10 +367,10 @@ def conv2d(
         Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
     ] = None,
     use_bias: bool = True,
-    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
-    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
-    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Conv2d",
     weight_name: Optional[str] = None,
@@ -392,10 +394,10 @@ def conv2d(
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
         activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
-        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
-        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
-        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
-        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
+        kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
         weight_name (Optional[str], optional): This weight's name. Defaults to None.
@@ -562,10 +564,10 @@ def conv3d(
         Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
     ] = None,
     use_bias: bool = True,
-    kernel_initializer: Optional[op_conf_util.InitializerConf] = None,
-    bias_initializer: Optional[op_conf_util.InitializerConf] = None,
-    kernel_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    bias_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    bias_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    kernel_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Conv3d",
     weight_name: Optional[str] = None,
@@ -589,10 +591,10 @@ def conv3d(
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
         activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
-        kernel_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
-        bias_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
-        kernel_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
-        bias_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
+        kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
+        bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
+        kernel_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the kernel weights matrix. Defaults to None.
+        bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector . Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
         weight_name (Optional[str], optional): This weight's name. Defaults to None.
@@ -1056,12 +1058,12 @@ def batch_normalization(
     epsilon: float = 0.001,
     center: bool = True,
     scale: bool = True,
-    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
-    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
-    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
-    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[initializer_conf_util.InitializerConf] = None,
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
@@ -1079,12 +1081,12 @@ def batch_normalization(
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
         center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
         scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
-        beta_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
-        gamma_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
-        beta_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
-        gamma_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
-        moving_mean_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
-        moving_variance_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
+        beta_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
+        gamma_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
+        beta_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
+        gamma_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
+        moving_mean_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
+        moving_variance_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
@@ -1226,12 +1228,12 @@ def batch_normalization_add_relu(
     epsilon: float = 0.001,
     center: bool = True,
     scale: bool = True,
-    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
-    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
-    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
-    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[initializer_conf_util.InitializerConf] = None,
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
@@ -1246,12 +1248,12 @@ def batch_normalization_add_relu(
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
         center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
         scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
-        beta_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
-        gamma_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
-        beta_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
-        gamma_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
-        moving_mean_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
-        moving_variance_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
+        beta_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
+        gamma_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
+        beta_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
+        gamma_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
+        moving_mean_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
+        moving_variance_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
@@ -1344,12 +1346,12 @@ def batch_normalization_relu(
     epsilon: float = 0.001,
     center: bool = True,
     scale: bool = True,
-    beta_initializer: Optional[op_conf_util.InitializerConf] = None,
-    gamma_initializer: Optional[op_conf_util.InitializerConf] = None,
-    beta_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    gamma_regularizer: Optional[op_conf_util.RegularizerConf] = None,
-    moving_mean_initializer: Optional[op_conf_util.InitializerConf] = None,
-    moving_variance_initializer: Optional[op_conf_util.InitializerConf] = None,
+    beta_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    gamma_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    beta_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    gamma_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
+    moving_mean_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    moving_variance_initializer: Optional[initializer_conf_util.InitializerConf] = None,
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
@@ -1363,12 +1365,12 @@ Args:
     epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
     center (bool, optional): A boolean specifies whether to add offset to normalized `Blob`. Defaults to True.
     scale (bool, optional): A boolean specifies whether to multiply normalized `Blob` by gamma. Defaults to True.
-    beta_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
-    gamma_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
-    beta_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
-    gamma_regularizer (Optional[op_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
-    moving_mean_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
-    moving_variance_initializer (Optional[op_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
+    beta_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for beta. Defaults to None.
+    gamma_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for gamma. Defaults to None.
+    beta_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for beta. Defaults to None.
+    gamma_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for gamma. Defaults to None.
+    moving_mean_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for moving mean. Defaults to None.
+    moving_variance_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for moving variance. Defaults to None.
     trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
     training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
     name (Optional[str], optional): This layer's name. Defaults to None.

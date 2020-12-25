@@ -765,7 +765,7 @@ Maybe<void> InferOpSbpSignature(
   };
   auto OrderValue4SbpHint = [&](const std::string& ibn,
                                 const SbpParallel& sbp_parallel) -> int32_t {
-    return -3 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
+    return -8 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
   };
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
