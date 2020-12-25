@@ -26,6 +26,8 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <iostream>
 #include <new>
+#include <string>
+#include <unordered_map>
 
 namespace mlir {
 
@@ -53,18 +55,24 @@ class Importer {
   ModuleOp module;
   /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
   Location unknownLoc;
+  std::unordered_map<std::string, mlir::Value> lbn2op;
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) { return failure(); }
   const std::string &type_name = op.user_conf().op_type_name();
   if (type_name == "relu") {
+    mlir::Value in = lbn2op.at(op.user_conf().input().at("in").s(0));
+    mlir::Value created = b.create<oneflow::ReluOp>(unknownLoc, in);
+    const std::string &lbn = op.user_conf().output().at("out").s(0);
+    lbn2op.insert({lbn, created});
     return success();
   } else if (type_name == "constant") {
     if (op.user_conf().attr().at("is_floating_value").at_bool()) {
-      b.create<oneflow::ConstantOp>(unknownLoc,
-                                    op.user_conf().attr().at("floating_value").at_double());
-      std::cout << "processed user op: " << op.name() << "\n\n";
+      mlir::Value created = b.create<oneflow::ConstantOp>(
+          unknownLoc, op.user_conf().attr().at("floating_value").at_double());
+      const std::string &lbn = op.user_conf().output().at("out").s(0);
+      lbn2op.insert({lbn, created});
     } else {
       // b.create<ConstantOp>(unknownLoc, op.user_conf().attr().at("integer_value").at_int64());
     }
