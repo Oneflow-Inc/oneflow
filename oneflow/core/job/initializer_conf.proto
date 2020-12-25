@@ -1,0 +1,93 @@
+syntax = "proto2";
+package oneflow;
+
+message ConstantInitializerConf {
+  optional float value = 1 [default = 0];
+}
+
+message ConstantIntInitializerConf {
+  optional int64 value = 1 [default = 0];
+}
+
+message RandomUniformInitializerConf {
+  optional float min = 1 [default = 0];
+  optional float max = 2 [default = 1];
+}
+
+message RandomUniformIntInitializerConf {
+  optional int32 min = 1 [default = 0];
+  optional int32 max = 2 [default = 1];
+}
+
+message RandomNormalInitializerConf {
+  optional float mean = 1 [default = 0];
+  optional float std = 2 [default = 1];
+}
+
+message TruncatedNormalInitializerConf {
+  optional float mean = 1 [default = 0.0];
+  optional float std = 2 [default = 0.05];
+}
+
+enum VarianceNorm {
+  kFanIn = 0;
+  kFanOut = 1;
+  kAverage = 2;
+}
+
+enum RandomDistribution {
+  kRandomUniform = 0;
+  kRandomNormal = 1;
+  kTruncatedNormal = 2;
+}
+
+message XavierInitializerConf {
+  required VarianceNorm variance_norm = 1;
+  required string data_format = 2;
+}
+
+message MsraInitializerConf {
+  required VarianceNorm variance_norm = 1;
+  required string data_format = 2;
+}
+
+//output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
+message RangeInitializerConf {
+  optional double start = 1 [default = 0];
+  optional double stride = 2 [default = 1];
+  optional int64 axis = 3 [default = -1];
+}
+
+message IntRangeInitializerConf {
+  optional int64 start = 1 [default = 0];
+  optional int64 stride = 2 [default = 1];
+  optional int64 axis = 3 [default = -1];
+}
+
+message VarianceScalingInitializerConf {
+  required float scale = 1;
+  required VarianceNorm variance_norm = 2;
+  required RandomDistribution distribution = 3;
+  required string data_format = 4;
+}
+
+message InitializerConf {
+  oneof type {
+    ConstantInitializerConf constant_conf = 1;
+    ConstantIntInitializerConf constant_int_conf = 2;
+    RandomUniformInitializerConf random_uniform_conf = 3;
+    RandomUniformIntInitializerConf random_uniform_int_conf = 4;
+    RandomNormalInitializerConf random_normal_conf = 5;
+    TruncatedNormalInitializerConf truncated_normal_conf = 6;
+    XavierInitializerConf xavier_conf = 7;
+    MsraInitializerConf msra_conf = 8;
+    RangeInitializerConf range_conf = 9;
+    IntRangeInitializerConf int_range_conf = 10;
+    VarianceScalingInitializerConf variance_scaling_conf = 11;
+  }
+}
+
+message InitializeWithSnapshotConf {
+  required string path = 1;
+  optional string key = 2;
+}
