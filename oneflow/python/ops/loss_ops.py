@@ -84,3 +84,45 @@ def smooth_l1_loss(
     )
     op.Attr("beta", float(beta))
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("ctc_loss")
+def ctc_loss(
+    log_probs: remote_blob_util.BlobDef,  # Tensor of size (input_length, batch_size, number_of_classes)
+    targets: remote_blob_util.BlobDef,  # Tensor of size (batch_size, max_target_length)
+    input_lengths: remote_blob_util.BlobDef,  # Tuple or tensor of size (batch_size)
+    target_lengths: remote_blob_util.BlobDef,  # Tuple or tensor of size (batch_size)
+    blank: int = 0,  # blank label. Default 0.
+    reduction: str = "mean",  # Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    name = name if name is not None else id_util.UniqueStr("CTCLoss_")
+    loss = (
+        flow.user_op_builder(name)
+        .Op("ctc_loss")
+        .Input("log_probs", [log_probs])
+        .Input("targets", [targets])
+        .Input("input_lengths", [input_lengths])
+        .Input("target_lengths", [target_lengths])
+        .Output("loss")
+        .Attr("blank", blank)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+    if reduction == "mean":
+        return flow.math.reduce_mean(
+            flow.math.xdivy(
+                loss,
+                flow.cast(
+                    flow.math.clip_by_value(target_lengths, min_value=1),
+                    dtype=flow.float,
+                ),
+            ),
+            name=name + "_reduce_mean",
+        )
+    elif reduction == "sum":
+        return flow.math.reduce_sum(loss, name=name + "_reduce_sum")
+    else:
+        return loss
