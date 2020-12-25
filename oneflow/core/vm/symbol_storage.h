@@ -124,10 +124,10 @@ class Storage final {
 
   Maybe<void> TryAdd(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
     CHECK_GT_OR_RETURN(symbol_id, 0);
-    const auto& iter = symbol_id2symbol_.find(symbol_id);
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (iter != symbol_id2symbol_.end()) { return Maybe<void>::Ok(); }
     const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    if (iter != symbol_id2symbol_.end()) { return Maybe<void>::Ok(); }
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
     return Maybe<void>::Ok();
   }

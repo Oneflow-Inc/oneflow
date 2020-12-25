@@ -43,7 +43,7 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   if (symbol.has_string_symbol()) {
     JUST(Global<symbol::Storage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol()));
   } else if (symbol.has_scope_symbol()) {
-    JUST(Global<symbol::Storage<Scope>>::Get()->Add(symbol_id, symbol.scope_symbol()));
+    JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, symbol.scope_symbol()));
   } else if (symbol.has_job_conf_symbol()) {
     JUST(Global<symbol::Storage<JobDesc>>::Get()->TryAdd(symbol_id, symbol.job_conf_symbol()));
   } else if (symbol.has_parallel_conf_symbol()) {

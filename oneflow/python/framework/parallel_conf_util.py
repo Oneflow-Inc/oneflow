@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
+import re
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 
 

@@ -521,7 +521,7 @@ class InstructionsBuilder(object):
             return oneflow_api.GetScopeSymbol(scope_proto)
         symbol_id = self._NewSymbolId4Scope(scope_proto)
         oneflow_api.AddScopeSymbol(symbol_id, scope_proto)
-        return oneflow_api.GetScopeSymbol(symbol_id, scope_proto)
+        return oneflow_api.GetScopeSymbol(scope_proto)
 
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
         if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
