@@ -212,9 +212,6 @@ def _test_slice_dynamic(
     slice_func = _make_slice_dynamic_func(slice_args, static_shape, dtype, func_cfg)
     of_outputs = slice_func([input])
     for out, of_out in zip(outputs, of_outputs):
-        print("xxxxxxxxxxxxxxxxxxx")
-        print(of_out[0].shape)
-        print(out.shape)
         test_case.assertTrue(np.array_equal(out, of_out[0]))
 
 
