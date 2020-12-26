@@ -29,7 +29,7 @@ class ScopeSymbol(Symbol):
     def __init__(self, symbol_id, scope_proto, parent_scope_symbol=None):
         Symbol.__init__(self, symbol_id, scope_proto)
         self.parent_scope_symbol_ = parent_scope_symbol
-        self.job_desc_symbol_ = symbol_storage.GetSymbol4Id(
+        self.job_desc_symbol_ = oneflow_api.GetJobConfSymbol(
             scope_proto.job_desc_symbol_id()
         )
         self.device_parallel_desc_symbol_ = oneflow_api.GetPlacementSymbol(
