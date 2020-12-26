@@ -13,23 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
-template<typename T>
-__device__ T gpu_atomic_add(T* address, const T val);
+namespace symbol {
 
-template<typename T>
-__device__ T gpu_atomic_max(T* address, const T val);
+namespace detail {
 
-template<typename T>
-__device__ T MaxWithLogThreshold(T x);
+template<>
+Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data) {
+  return ParallelDesc::New(symbol_id, data);
+}
 
-template<typename T>
-__device__ T SafeLog(T x);
+}  // namespace detail
+
+}  // namespace symbol
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_

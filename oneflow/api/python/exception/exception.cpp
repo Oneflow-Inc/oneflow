@@ -13,17 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/core/common/exception.h"
+#include "oneflow/core/common/error.h"
+#include "oneflow/api/python/of_api_registry.h"
 
-#include "oneflow/core/common/data_type.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-void InferArgWhereWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                       DataType index_type, int32_t num_axes, int64_t n,
-                                       int64_t* workspace_bytes);
+ONEFLOW_API_PYBIND11_MODULE("exception", m) {
+  m.def("GetThreadLocalLastError", &ThreadLocalError);
+  py::register_exception<oneflow::Exception>(m, "Exception");
+#define REGISTER_EXCEPTION(cls) \
+  py::register_exception<oneflow::OF_PP_CAT(cls, Exception)>(m, OF_PP_STRINGIZE(cls) "Exception");
+
+  OF_PP_FOR_EACH_TUPLE(REGISTER_EXCEPTION, EXCEPTION_SEQ)
+
+#undef REGISTER_EXCEPTION
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
