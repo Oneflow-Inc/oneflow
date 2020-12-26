@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
