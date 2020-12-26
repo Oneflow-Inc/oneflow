@@ -16,7 +16,10 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_desc.h"
+<<<<<<< HEAD
 #include "oneflow/core/job/scope.h"
+=======
+>>>>>>> 9c1e4133c3c0991fa1548028601da7a0f1b19b32
 
 namespace oneflow {
 
