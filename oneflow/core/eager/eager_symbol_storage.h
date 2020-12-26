@@ -24,15 +24,7 @@ namespace oneflow {
 class Scope;
 class ScopeProto;
 
-class JobDesc;
-class JobConfigProto;
-
 namespace symbol {
-
-template<>
-struct ConstructArgType4Symbol<JobDesc> final {
-  using type = JobConfigProto;
-};
 
 template<>
 struct ConstructArgType4Symbol<Scope> final {

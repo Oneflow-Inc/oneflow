@@ -25,6 +25,9 @@ namespace oneflow {
 class ParallelDesc;
 class ParallelConf;
 
+class JobDesc;
+class JobConfigProto;
+
 class OpNodeSignatureDesc;
 class OpNodeSignature;
 
@@ -45,6 +48,11 @@ struct ConstructArgType4Symbol<ParallelDesc> final {
   using type = ParallelConf;
 };
 
+template<>
+struct ConstructArgType4Symbol<JobDesc> final {
+  using type = JobConfigProto;
+};
+
 namespace detail {
 
 template<typename T>
@@ -55,6 +63,10 @@ Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>:
 template<>
 Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
     int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data);
+
+template<>
+Maybe<JobDesc> NewSymbol<JobDesc>(int64_t symbol_id,
+                                  const typename ConstructArgType4Symbol<JobDesc>::type& data);
 
 }  // namespace detail
 
