@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import os
 
 
 def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
@@ -49,6 +50,7 @@ def _make_dim_gather_fn(test_case, sample, datashape):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float32)
     func_config.default_logical_view(flow.scope.mirrored_view())
+    func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
 
     def _compare_diff(blob: oft.ListNumpy):
         test_case.assertTrue(np.allclose(sample["grad"], blob[0]))
@@ -57,7 +59,7 @@ def _make_dim_gather_fn(test_case, sample, datashape):
     def DynamicDimGatherJob(
         params_def: oft.ListNumpy.Placeholder(datashape, dtype=flow.float32),
         index_def: oft.ListNumpy.Placeholder(datashape, dtype=flow.int32),
-    ):
+    ) -> oft.ListNumpy:
         x_var = flow.get_variable(
             "input",
             shape=(1,),
@@ -82,7 +84,7 @@ def _make_dim_gather_fn(test_case, sample, datashape):
 def _compare_dim_gather_with_samples(test_case, inputshape, indexshape, dim, maxshape):
     sample = gen_gather_test_sample((inputshape), indexshape, dim)
     dynamic_dim_gather = _make_dim_gather_fn(test_case, sample, maxshape)
-    out = dynamic_dim_gather([sample["input"]], [sample["index"]]).get().numpy_list()[0]
+    out = dynamic_dim_gather([sample["input"]], [sample["index"]])[0]
     test_case.assertTrue(
         np.allclose(out, sample["output"].astype(np.float32), 1e-3, 1e-3)
     )
@@ -90,6 +92,7 @@ def _compare_dim_gather_with_samples(test_case, inputshape, indexshape, dim, max
 
 @flow.unittest.skip_unless_1n1d()
 class TestDynamicDimGather(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dynamic_dim_gather(test_case):
         _compare_dim_gather_with_samples(
             test_case, inputshape=(2, 2), indexshape=(2, 2), dim=1, maxshape=(10, 10)
