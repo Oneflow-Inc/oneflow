@@ -59,7 +59,7 @@ def name_scope(name: str) -> None:
     name_scope_stack_push(name)
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewScopeName(builder, name)
+        return builder.BuildScopeWithNewScopeName(old_scope, name)
 
     sess = session_context.GetDefaultSession()
     try:
