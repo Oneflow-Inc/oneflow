@@ -81,6 +81,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     }
     return success();
   } else {
+    module.emitError("can't handle user op of type: " + type_name);
     return failure();
   }
 }
