@@ -27,7 +27,6 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.vm_util as vm_util
@@ -35,6 +34,7 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow
+import oneflow_api
 import os
 
 
@@ -179,7 +179,7 @@ def get_eager_variable(
         shape, (list, tuple)
     ), "param shape should be a list or tuple of dimension"
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -240,7 +240,7 @@ def get_lazy_variable(
         shape, (list, tuple)
     ), "param shape should be a list or tuple of dimension"
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)

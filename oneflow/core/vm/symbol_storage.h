@@ -28,7 +28,7 @@ class ParallelConf;
 class OpNodeSignatureDesc;
 class OpNodeSignature;
 
-namespace vm {
+namespace symbol {
 
 template<typename T>
 struct ConstructArgType4Symbol final {
@@ -40,14 +40,32 @@ struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
   using type = OpNodeSignature;
 };
 
-template<typename T>
-class SymbolStorage final {
- public:
-  SymbolStorage(const SymbolStorage&) = delete;
-  SymbolStorage(SymbolStorage&&) = delete;
+template<>
+struct ConstructArgType4Symbol<ParallelDesc> final {
+  using type = ParallelConf;
+};
 
-  SymbolStorage() = default;
-  ~SymbolStorage() = default;
+namespace detail {
+
+template<typename T>
+Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+  return std::make_shared<T>(data);
+}
+
+template<>
+Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data);
+
+}  // namespace detail
+
+template<typename T>
+class Storage final {
+ public:
+  Storage(const Storage&) = delete;
+  Storage(Storage&&) = delete;
+
+  Storage() = default;
+  ~Storage() = default;
 
   bool Has(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -72,12 +90,24 @@ class SymbolStorage final {
     return iter->second;
   }
 
-  void Add(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
-    CHECK_GT(symbol_id, 0);
-    const auto& ptr = std::make_shared<T>(data);
+  Maybe<void> Add(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+    CHECK_GT_OR_RETURN(symbol_id, 0);
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
     std::unique_lock<std::mutex> lock(mutex_);
-    CHECK(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    return Maybe<void>::Ok();
   }
+
+  Maybe<void> TryAdd(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+    CHECK_GT_OR_RETURN(symbol_id, 0);
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (iter != symbol_id2symbol_.end()) { return Maybe<void>::Ok(); }
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
+    CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    return Maybe<void>::Ok();
+  }
+
   void Clear(int64_t symbol_id) {
     std::unique_lock<std::mutex> lock(mutex_);
     symbol_id2symbol_.erase(symbol_id);
@@ -92,7 +122,7 @@ class SymbolStorage final {
   HashMap<int64_t, std::shared_ptr<T>> symbol_id2symbol_;
 };
 
-}  // namespace vm
+}  // namespace symbol
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_STORAGE_H_
