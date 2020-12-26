@@ -21,20 +21,20 @@ limitations under the License.
 
 namespace oneflow {
 
-std::shared_ptr<oneflow::cfg::ErrorProto> RunLogicalInstruction(
+inline void RunLogicalInstruction(
     const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
     const std::string& eager_symbol_list_str) {
   return Global<eager::EagerOneflow>::Get()
       ->RunLogicalInstruction(cfg_instruction_list, eager_symbol_list_str)
-      .GetDataAndErrorProto();
+      .GetOrThrow();
 }
 
-std::shared_ptr<oneflow::cfg::ErrorProto> RunPhysicalInstruction(
+inline void RunPhysicalInstruction(
     const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
     const std::string& eager_symbol_list_str) {
   return Global<eager::EagerOneflow>::Get()
       ->RunPhysicalInstruction(cfg_instruction_list, eager_symbol_list_str)
-      .GetDataAndErrorProto();
+      .GetOrThrow();
 }
 
 }  // namespace oneflow

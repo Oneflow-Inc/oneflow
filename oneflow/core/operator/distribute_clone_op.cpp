@@ -93,7 +93,7 @@ Maybe<void> DistributeCloneOp::InferOutParallelDesc(
 }
 
 Maybe<void> DistributeCloneOp::InferParallelSignature() {
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t op_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);

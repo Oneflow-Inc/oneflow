@@ -283,8 +283,8 @@ Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
     // TODO(Liang Depeng): should not tolerate nullptr.
     if (iter == bn_in_op2parallel_desc_symbol_id.end()) { return nullptr; }
     int64_t symbol_id = iter->second;
-    const vm::SymbolStorage<ParallelDesc>* symbol_storage_ptr =
-        Global<vm::SymbolStorage<ParallelDesc>>::Get();
+    const symbol::Storage<ParallelDesc>* symbol_storage_ptr =
+        Global<symbol::Storage<ParallelDesc>>::Get();
     CHECK_OR_RETURN(symbol_storage_ptr->Has(symbol_id));
     return symbol_storage_ptr->GetPtr(symbol_id).get();
   };
