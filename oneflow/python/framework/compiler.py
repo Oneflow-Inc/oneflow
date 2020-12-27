@@ -30,7 +30,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util

@@ -47,7 +47,7 @@ class OpKernelObject(object_util.Object):
 
 def _GetScopeSymbol(op_conf):
     assert op_conf.HasField("scope_symbol_id")
-    return symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
+    return oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
 
 
 def _GetOpParallelSymbol(op_conf):
