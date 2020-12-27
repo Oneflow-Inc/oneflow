@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
@@ -107,7 +107,7 @@ Maybe<void> DistributeSplitOp::InferOutParallelDesc(
 }
 
 Maybe<void> DistributeSplitOp::InferParallelSignature() {
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t op_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
