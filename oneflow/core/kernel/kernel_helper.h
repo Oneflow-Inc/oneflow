@@ -26,6 +26,7 @@ namespace oneflow {
 
 bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
                     const std::function<Blob*(const std::string&)>& BnInOp2Blob);
-}
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_
