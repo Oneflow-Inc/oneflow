@@ -2438,7 +2438,7 @@ def ndindex_to_offset(
     """This operator computes the 1-D offset in N-D Tensor.
 
     Args:
-        index (remote_blob_util.BlobDef): The index Tensor. 
+        index (remote_blob_util.BlobDef): The Tensor contains the n-dimensions index. 
         dims (remote_blob_util.BlobDef): The dims Tensor. 
         name (Optional[str], optional): The name for the operator. Defaults to None.
     
