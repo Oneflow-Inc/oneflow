@@ -2439,7 +2439,7 @@ def ndindex_to_offset(
 
     Args:
         index (remote_blob_util.BlobDef): The Tensor contains the n-dimensions index. 
-        dims (remote_blob_util.BlobDef): The dims Tensor. 
+        dims (remote_blob_util.BlobDef): The Tensor represents the shape. 
         name (Optional[str], optional): The name for the operator. Defaults to None.
     
     Attention:
