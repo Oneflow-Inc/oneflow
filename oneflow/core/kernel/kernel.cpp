@@ -22,19 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && !blob->IsBodyEmpty()) { return false; }
-  }
-  return true;
-}
-
-}  // namespace
-
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
 }

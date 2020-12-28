@@ -545,6 +545,12 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
+
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
+      && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
+    return new_opkernel_state;
+  }
+
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
