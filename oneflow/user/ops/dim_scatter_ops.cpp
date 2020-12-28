@@ -98,7 +98,8 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SetSbp(user_op::SbpContext* ctx) {
+void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src)
+{
   const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
   int64_t index_num_axes = index_tensor.shape().NumAxes();
   const int32_t dim = ctx->Attr<int32_t>("dim");
@@ -109,8 +110,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
           .Split(user_op::OpArg("index", 0), i)
           .Split(user_op::OpArg("input", 0), i)
           .Split(user_op::OpArg("output", 0), i)
-          .Split(user_op::OpArg("like", 0), i)
-          .Split(user_op::OpArg("src", 0), i)
+          .Split(user_op::OpArg(like_or_src, 0), i)
           .Build();
     }
   }
@@ -119,16 +119,24 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .PartialSum(user_op::OpArg("input", 0))
       .Broadcast(user_op::OpArg("index", 0))
       .PartialSum(user_op::OpArg("output", 0))
-      .PartialSum(user_op::OpArg("like", 0))
-      .PartialSum(user_op::OpArg("src", 0))
-      .Build();
+      .PartialSum(user_op::OpArg(like_or_src, 0))
+      .Build();  
+}
+
+Maybe<void> SetSbpLike(user_op::SbpContext* ctx) {
+  _SetSbp(ctx, "like");
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
+  _SetSbp(ctx, "src");
   return Maybe<void>::Ok();
 }
 }  // namespace
 
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
   REGISTER_USER_OP(optypename)                 \
-      .OptionalInput("like")                   \
+      .Input("like")                   \
       .Input("input")                          \
       .Input("index")                          \
       .Output("output")                        \
@@ -136,7 +144,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .SetTensorDescInferFn(InferTensorDesc)   \
       .SetInputArgModifyFn(InputArgModifierFn) \
       .SetBatchAxisInferFn(InferBatchAxis)     \
-      .SetGetSbpFn(SetSbp)
+      .SetGetSbpFn(SetSbpLike)
 
 #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
   REGISTER_USER_OP(optypename)                        \
@@ -148,7 +156,7 @@ Maybe<void> SetSbp(user_op::SbpContext* ctx) {
       .SetTensorDescInferFn(InferTensorDesc)          \
       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
       .SetBatchAxisInferFn(InferBatchAxis)            \
-      .SetGetSbpFn(SetSbp)
+      .SetGetSbpFn(SetSbpInplace)
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \
