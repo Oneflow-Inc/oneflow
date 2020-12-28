@@ -214,7 +214,10 @@ def _compare_dim_scatter_add_like_with_samples(
             np.allclose(y, sample["output"].astype(np.float32), 1e-3, 1e-3)
         )
     else:
-        test_case.assertTrue(np.allclose(y.astype(value_type[0]), sample["output"].astype(value_type[0])))
+        print("oneflow:", y)
+        print("numpy:", sample["output"])
+        print((y - sample["output"])<1e-3)
+        test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0])))
 
 @flow.unittest.skip_unless_1n1d()
 class TestDimScatterAddLike1n1d(flow.unittest.TestCase):
@@ -244,7 +247,7 @@ class TestDimScatterAddLike1n1d(flow.unittest.TestCase):
 class TestDimScatterAddLike1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_add_like_float(test_case):
-        arg_dict = _gen_arg_dict("gpu", "float", "0:0-1", 2)
+        arg_dict = _gen_arg_dict("cpu", "float", "0:0-1", 2)
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_add_like_with_samples(test_case, *arg)
 
