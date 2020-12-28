@@ -54,19 +54,28 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
+
+    Shape* indice_shape = ctx->Shape4ArgNameAndIndex("indice", 0);
+    Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+    *indice_shape = *y_shape;
     return Maybe<void>::Ok();
   };
 }
 
 Maybe<void> ForwardBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
   *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+  *ctx->BatchAxis4ArgNameAndIndex("indice", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+    ctx->NewBuilder()
+    .Split(user_op::OpArg("x", 0), i)
+    .Split(user_op::OpArg("y", 0), i)
+    .Split(user_op::OpArg("indice", 0), i)
+    .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -102,6 +111,7 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
           builder.Op("maxpool_2d_grad")
               .Input("x", op.input("x", 0))
               .Input("y", op.output("y", 0))
+              .Input("indice", op.output("indice", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))
@@ -125,6 +135,7 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
 REGISTER_USER_OP("maxpool_2d")
     .Input("x")
     .Output("y")
+    .Output("indice")
     .Attr<std::string>("padding")
     .Attr<std::vector<int32_t>>("padding_before")
     .Attr<std::vector<int32_t>>("padding_after")
@@ -141,6 +152,7 @@ REGISTER_USER_OP("maxpool_2d")
 REGISTER_USER_OP("maxpool_2d_grad")
     .Input("x")
     .Input("y")
+    .Input("indice")
     .Input("dy")
     .Output("dx")
     .Attr<std::string>("padding")

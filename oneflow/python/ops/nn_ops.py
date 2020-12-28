@@ -1359,22 +1359,11 @@ def MaxPool2d(
     data_format: str = "NCHW",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    op = (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("TorchMaxPool2d_")
-        )
-        .Op("maxpool_2d")
-        .Input("x", [input])
-        .Output("y")
-    )
     assert data_format in ["NHWC", "NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
-    op.Attr("data_format", channel_pos)
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
     dilation = _GetSequence(dilation, 2, "dilation")
-    op.Attr("kernel_size", kernel_size)
     stride = _GetSequence(stride, 2, "stride")
-    op.Attr("stride", stride)
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
     
     assert len(pads_list) == len(input.shape) - 2
@@ -1382,13 +1371,29 @@ def MaxPool2d(
     padding_after = [pad[1] for pad in pads_list]
     print("kernel_size:", kernel_size, "dilation:", dilation, "stride:", stride, "\npadding_before, padding_after >>>>>>>>>>>>>>>>>>>>> ", padding_before, padding_after)
     assert len(pads_list) == len(input.shape) - 2
-    op.Attr("padding", padding_type)
-    op.Attr("padding_before", padding_before)
-    op.Attr("padding_after", padding_after)
-    op.Attr("dilation", dilation)
-    op.Attr("return_indices", return_indices)
-    op.Attr("ceil_mode", ceil_mode)
-    return op.Build().InferAndTryRun().RemoteBlobList()[0]
+
+    y, indice = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MaxPool2d_")
+        )
+        .Op("maxpool_2d")
+        .Input("x", [input])
+        .Output("y")
+        .Output("indice")
+        .Attr("data_format", channel_pos)
+        .Attr("stride", stride)
+        .Attr("kernel_size", kernel_size)
+        .Attr("padding", padding_type)
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("dilation", dilation)
+        .Attr("return_indices", return_indices)
+        .Attr("ceil_mode", ceil_mode)   
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return y, indice
 
 
 @oneflow_export("nn.max_pool2d")

@@ -18,13 +18,23 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/common/eigen_util.h"
 
 namespace oneflow {
 
+
+#define POOLING_DATA_TYPE_CPU_SEQ \
+  FLOATING_DATA_TYPE_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt32)
+
+#define POOLING_DATA_TYPE_GPU_SEQ \
+  POOLING_DATA_TYPE_CPU_SEQ
+//   FLOAT16_DATA_TYPE_SEQ
+
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
+typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class PoolingParams3D {
  public:
@@ -77,282 +87,115 @@ struct PoolKernelState final : public user_op::OpKernelState {
 };
 
 
-template<typename T>
-struct PoolingCpuKernelUtil {
- public:
-  typedef std::function<T()> ForwardInitialize;
-  typedef std::function<void(const T& lhs, T& rhs)> CFirstProcess;
-  typedef std::function<void(const int64_t in_col, const int64_t out_col,
-                             ConstEigenMatrixMap<T>& in_mat, EigenMatrixMap<T>& out_mat)>
-      CLastProcess;
-  typedef std::function<void(const int64_t size, T& out)> CFirstFinalize;
-  typedef std::function<void(const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat)>
-      CLastFinalize;
-  typedef std::function<void(const T& in, const T& out, const T& out_diff, const int64_t size,
-                             T& in_diff)>
-      CFirstProcessGrad;
-  typedef std::function<void(const int64_t out_col, const int64_t in_col, const int64_t size,
-                             ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
-                             ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr)>
-      CLastProcessGrad;
+template<DeviceType device_type, typename T>
+struct PoolingKernelUtil {
+  static void Maxpool2dForward(
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    const T* src, T* dest, T* indice_ptr, const std::vector<int32_t> padding_before,
+    const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
+    const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
+    const std::vector<int32_t> stride, const std::vector<int32_t> dilation, const bool return_indices, const bool ceil_mode
+  );
 
-
-  
-
-  static void MaxFWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    auto* pool_state = dynamic_cast<PoolKernelState*>(state);
-    CHECK(pool_state != nullptr);
-    pool_state->Update(x->shape());
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-    if (data_format == "channels_first") {
-      CFirstForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
-                    [](const T& lhs, T& rhs) {
-                      if (lhs > rhs) { rhs = lhs; }
-                    },
-                    [](const int64_t size, T& out) {});
-    } else if (data_format == "channels_last") {
-      CLastForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
-                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-                      EigenMatrixMap<T>& out_mat) {
-                     out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
-                   },
-                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-
-  static void MaxBWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
-    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto* pool_state = dynamic_cast<PoolKernelState*>(state);
-    CHECK(pool_state != nullptr);
-    pool_state->Update(x->shape());
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-    if (data_format == "channels_first") {
-      CFirstBackward(
-          pool_state->GetParams3D(), dy, y, x, dx,
-          [](const T& in, const T& out, const T& out_diff, const int64_t size, T& in_diff) {
-            if (in == out) { in_diff += out_diff; }
-          });
-    } else if (data_format == "channels_last") {
-      UNIMPLEMENTED();
-      // CLastBackward(
-      //     pool_state->GetParams3D(), dy, y, x, dx,
-      //     [](const int64_t out_col, const int64_t in_col, const int64_t size,
-      //        ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
-      //        ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) {
-      //       in_diff_arr.col(in_col) +=
-      //           out_diff_arr.col(out_col)
-      //           * (in_arr.col(in_col).cwiseEqual(out_arr.col(out_col)).template cast<T>());
-      //     });
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-
-
-  static void CFirstForward(const PoolingParams3D& params_3d, const user_op::Tensor* in_blob,
-                            user_op::Tensor* out_blob, const ForwardInitialize& initialize,
-                            const CFirstProcess& process, const CFirstFinalize& finalize) {
-    const Shape& in = params_3d.GetXShape5D();
-    const Shape& out = params_3d.GetYShape5D();
-    const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
-    const std::vector<int32_t>& strides = params_3d.strides_3d();
-    const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-    const std::vector<int32_t>& dilation = params_3d.dilation_3d();
-
-    const T* input = in_blob->dptr<T>();
-    T* output = out_blob->mut_dptr<T>();
-    FOR_RANGE(int64_t, n, 0, in.At(0)) {
-      FOR_RANGE(int64_t, c, 0, in.At(1)) {
-        FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-          int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-          int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
-          dstart = std::max(dstart, static_cast<int64_t>(0));
-          FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-            int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-            int64_t hend = std::min(hstart + (kernel_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
-            while(hstart < 0)
-              hstart += dilation.at(1); // hstart = std::max(hstart, static_cast<int64_t>(0));
-            FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-              int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-              int64_t wend = std::min(wstart + (kernel_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
-              while(wstart < 0)
-                wstart += dilation.at(2); //wstart = std::max(wstart, static_cast<int64_t>(0));
-              const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
-
-              T res = initialize();
-              FOR_RANGE(int64_t, d, dstart, dend) {
-                for(int64_t h=hstart;h<hend; h++) {
-                  for(int64_t w=wstart; w<wend; w++) {
-                    const int64_t input_index = d * in.Count(3) + h * in.At(4) + w;
-                    process(input[input_index], res);
-                  }
-                }
-              }
-              finalize((dend - dstart) * (hend - hstart) * (wend - wstart), res);
-              output[pool_index] = res;
-              //printf("\nhstart:%ld, hend:%ld, wstart:%ld, wend:%ld; pool_index:%ld\n", hstart, hend, wstart, wend, pool_index);
-        
-            }
-          }
-        }
-        input += in.Count(2);
-        output += out.Count(2);
-      }
-    }
-  }
-
-  static void CFirstBackward(const PoolingParams3D& params_3d, const user_op::Tensor* out_diff_blob,
-                             const user_op::Tensor* out_blob, const user_op::Tensor* in_blob,
-                             user_op::Tensor* in_diff_blob, const CFirstProcessGrad& process) {
-    const Shape& in = params_3d.GetXShape5D();
-    const Shape& out = params_3d.GetYShape5D();
-    const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
-    const std::vector<int32_t>& stride = params_3d.strides_3d();
-    const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-    const std::vector<int32_t>& dilation = params_3d.dilation_3d();
-
-    const T* output_diff = out_diff_blob->dptr<T>();
-    const T* output = out_blob->dptr<T>();
-    const T* input = in_blob->dptr<T>();
-    std::memset(in_diff_blob->mut_dptr<T>(), T(0), in.elem_cnt() * sizeof(T));
-    T* input_diff = in_diff_blob->mut_dptr<T>();
-    FOR_RANGE(int64_t, n, 0, in.At(0)) {
-      FOR_RANGE(int64_t, c, 0, in.At(1)) {
-        FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-          int64_t dstart = pd * stride.at(0) - padding_before.at(0);
-          int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
-          dstart = std::max(dstart, static_cast<int64_t>(0));
-          FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-            int64_t hstart = ph * stride.at(1) - padding_before.at(1);
-            int64_t hend = std::min(hstart + (kernel_size.at(1)-1)*dilation.at(1) + 1, in.At(3));
-            while(hstart < 0)
-              hstart += dilation.at(1); // hstart = std::max(hstart, static_cast<int64_t>(0));
-
-            FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-              int64_t wstart = pw * stride.at(2) - padding_before.at(2);
-              int64_t wend = std::min(wstart + (kernel_size.at(2)-1)*dilation.at(2) + 1, in.At(4));
-              while(wstart < 0)
-                wstart += dilation.at(2); //wstart = std::max(wstart, static_cast<int64_t>(0));
-
-              const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
-              const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
-              FOR_RANGE(int64_t, d, dstart, dend) {
-                FOR_RANGE(int64_t, h, hstart, hend) {
-                  FOR_RANGE(int64_t, w, wstart, wend) {
-                    const int64_t index = d * in.Count(3) + h * in.At(4) + w;
-                    process(input[index], output[pool_index], output_diff[pool_index], size,
-                            input_diff[index]);
-                  }
-                }
-              }
-            }
-          }
-        }
-        // offset
-        input += in.Count(2);
-        input_diff += in.Count(2);
-        output += out.Count(2);
-        output_diff += out.Count(2);
-      }
-    }
-  }
-
-  static void CLastForward(const PoolingParams3D& params_3d, const user_op::Tensor* in_blob,
-                           user_op::Tensor* out_blob, const ForwardInitialize& forward_initialize,
-                           const CLastProcess& process, const CLastFinalize& finalize) {
-    const Shape& in = params_3d.GetXShape5D();
-    const Shape& out = params_3d.GetYShape5D();
-    const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
-    const std::vector<int32_t>& stride = params_3d.strides_3d();
-    const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-
-    ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
-    EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
-    FOR_RANGE(int64_t, n, 0, in.At(0)) {
-      FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-        int64_t dstart = pd * stride.at(0) - padding_before.at(0);
-        int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
-        dstart = std::max(dstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-          int64_t hstart = ph * stride.at(1) - padding_before.at(1);
-          int64_t hend = std::min(hstart + kernel_size.at(1), in.At(3));
-          hstart = std::max(hstart, static_cast<int64_t>(0));
-          FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-            int64_t wstart = pw * stride.at(2) - padding_before.at(2);
-            int64_t wend = std::min(wstart + kernel_size.at(2), in.At(4));
-            wstart = std::max(wstart, static_cast<int64_t>(0));
-            const int out_col = ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
-            out_mat.col(out_col).setConstant(forward_initialize());
-            FOR_RANGE(int64_t, d, dstart, dend) {
-              FOR_RANGE(int64_t, h, hstart, hend) {
-                FOR_RANGE(int64_t, w, wstart, wend) {
-                  const int in_col = ((n * in.At(2) + d) * in.At(3) + h) * in.At(4) + w;
-                  process(in_col, out_col, in_mat, out_mat);
-                }
-              }
-            }
-            finalize((hend - hstart) * (wend - wstart) * (dend - dstart), out_col, out_mat);
-          }
-        }
-      }
-    }
-  }
-
-  static void CLastBackward(const PoolingParams3D& params_3d, const user_op::Tensor* out_diff_blob,
-                            const user_op::Tensor* out_blob, const user_op::Tensor* in_blob,
-                            user_op::Tensor* in_diff_blob, const CLastProcessGrad& process) {
-    const Shape& in = params_3d.GetXShape5D();
-    const Shape& out = params_3d.GetYShape5D();
-    const std::vector<int32_t>& kernel_size = params_3d.pool_size_3d();
-    const std::vector<int32_t>& strides = params_3d.strides_3d();
-    const std::vector<int32_t>& padding_before = params_3d.padding_before_3d();
-
-    // caffe2 implementation: need check
-    ConstEigenArrayMap<T> out_mat(out_blob->dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
-    ConstEigenArrayMap<T> in_mat(in_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
-    ConstEigenArrayMap<T> out_diff_mat(out_diff_blob->dptr<T>(), out.At(1),
-                                       out.elem_cnt() / out.At(1));
-    std::memset(in_diff_blob->mut_dptr<T>(), T(0), in.elem_cnt() * sizeof(T));
-    EigenArrayMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
-    FOR_RANGE(int64_t, n, 0, in.At(0)) {
-      FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-        int64_t dstart = pd * strides.at(0) - padding_before.at(0);
-        int64_t dend = std::min(dstart + kernel_size.at(0), in.At(2));
-        dstart = std::max(dstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-          int64_t hstart = ph * strides.at(1) - padding_before.at(1);
-          int64_t hend = std::min(hstart + kernel_size.at(1), in.At(3));
-          hstart = std::max(hstart, static_cast<int64_t>(0));
-          FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-            int64_t wstart = pw * strides.at(2) - padding_before.at(2);
-            int64_t wend = std::min(wstart + kernel_size.at(2), in.At(4));
-            wstart = std::max(wstart, static_cast<int64_t>(0));
-            const int64_t pool_index = ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
-            const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
-            FOR_RANGE(int64_t, d, dstart, dend) {
-              FOR_RANGE(int64_t, h, hstart, hend) {
-                FOR_RANGE(int64_t, w, wstart, wend) {
-                  const int64_t input_index = ((n * in.At(2) + d) * in.At(3) + h) * in.At(4) + w;
-                  process(pool_index, input_index, size, out_mat, in_mat, out_diff_mat,
-                          in_diff_mat);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  static void Maxpool2dBackward(
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    const T* src, T* dest, const T* indice_ptr,
+    const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
+    const int64_t dst_height, const int64_t dst_width,
+    const bool return_indices, const bool ceil_mode
+  );
 };
 
 
+template<typename T>
+OF_DEVICE_FUNC void FarwardCompute(
+    const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    const T* src, T* dest, T* indice_ptr, const int32_t padding_h, const int32_t padding_w,
+    const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
+    const int64_t y_height, const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
+    const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h, const int32_t dilation_w,
+    const bool return_indices, const bool ceil_mode
+  ) {
+    XPU_1D_KERNEL_LOOP(num, elem_num){
+      int64_t coord_x[4], hend, wend;
+      index_helper.OffsetToNdIndex(num, coord_x);
+      const int64_t n = coord_x[0];
+      const int64_t c = coord_x[1];
+      const int64_t h = coord_x[2];
+      const int64_t w = coord_x[3];
+      int64_t ip = c*x_width*x_height;
+      int64_t hstart = h * stride_h - padding_h;
+      int64_t wstart = w * stride_w - padding_w;
+      int64_t hend_min = hstart + (kernel_size_h-1)*dilation_h + 1;
+      if(hend_min<=x_height) hend=hend_min; else hend=x_height;
+      /*int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
+      
+      const int64_t wend_min = wstart + (kernel_size_w-1)*dilation_w + 1;
+      if(wend_min <= x_width) wend=wend_min; else wend=x_width;
+      /* int64_t wend = std::min(wstart + (kernel_size_w-1)*dilation_w + 1, x_width); */
+
+      while(hstart < 0)
+        hstart += dilation_h;
+      while(wstart < 0)
+        wstart += dilation_w;
+
+      /* local pointers */
+      const int64_t dest_idx = c*y_width*y_height + h*y_width + w;
+      int64_t indp = c*y_width*y_height + h*y_width + w;
+
+      /* compute local max: */
+      int64_t maxindex = hstart * x_width + wstart;
+      /* T maxval = -std::numeric_limits<T>::infinity(); */
+      T maxval;
+      for(int64_t i=hstart;i<hend; i++) {
+          for(int64_t j=wstart; j<wend; j++) {
+            int64_t tcntr = i*x_width + j;
+            const int64_t search_idx = ip + tcntr;
+            T val = src[search_idx];
+            if ((val > maxval) || std::isnan(val))
+            {
+              maxval = val;
+              maxindex = search_idx;
+            }
+          }
+      }
+      /* set output to local max */
+      dest[dest_idx] = src[maxindex];
+
+      /* store location of max */
+      indice_ptr[indp] = maxindex;  
+    }
+  }
+
+  
+
+template<typename T>
+OF_DEVICE_FUNC void BackwardCompute(
+  const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num, const T* src, T* dest, 
+  const T* indice_ptr, const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width, 
+  const int64_t dst_height, const int64_t dst_width, const bool return_indices, const bool ceil_mode
+) {
+  XPU_1D_KERNEL_LOOP(num, elem_num){
+    int64_t coord_dx[4];
+    index_helper.OffsetToNdIndex(num, coord_dx);
+    const int64_t n = coord_dx[0];
+    const int64_t c = coord_dx[1];
+    const int64_t h = coord_dx[2];
+    const int64_t w = coord_dx[3];
+    
+    int64_t src_idx = c*src_height*src_width + h*src_width + w;
+    int64_t indice_idx = c*src_height*src_width + h*src_width + w;
+    int64_t dest_idx = indice_ptr[indice_idx];
+    if (dest_idx != -1) {
+      /* update gradient */
+      dest[dest_idx] += src[src_idx];
+    }
+  }
+}
+
+
+#define INSTANTIATE_POOLING_KERNEL_UTIL(device_type_v, dtype_pair) \
+  template struct PoolingKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
 }  // namespace oneflow
 
