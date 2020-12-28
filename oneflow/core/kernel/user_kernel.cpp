@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 
 namespace oneflow {
 

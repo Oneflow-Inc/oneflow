@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/kernel/kernel_helper.h"
 
 namespace oneflow {
 

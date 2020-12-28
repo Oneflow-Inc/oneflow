@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #if defined(WITH_PROFILER)
