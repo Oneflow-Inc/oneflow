@@ -2435,7 +2435,7 @@ def ndindex_to_offset(
     dims: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    """This operator computes the 1-D offset in N-D Tensor.
+    """This operator converts the n-dimensions index of Tensor to a flatten offset.
 
     Args:
         index (remote_blob_util.BlobDef): The Tensor contains the n-dimensions index. 
