@@ -2463,7 +2463,6 @@ def ndindex_to_offset(
         out = ndindex_to_offset_job(index, dims)
         # output [28]
 
-
     """
     assert (
         len(index.shape) == 1 and len(dims.shape) == 1
