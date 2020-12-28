@@ -23,7 +23,9 @@ from typing import Dict
 import os
 
 
-def _compare_logsoftmax_with_np(input_shape, device_type, machine_ids, device_counts,axis):
+def _compare_logsoftmax_with_np(
+    input_shape, axis, device_type, machine_ids, device_counts
+):
     input_1 = np.random.random(size=input_shape).astype(np.float32)
 
     assert device_type in ["cpu", "gpu"]
@@ -37,25 +39,24 @@ def _compare_logsoftmax_with_np(input_shape, device_type, machine_ids, device_co
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
-    def np_logsoftmax(input,axis):
-        exps = np.exp(input,)
-        softmax=exps / np.sum(exps,axis=axis,keepdims=True)     
+    def np_logsoftmax(input, axis):
+        exps = np.exp(input)
+        softmax = exps / np.sum(exps, axis=axis, keepdims=True)
         return np.log(softmax)
 
-    np_out_logsoftmax = np_logsoftmax(input_1,1)
+    np_out_logsoftmax = np_logsoftmax(input_1, axis)
 
-    def np_diff(x, axis): 
-    # assert output grad is 1
+    def np_diff(x, axis):
+        # assert output grad is 1
         _grad = np.ones_like(x)
-        _sum = np.sum(_grad, axis=axis)
-        _diff = _grad - np.exp(x) * _sum 
-        elem_cnt = x.size
-        return _diff / elem_cnt
+        _sum = np.sum(_grad, axis=axis, keepdims=True)
+        _diff = _grad - np.exp(x) * _sum
+        return _diff
 
-    _np_grad = np_diff(np_out_logsoftmax, 1)
+    _np_grad = np_diff(np_out_logsoftmax, axis)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        assert np.allclose(blob, _np_grad)
+        assert np.allclose(blob, _np_grad, rtol=1e-2)
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -74,7 +75,7 @@ def _compare_logsoftmax_with_np(input_shape, device_type, machine_ids, device_co
 
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        of_logsoftmax_out = flow.nn.logsoftmax(x_var)
+        of_logsoftmax_out = flow.nn.logsoftmax(x_var, axis)
 
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
@@ -88,14 +89,14 @@ def _compare_logsoftmax_with_np(input_shape, device_type, machine_ids, device_co
     assert np.allclose(of_logsoftmax_out, np_out_logsoftmax)
 
 
-def _gen_arg_dict(shape, device_type, machine_ids, device_counts,axis):
+def _gen_arg_dict(shape, axis, device_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]
+    arg_dict["axis"] = [*axis]  # Pass (-1, 1) -> unzip as -1, 1 two test cases
     arg_dict["device_type"] = [device_type]
     arg_dict["machine_ids"] = [machine_ids]
     arg_dict["device_counts"] = [device_counts]
-    arg_dict["axis"] = [axis]
     return arg_dict
 
 
@@ -103,7 +104,11 @@ def _gen_arg_dict(shape, device_type, machine_ids, device_counts,axis):
 class Testlogsoftmax1n1d(flow.unittest.TestCase):
     def test_logsoftmax_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 3), device_type="cpu", machine_ids="0:0", device_counts=1,axis=1
+            shape=(2, 4, 6),
+            axis=(1, -1),
+            device_type="cpu",
+            machine_ids="0:0",
+            device_counts=1,
         )
         for arg in GenArgList(arg_dict):
             _compare_logsoftmax_with_np(*arg)
@@ -111,7 +116,11 @@ class Testlogsoftmax1n1d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_logsoftmax_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16), device_type="gpu", machine_ids="0:0", device_counts=1,axis=0
+            shape=(2, 4, 6, 2),
+            axis=(2, 3, -2),
+            device_type="gpu",
+            machine_ids="0:0",
+            device_counts=1,
         )
         for arg in GenArgList(arg_dict):
             _compare_logsoftmax_with_np(*arg)
@@ -122,7 +131,11 @@ class Testlogsoftmax1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_logsoftmax_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 8), device_type="gpu", machine_ids="0:0-1", device_counts=2,axis=2
+            shape=(2, 8),
+            axis=1,
+            device_type="gpu",
+            machine_ids="0:0-1",
+            device_counts=2,
         )
         for arg in GenArgList(arg_dict):
             _compare_logsoftmax_with_np(*arg)
