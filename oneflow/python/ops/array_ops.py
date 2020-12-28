@@ -2465,6 +2465,10 @@ def ndindex_to_offset(
 
 
     """
+    assert (
+        len(index.shape) == 1 and len(dims.shape) == 1
+    ), "The length of index shape and dims shape must be 1"
+
     _index_len = index.shape[0]
     _dim_len = dims.shape[0]
 
@@ -2473,9 +2477,8 @@ def ndindex_to_offset(
     ), "The Input sequence length is not matched, {} vs {}".format(_index_len, _dim_len)
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("RavelIndex_")
+            name if name is not None else id_util.UniqueStr("NdIndexToOffset_")
         )
-        .Op("ravel_index")
         .Op("ndindex_to_offset")
         .Input("index", [index])
         .Input("dims", [dims])
