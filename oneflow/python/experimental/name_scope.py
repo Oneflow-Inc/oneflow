@@ -17,10 +17,10 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_context
 import oneflow.python.framework.scope_util as scope_util
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import oneflow_api
 import traceback
 
 
@@ -59,7 +59,7 @@ def name_scope(name: str) -> None:
     name_scope_stack_push(name)
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewScopeName(builder, name)
+        return builder.BuildScopeWithNewScopeName(old_scope, name)
 
     sess = session_context.GetDefaultSession()
     try:
@@ -70,7 +70,7 @@ def name_scope(name: str) -> None:
 
 
 def name_scope_stack_push(name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
     if job_name not in sess.job_name2name_scope_stack:
         sess.job_name2name_scope_stack[job_name] = []
@@ -78,7 +78,7 @@ def name_scope_stack_push(name):
 
 
 def name_scope_stack_pop():
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
     assert job_name in sess.job_name2name_scope_stack
     assert len(sess.job_name2name_scope_stack[job_name]) > 0
@@ -104,5 +104,5 @@ def PrependOpNamePrefixIfNeed(op_conf):
     if op_conf.HasField("user_conf"):
         return
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_conf.name = GetJobNameScopePrefix(job_name) + op_conf.name
