@@ -35,8 +35,7 @@ void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
                                     .data_regst_time_shape();
   CHECK_GE(one_time_shape.elem_cnt(), acc_time_shape.elem_cnt());
-  AccumulateCompActor::Init(proto, one_time_shape.elem_cnt() / acc_time_shape.elem_cnt(),
-                            ColIdOrder::kAscending);
+  AccumulateCompActor::Init(proto, one_time_shape.elem_cnt() / acc_time_shape.elem_cnt());
 }
 
 REGISTER_ACTOR(TaskType::kAcc, AccCompActor);
