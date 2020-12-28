@@ -9,6 +9,7 @@ import "oneflow/core/framework/user_op_attr.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
+import "oneflow/core/operator/op_conf.proto";
 
 message NaiveModelUpdateConf {
 }

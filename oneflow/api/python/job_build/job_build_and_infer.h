@@ -231,15 +231,8 @@ inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProduc
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(lbn)));
 }
 
-Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(
-      JUST(ctx->MirroredBlobGetParallelDescFromProducerView(lbn))->parallel_conf());
-}
-
-Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
-                                                      const std::string& lbn) {
+inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
+                                                             const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   JUST(ctx->CheckLbnValidAndExist(lbn));
   return Maybe<void>::Ok();
