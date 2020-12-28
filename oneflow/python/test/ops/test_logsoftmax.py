@@ -56,7 +56,7 @@ def _compare_logsoftmax_with_np(
     _np_grad = np_diff(np_out_logsoftmax, axis)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        assert np.allclose(blob, _np_grad, rtol=1e-2)
+        assert np.allclose(blob, _np_grad, atol=1e-5)
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -76,7 +76,6 @@ def _compare_logsoftmax_with_np(
         flow.watch_diff(x_var, assert_prediction_grad)
 
         of_logsoftmax_out = flow.nn.logsoftmax(x_var, axis)
-
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
@@ -86,7 +85,7 @@ def _compare_logsoftmax_with_np(
 
     of_logsoftmax_out = oneflow_logsoftmax(input_1)
 
-    assert np.allclose(of_logsoftmax_out, np_out_logsoftmax)
+    assert np.allclose(of_logsoftmax_out, np_out_logsoftmax, rtol=1e-5)
 
 
 def _gen_arg_dict(shape, axis, device_type, machine_ids, device_counts):
@@ -104,7 +103,7 @@ def _gen_arg_dict(shape, axis, device_type, machine_ids, device_counts):
 class Testlogsoftmax1n1d(flow.unittest.TestCase):
     def test_logsoftmax_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(2, 4, 6),
+            shape=(2, 64, 32),
             axis=(1, -1),
             device_type="cpu",
             machine_ids="0:0",
