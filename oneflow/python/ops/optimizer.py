@@ -962,7 +962,7 @@ class StaticLossScalePolicy(LossScalePolicy):
 @oneflow_export("optimizer.loss_scale.dynamic_loss_scale")
 class DynamicLossScalePolicy(LossScalePolicy):
     def __init__(
-        self, initial_loss_scale=(2 ** 15), increment_period=2000, multiplier=2.0
+        self, initial_loss_scale=(2 ** 30), increment_period=2000, multiplier=2.0
     ):
         self.initial_loss_scale = initial_loss_scale
         self.increment_period = increment_period
