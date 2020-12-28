@@ -295,6 +295,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 {% endif %}{# field label type #}
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
+ public:
   {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case() const;
  protected:
   bool has_{{ util.oneof_name(oneof) }}() const;
