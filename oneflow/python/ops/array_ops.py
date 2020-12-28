@@ -2446,7 +2446,7 @@ def ndindex_to_offset(
         The `index` Tensor must be in the range of `dims` Tensor. 
 
     Returns:
-        remote_blob_util.BlobDef: The offset
+        remote_blob_util.BlobDef: The flatten offset.
 
     For example: 
 
