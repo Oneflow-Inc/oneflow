@@ -32,6 +32,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow
+import oneflow_api.oneflow.core.common.error as error_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 
 oneflow_api = oneflow.oneflow_api
@@ -352,7 +353,3 @@ def JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn):
     assert isinstance(job_name, str)
     assert isinstance(lbn, str)
     oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn)
-
-
-def LoadLibraryNow(lib_path):
-    oneflow_api.LoadLibraryNow(lib_path)
