@@ -22,12 +22,13 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
 from typing import Tuple, Optional, Union, Sequence, Text
+import traceback
 
 
 class ClipGradientConf:
@@ -585,6 +586,36 @@ class PolynomialScheduler(LrScheduler):
         learning_rate_decay_conf.polynomial_conf.power = self.power
         learning_rate_decay_conf.polynomial_conf.cycle = self.cycle
         return learning_rate_decay_conf
+
+
+@oneflow_export("optimizer.PolynomialSchduler")
+@oneflow_deprecate()
+class PolynomialSchduler(PolynomialScheduler):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        end_learning_rate: float = 0.0001,
+        power: float = 1.0,
+        cycle: bool = False,
+        warmup: Optional[WarmupConf] = None,
+    ):
+        print(
+            "WARNING:",
+            "oneflow.optimizer.PolynomialSchduler",
+            "will be removed in the future, use {} instead.".format(
+                "oneflow.optimizer.PolynomialScheduler"
+            ),
+        )
+        print(traceback.format_stack()[-2])
+        super().__init__(
+            base_lr=base_lr,
+            steps=steps,
+            end_learning_rate=end_learning_rate,
+            power=power,
+            cycle=cycle,
+            warmup=warmup,
+        )
 
 
 @oneflow_export("optimizer.LinearCosineScheduler")

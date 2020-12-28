@@ -33,6 +33,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 from functools import reduce
 import traceback
 
@@ -152,7 +153,7 @@ class FixedTensorDef(ArgBlobDef):
         parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
         if (
             parallel_symbol.device_tag == "gpu"
-            and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
+            and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0]
             and parallel_symbol.parallel_num == 1
         ):
             device_tag = "gpu"
@@ -312,7 +313,7 @@ class MirroredTensorListDef(ArgBlobDef):
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
     compile_context.CurJobAddMirroredOp(op_conf)
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
         job_name, mirrored_lbn
     )

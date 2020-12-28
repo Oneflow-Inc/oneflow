@@ -18,10 +18,13 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/symbol_id_cache.h"
 
 namespace oneflow {
 
@@ -114,6 +117,18 @@ void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
   }
 }
 
+// TODO(lixinqi): Refactor this function after symbol::IdCache and symbol::Storage merged
+template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
+Maybe<void> TryAddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
+  SymbolPbT symbol_pb;
+  symbol_conf.ToProto(&symbol_pb);
+  auto* id_cache = Global<symbol::IdCache<SymbolConfT>>::Get();
+  if (id_cache->Has(symbol_conf)) { return Maybe<void>::Ok(); }
+  JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
+  JUST(Global<symbol::Storage<SymbolT>>::Get()->TryAdd(symbol_id, symbol_pb));
+  return Maybe<void>::Ok();
+}
+
 Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* job,
                                            const std::function<Maybe<void>()>& Handler) {
   HashSet<std::string> exists_op_names;
@@ -124,7 +139,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
   // using a new JobBuilder to avoid bugs caused by MutOnlyOnce
   auto new_job_builder = std::make_shared<JobBuilder>(job);
   HashMap<int64_t, std::vector<const OperatorConf*>> scope_id2op_names;
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   for (const auto& op_conf : job->net().op()) {
     if (exists_op_names.count(op_conf.name()) > 0) { continue; }
     CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
@@ -142,7 +157,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
       symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
       return Maybe<void>::Ok();
     }));
-    Global<ForeignCallback>::Get()->AddScopeToPyStorage(symbol_id, new_scope);
+    JUST(TryAddSymbol<cfg::ScopeProto, ScopeProto, Scope>(symbol_id, *new_scope));
     return symbol_id;
   };
   for (const auto& pair : scope_id2op_names) {
