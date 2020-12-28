@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-COMMAND(Global<SymbolStorage<std::string>>::SetAllocated(new SymbolStorage<std::string>()));
+COMMAND(Global<symbol::Storage<std::string>>::SetAllocated(new symbol::Storage<std::string>()));
 
 namespace {
 
@@ -48,7 +48,7 @@ class InitStringSymbolInstructionType final : public InstructionType {
     FlatMsgView<StringObjectInstrOperand> args(instruction->instr_msg().operand());
     FOR_RANGE(int, i, 0, args->string_size()) {
       int64_t logical_object_id = args->string(i).logical_object_id();
-      const auto& str = Global<SymbolStorage<std::string>>::Get()->Get(logical_object_id);
+      const auto& str = Global<symbol::Storage<std::string>>::Get()->Get(logical_object_id);
       auto* rw_mutexed_object = instruction->mut_operand_type(args->string(i));
       rw_mutexed_object->Init<StringObject>(str);
     }

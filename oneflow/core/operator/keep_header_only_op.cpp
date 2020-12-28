@@ -19,6 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 void KeepHeaderOnlyOp::InitFromOpConf() {
+  CHECK(op_conf().has_keep_header_only_conf());
   CHECK_EQ(op_conf().keep_header_only_conf().in().size(),
            op_conf().keep_header_only_conf().out().size());
   EnrollRepeatedInputBn("in", false);

@@ -26,8 +26,6 @@ Regst::Regst() {
   status_.regst_desc_id = -1;
   status_.piece_id = -1;
   status_.act_id = -1;
-  status_.col_id = 0;
-  status_.max_col_id = 0;
   regst_desc_ = nullptr;
   comm_net_token_ = nullptr;
 }

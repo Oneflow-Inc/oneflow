@@ -47,8 +47,7 @@ REGISTER_USER_OP("dim_gather")
         CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
       }
 
-      CHECK_OR_RETURN(!in->is_dynamic());
-      CHECK_OR_RETURN(!index->is_dynamic());
+      CHECK_EQ_OR_RETURN(in->is_dynamic(), index->is_dynamic());
 
       FOR_RANGE(int64_t, i, 0, input_num_axes) {
         if (i == dim) { continue; }
@@ -186,7 +185,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
     });
 
 REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {

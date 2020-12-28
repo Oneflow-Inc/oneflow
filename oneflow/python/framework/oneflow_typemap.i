@@ -1,5 +1,0 @@
-%apply_numpy_typemaps(int8_t)
-%apply_numpy_typemaps(int32_t)
-%apply_numpy_typemaps(int64_t)
-%apply_numpy_typemaps(uint8_t)
-%apply_numpy_typemaps(char)

@@ -19,6 +19,7 @@ import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.object as object_util
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow_api
 
 
 class OpKernelObject(object_util.Object):
@@ -46,10 +47,10 @@ class OpKernelObject(object_util.Object):
 
 def _GetScopeSymbol(op_conf):
     assert op_conf.HasField("scope_symbol_id")
-    return symbol_storage.GetSymbol4Id(op_conf.scope_symbol_id)
+    return oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
 
 
 def _GetOpParallelSymbol(op_conf):
     assert op_conf.HasField("scope_symbol_id")
     symbol_id = c_api_util.GetOpParallelSymbolId(op_conf)
-    return symbol_storage.GetSymbol4Id(symbol_id)
+    return oneflow_api.GetPlacementSymbol(symbol_id)
