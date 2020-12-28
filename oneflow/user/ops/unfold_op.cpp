@@ -27,10 +27,10 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
-template<size_t NDims>
 TensorDescInferFn MakeFwTensorDescInferFn() {
   return [](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+    const int32_t spatial_ndim = x_shape.NumAxes() - 2;
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
@@ -38,20 +38,19 @@ TensorDescInferFn MakeFwTensorDescInferFn() {
     const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const int32_t idx_offset = IdxOffset(data_format);
-    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
+    const size_t c_dim = data_format == "channels_first" ? 1 : spatial_ndim + 1;
 
-    CHECK_GE_OR_RETURN(NDims, 1);
-    CHECK_LE_OR_RETURN(NDims, 3);
-    CHECK_EQ_OR_RETURN(NDims + 2, x_shape.NumAxes());
-    CHECK_EQ_OR_RETURN(kernel_size.size(), NDims);
+    CHECK_GE_OR_RETURN(spatial_ndim, 1);
+    CHECK_LE_OR_RETURN(spatial_ndim, 3);
+    CHECK_EQ_OR_RETURN(kernel_size.size(), spatial_ndim);
     for (int32_t kernel_dim : kernel_size) { CHECK_GT_OR_RETURN(kernel_dim, 0); }
-    CHECK_EQ_OR_RETURN(strides.size(), NDims);
+    CHECK_EQ_OR_RETURN(strides.size(), spatial_ndim);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
-    CHECK_EQ_OR_RETURN(dilation_rate.size(), NDims);
+    CHECK_EQ_OR_RETURN(dilation_rate.size(), spatial_ndim);
     for (int32_t dilation_dim : dilation_rate) { CHECK_GT_OR_RETURN(dilation_dim, 0); }
 
-    std::vector<int64_t> dhw_shape(NDims);
-    for (int32_t i = 0; i < NDims; ++i) {
+    std::vector<int64_t> dhw_shape(spatial_ndim);
+    for (int32_t i = 0; i < spatial_ndim; ++i) {
       dhw_shape[i] = (x_shape.At(idx_offset + i) + padding_before[i] + padding_after[i]
                       - dilation_rate[i] * (kernel_size[i] - 1) - 1)
                          / strides[i]
@@ -116,13 +115,12 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-template<size_t NDims>
 GenBackwardOpConfFn MakeGenBackwardOpConfFn() {
   return [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
-          builder.Op("unfold_" + std::to_string(NDims) + "d_grad")
+          builder.Op("unfold_grad")
               .Input("x", op.input("x", 0))
               .Input("y", op.output("y", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
@@ -151,43 +149,26 @@ REGISTER_USER_OP("unfold")
     .Attr<std::vector<int32_t>>("padding_after")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<std::vector<int32_t>>("dilation_rate")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn<2>())
+    .SetTensorDescInferFn(MakeFwTensorDescInferFn())
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
-#define REGISTER_UNFOLD_OP_NDIMS(dim)                          \
-  REGISTER_USER_OP("unfold_" + std::to_string(dim) + "d")      \
-      .Input("x")                                              \
-      .Output("y")                                             \
-      .Attr<std::string>("data_format")                        \
-      .Attr<std::vector<int32_t>>("kernel_size")               \
-      .Attr<std::vector<int32_t>>("padding_before")            \
-      .Attr<std::vector<int32_t>>("padding_after")             \
-      .Attr<std::vector<int32_t>>("strides")                   \
-      .Attr<std::vector<int32_t>>("dilation_rate")             \
-      .SetTensorDescInferFn(MakeFwTensorDescInferFn<dim>())    \
-      .SetBatchAxisInferFn(FwBatchAxisInferFn)                 \
-      .SetGetSbpFn(FwGetSbpFn);                                \
-                                                               \
-  REGISTER_USER_OP("unfold_" + std::to_string(dim) + "d_grad") \
-      .Input("x")                                              \
-      .Input("y")                                              \
-      .Input("dy")                                             \
-      .Output("dx")                                            \
-      .Attr<std::string>("data_format")                        \
-      .Attr<std::vector<int32_t>>("kernel_size")               \
-      .Attr<std::vector<int32_t>>("padding_before")            \
-      .Attr<std::vector<int32_t>>("padding_after")             \
-      .Attr<std::vector<int32_t>>("strides")                   \
-      .Attr<std::vector<int32_t>>("dilation_rate")             \
-      .SetTensorDescInferFn(BwTensorDescInferFn)               \
-      .SetBatchAxisInferFn(BwBatchAxisInferFn)                 \
-      .SetGetSbpFn(BwGetSbpFn);                                \
-                                                               \
-  REGISTER_USER_OP_GRAD("unfold_" + std::to_string(dim) + "d") \
-      .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn<dim>());
+REGISTER_USER_OP("unfold_grad")
+    .Input("x")
+    .Input("y")
+    .Input("dy")
+    .Output("dx")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::vector<int32_t>>("padding_after")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .SetTensorDescInferFn(BwTensorDescInferFn)
+    .SetBatchAxisInferFn(BwBatchAxisInferFn)
+    .SetGetSbpFn(BwGetSbpFn);
 
-REGISTER_UNFOLD_OP_NDIMS(2)
+REGISTER_USER_OP_GRAD("unfold").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn());
 
 }  // namespace user_op
 
