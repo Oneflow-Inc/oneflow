@@ -252,9 +252,13 @@ class UnfoldKernelV2 final : public OpKernel {
 #define REGISTER_UNFOLD_KERNEL_V2(device, dtype)                                               \
   REGISTER_USER_KERNEL("unfold").SetCreateFn<UnfoldKernelV2<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == device)                                                      \
-      & (user_op::HobDataType("input", 0) == GetDataType<dtype>::value));
+      & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_UNFOLD_KERNEL_V2(DeviceType::kCPU, float)
+REGISTER_UNFOLD_KERNEL_V2(DeviceType::kCPU, double)
 
 REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, float)
+REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, double)
 
 #define REGISTER_UNFOLD_KERNEL_NDIMS(dim, device, dtype)   \
   REGISTER_USER_KERNEL("unfold_grad")                      \

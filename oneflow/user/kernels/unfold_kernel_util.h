@@ -41,7 +41,8 @@ struct UnfoldParams {
   UnfoldParams(const int64_t batch_size, const int64_t channels, const int64_t* spatial_dims,
                const int32_t* kernel_size, const int32_t* padding_before,
                const int32_t* padding_after, const int32_t* stride, const int32_t* dilation);
-  INDEX_T elem_cnt;
+  INDEX_T in_elem_cnt;
+  INDEX_T out_elem_cnt;
   INDEX_T dims[NDIM];
   int padding[NDIM];
   int stride[NDIM];
@@ -57,16 +58,17 @@ UnfoldParams<INDEX_T, NDIM, SDIM>::UnfoldParams(const int64_t batch_size, const 
                                                 const int32_t* padding_before,
                                                 const int32_t* padding_after, const int32_t* stride,
                                                 const int32_t* dilation)
-    : elem_cnt(0), in_index_helper(0), out_index_helper(0) {
+    : in_elem_cnt(0), out_elem_cnt(0), in_index_helper(0), out_index_helper(0) {
   INDEX_T input_dims[kInputNDim] = {0};
   INDEX_T output_dims[kOutputNDim] = {0};
-  this->elem_cnt = batch_size * channels;
+  this->in_elem_cnt = batch_size * channels;
+  this->out_elem_cnt = batch_size * channels;
   input_dims[0] = batch_size;
   output_dims[0] = batch_size;
   input_dims[kInputChannelDim] = channels;
   output_dims[kOutputChannelDim] = channels;
   for (int d = 0; d < NDIM; ++d) {
-    this->elem_cnt *= spatial_dims[d];
+    this->in_elem_cnt *= spatial_dims[d];
     this->dims[d] = spatial_dims[d];
     this->padding[d] = padding_before[d];
     this->stride[d] = stride[d];
@@ -77,6 +79,7 @@ UnfoldParams<INDEX_T, NDIM, SDIM>::UnfoldParams(const int64_t batch_size, const 
                                     - dilation[d] * (kernel_size[d] - 1) - 1)
                                        / stride[d]
                                    + 1;
+    this->out_elem_cnt *= output_dims[SDIM + d] * output_dims[SDIM + NDIM + d];
   }
   in_index_helper = NdIndexOffsetHelper<INDEX_T, kInputNDim>(input_dims);
   out_index_helper = NdIndexOffsetHelper<INDEX_T, kOutputNDim>(output_dims);
@@ -84,7 +87,7 @@ UnfoldParams<INDEX_T, NDIM, SDIM>::UnfoldParams(const int64_t batch_size, const 
 
 // index_a format: (N, C, di, hi, wi, db, hb, wb) or (N, di, hi, wi, db, hb, wb, C)
 // index_b format: (N, C, D, H, W) or (N, D, H, W, C)
-// return: false indicates out-of-bound, otherwise in-bound
+// return: true indicates out-of-bound, otherwise in-bound
 template<typename INDEX_T, int NDIM, int SDIM>
 OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>& params,
                                          const INDEX_T* index_a, INDEX_T* index_b) {
@@ -93,8 +96,7 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
   // channel dim index transform
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
   index_b[ParamType::kInputChannelDim] = index_a[ParamType::kOutputChannelDim];
-  // spatial dim index transform
-  bool out_bound = false;
+// spatial dim index transform
 #ifdef __CUDA_ARCH__
 #pragma unroll
 #endif
@@ -102,10 +104,10 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
   for (int64_t d = 0; d < NDIM; ++d) {
     INDEX_T idx = index_a[SDIM + NDIM + d] * params.stride[d]
                   + index_a[SDIM + d] * params.dilation[d] - params.padding[d];
-    out_bound = out_bound && (idx < 0 || idx >= params.dims[d]);
-    if (!out_bound) { index_b[d] = idx; }
+    if (idx < 0 || idx >= params.dims[d]) return true;
+    index_b[SDIM + d] = idx;
   }
-  return out_bound;
+  return false;
 }
 
 template<DeviceType device_type, typename T>
