@@ -32,13 +32,11 @@ TensorDescInferFn MakeFwTensorDescInferFn() {
   return [](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-    const std::string& padding = ctx->Attr<std::string>("padding");
     std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const int32_t idx_offset = IdxOffset(data_format);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
 
@@ -54,9 +52,10 @@ TensorDescInferFn MakeFwTensorDescInferFn() {
 
     std::vector<int64_t> dhw_shape(NDims);
     for (int32_t i = 0; i < NDims; ++i) {
-      GetWindowedOutputSize(x_shape.At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                            strides.at(i), padding, ceil_mode, &dhw_shape.at(i),
-                            &padding_before.at(i), &padding_after.at(i));
+      dhw_shape[i] = (x_shape.At(idx_offset + i) + padding_before[i] + padding_after[i]
+                      - dilation_rate[i] * (kernel_size[i] - 1) - 1)
+                         / strides[i]
+                     + 1;
     }
     DimVector y_shape(3);
     y_shape.at(0) = x_shape.At(0);
@@ -129,13 +128,11 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn() {
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::string>("padding"))
               .Attr("padding_before", op.attr<std::vector<int32_t>>("padding_before"))
               .Attr("padding_after", op.attr<std::vector<int32_t>>("padding_after"))
               .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
               .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
               .Attr("dilation_rate", op.attr<std::vector<int32_t>>("dilation_rate"))
-              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
               .Build();
       op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
       AddOp(grad_op);
@@ -162,14 +159,12 @@ REGISTER_USER_OP("unfold")
   REGISTER_USER_OP("unfold_" + std::to_string(dim) + "d")      \
       .Input("x")                                              \
       .Output("y")                                             \
-      .Attr<std::string>("padding")                            \
-      .Attr<std::vector<int32_t>>("padding_before")            \
-      .Attr<std::vector<int32_t>>("padding_after")             \
       .Attr<std::string>("data_format")                        \
       .Attr<std::vector<int32_t>>("kernel_size")               \
+      .Attr<std::vector<int32_t>>("padding_before")            \
+      .Attr<std::vector<int32_t>>("padding_after")             \
       .Attr<std::vector<int32_t>>("strides")                   \
       .Attr<std::vector<int32_t>>("dilation_rate")             \
-      .Attr<bool>("ceil_mode")                                 \
       .SetTensorDescInferFn(MakeFwTensorDescInferFn<dim>())    \
       .SetBatchAxisInferFn(FwBatchAxisInferFn)                 \
       .SetGetSbpFn(FwGetSbpFn);                                \
@@ -179,14 +174,12 @@ REGISTER_USER_OP("unfold")
       .Input("y")                                              \
       .Input("dy")                                             \
       .Output("dx")                                            \
-      .Attr<std::string>("padding")                            \
-      .Attr<std::vector<int32_t>>("padding_before")            \
-      .Attr<std::vector<int32_t>>("padding_after")             \
       .Attr<std::string>("data_format")                        \
       .Attr<std::vector<int32_t>>("kernel_size")               \
+      .Attr<std::vector<int32_t>>("padding_before")            \
+      .Attr<std::vector<int32_t>>("padding_after")             \
       .Attr<std::vector<int32_t>>("strides")                   \
       .Attr<std::vector<int32_t>>("dilation_rate")             \
-      .Attr<bool>("ceil_mode")                                 \
       .SetTensorDescInferFn(BwTensorDescInferFn)               \
       .SetBatchAxisInferFn(BwBatchAxisInferFn)                 \
       .SetGetSbpFn(BwGetSbpFn);                                \

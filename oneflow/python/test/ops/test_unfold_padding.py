@@ -30,84 +30,84 @@ unfold_confs = [
         "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (1, 3, 7, 7),
         "kernel_size": 3,
         "strides": 2,
         "dilation_rate": 1,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (1, 5, 6, 6),
         "kernel_size": 2,
         "strides": 2,
         "dilation_rate": 2,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (1, 7, 5, 5),
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (1, 3, 3, 3),
         "kernel_size": 1,
         "strides": 2,
         "dilation_rate": 3,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (4, 1, 9, 9),
         "kernel_size": 2,
         "strides": 3,
         "dilation_rate": 2,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (1, 1, 6, 6),
         "kernel_size": 2,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (1, 3, 7, 7),
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (1, 5, 6, 6),
         "kernel_size": 2,
         "strides": 1,
         "dilation_rate": 2,
-        "padding": "SAME",
+        "padding": 0,
     },
     {
         "x_shape": (1, 7, 5, 5),
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (1, 3, 3, 3),
         "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 3,
-        "padding": "SAME",
+        "padding": 0,
     },
     {
         "x_shape": (4, 1, 9, 9),
         "kernel_size": 2,
         "strides": 1,
         "dilation_rate": 2,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (1, 3, 3, 3),
@@ -135,14 +135,14 @@ unfold_confs = [
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
-        "padding": ((1, 1), (2, 2)),
+        "padding": (1, 1),
     },
     {
         "x_shape": (3, 2, 8, 8),
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
-        "padding": [(1, 2), (1, 2)],
+        "padding": (1, 2),
     },
 ]
 
@@ -153,42 +153,42 @@ unfold_confs_1n2d = [
         "kernel_size": 1,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (2, 5, 6, 6),
         "kernel_size": 2,
         "strides": 2,
         "dilation_rate": 2,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (4, 3, 3, 3),
         "kernel_size": 1,
         "strides": 2,
         "dilation_rate": 3,
-        "padding": "VALID",
+        "padding": 0,
     },
     {
         "x_shape": (2, 3, 7, 7),
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (4, 7, 5, 5),
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 1,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (4, 3, 9, 9),
         "kernel_size": 2,
         "strides": 2,
         "dilation_rate": 2,
-        "padding": "SAME",
+        "padding": 1,
     },
     {
         "x_shape": (6, 2, 8, 8),
@@ -202,7 +202,7 @@ unfold_confs_1n2d = [
         "kernel_size": 3,
         "strides": 1,
         "dilation_rate": 2,
-        "padding": ((1, 1), (2, 2)),
+        "padding": (1, 1),
     },
 ]
 
@@ -229,7 +229,7 @@ def _GetTorchPadding(padding, dim, in_dhw, kernel_size, strides, dilation_rate):
     valid_case = True
     torch_padding = [0 for _ in range(dim)]
     if isinstance(padding, int):
-        torch_padding = _GetSequence(padding, 2, "padding")
+        torch_padding = _GetSequence(padding, dim, "padding")
     elif isinstance(padding, (list, tuple)):
         for i in range(dim):
             if isinstance(padding[i], int):
@@ -330,7 +330,7 @@ def _compare_with_samples(case):
             v = flow.cast_to_current_logical_view(v)
             x += v
 
-        unfold_f = getattr(flow.nn, "unfold".format(dim))
+        unfold_f = getattr(flow.nn, "unfold")
         padding = unfold_conf["padding"]
         if padding == "SAME":
             padding = "SAME_UPPER"

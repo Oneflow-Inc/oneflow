@@ -33,13 +33,11 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
       user_op::KernelInitContext* ctx) {
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
-    const std::string& padding = ctx->Attr<std::string>("padding");
     std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const int32_t idx_offset = IdxOffset(data_format);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     std::shared_ptr<UnfoldOpKernelState> state(new UnfoldOpKernelState());
@@ -61,9 +59,11 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
     native_shape.at(0) = x_shape.At(0);
     native_shape.at(c_dim) = x_shape.At(c_dim);
     for (int32_t i = 0; i < NDims; ++i) {
-      GetWindowedOutputSize(x_shape.At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                            strides.at(i), padding, ceil_mode, &native_shape.at(idx_offset + i),
-                            &padding_before.at(i), &padding_after.at(i));
+      native_shape[idx_offset + i] =
+          (x_shape.At(idx_offset + i) + padding_before[i] + padding_after[i]
+           - dilation_rate[i] * (kernel_size[i] - 1) - 1)
+              / strides[i]
+          + 1;
     }
 
     state->in_5d_shape_ = Gen5DShape(x_shape, idx_offset);
@@ -73,7 +73,6 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
     state->strides_3d_ = Gen3DVec(strides, 1);
     state->dilation_rate_3d_ = Gen3DVec(dilation_rate, 1);
     state->padding_before_3d_ = Gen3DVec(padding_before, 0);
-    state->ceil_mode_ = ceil_mode;
 
     return std::move(state);
   }
@@ -86,8 +85,6 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
   std::vector<int32_t> strides_3d_;
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
-  std::string padding_;
-  bool ceil_mode_;
 };
 
 template<DeviceType device_type, typename T>

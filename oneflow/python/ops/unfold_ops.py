@@ -46,17 +46,17 @@ def unfold(
     kernel_size: Union[int, IntPair],
     strides: Union[int, IntPair],
     dilation_rate: Union[int, IntPair],
-    padding: Union[str, int, Sequence[Sequence[int]]],
+    padding: Union[int, IntPair],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Performs the unfold on the input. 
 
     Args:
         input (remote_blob_util.BlobDef): A 4-D `Blob` of shape [batch, height, width, channels].
-        kernel_size (Union[int, IntPair]):  An int or list of ints that has length 2. The size of the window for each dimension of the input `Blob`.
+        kernel_size (Union[int, IntPair]):  An int or list of ints that has length 2. The size of the sliding window for each dimension of the input `Blob`.
         strides (Union[int, IntPair]): An int or list of ints that has length 2. The stride of the sliding window for each dimension of the input `Blob`.
         dilation_rate (Union[int, IntPair]): An int or list of ints that has length 2. The dilation_rate of the sliding window for each dimension of the input `Blob`.
-        padding (Union[str, int, Sequence[Sequence[int]]]): '`VALID'` or '`SAME'` or '`SAME_LOWER'`, or '`int'`, or '`SAME_UPPER or Sequence[Sequence[int]]'`.
+        padding (Union[int, IntPair]):  An int or list of ints that has length 2. Implicit zero padding to be added for each dimension of the input `Blob`.
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
     Returns:
@@ -78,7 +78,7 @@ def unfold(
                 kernel_size=3,
                 strides=2,
                 dilation_rate=1,
-                padding='SAME',
+                padding=1,
             )
 
             return unfold_out
@@ -98,23 +98,22 @@ def unfold(
         .Input("x", [input])
         .Output("y")
     )
+    ndims = 2
     data_format = "NCHW"
-    ceil_mode = False
     assert data_format in ["NHWC", "NCHW"]
+    assert len(input.shape) - 2 == ndims
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     op.Attr("data_format", channel_pos)
-    kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
+    kernel_size = _GetSequence(kernel_size, ndims, "kernel_size")
     op.Attr("kernel_size", kernel_size)
-    strides = _GetSequence(strides, 2, "strides")
+    strides = _GetSequence(strides, ndims, "strides")
     op.Attr("strides", strides)
-    dilation_rate = _GetSequence(dilation_rate, 2, "dilation_rate")
+    dilation_rate = _GetSequence(dilation_rate, ndims, "dilation_rate")
     op.Attr("dilation_rate", dilation_rate)
-    padding_type, pads_list = calc_unfold_padding(padding, 0, 2)
-    assert len(pads_list) == len(input.shape) - 2
+    _, pads_list = calc_unfold_padding(padding, 0, ndims)
+    assert len(pads_list) == ndims
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    op.Attr("padding", padding_type)
     op.Attr("padding_before", padding_before)
     op.Attr("padding_after", padding_after)
-    op.Attr("ceil_mode", ceil_mode)
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
