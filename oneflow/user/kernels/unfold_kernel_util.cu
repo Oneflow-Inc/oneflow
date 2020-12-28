@@ -53,50 +53,6 @@ __global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, cons
 }
 
 template<typename T>
-__global__ void UnfoldCFirstForward(const int64_t elem_cnt, const T* data_im, const int64_t depth,
-                                    const int64_t height, const int64_t width,
-                                    const int64_t kernel_depth, const int64_t kernel_height,
-                                    const int64_t kernel_width, const int64_t pad_depth,
-                                    const int64_t pad_height, const int64_t pad_width,
-                                    const int64_t stride_depth, const int64_t stride_height,
-                                    const int64_t stride_width, const int64_t dilation_depth,
-                                    const int64_t dilation_height, const int64_t dilation_width,
-                                    const int64_t depth_col, const int64_t height_col,
-                                    const int64_t width_col, T* data_col) {
-  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
-    int64_t w_out = index % width_col;
-    int64_t idx = index / width_col;
-    int64_t h_out = idx % height_col;
-    idx /= height_col;
-    int64_t d_out = idx % depth_col;
-
-    int64_t n_c_in = idx / depth_col;
-    int64_t n_c_out = n_c_in * kernel_depth * kernel_height * kernel_width;
-    int64_t d_in = d_out * stride_depth - pad_depth;
-    int64_t h_in = h_out * stride_height - pad_height;
-    int64_t w_in = w_out * stride_width - pad_width;
-
-    T* col = data_col + ((n_c_out * depth_col + d_out) * height_col + h_out) * width_col + w_out;
-    const T* im = data_im + ((n_c_in * depth + d_in) * height + h_in) * width + w_in;
-
-    for (int64_t i = 0; i < kernel_depth; ++i) {
-      for (int64_t j = 0; j < kernel_height; ++j) {
-        for (int64_t k = 0; k < kernel_width; ++k) {
-          int64_t d = d_in + i * dilation_depth;
-          int64_t h = h_in + j * dilation_height;
-          int64_t w = w_in + k * dilation_width;
-          *col = (d >= 0 && h >= 0 && w >= 0 && d < depth && h < height && w < width)
-                     ? im[(i * dilation_depth * height + j * dilation_height) * width
-                          + k * dilation_width]
-                     : static_cast<T>(0);
-          col += depth_col * height_col * width_col;
-        }
-      }
-    }
-  }
-}
-
-template<typename T>
 __global__ void UnfoldCFirstBackward(
     const int64_t elem_cnt, const T* data_col, const int64_t depth, const int64_t height,
     const int64_t width, const int64_t kernel_d, const int64_t kernel_h, const int64_t kernel_w,
@@ -161,24 +117,6 @@ inline int32_t GetUnfoldMaxNumBlocks(const int32_t n) {
 template<typename T>
 class UnfoldKernelUtil<DeviceType::kGPU, T> {
  public:
-  static void CFirstForward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
-                            const Shape& out, const std::vector<int32_t>& kernel_size,
-                            const std::vector<int32_t>& strides,
-                            const std::vector<int32_t>& dilation_rate,
-                            const std::vector<int32_t>& padding_before, const T* data_im,
-                            T* data_col) {
-    cudaMemset(data_col, T(0), out.elem_cnt() * sizeof(T));
-
-    UnfoldCFirstForward<T><<<GetUnfoldMaxNumBlocks(out_5d.elem_cnt()), kUnfoldMaxGpuBlockSize, 0,
-                             device_ctx->cuda_stream()>>>(
-        out_5d.elem_cnt(), data_im, in.At(2), in.At(3), in.At(4), kernel_size.at(0),
-        kernel_size.at(1), kernel_size.at(2), padding_before.at(0), padding_before.at(1),
-        padding_before.at(2), strides.at(0), strides.at(1), strides.at(2), dilation_rate.at(0),
-        dilation_rate.at(1), dilation_rate.at(2), out_5d.At(2), out_5d.At(3), out_5d.At(4),
-        data_col);
-    OF_CUDA_CHECK(cudaGetLastError());
-  }
-
   static void CFirstBackward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
                              const Shape& out, const std::vector<int32_t>& kernel_size,
                              const std::vector<int32_t>& strides,

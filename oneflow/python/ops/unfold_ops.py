@@ -94,7 +94,7 @@ def unfold(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("Unfold2D_")
         )
-        .Op("unfold_2d")
+        .Op("unfold")
         .Input("x", [input])
         .Output("y")
     )

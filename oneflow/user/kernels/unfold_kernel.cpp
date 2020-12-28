@@ -90,24 +90,6 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
 template<DeviceType device_type, typename T>
 class UnfoldKernelImpl {
  public:
-  static void FWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    auto* unfold_state = dynamic_cast<UnfoldOpKernelState*>(state);
-    CHECK(unfold_state != nullptr);
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-
-    if (data_format == "channels_first") {
-      UnfoldKernelUtil<device_type, T>::CFirstForward(
-          ctx->device_ctx(), unfold_state->in_5d_shape_, unfold_state->out_5d_shape_,
-          unfold_state->out_shape_, unfold_state->kernel_size_3d_, unfold_state->strides_3d_,
-          unfold_state->dilation_rate_3d_, unfold_state->padding_before_3d_, x->dptr<T>(),
-          y->mut_dptr<T>());
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-
   static void BWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -125,24 +107,6 @@ class UnfoldKernelImpl {
       UNIMPLEMENTED();
     }
   }
-};
-
-template<size_t NDims, DeviceType device_type, typename T>
-class UnfoldKernel final : public user_op::OpKernel {
- public:
-  UnfoldKernel() = default;
-  ~UnfoldKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState<NDims>(ctx);
-  }
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    UnfoldKernelImpl<device_type, T>::FWCompute(ctx, state);
-  };
 };
 
 template<size_t NDims, DeviceType device_type, typename T>
@@ -292,14 +256,10 @@ class UnfoldKernelV2 final : public OpKernel {
 
 REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, float)
 
-#define REGISTER_UNFOLD_KERNEL_NDIMS(dim, device, dtype)                               \
-  REGISTER_USER_KERNEL("unfold_" + std::to_string(dim) + "d")                          \
-      .SetCreateFn<UnfoldKernel<dim, device, dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("unfold_" + std::to_string(dim) + "d_grad")                     \
-      .SetCreateFn<UnfoldGradKernel<dim, device, dtype>>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
+#define REGISTER_UNFOLD_KERNEL_NDIMS(dim, device, dtype)   \
+  REGISTER_USER_KERNEL("unfold_grad")                      \
+      .SetCreateFn<UnfoldGradKernel<dim, device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kCPU, float)
