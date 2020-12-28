@@ -296,13 +296,13 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
   {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case() const;
-
+ protected:
   bool has_{{ util.oneof_name(oneof) }}() const;
 {% endfor %}{# oneofs #}
 
+ public:
   ::std::shared_ptr<Const{{ util.class_name(cls) }}> __SharedConst__() const;
   int64_t __Id__() const;
- public:
   bool operator==(const Const{{ util.class_name(cls) }}& other) const;
 
   bool operator<(const Const{{ util.class_name(cls) }}& other) const;
