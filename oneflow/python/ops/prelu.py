@@ -19,6 +19,8 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
@@ -26,8 +28,8 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 @oneflow_export("layers.prelu")
 def prelu(
     inputs: remote_blob_util.BlobDef,
-    alpha_initializer: Optional[op_conf_util.InitializerConf] = None,
-    alpha_regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    alpha_initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    alpha_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     shared_axes: Optional[Sequence[int]] = None,
     trainable: bool = True,
     name: str = "PRelu",
@@ -45,8 +47,8 @@ def prelu(
 
     Args:
         inputs (remote_blob_util.BlobDef): The input Blob. 
-        alpha_initializer (Optional[op_conf_util.InitializerConf], optional): The initializer of alpha. Defaults to None.
-        alpha_regularizer (Optional[op_conf_util.RegularizerConf], optional): The regularizer of alpha. Defaults to None.
+        alpha_initializer (Optional[initializer_conf_util.InitializerConf], optional): The initializer of alpha. Defaults to None.
+        alpha_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): The regularizer of alpha. Defaults to None.
         shared_axes (Optional[Sequence[int]], optional): The axis along which to share learnable parameters for the prelu activation function. Defaults to None.
         trainable (bool, optional): Whether to train the parameter :math:`\alpha`. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "PRelu".

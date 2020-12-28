@@ -106,7 +106,7 @@ def _GetReturnOpConfAndOutLbiAndScope(remote_blob, allow_cpu_return_op=True):
     parallel_conf.CopyFrom(remote_blob.parallel_conf)
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewParallelConf(builder, parallel_conf)
+        return builder.BuildScopeWithNewParallelConf(old_scope, parallel_conf)
 
     sess = session_ctx.GetDefaultSession()
     scope = scope_util.MakeScope(BuildScope)

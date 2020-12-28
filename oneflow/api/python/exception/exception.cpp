@@ -13,23 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/core/common/exception.h"
+#include "oneflow/core/common/error.h"
+#include "oneflow/api/python/of_api_registry.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-template<typename T>
-__device__ T gpu_atomic_add(T* address, const T val);
+ONEFLOW_API_PYBIND11_MODULE("exception", m) {
+  m.def("GetThreadLocalLastError", &ThreadLocalError);
+  py::register_exception<oneflow::Exception>(m, "Exception");
+#define REGISTER_EXCEPTION(cls) \
+  py::register_exception<oneflow::OF_PP_CAT(cls, Exception)>(m, OF_PP_STRINGIZE(cls) "Exception");
 
-template<typename T>
-__device__ T gpu_atomic_max(T* address, const T val);
+  OF_PP_FOR_EACH_TUPLE(REGISTER_EXCEPTION, EXCEPTION_SEQ)
 
-template<typename T>
-__device__ T MaxWithLogThreshold(T x);
-
-template<typename T>
-__device__ T SafeLog(T x);
+#undef REGISTER_EXCEPTION
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_

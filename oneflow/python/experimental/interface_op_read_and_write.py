@@ -18,7 +18,6 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -26,10 +25,11 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
+import oneflow_api
 
 
 def _GetInterfaceBlobObject(builder, op_name):
-    if c_api_util.EagerExecutionEnabled():
+    if oneflow_api.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().var_name2var_blob[op_name].blob_object
     blob_object = builder.MakeLazyRefBlobObject(op_name)
     return blob_object
