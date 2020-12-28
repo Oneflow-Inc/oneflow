@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
@@ -38,24 +38,26 @@ namespace eager {
 
 namespace {
 
-void StorageAdd(const EagerSymbol& symbol) {
+Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   int64_t symbol_id = symbol.symbol_id();
   if (symbol.has_string_symbol()) {
-    Global<vm::SymbolStorage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol());
+    JUST(Global<symbol::Storage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol()));
   } else if (symbol.has_scope_symbol()) {
-    Global<vm::SymbolStorage<Scope>>::Get()->Add(symbol_id, symbol.scope_symbol());
+    JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, symbol.scope_symbol()));
   } else if (symbol.has_job_conf_symbol()) {
-    Global<vm::SymbolStorage<JobDesc>>::Get()->Add(symbol_id, symbol.job_conf_symbol());
+    JUST(Global<symbol::Storage<JobDesc>>::Get()->TryAdd(symbol_id, symbol.job_conf_symbol()));
   } else if (symbol.has_parallel_conf_symbol()) {
-    Global<vm::SymbolStorage<ParallelDesc>>::Get()->Add(symbol_id, symbol.parallel_conf_symbol());
+    JUST(Global<symbol::Storage<ParallelDesc>>::Get()->TryAdd(symbol_id,
+                                                              symbol.parallel_conf_symbol()));
   } else if (symbol.has_op_conf_symbol()) {
-    Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol());
+    JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol()));
   } else if (symbol.has_op_node_signature_symbol()) {
-    Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(symbol_id,
-                                                               symbol.op_node_signature_symbol());
+    JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->Add(
+        symbol_id, symbol.op_node_signature_symbol()));
   } else {
-    UNIMPLEMENTED();
+    OF_UNIMPLEMENTED();
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -66,7 +68,9 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
       cluster_instruction->eager_instruction().instruction_list();
   const EagerSymbolList& eager_symbol_list =
       cluster_instruction->eager_instruction().eager_symbol_list();
-  for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) { StorageAdd(eager_symbol); }
+  for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) {
+    JUST(StorageAdd(eager_symbol));
+  }
   return vm::Run(instruction_list_proto);
 }
 

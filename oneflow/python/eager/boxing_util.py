@@ -657,8 +657,10 @@ def CpuOneToManyBroadcastBlobReference(
     builder, produced_blob_object, to_parallel_desc_symbol
 ):
     x_parallel_desc_symbol = produced_blob_object.parallel_desc_symbol
-    x_machine_ids = list(x_parallel_desc_symbol.machine_id2device_id_list.keys())
-    to_machine_ids = list(to_parallel_desc_symbol.machine_id2device_id_list.keys())
+    x_machine_ids = list(dict(x_parallel_desc_symbol.machine_id2device_id_list).keys())
+    to_machine_ids = list(
+        dict(to_parallel_desc_symbol.machine_id2device_id_list).keys()
+    )
     assert x_machine_ids == to_machine_ids, (x_machine_ids, to_machine_ids)
     x_first_device_ids = x_parallel_desc_symbol.machine_id2device_id_list[
         x_machine_ids[0]

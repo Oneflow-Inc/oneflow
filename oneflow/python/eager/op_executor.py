@@ -33,6 +33,7 @@ import oneflow_api.oneflow.core.job.placement as placement_cfg
 from google.protobuf import text_format
 
 import oneflow
+import oneflow_api
 import numpy as np
 import os
 
@@ -91,7 +92,7 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
     def GetInBlobObject(builder, ibn, bn_in_op2blob_object):
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
+        in_op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(parallel_sig[ibn])
         in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
             in_op_parallel_desc_sym, op_attribute, ibn
         )
@@ -111,7 +112,7 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
 
 def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
-    op_parallel_desc_sym = symbol_storage.GetSymbol4Id(
+    op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(
         op_attribute.parallel_signature.op_parallel_desc_symbol_id
     )
     parallel_size = len(op_attribute.input_bns)
@@ -124,7 +125,7 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
     def GetInBlobObject(builder, i, bn_in_op2blob_object):
         ibn = "in_%s" % i
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
+        in_op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(parallel_sig[ibn])
         in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
             in_op_parallel_desc_sym, op_attribute, ibn
         )
@@ -147,7 +148,7 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
 
 
 def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + op_attribute.op_conf.name
     sess = session_ctx.GetDefaultSession()
     var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -236,7 +237,7 @@ def _Assign(var_blob_object, value_blob_object):
 
 
 def _BuildNotMirroredScope(old_scope, builder):
-    return old_scope.BuildWithNewIsMirrored(builder, False)
+    return builder.BuildScopeWithNewIsMirrored(old_scope, False)
 
 
 def _EagerRunModelInit(var_op_conf):

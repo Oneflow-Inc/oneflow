@@ -21,11 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-struct DecodeStatus {
-  int32_t cur_col_id_;
-  int32_t max_col_id_;
-};
-
 class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeOFRecordKernel);
