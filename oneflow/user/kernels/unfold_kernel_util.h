@@ -110,24 +110,6 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
   return false;
 }
 
-template<DeviceType device_type, typename T>
-class UnfoldKernelUtil {
- public:
-  static void CFirstForward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
-                            const Shape& out, const std::vector<int32_t>& kernel_size,
-                            const std::vector<int32_t>& strides,
-                            const std::vector<int32_t>& dilation_rate,
-                            const std::vector<int32_t>& padding_before, const T* data_im,
-                            T* data_col);
-
-  static void CFirstBackward(const DeviceCtx* device_ctx, const Shape& in, const Shape& out_5d,
-                             const Shape& out, const std::vector<int32_t>& kernel_size,
-                             const std::vector<int32_t>& strides,
-                             const std::vector<int32_t>& dilation_rate,
-                             const std::vector<int32_t>& padding_before, const T* data_col,
-                             T* data_im);
-};
-
 template<DeviceType device_type, typename T, typename INDEX_T, int NDIM, int SDIM>
 struct UnfoldKernelUtilV2 {
   static void Forward(DeviceCtx* ctx, const void* params, const T* input_ptr, T* output_ptr);
@@ -147,9 +129,6 @@ struct UnfoldKernelUtilV2 {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNFOLD_KERNEL_UTIL_WITH_TYPE_PAIR, (device), \
                                    ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,           \
                                    SPATIAL_NDIM_SEQ, SPATIAL_DIM_SEQ)
-
-#define INSTANTIATE_UNFOLD_KERNEL_UTIL(device, dtype) \
-  template class UnfoldKernelUtil<device, dtype>;
 
 }  // namespace user_op
 

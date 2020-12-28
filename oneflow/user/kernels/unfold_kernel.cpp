@@ -87,48 +87,6 @@ class UnfoldOpKernelState final : public user_op::OpKernelState {
   std::vector<int32_t> padding_before_3d_;
 };
 
-template<DeviceType device_type, typename T>
-class UnfoldKernelImpl {
- public:
-  static void BWCompute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) {
-    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto* unfold_state = dynamic_cast<UnfoldOpKernelState*>(state);
-    CHECK(unfold_state != nullptr);
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-
-    if (data_format == "channels_first") {
-      UnfoldKernelUtil<device_type, T>::CFirstBackward(
-          ctx->device_ctx(), unfold_state->in_5d_shape_, unfold_state->out_5d_shape_,
-          unfold_state->out_shape_, unfold_state->kernel_size_3d_, unfold_state->strides_3d_,
-          unfold_state->dilation_rate_3d_, unfold_state->padding_before_3d_, dy->dptr<T>(),
-          dx->mut_dptr<T>());
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-};
-
-template<size_t NDims, DeviceType device_type, typename T>
-class UnfoldGradKernel final : public user_op::OpKernel {
- public:
-  UnfoldGradKernel() = default;
-  ~UnfoldGradKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return UnfoldOpKernelState::DoCreateOpKernelState<NDims>(ctx);
-  }
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    UnfoldKernelImpl<device_type, T>::BWCompute(ctx, state);
-  };
-};
-
-// new implementation
-
 template<typename INDEX_T, int NDIM, int SDIM>
 class UnfoldOpKernelStateV2 : public OpKernelState {
  public:
@@ -247,6 +205,25 @@ class UnfoldKernelV2 final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<DeviceType device_type, typename T>
+class UnfoldGradKernel final : public user_op::OpKernel {
+ public:
+  UnfoldGradKernel() = default;
+  ~UnfoldGradKernel() = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    UNIMPLEMENTED();
+  };
+};
+
 }  // namespace
 
 #define REGISTER_UNFOLD_KERNEL_V2(device, dtype)                                               \
@@ -257,21 +234,9 @@ class UnfoldKernelV2 final : public OpKernel {
 REGISTER_UNFOLD_KERNEL_V2(DeviceType::kCPU, float)
 REGISTER_UNFOLD_KERNEL_V2(DeviceType::kCPU, double)
 
+#ifdef WITH_CUDA
 REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, float)
 REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, double)
-
-#define REGISTER_UNFOLD_KERNEL_NDIMS(dim, device, dtype)   \
-  REGISTER_USER_KERNEL("unfold_grad")                      \
-      .SetCreateFn<UnfoldGradKernel<dim, device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
-
-REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kCPU, float)
-REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kCPU, double)
-
-#ifdef WITH_CUDA
-REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kGPU, float)
-REGISTER_UNFOLD_KERNEL_NDIMS(2, DeviceType::kGPU, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op
