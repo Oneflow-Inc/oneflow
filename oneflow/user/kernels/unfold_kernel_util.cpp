@@ -20,7 +20,7 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
-struct UnfoldKernelUtilV2<DeviceType::kCPU, T, INDEX_T, NDIM, SDIM> {
+struct UnfoldKernelUtil<DeviceType::kCPU, T, INDEX_T, NDIM, SDIM> {
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
   static void Forward(DeviceCtx* ctx, const void* raw_params, const T* input_ptr, T* output_ptr) {
     const auto* params = static_cast<const ParamType*>(raw_params);

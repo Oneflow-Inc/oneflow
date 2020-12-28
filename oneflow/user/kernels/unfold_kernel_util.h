@@ -111,19 +111,19 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
 }
 
 template<DeviceType device_type, typename T, typename INDEX_T, int NDIM, int SDIM>
-struct UnfoldKernelUtilV2 {
+struct UnfoldKernelUtil {
   static void Forward(DeviceCtx* ctx, const void* params, const T* input_ptr, T* output_ptr);
 };
 
 #define SPATIAL_NDIM_SEQ OF_PP_MAKE_TUPLE_SEQ(1) OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3)
 #define SPATIAL_DIM_SEQ OF_PP_MAKE_TUPLE_SEQ(1) OF_PP_MAKE_TUPLE_SEQ(2)
 
-#define INSTANTIATE_UNFOLD_KERNEL_UTIL_V2(device, dtype, itype, ndim, sdim) \
-  template struct UnfoldKernelUtilV2<device, dtype, itype, ndim, sdim>;
+#define INSTANTIATE_UNFOLD_KERNEL_UTIL(device, dtype, itype, ndim, sdim) \
+  template struct UnfoldKernelUtil<device, dtype, itype, ndim, sdim>;
 
 #define INSTANTIATE_UNFOLD_KERNEL_UTIL_WITH_TYPE_PAIR(device, dtype_pair, itype_pair, ndim, sdim) \
-  INSTANTIATE_UNFOLD_KERNEL_UTIL_V2(device, OF_PP_PAIR_FIRST(dtype_pair),                         \
-                                    OF_PP_PAIR_FIRST(itype_pair), ndim, sdim)
+  INSTANTIATE_UNFOLD_KERNEL_UTIL(device, OF_PP_PAIR_FIRST(dtype_pair),                            \
+                                 OF_PP_PAIR_FIRST(itype_pair), ndim, sdim)
 
 #define INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(device)                                   \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNFOLD_KERNEL_UTIL_WITH_TYPE_PAIR, (device), \

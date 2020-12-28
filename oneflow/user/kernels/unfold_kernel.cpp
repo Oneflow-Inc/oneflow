@@ -24,77 +24,14 @@ namespace user_op {
 
 namespace {
 
-class UnfoldOpKernelState final : public user_op::OpKernelState {
- public:
-  UnfoldOpKernelState() {}
-
-  template<size_t NDims>
-  static std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(
-      user_op::KernelInitContext* ctx) {
-    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
-    std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    std::vector<int32_t> padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
-    const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
-    const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    const int32_t idx_offset = IdxOffset(data_format);
-    const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
-    std::shared_ptr<UnfoldOpKernelState> state(new UnfoldOpKernelState());
-
-    auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
-      DimVector ret_vec(shape.dim_vec());
-      int32_t ndims = ret_vec.size() - 2;
-      ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
-      return Shape(ret_vec);
-    };
-    auto Gen3DVec = [](const std::vector<int32_t>& origin_vec,
-                       int32_t num) -> std::vector<int32_t> {
-      std::vector<int32_t> ret_vec = origin_vec;
-      ret_vec.insert(ret_vec.begin(), 3 - ret_vec.size(), num);
-      return ret_vec;
-    };
-
-    DimVector native_shape(NDims + 2);
-    native_shape.at(0) = x_shape.At(0);
-    native_shape.at(c_dim) = x_shape.At(c_dim);
-    for (int32_t i = 0; i < NDims; ++i) {
-      native_shape[idx_offset + i] =
-          (x_shape.At(idx_offset + i) + padding_before[i] + padding_after[i]
-           - dilation_rate[i] * (kernel_size[i] - 1) - 1)
-              / strides[i]
-          + 1;
-    }
-
-    state->in_5d_shape_ = Gen5DShape(x_shape, idx_offset);
-    state->out_5d_shape_ = Gen5DShape(Shape(native_shape), idx_offset);
-    state->out_shape_ = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
-    state->kernel_size_3d_ = Gen3DVec(kernel_size, 1);
-    state->strides_3d_ = Gen3DVec(strides, 1);
-    state->dilation_rate_3d_ = Gen3DVec(dilation_rate, 1);
-    state->padding_before_3d_ = Gen3DVec(padding_before, 0);
-
-    return std::move(state);
-  }
-
- public:
-  Shape in_5d_shape_;
-  Shape out_5d_shape_;
-  Shape out_shape_;
-  std::vector<int32_t> kernel_size_3d_;
-  std::vector<int32_t> strides_3d_;
-  std::vector<int32_t> dilation_rate_3d_;
-  std::vector<int32_t> padding_before_3d_;
-};
-
 template<typename INDEX_T, int NDIM, int SDIM>
-class UnfoldOpKernelStateV2 : public OpKernelState {
+class UnfoldOpKernelState : public OpKernelState {
  public:
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
-  UnfoldOpKernelStateV2(const ShapeView& input_shape, const std::vector<int32_t>& kernel_size,
-                        const std::vector<int32_t>& padding_before,
-                        const std::vector<int32_t>& padding_after,
-                        const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation)
+  UnfoldOpKernelState(const ShapeView& input_shape, const std::vector<int32_t>& kernel_size,
+                      const std::vector<int32_t>& padding_before,
+                      const std::vector<int32_t>& padding_after, const std::vector<int32_t>& stride,
+                      const std::vector<int32_t>& dilation)
       : params_(input_shape.At(0), input_shape.At(ParamType::kInputChannelDim),
                 input_shape.ptr() + SDIM, kernel_size.data(), padding_before.data(),
                 padding_after.data(), stride.data(), dilation.data()) {}
@@ -111,13 +48,13 @@ std::shared_ptr<OpKernelState> CreateUnfoldOpKernelState(const ShapeView& input_
                                                          const std::vector<int32_t>& padding_after,
                                                          const std::vector<int32_t>& stride,
                                                          const std::vector<int32_t>& dilation) {
-  return std::make_shared<UnfoldOpKernelStateV2<INDEX_T, NDIM, SDIM>>(
+  return std::make_shared<UnfoldOpKernelState<INDEX_T, NDIM, SDIM>>(
       input_shape, kernel_size, padding_before, padding_after, stride, dilation);
 }
 
 template<typename INDEX_T, int NDIM, int SDIM>
 const void* GetUnfoldParams(OpKernelState* state) {
-  auto* unfold_state = dynamic_cast<UnfoldOpKernelStateV2<INDEX_T, NDIM, SDIM>*>(state);
+  auto* unfold_state = dynamic_cast<UnfoldOpKernelState<INDEX_T, NDIM, SDIM>*>(state);
   CHECK_NOTNULL(unfold_state);
   return static_cast<const void*>(&unfold_state->params());
 }
@@ -133,10 +70,10 @@ DEFINE_UNFOLD_SWITCH_FUNC(const void*, GetUnfoldParams);
 #undef SWITCH_ENTRY
 
 template<DeviceType device_type, typename T>
-class UnfoldKernelV2 final : public OpKernel {
+class UnfoldKernel final : public OpKernel {
  public:
-  UnfoldKernelV2() = default;
-  ~UnfoldKernelV2() = default;
+  UnfoldKernel() = default;
+  ~UnfoldKernel() = default;
 
   std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
     const TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -171,7 +108,7 @@ class UnfoldKernelV2 final : public OpKernel {
   }
 
 #define SWITCH_ENTRY(func_name, itype, ndim, sdim) \
-  UnfoldKernelUtilV2<device_type, T, itype, ndim, sdim>::func_name
+  UnfoldKernelUtil<device_type, T, itype, ndim, sdim>::func_name
   DEFINE_STATIC_SWITCH_FUNC(void, Forward, SWITCH_ENTRY,
                             MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
                             MAKE_NDIM_CTRV_SEQ(SPATIAL_NDIM_SEQ),
@@ -226,17 +163,21 @@ class UnfoldGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 
-#define REGISTER_UNFOLD_KERNEL_V2(device, dtype)                                               \
-  REGISTER_USER_KERNEL("unfold").SetCreateFn<UnfoldKernelV2<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                      \
-      & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+#define REGISTER_UNFOLD_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("unfold").SetCreateFn<UnfoldKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == device)                                                    \
+      & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                        \
+  REGISTER_USER_KERNEL("unfold_grad")                                                        \
+      .SetCreateFn<UnfoldGradKernel<device, dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_UNFOLD_KERNEL_V2(DeviceType::kCPU, float)
-REGISTER_UNFOLD_KERNEL_V2(DeviceType::kCPU, double)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, float)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
-REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, float)
-REGISTER_UNFOLD_KERNEL_V2(DeviceType::kGPU, double)
+REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, float)
+REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, double)
 #endif  // WITH_CUDA
 
 }  // namespace user_op
