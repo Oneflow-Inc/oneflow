@@ -483,7 +483,8 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
           OF_NCCL_CHECK(ncclCommInitRank(&device_id2comm.at(device_id), device_set.device_size(),
                                          nccl_unique_id, rank));
         }
-        OF_NCCL_CHECK(ncclGroupEnd());
+        OF_NCCL_CHECK(ncclGroupEnd())
+            << "To see more detail, please run OneFlow with system variable NCCL_DEBUG=INFO";
       }
     }
   }
