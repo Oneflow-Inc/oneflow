@@ -100,7 +100,8 @@ class CpuHardtanhGradKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, float)
+REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, double);
 REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, double)
 
 }  // namespace user_op
