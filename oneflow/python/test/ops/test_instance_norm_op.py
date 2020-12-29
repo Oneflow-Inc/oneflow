@@ -29,8 +29,8 @@ def getInstanceNorm1DOutAndGrad(input, gout, eps):
     assert len(input.shape) >= 3
 
     # reshape to (N, C, L)
-    input_reshape_to_1d = np.reshape(input, (input.shape[0], input.shape[1], -1)) 
-    gout_reshape_to_1d = np.reshape(gout, (gout.shape[0], gout.shape[1], -1)) 
+    input_reshape_to_1d = np.reshape(input, (input.shape[0], input.shape[1], -1))
+    gout_reshape_to_1d = np.reshape(gout, (gout.shape[0], gout.shape[1], -1))
 
     # compute instance normalization in numpy
     gamma = np.ones((1, input_reshape_to_1d.shape[1], 1), dtype=np.float32)
@@ -41,7 +41,9 @@ def getInstanceNorm1DOutAndGrad(input, gout, eps):
     out_np = in_sub_mean * invar_np * gamma
 
     # compute the gradient of variance
-    gvar = gout_reshape_to_1d * gamma * in_sub_mean * -0.5 * np.power(var_np + eps, -1.5)
+    gvar = (
+        gout_reshape_to_1d * gamma * in_sub_mean * -0.5 * np.power(var_np + eps, -1.5)
+    )
     gvar = np.sum(gvar, axis=(2), keepdims=True)
     # compute the gradient of mean
     gmean = np.sum(gout_reshape_to_1d * gamma, axis=(2), keepdims=True)
@@ -51,7 +53,9 @@ def getInstanceNorm1DOutAndGrad(input, gout, eps):
     gmean += tmp
     # compute the gradient of input
     gin_np = (
-        gout_reshape_to_1d * gamma * invar_np + gvar * scale * 2.0 * in_sub_mean + gmean * scale
+        gout_reshape_to_1d * gamma * invar_np
+        + gvar * scale * 2.0 * in_sub_mean
+        + gmean * scale
     )
 
     # reshape back to original
@@ -103,7 +107,7 @@ def _compare_instance_norm_nd_with_np(
             out = flow.nn.InstanceNorm1d(x_var, eps=eps, affine=affine)
         elif len(of_input.shape) == 4:
             out = flow.nn.InstanceNorm2d(x_var, eps=eps, affine=affine)
-        else: # len(of_input.shape) == 5
+        else:  # len(of_input.shape) == 5
             out = flow.nn.InstanceNorm3d(x_var, eps=eps, affine=affine)
 
         with flow.scope.placement(device_type, "0:0"):
