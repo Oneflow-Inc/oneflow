@@ -34,10 +34,20 @@ def _bin_update(out_val, in_value):
 
 
 def gen_scatter_like_test_sample(
-    input_shape, index_shape, dim, like_shape, is_float=True, binop=_bin_add
+    input_shape,
+    index_shape,
+    dim,
+    like_shape,
+    is_float=True,
+    binop=_bin_add,
+    inplace=True,
 ):
     def _np_dim_scatter_add_like(input, dim, index, like):
-        output = np.zeros(like.shape)
+        if inplace:
+            output = like.copy()
+        else:
+            output = np.zeros(like.shape)
+
         for inputidx in range(0, input.size):
             outcoord = np.unravel_index(inputidx, input.shape)
             outcoord = [*outcoord]
@@ -88,13 +98,20 @@ def _gen_arg_dict(
     device_count=1,
     binop=_bin_add,
     dim_scatter_op=flow.dim_scatter_add_like,
+    inplace=True,
 ):
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
     arg_dict["samples"].append(
         gen_scatter_like_test_sample(
-            (2, 2), (2, 2), 1, (4, 4), is_float=value_type == "float", binop=binop
+            (2, 2),
+            (2, 2),
+            1,
+            (2, 2),
+            is_float=value_type == "float",
+            binop=binop,
+            inplace=inplace,
         )
     )
     # arg_dict["samples"].append(gen_scatter_like_test_sample((2, 2), (2, 2), 0, (4, 4), value_type=="float"))
@@ -198,7 +215,8 @@ def _make_dim_scatter_add_like_fn(
                 x = x_var + params_def
 
             x_int32 = flow.cast(x, dtype=flow.int32)
-            y_int32 = flow_scatter_op(dim, indices_def, x_int32, like_def)
+            like_def_int32 = flow.cast(like_def, dtype=flow.int32)
+            y_int32 = flow_scatter_op(dim, indices_def, x_int32, like_def_int32)
             y_fp32 = flow.cast(y_int32, dtype=flow.int32)
 
             with flow.scope.placement(device_type, "0:0"):
@@ -251,44 +269,61 @@ def _compare_dim_scatter_op_like_with_samples(
         test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0])))
 
 
+# ----scatter like ops test----
 @flow.unittest.skip_unless_1n1d()
-class TestDimScatterAddLike1n1d(flow.unittest.TestCase):
+class TestDimScatterOpsLike1n1d(flow.unittest.TestCase):
     def test_dim_scatter_add_like_int_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            "cpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add_like
+            "cpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add_like, inplace=False
         )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
     def test_dim_scatter_add_like_float_cpu(test_case):
-        arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1, _bin_add, flow.dim_scatter_add_like)
+        arg_dict = _gen_arg_dict(
+            "cpu", "float", "0:0", 1, _bin_add, flow.dim_scatter_add_like, inplace=False
+        )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_add_like_int_gpu(test_case):
-        arg_dict = _gen_arg_dict("gpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add_like)
+        arg_dict = _gen_arg_dict(
+            "gpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add_like, inplace=False
+        )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_add_like_float_gpu(test_case):
-        arg_dict = _gen_arg_dict("gpu", "float", "0:0", 1, _bin_add, flow.dim_scatter_add_like)
+        arg_dict = _gen_arg_dict(
+            "gpu", "float", "0:0", 1, _bin_add, flow.dim_scatter_add_like, inplace=False
+        )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
-@flow.unittest.skip_unless_1n1d()
-class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
     def test_dim_scatter_update_like_int_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            "cpu", "int", "0:0", 1, _bin_update, flow.dim_scatter_update_like
+            "cpu",
+            "int",
+            "0:0",
+            1,
+            _bin_update,
+            flow.dim_scatter_update_like,
+            inplace=False,
         )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
     def test_dim_scatter_update_like_float_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            "cpu", "float", "0:0", 1, _bin_update, flow.dim_scatter_update_like
+            "cpu",
+            "float",
+            "0:0",
+            1,
+            _bin_update,
+            flow.dim_scatter_update_like,
+            inplace=False,
         )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
@@ -296,7 +331,13 @@ class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_update_like_int_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            "gpu", "int", "0:0", 1, _bin_update, flow.dim_scatter_update_like
+            "gpu",
+            "int",
+            "0:0",
+            1,
+            _bin_update,
+            flow.dim_scatter_update_like,
+            inplace=False,
         )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
@@ -304,7 +345,113 @@ class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_update_like_float_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            "gpu", "float", "0:0", 1, _bin_update, flow.dim_scatter_update_like
+            "gpu",
+            "float",
+            "0:0",
+            1,
+            _bin_update,
+            flow.dim_scatter_update_like,
+            inplace=False,
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+
+@flow.unittest.skip_unless_1n2d()
+class TestDimScatterOpsLike1n2d(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_scatter_add_like_float(test_case):
+        arg_dict = _gen_arg_dict(
+            "gpu",
+            "float",
+            "0:0-1",
+            2,
+            _bin_add,
+            flow.dim_scatter_add_like,
+            inplace=False,
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_scatter_update_like_float(test_case):
+        arg_dict = _gen_arg_dict(
+            "gpu",
+            "float",
+            "0:0-1",
+            2,
+            _bin_update,
+            flow.dim_scatter_update_like,
+            inplace=False,
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+
+# ----scatter like ops test END----
+
+# ----scatter inplace ops test----
+@flow.unittest.skip_unless_1n1d()
+class TestDimScatterAddInplace1n1d(flow.unittest.TestCase):
+    def test_dim_scatter_add_int_cpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "cpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    def test_dim_scatter_add_float_cpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "cpu", "float", "0:0", 1, _bin_add, flow.dim_scatter_add, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_scatter_add_like_int_gpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "gpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_scatter_add_like_float_gpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "gpu", "float", "0:0", 1, _bin_add, flow.dim_scatter_add, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
+    def test_dim_scatter_update_like_int_cpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "cpu", "int", "0:0", 1, _bin_update, flow.dim_scatter_update, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    def test_dim_scatter_update_like_float_cpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "cpu", "float", "0:0", 1, _bin_update, flow.dim_scatter_update, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_scatter_update_like_int_gpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "gpu", "int", "0:0", 1, _bin_update, flow.dim_scatter_update, inplace=True
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_dim_scatter_op_like_with_samples(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_scatter_update_like_float_gpu(test_case):
+        arg_dict = _gen_arg_dict(
+            "gpu", "float", "0:0", 1, _bin_update, flow.dim_scatter_update, inplace=True
         )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
@@ -314,7 +461,9 @@ class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
 class TestDimScatterAddLike1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_add_like_float(test_case):
-        arg_dict = _gen_arg_dict("gpu", "float", "0:0-1", 2, _bin_add, flow.dim_scatter_add_like)
+        arg_dict = _gen_arg_dict(
+            "gpu", "float", "0:0-1", 2, _bin_add, flow.dim_scatter_add, inplace=True
+        )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
@@ -324,7 +473,13 @@ class TestDimScatterUpdateLike1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_update_like_float(test_case):
         arg_dict = _gen_arg_dict(
-            "gpu", "float", "0:0-1", 2, _bin_update, flow.dim_scatter_update_like
+            "gpu",
+            "float",
+            "0:0-1",
+            2,
+            _bin_update,
+            flow.dim_scatter_update,
+            inplace=True,
         )
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
