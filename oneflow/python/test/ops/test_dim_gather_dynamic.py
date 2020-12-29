@@ -84,7 +84,9 @@ def _make_dim_gather_fn(test_case, sample, datashape):
 def _compare_dim_gather_with_samples(test_case, inputshape, indexshape, dim, maxshape):
     sample = gen_gather_test_sample((inputshape), indexshape, dim)
     dynamic_dim_gather = _make_dim_gather_fn(test_case, sample, maxshape)
-    out = dynamic_dim_gather([sample["input"]], [sample["index"]])[0]
+    out = dynamic_dim_gather(
+        [sample["input"].astype(np.float32)], [sample["index"].astype(np.int32)]
+    )[0]
     test_case.assertTrue(
         np.allclose(out, sample["output"].astype(np.float32), 1e-3, 1e-3)
     )
