@@ -2722,7 +2722,7 @@ def leaky_relu(
     )
 
 
-@oneflow_export("math.hardtanh")
+@oneflow_export("nn.hardtanh")
 def hardtanh(
     x: remote_blob_util.BlobDef,
     min_val: float = -1,
