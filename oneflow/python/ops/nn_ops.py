@@ -2725,10 +2725,52 @@ def leaky_relu(
 @oneflow_export("nn.hardtanh")
 def hardtanh(
     x: remote_blob_util.BlobDef,
-    min_val: float = -1,
-    max_val: float = 1,
+    min_val: float = -1.0,
+    max_val: float = 1.0,
     name: Optional[str] = None,
-):
+) -> remote_blob_util.BlobDef:
+    r"""The Hardtanh activation. 
+
+    The equation is: 
+
+    .. math:: 
+
+        \text{HardTanh}(x) = \begin{cases}
+            max\_val & \text{ if } x > max\_val \\
+            -min\_val & \text{ if } x < min\_val \\
+            x & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardtanh_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
+            return flow.nn.hardtanh(x, min_val=-1.25, max_val=1.2)
+
+
+        x = np.array([[-1.5, -1.1, 0.6], 
+                    [1.2, 1.3, 1.5]]).astype(np.float32)
+        out = hardtanh_job(x)
+
+        # output [[-1.25 -1.1   0.6 ]
+        #         [ 1.2   1.2   1.2 ]]
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Tensor. 
+        min_val (float, optional): The minimum value of the linear region range. Defaults to -1.
+        max_val (float, optional): The maximum value of the linear region range. Defaults to 1.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The activated tensor. 
+    """
     if name is None:
         name = id_util.UniqueStr("Hardtanh_")
 
