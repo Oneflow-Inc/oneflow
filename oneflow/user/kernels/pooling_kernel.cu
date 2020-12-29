@@ -37,7 +37,7 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
 
 template<typename T>
 __global__ void DoCUDAMaxPool2dForward(
-    const NdIndexOffsetHelper<int64_t, 4>& index_helper,  int64_t elem_num, T maxval,
+    const NdIndexOffsetHelper<int64_t, 4> index_helper,  int64_t elem_num, T maxval,
     const T* src, T* dest, T* indice_ptr,  int32_t padding_h,  int32_t padding_w,
     int64_t n_batch,  int64_t n_channel,  int64_t x_height,  int64_t x_width,
     int64_t y_height,  int64_t y_width,  int32_t kernel_size_h,  int32_t kernel_size_w,
@@ -54,11 +54,9 @@ __global__ void DoCUDAMaxPool2dForward(
 
 template<typename T>
 __global__ void DoCUDAMaxPool2dBackward(
-    const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
-    const T* src, T* dest, const T* indice_ptr,
+    const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num, const T* src, T* dest, const T* indice_ptr,
     const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
-    const int64_t dst_height, const int64_t dst_width,
-    const bool return_indices, const bool ceil_mode
+    const int64_t dst_height, const int64_t dst_width, const bool return_indices, const bool ceil_mode
   ) {
     BackwardCompute<T>(
       index_helper, elem_num, src, dest, indice_ptr,
@@ -70,7 +68,7 @@ __global__ void DoCUDAMaxPool2dBackward(
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kGPU, T> {
   static void Maxpool2dForward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
     const T* src, T* dest, T* indice_ptr, const std::vector<int32_t> padding_before,
     const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
     const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
@@ -86,11 +84,9 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
   }
 
   static void Maxpool2dBackward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
-    const T* src, T* dest, const T* indice_ptr,
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num, const T* src, T* dest, const T* indice_ptr,
     const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
-    const int64_t dst_height, const int64_t dst_width,
-    const bool return_indices, const bool ceil_mode
+    const int64_t dst_height, const int64_t dst_width, const bool return_indices, const bool ceil_mode
   ){
     DoCUDAMaxPool2dBackward<T>
     <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(

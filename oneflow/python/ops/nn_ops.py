@@ -1359,7 +1359,8 @@ def MaxPool2d(
     data_format: str = "NCHW",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    assert data_format in ["NHWC", "NCHW"]
+    assert data_format in ["NCHW"]
+    # assert data_format in ["NHWC", "NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
     dilation = _GetSequence(dilation, 2, "dilation")

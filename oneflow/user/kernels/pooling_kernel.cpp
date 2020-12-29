@@ -34,7 +34,7 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kCPU, T> {
   static void Maxpool2dForward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
     const T* src, T* dest, T* indice_ptr, const std::vector<int32_t> padding_before,
     const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
     const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
@@ -49,7 +49,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Maxpool2dBackward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
     const T* src, T* dest, const T* indice_ptr,
     const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
     const int64_t dst_height, const int64_t dst_width,
@@ -105,13 +105,13 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const int64_t x_width = x->shape().At(w_idx);
     const int64_t y_height = y->shape().At(h_idx);
     const int64_t y_width = y->shape().At(w_idx);
-    const int64_t elem_num = x->shape().elem_cnt();
+    const int64_t elem_num = y->shape().elem_cnt();
     
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
     T* indice_ptr = indice->mut_dptr<T>();
-    DimVector x_vector = ShapeViewToDimVector(x->shape());
-    NdIndexOffsetHelper<int64_t, 4> index_helper(x_vector.data());
+    DimVector y_vector = ShapeViewToDimVector(y->shape());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
      
     PoolingKernelUtil<device_type, T>::Maxpool2dForward(
       ctx->device_ctx(), index_helper, elem_num, src, dest, indice_ptr, padding_before, n_batch, 
@@ -195,7 +195,8 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 #define REGISTER_POOLING_WITH_DEVICE(device) \
   REGISTER_POOLING_KERNELS(device, float)    \
   REGISTER_POOLING_KERNELS(device, double)   \
-  REGISTER_POOLING_KERNELS(device, int32_t)
+  REGISTER_POOLING_KERNELS(device, int32_t)  \
+  REGISTER_POOLING_KERNELS(device, int64_t)
 
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA

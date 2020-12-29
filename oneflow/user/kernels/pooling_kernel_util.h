@@ -27,7 +27,8 @@ namespace oneflow {
 
 #define POOLING_DATA_TYPE_CPU_SEQ \
   FLOATING_DATA_TYPE_SEQ          \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 #define POOLING_DATA_TYPE_GPU_SEQ \
   POOLING_DATA_TYPE_CPU_SEQ
@@ -89,7 +90,7 @@ struct PoolKernelState final : public user_op::OpKernelState {
 template<DeviceType device_type, typename T>
 struct PoolingKernelUtil {
   static void Maxpool2dForward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
     const T* src, T* dest, T* indice_ptr, const std::vector<int32_t> padding_before,
     const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
     const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
@@ -97,7 +98,7 @@ struct PoolingKernelUtil {
   );
 
   static void Maxpool2dBackward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
     const T* src, T* dest, const T* indice_ptr,
     const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
     const int64_t dst_height, const int64_t dst_width,
@@ -108,7 +109,7 @@ struct PoolingKernelUtil {
 
 template<typename T>
 OF_DEVICE_FUNC void FarwardCompute(
-    const NdIndexOffsetHelper<int64_t, 4>& index_helper,  int64_t elem_num, T maxval,
+    const NdIndexOffsetHelper<int64_t, 4> index_helper,  int64_t elem_num, T maxval,
     const T* src, T* dest, T* indice_ptr, const int32_t padding_h, const int32_t padding_w,
     const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
     const int64_t y_height, const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
@@ -116,7 +117,7 @@ OF_DEVICE_FUNC void FarwardCompute(
     const bool return_indices, const bool ceil_mode
   ) {
     XPU_1D_KERNEL_LOOP(num, elem_num){
-      int64_t c, h, w, coords[4];
+      int64_t c, h, w, coords[4]={0};
       index_helper.OffsetToNdIndex(num, coords);
       c = coords[1];
       h = coords[2];
@@ -137,7 +138,6 @@ OF_DEVICE_FUNC void FarwardCompute(
       }else{
         wend = x_width;
       }
-
       while(hstart < 0)
         hstart += dilation_h;
       while(wstart < 0)
@@ -146,7 +146,6 @@ OF_DEVICE_FUNC void FarwardCompute(
       /* local pointers */
       int64_t dest_idx = c*y_width*y_height + h*y_width + w;
       int64_t indp = c*y_width*y_height + h*y_width + w;
-
       /* compute local max: */
       int64_t maxindex = hstart * x_width + wstart;
       /* T maxval = -std::numeric_limits<T>::infinity(); */
@@ -156,6 +155,7 @@ OF_DEVICE_FUNC void FarwardCompute(
             int64_t search_idx = ip + tcntr;
             T val = src[search_idx];
             if ((val > maxval) || std::isnan(val))
+            // if (val > maxval)
             {
               maxval = val;
               maxindex = search_idx;
@@ -164,9 +164,8 @@ OF_DEVICE_FUNC void FarwardCompute(
       }
       /* set output to local max */
       dest[dest_idx] = src[maxindex];
-
       /* store location of max */
-      indice_ptr[indp] = maxindex;  
+      indice_ptr[indp] = maxindex;
     }
   }
 
@@ -174,7 +173,7 @@ OF_DEVICE_FUNC void FarwardCompute(
 
 template<typename T>
 OF_DEVICE_FUNC void BackwardCompute(
-  const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num, const T* src, T* dest, 
+  const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num, const T* src, T* dest, 
   const T* indice_ptr, const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width, 
   const int64_t dst_height, const int64_t dst_width, const bool return_indices, const bool ceil_mode
 ) {
@@ -195,7 +194,6 @@ OF_DEVICE_FUNC void BackwardCompute(
     }
   }
 }
-
 
 #define INSTANTIATE_POOLING_KERNEL_UTIL(device_type_v, dtype_pair) \
   template struct PoolingKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
