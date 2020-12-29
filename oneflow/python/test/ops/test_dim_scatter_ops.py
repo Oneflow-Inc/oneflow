@@ -269,7 +269,6 @@ def _compare_dim_scatter_op_like_with_samples(
         test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0])))
 
 
-# ----scatter like ops test----
 @flow.unittest.skip_unless_1n1d()
 class TestDimScatterOpsLike1n1d(flow.unittest.TestCase):
     def test_dim_scatter_add_like_int_cpu(test_case):
@@ -388,11 +387,8 @@ class TestDimScatterOpsLike1n2d(flow.unittest.TestCase):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
 
-# ----scatter like ops test END----
-
-# ----scatter inplace ops test----
 @flow.unittest.skip_unless_1n1d()
-class TestDimScatterAddInplace1n1d(flow.unittest.TestCase):
+class TestDimScatterOpsInplace1n1d(flow.unittest.TestCase):
     def test_dim_scatter_add_int_cpu(test_case):
         arg_dict = _gen_arg_dict(
             "cpu", "int", "0:0", 1, _bin_add, flow.dim_scatter_add, inplace=True
@@ -423,9 +419,6 @@ class TestDimScatterAddInplace1n1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
-
-@flow.unittest.skip_unless_1n1d()
-class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
     def test_dim_scatter_update_like_int_cpu(test_case):
         arg_dict = _gen_arg_dict(
             "cpu", "int", "0:0", 1, _bin_update, flow.dim_scatter_update, inplace=True
@@ -458,7 +451,7 @@ class TestDimScatterUpdateLike1n1d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestDimScatterAddLike1n2d(flow.unittest.TestCase):
+class TestDimScatterOpsInplace1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_add_like_float(test_case):
         arg_dict = _gen_arg_dict(
@@ -467,9 +460,6 @@ class TestDimScatterAddLike1n2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_dim_scatter_op_like_with_samples(test_case, *arg)
 
-
-@flow.unittest.skip_unless_1n2d()
-class TestDimScatterUpdateLike1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dim_scatter_update_like_float(test_case):
         arg_dict = _gen_arg_dict(
