@@ -98,14 +98,13 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src)
-{
+void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src) {
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("input", 0))
       .Broadcast(user_op::OpArg("index", 0))
       .PartialSum(user_op::OpArg("output", 0))
       .PartialSum(user_op::OpArg(like_or_src, 0))
-      .Build();  
+      .Build();
 }
 
 Maybe<void> SetSbpLike(user_op::SbpContext* ctx) {
@@ -121,7 +120,7 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
 
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
   REGISTER_USER_OP(optypename)                 \
-      .Input("like")                   \
+      .Input("like")                           \
       .Input("input")                          \
       .Input("index")                          \
       .Output("output")                        \
