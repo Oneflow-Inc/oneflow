@@ -1664,12 +1664,12 @@ def _softmax_need_transpose(x, axis):
     assert dim_num >= 2
     if axis < 0:
         axis += dim_num
-    assert axis >= 1
+    assert axis >= 0
     assert axis < dim_num
 
     need_transpose = False
-    permute = [i for i in range(dim_num)]
-    if axis > 0 and axis != dim_num - 1:
+    permute = list(range(dim_num))
+    if axis != dim_num - 1:
         need_transpose = True
         permute[axis] = permute[-1]
         permute[-1] = axis
