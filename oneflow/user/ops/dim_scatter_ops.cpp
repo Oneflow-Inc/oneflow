@@ -100,21 +100,6 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
 
 void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src)
 {
-  const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
-  int64_t index_num_axes = index_tensor.shape().NumAxes();
-  const int32_t dim = ctx->Attr<int32_t>("dim");
-
-  FOR_RANGE(int64_t, i, 0, index_num_axes) {
-    if (i != dim) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("input", 0), i)
-          .Split(user_op::OpArg("output", 0), i)
-          .Split(user_op::OpArg(like_or_src, 0), i)
-          .Build();
-    }
-  }
-
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("input", 0))
       .Broadcast(user_op::OpArg("index", 0))
