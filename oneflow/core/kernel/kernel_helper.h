@@ -13,33 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
-#define ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
 
-#include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/job/job_desc.h"
+#ifndef ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_
+#define ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_
+
+#include <string>
+#include <functional>
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
-class Scope;
-class ScopeProto;
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob);
 
-class JobDesc;
-class JobConfigProto;
-
-namespace vm {
-
-template<>
-struct ConstructArgType4Symbol<JobDesc> final {
-  using type = JobConfigProto;
-};
-
-template<>
-struct ConstructArgType4Symbol<Scope> final {
-  using type = ScopeProto;
-};
-
-}  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
+#endif  // ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_

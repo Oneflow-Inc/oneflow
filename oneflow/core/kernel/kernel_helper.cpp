@@ -13,23 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
+
+#include "oneflow/core/kernel/kernel_helper.h"
 
 namespace oneflow {
 
-template<typename T>
-__device__ T gpu_atomic_add(T* address, const T val);
-
-template<typename T>
-__device__ T gpu_atomic_max(T* address, const T val);
-
-template<typename T>
-__device__ T MaxWithLogThreshold(T x);
-
-template<typename T>
-__device__ T SafeLog(T x);
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_CUDA_KERNEL_UTIL_H_
