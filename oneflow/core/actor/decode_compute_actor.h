@@ -34,7 +34,6 @@ class DecodeCompActor final : public CompActor {
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
 
   int32_t piece_id_;
-  DecodeStatus decode_status_;
 };
 
 }  // namespace oneflow

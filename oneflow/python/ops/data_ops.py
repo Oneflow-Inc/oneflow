@@ -19,6 +19,7 @@ from typing import Optional, Sequence, Tuple, Union, List
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.record.image_pb2 as image_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.dtype as dtype_util
@@ -375,7 +376,7 @@ def decode_random(
     shape: Sequence[int],
     dtype: dtype_util.dtype,
     batch_size: int = 1,
-    initializer: Optional[op_conf_util.InitializerConf] = None,
+    initializer: Optional[initializer_conf_util.InitializerConf] = None,
     tick: Optional[remote_blob_util.BlobDef] = None,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:

@@ -1407,26 +1407,20 @@ def argwhere(
     if name is None:
         name = id_util.UniqueStr("ArgWhere_")
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name)
-    setattr(op_conf.arg_where_conf, "in", condition.unique_name)
-    setattr(op_conf.arg_where_conf, "out", "out")
-    setattr(op_conf.arg_where_conf, "out_size", "out_size")
-    if dtype is not None:
-        setattr(op_conf.arg_where_conf, "data_type", dtype.oneflow_proto_dtype)
-    interpret_util.Forward(op_conf)
+    if dtype is None:
+        dtype = flow.int32
 
-    arg_where_out_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(arg_where_out_lbi, "op_name", op_conf.name)
-    setattr(arg_where_out_lbi, "blob_name", "out")
-
-    arg_where_out_size_lbi = logical_blob_id_util.LogicalBlobId()
-    setattr(arg_where_out_size_lbi, "op_name", op_conf.name)
-    setattr(arg_where_out_size_lbi, "blob_name", "out_size")
-
-    arg_where_out = remote_blob_util.RemoteBlob(arg_where_out_lbi)
-    arg_where_out_size = remote_blob_util.RemoteBlob(arg_where_out_size_lbi)
-    return sync_dynamic_resize(arg_where_out, arg_where_out_size)
+    op = (
+        flow.user_op_builder(name)
+        .Op("argwhere")
+        .Input("input", [condition])
+        .Attr("dtype", dtype)
+        .Output("output")
+        .Output("output_size")
+        .Build()
+    )
+    output, output_size = op.InferAndTryRun().RemoteBlobList()
+    return sync_dynamic_resize(output, output_size)
 
 
 @oneflow_export("nonzero")
@@ -1675,39 +1669,71 @@ def sync_dynamic_resize(
 
 @oneflow_export("stack")
 def stack(
-    inputs: Sequence[remote_blob_util.BlobDef], axis: int, name: Optional[str] = None
+    inputs: Sequence[remote_blob_util.BlobDef],
+    axis: int = 0,
+    name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     """This operator stacks the multiple Blobs on the specified axis. 
-
-    Still Unavailable. 
 
     Args:
         inputs (Sequence[remote_blob_util.BlobDef]): A list of input Blob. 
         axis (int): The stack axis. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def stack_job(x: tp.Numpy.Placeholder(shape=(2, 4, 6)), 
+                    y: tp.Numpy.Placeholder(shape=(2, 4, 6)))->tp.Numpy:
+            out = flow.stack([x, y], axis=2) 
+            return out 
+
+        x = np.ones(shape=(2, 4, 6), dtype=np.float32)
+        y = np.ones(shape=(2, 4, 6), dtype=np.float32)
+
+        out = stack_job(x, y)
+
+        # output.shape (2, 4, 2, 6)
+
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
 
     """
-    if not isinstance(inputs, (list, tuple)):
-        inputs = [inputs]
+    if name is None:
+        name = id_util.UniqueStr("Stack_")
 
+    inputs = list(inputs)
+
+    _input_shape = inputs[0].shape
+    _max_dim = len(_input_shape)
+
+    # The axis must be in range [-(_max_dim +1), _max_dim]
     if axis < 0:
-        axis = axis + len(inputs[0].shape)
+        axis = axis + _max_dim + 1
+    assert (axis >= 0) and (axis <= _max_dim)
 
-    assert axis == 0, "Only support dim0 stack now."
+    # All input tensors must have the same shape
+    _input_list_length = len(inputs)
+    for i in range(_input_list_length):
+        _current_shape = inputs[i].shape
+        assert (
+            _input_shape == _current_shape
+        ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
+            _current_shape
+        )
+        # Expand dims for each tensor
+        inputs[i] = flow.expand_dims(
+            inputs[i], axis=axis, name=name + "expand_dims_{}".format(i)
+        )
 
-    op_conf = op_conf_util.OperatorConf()
-    setattr(op_conf, "name", name or id_util.UniqueStr("Stack_"))
-    getattr(op_conf.stack_conf, "in").extend([input.unique_name for input in inputs])
-    setattr(op_conf.stack_conf, "axis", axis)
-    setattr(op_conf.stack_conf, "out", "out")
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+    return flow.concat(inputs, axis=axis, name=name + "concat")
 
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
@@ -1853,15 +1879,11 @@ def identity(
     """
     if name is None:
         name = id_util.UniqueStr("Identity_")
-    op_conf = op_conf_util.OperatorConf()
-    op_conf.name = name
-    setattr(op_conf.identity_conf, "in", x.unique_name)
-    op_conf.identity_conf.out = "out"
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "out"
-    return remote_blob_util.RemoteBlob(lbi)
+
+    op = (
+        flow.user_op_builder(name).Op("identity").Input("in", [x]).Output("out").Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
 
 
 @oneflow_export("identity_n")
@@ -2312,3 +2334,90 @@ def amp_white_identity(
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("zeros")
+def zeros(
+    shape: Sequence[int],
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator creates a Tensor filled with the scalar value `0`.
+
+    Args:
+        shape (Sequence[int]): The shape of the Tensor. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Tensor filled with value `0`
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+
+
+        @flow.global_function()
+        def zeros_job() -> tp.Numpy: 
+            return flow.zeros(shape=(2, 3), dtype=flow.float32)
+
+
+        out = zeros_job()
+
+        # output: [[0. 0. 0.]
+        #          [0. 0. 0.]]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Zeros_")
+
+    if dtype is None:
+        dtype = flow.float32
+
+    return flow.constant(value=0.0, shape=shape, dtype=dtype, name=name + "constant")
+
+
+@oneflow_export("ones")
+def ones(
+    shape: Sequence[int],
+    dtype: Optional[dtype_util.dtype] = None,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    """This operator creates a Tensor filled with the scalar value `1`. 
+    
+    Args:
+        shape (Sequence[int]): The shape of the Tensor. 
+        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The result Blob filled with value `1`
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import oneflow.typing as tp 
+    
+    
+        @flow.global_function()
+        def ones_job() -> tp.Numpy: 
+            return flow.ones(shape=(2, 3), dtype=flow.float32)
+    
+    
+        out = ones_job()
+    
+        # output: [[1. 1. 1.]
+        #          [1. 1. 1.]]
+    """
+    if name is None:
+        name = id_util.UniqueStr("Ones_")
+
+    if dtype is None:
+        dtype = flow.float32
+
+    return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")

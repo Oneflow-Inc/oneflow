@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #if defined(WITH_PROFILER)
@@ -21,19 +22,6 @@ limitations under the License.
 #endif
 
 namespace oneflow {
-
-namespace {
-
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && !blob->IsBodyEmpty()) { return false; }
-  }
-  return true;
-}
-
-}  // namespace
 
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
