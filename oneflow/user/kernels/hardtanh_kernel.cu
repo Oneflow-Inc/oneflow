@@ -15,42 +15,65 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
-
+#include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 namespace oneflow {
 
 namespace user_op {
 
+template<typename T>
+struct HardtanhFunctor {
+  __host__ __device__ explicit HardtanhFunctor(T min_val, T max_val)
+      : min_val(min_val), max_val(max_val) {}
+  __device__ T operator()(T x) const {
+    if (x <= min_val)
+      return min_val;
+    else if (x >= max_val)
+      return max_val;
+    else
+      return x;
+  }
+  T min_val;
+  T max_val;
+};
+
+template<typename T>
+struct HardtanhGradFunctor {
+  __host__ __device__ explicit HardtanhGradFunctor(T min_val, T max_val)
+      : min_val(min_val), max_val(max_val) {}
+  __device__ T operator()(T x, T dy) const {
+    return (x > min_val && x < max_val) ? dy : static_cast<T>(0);
+  }
+  T min_val;
+  T max_val;
+};
+
 template<DeviceType device_type, typename T>
-class CpuHardtanhKernel final : public OpKernel {
+class GpuHardtanhKernel final : public OpKernel {
  public:
-  CpuHardtanhKernel() = default;
-  ~CpuHardtanhKernel() = default;
+  GpuHardtanhKernel() = default;
+  ~GpuHardtanhKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const T min_val = static_cast<T>(ctx->Attr<double>("min_val"));
-    const T max_val = static_cast<T>(ctx->Attr<double>("max_val"));
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
+    const T min_val = static_cast<T>(ctx->Attr<double>("min_val"));
+    const T max_val = static_cast<T>(ctx->Attr<double>("max_val"));
 
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      if (in_ptr[i] > max_val)
-        out_ptr[i] = max_val;
-      else if (in_ptr[i] < min_val)
-        out_ptr[i] = min_val;
-      else
-        out_ptr[i] = in_ptr[i];
-    }
+    OF_CUDA_CHECK(
+        (oneflow::cuda::elementwise::Unary(HardtanhFunctor<T>(min_val, max_val), elem_cnt, out_ptr,
+                                           in_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDTANH_KERNEL(device, dtype)                                       \
+#define REGISTER_GPU_HARDTANH_KERNEL(device, dtype)                                       \
   REGISTER_USER_KERNEL("hardtanh")                                                        \
-      .SetCreateFn<CpuHardtanhKernel<device, dtype>>()                                    \
+      .SetCreateFn<GpuHardtanhKernel<device, dtype>>()                                    \
       .SetIsMatchedHob((HobDeviceTag() == device)                                         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value))            \
       .SetInplaceProposalFn(                                                              \
@@ -59,14 +82,15 @@ class CpuHardtanhKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, double)
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, half)
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, float)
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, double)
 
 template<DeviceType device_type, typename T>
-class CpuHardtanhGradKernel final : public OpKernel {
+class GpuHardtanhGradKernel final : public OpKernel {
  public:
-  CpuHardtanhGradKernel() = default;
-  ~CpuHardtanhGradKernel() = default;
+  GpuHardtanhGradKernel() = default;
+  ~GpuHardtanhGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -79,19 +103,17 @@ class CpuHardtanhGradKernel final : public OpKernel {
 
     const T min_val = static_cast<T>(ctx->Attr<double>("min_val"));
     const T max_val = static_cast<T>(ctx->Attr<double>("max_val"));
-    const T zero_t = static_cast<T>(0);
-
     const int32_t elem_cnt = y_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = (y_ptr[i] > min_val && y_ptr[i] < max_val) ? dy_ptr[i] : zero_t;
-    }
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(HardtanhGradFunctor<T>(min_val, max_val),
+                                                      elem_cnt, dx_ptr, y_ptr, dy_ptr,
+                                                      ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(device, dtype)                              \
+#define REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(device, dtype)                              \
   REGISTER_USER_KERNEL("hardtanh_grad")                                                   \
-      .SetCreateFn<CpuHardtanhGradKernel<device, dtype>>()                                \
+      .SetCreateFn<GpuHardtanhGradKernel<device, dtype>>()                                \
       .SetIsMatchedHob((HobDeviceTag() == device)                                         \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value))             \
       .SetInplaceProposalFn(                                                              \
@@ -100,8 +122,9 @@ class CpuHardtanhGradKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, double)
+REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, half)
+REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, float)
+REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, double)
 
 }  // namespace user_op
 

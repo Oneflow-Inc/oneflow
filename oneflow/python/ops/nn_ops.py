@@ -2722,6 +2722,34 @@ def leaky_relu(
     )
 
 
+@oneflow_export("math.hardtanh")
+def hardtanh(
+    x: remote_blob_util.BlobDef,
+    min_val: float = -1,
+    max_val: float = 1,
+    name: Optional[str] = None,
+):
+    if name is None:
+        name = id_util.UniqueStr("Hardtanh_")
+
+    min_val = float(min_val)
+    max_val = float(max_val)
+
+    assert min_val < max_val, "max_val should be larger than min_val"
+
+    return (
+        flow.user_op_builder(name)
+        .Op("hardtanh")
+        .Input("in", [x])
+        .Attr("min_val", min_val)
+        .Attr("max_val", max_val)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
     input: remote_blob_util.BlobDef,
