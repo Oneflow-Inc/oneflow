@@ -2322,6 +2322,44 @@ def dim_scatter_update_like(
     like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r""" desc: ... `input` according to `index` along with the axis `dim`.
+
+    Take a 3-D blob as example, the output is specified by:
+
+    .. code-block:: python
+
+        output[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+        output[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+        output[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+
+
+    The shape of `input` and `index` should be the same except in the `dim` dimension. 
+    
+    That is, if `input` is a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, x_i, x_{i+1}, \dots, x_n)`,
+    and `dim = i`, then `index` must be a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, k, x_{i+1}, \dots, x_n)` 
+    where :math:`k \geq 1`.
+
+    The return Blob `output` will have the same shape with `index`.
+
+    Args:
+        dim (int): The axis along which to index
+        index (remote_blob_util.BlobDef): The index blob of elements to scatter
+        input (remote_blob_util.BlobDef): The input blob whose elments will be scatterd and updated to output.
+        like (remote_blob_util.BlobDef): The like blob. The shape size of output will be same as like blob.
+        name (Optional[str], optional): The name of the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The elements scattered from `input` will be returned as the output Blob.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        #...
+
+    """    
+
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("DimScatterUpdateLike_")
@@ -2396,7 +2434,7 @@ def dim_scatter_add(
 ) -> remote_blob_util.BlobDef:
     return (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
+            name if name is not None else id_util.UniqueStr("DimScatterAdd_")
         )
         .Op("dim_scatter_add")
         .Input("input", [input])
