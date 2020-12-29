@@ -1369,7 +1369,6 @@ def MaxPool2d(
     assert len(pads_list) == len(input.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    print("kernel_size:", kernel_size, "dilation:", dilation, "stride:", stride, "\npadding_before, padding_after >>>>>>>>>>>>>>>>>>>>> ", padding_before, padding_after)
     assert len(pads_list) == len(input.shape) - 2
 
     y, indice = (

@@ -20,21 +20,20 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/operator/operator_util.h"
-#include "oneflow/core/common/eigen_util.h"
+
 
 namespace oneflow {
 
 
 #define POOLING_DATA_TYPE_CPU_SEQ \
   FLOATING_DATA_TYPE_SEQ          \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt32)
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 #define POOLING_DATA_TYPE_GPU_SEQ \
   POOLING_DATA_TYPE_CPU_SEQ
-//   FLOAT16_DATA_TYPE_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
+typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class PoolingParams3D {
  public:
@@ -109,7 +108,7 @@ struct PoolingKernelUtil {
 
 template<typename T>
 OF_DEVICE_FUNC void FarwardCompute(
-    const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t elem_num,
+    const NdIndexOffsetHelper<int64_t, 4>& index_helper,  int64_t elem_num, T maxval,
     const T* src, T* dest, T* indice_ptr, const int32_t padding_h, const int32_t padding_w,
     const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
     const int64_t y_height, const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
@@ -117,22 +116,27 @@ OF_DEVICE_FUNC void FarwardCompute(
     const bool return_indices, const bool ceil_mode
   ) {
     XPU_1D_KERNEL_LOOP(num, elem_num){
-      int64_t coord_x[4], hend, wend;
-      index_helper.OffsetToNdIndex(num, coord_x);
-      const int64_t n = coord_x[0];
-      const int64_t c = coord_x[1];
-      const int64_t h = coord_x[2];
-      const int64_t w = coord_x[3];
+      int64_t c, h, w, coords[4];
+      index_helper.OffsetToNdIndex(num, coords);
+      c = coords[1];
+      h = coords[2];
+      w = coords[3];
       int64_t ip = c*x_width*x_height;
       int64_t hstart = h * stride_h - padding_h;
       int64_t wstart = w * stride_w - padding_w;
-      int64_t hend_min = hstart + (kernel_size_h-1)*dilation_h + 1;
-      if(hend_min<=x_height) hend=hend_min; else hend=x_height;
-      /*int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
-      
-      const int64_t wend_min = wstart + (kernel_size_w-1)*dilation_w + 1;
-      if(wend_min <= x_width) wend=wend_min; else wend=x_width;
+      /* int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
       /* int64_t wend = std::min(wstart + (kernel_size_w-1)*dilation_w + 1, x_width); */
+      int64_t hend, wend;
+      if((hstart + (kernel_size_h-1)*dilation_h + 1) <= x_height){
+        hend = (hstart + (kernel_size_h-1)*dilation_h + 1);
+      }else{
+        hend = x_height;
+      }
+      if((wstart + (kernel_size_w-1)*dilation_w + 1) <= x_width){
+        wend = (wstart + (kernel_size_w-1)*dilation_w + 1);
+      }else{
+        wend = x_width;
+      }
 
       while(hstart < 0)
         hstart += dilation_h;
@@ -140,17 +144,16 @@ OF_DEVICE_FUNC void FarwardCompute(
         wstart += dilation_w;
 
       /* local pointers */
-      const int64_t dest_idx = c*y_width*y_height + h*y_width + w;
+      int64_t dest_idx = c*y_width*y_height + h*y_width + w;
       int64_t indp = c*y_width*y_height + h*y_width + w;
 
       /* compute local max: */
       int64_t maxindex = hstart * x_width + wstart;
       /* T maxval = -std::numeric_limits<T>::infinity(); */
-      T maxval;
       for(int64_t i=hstart;i<hend; i++) {
           for(int64_t j=wstart; j<wend; j++) {
             int64_t tcntr = i*x_width + j;
-            const int64_t search_idx = ip + tcntr;
+            int64_t search_idx = ip + tcntr;
             T val = src[search_idx];
             if ((val > maxval) || std::isnan(val))
             {
@@ -176,12 +179,12 @@ OF_DEVICE_FUNC void BackwardCompute(
   const int64_t dst_height, const int64_t dst_width, const bool return_indices, const bool ceil_mode
 ) {
   XPU_1D_KERNEL_LOOP(num, elem_num){
-    int64_t coord_dx[4];
+    int64_t c, h, w;
+    int64_t coord_dx[4]={0};
     index_helper.OffsetToNdIndex(num, coord_dx);
-    const int64_t n = coord_dx[0];
-    const int64_t c = coord_dx[1];
-    const int64_t h = coord_dx[2];
-    const int64_t w = coord_dx[3];
+    c = coord_dx[1];
+    h = coord_dx[2];
+    w = coord_dx[3];
     
     int64_t src_idx = c*src_height*src_width + h*src_width + w;
     int64_t indice_idx = c*src_height*src_width + h*src_width + w;

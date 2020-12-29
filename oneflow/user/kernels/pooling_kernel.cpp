@@ -40,8 +40,9 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
     const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
     const std::vector<int32_t> stride, const std::vector<int32_t> dilation, const bool return_indices, const bool ceil_mode
   ){
-    FarwardCompute(
-      index_helper, elem_num, src, dest, indice_ptr, padding_before[0], padding_before[1], n_batch, 
+    T maxval = -std::numeric_limits<T>::infinity();
+    FarwardCompute<T>(
+      index_helper, elem_num, maxval, src, dest, indice_ptr, padding_before[0], padding_before[1], n_batch, 
       n_channel, x_height, x_width, y_height, y_width,
       kernel_size[0], kernel_size[1], stride[0], stride[1], dilation[0], dilation[1], return_indices, ceil_mode
     );
@@ -54,7 +55,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
     const int64_t dst_height, const int64_t dst_width,
     const bool return_indices, const bool ceil_mode
   ){
-    BackwardCompute(
+    BackwardCompute<T>(
       index_helper, elem_num, src, dest, indice_ptr,
       n_batch, n_channel, src_height, src_width,
       dst_height, dst_width, return_indices, ceil_mode
@@ -62,7 +63,7 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-namespace user_op{
+// namespace user_op{
 
 template<DeviceType device_type, typename T>
 class MaxPool2dKernel final : public user_op::OpKernel {
@@ -73,9 +74,9 @@ class MaxPool2dKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const std::string padding = ctx->Attr<std::string>("padding");
     const std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -128,10 +129,10 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
-    Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const std::string data_format = ctx->Attr<std::string>("data_format");
     const std::string padding = ctx->Attr<std::string>("padding");
     const std::vector<int32_t> padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -168,6 +169,9 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     DimVector dy_vector = ShapeViewToDimVector(dy->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
+    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
+
     PoolingKernelUtil<device_type, T>::Maxpool2dBackward(
       ctx->device_ctx(), index_helper, elem_num, src, dest, indice_ptr,
       n_batch, n_channel, src_height, src_width,
@@ -194,13 +198,17 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
   REGISTER_POOLING_KERNELS(device, int32_t)
 
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_POOLING_WITH_DEVICE(DeviceType::kGPU)
+//REGISTER_POOLING_KERNELS(DeviceType::kGPU, float16)
+#endif
 
-
-}  // namespace user_op
+//}  // namespace user_op
 
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kCPU),
                                  POOLING_DATA_TYPE_CPU_SEQ);
+                                
 
 }  // namespace oneflow
 
