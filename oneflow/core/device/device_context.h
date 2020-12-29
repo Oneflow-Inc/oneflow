@@ -36,6 +36,7 @@ class DeviceCtx {
   virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
+  virtual const cublasHandle_t& cublas_tf32_tensor_op_math_handle() const { UNIMPLEMENTED(); }
   virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
 #endif
 

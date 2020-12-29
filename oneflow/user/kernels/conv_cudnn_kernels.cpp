@@ -60,6 +60,12 @@ struct CudnnConvArgsAndAlgo final {
         << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
         << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
         << byte_size_of_buf;
+
+    if ((0 == algo_perf.mathType) && 
+        (!job_desc.job_conf().enable_tensor_float_32_compute())) {
+        algo_perf.mathType = CUDNN_FMA_MATH;
+    }
+
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
   }
   CudnnConvArgsAndAlgo() = delete;
@@ -165,14 +171,13 @@ class ConvGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t> args_and_algo(
         in, weight, out, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
         job_desc.job_conf().has_cudnn_conv_force_fwd_algo(),
         job_desc.job_conf().cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
-
+    
     OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
         args.wdesc.Get(), weight->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
@@ -312,7 +317,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         job_desc.job_conf().cudnn_conv_force_bwd_filter_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
-
+    
     OF_CUDNN_CHECK(cudnnConvolutionBackwardFilter(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), x->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),

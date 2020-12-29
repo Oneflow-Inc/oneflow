@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import tensorflow as tf
 import test_global_storage
-from test_util import GenArgList
+from test_util import GenArgList, type_name_to_flow_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -29,13 +29,17 @@ for gpu in gpus:
 
 
 def compare_with_tensorflow(
-    device_type, a_shape, b_shape, transpose_a, transpose_b, fuse_add_to_output
+    device_type, data_type, a_shape, b_shape, transpose_a, transpose_b, fuse_add_to_output
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.enable_fuse_add_to_output(fuse_add_to_output)
+    if data_type == "tensorfloat32":
+        func_config.enable_tensor_float_32_compute(True)
+    else:
+        func_config.enable_tensor_float_32_compute(False)
 
     @flow.global_function(type="train", function_config=func_config)
     def MatmulJob():
@@ -43,26 +47,30 @@ def compare_with_tensorflow(
             a = flow.get_variable(
                 "a",
                 shape=a_shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             b = flow.get_variable(
                 "b",
                 shape=b_shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
+            
             out = flow.matmul(a, b, transpose_a, transpose_b)
+
             c = flow.get_variable(
                 "c",
                 shape=out.shape,
-                dtype=flow.float,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
+
             loss = out + c
+            
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -94,12 +102,18 @@ def compare_with_tensorflow(
     tf_b_diff = tape.gradient(tf_out, b, loss_diff)
     tf_c_diff = tape.gradient(tf_out, c, loss_diff)
 
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=1e-03), np.max(
+    if data_type == "tensorfloat32":
+        tolerance = 1e-0
+    else:
+        tolerance = 1e-3
+    
+
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), atol=tolerance), np.max(
         np.abs(of_out.numpy() - tf_out.numpy())
     )
-    assert np.allclose(test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=1e-03)
-    assert np.allclose(test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=1e-03)
-    assert np.allclose(test_global_storage.Get("c_diff"), tf_c_diff.numpy(), atol=1e-03)
+    assert np.allclose(test_global_storage.Get("a_diff"), tf_a_diff.numpy(), atol=tolerance)
+    assert np.allclose(test_global_storage.Get("b_diff"), tf_b_diff.numpy(), atol=tolerance)
+    assert np.allclose(test_global_storage.Get("c_diff"), tf_c_diff.numpy(), atol=tolerance)
 
 
 def filter_args(arg_list):
@@ -110,11 +124,11 @@ def filter_args(arg_list):
 
     ret = []
     for arg in arg_list:
-        a_shape = arg[1]
-        b_shape = arg[2]
-        if arg[3]:  # transpose_a
+        a_shape = arg[2]
+        b_shape = arg[3]
+        if arg[4]:  # transpose_a
             a_shape = trans_shape(a_shape)
-        if arg[4]:  # transpose_b
+        if arg[5]:  # transpose_b
             b_shape = trans_shape(b_shape)
         if a_shape[-1] == b_shape[-2]:
             ret.append(tuple(arg))
@@ -124,6 +138,7 @@ def filter_args(arg_list):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["data_type"] = ["tensorfloat32"]
     arg_dict["a_shape"] = [(512, 256), (256, 512)]
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
@@ -133,13 +148,14 @@ def gen_arg_list():
 
     arg_dict.clear()
     arg_dict["device_type"] = ["cpu", "gpu"]
+    # arg_dict["data_type"] = ["double", "float32", "tensorfloat32"]
+    arg_dict["data_type"] = ["tensorfloat32"]
     arg_dict["a_shape"] = [(10, 10, 64, 32), (10, 10, 32, 64)]
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
     arg_dict["fuse_add_to_output"] = [True, False]
     batch_matmul_args = filter_args(GenArgList(arg_dict))
-
     return matmul_args + batch_matmul_args
 
 

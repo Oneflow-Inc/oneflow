@@ -59,6 +59,16 @@ const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
   return cublas_tensor_op_math_handle_.get();
 }
 
+const cublasHandle_t* CudaStreamHandle::cublas_tf32_tensor_op_math_handle() {
+  if (!cublas_tf32_tensor_op_math_handle_) {
+    cublas_tf32_tensor_op_math_handle_.reset(new cublasHandle_t);
+    OF_CUBLAS_CHECK(cublasCreate(cublas_tf32_tensor_op_math_handle_.get()));
+    OF_CUBLAS_CHECK(cublasSetStream(*cublas_tf32_tensor_op_math_handle_, *cuda_stream()));
+    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tf32_tensor_op_math_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
+  }
+  return cublas_tf32_tensor_op_math_handle_.get();
+}
+
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
     if (IsCuda9OnTuringDevice()) {
@@ -88,6 +98,8 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_)); }
+  if (cublas_tensor_op_math_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_tensor_op_math_handle_)); }
+  if (cublas_tf32_tensor_op_math_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_tf32_tensor_op_math_handle_)); }
   if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
 }
 
