@@ -214,9 +214,6 @@ def _compare_dim_scatter_add_like_with_samples(
             np.allclose(y, sample["output"].astype(np.float32), 1e-3, 1e-3)
         )
     else:
-        print("oneflow:", y)
-        print("numpy:", sample["output"])
-        print((y - sample["output"])<1e-3)
         test_case.assertTrue(np.allclose(y, sample["output"].astype(value_type[0])))
 
 @flow.unittest.skip_unless_1n1d()
