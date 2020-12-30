@@ -76,4 +76,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         &JobBuildAndInferCtx_MirroredBlobGetBatchAxis);
   m.def("JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView",
         &JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView);
+  m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
 }

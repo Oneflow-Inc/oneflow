@@ -21,6 +21,7 @@ import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.job_set_pb2 as job_set_pb
+import oneflow.core.job.job_pb2 as job_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -335,3 +336,8 @@ def GetOpAttributes():
 def GetJobSet():
     job_set = oneflow_api.GetSerializedJobSet()
     return text_format.Parse(job_set, job_set_pb.JobSet())
+
+
+def GetCurrentJob():
+    serialized_job = oneflow_api.GetSerializedCurrentJob()
+    return text_format.Parse(serialized_job, job_pb.Job())

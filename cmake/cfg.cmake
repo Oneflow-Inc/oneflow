@@ -63,6 +63,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
+      oneflow/core/serving/saved_model.proto
   )
 
   set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
@@ -111,6 +112,9 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/learning_rate_schedule_conf.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
+      oneflow/core/register/logical_blob_id.proto
+      oneflow/core/operator/op_conf.proto
+      oneflow/core/serving/saved_model.proto
   )
 
   foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})

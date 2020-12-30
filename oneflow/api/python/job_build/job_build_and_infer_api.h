@@ -168,4 +168,9 @@ inline std::string JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
       .GetOrThrow();
 }
 
+inline void JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
+                                                      const std::string& lbn) {
+  return oneflow::JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn).GetOrThrow();
+}
+
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_API_H_
