@@ -24,7 +24,6 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
-
 TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
@@ -37,20 +36,20 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
     const bool return_indices = ctx->Attr<bool>("return_indices");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-   
 
     CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
     for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
     CHECK_EQ_OR_RETURN(stride.size(), dim);
     for (int32_t stride_dim : stride) { CHECK_GT_OR_RETURN(stride_dim, 0); }
 
-    for (int32_t i=0; i<padding_after.size(); i++) {
+    for (int32_t i = 0; i < padding_after.size(); i++) {
       CHECK_GT_OR_RETURN(kernel_size[i], 2 * padding_after[i])
-         << "pad should be smaller than half of kernel size";
+          << "pad should be smaller than half of kernel size";
     }
 
-    const PoolingParams3D params_3d(dim, *x_shape, data_format, padding, padding_before, padding_after,
-                             kernel_size, stride, dilation, return_indices, ceil_mode);
+    const PoolingParams3D params_3d(dim, *x_shape, data_format, padding, padding_before,
+                                    padding_after, kernel_size, stride, dilation, return_indices,
+                                    ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
@@ -72,10 +71,10 @@ Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
     ctx->NewBuilder()
-    .Split(user_op::OpArg("x", 0), i)
-    .Split(user_op::OpArg("y", 0), i)
-    .Split(user_op::OpArg("indice", 0), i)
-    .Build();
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("indice", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }

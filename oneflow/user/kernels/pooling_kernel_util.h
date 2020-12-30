@@ -21,30 +21,26 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/operator/operator_util.h"
 
-
 namespace oneflow {
 
-
-#define POOLING_DATA_TYPE_CPU_SEQ \
-  FLOATING_DATA_TYPE_SEQ          \
+#define POOLING_DATA_TYPE_CPU_SEQ                 \
+  FLOATING_DATA_TYPE_SEQ                          \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define POOLING_DATA_TYPE_GPU_SEQ \
-  POOLING_DATA_TYPE_CPU_SEQ
+#define POOLING_DATA_TYPE_GPU_SEQ POOLING_DATA_TYPE_CPU_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class PoolingParams3D {
  public:
-  PoolingParams3D(
-           const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-           const std::string& padding, const std::vector<int32_t>& padding_before,
-           const std::vector<int32_t>& padding_after, const std::vector<int32_t>& kernel_size,
-           const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
-           const bool return_indices, const bool ceil_mode
-  );
+  PoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
+                  const std::string& padding, const std::vector<int32_t>& padding_before,
+                  const std::vector<int32_t>& padding_after,
+                  const std::vector<int32_t>& kernel_size, const std::vector<int32_t>& stride,
+                  const std::vector<int32_t>& dilation, const bool return_indices,
+                  const bool ceil_mode);
   ~PoolingParams3D() = default;
   void Reset(const ShapeView& x_shape);
 
@@ -86,108 +82,104 @@ struct PoolKernelState final : public user_op::OpKernelState {
   }
 };
 
-
 template<DeviceType device_type, typename T>
 struct PoolingKernelUtil {
-  static void Maxpool2dForward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
-    const T* src, T* dest, T* indice_ptr, const std::vector<int32_t> padding_before,
-    const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
-    const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
-    const std::vector<int32_t> stride, const std::vector<int32_t> dilation, const bool return_indices, const bool ceil_mode
-  );
+  static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                               const int64_t elem_num, const T* src, T* dest, T* indice_ptr,
+                               const std::vector<int32_t> padding_before, const int64_t n_batch,
+                               const int64_t n_channel, const int64_t x_height,
+                               const int64_t x_width, const int64_t y_height, const int64_t y_width,
+                               const std::vector<int32_t> kernel_size,
+                               const std::vector<int32_t> stride,
+                               const std::vector<int32_t> dilation, const bool return_indices,
+                               const bool ceil_mode);
 
-  static void Maxpool2dBackward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
-    const T* src, T* dest, const T* indice_ptr,
-    const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
-    const int64_t dst_height, const int64_t dst_width,
-    const bool return_indices, const bool ceil_mode
-  );
+  static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                                const int64_t elem_num, const T* src, T* dest, const T* indice_ptr,
+                                const int64_t n_batch, const int64_t n_channel,
+                                const int64_t src_height, const int64_t src_width,
+                                const int64_t dst_height, const int64_t dst_width,
+                                const bool return_indices, const bool ceil_mode);
 };
-
 
 template<typename T>
 OF_DEVICE_FUNC void FarwardCompute(
-    const NdIndexOffsetHelper<int64_t, 4> index_helper,  int64_t elem_num, T maxval,
-    const T* src, T* dest, T* indice_ptr, const int32_t padding_h, const int32_t padding_w,
-    const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
-    const int64_t y_height, const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
-    const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h, const int32_t dilation_w,
-    const bool return_indices, const bool ceil_mode
-  ) {
-    XPU_1D_KERNEL_LOOP(num, elem_num){
-      int64_t c, h, w, coords[4]={0};
-      index_helper.OffsetToNdIndex(num, coords);
-      c = coords[1];
-      h = coords[2];
-      w = coords[3];
-      int64_t ip = c*x_width*x_height;
-      int64_t hstart = h * stride_h - padding_h;
-      int64_t wstart = w * stride_w - padding_w;
-      /* int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
-      /* int64_t wend = std::min(wstart + (kernel_size_w-1)*dilation_w + 1, x_width); */
-      int64_t hend, wend;
-      if((hstart + (kernel_size_h-1)*dilation_h + 1) <= x_height){
-        hend = (hstart + (kernel_size_h-1)*dilation_h + 1);
-      }else{
-        hend = x_height;
-      }
-      if((wstart + (kernel_size_w-1)*dilation_w + 1) <= x_width){
-        wend = (wstart + (kernel_size_w-1)*dilation_w + 1);
-      }else{
-        wend = x_width;
-      }
-      while(hstart < 0)
-        hstart += dilation_h;
-      while(wstart < 0)
-        wstart += dilation_w;
-
-      /* local pointers */
-      int64_t dest_idx = c*y_width*y_height + h*y_width + w;
-      int64_t indp = c*y_width*y_height + h*y_width + w;
-      /* compute local max: */
-      int64_t maxindex = hstart * x_width + wstart;
-      /* T maxval = -std::numeric_limits<T>::infinity(); */
-      for(int64_t i=hstart;i<hend; i++) {
-          for(int64_t j=wstart; j<wend; j++) {
-            int64_t tcntr = i*x_width + j;
-            int64_t search_idx = ip + tcntr;
-            T val = src[search_idx];
-            if ((val > maxval) || std::isnan(val))
-            // if (val > maxval)
-            {
-              maxval = val;
-              maxindex = tcntr;
-            }
-          }
-      }
-      /* set output to local max */
-      dest[dest_idx] = src[maxindex];
-      /* store location of max */
-      indice_ptr[indp] = maxindex;
+    const NdIndexOffsetHelper<int64_t, 4> index_helper, int64_t elem_num, T maxval, const T* src,
+    T* dest, T* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int64_t n_batch,
+    const int64_t n_channel, const int64_t x_height, const int64_t x_width, const int64_t y_height,
+    const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
+    const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
+    const int32_t dilation_w, const bool return_indices, const bool ceil_mode) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
+    int64_t c, h, w, coords[4] = {0};
+    index_helper.OffsetToNdIndex(num, coords);
+    c = coords[1];
+    h = coords[2];
+    w = coords[3];
+    int64_t ip = c * x_width * x_height;
+    int64_t hstart = h * stride_h - padding_h;
+    int64_t wstart = w * stride_w - padding_w;
+    /* int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
+    /* int64_t wend = std::min(wstart + (kernel_size_w-1)*dilation_w + 1, x_width); */
+    int64_t hend, wend;
+    if ((hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height) {
+      hend = (hstart + (kernel_size_h - 1) * dilation_h + 1);
+    } else {
+      hend = x_height;
     }
-  }
+    if ((wstart + (kernel_size_w - 1) * dilation_w + 1) <= x_width) {
+      wend = (wstart + (kernel_size_w - 1) * dilation_w + 1);
+    } else {
+      wend = x_width;
+    }
+    while (hstart < 0) hstart += dilation_h;
+    while (wstart < 0) wstart += dilation_w;
 
-  
+    /* local pointers */
+    int64_t dest_idx = c * y_width * y_height + h * y_width + w;
+    int64_t indp = c * y_width * y_height + h * y_width + w;
+    /* compute local max: */
+    int64_t maxindex = hstart * x_width + wstart;
+    /* T maxval = -std::numeric_limits<T>::infinity(); */
+    for (int64_t i = hstart; i < hend; i++) {
+      for (int64_t j = wstart; j < wend; j++) {
+        int64_t tcntr = i * x_width + j;
+        int64_t search_idx = ip + tcntr;
+        T val = src[search_idx];
+        if ((val > maxval) || std::isnan(val))
+        // if (val > maxval)
+        {
+          maxval = val;
+          maxindex = tcntr;
+        }
+      }
+    }
+    /* set output to local max */
+    dest[dest_idx] = src[maxindex];
+    /* store location of max */
+    indice_ptr[indp] = maxindex;
+  }
+}
 
 template<typename T>
-OF_DEVICE_FUNC void BackwardCompute(
-  const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num, const T* src, T* dest, 
-  const T* indice_ptr, const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width, 
-  const int64_t dst_height, const int64_t dst_width, const bool return_indices, const bool ceil_mode
-) {
-  XPU_1D_KERNEL_LOOP(num, elem_num){
+OF_DEVICE_FUNC void BackwardCompute(const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                                    const int64_t elem_num, const T* src, T* dest,
+                                    const T* indice_ptr, const int64_t n_batch,
+                                    const int64_t n_channel, const int64_t src_height,
+                                    const int64_t src_width, const int64_t dst_height,
+                                    const int64_t dst_width, const bool return_indices,
+                                    const bool ceil_mode) {
+  XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t c, h, w;
-    int64_t coord_dx[4]={0};
+    int64_t coord_dx[4] = {0};
     index_helper.OffsetToNdIndex(num, coord_dx);
     c = coord_dx[1];
     h = coord_dx[2];
     w = coord_dx[3];
-    
-    int64_t ip = c*dst_width*dst_height;
-    int64_t src_idx = c*src_height*src_width + h*src_width + w;
-    int64_t indice_idx = c*src_height*src_width + h*src_width + w;
+
+    int64_t ip = c * dst_width * dst_height;
+    int64_t src_idx = c * src_height * src_width + h * src_width + w;
+    int64_t indice_idx = c * src_height * src_width + h * src_width + w;
     int64_t dest_idx = ip + indice_ptr[indice_idx];
     if (dest_idx != -1) {
       /* update gradient */

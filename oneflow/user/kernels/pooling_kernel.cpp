@@ -33,33 +33,30 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
 
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kCPU, T> {
-  static void Maxpool2dForward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
-    const T* src, T* dest, T* indice_ptr, const std::vector<int32_t> padding_before,
-    const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
-    const int64_t y_height, const int64_t y_width, const std::vector<int32_t> kernel_size,
-    const std::vector<int32_t> stride, const std::vector<int32_t> dilation, const bool return_indices, const bool ceil_mode
-  ){
+  static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                               const int64_t elem_num, const T* src, T* dest, T* indice_ptr,
+                               const std::vector<int32_t> padding_before, const int64_t n_batch,
+                               const int64_t n_channel, const int64_t x_height,
+                               const int64_t x_width, const int64_t y_height, const int64_t y_width,
+                               const std::vector<int32_t> kernel_size,
+                               const std::vector<int32_t> stride,
+                               const std::vector<int32_t> dilation, const bool return_indices,
+                               const bool ceil_mode) {
     T maxval = -std::numeric_limits<T>::infinity();
-    FarwardCompute<T>(
-      index_helper, elem_num, maxval, src, dest, indice_ptr, padding_before[0], padding_before[1], n_batch, 
-      n_channel, x_height, x_width, y_height, y_width,
-      kernel_size[0], kernel_size[1], stride[0], stride[1], dilation[0], dilation[1], return_indices, ceil_mode
-    );
+    FarwardCompute<T>(index_helper, elem_num, maxval, src, dest, indice_ptr, padding_before[0],
+                      padding_before[1], n_batch, n_channel, x_height, x_width, y_height, y_width,
+                      kernel_size[0], kernel_size[1], stride[0], stride[1], dilation[0],
+                      dilation[1], return_indices, ceil_mode);
   }
 
-  static void Maxpool2dBackward(
-    DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper, const int64_t elem_num,
-    const T* src, T* dest, const T* indice_ptr,
-    const int64_t n_batch, const int64_t n_channel, const int64_t src_height, const int64_t src_width,
-    const int64_t dst_height, const int64_t dst_width,
-    const bool return_indices, const bool ceil_mode
-  ){
-    BackwardCompute<T>(
-      index_helper, elem_num, src, dest, indice_ptr,
-      n_batch, n_channel, src_height, src_width,
-      dst_height, dst_width, return_indices, ceil_mode
-    );
+  static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
+                                const int64_t elem_num, const T* src, T* dest, const T* indice_ptr,
+                                const int64_t n_batch, const int64_t n_channel,
+                                const int64_t src_height, const int64_t src_width,
+                                const int64_t dst_height, const int64_t dst_width,
+                                const bool return_indices, const bool ceil_mode) {
+    BackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, n_batch, n_channel,
+                       src_height, src_width, dst_height, dst_width, return_indices, ceil_mode);
   }
 };
 
@@ -92,11 +89,11 @@ class MaxPool2dKernel final : public user_op::OpKernel {
       c_idx = 1;
       h_idx = 2;
       w_idx = 3;
-    }else if (data_format == "channels_last"){
+    } else if (data_format == "channels_last") {
       c_idx = 3;
       h_idx = 1;
       w_idx = 2;
-    }else{
+    } else {
       UNIMPLEMENTED();
     }
     const int64_t n_batch = x->shape().At(0);
@@ -106,18 +103,17 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const int64_t y_height = y->shape().At(h_idx);
     const int64_t y_width = y->shape().At(w_idx);
     const int64_t elem_num = y->shape().elem_cnt();
-    
+
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
     T* indice_ptr = indice->mut_dptr<T>();
     DimVector y_vector = ShapeViewToDimVector(y->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-     
+
     PoolingKernelUtil<device_type, T>::Maxpool2dForward(
-      ctx->device_ctx(), index_helper, elem_num, src, dest, indice_ptr, padding_before, n_batch, 
-      n_channel, x_height, x_width, y_height, y_width,
-      kernel_size, stride, dilation,return_indices, ceil_mode
-    );
+        ctx->device_ctx(), index_helper, elem_num, src, dest, indice_ptr, padding_before, n_batch,
+        n_channel, x_height, x_width, y_height, y_width, kernel_size, stride, dilation,
+        return_indices, ceil_mode);
   };
 };
 
@@ -148,11 +144,11 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
       c_idx = 1;
       h_idx = 2;
       w_idx = 3;
-    }else if (data_format == "channels_last"){
+    } else if (data_format == "channels_last") {
       c_idx = 3;
       h_idx = 1;
       w_idx = 2;
-    }else{
+    } else {
       UNIMPLEMENTED();
     }
     const int64_t n_batch = dy->shape().At(0);
@@ -173,22 +169,18 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
     PoolingKernelUtil<device_type, T>::Maxpool2dBackward(
-      ctx->device_ctx(), index_helper, elem_num, src, dest, indice_ptr,
-      n_batch, n_channel, src_height, src_width,
-      dst_height, dst_width, return_indices, ceil_mode
-    );
-
+        ctx->device_ctx(), index_helper, elem_num, src, dest, indice_ptr, n_batch, n_channel,
+        src_height, src_width, dst_height, dst_width, return_indices, ceil_mode);
   };
 };
 
-
-#define REGISTER_POOLING_KERNELS(device, dtype)                               \
-  REGISTER_USER_KERNEL("maxpool_2d")                                             \
-      .SetCreateFn<MaxPool2dKernel<device, dtype>>()                             \
+#define REGISTER_POOLING_KERNELS(device, dtype)                                        \
+  REGISTER_USER_KERNEL("maxpool_2d")                                                   \
+      .SetCreateFn<MaxPool2dKernel<device, dtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("maxpool_2d_grad")                                        \
-      .SetCreateFn<MaxPool2dGradKernel<device, dtype>>()                         \
+  REGISTER_USER_KERNEL("maxpool_2d_grad")                                              \
+      .SetCreateFn<MaxPool2dGradKernel<device, dtype>>()                               \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
@@ -201,15 +193,12 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kGPU)
-//REGISTER_POOLING_KERNELS(DeviceType::kGPU, float16)
+// REGISTER_POOLING_KERNELS(DeviceType::kGPU, float16)
 #endif
 
 //}  // namespace user_op
 
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kCPU),
                                  POOLING_DATA_TYPE_CPU_SEQ);
-                                
 
 }  // namespace oneflow
-

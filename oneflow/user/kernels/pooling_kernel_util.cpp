@@ -43,14 +43,14 @@ std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32
   return vec;
 }
 
-
-PoolingParams3D::PoolingParams3D(
-           const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-           const std::string& padding, const std::vector<int32_t>& padding_before,
-           const std::vector<int32_t>& padding_after, const std::vector<int32_t>& kernel_size,
-           const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
-           const bool return_indices, const bool ceil_mode
-  )
+PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
+                                 const std::string& data_format, const std::string& padding,
+                                 const std::vector<int32_t>& padding_before,
+                                 const std::vector<int32_t>& padding_after,
+                                 const std::vector<int32_t>& kernel_size,
+                                 const std::vector<int32_t>& stride,
+                                 const std::vector<int32_t>& dilation, const bool return_indices,
+                                 const bool ceil_mode)
     : dim_(dim),
       pool_size_3d_(Get3DVec(kernel_size, dim)),
       strides_3d_(Get3DVec(stride, dim)),
