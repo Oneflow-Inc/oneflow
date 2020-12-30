@@ -1371,29 +1371,30 @@ def MaxPool2d(
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
     assert len(pads_list) == len(input.shape) - 2
-
     y, indice = (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("MaxPool2d_")
-        )
-        .Op("maxpool_2d")
-        .Input("x", [input])
-        .Output("y")
-        .Output("indice")
-        .Attr("data_format", channel_pos)
-        .Attr("stride", stride)
-        .Attr("kernel_size", kernel_size)
-        .Attr("padding", padding_type)
-        .Attr("padding_before", padding_before)
-        .Attr("padding_after", padding_after)
-        .Attr("dilation", dilation)
-        .Attr("return_indices", return_indices)
-        .Attr("ceil_mode", ceil_mode)   
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()
+            name if name is not None else id_util.UniqueStr("MaxPool2d_"))
+            .Op("maxpool_2d")
+            .Input("x", [input])
+            .Output("y")
+            .Output("indice")
+            .Attr("data_format", channel_pos)
+            .Attr("stride", stride)
+            .Attr("kernel_size", kernel_size)
+            .Attr("padding", padding_type)
+            .Attr("padding_before", padding_before)
+            .Attr("padding_after", padding_after)
+            .Attr("dilation", dilation)
+            .Attr("return_indices", return_indices)
+            .Attr("ceil_mode", ceil_mode)   
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()
     )
-    return y, indice
+    if return_indices==True:
+        return y, indice
+    else:        
+        return y
 
 
 @oneflow_export("nn.max_pool2d")
