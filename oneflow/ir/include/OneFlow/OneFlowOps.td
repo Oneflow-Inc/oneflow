@@ -68,10 +68,10 @@ def OneFlow_GenericUserOp : OneFlow_Op<"generic_user", [NoSideEffect]> {
     let summary = "Generic op for all kinds of user op";
 
     let arguments = (ins
-
+      Variadic<AnyType>:$operands,
       DictionaryAttr:$attr
     );
-    let results = (outs F32Tensor:$res);
+    let results = (outs Variadic<AnyType>:$output);
 }
 
 #endif // ONEFLOW_OPS

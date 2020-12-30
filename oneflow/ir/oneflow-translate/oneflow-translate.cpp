@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/Value.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -146,12 +147,36 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     }
     ArrayRef<NamedAttribute> named_attributes(named_attr_vec);
 
-    mlir::Value created =
-        b.create<oneflow::GenericUserOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
-                                         b.getDictionaryAttr(named_attributes))
-            .getResult();
-    const std::string &lbn = user_conf.output().at("out").s(0);
-    lbn2result.insert({lbn, created});
+    std::vector<::mlir::Value> vs;
+    for (auto kv : op.user_conf().input()) {
+      // TODO: declare tensor containing field lbi
+      // const std::string &ibn = kv.first;
+      const std::vector<std::string> lbns = {kv.second.s().begin(), kv.second.s().end()};
+      for (const std::string &lbn : lbns) {
+        // TODO: add placehorder tensors for tick
+        if (lbn2result.find(lbn) != lbn2result.end()) {
+          auto v = lbn2result.at(lbn);
+          vs.push_back(v);
+        }
+      }
+    }
+    auto out_types = llvm::SmallVector<Type, 8>();
+    for (auto kv : op.user_conf().output()) {
+      for (const std::string &lbn : kv.second.s()) {
+        out_types.append({RankedTensorType::get({}, b.getF32Type())});
+      }
+    }
+    ::mlir::ValueRange operands(vs);
+    auto created = b.create<oneflow::GenericUserOp>(unknownLoc, out_types, operands,
+                                                    b.getDictionaryAttr(named_attributes));
+
+    for (auto kv : op.user_conf().output()) {
+      // const std::string &obn = kv.first;
+      for (const std::string &lbn : kv.second.s()) {
+        lbn2result.insert({lbn, created.getResults().back()});
+      }
+    }
+
     return success();
   }
 }  // namespace
