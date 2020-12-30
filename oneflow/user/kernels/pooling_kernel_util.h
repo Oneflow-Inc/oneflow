@@ -141,8 +141,8 @@ OF_DEVICE_FUNC void FarwardCompute(
     /* compute local max: */
     int64_t maxindex = hstart * x_width + wstart;
     /* T maxval = -std::numeric_limits<T>::infinity(); */
-    for (int64_t i = hstart; i < hend; i++) {
-      for (int64_t j = wstart; j < wend; j++) {
+    for (int64_t i = hstart; i < hend; i+=dilation_h) {
+      for (int64_t j = wstart; j < wend; j+=dilation_w) {
         int64_t tcntr = i * x_width + j;
         int64_t search_idx = ip + tcntr;
         T val = src[search_idx];
