@@ -17,19 +17,19 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, typename K>
-struct InTopkKernelUtil<DeviceType::kCPU, T, K> {
-  static void InTopk(DeviceCtx* ctx, const int targets_num, const int classes_num, const T* targets,
-                     const K* predictions, const int k, int8_t* out) {
+template<typename IDX>
+struct InTopkKernelUtil<DeviceType::kCPU, IDX> {
+  static void InTopk(DeviceCtx* ctx, const int targets_num, const int classes_num,
+                     const IDX* targets, const float* predictions, const int k, int8_t* out) {
     FOR_RANGE(int32_t, batch_idx, 0, targets_num) {
-      T target = targets[batch_idx];
+      IDX target = targets[batch_idx];
       bool cannot_say =
           (target >= classes_num) || !std::isfinite(predictions[batch_idx * classes_num + target]);
       int32_t more_probable_classes = 0;
       if (!cannot_say) {
-        const K target_prediction = predictions[batch_idx * classes_num + target];
+        const float target_prediction = predictions[batch_idx * classes_num + target];
         FOR_RANGE(int32_t, class_idx, 0, classes_num) {
-          K pred = predictions[batch_idx * classes_num + class_idx];
+          float pred = predictions[batch_idx * classes_num + class_idx];
 
           if (!std::isfinite(pred)) {
             cannot_say = true;
@@ -46,6 +46,6 @@ struct InTopkKernelUtil<DeviceType::kCPU, T, K> {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_FUNCTOR, (DeviceType::kCPU),
-                                 INDEX_DATA_TYPE_SEQ, OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat))
+                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

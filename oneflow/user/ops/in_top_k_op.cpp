@@ -23,16 +23,13 @@ REGISTER_USER_OP("in_top_k")
     .Attr<int32_t>("k")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-
-      const Shape* targets_shape = ctx->Shape4ArgNameAndIndex("targets", 0);
-      CHECK_EQ_OR_RETURN(targets_shape->NumAxes(), 1);
-
-      const Shape* predictions_shape = ctx->Shape4ArgNameAndIndex("predictions", 0);
-      CHECK_EQ_OR_RETURN(predictions_shape->NumAxes(), 2);
-
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *targets_shape;
+      const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
+      const user_op::TensorDesc* predictions = ctx->TensorDesc4ArgNameAndIndex("predictions", 0);
+      CHECK_EQ_OR_RETURN(targets->shape().NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(predictions->shape().NumAxes(), 2);
+      CHECK_EQ_OR_RETURN(predictions->data_type(), DataType::kFloat);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = targets->shape();
       *ctx->Dtype4ArgNameAndIndex("out", 0) = kInt8;
-
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -40,11 +37,7 @@ REGISTER_USER_OP("in_top_k")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("predictions", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      }
+      ctx->NewBuilder().Split(user_op::OpArg("predictions", 0), 0).Build();
       return Maybe<void>::Ok();
     });
 }

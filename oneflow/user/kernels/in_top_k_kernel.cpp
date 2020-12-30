@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename K>
+template<DeviceType device_type, typename IDX>
 class InTopkKernel final : public user_op::OpKernel {
  public:
   InTopkKernel() = default;
@@ -30,29 +30,26 @@ class InTopkKernel final : public user_op::OpKernel {
     const user_op::Tensor* predictions = ctx->Tensor4ArgNameAndIndex("predictions", 0);
     const int32_t k = ctx->Attr<int32_t>("k");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     CHECK_EQ(targets->shape().At(0), predictions->shape().At(0));
-
-    const int32_t targets_num = predictions->shape().At(0);
+    CHECK_EQ(targets->shape().NumAxes(), 1);
+    CHECK_EQ(predictions->shape().NumAxes(), 2);
+    const int32_t instance_num = predictions->shape().At(0);
     const int32_t classes_num = predictions->shape().At(1);
-    InTopkKernelUtil<device_type, T, K>::InTopk(ctx->device_ctx(), targets_num, classes_num,
-                                                targets->dptr<T>(), predictions->dptr<K>(), k,
-                                                out->mut_dptr<int8_t>());
+    InTopkKernelUtil<device_type, IDX>::InTopk(ctx->device_ctx(), instance_num, classes_num,
+                                               targets->dptr<IDX>(), predictions->dptr<float>(), k,
+                                               out->mut_dptr<int8_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_IN_TOP_K_KERNEL(device, target_dtype_pair, prediction_dtype_pair)       \
-  REGISTER_USER_KERNEL("in_top_k")                                                       \
-      .SetCreateFn<InTopkKernel<device, OF_PP_PAIR_FIRST(target_dtype_pair),             \
-                                OF_PP_PAIR_FIRST(prediction_dtype_pair)>>()              \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceTag() == device)                                            \
-          & (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype_pair)) \
-          & (user_op::HobDataType("predictions", 0) == OF_PP_PAIR_SECOND(prediction_dtype_pair)));
+#define REGISTER_IN_TOP_K_KERNEL(device, target_dtype_pair)                     \
+  REGISTER_USER_KERNEL("in_top_k")                                              \
+      .SetCreateFn<InTopkKernel<device, OF_PP_PAIR_FIRST(target_dtype_pair)>>() \
+      .SetIsMatchedHob(                                                         \
+          (user_op::HobDeviceTag() == device)                                   \
+          & (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_IN_TOP_K_KERNEL, DEVICE_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,
-                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat))
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_IN_TOP_K_KERNEL, DEVICE_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 #undef REGISTER_IN_TOP_K_KERNEL
 

@@ -28,7 +28,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(device_type, target_dtype):
+def compare_with_tensorflow(
+    device_type, target_dtype, predictions_shape, k, with_finite=False
+):
     assert device_type in ["gpu", "cpu"]
     assert target_dtype in ["int32", "int64"]
     flow_data_type = type_name_to_flow_type[target_dtype]
@@ -37,15 +39,21 @@ def compare_with_tensorflow(device_type, target_dtype):
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow_data_type)
-
-    targets = np.random.randint(4, size=3).astype(type_name_to_np_type[target_dtype])
-    predictions = np.random.rand(3, 4).astype("float32")
-    k = random.choice([1, 2, 3, 4])
+    batch_size = predictions_shape[0]
+    classes = predictions_shape[1]
+    targets = np.random.randint(classes, size=batch_size).astype(
+        type_name_to_np_type[target_dtype]
+    )
+    predictions = np.random.rand(*predictions_shape).astype("float32")
+    if with_finite:
+        predictions[np.random.randint(batch_size)][np.random.randint(classes)] = float(
+            "inf"
+        )
 
     @flow.global_function(function_config=func_config)
     def IntopkJob(
-        targets: tp.Numpy.Placeholder((3,), dtype=flow_data_type),
-        predictions: tp.Numpy.Placeholder((3, 4), dtype=flow.float32),
+        targets: tp.Numpy.Placeholder((batch_size,), dtype=flow_data_type),
+        predictions: tp.Numpy.Placeholder(predictions_shape, dtype=flow.float32),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.in_top_k(targets, predictions, k=k)
@@ -53,17 +61,15 @@ def compare_with_tensorflow(device_type, target_dtype):
     # OneFlow
     of_out = IntopkJob(targets, predictions,).get().numpy()
     # TensorFlow
-    with tf.GradientTape(persistent=True) as tape:
-        predictions = tf.Variable(predictions)
-        targets = tf.Variable(targets)
-        tf_out = tf.math.in_top_k(targets, predictions, k=k)
-    assert np.allclose(of_out, tf_out)
+    tf_out = tf.math.in_top_k(targets, predictions, k=k)
+    assert np.array_equal(of_out, tf_out)
 
 
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["target_dtype"] = ["int32", "int64"]
+    arg_dict["predictions_shape"] = [(3, 4), (20, 10)]
 
     return GenArgList(arg_dict)
 
@@ -72,7 +78,9 @@ def gen_arg_list():
 class TestInTopk(flow.unittest.TestCase):
     def test_in_top_K(test_case):
         for arg in gen_arg_list():
-            compare_with_tensorflow(*arg)
+            for k in range(1, arg[2][1] + 1):
+                compare_with_tensorflow(*arg, k)
+                compare_with_tensorflow(*arg, k, with_finite=True)
 
 
 if __name__ == "__main__":

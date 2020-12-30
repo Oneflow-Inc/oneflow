@@ -1954,7 +1954,7 @@ def polyval(
 def in_top_k(
     targets: remote_blob_util.BlobDef,
     predictions: remote_blob_util.BlobDef,
-    k: Optional[int] = 1,
+    k: Optional[int],
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Says whether the targets are in the top K predictions.
