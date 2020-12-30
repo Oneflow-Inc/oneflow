@@ -12,9 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "OneFlow/OneFlowOps.h"
+#include "llvm-c/Core.h"
+#include "llvm/ADT/StringRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Module.h"
 #include "mlir/InitAllTranslations.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
 #include "mlir/IR/Builders.h"
@@ -29,6 +32,7 @@
 #include <new>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace mlir {
 
@@ -60,7 +64,10 @@ class Importer {
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
-  if (op.has_user_conf() == false) { return failure(); }
+  if (op.has_user_conf() == false) {
+    module.emitError("Not a user op. op name: " + op.name());
+    return failure();
+  }
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
   const std::string &type_name = user_conf.op_type_name();
   if (type_name == "relu") {
@@ -69,7 +76,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     const std::string &lbn = user_conf.output().at("out").s(0);
     lbn2result.insert({lbn, created});
     return success();
-  } else if (type_name == "constant") {
+  } else if (type_name == "constant1") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
       mlir::Value created = b.create<oneflow::ConstantOp>(
                                  unknownLoc, user_conf.attr().at("floating_value").at_double())
@@ -81,10 +88,73 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     }
     return success();
   } else {
-    module.emitError("can't handle user op of type: " + type_name);
-    return failure();
+    std::vector<NamedAttribute> named_attr_vec;
+    for (const class google::protobuf::MapPair<class std::basic_string<char>,
+                                               class ::oneflow::AttrValue> &attr :
+         op.user_conf().attr()) {
+      const std::string &name = attr.first;
+      const ::oneflow::AttrValue &value = attr.second;
+      if (value.has_at_int32()) {
+        std::pair<mlir::Identifier, mlir::Attribute> kv =
+            b.getNamedAttr(name, b.getI32IntegerAttr(value.at_int32()));
+        named_attr_vec.emplace_back(kv);
+      }
+#define DEFINE_ONE_ELIF(at_key, get_attr)                 \
+  else if (value.has_##at_key()) {                        \
+    std::pair<mlir::Identifier, mlir::Attribute> kv =     \
+        b.getNamedAttr(name, b.get_attr(value.at_key())); \
+    named_attr_vec.emplace_back(kv);                      \
   }
-}
+      DEFINE_ONE_ELIF(at_int64, getI64IntegerAttr)
+      DEFINE_ONE_ELIF(at_bool, getBoolAttr)
+      DEFINE_ONE_ELIF(at_float, getF32FloatAttr)
+      DEFINE_ONE_ELIF(at_double, getF64FloatAttr)
+      DEFINE_ONE_ELIF(at_string, getStringAttr)
+#undef DEFINE_ONE_ELIF
+#define DEFINE_ONE_ELIF(at_key, get_attr, field)                                           \
+  else if (value.has_##at_key()) {                                                         \
+    std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                      \
+        name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
+    named_attr_vec.emplace_back(kv);                                                       \
+  }
+      DEFINE_ONE_ELIF(at_shape, getI64ArrayAttr, dim)
+      DEFINE_ONE_ELIF(at_list_int32, getI32ArrayAttr, val)
+      DEFINE_ONE_ELIF(at_list_int64, getI64ArrayAttr, val)
+      DEFINE_ONE_ELIF(at_list_float, getF32ArrayAttr, val)
+#undef DEFINE_ONE_ELIF
+      else if (value.has_at_list_string()) {
+        auto s_vec = std::vector<std::string>(
+            {value.at_list_string().val().begin(), value.at_list_string().val().end()});
+        auto r_vec = std::vector<llvm::StringRef>();
+        for (auto s : s_vec) { r_vec.push_back(s); }
+        std::pair<mlir::Identifier, mlir::Attribute> kv =
+            b.getNamedAttr(name, b.getStrArrayAttr(r_vec));
+        named_attr_vec.emplace_back(kv);
+      }
+      else if (value.has_at_data_type()) {
+        auto dt = ::mlir::oneflow::symbolizeDataType(value.at_data_type());
+        auto dt_str = ::mlir::oneflow::stringifyEnum(
+            dt.getValueOr(::mlir::oneflow::DataType::InvalidDataType));
+        std::pair<mlir::Identifier, mlir::Attribute> kv =
+            b.getNamedAttr(name, b.getStringAttr(dt_str));
+        named_attr_vec.emplace_back(kv);
+      }
+      else {
+        module.emitError("can't handle user op attr: " + name);
+        return failure();
+      }
+    }
+    ArrayRef<NamedAttribute> named_attributes(named_attr_vec);
+
+    mlir::Value created =
+        b.create<oneflow::GenericUserOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
+                                         b.getDictionaryAttr(named_attributes))
+            .getResult();
+    const std::string &lbn = user_conf.output().at("out").s(0);
+    lbn2result.insert({lbn, created});
+    return success();
+  }
+}  // namespace
 
 LogicalResult Importer::processJob(::oneflow::Job *job) {
   auto func_type = b.getFunctionType(llvm::None, llvm::None);

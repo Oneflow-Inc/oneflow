@@ -17,7 +17,9 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
 
+#include "OneFlow/OneFlowEnums.h.inc"
+
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 
-#endif // ONEFLOW_ONEFLOWOPS_H
+#endif  // ONEFLOW_ONEFLOWOPS_H

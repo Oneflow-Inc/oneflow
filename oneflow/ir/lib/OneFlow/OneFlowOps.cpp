@@ -30,5 +30,7 @@ void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, do
                     builder.getFloatAttr(builder.getF64Type(), value));
 }
 
+#include "OneFlow/OneFlowEnums.cpp.inc"
+
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.cpp.inc"
