@@ -185,9 +185,10 @@ OF_DEVICE_FUNC void BackwardCompute(
     h = coord_dx[2];
     w = coord_dx[3];
     
+    int64_t ip = c*dst_width*dst_height;
     int64_t src_idx = c*src_height*src_width + h*src_width + w;
     int64_t indice_idx = c*src_height*src_width + h*src_width + w;
-    int64_t dest_idx = indice_ptr[indice_idx];
+    int64_t dest_idx = ip + indice_ptr[indice_idx];
     if (dest_idx != -1) {
       /* update gradient */
       dest[dest_idx] += src[src_idx];
