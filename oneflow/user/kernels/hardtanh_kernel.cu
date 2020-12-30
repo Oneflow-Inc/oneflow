@@ -26,15 +26,16 @@ struct HardtanhFunctor {
   __host__ __device__ explicit HardtanhFunctor(T min_val, T max_val)
       : min_val(min_val), max_val(max_val) {}
   __device__ T operator()(T x) const {
-    if (x <= min_val)
+    if (x <= min_val) {
       return min_val;
-    else if (x >= max_val)
+    } else if (x >= max_val) {
       return max_val;
-    else
+    } else {
       return x;
+    }
   }
-  T min_val;
-  T max_val;
+  const T min_val;
+  const T max_val;
 };
 
 template<typename T>
@@ -44,8 +45,8 @@ struct HardtanhGradFunctor {
   __device__ T operator()(T x, T dy) const {
     return (x > min_val && x < max_val) ? dy : static_cast<T>(0);
   }
-  T min_val;
-  T max_val;
+  const T min_val;
+  const T max_val;
 };
 
 template<DeviceType device_type, typename T>
@@ -82,9 +83,11 @@ class GpuHardtanhKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, half)
-REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, float)
-REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, double)
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
 class GpuHardtanhGradKernel final : public OpKernel {
@@ -122,9 +125,9 @@ class GpuHardtanhGradKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, half)
-REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, float)
-REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, double)
+REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 

@@ -37,12 +37,13 @@ class CpuHardtanhKernel final : public OpKernel {
 
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      if (in_ptr[i] > max_val)
+      if (in_ptr[i] > max_val) {
         out_ptr[i] = max_val;
-      else if (in_ptr[i] < min_val)
+      } else if (in_ptr[i] < min_val) {
         out_ptr[i] = min_val;
-      else
+      } else {
         out_ptr[i] = in_ptr[i];
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -59,8 +60,10 @@ class CpuHardtanhKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, double)
+REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
 class CpuHardtanhGradKernel final : public OpKernel {
@@ -102,7 +105,6 @@ class CpuHardtanhGradKernel final : public OpKernel {
 
 REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, double);
-REGISTER_CPU_HARDTANH_BACKWARD_KERNEL(DeviceType::kCPU, double)
 
 }  // namespace user_op
 
