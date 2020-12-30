@@ -184,7 +184,7 @@ def _make_dim_scatter_add_like_fn(
                 x_var = flow.cast_to_current_logical_view(x_var)
                 x = x_var + params_def
 
-            y = flow_scatter_op(dim, indices_def, x, like_def)
+            y = flow_scatter_op(x, dim, indices_def, like_def)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
@@ -216,7 +216,7 @@ def _make_dim_scatter_add_like_fn(
 
             x_int32 = flow.cast(x, dtype=flow.int32)
             like_def_int32 = flow.cast(like_def, dtype=flow.int32)
-            y_int32 = flow_scatter_op(dim, indices_def, x_int32, like_def_int32)
+            y_int32 = flow_scatter_op(x_int32, dim, indices_def, like_def_int32)
             y_fp32 = flow.cast(y_int32, dtype=flow.int32)
 
             with flow.scope.placement(device_type, "0:0"):

@@ -2314,37 +2314,56 @@ def amp_white_identity(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
+def _check_scatter_blobs(input, dim, index, like_or_src):
+    assert dim < len(index.shape), ValueError(
+        "Value of dim is out of range(dim should be less than len(index.shape))"
+    )
+
+    assert len(input.shape) == len(index.shape) and len(input.shape) == len(
+        like_or_src.shape
+    ), ValueError("Number of dimensions of input, index and like/src should equal")
+
+    for i in range(0, len(input.shape)):
+        assert input.shape[i] == index.shape[i], ValueError(
+            "Shape of input and index should be same"
+        )
+        assert input.shape[i] <= like_or_src.shape[i], ValueError(
+            "Shape like/src blob should be larger than input"
+        )
+
+
 @oneflow_export("dim_scatter_update_like")
 def dim_scatter_update_like(
+    input: remote_blob_util.BlobDef,
     dim: int,
     index: remote_blob_util.BlobDef,
-    input: remote_blob_util.BlobDef,
     like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
-    r""" desc: ... `input` according to `index` along with the axis `dim`.
+    r"""This operator writes the elements specified by `index` along with the axis 
+    `dim` from the `input` into the output blob whose shape size specified by `like`.
 
     Take a 3-D blob as example, the output is specified by:
 
     .. code-block:: python
 
-        output[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
-        output[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
-        output[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+        output[index[i][j][k]][j][k] = input[i][j][k]  # if dim == 0
+        output[i][index[i][j][k]][k] = input[i][j][k]  # if dim == 1
+        output[i][j][index[i][j][k]] = input[i][j][k]  # if dim == 2
 
-
-    The shape of `input` and `index` should be the same except in the `dim` dimension. 
+    `input`, `index` and `like` should have same number of dimensions. 
+    The shape of `input` and `index` should be the same. 
+    It is also required that sizes at dimension `d` of `index` and `like` should be equal 
+    for all dimensions d != dim.
     
-    That is, if `input` is a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, x_i, x_{i+1}, \dots, x_n)`,
-    and `dim = i`, then `index` must be a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, k, x_{i+1}, \dots, x_n)` 
-    where :math:`k \geq 1`.
-
-    The return Blob `output` will have the same shape with `index`.
+    Moreover, the values of index must not exceeds the range of like blob at dim dimension.
+    
+    The return Blob `output` will have the same shape with `like`.
 
     Args:
+        input (remote_blob_util.BlobDef): The input blob whose elments will be scatterd and updated to output.
         dim (int): The axis along which to index
         index (remote_blob_util.BlobDef): The index blob of elements to scatter
-        input (remote_blob_util.BlobDef): The input blob whose elments will be scatterd and updated to output.
         like (remote_blob_util.BlobDef): The like blob. The shape size of output will be same as like blob.
         name (Optional[str], optional): The name of the operation. Defaults to None.
 
@@ -2356,9 +2375,36 @@ def dim_scatter_update_like(
     .. code-block:: python
 
         import oneflow as flow
-        #...
+        import numpy as np
+        import oneflow.typing as tp
 
-    """    
+
+        @flow.global_function()
+        def dim_scatter_update_Job(
+            input: tp.Numpy.Placeholder((2, 2), dtype=flow.float64),
+            index: tp.Numpy.Placeholder((2, 2), dtype=flow.int32),
+        ) -> tp.Numpy:
+            like_blob = flow.get_variable(
+                "like_blob",
+                (3, 3),
+                dtype=flow.float64,
+                initializer=flow.constant_initializer(0),
+            )
+            return flow.dim_scatter_update_like(input, 1, index, like_blob)
+
+
+        input = np.array([[1, 2], [3, 4]]).astype(np.float64)
+        index = np.array([[1, 0], [1, 2]]).astype(np.int32)
+
+        out = dim_scatter_update_Job(input, index)
+        print(out)
+        # output
+        # [[2. 1. 0.]
+        #  [0. 3. 4.]
+        #  [0. 0. 0.]]
+
+    """
+    _check_scatter_blobs(input, dim, index, like)
 
     return (
         flow.user_op_builder(
@@ -2378,9 +2424,9 @@ def dim_scatter_update_like(
 
 @oneflow_export("dim_scatter_update")
 def dim_scatter_update(
+    input: remote_blob_util.BlobDef,
     dim: int,
     index: remote_blob_util.BlobDef,
-    input: remote_blob_util.BlobDef,
     src: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -2402,9 +2448,9 @@ def dim_scatter_update(
 
 @oneflow_export("dim_scatter_add_like")
 def dim_scatter_add_like(
+    input: remote_blob_util.BlobDef,
     dim: int,
     index: remote_blob_util.BlobDef,
-    input: remote_blob_util.BlobDef,
     like: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
@@ -2426,9 +2472,9 @@ def dim_scatter_add_like(
 
 @oneflow_export("dim_scatter_add")
 def dim_scatter_add(
+    input: remote_blob_util.BlobDef,
     dim: int,
     index: remote_blob_util.BlobDef,
-    input: remote_blob_util.BlobDef,
     src: remote_blob_util.BlobDef,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
