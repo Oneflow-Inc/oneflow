@@ -136,7 +136,7 @@ struct MultiStore {
 template<typename T, int pack_size, int cols_per_thread, bool padding>
 __global__ void SoftmaxWarpImpl(const int64_t rows, const int64_t cols, const T* x, T* y) {
   static_assert(cols_per_thread % pack_size == 0, "");
-  constexpr int pack_per_thread = cols_per_thread / pack_size;
+  constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * kWarpSize);
   using ComputeType = typename GetComputeType<T>::type;
   ComputeType buf[cols_per_thread];
@@ -149,17 +149,17 @@ __global__ void SoftmaxWarpImpl(const int64_t rows, const int64_t cols, const T*
     T* row_y = y + row_offset;
     ComputeType thread_max = -Inf<ComputeType>();
 #pragma unroll
-    for (int i = 0; i < pack_per_thread; ++i) {
-      const int col = (i * kWarpSize + lane_id) * pack_size;
+    for (int pack_id = 0; pack_id < num_packs; ++pack_id) {
+      const int col = (pack_id * kWarpSize + lane_id) * pack_size;
       if (!padding || col < cols) {
-        MultiFetch<T, ComputeType, pack_size>()(buf + i * pack_size, row_x + col);
+        MultiFetch<T, ComputeType, pack_size>()(buf + pack_id * pack_size, row_x + col);
 #pragma unroll
-        for (int j = 0; j < pack_size; ++j) {
-          thread_max = max(thread_max, buf[i * pack_size + j]);
+        for (int i = 0; i < pack_size; ++i) {
+          thread_max = max(thread_max, buf[pack_id * pack_size + i]);
         }
       } else {
 #pragma unroll
-        for (int j = 0; j < pack_size; ++j) { buf[i * pack_size + j] = -Inf<ComputeType>(); }
+        for (int i = 0; i < pack_size; ++i) { buf[pack_id * pack_size + i] = -Inf<ComputeType>(); }
       }
     }
     const ComputeType warp_max = WarpAllReduce<MaxOp, ComputeType>(thread_max);
@@ -173,7 +173,7 @@ __global__ void SoftmaxWarpImpl(const int64_t rows, const int64_t cols, const T*
 #pragma unroll
     for (int i = 0; i < cols_per_thread; ++i) { buf[i] = buf[i] / warp_sum; }
 #pragma unroll
-    for (int i = 0; i < pack_per_thread; ++i) {
+    for (int i = 0; i < num_packs; ++i) {
       const int col = (i * kWarpSize + lane_id) * pack_size;
       if (!padding || col < cols) {
         MultiStore<ComputeType, T, pack_size>()(row_y + col, buf + i * pack_size);
@@ -325,9 +325,9 @@ __global__ void SoftmaxBlockSMemImpl(const int64_t rows, const int64_t cols, con
       ComputeType pack[pack_size];
       MultiFetch<T, ComputeType, pack_size>()(pack, row_x + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) {
-        buf[num_packs * j + pack_id] = pack[j];
-        thread_max = max(thread_max, pack[j]);
+      for (int i = 0; i < pack_size; ++i) {
+        buf[i * num_packs + pack_id] = pack[i];
+        thread_max = max(thread_max, pack[i]);
       }
     }
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
@@ -341,9 +341,9 @@ __global__ void SoftmaxBlockSMemImpl(const int64_t rows, const int64_t cols, con
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) {
-        pack[j] = buf[num_packs * j + pack_id] / row_sum;
-        thread_max = max(thread_max, pack[j]);
+      for (int i = 0; i < pack_size; ++i) {
+        pack[i] = buf[i * num_packs + pack_id] / row_sum;
+        thread_max = max(thread_max, pack[i]);
       }
       MultiStore<ComputeType, T, pack_size>()(row_y + pack_id * pack_size, pack);
     }
@@ -410,7 +410,7 @@ __global__ void SoftmaxBlockUncachedImpl(const int64_t rows, const int64_t cols,
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     const int64_t row_offset = row * cols;
     const T* row_x = x + row_offset;
     T* row_y = y + row_offset;
@@ -419,7 +419,7 @@ __global__ void SoftmaxBlockUncachedImpl(const int64_t rows, const int64_t cols,
       ComputeType pack[pack_size];
       MultiFetch<T, ComputeType, pack_size>()(pack, row_x + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) { thread_max = max(thread_max, pack[j]); }
+      for (int i = 0; i < pack_size; ++i) { thread_max = max(thread_max, pack[i]); }
     }
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
     ComputeType thread_sum = 0;
@@ -427,14 +427,14 @@ __global__ void SoftmaxBlockUncachedImpl(const int64_t rows, const int64_t cols,
       ComputeType pack[pack_size];
       MultiFetch<T, ComputeType, pack_size>()(pack, row_x + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) { thread_sum += exp(pack[j] - row_max); }
+      for (int i = 0; i < pack_size; ++i) { thread_sum += exp(pack[i] - row_max); }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
       MultiFetch<T, ComputeType, pack_size>()(pack, row_x + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) { pack[j] = exp(pack[j] - row_max) / row_sum; }
+      for (int i = 0; i < pack_size; ++i) { pack[i] = exp(pack[i] - row_max) / row_sum; }
       MultiStore<ComputeType, T, pack_size>()(row_y + pack_id * pack_size, pack);
     }
   }
@@ -501,27 +501,27 @@ __global__ void SoftmaxGradWarpImpl(const int64_t rows, const int64_t cols, cons
     T* row_dx = dx + row_offset;
     ComputeType thread_sum = 0;
 #pragma unroll
-    for (int i = 0; i < pack_per_thread; ++i) {
-      const int col = (i * kWarpSize + lane_id) * pack_size;
+    for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
+      const int col = (pack_id * kWarpSize + lane_id) * pack_size;
       if (!padding || col < cols) {
-        MultiFetch<T, ComputeType, pack_size>()(y_buf + i * pack_size, row_y + col);
-        MultiFetch<T, ComputeType, pack_size>()(dy_buf + i * pack_size, row_dy + col);
+        MultiFetch<T, ComputeType, pack_size>()(y_buf + pack_id * pack_size, row_y + col);
+        MultiFetch<T, ComputeType, pack_size>()(dy_buf + pack_id * pack_size, row_dy + col);
 #pragma unroll
-        for (int j = 0; j < pack_size; ++j) {
-          thread_sum += y_buf[i * pack_size + j] * dy_buf[i * pack_size + j];
+        for (int i = 0; i < pack_size; ++i) {
+          thread_sum += y_buf[pack_id * pack_size + i] * dy_buf[pack_id * pack_size + i];
         }
       }
     }
     const ComputeType warp_sum = WarpAllReduce<SumOp, ComputeType>(thread_sum);
 #pragma unroll
-    for (int i = 0; i < pack_per_thread; ++i) {
-      const int col = (i * kWarpSize + lane_id) * pack_size;
+    for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
+      const int col = (pack_id * kWarpSize + lane_id) * pack_size;
       if (!padding || col < cols) {
-        for (int j = 0; j < pack_size; ++j) {
-          dy_buf[i * pack_size + j] =
-              (dy_buf[i * pack_size + j] - warp_sum) * y_buf[i * pack_size + j];
+        for (int i = 0; i < pack_size; ++i) {
+          dy_buf[pack_id * pack_size + i] =
+              (dy_buf[pack_id * pack_size + i] - warp_sum) * y_buf[pack_id * pack_size + i];
         }
-        MultiStore<ComputeType, T, pack_size>()(row_dx + col, dy_buf + i * pack_size);
+        MultiStore<ComputeType, T, pack_size>()(row_dx + col, dy_buf + pack_id * pack_size);
       }
     }
   }
@@ -672,18 +672,18 @@ __global__ void SoftmaxGradBlockSMemImpl(const int64_t rows, const int64_t cols,
       MultiFetch<T, ComputeType, pack_size>()(y_pack, row_y + pack_id * pack_size);
       MultiFetch<T, ComputeType, pack_size>()(dy_pack, row_dy + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) {
-        y_buf[num_packs * j + pack_id] = y_pack[j];
-        dy_buf[num_packs * j + pack_id] = dy_pack[j];
-        thread_sum += y_pack[j] * dy_pack[j];
+      for (int i = 0; i < pack_size; ++i) {
+        y_buf[i * num_packs + pack_id] = y_pack[i];
+        dy_buf[i * num_packs + pack_id] = dy_pack[i];
+        thread_sum += y_pack[i] * dy_pack[i];
       }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) {
-        pack[j] = (dy_buf[num_packs * j + pack_id] - row_sum) * y_buf[num_packs * j + pack_id];
+      for (int i = 0; i < pack_size; ++i) {
+        pack[i] = (dy_buf[i * num_packs + pack_id] - row_sum) * y_buf[i * num_packs + pack_id];
       }
       MultiStore<ComputeType, T, pack_size>()(row_dx + pack_id * pack_size, pack);
     }
@@ -756,7 +756,7 @@ __global__ void SoftmaxGradBlockUncachedImpl(const int64_t rows, const int64_t c
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
-  for (int row = blockIdx.x; row < rows; row += gridDim.x) {
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
     const int64_t row_offset = row * cols;
     const T* row_y = y + row_offset;
     const T* row_dy = dy + row_offset;
@@ -768,7 +768,7 @@ __global__ void SoftmaxGradBlockUncachedImpl(const int64_t rows, const int64_t c
       MultiFetch<T, ComputeType, pack_size>()(y_pack, row_y + pack_id * pack_size);
       MultiFetch<T, ComputeType, pack_size>()(dy_pack, row_dy + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) { thread_sum += y_pack[j] * dy_pack[j]; }
+      for (int i = 0; i < pack_size; ++i) { thread_sum += y_pack[i] * dy_pack[i]; }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
@@ -777,7 +777,7 @@ __global__ void SoftmaxGradBlockUncachedImpl(const int64_t rows, const int64_t c
       MultiFetch<T, ComputeType, pack_size>()(y_pack, row_y + pack_id * pack_size);
       MultiFetch<T, ComputeType, pack_size>()(dy_pack, row_dy + pack_id * pack_size);
 #pragma unroll
-      for (int j = 0; j < pack_size; ++j) { dy_pack[j] = (dy_pack[j] - row_sum) * y_pack[j]; }
+      for (int i = 0; i < pack_size; ++i) { dy_pack[i] = (dy_pack[i] - row_sum) * y_pack[i]; }
       MultiStore<ComputeType, T, pack_size>()(row_dx + pack_id * pack_size, dy_pack);
     }
   }
