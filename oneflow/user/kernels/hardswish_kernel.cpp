@@ -36,7 +36,7 @@ class CpuHardSwishKernel final : public OpKernel {
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       if (in_ptr[i] <= static_cast<T>(-3)) {
-        out_ptr[i] = 0;
+        out_ptr[i] = static_cast<T>(0);
       } else if (in_ptr[i] >= static_cast<T>(3)) {
         out_ptr[i] = in_ptr[i];
       } else {

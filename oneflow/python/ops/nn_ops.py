@@ -2724,10 +2724,9 @@ def leaky_relu(
 
 @oneflow_export("nn.hardswish")
 def hardswish(
-    x: remote_blob_util.BlobDef,
-    name: Optional[str] = None
-)-> remote_blob_util.BlobDef: 
-    if name is None: 
+    x: remote_blob_util.BlobDef, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    if name is None:
         name = id_util.UniqueStr("HardSwish_")
     return (
         flow.user_op_builder(name)
