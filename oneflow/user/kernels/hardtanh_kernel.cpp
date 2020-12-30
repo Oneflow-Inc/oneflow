@@ -86,7 +86,7 @@ class CpuHardtanhGradKernel final : public OpKernel {
 
     const int32_t elem_cnt = y_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = (y_ptr[i] > min_val && y_ptr[i] < max_val) ? dy_ptr[i] : zero_t;
+      dx_ptr[i] = (y_ptr[i] != min_val && y_ptr[i] != max_val) ? dy_ptr[i] : zero_t;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -43,7 +43,7 @@ struct HardtanhGradFunctor {
   __host__ __device__ explicit HardtanhGradFunctor(T min_val, T max_val)
       : min_val(min_val), max_val(max_val) {}
   __device__ T operator()(T x, T dy) const {
-    return (x > min_val && x < max_val) ? dy : static_cast<T>(0);
+    return (x != min_val && x != max_val) ? dy : static_cast<T>(0);
   }
   const T min_val;
   const T max_val;
