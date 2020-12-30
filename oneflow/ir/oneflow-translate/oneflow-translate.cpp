@@ -151,8 +151,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     for (auto kv : op.user_conf().input()) {
       // TODO: declare tensor containing field lbi
       // const std::string &ibn = kv.first;
-      const std::vector<std::string> lbns = {kv.second.s().begin(), kv.second.s().end()};
-      for (const std::string &lbn : lbns) {
+      for (const std::string &lbn : kv.second.s()) {
         // TODO: add placehorder tensors for tick
         if (lbn2result.find(lbn) != lbn2result.end()) {
           auto v = lbn2result.at(lbn);
