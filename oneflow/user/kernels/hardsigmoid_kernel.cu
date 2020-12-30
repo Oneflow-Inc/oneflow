@@ -36,8 +36,8 @@ struct HardsigmoidFunctor {
 template<typename T>
 struct HardsigmoidGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x >= static_cast<T>(-3) && x <= static_cast<T>(3)) ? dy / static_cast<T>(6)
-                                                               : static_cast<T>(0);
+    return (x > static_cast<T>(-3) && x < static_cast<T>(3)) ? dy / static_cast<T>(6)
+                                                             : static_cast<T>(0);
   }
 };
 
@@ -82,9 +82,11 @@ class GpuHardsigmoidKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, float)
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, double)
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, half)
+REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
 class GpuHardsigmoidGradKernel final : public OpKernel {
@@ -115,9 +117,9 @@ class GpuHardsigmoidGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)               \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, double)
-REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, float)
-REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, half)
+REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 

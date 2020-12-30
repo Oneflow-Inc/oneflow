@@ -742,23 +742,6 @@ def sigmoid_grad(
     )
 
 
-@oneflow_export("math.hardsigmoid")
-def hard_sigmoid(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
-    return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("HardSigmoid_")
-        )
-        .Op("hardsigmoid")
-        .Input("in", [x])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
 @oneflow_export("math.unsorted_segment_sum", "unsorted_segment_sum")
 def unsorted_segment_sum(
     data: remote_blob_util.BlobDef,

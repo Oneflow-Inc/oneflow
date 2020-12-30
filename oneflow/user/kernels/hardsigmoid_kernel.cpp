@@ -35,12 +35,13 @@ class CpuHardsigmoidKernel final : public OpKernel {
 
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      if (in_ptr[i] <= static_cast<T>(-3))
+      if (in_ptr[i] <= static_cast<T>(-3)) {
         out_ptr[i] = static_cast<T>(0);
-      else if (in_ptr[i] >= static_cast<T>(3))
+      } else if (in_ptr[i] >= static_cast<T>(3)) {
         out_ptr[i] = static_cast<T>(1);
-      else
+      } else {
         out_ptr[i] = (in_ptr[i] / static_cast<T>(6)) + static_cast<T>(0.5);
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -52,8 +53,10 @@ class CpuHardsigmoidKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, double)
+REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
 class CpuHardsigmoidGradKernel final : public OpKernel {
@@ -71,18 +74,9 @@ class CpuHardsigmoidGradKernel final : public OpKernel {
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = (x_ptr[i] >= static_cast<T>(-3) && x_ptr[i] <= static_cast<T>(3))
+      dx_ptr[i] = (x_ptr[i] > static_cast<T>(-3) && x_ptr[i] < static_cast<T>(3))
                       ? dy_ptr[i] / static_cast<T>(6)
                       : static_cast<T>(0);
-      // std::cout<<"input x is: "<<x_ptr[i]<<std::endl;
-      // if(x_ptr[i] >= static_cast<T>(-3) && x_ptr[i] <= static_cast<T>(3)){
-      //     dx_ptr[i] = static_cast<T>(1)/static_cast<T>(6)*dy_ptr[i];
-      // }
-      // else
-      // {
-      //     dx_ptr[i] = static_cast<T>(0);
-      // }
-      // end forloop
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -94,8 +88,8 @@ class CpuHardsigmoidGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)               \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCPU, double)
+REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace user_op
 
