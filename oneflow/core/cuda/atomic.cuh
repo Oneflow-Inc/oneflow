@@ -55,6 +55,29 @@ __device__ __forceinline__ double Add(double* address, double val) {
 #endif
 }
 
+__device__ __forceinline__ float Max(float* address, const float val) {
+  int* address_as_i = (int*)address;
+  int old = *address_as_i;
+  int assumed = 0;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_i, assumed, __float_as_int(fmaxf(val, __int_as_float(assumed))));
+  } while (assumed != old);
+  return __int_as_float(old);
+}
+
+__device__ __forceinline__ double Max(double* address, const double val) {
+  unsigned long long int* address_as_i = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_i;
+  unsigned long long int assumed = 0;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_i, assumed,
+                    __double_as_longlong(fmax(val, __longlong_as_double(assumed))));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+
 }  // namespace atomic
 
 }  // namespace cuda
