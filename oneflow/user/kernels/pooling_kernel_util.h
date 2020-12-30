@@ -158,7 +158,7 @@ OF_DEVICE_FUNC void FarwardCompute(
             // if (val > maxval)
             {
               maxval = val;
-              maxindex = search_idx;
+              maxindex = tcntr;
             }
           }
       }
