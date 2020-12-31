@@ -41,6 +41,29 @@ struct EluGradFunctor {
 };
 
 // TODO: Add half version
+template<>
+struct EluFunctor<half> {
+  __host__ __device__ explicit EluFunctor(float alpha) : alpha(alpha) {}
+  __device__ half operator()(half x) const {
+    float x_float =__half2float(x);
+    float out = ((x_float) > static_cast<float>(0)) ? x_float : alpha * (exp(x_float) - static_cast<float>(1));
+    return __float2half(out);
+  }
+  const float alpha;
+};
+
+template<>
+struct EluGradFunctor<half> {
+  __host__ __device__ explicit EluGradFunctor(float alpha) : alpha(alpha) {}
+  __device__ half operator()(half x, half dy) const {
+    float x_float =__half2float(x);
+    float dy_float =__half2float(dy);
+    float out = ((x_float) > static_cast<float>(0)) ? dy_float : dy_float * alpha * exp(x_float);
+    return __float2half(out);
+  }
+  const float alpha;
+};
+
 
 template<DeviceType device_type, typename T>
 class GpuEluKernel final : public OpKernel {
@@ -67,6 +90,7 @@ class GpuEluKernel final : public OpKernel {
   REGISTER_USER_KERNEL("elu").SetCreateFn<GpuEluKernel<device, dtype>>().SetIsMatchedHob( \
       (HobDeviceTag() == device) & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
+REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, half);
 REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, double);
 
