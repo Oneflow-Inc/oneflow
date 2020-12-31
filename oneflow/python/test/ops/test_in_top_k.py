@@ -52,7 +52,7 @@ def compare_with_tensorflow(
     @flow.global_function(function_config=func_config)
     def IntopkJob(
         targets: tp.ListNumpy.Placeholder(
-            (instance_num,), dtype=type_name_to_flow_type[target_dtype]
+            (instance_num + 10,), dtype=type_name_to_flow_type[target_dtype]
         ),
         predictions: tp.ListNumpy.Placeholder(
             tuple([dim + 5 for dim in predictions_shape]), dtype=flow.float
