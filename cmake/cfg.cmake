@@ -63,6 +63,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/cfg_reflection_test.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
+      oneflow/core/framework/tensor.proto
       oneflow/core/serving/saved_model.proto
   )
 
@@ -113,8 +114,8 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
       oneflow/core/register/logical_blob_id.proto
-      oneflow/core/operator/op_conf.proto
-      oneflow/core/serving/saved_model.proto
+      oneflow/core/common/shape.proto
+      oneflow/core/framework/tensor.proto
   )
 
   foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})

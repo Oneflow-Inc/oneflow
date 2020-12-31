@@ -21,6 +21,7 @@ from google.protobuf import text_format
 import oneflow as flow
 import oneflow_api
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.core.framework.tensor_pb2 as tensor_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb2
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
@@ -289,9 +290,9 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     assert isinstance(job_name, str)
     assert isinstance(lbn, str)
     if blob_conf is None:
-        blob_conf = op_conf_pb2.InterfaceBlobConf()
+        blob_conf = tensor_pb.InterfaceBlobConf()
     else:
-        assert isinstance(blob_conf, op_conf_pb2.InterfaceBlobConf)
+        assert isinstance(blob_conf, tensor_pb.InterfaceBlobConf)
 
     shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, lbn)
     dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)

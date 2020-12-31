@@ -21,7 +21,12 @@ import numpy as np
 
 import oneflow as flow
 import oneflow_api
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow_api.oneflow.core.job.job_conf as job_conf_proto_cfg
+import oneflow_api.oneflow.core.framework.tensor as tensor_proto_cfg
+import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
+import oneflow_api.oneflow.core.common.data_type as dtype_proto_cfg
+import oneflow.core.job.job_conf_pb2 as job_conf_proto
+import oneflow.core.framework.tensor_pb2 as tensor_proto
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.python.framework.session_util as session_util
@@ -39,6 +44,56 @@ def _need_check_device_tag(op_conf):
         return False
 
     return op_conf.HasField("device_tag")
+
+
+def _signature_proto_to_cfg(signature_proto, mut_signature_cfg):
+    assert isinstance(signature_proto, job_conf_proto.JobSignatureDef)
+    assert isinstance(mut_signature_cfg, job_conf_proto_cfg.JobSignatureDef)
+
+    for input_name, input_def in signature_proto.inputs.items():
+        input_def_cfg = job_conf_proto_cfg.JobInputDef()
+        input_def_cfg.mutable_lbi().set_op_name(input_def.lbi.op_name)
+        input_def_cfg.mutable_lbi().set_blob_name(input_def.lbi.blob_name)
+        _inferface_blob_conf_proto_to_cfg(
+            input_def.blob_conf, input_def_cfg.mutable_blob_conf()
+        )
+        mut_signature_cfg.mutable_inputs()[input_name].CopyFrom(input_def_cfg)
+
+    for output_name, output_def in signature_proto.outputs.items():
+        output_def_cfg = job_conf_proto_cfg.JobOutputDef()
+        output_def_cfg.mutable_lbi().set_op_name(output_def.lbi.op_name)
+        output_def_cfg.mutable_lbi().set_blob_name(output_def.lbi.blob_name)
+        mut_signature_cfg.mutable_outputs()[output_name].CopyFrom(output_def_cfg)
+
+
+def _inferface_blob_conf_proto_to_cfg(
+    inferface_blob_conf_proto, mut_inferface_blob_conf_cfg
+):
+    assert isinstance(inferface_blob_conf_proto, tensor_proto.InterfaceBlobConf)
+    assert isinstance(mut_inferface_blob_conf_cfg, tensor_proto_cfg.InterfaceBlobConf)
+
+    shape = shape_proto_cfg.ShapeProto()
+    for dim in inferface_blob_conf_proto.shape.dim:
+        shape.add_dim(dim)
+
+    mut_inferface_blob_conf_cfg.mutable_shape().CopyFrom(shape)
+    dtype = dtype_proto_cfg.DataType(int(inferface_blob_conf_proto.data_type))
+    mut_inferface_blob_conf_cfg.set_data_type(dtype)
+
+    split_axis = dtype_proto_cfg.OptInt64()
+    if inferface_blob_conf_proto.split_axis.HasField("value"):
+        split_axis.set_value(inferface_blob_conf_proto.split_axis.value)
+    mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
+
+    batch_axis = dtype_proto_cfg.OptInt64()
+    if inferface_blob_conf_proto.batch_axis.HasField("value"):
+        batch_axis.set_value(inferface_blob_conf_proto.batch_axis.value)
+    mut_inferface_blob_conf_cfg.mutable_batch_axis().CopyFrom(batch_axis)
+
+    mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
+    mut_inferface_blob_conf_cfg.set_is_tensor_list(
+        inferface_blob_conf_proto.is_tensor_list
+    )
 
 
 @oneflow_export("serving.SessionOption")
@@ -106,6 +161,8 @@ class InferenceSession(object):
                 "not supported device tag {}".format(self.option_.device_tag)
             )
 
+        self.config_proto_.io_conf.enable_legacy_model_io = True
+
     def close(self):
         self._sync()
         if self.status_ == self.SessionStatus.RUNNING:
@@ -141,8 +198,9 @@ class InferenceSession(object):
         self.checkpoint_path_ = checkpoint_path
 
     def set_job_signature(self, job_name, signature):
+        assert isinstance(signature, job_conf_proto.JobSignatureDef)
         job_conf = self._get_job_conf(job_name)
-        job_conf.signature.CopyFrom(signature)
+        _signature_proto_to_cfg(signature, job_conf.mutable_signature())
 
         self.job_name2input_name2lbn_[job_name] = {}
         for input_name, input_def in signature.inputs.items():
@@ -158,8 +216,8 @@ class InferenceSession(object):
         if job_name in self.job_name2job_conf_:
             return self.job_name2job_conf_[job_name]
         else:
-            job_conf = job_conf_pb.JobConfigProto()
-            job_conf.job_name = job_name
+            job_conf = job_conf_proto_cfg.JobConfigProto()
+            job_conf.set_job_name(job_name)
             self.job_name2job_conf_[job_name] = job_conf
             return job_conf
 
@@ -186,14 +244,11 @@ class InferenceSession(object):
         oneflow_api.JobBuildAndInferCtx_Close()
 
     def compile(self, op_list):
-        print(type(op_list))
         self._check_status(self.SessionStatus.OPEN)
         scope = flow.current_scope()
-        print(type(scope))
         device_tag = scope.device_parallel_desc_symbol.device_tag
         for op_conf in op_list:
-            print(type(op_conf))
-            if _need_check_device_tag(op_conf) and op_conf.device_tag() != device_tag:
+            if _need_check_device_tag(op_conf) and op_conf.device_tag != device_tag:
                 print(
                     "WARNING: the device_tag of op {} is not equal to the device_tag of seesion's current scope"
                     " ({} vs. {})"
