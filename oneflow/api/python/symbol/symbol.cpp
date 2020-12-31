@@ -18,6 +18,10 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/job/scope.pb.h"
 
 namespace py = pybind11;
 
@@ -41,7 +45,7 @@ Maybe<SymbolT> GetSymbol(const SymbolConfT& symbol_conf) {
   return ptr;
 }
 
-// TODO(hanbibin): the second template arg will be moved after symbol_storage is prefect
+// TODO(hanbibin): the second template arg will be moved after symbol_storage is refactored
 template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
 Maybe<void> AddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
   SymbolPbT symbol_pb;
@@ -72,7 +76,7 @@ Maybe<SymbolT> GetSymbol(int64_t symbol_id) {
 }
 
 template<typename SymbolConfT, typename SymbolT>
-std::shared_ptr<SymbolT> ApiGetSymbol(int64_t symbol_id) {
+std::shared_ptr<SymbolT> ApiGetSymbolById(int64_t symbol_id) {
   return GetSymbol<SymbolConfT, SymbolT>(symbol_id).GetPtrOrThrow();
 }
 
@@ -82,11 +86,20 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("HasPlacementSymbol", &ApiHasSymbol<cfg::ParallelConf>);
   m.def("AddPlacementSymbol", &ApiAddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>);
 
-  m.def("GetPlacementSymbol",
-        static_cast<std::shared_ptr<ParallelDesc> (*)(const cfg::ParallelConf&)>(
-            &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
-  m.def("GetPlacementSymbol", static_cast<std::shared_ptr<ParallelDesc> (*)(int64_t)>(
-                                  &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>));
+  m.def("GetPlacementSymbol", &ApiGetSymbol<cfg::ParallelConf, ParallelDesc>);
+  m.def("GetPlacementSymbol", &ApiGetSymbolById<cfg::ParallelConf, ParallelDesc>);
+
+  m.def("HasJobConfSymbol", &ApiHasSymbol<cfg::JobConfigProto>);
+  m.def("AddJobConfSymbol", &ApiAddSymbol<cfg::JobConfigProto, JobConfigProto, JobDesc>);
+
+  m.def("GetJobConfSymbol", &ApiGetSymbol<cfg::JobConfigProto, JobDesc>);
+  m.def("GetJobConfSymbol", &ApiGetSymbolById<cfg::JobConfigProto, JobDesc>);
+
+  m.def("HasScopeSymbol", &ApiHasSymbol<cfg::ScopeProto>);
+  m.def("AddScopeSymbol", &ApiAddSymbol<cfg::ScopeProto, ScopeProto, Scope>);
+
+  m.def("GetScopeSymbol", &ApiGetSymbol<cfg::ScopeProto, Scope>);
+  m.def("GetScopeSymbol", &ApiGetSymbolById<cfg::ScopeProto, Scope>);
 }
 
 }  // namespace oneflow
