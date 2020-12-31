@@ -80,8 +80,6 @@ def _compare_hardsigmoid_with_np(
     _np_grad = np_diff(input_1)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        # print("NUmpy grad is: ", _np_grad)
-        # print("Of grad is: ", blob)
         assert np.allclose(blob, _np_grad, atol=1e-5)
 
     if value_type[1] == flow.float16:

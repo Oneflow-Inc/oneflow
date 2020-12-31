@@ -82,8 +82,6 @@ class GpuHardsigmoidKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, int64_t);
 REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, half);
 REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, double);
