@@ -60,8 +60,6 @@ class CpuHardtanhKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, int64_t);
 REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_HARDTANH_KERNEL(DeviceType::kCPU, double);
 

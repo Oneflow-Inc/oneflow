@@ -83,8 +83,6 @@ class GpuHardtanhKernel final : public OpKernel {
             return Maybe<void>::Ok();                                                     \
           });
 
-REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, int64_t);
 REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, half);
 REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_HARDTANH_KERNEL(DeviceType::kGPU, double);
