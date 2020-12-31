@@ -53,17 +53,32 @@ class MaxPool2D:
         self.in_height = np.shape(x)[2]
         self.in_width = np.shape(x)[3]
 
-        pad_x = np.pad(x, ((0, 0), (0, 0), (self.padding[0], self.padding[0]), (self.padding[1], self.padding[1])),
-                       'constant', constant_values=(0, 0))
+        pad_x = np.pad(
+            x,
+            (
+                (0, 0),
+                (0, 0),
+                (self.padding[0], self.padding[0]),
+                (self.padding[1], self.padding[1]),
+            ),
+            "constant",
+            constant_values=(0, 0),
+        )
         self.pad_x = pad_x
         self.pad_shape = pad_x.shape
 
         self.out_height = int((self.in_height - self.w_height) / self.stride[0]) + 1
         self.out_width = int((self.in_width - self.w_width) / self.stride[1]) + 1
-        self.pad_out_height = np.uint16(round((self.pad_shape[2] - self.w_height + 1) / self.stride[0]))
-        self.pad_out_width = np.uint16(round((self.pad_shape[3] - self.w_width + 1) / self.stride[1]))
+        self.pad_out_height = np.uint16(
+            round((self.pad_shape[2] - self.w_height + 1) / self.stride[0])
+        )
+        self.pad_out_width = np.uint16(
+            round((self.pad_shape[3] - self.w_width + 1) / self.stride[1])
+        )
 
-        out = np.zeros((self.in_batch, self.in_channel, self.pad_out_height, self.pad_out_width))
+        out = np.zeros(
+            (self.in_batch, self.in_channel, self.pad_out_height, self.pad_out_width)
+        )
         self.arg_max = np.zeros_like(out, dtype=np.int32)
         for n in range(self.in_batch):
             for c in range(self.in_channel):
@@ -73,8 +88,12 @@ class MaxPool2D:
                         start_j = j * self.stride[1]
                         end_i = start_i + self.w_height
                         end_j = start_j + self.w_width
-                        out[n, c, i, j] = np.max(pad_x[n, c, start_i: end_i, start_j: end_j])
-                        self.arg_max[n, c, i, j] = np.argmax(pad_x[n, c, start_i: end_i, start_j: end_j])
+                        out[n, c, i, j] = np.max(
+                            pad_x[n, c, start_i:end_i, start_j:end_j]
+                        )
+                        self.arg_max[n, c, i, j] = np.argmax(
+                            pad_x[n, c, start_i:end_i, start_j:end_j]
+                        )
 
         self.arg_max = self.arg_max
         return out
@@ -89,9 +108,18 @@ class MaxPool2D:
                         start_j = j * self.stride[1]
                         end_i = start_i + self.w_height
                         end_j = start_j + self.w_width
-                        index = np.unravel_index(self.arg_max[n, c, i, j], self.kernel_size)
-                        dx[n, c, start_i: end_i, start_j: end_j][index] = d_loss[n, c, i, j]
-        dx = dx[:,:,self.padding[0]:self.pad_shape[2]-self.padding[0],self.padding[1]:self.pad_shape[3]-self.padding[1]]
+                        index = np.unravel_index(
+                            self.arg_max[n, c, i, j], self.kernel_size
+                        )
+                        dx[n, c, start_i:end_i, start_j:end_j][index] = d_loss[
+                            n, c, i, j
+                        ]
+        dx = dx[
+            :,
+            :,
+            self.padding[0] : self.pad_shape[2] - self.padding[0],
+            self.padding[1] : self.pad_shape[3] - self.padding[1],
+        ]
         return dx
 
 
@@ -168,14 +196,14 @@ def _make_op_function(
         @flow.global_function(type="train", function_config=func_config)
         def op_function(
             input_x: tp.Numpy.Placeholder(input.shape, dtype=value_type)
-            ) -> tp.Numpy:
+        ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
                 x_var = flow.get_variable(
                     name="input",
                     shape=input.shape,
                     dtype=value_type,
                     initializer=flow.zeros_initializer(),
-                    trainable=True
+                    trainable=True,
                 )
                 x_var = flow.cast_to_current_logical_view(x_var)
                 x = x_var + input_x
@@ -193,23 +221,24 @@ def _make_op_function(
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
                 ).minimize(y)
-          
+
             flow.watch_diff(x, _compare_diff)
             return y
 
         return op_function
 
     elif value_type == flow.int32:
+
         @flow.global_function(type="train", function_config=func_config)
         def op_function(
             input_x: tp.Numpy.Placeholder(input.shape, dtype=flow.float32)
-            ) -> tp.Numpy:
+        ) -> tp.Numpy:
             x_var = flow.get_variable(
                 name="input_x",
                 shape=input.shape,
                 dtype=flow.float32,
                 initializer=flow.constant_initializer(0),
-                trainable=True
+                trainable=True,
             )
             x_var = flow.cast_to_current_logical_view(x_var)
             flow.watch_diff(x_var, _compare_diff)
@@ -238,7 +267,6 @@ def _make_op_function(
 def gen_numpy_test_sample(input_shape, kernel_size, stride, padding, is_float=True):
     max_pool_numpy = MaxPool2D(kernel_size, stride, padding)
 
-
     def _np_maxpool2d(input):
         y = max_pool_numpy(input)
         return y
@@ -248,7 +276,7 @@ def gen_numpy_test_sample(input_shape, kernel_size, stride, padding, is_float=Tr
         return grad
 
     if is_float:
-        elm_cnt = input_shape[0]*input_shape[1]*input_shape[2]*input_shape[3]
+        elm_cnt = input_shape[0] * input_shape[1] * input_shape[2] * input_shape[3]
         input = np.arange(elm_cnt).reshape(input_shape).astype(np.float32)
     else:
         input = np.random.randint(0, 100, input_shape)
@@ -300,8 +328,12 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(gen_numpy_test_sample((1, 2, 4, 4), (3,3), (1,1), (0,0)))
-    arg_dict["samples"].append(gen_numpy_test_sample((1, 2, 6, 6), (3,3), (2,2), (1,1)))
+    arg_dict["samples"].append(
+        gen_numpy_test_sample((1, 2, 4, 4), (3, 3), (1, 1), (0, 0))
+    )
+    arg_dict["samples"].append(
+        gen_numpy_test_sample((1, 2, 6, 6), (3, 3), (2, 2), (1, 1))
+    )
     if value_type == "float":
         if device_type == "gpu":
             arg_dict["value_type"] = [
@@ -331,7 +363,7 @@ class TestMaxPool2d1n1d(flow.unittest.TestCase):
         arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)
         for arg in GenArgList(arg_dict):
             _compare_op_function_with_samples(test_case, *arg)
-    
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_float_gpu(test_case):
         arg_dict = _gen_arg_dict("cpu", "float", "0:0", 1)

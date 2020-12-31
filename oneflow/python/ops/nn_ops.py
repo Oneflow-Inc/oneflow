@@ -191,7 +191,6 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
         return_pads_list = [[0, 0]] * ndims
         return inputs, return_pads_list
 
-
     ndims = len(inputs.shape) - 2
     assert len(kernel_sizes) == ndims
     assert len(dilations) == ndims
@@ -251,6 +250,7 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
         inputs = flow.pad(inputs, paddings=pad_op_list)
         return_pads_list = [[0, 0]] * ndims
         return inputs, return_pads_list
+
 
 @oneflow_export("nn.conv1d")
 def conv1d(
@@ -1424,11 +1424,11 @@ def MaxPool2d(
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
     dilation = _GetSequence(dilation, 2, "dilation")
     stride = _GetSequence(stride, 2, "stride")
-    assert len(padding) == 2 or padding in ['SAME', 'VALID']
-    if (len(padding)==2):
-        if data_format=="NCHW":
+    assert len(padding) == 2 or padding in ["SAME", "VALID"]
+    if len(padding) == 2:
+        if data_format == "NCHW":
             padding = (0, 0, padding[0], padding[1])
-        elif data_format=="NHWC":
+        elif data_format == "NHWC":
             padding = (0, padding[0], padding[1], 0)
         else:
             raise ValueError('data_format must be "NHWC" or "NCHW".')
