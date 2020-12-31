@@ -127,17 +127,23 @@ class LazyConsistentBlob(ConsistentBlob):
                 file=sys.stderr,
             )
             print(traceback.format_stack()[-2])
-        return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.logical_blob_name)
+        return c_api_util.JobBuildAndInferCtx_GetStaticShape(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def dtype(self):
         return convert_proto_dtype_to_oneflow_dtype(
-            c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.logical_blob_name)
+            c_api_util.JobBuildAndInferCtx_GetDataType(
+                self.job_name_, self.logical_blob_name
+            )
         )
 
     @property
     def batch_axis(self):
-        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(self.job_name_, self.logical_blob_name)
+        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def split_axis(self):
@@ -147,11 +153,15 @@ class LazyConsistentBlob(ConsistentBlob):
 
     @property
     def is_dynamic(self):
-        return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.logical_blob_name)
+        return c_api_util.JobBuildAndInferCtx_IsDynamic(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def is_tensor_list(self):
-        return c_api_util.JobBuildAndInferCtx_IsTensorList(self.job_name_, self.logical_blob_name)
+        return c_api_util.JobBuildAndInferCtx_IsTensorList(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def parallel_conf(self):
