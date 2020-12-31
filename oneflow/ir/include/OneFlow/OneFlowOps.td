@@ -64,7 +64,7 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [NoSideEffect,
     }];
 }
 
-def OneFlow_GenericUserOp : OneFlow_Op<"generic_user", [NoSideEffect]> {
+def OneFlow_UserOp : OneFlow_Op<"user", [NoSideEffect]> {
     let summary = "Generic op for all kinds of user op";
 
     let arguments = (ins
