@@ -69,6 +69,7 @@ def OneFlow_GenericUserOp : OneFlow_Op<"generic_user", [NoSideEffect]> {
 
     let arguments = (ins
       Variadic<AnyType>:$operands,
+      StrAttr:$op_type_name,
       DictionaryAttr:$attr
     );
     let results = (outs Variadic<AnyType>:$output);

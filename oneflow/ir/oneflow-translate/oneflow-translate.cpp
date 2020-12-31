@@ -167,6 +167,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     }
     ::mlir::ValueRange operands(vs);
     auto created = b.create<oneflow::GenericUserOp>(unknownLoc, out_types, operands,
+                                                    op.user_conf().op_type_name(),
                                                     b.getDictionaryAttr(named_attributes));
 
     for (auto kv : op.user_conf().output()) {
