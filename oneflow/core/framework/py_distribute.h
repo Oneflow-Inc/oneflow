@@ -22,12 +22,16 @@ namespace oneflow {
 
 namespace compatible_py {
 
+static const int64_t HAS_NO_AXIS = -1;
+
 class Distribute {
  public:
   Distribute() : sbp_parallel_(std::make_shared<cfg::SbpParallel>()) {}
   Distribute(const Distribute&) = delete;
   Distribute(Distribute&&) = delete;
   virtual ~Distribute() = default;
+
+  virtual int64_t axis() const { return HAS_NO_AXIS; }
 
  protected:
   std::shared_ptr<cfg::SbpParallel> sbp_parallel_;
@@ -58,7 +62,7 @@ class SplitDistribute : public Distribute {
   SplitDistribute(SplitDistribute&&) = delete;
   ~SplitDistribute() override = default;
 
-  int64_t axis() const { return sbp_parallel_->split_parallel().axis(); }
+  int64_t axis() const override { return sbp_parallel_->split_parallel().axis(); }
 };
 
 std::shared_ptr<AutoDistribute> GlobalAutoDistribute();

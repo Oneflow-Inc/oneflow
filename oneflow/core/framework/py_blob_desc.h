@@ -79,9 +79,9 @@ class BlobDesc : public Tensor {
     if (std::dynamic_pointer_cast<AutoDistribute>(distribute_)) {
       return std::string("");
     } else if (std::dynamic_pointer_cast<BroadcastDistribute>(distribute_)) {
-      return std::string("B");
+      return std::string(":B");
     } else if (std::dynamic_pointer_cast<SplitDistribute>(distribute_)) {
-      return std::string("S");
+      return std::string(":S") + std::to_string(distribute_->axis());
     } else {
       OF_UNIMPLEMENTED();
     }
