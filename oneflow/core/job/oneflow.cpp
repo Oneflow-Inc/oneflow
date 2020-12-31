@@ -993,13 +993,13 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   // Runtime
   OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
   JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
-  OF_PROFILER_RANGE_POP;
+  OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
-  OF_PROFILER_RANGE_POP;
+  OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
 
