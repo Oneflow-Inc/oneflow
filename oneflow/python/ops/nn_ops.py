@@ -1413,7 +1413,7 @@ def MaxPool2d(
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
-    dilation: Union[int, IntPair],
+    dilation: Union[int, IntPair] = 1,
     return_indices: bool = False,
     ceil_mode: bool = False,
     data_format: str = "NCHW",
@@ -1433,8 +1433,6 @@ def MaxPool2d(
         else:
             raise ValueError('data_format must be "NHWC" or "NCHW".')
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
-    # padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 0)
-
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
     assert len(pads_list) == len(input.shape) - 2
