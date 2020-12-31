@@ -2832,6 +2832,25 @@ def leaky_relu(
     )
 
 
+@oneflow_export("nn.elu")
+def elu(
+    x: remote_blob_util.BlobDef, alpha: float = 1.0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    alpha = float(alpha)
+    if name is None:
+        name = id_util.UniqueStr("Elu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("elu")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("alpha", alpha)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
     input: remote_blob_util.BlobDef,
