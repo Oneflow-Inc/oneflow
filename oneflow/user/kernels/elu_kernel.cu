@@ -15,16 +15,38 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
 namespace user_op {
 
+template<typename T>
+struct EluFunctor {
+  __host__ __device__ explicit EluFunctor(T alpha) : alpha(alpha) {}
+  __device__ T operator()(T x) const {
+    return (x > static_cast<T>(0)) ? x : alpha * (exp(x) - static_cast<T>(1));
+  }
+  const T alpha;
+};
+
+template<typename T>
+struct EluGradFunctor {
+  __host__ __device__ explicit EluGradFunctor(T alpha) : alpha(alpha) {}
+  __device__ T operator()(T x, T dy) const {
+    return (x > static_cast<T>(0)) ? dy : dy * alpha * (exp(x));
+  }
+  const T alpha;
+};
+
+// TODO: Add half version
+
 template<DeviceType device_type, typename T>
-class CpuEluKernel final : public OpKernel {
+class GpuEluKernel final : public OpKernel {
  public:
-  CpuEluKernel() = default;
-  ~CpuEluKernel() = default;
+  GpuEluKernel() = default;
+  ~GpuEluKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -35,27 +57,24 @@ class CpuEluKernel final : public OpKernel {
     T* out_ptr = out_tensor->mut_dptr<T>();
 
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      out_ptr[i] = (in_ptr[i] > static_cast<T>(0))
-                       ? in_ptr[i]
-                       : alpha * (std::exp(in_ptr[i]) - static_cast<T>(1));
-    }
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Unary(EluFunctor<T>(alpha), elem_cnt, out_ptr,
+                                                     in_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ELU_KERNEL(device, dtype)                                            \
-  REGISTER_USER_KERNEL("elu").SetCreateFn<CpuEluKernel<device, dtype>>().SetIsMatchedHob( \
+#define REGISTER_GPU_ELU_KERNEL(device, dtype)                                            \
+  REGISTER_USER_KERNEL("elu").SetCreateFn<GpuEluKernel<device, dtype>>().SetIsMatchedHob( \
       (HobDeviceTag() == device) & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_ELU_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_ELU_KERNEL(DeviceType::kCPU, double);
+REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuEluGradKernel final : public OpKernel {
+class GpuEluGradKernel final : public OpKernel {
  public:
-  CpuEluGradKernel() = default;
-  ~CpuEluGradKernel() = default;
+  GpuEluGradKernel() = default;
+  ~GpuEluGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -67,23 +86,21 @@ class CpuEluGradKernel final : public OpKernel {
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] =
-          (x_ptr[i] > static_cast<T>(0)) ? dy_ptr[i] : dy_ptr[i] * alpha * (std::exp(x_ptr[i]));
-    }
+    OF_CUDA_CHECK(
+        (oneflow::cuda::elementwise::Binary(EluGradFunctor<T>(alpha), elem_cnt, dx_ptr, x_ptr,
+                                            dy_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ELU_BACKWARD_KERNEL(device, dtype) \
+#define REGISTER_GPU_ELU_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("elu_grad")                      \
-      .SetCreateFn<CpuEluGradKernel<device, dtype>>()   \
+      .SetCreateFn<GpuEluGradKernel<device, dtype>>()   \
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_ELU_BACKWARD_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_ELU_BACKWARD_KERNEL(DeviceType::kCPU, double);
+REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 
