@@ -49,8 +49,8 @@ REGISTER_USER_OP("broadcast_maximum_backward")
     .Input("y")
     .Output("dx")
     .Output("dy")
-    .SetTensorDescInferFn(InferTensorMaximumDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetTensorDescInferFn(InferTensorMaximumDesc);
+    //.SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
     // .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
 
 } // namespace user_op
