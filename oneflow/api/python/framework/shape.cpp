@@ -23,19 +23,9 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Shape, std::shared_ptr<Shape>>(m, "Shape")
-      .def("element_count", &Shape::elem_cnt)
-      .def("as_list",
-           [](const std::shared_ptr<Shape>& x) {
-             py::list ret;
-             for (auto& dim : x->dim_vec()) { ret.append((int64_t)dim); }
-             return ret;
-           })
-      .def("as_tuple", [](const std::shared_ptr<Shape>& x) {
-        py::tuple ret(x->NumAxes());
-        for (int i = 0; i < x->NumAxes(); ++i) { ret[i] = x->At(i); }
-        return ret;
-      });
+  py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
+      .def("__str__", &Shape::ToString)
+      .def("__repr__", &Shape::ToString);
 }
 
 }  // namespace oneflow
