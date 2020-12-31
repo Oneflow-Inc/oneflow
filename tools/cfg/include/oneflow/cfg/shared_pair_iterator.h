@@ -19,14 +19,11 @@ class _SharedPairIterator_ {
   using pointer = std::unique_ptr<value_type>;
   using reference = value_type;
 
-  _SharedPairIterator_(DataIter data_iter)
-      : data_iter_(data_iter) {}
+  _SharedPairIterator_(DataIter data_iter) : data_iter_(data_iter) {}
 
   // const methods
 
-  bool operator==(const _SharedPairIterator_& rhs) const {
-    return data_iter_ == rhs.data_iter_;
-  }
+  bool operator==(const _SharedPairIterator_& rhs) const { return data_iter_ == rhs.data_iter_; }
 
   bool operator!=(const _SharedPairIterator_& rhs) const { return !(*this == rhs); }
 

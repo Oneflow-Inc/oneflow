@@ -9,13 +9,11 @@ namespace google {
 namespace protobuf {
 
 class Message;
-
 }
-}
+}  // namespace google
 
 namespace oneflow {
 namespace cfg {
-
 
 class Message {
  public:
@@ -68,18 +66,17 @@ class Message {
   }
 
   virtual int FieldNumber4FieldName(const std::string& field_name) const = 0;
-  virtual bool FieldDefined4FieldNumber(int field_number) const = 0; 
+  virtual bool FieldDefined4FieldNumber(int field_number) const = 0;
   virtual const std::set<std::type_index>& ValidTypeIndices4FieldNumber(int field_number) const = 0;
   virtual const void* FieldPtr4FieldNumber(int field_number) const = 0;
   virtual void* MutableFieldPtr4FieldNumber(int field_number) { return nullptr; }
-  
+
   using PbMessage = ::google::protobuf::Message;
   virtual void ToProto(PbMessage*) const = 0;
-  virtual void InitFromProto(const PbMessage&) {};
-
+  virtual void InitFromProto(const PbMessage&){};
 };
 
-}
-}
+}  // namespace cfg
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CFG_CFG_MESSAGE_H_
