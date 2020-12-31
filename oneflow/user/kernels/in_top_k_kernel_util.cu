@@ -19,11 +19,11 @@ namespace oneflow {
 
 namespace {
 
-template<typename IDX>
-__global__ void InTopkGpu(const int targets_num, const int classes_num, const IDX* targets,
+template<typename T>
+__global__ void InTopkGpu(const int instance_num, const int classes_num, const T* targets,
                           const float* predictions, const int k, int8_t* out) {
-  CUDA_1D_KERNEL_LOOP(idx, targets_num) {
-    IDX target = targets[idx];
+  CUDA_1D_KERNEL_LOOP(idx, instance_num) {
+    T target = targets[idx];
     bool cannot_say = (target >= classes_num) || !isfinite(predictions[idx * classes_num + target]);
 
     int32_t more_probable_classes = 0;
@@ -47,16 +47,20 @@ __global__ void InTopkGpu(const int targets_num, const int classes_num, const ID
 
 }  // namespace
 
-template<typename IDX>
-struct InTopkKernelUtil<DeviceType::kGPU, IDX> {
-  static void InTopk(DeviceCtx* ctx, const int targets_num, const int classes_num,
-                     const IDX* targets, const float* predictions, const int k, int8_t* out) {
-    RUN_CUDA_KERNEL((InTopkGpu<IDX>), ctx, targets_num, targets_num, classes_num, targets,
+template<typename T>
+struct InTopkKernelUtil<DeviceType::kGPU, T> {
+  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
+                     const T* targets, const float* predictions, const int k, int8_t* out) {
+    RUN_CUDA_KERNEL((InTopkGpu<T>), ctx, instance_num, instance_num, classes_num, targets,
                     predictions, k, out);
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_FUNCTOR, (DeviceType::kGPU),
-                                 INDEX_DATA_TYPE_SEQ)
+#define INSTANTIATE_IN_TOP_K_GPU_FUNCTOR(dtype, dtype_v) \
+  template struct InTopkKernelUtil<DeviceType::kGPU, dtype>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_GPU_FUNCTOR, INDEX_DATA_TYPE_SEQ)
+
+#undef INSTANTIATE_IN_TOP_K_GPU_FUNCTOR
 
 }  // namespace oneflow

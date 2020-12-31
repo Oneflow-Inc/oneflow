@@ -20,14 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename IDX>
+template<DeviceType device_type, typename T>
 struct InTopkKernelUtil {
-  static void InTopk(DeviceCtx* ctx, const int targets_num, const int classes_num,
-                     const IDX* targets, const float* predictions, const int k, int8_t* out);
+  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
+                     const T* targets, const float* predictions, const int k, int8_t* out);
 };
-
-#define INSTANTIATE_IN_TOP_K_FUNCTOR(device_type_v, target_dtype_pair) \
-  template struct InTopkKernelUtil<device_type_v, OF_PP_PAIR_FIRST(target_dtype_pair)>;
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_

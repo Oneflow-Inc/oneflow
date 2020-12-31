@@ -17,19 +17,19 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename IDX>
-struct InTopkKernelUtil<DeviceType::kCPU, IDX> {
-  static void InTopk(DeviceCtx* ctx, const int targets_num, const int classes_num,
-                     const IDX* targets, const float* predictions, const int k, int8_t* out) {
-    FOR_RANGE(int32_t, batch_idx, 0, targets_num) {
-      IDX target = targets[batch_idx];
+template<typename T>
+struct InTopkKernelUtil<DeviceType::kCPU, T> {
+  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
+                     const T* targets, const float* predictions, const int k, int8_t* out) {
+    FOR_RANGE(int32_t, idx, 0, instance_num) {
+      T target = targets[idx];
       bool cannot_say =
-          (target >= classes_num) || !std::isfinite(predictions[batch_idx * classes_num + target]);
+          (target >= classes_num) || !std::isfinite(predictions[idx * classes_num + target]);
       int32_t more_probable_classes = 0;
       if (!cannot_say) {
-        const float target_prediction = predictions[batch_idx * classes_num + target];
+        const float target_prediction = predictions[idx * classes_num + target];
         FOR_RANGE(int32_t, class_idx, 0, classes_num) {
-          float pred = predictions[batch_idx * classes_num + class_idx];
+          float pred = predictions[idx * classes_num + class_idx];
 
           if (!std::isfinite(pred)) {
             cannot_say = true;
@@ -40,12 +40,16 @@ struct InTopkKernelUtil<DeviceType::kCPU, IDX> {
           }
         }
       }
-      out[batch_idx] = cannot_say ? false : (more_probable_classes < k);
+      out[idx] = cannot_say ? false : (more_probable_classes < k);
     }
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_FUNCTOR, (DeviceType::kCPU),
-                                 INDEX_DATA_TYPE_SEQ)
+#define INSTANTIATE_IN_TOP_K_CPU_FUNCTOR(dtype, dtype_v) \
+  template struct InTopkKernelUtil<DeviceType::kCPU, dtype>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_CPU_FUNCTOR, INDEX_DATA_TYPE_SEQ)
+
+#undef INSTANTIATE_IN_TOP_K_CPU_FUNCTOR
 
 }  // namespace oneflow

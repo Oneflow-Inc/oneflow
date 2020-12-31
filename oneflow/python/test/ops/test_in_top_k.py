@@ -20,7 +20,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
 import tensorflow as tf
-import random
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -33,33 +32,37 @@ def compare_with_tensorflow(
 ):
     assert device_type in ["gpu", "cpu"]
     assert target_dtype in ["int32", "int64"]
-    flow_data_type = type_name_to_flow_type[target_dtype]
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.default_data_type(flow_data_type)
-    batch_size = predictions_shape[0]
+    func_config.default_logical_view(flow.scope.mirrored_view())
+    func_config.default_data_type(flow.float)
+
+    instance_num = predictions_shape[0]
     classes = predictions_shape[1]
-    targets = np.random.randint(classes, size=batch_size).astype(
+    targets = np.random.randint(classes, size=instance_num).astype(
         type_name_to_np_type[target_dtype]
     )
     predictions = np.random.rand(*predictions_shape).astype("float32")
     if with_finite:
-        predictions[np.random.randint(batch_size)][np.random.randint(classes)] = float(
-            "inf"
-        )
+        predictions[np.random.randint(instance_num)][
+            np.random.randint(classes)
+        ] = float("inf")
 
     @flow.global_function(function_config=func_config)
     def IntopkJob(
-        targets: tp.Numpy.Placeholder((batch_size,), dtype=flow_data_type),
-        predictions: tp.Numpy.Placeholder(predictions_shape, dtype=flow.float32),
+        targets: tp.ListNumpy.Placeholder(
+            (instance_num,), dtype=type_name_to_flow_type[target_dtype]
+        ),
+        predictions: tp.ListNumpy.Placeholder(
+            tuple([dim + 5 for dim in predictions_shape]), dtype=flow.float
+        ),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.in_top_k(targets, predictions, k=k)
 
     # OneFlow
-    of_out = IntopkJob(targets, predictions,).get().numpy()
+    of_out = IntopkJob([targets], [predictions]).get().numpy_list()[0]
     # TensorFlow
     tf_out = tf.math.in_top_k(targets, predictions, k=k)
     assert np.array_equal(of_out, tf_out)
@@ -69,8 +72,9 @@ def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["target_dtype"] = ["int32", "int64"]
-    arg_dict["predictions_shape"] = [(3, 4), (20, 10)]
-
+    arg_dict["predictions_shape"] = [(10, 5)]
+    arg_dict["k"] = [1, 2, 3, 4, 5]
+    arg_dict["with_finite"] = [False, True]
     return GenArgList(arg_dict)
 
 
@@ -78,9 +82,7 @@ def gen_arg_list():
 class TestInTopk(flow.unittest.TestCase):
     def test_in_top_K(test_case):
         for arg in gen_arg_list():
-            for k in range(1, arg[2][1] + 1):
-                compare_with_tensorflow(*arg, k)
-                compare_with_tensorflow(*arg, k, with_finite=True)
+            compare_with_tensorflow(*arg)
 
 
 if __name__ == "__main__":

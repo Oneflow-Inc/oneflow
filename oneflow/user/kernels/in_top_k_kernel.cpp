@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename IDX>
+template<DeviceType device_type, typename T>
 class InTopkKernel final : public user_op::OpKernel {
  public:
   InTopkKernel() = default;
@@ -35,9 +35,9 @@ class InTopkKernel final : public user_op::OpKernel {
     CHECK_EQ(predictions->shape().NumAxes(), 2);
     const int32_t instance_num = predictions->shape().At(0);
     const int32_t classes_num = predictions->shape().At(1);
-    InTopkKernelUtil<device_type, IDX>::InTopk(ctx->device_ctx(), instance_num, classes_num,
-                                               targets->dptr<IDX>(), predictions->dptr<float>(), k,
-                                               out->mut_dptr<int8_t>());
+    InTopkKernelUtil<device_type, T>::InTopk(ctx->device_ctx(), instance_num, classes_num,
+                                             targets->dptr<T>(), predictions->dptr<float>(), k,
+                                             out->mut_dptr<int8_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
