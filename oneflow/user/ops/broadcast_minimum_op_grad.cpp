@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace user_op {
 
-Maybe<void> InferTensorMaximumDesc(InferContext* ctx) {
+Maybe<void> InferTensorMinimumDesc(InferContext* ctx) {
   // backward(dz, x, y) -> dx, dy
   const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -37,17 +37,18 @@ Maybe<void> InferTensorMaximumDesc(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP("broadcast_maximum_backward")
+REGISTER_USER_OP("broadcast_minimum_backward")
     .Input("dz")
     .Input("x")
     .Input("y")
     .Output("dx")
     .Output("dy")
-    .SetTensorDescInferFn(InferTensorMaximumDesc);
-//.SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
-// .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
+    .SetTensorDescInferFn(InferTensorMinimumDesc);
 
 // TODO: Add BatchAxisInfer and SBP
+
+//.SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+// .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
 
 }  // namespace user_op
 
