@@ -45,11 +45,11 @@ struct InTopkKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-#define INSTANTIATE_IN_TOP_K_CPU_FUNCTOR(dtype, dtype_v) \
+#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CPU(dtype, dtype_v) \
   template struct InTopkKernelUtil<DeviceType::kCPU, dtype>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_CPU_FUNCTOR, INDEX_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CPU, INDEX_DATA_TYPE_SEQ)
 
-#undef INSTANTIATE_IN_TOP_K_CPU_FUNCTOR
+#undef INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CPU
 
 }  // namespace oneflow

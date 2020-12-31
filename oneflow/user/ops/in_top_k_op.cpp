@@ -30,11 +30,12 @@ REGISTER_USER_OP("in_top_k")
       CHECK_LE_OR_RETURN(targets->data_type(), DataType::kInt64);
       CHECK_EQ_OR_RETURN(predictions->shape().NumAxes(), 2);
       CHECK_EQ_OR_RETURN(predictions->data_type(), DataType::kFloat);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       const bool is_dynamic = targets->is_dynamic();
       CHECK_EQ_OR_RETURN(is_dynamic, predictions->is_dynamic());
-      ctx->TensorDesc4ArgNameAndIndex("out", 0)->set_is_dynamic(is_dynamic);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = targets->shape();
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = kInt8;
+      out->set_is_dynamic(is_dynamic);
+      *out->mut_shape() = targets->shape();
+      *out->mut_data_type() = kInt8;
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -42,7 +43,7 @@ REGISTER_USER_OP("in_top_k")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(user_op::OpArg("predictions", 0), 0).Build();
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     });
 }

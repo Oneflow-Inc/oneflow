@@ -56,11 +56,11 @@ struct InTopkKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INSTANTIATE_IN_TOP_K_GPU_FUNCTOR(dtype, dtype_v) \
+#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU(dtype, dtype_v) \
   template struct InTopkKernelUtil<DeviceType::kGPU, dtype>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_GPU_FUNCTOR, INDEX_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU, INDEX_DATA_TYPE_SEQ)
 
-#undef INSTANTIATE_IN_TOP_K_GPU_FUNCTOR
+#undef INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU
 
 }  // namespace oneflow
