@@ -21,7 +21,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow_api
-import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.python.framework.session_util as session_util
@@ -146,22 +146,20 @@ class InferenceSession(object):
 
         self.job_name2input_name2lbn_[job_name] = {}
         for input_name, input_def in signature.inputs.items():
-            lbi = input_def.lbi
-            lbn = "{}/{}".format(lbi.op_name, lbi.blob_name)
+            lbn = "{}/{}".format(input_def.lbi.op_name, input_def.lbi.blob_name)
             self.job_name2input_name2lbn_[job_name][input_name] = lbn
 
         self.job_name2output_name2lbn_[job_name] = {}
-        for output_name, output_def in signature.outputs().items():
-            lbi = output_def.lbi
-            lbn = "{}/{}".format(lbi.op_name, lbi.blob_name)
+        for output_name, output_def in signature.outputs.items():
+            lbn = "{}/{}".format(output_def.lbi.op_name, output_def.lbi.blob_name)
             self.job_name2output_name2lbn_[job_name][output_name] = lbn
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
             return self.job_name2job_conf_[job_name]
         else:
-            job_conf = job_conf_cfg.JobConfigProto()
-            job_conf.set_job_name(job_name)
+            job_conf = job_conf_pb.JobConfigProto()
+            job_conf.job_name = job_name
             self.job_name2job_conf_[job_name] = job_conf
             return job_conf
 
