@@ -68,10 +68,10 @@ class BlobDef(
     oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
     def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
-        lbi_ = lbi_util.LogicalBlobId()
-        lbi_.set_op_name(lbi.op_name)
-        lbi_.set_blob_name(lbi.blob_name)
-        oneflow_api.BlobDesc.__init__(self, lbi_, distribute)
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        oneflow_api.BlobDesc.__init__(self, cfg_lbi, distribute)
         if job_name is None:
             job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         self.job_name_ = job_name
@@ -99,7 +99,7 @@ class BlobDef(
 
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
-        ret = RemoteBlob(self.lbi_)
+        ret = RemoteBlob(self.lbi)
         ret.distribute_ = distribute
         return ret
 
@@ -127,36 +127,36 @@ class LazyConsistentBlob(ConsistentBlob):
                 file=sys.stderr,
             )
             print(traceback.format_stack()[-2])
-        return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn)
 
     @property
     def dtype(self):
         return convert_proto_dtype_to_oneflow_dtype(
-            c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
+            c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn)
         )
 
     @property
     def batch_axis(self):
-        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(self.job_name_, self.lbn)
 
     @property
     def split_axis(self):
         return c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     @property
     def is_dynamic(self):
-        return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.lbn)
 
     @property
     def is_tensor_list(self):
-        return c_api_util.JobBuildAndInferCtx_IsTensorList(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_IsTensorList(self.job_name_, self.lbn)
 
     @property
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     def IdenticalTo(self, rhs):
@@ -207,45 +207,45 @@ class LazyMirroredBlob(MirroredBlob):
             )
             print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     @property
     def dtype(self):
         return convert_proto_dtype_to_oneflow_dtype(
             c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
-                self.job_name_, self.lbn_
+                self.job_name_, self.lbn
             )
         )
 
     @property
     def batch_axis(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     @property
     def split_axis(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     @property
     def is_dynamic(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     @property
     def is_tensor_list(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
     @property
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.lbn
         )
 
 

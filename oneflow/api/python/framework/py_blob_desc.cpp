@@ -31,7 +31,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           }))
       .def_property_readonly("lbi", &BlobDesc::lbi)
       .def_property_readonly("logical_blob_name", &BlobDesc::logical_blob_name)
-      .def_property_readonly("lbn_", &BlobDesc::logical_blob_name)
       .def_property_readonly("op_name", &BlobDesc::op_name)
       .def_property_readonly("blob_name", &BlobDesc::blob_name)
       .def_property_readonly("shape", &BlobDesc::shape)
