@@ -25,12 +25,12 @@ REGISTER_USER_OP("in_top_k")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
       const user_op::TensorDesc* predictions = ctx->TensorDesc4ArgNameAndIndex("predictions", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_EQ_OR_RETURN(targets->shape().NumAxes(), 1);
       CHECK_GE_OR_RETURN(targets->data_type(), DataType::kInt32);
       CHECK_LE_OR_RETURN(targets->data_type(), DataType::kInt64);
       CHECK_EQ_OR_RETURN(predictions->shape().NumAxes(), 2);
       CHECK_EQ_OR_RETURN(predictions->data_type(), DataType::kFloat);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       const bool is_dynamic = targets->is_dynamic();
       CHECK_EQ_OR_RETURN(is_dynamic, predictions->is_dynamic());
       out->set_is_dynamic(is_dynamic);
