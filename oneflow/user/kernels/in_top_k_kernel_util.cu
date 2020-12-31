@@ -56,8 +56,8 @@ struct InTopkKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU(dtype, dtype_v) \
-  template struct InTopkKernelUtil<DeviceType::kGPU, dtype>;
+#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU(cpp_data_type, data_type) \
+  template struct InTopkKernelUtil<DeviceType::kGPU, cpp_data_type>;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_KERNEL_UTIL_GPU, INDEX_DATA_TYPE_SEQ)
 

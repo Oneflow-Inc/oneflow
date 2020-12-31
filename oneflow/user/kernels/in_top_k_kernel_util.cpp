@@ -45,8 +45,8 @@ struct InTopkKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
-#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CPU(dtype, dtype_v) \
-  template struct InTopkKernelUtil<DeviceType::kCPU, dtype>;
+#define INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CPU(cpp_data_type, data_type) \
+  template struct InTopkKernelUtil<DeviceType::kCPU, cpp_data_type>;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_IN_TOP_K_KERNEL_UTIL_CPU, INDEX_DATA_TYPE_SEQ)
 
