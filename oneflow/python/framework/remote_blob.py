@@ -104,7 +104,7 @@ class BlobDef(
         lbi.op_name = self.op_name
         lbi.blob_name = self.blob_name
         ret = RemoteBlob(lbi)
-        ret.distribute_ = distribute
+        ret.set_distribute(distribute)
         return ret
 
     def with_gradient_distribute(self, distribute):

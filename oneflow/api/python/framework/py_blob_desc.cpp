@@ -23,11 +23,24 @@ namespace oneflow {
 
 namespace compatible_py {
 
+class PyBlobDesc : public BlobDesc {
+ public:
+  using BlobDesc::BlobDesc;
+  std::shared_ptr<BlobDesc> Clone() const override {
+    PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, BlobDesc, Clone, );
+  }
+
+  std::shared_ptr<BlobDesc> with_distribute(
+      const std::shared_ptr<Distribute>& distribute) const override {
+    PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, BlobDesc, with_distribute, distribute);
+  }
+};
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
+  py::class_<BlobDesc, PyBlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(
           [](std::shared_ptr<cfg::LogicalBlobId> lbi, std::shared_ptr<Distribute> distribute) {
-            return std::make_shared<BlobDesc>(lbi, distribute);
+            return std::make_shared<PyBlobDesc>(lbi, distribute);
           }))
       .def_property_readonly("lbi", &BlobDesc::lbi)
       .def_property_readonly("logical_blob_name", &BlobDesc::logical_blob_name)
@@ -42,6 +55,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("distribute", &BlobDesc::distribute)
       .def_property_readonly("unique_name", &BlobDesc::unique_name)
       .def("Clone", &BlobDesc::Clone)
+      .def("set_distribute", &BlobDesc::set_distribute)
       .def("with_distribute", &BlobDesc::with_distribute)
       .def("with_split_distribute",
            [](const std::shared_ptr<BlobDesc>& blob_desc, int64_t axis) {

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_FRAMEWORK_PY_BLOB_DESC_H_
 #define ONEFLOW_CORE_FRAMEWORK_PY_BLOB_DESC_H_
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/tensor.h"
@@ -33,7 +34,7 @@ class BlobDesc : public Tensor {
  public:
   BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
            const std::shared_ptr<Distribute>& distribute)
-      : lbi_(lbi), distribute_(std::make_shared<AutoDistribute>()) {
+      : lbi_(lbi), distribute_(distribute) {
     lbn_ = lbi->op_name() + "/" + lbi->blob_name();
   }
 
@@ -56,13 +57,9 @@ class BlobDesc : public Tensor {
   virtual std::shared_ptr<Distribute> distribute() const { return distribute_; }
   virtual std::string unique_name() const { return lbn_ + *CHECK_JUST(Distribute2Str()); }
 
-  std::shared_ptr<BlobDesc> Clone() const { return std::make_shared<BlobDesc>(*this); }
-
-  std::shared_ptr<BlobDesc> with_distribute(const std::shared_ptr<Distribute>& distribute) {
-    std::shared_ptr<BlobDesc> ret = Clone();
-    ret->set_distribute(distribute);
-    return ret;
-  }
+  virtual std::shared_ptr<BlobDesc> Clone() const = 0;
+  virtual std::shared_ptr<BlobDesc> with_distribute(
+      const std::shared_ptr<Distribute>& distribute) const = 0;
 
   Maybe<BlobDesc> with_split_distribute(int64_t axis) {
     return with_distribute(JUST(GlobalSplitDistribute(axis)));
@@ -71,10 +68,9 @@ class BlobDesc : public Tensor {
   std::shared_ptr<BlobDesc> with_broadcast_distribute() {
     return with_distribute(GlobalBroadcastDistribute());
   }
-
- protected:
   void set_distribute(const std::shared_ptr<Distribute> distribute) { distribute_ = distribute; }
 
+ protected:
   Maybe<std::string> Distribute2Str() const {
     if (std::dynamic_pointer_cast<AutoDistribute>(distribute_)) {
       return std::string("");
