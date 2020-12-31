@@ -13,33 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
-#define ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/core/common/exception.h"
+#include "oneflow/core/common/error.h"
+#include "oneflow/api/python/of_api_registry.h"
 
-#include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/job/job_desc.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-class Scope;
-class ScopeProto;
+ONEFLOW_API_PYBIND11_MODULE("exception", m) {
+  m.def("GetThreadLocalLastError", &ThreadLocalError);
+  py::register_exception<oneflow::Exception>(m, "Exception");
+#define REGISTER_EXCEPTION(cls) \
+  py::register_exception<oneflow::OF_PP_CAT(cls, Exception)>(m, OF_PP_STRINGIZE(cls) "Exception");
 
-class JobDesc;
-class JobConfigProto;
+  OF_PP_FOR_EACH_TUPLE(REGISTER_EXCEPTION, EXCEPTION_SEQ)
 
-namespace vm {
+#undef REGISTER_EXCEPTION
+}
 
-template<>
-struct ConstructArgType4Symbol<JobDesc> final {
-  using type = JobConfigProto;
-};
-
-template<>
-struct ConstructArgType4Symbol<Scope> final {
-  using type = ScopeProto;
-};
-
-}  // namespace vm
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_EAGER_EAGER_SYMBOL_STORAGE_H_

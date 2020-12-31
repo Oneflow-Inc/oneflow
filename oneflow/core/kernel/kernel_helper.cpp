@@ -13,17 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
 
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 
 namespace oneflow {
 
-void InferArgWhereWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                       DataType index_type, int32_t num_axes, int64_t n,
-                                       int64_t* workspace_bytes);
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
