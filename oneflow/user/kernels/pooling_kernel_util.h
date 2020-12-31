@@ -140,6 +140,7 @@ OF_DEVICE_FUNC void FarwardCompute(
     int64_t indp = c * y_width * y_height + h * y_width + w;
     /* compute local max: */
     int64_t maxindex = hstart * x_width + wstart;
+    int64_t src_idx;
     /* T maxval = -std::numeric_limits<T>::infinity(); */
     for (int64_t i = hstart; i < hend; i+=dilation_h) {
       for (int64_t j = wstart; j < wend; j+=dilation_w) {
@@ -151,11 +152,12 @@ OF_DEVICE_FUNC void FarwardCompute(
         {
           maxval = val;
           maxindex = tcntr;
+          src_idx = search_idx;
         }
       }
     }
     /* set output to local max */
-    dest[dest_idx] = src[maxindex];
+    dest[dest_idx] = src[src_idx];
     /* store location of max */
     indice_ptr[indp] = maxindex;
   }
