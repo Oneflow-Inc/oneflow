@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/user/kernels/broadcast_maximum_kernel_util.h"
 
 namespace oneflow {
-namespace user_op{
+namespace user_op {
 
 template<DeviceType device_type, typename T>
 class BroadcastMaximumBackward final : public user_op::OpKernel {
@@ -41,27 +41,27 @@ class BroadcastMaximumBackward final : public user_op::OpKernel {
     T* dptr_dx = tensor_dx->mut_dptr<T>();
     T* dptr_dy = tensor_dy->mut_dptr<T>();
 
-    MaximumBackwardFunctor<device_type, T>()(ctx->device_ctx(),
-    tensor_dz->shape().elem_cnt(),
-    dptr_dz, dptr_x, dptr_y,
-    dptr_dx, dptr_dy);
+    MaximumBackwardFunctor<device_type, T>()(ctx->device_ctx(), tensor_dz->shape().elem_cnt(),
+                                             dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BW_MAXIMUM_KERNEL(device, dtype)                                 \
-  REGISTER_USER_KERNEL("broadcast_maximum_backward")                  \
-      .SetCreateFn<BroadcastMaximumBackward<device, dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+#define REGISTER_BW_MAXIMUM_KERNEL(device, dtype)             \
+  REGISTER_USER_KERNEL("broadcast_maximum_backward")          \
+      .SetCreateFn<BroadcastMaximumBackward<device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)    \
                        & (user_op::HobDataType("dz", 0) == GetDataType<dtype>::value));
 
 REGISTER_BW_MAXIMUM_KERNEL(DeviceType::kCPU, float);
 REGISTER_BW_MAXIMUM_KERNEL(DeviceType::kCPU, double);
+REGISTER_BW_MAXIMUM_KERNEL(DeviceType::kGPU, float);
+REGISTER_BW_MAXIMUM_KERNEL(DeviceType::kGPU, double);
 
 REGISTER_USER_OP_GRAD("broadcast_maximum")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-      const auto grad_op_namex = ctx->FwOp().op_name() + "_gradx";
-      const auto& grad_op_funcx = [&ctx](user_op::BackwardOpBuilder& builder) {
+      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+      const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("broadcast_maximum_backward")
             .InputBind("dz", ctx->FwOp().output_grad("z", 0))
             .InputBind("x", ctx->FwOp().input("x", 0))
@@ -70,29 +70,16 @@ REGISTER_USER_OP_GRAD("broadcast_maximum")
             .Output("dy")
             .Build();
       };
-      ctx->DefineOp(grad_op_namex, grad_op_funcx);
-
-      const auto& dx_get_funcx = [&ctx, &grad_op_namex]() -> const std::string& {
-        return ctx->GetOp(grad_op_namex).output("dx", 0);
+      ctx->DefineOp(grad_op_name, grad_op_func);
+      const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& {
+        return ctx->GetOp(grad_op_name).output("dx", 0);
       };
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_funcx);
-
-      const auto grad_op_namey = ctx->FwOp().op_name() + "_grady";
-      const auto& grad_op_funcy = [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("broadcast_maximum_backward")
-            .InputBind("dz", ctx->FwOp().output_grad("z", 0))
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("y", ctx->FwOp().input("y", 0))
-            .Output("dx")
-            .Output("dy")
-            .Build();
+      const auto& dy_get_func = [&ctx, &grad_op_name]() -> const std::string& {
+        return ctx->GetOp(grad_op_name).output("dy", 0);
       };
-      ctx->DefineOp(grad_op_namey, grad_op_funcy);
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);
+      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);
 
-      const auto& dx_get_func = [&ctx, &grad_op_namey]() -> const std::string& {
-        return ctx->GetOp(grad_op_namey).output("dy", 0);
-      };
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dx_get_func);
-    }); 
+    });
 }  // namespace user_op
 }  // namespace oneflow

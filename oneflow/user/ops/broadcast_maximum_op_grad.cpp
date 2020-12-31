@@ -17,16 +17,12 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-
-
-}  // namespace
+namespace {}  // namespace
 
 namespace user_op {
 
 Maybe<void> InferTensorMaximumDesc(InferContext* ctx) {
-  //backward(dz, x, y) -> dx, dy
+  // backward(dz, x, y) -> dx, dy
   const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
@@ -50,10 +46,9 @@ REGISTER_USER_OP("broadcast_maximum_backward")
     .Output("dx")
     .Output("dy")
     .SetTensorDescInferFn(InferTensorMaximumDesc);
-    //.SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
-    // .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
+//.SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+// .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
 
-} // namespace user_op
-
+}  // namespace user_op
 
 }  // namespace oneflow
