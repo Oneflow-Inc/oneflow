@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
@@ -99,7 +100,10 @@ class BlobDef(
 
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
-        ret = RemoteBlob(self.lbi)
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = self.op_name
+        lbi.blob_name = self.blob_name
+        ret = RemoteBlob(lbi)
         ret.distribute_ = distribute
         return ret
 
