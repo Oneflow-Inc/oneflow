@@ -72,7 +72,7 @@ REGISTER_USER_OP("user_sigmoid_backward")
 
 REGISTER_USER_OP_GRAD("user_sigmoid_forward")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+      const auto grad_op_name = ctx->FwOp().op_name + "_grad";
       const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("user_sigmoid_backward")
             .InputBind("y", ctx->FwOp().output("y", 0))

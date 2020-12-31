@@ -23,6 +23,7 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 
 IntPair = Tuple[int, int]
 
@@ -41,7 +42,7 @@ def dense(
     bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Dense",
-    model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    model_distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""Fully-connected layer. 
 
@@ -58,7 +59,7 @@ def dense(
         bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
-        model_distribute (distribute_util.Distribute, optional): Define the way to ditribute the model. Defaults to distribute_util.broadcast().
+        model_distribute (oneflow_api.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow_api.distribute.broadcast().
 
     Returns:
         remote_blob_util.BlobDef:  A N-D `Blob` with the shape of (batch_size, units).
@@ -102,12 +103,12 @@ def dense(
     assert in_num_axes >= 2
 
     assert (
-        model_distribute is distribute_util.auto()
-        or model_distribute is distribute_util.broadcast()
-        or model_distribute is distribute_util.split(0)
+        model_distribute is oneflow_api.distribute.auto()
+        or model_distribute is oneflow_api.distribute.broadcast()
+        or model_distribute is oneflow_api.distribute.split(0)
     )
 
-    if model_distribute is distribute_util.split(0):
+    if model_distribute is oneflow_api.distribute.split(0):
         assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
     if in_num_axes > 2:
@@ -824,7 +825,7 @@ def layer_norm(
                 initializer=flow.constant_initializer(0.0),
                 trainable=trainable,
                 model_name="beta",
-                distribute=distribute_util.broadcast(),
+                distribute=oneflow_api.distribute.broadcast(),
                 reuse=False,
             )
 
@@ -837,7 +838,7 @@ def layer_norm(
                 initializer=flow.constant_initializer(1.0),
                 trainable=trainable,
                 model_name="gamma",
-                distribute=distribute_util.broadcast(),
+                distribute=oneflow_api.distribute.broadcast(),
                 reuse=False,
             )
 
@@ -1006,7 +1007,7 @@ def _get_batch_normalization_variables(
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
-                distribute=distribute_util.broadcast(),
+                distribute=oneflow_api.distribute.broadcast(),
                 reuse=False,
             )
         else:
@@ -1020,7 +1021,7 @@ def _get_batch_normalization_variables(
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
-                distribute=distribute_util.broadcast(),
+                distribute=oneflow_api.distribute.broadcast(),
                 reuse=False,
             )
         else:
@@ -1034,7 +1035,7 @@ def _get_batch_normalization_variables(
             dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
-            distribute=distribute_util.broadcast(),
+            distribute=oneflow_api.distribute.broadcast(),
             reuse=False,
         )
 
@@ -1044,7 +1045,7 @@ def _get_batch_normalization_variables(
             dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
-            distribute=distribute_util.broadcast(),
+            distribute=oneflow_api.distribute.broadcast(),
             reuse=False,
         )
     return beta, gamma, moving_mean, moving_variance
