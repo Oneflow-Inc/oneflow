@@ -22,7 +22,7 @@ from collections import OrderedDict
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
-def compare_with_tensorflow(device_type, device_num, in_shape, data_type, coeffs):
+def compare_with_numpy(device_type, device_num, in_shape, data_type, coeffs):
     assert device_type in ["cpu", "gpu"]
     assert data_type in ["float32", "double"]
     flow_data_type = type_name_to_flow_type[data_type]
@@ -94,14 +94,14 @@ def gen_arg_list(type):
 class TestPolyval1n1d(flow.unittest.TestCase):
     def test_polyval(test_case):
         for arg in gen_arg_list("1n1d"):
-            compare_with_tensorflow(*arg)
+            compare_with_numpy(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
 class TestPolyval1n2d(flow.unittest.TestCase):
     def test_polyval(test_case):
         for arg in gen_arg_list("1n2d"):
-            compare_with_tensorflow(*arg)
+            compare_with_numpy(*arg)
 
 
 if __name__ == "__main__":
