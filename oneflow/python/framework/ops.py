@@ -26,6 +26,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
+import oneflow_api
 from typing import Union, Optional
 
 
@@ -131,8 +132,8 @@ def pack(input, pack_num, name=None):
 def api_parallel_cast(
     input: remote_blob_util.BlobDef,
     name: Optional[str] = None,
-    distribute: Optional[distribute_util.Distribute] = None,
-    gradient_distribute: Optional[distribute_util.Distribute] = None,
+    distribute: Optional[oneflow_api.distribute.Distribute] = None,
+    gradient_distribute: Optional[oneflow_api.distribute.Distribute] = None,
 ) -> remote_blob_util.BlobDef:
     func = enable_if.unique([parallel_cast])
     return func(
@@ -154,9 +155,9 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
 
     def to_split_axis(dist):
         split_axis = data_type_util.OptInt64()
-        if type(dist) is distribute_util.SplitDistribute:
+        if type(dist) is oneflow_api.distribute.SplitDistribute:
             split_axis.value = dist.axis
-        elif type(dist) is distribute_util.BroadcastDistribute:
+        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
             split_axis.ClearField("value")
         else:
             raise NotImplementedError
