@@ -334,7 +334,9 @@ def EagerWatchDiff(blob_watched, handler_or_prompt=None):
     handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     handler_uuid = str(uuid.uuid1())
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
-    lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
+    # Copy cfg LBI to proto LBI
+    lbi_and_uuid.lbi.op_name = blob_watched.lbi.op_name()
+    lbi_and_uuid.lbi.blob_name = blob_watched.lbi.blob_name()
     lbi_and_uuid.watcher_uuid = handler_uuid
     c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
     uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
@@ -360,7 +362,9 @@ def LazyWatchDiff(blob_watched, handler_or_prompt=None):
 def LazyConsistentWatchDiff(blob_watched, handler):
     handler_uuid = str(uuid.uuid1())
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
-    lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
+    # Copy cfg LBI to proto LBI
+    lbi_and_uuid.lbi.op_name = blob_watched.lbi.op_name()
+    lbi_and_uuid.lbi.blob_name = blob_watched.lbi.blob_name()
     lbi_and_uuid.watcher_uuid = handler_uuid
     c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
     watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)

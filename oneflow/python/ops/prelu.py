@@ -23,6 +23,7 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 
 
 @oneflow_export("layers.prelu")
@@ -33,7 +34,7 @@ def prelu(
     shared_axes: Optional[Sequence[int]] = None,
     trainable: bool = True,
     name: str = "PRelu",
-    model_distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    model_distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
 ) -> remote_blob_util.BlobDef:
     r"""The Prelu(Parametric Rectified Linear Unit) activation. 
     
@@ -52,7 +53,7 @@ def prelu(
         shared_axes (Optional[Sequence[int]], optional): The axis along which to share learnable parameters for the prelu activation function. Defaults to None.
         trainable (bool, optional): Whether to train the parameter :math:`\alpha`. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "PRelu".
-        model_distribute (distribute_util.Distribute, optional): Define the way to ditribute the model. Defaults to distribute_util.broadcast().
+        model_distribute (oneflow_api.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow_api.distribute.broadcast().
 
     Returns:
         remote_blob_util.BlobDef: The activated Blob

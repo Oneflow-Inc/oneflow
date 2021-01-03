@@ -1950,6 +1950,57 @@ def polyval(
     return p
 
 
+@oneflow_export("math.in_top_k", "in_top_k")
+def in_top_k(
+    targets: remote_blob_util.BlobDef,
+    predictions: remote_blob_util.BlobDef,
+    k: Optional[int],
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Says whether the targets are in the top K predictions.
+
+    Args:
+        targets (remote_blob_util.BlobDef): A Blob of type int32 or int64.
+        predictions (remote_blob_util.BlobDef): A Blob of type float32.
+        k (Optional[int], optional): Number of top elements to look at for computing precision.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        remote_blob_util.BlobDef: A Blob of type bool. Computed Precision at k as a bool Blob.
+    
+    For example:
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def intopk_Job(
+            targets: tp.Numpy.Placeholder((2,), dtype=flow.int32),
+            predictions: tp.Numpy.Placeholder((2, 4), dtype=flow.float32),
+        ) -> tp.Numpy:
+            return flow.math.in_top_k(targets, predictions, 1)
+
+        targets = np.array([3, 1], dtype=np.int32)
+        predictions = np.array([[0.0, 1.0, 2.0, 3.0], [3.0, 2.0, 1.0, 0.0],], dtype=np.float32)
+        out = intopk_Job(targets, predictions)
+
+        # out [1 0]
+
+    """
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("InTopK_"))
+        .Op("in_top_k")
+        .Input("targets", [targets])
+        .Input("predictions", [predictions])
+        .Attr("k", k)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("range")
 def range(
     start, limit=None, delta=1, dtype=None, name="range"

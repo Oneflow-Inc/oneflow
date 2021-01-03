@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/thread/cpu_thread.h"
-#include "oneflow/core/profiler/profiler.h"
+#include <vector>
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/shape.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-CpuThread::CpuThread(int64_t thrd_id) {
-  set_thrd_id(thrd_id);
-  mut_actor_thread() = std::thread([this, thrd_id]() {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("CPU Actor : (" + std::to_string(thrd_id) + ")");
-    ThreadCtx ctx;
-#ifdef WITH_CUDA
-    ctx.cb_event_chan = nullptr;
-#endif  // WITH_CUDA
-    PollMsgChannel(ctx);
-  });
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
+      .def("__str__", &Shape::ToString)
+      .def("__repr__", &Shape::ToString);
 }
 
 }  // namespace oneflow
