@@ -111,12 +111,16 @@ OF_DEVICE_FUNC void FarwardCompute(
     const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
     const int32_t dilation_w, const bool return_indices, const bool ceil_mode) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t c, h, w, coords[4] = {0};
+    int64_t n, c, h, w, coords[4] = {0};
     index_helper.OffsetToNdIndex(num, coords);
+    n = coords[0];
     c = coords[1];
     h = coords[2];
     w = coords[3];
-    int64_t ip = c * x_width * x_height;
+
+    int64_t xstart = n * n_channel * x_width * x_height;
+    int64_t ystart = n * n_channel * y_height * y_width;
+    int64_t ip = xstart + c * x_width * x_height;
     int64_t hstart = h * stride_h - padding_h;
     int64_t wstart = w * stride_w - padding_w;
     /* int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
@@ -136,8 +140,8 @@ OF_DEVICE_FUNC void FarwardCompute(
     while (wstart < 0) wstart += dilation_w;
 
     /* local pointers */
-    int64_t dest_idx = c * y_width * y_height + h * y_width + w;
-    int64_t indp = c * y_width * y_height + h * y_width + w;
+    int64_t dest_idx = ystart + c * y_width * y_height + h * y_width + w;
+    int64_t indp = ystart + c * y_width * y_height + h * y_width + w;
     /* compute local max: */
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx;
@@ -172,15 +176,19 @@ OF_DEVICE_FUNC void BackwardCompute(const NdIndexOffsetHelper<int64_t, 4> index_
                                     const int64_t dst_width, const bool return_indices,
                                     const bool ceil_mode) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t c, h, w;
+    int64_t n, c, h, w;
     int64_t coord_dx[4] = {0};
     index_helper.OffsetToNdIndex(num, coord_dx);
+    n = coord_dx[0];
     c = coord_dx[1];
     h = coord_dx[2];
     w = coord_dx[3];
 
-    int64_t ip = c * dst_width * dst_height;
-    int64_t src_idx = c * src_height * src_width + h * src_width + w;
+    int64_t src_start = n * n_channel * src_height * src_width;
+    int64_t dst_start = n * n_channel * dst_height * dst_width;
+
+    int64_t ip = dst_start + c * dst_width * dst_height;
+    int64_t src_idx = src_start + c * src_height * src_width + h * src_width + w;
     int64_t indice_idx = c * src_height * src_width + h * src_width + w;
     int64_t dest_idx = ip + indice_ptr[indice_idx];
     if (dest_idx != -1) {
