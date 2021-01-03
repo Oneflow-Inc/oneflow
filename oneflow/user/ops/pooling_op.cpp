@@ -95,6 +95,7 @@ Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
         .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("indice", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
         .Build();
