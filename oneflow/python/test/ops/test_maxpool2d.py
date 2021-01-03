@@ -329,10 +329,10 @@ def _gen_arg_dict(
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
     arg_dict["samples"].append(
-        gen_numpy_test_sample((1, 2, 4, 4), (3, 3), (1, 1), (0, 0))
+        gen_numpy_test_sample((2, 2, 4, 4), (3, 3), (1, 1), (0, 0))
     )
     arg_dict["samples"].append(
-        gen_numpy_test_sample((1, 2, 6, 6), (3, 3), (2, 2), (1, 1))
+        gen_numpy_test_sample((2, 2, 6, 6), (3, 3), (2, 2), (1, 1))
     )
     if value_type == "float":
         if device_type == "gpu":
