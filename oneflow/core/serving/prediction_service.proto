@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow.serving;
+
+import "oneflow/core/serving/predict.proto";
+
+service PredictionService {
+  rpc Predict(PredictRequest) returns (PredictResponse);
+}

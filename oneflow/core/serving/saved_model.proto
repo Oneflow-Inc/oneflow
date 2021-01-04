@@ -1,0 +1,35 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/job_conf.proto";
+
+message SavedModel {
+  required string name = 1;
+  required int64 version = 2;
+  required string checkpoint_dir = 3;
+  map<string, GraphDef> graphs = 4;
+  optional string default_graph_name = 5;
+  repeated JobGraph job_graphs = 6;
+}
+
+message GraphDef {
+  repeated OperatorConf op_list = 1;
+  map<string, JobSignatureDef> signatures = 2;
+  optional string default_signature_name = 3;
+}
+
+message JobGraph {
+  message ListProducerInfo {
+    repeated ProducerInfo infos = 1;
+  }
+  message ProducerInfo {
+    optional string producer_job_name = 1;
+    optional string producer_job_output_blob_name = 2;
+    required string current_job_input_blob_name = 3;
+  }
+  required string job_graph_name = 1;
+  repeated string input_job_names = 2;
+  repeated string output_job_names = 3;
+  map<string, ListProducerInfo> dependency_between_jobs = 4;
+}

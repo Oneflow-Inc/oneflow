@@ -42,9 +42,23 @@ import oneflow_api
 import inspect
 
 
+job_map = {}
+
+
+def _StashJob(job_name):
+    # NOTE(Liang Depeng): Save the original network definition before rewriting the graph.
+    # NOTE: Counld be replaced by session.StashJob
+    global job_map
+    job_set = c_api_util.GetJobSet()
+    for job in job_set.job:
+        if job.job_conf.job_name == job_name:
+            job_map[job_name] = job
+
+
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
-        _CompileJob(function_desc)
+        _CompileJob(session, function_desc)
+        _StashJob(function_desc.job_func.__name__)
         oneflow_api.CurJobBuildAndInferCtx_Complete()
 
 
@@ -83,7 +97,7 @@ def InterpretScope(session, function_desc, config_proto):
                 yield
 
 
-def _CompileJob(function_desc):
+def _CompileJob(session, function_desc):
     func = function_desc.job_func
     parameters = func.__oneflow_function_signature__.parameters
     if len(parameters) == 0:
@@ -105,6 +119,7 @@ def _CompileJob(function_desc):
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
+    session.StashJob(func.__name__)
 
 
 def _InterpretGlobalFunction(function_desc, args):

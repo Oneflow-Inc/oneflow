@@ -231,6 +231,13 @@ inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProduc
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(lbn)));
 }
 
+inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
+                                                             const std::string& lbn) {
+  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  JUST(ctx->CheckLbnValidAndExist(lbn));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_

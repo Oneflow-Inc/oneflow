@@ -1,0 +1,21 @@
+syntax = "proto2";
+package oneflow;
+
+message ModelConfig {
+  required string name = 1;
+  required string saved_model_path = 2;
+  optional string saved_model_pb_file_name = 3;
+  optional string saved_model_prototxt_file_name = 4;
+  repeated GraphConfig graph_config = 5;
+  optional string device_tag = 6;
+  optional int32 device_num = 7;
+}
+
+message GraphConfig {
+  required string name = 1;
+  optional string signature_name = 2;
+}
+
+message ModelConfigList {
+  repeated ModelConfig model_config = 1;
+}

@@ -45,7 +45,8 @@ Maybe<void> BatchAxisInferFnUtil::NaiveInferBatchAxis(BatchAxisContext* ctx) {
         ctx->BatchAxis4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
     if (cur_in_batch_axis->has_value() == false) { continue; }
     if (batch_axis) {
-      CHECK_EQ_OR_RETURN(batch_axis->value(), cur_in_batch_axis->value());
+      CHECK_EQ_OR_RETURN(batch_axis->value(), cur_in_batch_axis->value())
+          << batch_axis->value() << " vs. " << cur_in_batch_axis->value();
     } else {
       batch_axis = cur_in_batch_axis;
     }

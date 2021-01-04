@@ -66,6 +66,7 @@ class JobBuildAndInferCtx {
   const Job& job() const;
   Maybe<void> CheckJob() const;
   std::string GetJobStructureGraphJson(const std::string& job_name) const;
+  Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
 
   virtual Maybe<void> Complete() = 0;
 
@@ -122,7 +123,6 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckOpBlobSplitability(Operator*, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
-  Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
   Maybe<LogicalBlobId> GetMirroredLbi(const std::string& lbn_with_hint) const;
   bool HasAnyMirroredBlobInput(const Operator& op) const;
   Maybe<void> CheckAllInputsConvertableToMirroredBlob(const Operator& op) const;

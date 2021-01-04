@@ -1,0 +1,37 @@
+syntax = "proto2";
+
+package oneflow.serving;
+
+service PredictionService {
+    rpc Classify(ClassificationRequest) returns (ClassificationResponse) {}
+}
+
+message ClassificationRequest {
+    required NumpyInputs numpy_inputs = 1;
+}
+
+message NumpyInputs {
+    repeated NumpyArray numpy_arrays = 1;
+}
+
+message NumpyArray {
+    required bytes np_array_content = 2;
+    repeated int32 np_array_shapes = 3;
+}
+
+message ClassificationResponse {
+    required ClassificationResult result = 1;
+}
+
+message ClassificationResult {
+    repeated ClassLists classlists = 1;
+}
+
+message ClassLists {
+    repeated SingleClass classes = 1;
+}
+
+message SingleClass {
+    required string predicted_label = 1;
+    required float predicted_score = 2;
+}
