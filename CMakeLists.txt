@@ -58,7 +58,7 @@ else()
   add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 endif()
 if (BUILD_PROFILER)
-  add_definitions(-DWITH_PROFILER)
+  add_definitions(-DOF_ENABLE_PROFILER)
 endif()
 
 enable_testing()
