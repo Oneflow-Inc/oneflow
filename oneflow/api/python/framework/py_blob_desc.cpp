@@ -49,7 +49,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("shape", &BlobDesc::shape)
       .def_property_readonly("dtype", &BlobDesc::dtype)
       .def_property_readonly("batch_axis", &BlobDesc::batch_axis)
-      .def_property_readonly("split_axis", &BlobDesc::split_axis)
       .def_property_readonly("is_dynamic", &BlobDesc::is_dynamic)
       .def_property_readonly("is_tensor_list", &BlobDesc::is_tensor_list)
       .def_property_readonly("parallel_conf", &BlobDesc::parallel_conf)
