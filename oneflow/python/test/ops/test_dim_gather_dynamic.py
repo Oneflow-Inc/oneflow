@@ -96,6 +96,9 @@ def _compare_dim_gather_with_samples(test_case, inputshape, indexshape, dim, max
 class TestDynamicDimGather(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dynamic_dim_gather(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
         _compare_dim_gather_with_samples(
             test_case, inputshape=(2, 2), indexshape=(2, 2), dim=1, maxshape=(10, 10)
         )

@@ -29,6 +29,7 @@ import oneflow.python.framework.module as module_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 IntPair = Tuple[int, int]
 
@@ -802,8 +803,77 @@ def moments(
         )
 
 
+@oneflow_export("nn.InstanceNorm1d")
+def instance_normalization1d(
+    x: remote_blob_util.BlobDef,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Applies Instance Normalization over a 3D input.
+
+    Args:
+        x (remote_blob_util.BlobDef): 3D input tensor with NCL data layout.
+        eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
+        affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
+                       initialized the same way as done for batch normalization. Default: True.
+        name (Optional[str], optional): Name of this op.
+
+    Returns:
+        remote_blob_util.BlobDef: The normalized input tensor.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32))
+        ) -> tp.Numpy:
+            instance_norm = flow.nn.InstanceNorm1d(
+                x,
+                eps=1e-5,
+                affine=True,
+            )
+            return instance_norm
+
+        x = np.random.random(size=(4, 2, 32)).astype(np.float32)
+        out = instance_norm_Job(x)
+
+    """
+    assert len(x.shape) == 3
+
+    if name is None:
+        name = id_util.UniqueStr("InstanceNorm1D_")
+
+    channel = x.shape[1]
+    (mean, variance) = flow.nn.moments(x, [2], keepdims=True)
+    normalized = (x - mean) / flow.math.sqrt(variance + eps)
+    if affine == True:
+        gamma = flow.get_variable(
+            name + "_gamma",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
+        beta = flow.get_variable(
+            name + "_beta",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.zeros_initializer(),
+            trainable=True,
+        )
+        return gamma * normalized + beta
+    else:
+        return normalized
+
+
 @oneflow_export("nn.InstanceNorm2d")
-def instance_normalization(
+def instance_normalization2d(
     x: remote_blob_util.BlobDef,
     eps: float = 1e-05,
     affine: bool = True,
@@ -832,7 +902,7 @@ def instance_normalization(
         @flow.global_function()
         def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32, 32))
         ) -> tp.Numpy:
-            instance_norm = flow.nn.instance_normalization(
+            instance_norm = flow.nn.InstanceNorm2d(
                 x,
                 eps=1e-5,
                 affine=True,
@@ -848,27 +918,68 @@ def instance_normalization(
     if name is None:
         name = id_util.UniqueStr("InstanceNorm2D_")
 
-    channel = x.shape[1]
-    (mean, variance) = flow.nn.moments(x, [2, 3], keepdims=True)
-    normalized = (x - mean) / flow.math.sqrt(variance + eps)
-    if affine == True:
-        gamma = flow.get_variable(
-            name + "_gamma",
-            shape=(1, channel, 1, 1),
-            dtype=x.dtype,
-            initializer=flow.ones_initializer(),
-            trainable=True,
-        )
-        beta = flow.get_variable(
-            name + "_beta",
-            shape=(1, channel, 1, 1),
-            dtype=x.dtype,
-            initializer=flow.zeros_initializer(),
-            trainable=True,
-        )
-        return gamma * normalized + beta
-    else:
-        return normalized
+    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], x.shape[1], -1])
+    normalized_1d_out = flow.nn.InstanceNorm1d(
+        reshape_to_1d, eps=eps, affine=affine, name=name
+    )
+    reshape_back_to_2d = flow.reshape(normalized_1d_out, shape=list(x.shape))
+
+    return reshape_back_to_2d
+
+
+@oneflow_export("nn.InstanceNorm3d")
+def instance_normalization3d(
+    x: remote_blob_util.BlobDef,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> remote_blob_util.BlobDef:
+    r"""Applies Instance Normalization over a 5D input.
+
+    Args:
+        x (remote_blob_util.BlobDef): 5D input tensor with NCDHW data layout.
+        eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
+        affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
+                       initialized the same way as done for batch normalization. Default: True.
+        name (Optional[str], optional): Name of this op.
+
+    Returns:
+        remote_blob_util.BlobDef: The normalized input tensor.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def instance_norm_Job(x: tp.Numpy.Placeholder((4, 2, 32, 32, 32))
+        ) -> tp.Numpy:
+            instance_norm = flow.nn.InstanceNorm2d(
+                x,
+                eps=1e-5,
+                affine=True,
+            )
+            return instance_norm
+
+        x = np.random.random(size=(4, 2, 32, 32, 32)).astype(np.float32)
+        out = instance_norm_Job(x)
+
+    """
+    assert len(x.shape) == 5
+
+    if name is None:
+        name = id_util.UniqueStr("InstanceNorm3D_")
+
+    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], x.shape[1], -1])
+    normalized_1d_out = flow.nn.InstanceNorm1d(
+        reshape_to_1d, eps=eps, affine=affine, name=name
+    )
+    reshape_back_to_3d = flow.reshape(normalized_1d_out, shape=list(x.shape))
+
+    return reshape_back_to_3d
 
 
 @oneflow_export("nn.batch_normalization")
@@ -1664,12 +1775,12 @@ def _softmax_need_transpose(x, axis):
     assert dim_num >= 2
     if axis < 0:
         axis += dim_num
-    assert axis >= 1
+    assert axis >= 0
     assert axis < dim_num
 
     need_transpose = False
-    permute = [i for i in range(dim_num)]
-    if axis > 0 and axis != dim_num - 1:
+    permute = list(range(dim_num))
+    if axis != dim_num - 1:
         need_transpose = True
         permute[axis] = permute[-1]
         permute[-1] = axis
@@ -1849,7 +1960,7 @@ def sparse_cross_entropy(
     else:
         assert len(labels.shape) == len(prediction.shape) - 1
 
-    if prediction.distribute is distribute_util.split(len(prediction.shape) - 1):
+    if prediction.distribute is oneflow_api.distribute.split(len(prediction.shape) - 1):
         return (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("SparseCrossEntropyMs_")
@@ -2006,7 +2117,7 @@ def sparse_softmax_cross_entropy_with_logits(
     else:
         assert len(labels.shape) == len(logits.shape) - 1
 
-    if logits.distribute is distribute_util.split(len(logits.shape) - 1):
+    if logits.distribute is oneflow_api.distribute.split(len(logits.shape) - 1):
         prob, out = (
             flow.user_op_builder(
                 name

@@ -98,18 +98,18 @@ struct ArgWhereKernelUtil<DeviceType::kGPU, IN_T, OUT_T, NDIM> {
     CHECK_NOTNULL(ctx);
     CHECK_LE(elem_cnt, std::numeric_limits<OUT_T>::max());
     size_t workspace = GetWorkspaceBytesSize(ctx, elem_cnt);
-    CHECK_LE(temp_storage_bytes, workspace);
+    CHECK_LE(workspace, temp_storage_bytes);
 
     if (NDIM == 1) {
-      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OUT_T*>(ctx->cuda_stream(), input_shape.elem_cnt(),
-                                                     temp_storage, temp_storage_bytes, input_ptr,
-                                                     output_ptr, output_size_ptr)));
+      OF_CUDA_CHECK(
+          (SelectTrue<IN_T, OUT_T, OUT_T*>(ctx->cuda_stream(), input_shape.elem_cnt(), temp_storage,
+                                           workspace, input_ptr, output_ptr, output_size_ptr)));
     } else {
       using OutputIterator = StrideIterator<OUT_T, NDIM>;
       OutputIterator output_iter(output_ptr, elem_cnt);
-      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(
-          ctx->cuda_stream(), elem_cnt, temp_storage, temp_storage_bytes, input_ptr, output_iter,
-          output_size_ptr)));
+      OF_CUDA_CHECK((SelectTrue<IN_T, OUT_T, OutputIterator>(ctx->cuda_stream(), elem_cnt,
+                                                             temp_storage, workspace, input_ptr,
+                                                             output_iter, output_size_ptr)));
 
       OUT_T dims[NDIM] = {0};
       std::transform(input_shape.ptr(), input_shape.ptr() + input_shape.NumAxes(), dims,
