@@ -53,8 +53,6 @@ class CpuHardSwishKernel final : public OpKernel {
         .SetIsMatchedHob((HobDeviceTag() == device)  \
                          & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, int64_t)
 REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, float)
 REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, double)
 
