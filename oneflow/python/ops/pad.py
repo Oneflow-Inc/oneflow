@@ -22,19 +22,20 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 @oneflow_export("pad")
 def pad(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     paddings: Sequence[int],
     constant_value: Union[int, float] = 0,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`. 
 
     Args:
-        x (remote_blob_util.BlobDef): The input Blob
+        x (oneflow_api.BlobDesc): The input Blob
         paddings (Sequence[int]): A list of integers to specify the padding width, its length must equal with the length of `x.shape`. 
         constant_value (Union[int, float], optional): The constant value to pad. Defaults to 0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -43,7 +44,7 @@ def pad(
         ValueError: The parameter `paddings` must be a tuple or a list. 
 
     Returns:
-        remote_blob_util.BlobDef: The Blob after padding.  
+        oneflow_api.BlobDesc: The Blob after padding.  
 
     For example: 
 
@@ -117,11 +118,11 @@ def pad(
 
 @oneflow_export("pad_grad")
 def pad_grad(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     paddings: Sequence[int],
     constant_value: Union[int, float] = 0,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
@@ -155,18 +156,18 @@ def pad_grad(
 
 @oneflow_export("same_padding")
 def same_padding(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     padding: Sequence[int],
     data_format: str,
     kernel_size: Sequence[int],
     strides: Sequence[int],
     dilation_rate: Sequence[int],
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator do the padding in "SAME" mode, It can computes the pad width according to the `kernel_size` and `strides` to keep the size of feature map unchanged after convolution or other operations. 
 
     Args:
-        x (remote_blob_util.BlobDef): The input blob. 
+        x (oneflow_api.BlobDesc): The input blob. 
         padding (Sequence[int]): The padding mode. It should be "SAME_UPPER" or "SAME_LOWER" 
         data_format ([type]): The data format of input Blob. If the string starts with "NC", it means the data format is `channel first`, else the data format is `channel last`. 
         kernel_size (Sequence[int]): The kernel size of operations. Its type should be tuple or list. 
@@ -175,7 +176,7 @@ def same_padding(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The Blob after padding. 
+        oneflow_api.BlobDesc: The Blob after padding. 
 
     For example: 
 
@@ -239,20 +240,20 @@ def same_padding(
 
 @oneflow_export("reflection_pad2d")
 def reflection_pad2d(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     padding: Union[int, tuple, list],
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """Pads the input tensor using the reflection of the input boundary. 
 
     Args:
-        x (remote_blob_util.BlobDef): input blob, only support "NCHW" format.
-        padding (Union[int, remote_blob_util.BlobDef]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
         if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: [description]
+        oneflow_api.BlobDesc: [description]
 
     For example: 
 

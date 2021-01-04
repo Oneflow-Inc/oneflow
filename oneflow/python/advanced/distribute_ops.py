@@ -25,12 +25,13 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Union, Tuple, List, Optional, Sequence, Callable
+import oneflow_api
 
 
 @oneflow_export("advanced.distribute_clone")
 def api_distribute_clone(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> Tuple[oneflow_api.BlobDesc]:
     func = enable_if.unique([distribute_clone])
     return func(x, name=name)
 
@@ -59,8 +60,8 @@ def distribute_clone(x, name=None):
 
 @oneflow_export("advanced.distribute_add")
 def api_distribute_add(
-    xs: Sequence[remote_blob_util.BlobDef], name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    xs: Sequence[oneflow_api.BlobDesc], name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([distribute_add])
     return func(xs, name=name)
 
@@ -85,8 +86,8 @@ def distribute_add(xs, name=None):
 
 @oneflow_export("advanced.distribute_split")
 def api_distribute_split(
-    x: remote_blob_util.BlobDef, axis: int = 0, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]:
+    x: oneflow_api.BlobDesc, axis: int = 0, name: Optional[str] = None
+) -> Tuple[oneflow_api.BlobDesc]:
     func = enable_if.unique([distribute_split])
     return func(x, axis=axis, name=name)
 
@@ -116,8 +117,8 @@ def distribute_split(x, axis=0, name=None):
 
 @oneflow_export("advanced.distribute_concat")
 def api_distribute_concat(
-    xs: Sequence[remote_blob_util.BlobDef], axis: int = 0, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    xs: Sequence[oneflow_api.BlobDesc], axis: int = 0, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([distribute_concat])
     return func(xs, axis=axis, name=name)
 
@@ -143,12 +144,10 @@ def distribute_concat(xs, axis=0, name=None):
 
 @oneflow_export("advanced.distribute_map")
 def api_distribute_map(
-    xs: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef],
-    f: Callable[
-        [remote_blob_util.BlobDef, remote_blob_util.BlobDef], remote_blob_util.BlobDef
-    ],
+    xs: Union[Sequence[oneflow_api.BlobDesc], oneflow_api.BlobDesc],
+    f: Callable[[oneflow_api.BlobDesc, oneflow_api.BlobDesc], oneflow_api.BlobDesc],
     axis: int = 0,
-) -> Tuple[remote_blob_util.BlobDef]:
+) -> Tuple[oneflow_api.BlobDesc]:
     func = enable_if.unqiue([distribute_map])
     return func(xs, f, axis=axis)
 
@@ -171,9 +170,7 @@ def distribute_map(xs, f, axis=0):
 
 
 @oneflow_export("cast_to_current_logical_view")
-def cast_to_current_logical_view(
-    x: remote_blob_util.BlobDef,
-) -> remote_blob_util.BlobDef:
+def cast_to_current_logical_view(x: oneflow_api.BlobDesc,) -> oneflow_api.BlobDesc:
     if (
         isinstance(x, remote_blob_util.ConsistentBlob)
         and oneflow.scope.mirrored_view_enabled()

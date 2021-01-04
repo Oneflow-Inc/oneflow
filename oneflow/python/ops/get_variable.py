@@ -50,7 +50,7 @@ def api_get_variable(
     random_seed: Optional[int] = None,
     distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
     reuse: bool = True,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Create a variable or retrieve an existing one.
 
     Args:
