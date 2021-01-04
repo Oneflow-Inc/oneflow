@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_
+#include <vector>
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/shape.h"
 
-#include "oneflow/core/common/data_type.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-void InferArgWhereWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                       DataType index_type, int32_t num_axes, int64_t n,
-                                       int64_t* workspace_bytes);
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
+      .def("__str__", &Shape::ToString)
+      .def("__repr__", &Shape::ToString);
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_OPERATOR_ARG_WHERE_OP_UTIL_H_

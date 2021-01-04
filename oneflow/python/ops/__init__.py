@@ -42,7 +42,10 @@ def InputOpByArgBlobDef(blob_def):
     op_conf.input_conf.out = blob_def.blob_name
     op_conf.input_conf.blob_conf.CopyFrom(blob_def.ToInterfaceBlobConf())
     blob_def.AddAndInferOp(op_conf)
-    return remote_blob_util.RemoteBlob(blob_def.lbi)
+    lbi = logical_blob_id_util.LogicalBlobId()
+    lbi.op_name = blob_def.op_name
+    lbi.blob_name = blob_def.blob_name
+    return remote_blob_util.RemoteBlob(lbi)
 
 
 def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
@@ -106,7 +109,7 @@ def _GetReturnOpConfAndOutLbiAndScope(remote_blob, allow_cpu_return_op=True):
     parallel_conf.CopyFrom(remote_blob.parallel_conf)
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewParallelConf(builder, parallel_conf)
+        return builder.BuildScopeWithNewParallelConf(old_scope, parallel_conf)
 
     sess = session_ctx.GetDefaultSession()
     scope = scope_util.MakeScope(BuildScope)

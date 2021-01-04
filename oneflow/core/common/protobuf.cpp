@@ -140,7 +140,7 @@ DEFINE_ENUM_VAL_GETTER_AND_SETTER(DataType);
     int32_t field_size = r->FieldSize(msg, fd);                                             \
     vec_type retval(field_size);                                                            \
     for (int i = 0; i < field_size; ++i) { retval[i] = r->Get##vec_type_name(msg, fd, i); } \
-    return std::move(retval);                                                               \
+    return retval;                                                                          \
   }                                                                                         \
   DECLARE_SETTER_FUNC_HEADER(vec_type) {                                                    \
     PROTOBUF_REFLECTION((*msg), field_name);                                                \
