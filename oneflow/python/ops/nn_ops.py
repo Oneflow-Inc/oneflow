@@ -2833,53 +2833,54 @@ def leaky_relu(
     )
 
 
-@oneflow_export("nn.hardswish")
-def hardswish(
+@oneflow_export("nn.hardsigmoid")
+def hard_sigmoid(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
-    r"""The Hardswish activation. 
+    r"""The Hardsigmoid activation. 
 
     The formula is: 
 
     .. math:: 
 
-        \text{Hardswish}(x) = \begin{cases}
+        \text{Hardsigmoid}(x) = \begin{cases}
             0 & \text{ if } x \le -3  \\
-            x & \text{ if } x \ge +3 \\
-            x*(x+3)/6 & \text{ otherwise } \\
+            1 & \text{ if } x \ge +3 \\
+            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
         \end{cases}
 
     For example: 
 
     .. code-block:: python 
-
         import oneflow as flow 
         import oneflow.typing as tp 
         import numpy as np 
 
 
         @flow.global_function()
-        def hardswish_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            return flow.nn.hardswish(x)
+        def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            out = flow.math.hardsigmoid(x)
 
+            return out
 
-        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
-        out = hardswish_job(x)
+        
+        x = np.array([-3.1, 0, 3.3]).astype(np.float32)
+        out = hardsigmoid_job(x)
 
-        # output [0.        0.6666667 3.5      ]
+        # output [0.  0.5 1. ]
 
     Args:
         x (remote_blob_util.BlobDef): The input Tensor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The activated Tensor.
+        remote_blob_util.BlobDef: The activated Tensor. 
     """
-    if name is None:
-        name = id_util.UniqueStr("HardSwish_")
     return (
-        flow.user_op_builder(name)
-        .Op("hardswish")
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("HardSigmoid_")
+        )
+        .Op("hardsigmoid")
         .Input("in", [x])
         .Output("out")
         .Build()
