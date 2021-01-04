@@ -2835,8 +2835,8 @@ def leaky_relu(
 
 @oneflow_export("nn.hardsigmoid")
 def hard_sigmoid(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""The Hardsigmoid activation. 
 
     The formula is: 
@@ -2870,11 +2870,11 @@ def hard_sigmoid(
         # output [0.  0.5 1. ]
 
     Args:
-        x (remote_blob_util.BlobDef): The input Tensor. 
+        x (oneflow_api.BlobDesc): The input Tensor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The activated Tensor. 
+        oneflow_api.BlobDesc: The activated Tensor. 
     """
     return (
         flow.user_op_builder(
