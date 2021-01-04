@@ -1530,6 +1530,79 @@ def MaxPool2d(
     data_format: str = "NCHW",
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
+    r""" Performs the 2d-max pooling on the input `Blob`.
+         Different from nn.max_pool2d, nn.MaxPool2d supports more params e.g. dilation,return_indices.
+
+    Args:
+        input (remote_blob_util.BlobDef): A 4-D `Blob` of the format specified by data_format.
+        kernel_size (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
+        stride (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm.
+        dilation (Union[int, IntPair]): a parameter that controls the stride of elements in the window.
+        return_indices (bool): if True, will return the max indices along with the outputs.
+        ceil_mode (bool): when True, will use ceil instead of floor to compute the output shape.
+        data_format (str, optional): '`NHWC'`, '`NCHW'` or '`NCHW_VECT_C'`. Defaults to "NCHW", for now only supporr 'NCHW'.
+        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+        import numpy as np
+
+        input_shape = (1, 2, 4, 4)
+        @flow.global_function(type="predict")
+        def maxpool_job(
+            x: tp.Numpy.Placeholder(input_shape),
+        ) -> Tuple[tp.Numpy, tp.Numpy]:
+            with flow.scope.placement("gpu", "0:0"):
+                (y, indice) = flow.nn.MaxPool2d(
+                    x,
+                    kernel_size=3,
+                    stride=2,
+                    padding=(1, 1),
+                    dilation=1,
+                    return_indices=True,
+                    ceil_mode=False,
+                    data_format="NCHW",
+                )
+            return (y, indice)
+
+        x = np.arange(32).reshape(input_shape).astype(np.float32)
+        y, indice = maxpool_job(x)
+        print("in:\n", x, "\ny:\n", y, "\nindice:\n", indice)
+
+        #in:
+        #[[[[ 0.  1.  2.  3.]
+        #[ 4.  5.  6.  7.]
+        #[ 8.  9. 10. 11.]
+        #[12. 13. 14. 15.]]
+
+        #[[16. 17. 18. 19.]
+        #[20. 21. 22. 23.]
+        #[24. 25. 26. 27.]
+        #[28. 29. 30. 31.]]]] 
+        #y:
+        #[[[[ 5.  7.]
+        #[13. 15.]]
+
+        #[[21. 23.]
+        #[29. 31.]]]] 
+
+        #indice:
+        #[[[[ 5.  7.]
+        #[13. 15.]]
+
+        #[[ 5.  7.]
+        #[13. 15.]]]]
+
+    """
     assert data_format in ["NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
