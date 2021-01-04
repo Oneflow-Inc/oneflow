@@ -13,21 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/thread/cpu_thread.h"
-#include "oneflow/core/profiler/profiler.h"
+#ifndef ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
+
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 
-CpuThread::CpuThread(int64_t thrd_id) {
-  set_thrd_id(thrd_id);
-  mut_actor_thread() = std::thread([this, thrd_id]() {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("CPU Actor : (" + std::to_string(thrd_id) + ")");
-    ThreadCtx ctx;
-#ifdef WITH_CUDA
-    ctx.cb_event_chan = nullptr;
-#endif  // WITH_CUDA
-    PollMsgChannel(ctx);
-  });
-}
-
+template<DeviceType device_type, typename T>
+struct InTopkKernelUtil {
+  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
+                     const T* targets, const float* predictions, const int k, int8_t* out);
+};
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNELS_IN_TOP_K_KERNEL_UTIL_H_
