@@ -49,7 +49,10 @@ class BlobDesc : public Tensor {
   virtual cfg::DataType dtype() const override { UNIMPLEMENTED(); }
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); };
 
-  virtual int batch_axis() const { UNIMPLEMENTED(); }
+  int64_t get_batch_axis() const { UNIMPLEMENTED(); }
+  virtual int batch_axis() const { return get_batch_axis(); }
+  int64_t get_split_axis() const { UNIMPLEMENTED(); }
+  virtual int split_axis() const { return get_split_axis(); }
   virtual bool has_batch_axis() const { return batch_axis_ != HAS_NO_BATCH_AXIS; }
   virtual void set_batch_axis(int64_t val) { batch_axis_ = val; }
   virtual bool is_dynamic() const { UNIMPLEMENTED(); }
