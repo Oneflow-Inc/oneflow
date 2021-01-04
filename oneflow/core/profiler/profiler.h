@@ -24,6 +24,39 @@ namespace profiler {
 
 void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag);
 
+void NameThisHostThread(const std::string& name);
+
+void RangePush(const std::string& name);
+
+void RangePop();
+
+class RangeGuardCtx;
+
+class RangeGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RangeGuard);
+  explicit RangeGuard(const std::string& name);
+  ~RangeGuard();
+
+ private:
+  std::shared_ptr<RangeGuardCtx> ctx_;
+};
+
+#ifdef OF_ENABLE_PROFILER
+#define OF_PROFILER_NAME_THIS_HOST_THREAD(name) ::oneflow::profiler::NameThisHostThread(name)
+#define OF_PROFILER_ONLY_CODE(...) __VA_ARGS__
+#define OF_PROFILER_RANGE_PUSH(name) ::oneflow::profiler::RangePush(name)
+#define OF_PROFILER_RANGE_POP() ::oneflow::profiler::RangePop()
+#define OF_PROFILER_RANGE_GUARD(name) \
+  ::oneflow::profiler::RangeGuard OF_PP_CAT(_of_profiler_range_guard_, __COUNTER__)(name)
+#else
+#define OF_PROFILER_ONLY_CODE(...)
+#define OF_PROFILER_RANGE_PUSH(name)
+#define OF_PROFILER_RANGE_POP()
+#define OF_PROFILER_RANGE_GUARD(name)
+#define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
+#endif
+
 }  // namespace profiler
 
 }  // namespace oneflow

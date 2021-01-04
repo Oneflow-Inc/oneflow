@@ -15,11 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
-#include "oneflow/core/common/cached_caller.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
-#if defined(WITH_PROFILER)
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/kernel.h"
-#endif
 
 namespace oneflow {
 
@@ -100,13 +98,9 @@ void Kernel::Forward(const KernelCtx& ctx,
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
-#if defined(WITH_PROFILER)
-  profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob);
-#endif
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);
-#if defined(WITH_PROFILER)
-  profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob);
-#endif
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
   SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
 }
 
