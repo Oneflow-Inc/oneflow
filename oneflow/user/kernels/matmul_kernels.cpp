@@ -70,8 +70,9 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     } else {
       beta = GetZeroVal<T>();
     }
-    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), is_tf32, trans_a, trans_b, m, n, k, GetOneVal<T>(),
-                                       a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), is_tf32, trans_a, trans_b, m, n, k,
+                                       GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(), beta,
+                                       out->mut_dptr<T>());
   }
 };
 
@@ -140,10 +141,8 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 #endif
 
 #ifdef WITH_CUDA
-REGISTER_USER_KERNEL("matmul")                                                      \
-    .SetCreateFn<MatmulGpuHalfKernel>()                                             \
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                     & (user_op::HobDataType("a", 0) == DataType::kFloat16));
+REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedHob(
+    (user_op::HobDeviceTag() == "gpu") & (user_op::HobDataType("a", 0) == DataType::kFloat16));
 #endif
 
 template<DeviceType device_type, typename T>

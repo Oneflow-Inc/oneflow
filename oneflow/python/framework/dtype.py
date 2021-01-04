@@ -39,6 +39,7 @@ class float16(dtype):
 class float32(dtype):
     oneflow_proto_dtype = data_type_pb2.kFloat
 
+
 @oneflow_export("tensor_float32")
 class tensor_float32(dtype):
     oneflow_proto_dtype = data_type_pb2.kFloat

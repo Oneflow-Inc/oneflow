@@ -46,7 +46,7 @@ def compare_with_tensorflow(
         func_config.enable_tensor_float_32_compute(True)
     else:
         func_config.enable_tensor_float_32_compute(False)
-        
+
     if data_type == "float16":
         dtype = flow.float
     else:

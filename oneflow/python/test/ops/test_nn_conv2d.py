@@ -116,14 +116,14 @@ def compare_with_tensorflow(
             flow.watch_diff(weight, test_global_storage.Setter("weight_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
-            
+
             return loss
 
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
     of_out = ConvJob().get()
-    
+
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x").transpose(xy_data_transpose))
