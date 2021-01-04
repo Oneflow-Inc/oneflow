@@ -111,6 +111,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/learning_rate_schedule_conf.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
+      oneflow/core/register/logical_blob_id.proto
   )
 
   foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})

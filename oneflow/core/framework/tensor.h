@@ -17,12 +17,34 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 
 class Blob;
+
+namespace cfg {
+
+class LogicalBlobId;
+class ParallelConf;
+
+}  // namespace cfg
+
+class Tensor {
+ public:
+  virtual ~Tensor() = default;
+
+  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const = 0;
+  virtual std::string logical_blob_name() const = 0;
+  virtual std::string op_name() const = 0;
+  virtual std::string blob_name() const = 0;
+  virtual std::shared_ptr<Shape> shape() const = 0;
+  virtual cfg::DataType dtype() const = 0;
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+};
 
 namespace user_op {
 
