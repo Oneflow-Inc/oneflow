@@ -2837,6 +2837,44 @@ def leaky_relu(
 def hardswish(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
 ) -> remote_blob_util.BlobDef:
+    r"""The Hardswish activation. 
+
+    The formula is: 
+
+    .. math:: 
+
+        \text{Hardswish}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            x & \text{ if } x \ge +3 \\
+            x*(x+3)/6 & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardswish_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.hardswish(x)
+
+
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = hardswish_job(x)
+
+        # output [0.        0.6666667 3.5      ]
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The activated Tensor.
+    """
     if name is None:
         name = id_util.UniqueStr("HardSwish_")
     return (
