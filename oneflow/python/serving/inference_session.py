@@ -128,6 +128,7 @@ class SessionOption(object):
     def __init__(self):
         self.device_tag = "gpu"
         self.device_num = 1
+        self.is_mirrored_view = False
 
 
 @oneflow_export("serving.InferenceSession")
@@ -144,9 +145,7 @@ class InferenceSession(object):
             assert isinstance(option, SessionOption)
             self.option_ = option
 
-        self.cond_var_ = threading.Condition()
-        self.running_job_cnt_ = 0
-        self.is_mirrored_ = False
+        self.is_mirrored_ = self.option_.is_mirrored_view
         self.checkpoint_path_ = None
         self.config_proto_ = None
         self.job_name2job_conf_ = {}
@@ -154,6 +153,7 @@ class InferenceSession(object):
         self.job_name2input_name2lbn_ = {}
         self.job_name2output_name2lbn_ = {}
         self.output_name2future_ = {}
+        self.job_futures_ = []
         self.status_ = None
 
         self.init()
@@ -191,7 +191,8 @@ class InferenceSession(object):
         self.config_proto_.io_conf.enable_legacy_model_io = True
 
     def close(self):
-        self._sync()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.wait_for_all_jobs_finished())
         if self.status_ == self.SessionStatus.RUNNING:
             oneflow_api.StopLazyGlobalSession()
             oneflow_api.DestroyLazyGlobalSession()
@@ -435,9 +436,15 @@ class InferenceSession(object):
         return await asyncio.gather(*output_futures)
 
     def _run_job(self, job_inst):
-        self._increase_running_job_cnt()
-        job_inst.AddPostFinishCallback(lambda _: self._decrease_running_job_cnt())
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+
+        def job_finish_cb(_):
+            loop.call_soon_threadsafe(future.set_result, None)
+
+        job_inst.AddPostFinishCallback(job_finish_cb)
         oneflow_api.LaunchJob(job_inst)
+        self.job_futures_.append(future)
 
     def _run_push_jobs(self, **kwargs):
         for (
@@ -510,23 +517,10 @@ class InferenceSession(object):
         )
         self._run_job(load_checkpoint_job_inst)
 
-    def _sync(self):
-        self.cond_var_.acquire()
-        while self.running_job_cnt_ > 0:
-            self.cond_var_.wait()
-        assert self.running_job_cnt_ == 0
-        self.cond_var_.release()
-
-    def _increase_running_job_cnt(self):
-        self.cond_var_.acquire()
-        self.running_job_cnt_ += 1
-        self.cond_var_.release()
-
-    def _decrease_running_job_cnt(self):
-        self.cond_var_.acquire()
-        self.running_job_cnt_ -= 1
-        self.cond_var_.notify()
-        self.cond_var_.release()
+    async def wait_for_all_jobs_finished(self):
+        if len(self.job_futures_) > 0:
+            await asyncio.gather(*self.job_futures_)
+            self.job_futures_ = []
 
     def print_job_set(self):
         self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
