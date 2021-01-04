@@ -187,7 +187,7 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
-    arg_dict["data_type"] = ["float16", "float32", "double"]
+    arg_dict["data_type"] = ["float16", "float32", "double", "tensorfloat32"]
     arg_dict["fuse_add_to_output"] = [True, False]
     matmul_args = filter_args(GenArgList(arg_dict))
 
@@ -197,7 +197,7 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
-    arg_dict["data_type"] = ["float16", "float32", "double"]
+    arg_dict["data_type"] = ["float16", "float32", "double", "tensorfloat32"]
     arg_dict["fuse_add_to_output"] = [True, False]
     batch_matmul_args = filter_args(GenArgList(arg_dict))
     return matmul_args + batch_matmul_args
@@ -207,7 +207,7 @@ def gen_arg_list():
 class TestMatmul(flow.unittest.TestCase):
     def test_matmul(test_case):
         for arg in gen_arg_list():
-            if arg[0] == "cpu" and arg[5] == "float16":
+            if arg[0] == "cpu" and (arg[5] == "float16" or arg[5] == "tensorfloat32"):
                 continue
             compare_with_tensorflow(*arg)
 

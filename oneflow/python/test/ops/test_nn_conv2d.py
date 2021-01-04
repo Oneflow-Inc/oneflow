@@ -68,6 +68,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.enable_tensor_float_32_compute(True)
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
         weight_data_transpose = (2, 3, 1, 0)

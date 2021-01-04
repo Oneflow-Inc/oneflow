@@ -54,7 +54,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-
+    func_config.enable_tensor_float_32_compute(True)
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     if data_format == "NCHW":
