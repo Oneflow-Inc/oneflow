@@ -2917,13 +2917,13 @@ def hardswish(
         @flow.global_function()
         def hardswish_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
             return flow.nn.hardswish(x)
+
+
         x = np.array([-3.5, 1, 3.5]).astype(np.float32)
-
-
         out = hardswish_job(x)
 
         # output [0.        0.6666667 3.5      ]
-        
+
     Args:
         x (remote_blob_util.BlobDef): The input Tensor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
