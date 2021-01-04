@@ -29,11 +29,6 @@ class PyBlobDesc : public BlobDesc {
   std::shared_ptr<BlobDesc> Clone() const override {
     PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, BlobDesc, Clone, );
   }
-
-  std::shared_ptr<BlobDesc> with_distribute(
-      const std::shared_ptr<Distribute>& distribute) const override {
-    PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, BlobDesc, with_distribute, distribute);
-  }
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

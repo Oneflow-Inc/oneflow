@@ -65,44 +65,44 @@ def LazyRemoteBlob(lbi, **kw):
     return blob_type(lbi, **kw)
 
 
-class ConsistentBlob(
-    oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
-):
+# class ConsistentBlob(
+#     oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
+# ):
+#     def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
+#         cfg_lbi = lbi_util.LogicalBlobId()
+#         cfg_lbi.set_op_name(lbi.op_name)
+#         cfg_lbi.set_blob_name(lbi.blob_name)
+#         oneflow_api.BlobDesc.__init__(self, cfg_lbi, distribute)
+#         if job_name is None:
+#             job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+#         self.job_name_ = job_name
+#         self.parallel_size_ = 0
+
+#     def with_distribute(self, distribute):
+#         oneflow.distribute.assert_is_valid_distribute(distribute)
+#         lbi = logical_blob_id_util.LogicalBlobId()
+#         lbi.op_name = self.op_name
+#         lbi.blob_name = self.blob_name
+#         ret = RemoteBlob(lbi)
+#         ret.set_distribute(distribute)
+#         return ret
+
+#     def with_gradient_distribute(self, distribute):
+#         return oneflow.parallel_cast(self, gradient_distribute=distribute)
+
+#     @property
+#     def parallel_size(self):
+#         if self.parallel_size_ == 0:
+#             self.parallel_size_ = placement_ctx.GetParallelSize(
+#                 placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
+#             )
+#         return self.parallel_size_
+
+
+class LazyConsistentBlob(oneflow_api.ConsistentBlob, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
     def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
-        cfg_lbi = lbi_util.LogicalBlobId()
-        cfg_lbi.set_op_name(lbi.op_name)
-        cfg_lbi.set_blob_name(lbi.blob_name)
-        oneflow_api.BlobDesc.__init__(self, cfg_lbi, distribute)
-        if job_name is None:
-            job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
-        self.job_name_ = job_name
-        self.parallel_size_ = 0
-
-    def with_distribute(self, distribute):
-        oneflow.distribute.assert_is_valid_distribute(distribute)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = self.op_name
-        lbi.blob_name = self.blob_name
-        ret = RemoteBlob(lbi)
-        ret.set_distribute(distribute)
-        return ret
-
-    def with_gradient_distribute(self, distribute):
-        return oneflow.parallel_cast(self, gradient_distribute=distribute)
-
-    @property
-    def parallel_size(self):
-        if self.parallel_size_ == 0:
-            self.parallel_size_ = placement_ctx.GetParallelSize(
-                placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
-            )
-        return self.parallel_size_
-
-
-class LazyConsistentBlob(ConsistentBlob):
-    def __init__(self, lbi, **kw):
-        ConsistentBlob.__init__(self, lbi, **kw)
-        self.job_name_ = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+        ConsistentBlob.__init__(self, lbi, job_name, distribute)
+        self.set_job_name(oneflow_api.JobBuildAndInferCtx_GetCurrentJobName())
 
     @property
     def shape(self):
@@ -180,18 +180,6 @@ class MirroredBlob(
             job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         self.job_name_ = job_name
         self.parallel_size_ = 0
-
-    def with_distribute(self, distribute):
-        oneflow.distribute.assert_is_valid_distribute(distribute)
-        lbi = logical_blob_id_util.LogicalBlobId()
-        lbi.op_name = self.op_name
-        lbi.blob_name = self.blob_name
-        ret = RemoteBlob(lbi)
-        ret.set_distribute(distribute)
-        return ret
-
-    def with_gradient_distribute(self, distribute):
-        return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
     @property
     def parallel_size(self):
