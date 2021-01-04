@@ -24,7 +24,7 @@ namespace oneflow {
 namespace compatible_py {
 
 std::shared_ptr<BlobDesc> ConsistentBlob::Clone() const {
-  PYBIND11_OVERRIDE(std::shared_ptr<BlobDesc>, ConsistentBlob, Clone, );
+  PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, ConsistentBlob, Clone, );
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

@@ -75,9 +75,6 @@ class LazyConsistentBlob(
             cfg_lbi.set_blob_name(lbi.blob_name)
             lbi = cfg_lbi
 
-        print("*" * 20)
-        print(type(lbi))
-        print("*" * 20)
         oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
         self.set_job_name(oneflow_api.JobBuildAndInferCtx_GetCurrentJobName())
 
@@ -152,10 +149,13 @@ class MirroredBlob(
     oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
     def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
-        cfg_lbi = lbi_util.LogicalBlobId()
-        cfg_lbi.set_op_name(lbi.op_name)
-        cfg_lbi.set_blob_name(lbi.blob_name)
-        oneflow_api.BlobDesc.__init__(self, cfg_lbi, distribute)
+        if not isinstance(lbi, lbi_util.LogicalBlobId):
+            cfg_lbi = lbi_util.LogicalBlobId()
+            cfg_lbi.set_op_name(lbi.op_name)
+            cfg_lbi.set_blob_name(lbi.blob_name)
+            lbi = cfg_lbi
+
+        oneflow_api.BlobDesc.__init__(self, lbi, distribute)
         if job_name is None:
             job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         self.job_name_ = job_name
@@ -415,9 +415,25 @@ class EagerBlobTrait(object):
         )
 
 
-class EagerConsistentBlob(EagerBlobTrait, oneflow_api.ConsistentBlob):
-    def __init__(self, lbi, blob_object=None, job_name=None, **kw):
-        oneflow_api.ConsistentBlob.__init__(self, lbi, job_name=job_name, **kw)
+class EagerConsistentBlob(
+    EagerBlobTrait,
+    oneflow_api.ConsistentBlob,
+    blob_trait.BlobOperatorTrait,
+    blob_trait.BlobHeaderTrait,
+):
+    def __init__(
+        self,
+        lbi,
+        blob_object=None,
+        job_name="",
+        distribute=oneflow_api.distribute.auto(),
+    ):
+        if not isinstance(lbi, lbi_util.LogicalBlobId):
+            cfg_lbi = lbi_util.LogicalBlobId()
+            cfg_lbi.set_op_name(lbi.op_name)
+            cfg_lbi.set_blob_name(lbi.blob_name)
+            lbi = cfg_lbi
+        oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
         self._Init(blob_object)
 
     def Clone(self):
