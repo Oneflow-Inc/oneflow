@@ -103,7 +103,7 @@ def _compare_logsoftmax_with_np(
 def _gen_arg_dict(shape, axis, device_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
-    arg_dict["input_shape"] = [shape]
+    arg_dict["input_shape"] = [(6, 1024, 1024)]
     arg_dict["axis"] = [*axis]  # Pass (-1, 1) -> unzip as -1, 1 two test cases
     arg_dict["device_type"] = [device_type]
     arg_dict["machine_ids"] = [machine_ids]
