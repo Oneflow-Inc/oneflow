@@ -1895,7 +1895,9 @@ def logsoftmax(
         axis = -1
     if name is None:
         name = id_util.UniqueStr("logsoftmax")
-    return flow.math.log(flow.nn.softmax(logits, axis, name=name+"_softmax"), name=name+"_log")
+    return flow.math.log(
+        flow.nn.softmax(logits, axis, name=name + "_softmax"), name=name + "_log"
+    )
 
 
 @oneflow_export("nn.softmax_grad")
