@@ -40,30 +40,25 @@ struct EluGradFunctor {
   const T alpha;
 };
 
-// TODO: Add half version
 template<>
 struct EluFunctor<half> {
-  __host__ __device__ explicit EluFunctor(float alpha) : alpha(alpha) {}
-  __device__ half operator()(half x) const {
-    float x_float =__half2float(x);
-    float out = ((x_float) > static_cast<float>(0)) ? x_float : alpha * (exp(x_float) - static_cast<float>(1));
-    return __float2half(out);
-  }
+  __host__ __device__ explicit EluFunctor(float alpha)
+      : alpha(alpha), float_functor(EluFunctor<float>(alpha)) {}
+  __device__ half operator()(half x) const { return __float2half(float_functor(__half2float(x))); }
   const float alpha;
+  EluFunctor<float> float_functor;
 };
 
 template<>
 struct EluGradFunctor<half> {
-  __host__ __device__ explicit EluGradFunctor(float alpha) : alpha(alpha) {}
+  __host__ __device__ explicit EluGradFunctor(float alpha)
+      : alpha(alpha), float_functor(EluGradFunctor<float>(alpha)) {}
   __device__ half operator()(half x, half dy) const {
-    float x_float =__half2float(x);
-    float dy_float =__half2float(dy);
-    float out = ((x_float) > static_cast<float>(0)) ? dy_float : dy_float * alpha * exp(x_float);
-    return __float2half(out);
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
   const float alpha;
+  EluGradFunctor<float> float_functor;
 };
-
 
 template<DeviceType device_type, typename T>
 class GpuEluKernel final : public OpKernel {
@@ -123,6 +118,7 @@ class GpuEluGradKernel final : public OpKernel {
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, half);
 REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, double);
 

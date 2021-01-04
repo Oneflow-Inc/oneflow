@@ -2833,6 +2833,63 @@ def leaky_relu(
     )
 
 
+@oneflow_export("nn.elu")
+def elu(
+    x: remote_blob_util.BlobDef, alpha: float = 1.0, name: Optional[str] = None
+) -> remote_blob_util.BlobDef:
+    r"""The ELU activation. 
+
+    The formula is: 
+
+    .. math::  
+
+        \text{ELU}(x) = \begin{cases}
+				x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0 \\
+    		    \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def elu_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.elu(x, alpha=1.0)
+
+
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = elu_job(x)
+
+        # output [-0.9698026  1.         3.5      ]
+
+    Args:
+        x (remote_blob_util.BlobDef): The input Tensor. 
+        alpha (float, optional): The `alpha` value for the ELU formula. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDef: The activated Tensor.
+    """
+    alpha = float(alpha)
+    if name is None:
+        name = id_util.UniqueStr("Elu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("elu")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("alpha", alpha)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.hardsigmoid")
 def hard_sigmoid(
     x: remote_blob_util.BlobDef, name: Optional[str] = None
