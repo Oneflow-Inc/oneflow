@@ -37,14 +37,21 @@ from functools import reduce
 import traceback
 
 
-class ArgBlobDef(oneflow_api.BlobDesc):
-    def __init__(self, shape, dtype, batch_axis, name=None):
+class ArgBlobDef(object):
+    def __init__(
+        self,
+        shape,
+        dtype,
+        batch_axis,
+        name=None,
+        distribute=oneflow_api.distribute.auto(),
+    ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
             name = id_util.UniqueStr("Input_")
         lbi.set_op_name(name)
         lbi.set_blob_name("out")
-        oneflow_api.BlobDesc.__init__(self, lbi, oneflow_api.distribute.auto())
+        self.lbi_ = lbi
         assert type(shape) is tuple
         for dim in shape:
             assert type(dim) is int
@@ -52,6 +59,23 @@ class ArgBlobDef(oneflow_api.BlobDesc):
         self.shape_ = shape
         self.dtype_ = dtype
         self.batch_axis_ = batch_axis
+        self.distribute_ = distribute
+
+    @property
+    def lbi(self):
+        return self.lbi_
+
+    @property
+    def op_name(self):
+        return self.lbi_.op_name()
+
+    @property
+    def blob_name(self):
+        return self.lbi_.blob_name()
+
+    @property
+    def unique_name(self):
+        return self.op_name + "/" + self.blob_name + self._Distribute2Str()
 
     @property
     def shape(self):
@@ -78,7 +102,7 @@ class ArgBlobDef(oneflow_api.BlobDesc):
             shape=self.shape_,
             dtype=self.dtype_,
             batch_axis=self.batch_axis_,
-            name=self.lbi.op_name,
+            name=self.op_name,
         )
 
     def Clone(self, op_name=None):
@@ -116,6 +140,16 @@ class ArgBlobDef(oneflow_api.BlobDesc):
         interface_blob_conf.is_tensor_list = self.is_tensor_list
         self.SetBatchAxisAndSplitAxis(interface_blob_conf)
         return interface_blob_conf
+
+    def _Distribute2Str(self):
+        if type(self.distribute_) is oneflow_api.distribute.AutoDistribute:
+            return ""
+        elif type(self.distribute_) is oneflow_api.distribute.SplitDistribute:
+            return ":S" + str(self.distribute_.axis)
+        elif type(self.distribute_) is oneflow_api.distribute.BroadcastDistribute:
+            return ":B"
+        else:
+            raise NotImplementedError
 
 
 class FixedTensorDef(ArgBlobDef):

@@ -2833,6 +2833,62 @@ def leaky_relu(
     )
 
 
+@oneflow_export("nn.hardsigmoid")
+def hard_sigmoid(
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    r"""The Hardsigmoid activation. 
+
+    The formula is: 
+
+    .. math:: 
+
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            1 & \text{ if } x \ge +3 \\
+            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            out = flow.math.hardsigmoid(x)
+
+            return out
+
+        
+        x = np.array([-3.1, 0, 3.3]).astype(np.float32)
+        out = hardsigmoid_job(x)
+
+        # output [0.  0.5 1. ]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor. 
+    """
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("HardSigmoid_")
+        )
+        .Op("hardsigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
     input: oneflow_api.BlobDesc,
