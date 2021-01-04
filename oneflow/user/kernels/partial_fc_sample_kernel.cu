@@ -288,10 +288,14 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("weight", 0);
     const int64_t class_num = in_logical_desc->shape().At(0);
     const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
-    const int64_t seed = ctx->Attr<int64_t>("seed");
+    int64_t seed = ctx->Attr<int64_t>("seed");
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t num_sample_per_rank = RoundUp(num_sample, parallel_num) / parallel_num;
     if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 0 && parallel_num > 1) {
+      std::seed_seq seq{seed};
+      std::vector<int64_t> seeds(parallel_num);
+      seq.generate(seeds.begin(), seeds.end());
+      seed = seeds.at(ctx->parallel_ctx().parallel_id());
       CHECK(ctx->SbpParallel4ArgNameAndIndex("label", 0).has_broadcast_parallel());
       BalancedSplitter bs(class_num, parallel_num);
       return std::make_shared<DistributedPartialFcSampleOpKernelState>(
