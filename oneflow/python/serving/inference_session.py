@@ -18,6 +18,9 @@ import threading
 import inspect
 import asyncio
 import numpy as np
+import os
+import enum
+import google.protobuf.text_format as text_format
 
 import oneflow as flow
 import oneflow_api
@@ -27,6 +30,7 @@ import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api.oneflow.core.common.data_type as dtype_proto_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
 import oneflow.core.framework.tensor_pb2 as tensor_proto
+import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.python.framework.session_util as session_util
@@ -37,6 +41,24 @@ import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
+
+
+def _is_int(val):
+    try:
+        num = int(val)
+    except ValueError:
+        return False
+    return True
+
+
+def _find_model_latest_version(saved_model_dir):
+    version_dirs = []
+    for f in os.listdir(saved_model_dir):
+        if os.path.isdir(os.path.join(saved_model_dir, f)) and _is_int(f):
+            version_dirs.append(f)
+
+    version_dirs.sort(reverse=True, key=lambda x: int(x))
+    return version_dirs[0]
 
 
 def _need_check_device_tag(op_conf):
@@ -96,6 +118,11 @@ def _inferface_blob_conf_proto_to_cfg(
     )
 
 
+@oneflow_export("serving.ModelVersionPolicy")
+class ModelVersionPolicy(enum.Enum):
+    LATEST = 1
+
+
 @oneflow_export("serving.SessionOption")
 class SessionOption(object):
     def __init__(self):
@@ -105,10 +132,10 @@ class SessionOption(object):
 
 @oneflow_export("serving.InferenceSession")
 class InferenceSession(object):
-    class SessionStatus:
-        OPEN = "OPEN"
-        RUNNING = "RUNNING"
-        CLOSED = "CLOSED"
+    class SessionStatus(enum.Enum):
+        OPEN = 1
+        RUNNING = 2
+        CLOSED = 3
 
     def __init__(self, option=None):
         if option is None:
@@ -267,6 +294,73 @@ class InferenceSession(object):
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self._run_load_checkpoint_job()
         self.status_ = self.SessionStatus.RUNNING
+
+    def load_saved_model(
+        self,
+        saved_model_dir,
+        model_version=ModelVersionPolicy.LATEST,
+        saved_model_meta_file_basename="saved_model",
+        graph_name=None,
+        signature_name=None,
+    ):
+        if not os.path.isdir(saved_model_dir):
+            raise ValueError("{} is not a valid directory".format(saved_model_dir))
+
+        if isinstance(model_version, int):
+            pass
+        elif model_version == ModelVersionPolicy.LATEST:
+            model_version = _find_model_latest_version(saved_model_dir)
+        else:
+            raise NotImplementedError
+
+        saved_model_path = os.path.join(saved_model_dir, str(model_version))
+        if not os.path.isdir(saved_model_path):
+            raise ValueError(
+                "version {} of saved model in dir {} do not exist".format(
+                    model_version, saved_model_dir
+                )
+            )
+
+        subfiles = list(os.listdir(saved_model_path))
+        saved_model_meta_pb_filename = saved_model_meta_file_basename + ".pb"
+        saved_model_meta_prototxt_filename = (
+            saved_model_meta_file_basename + ".prototxt"
+        )
+        saved_model_proto = saved_model_pb.SavedModel()
+        if saved_model_meta_pb_filename in subfiles:
+            saved_model_meta_file_path = os.path.join(
+                saved_model_path, saved_model_meta_pb_filename
+            )
+            with open(saved_model_meta_file_path, "rb") as f:
+                saved_model_proto.ParseFromString(f.read())
+        elif saved_model_meta_prototxt_filename in subfiles:
+            saved_model_meta_file_path = os.path.join(
+                saved_model_path, saved_model_meta_prototxt_filename
+            )
+            with open(saved_model_meta_file_path, "rt") as f:
+                text_format.Merge(f.read(), saved_model_proto)
+        else:
+            raise ValueError(
+                "saved model meta file {} do not exist in {}".format(
+                    saved_model_meta_file_basename, saved_model_path
+                )
+            )
+
+        self.set_checkpoint_path(
+            os.path.join(saved_model_path, saved_model_proto.checkpoint_dir)
+        )
+        if graph_name is None:
+            graph_name = saved_model_proto.default_graph_name
+        if graph_name not in saved_model_proto.graphs:
+            raise ValueError("graph {} do not exist".format(graph_name))
+        graph_def = saved_model_proto.graphs[graph_name]
+        if signature_name is None:
+            signature_name = graph_def.default_signature_name
+        if signature_name not in graph_def.signatures:
+            raise ValueError("signature {} do not exist".format(signature_name))
+        signature_def = graph_def.signatures[signature_name]
+        with self.open(graph_name, signature_def):
+            self.compile(graph_def.op_list)
 
     # TODO: list jobs
 

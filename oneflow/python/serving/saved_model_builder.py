@@ -21,12 +21,11 @@ from google.protobuf import text_format
 import oneflow as flow
 import oneflow_api
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.framework.tensor_pb2 as tensor_pb
-import oneflow.core.operator.op_conf_pb2 as op_conf_pb2
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 
 

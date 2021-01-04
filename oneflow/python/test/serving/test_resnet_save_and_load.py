@@ -121,23 +121,8 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
 
         # load model and run
         flow.clear_default_session()
-        model_meta_file_path = os.path.join(
-            saved_model_path, str(model_version), "saved_model.prototxt"
-        )
-        saved_model_proto = load_saved_model(model_meta_file_path)
         sess = flow.serving.InferenceSession()
-        checkpoint_path = os.path.join(
-            saved_model_path, str(model_version), saved_model_proto.checkpoint_dir
-        )
-        sess.set_checkpoint_path(checkpoint_path)
-
-        graph_name = saved_model_proto.default_graph_name
-        graph_def = saved_model_proto.graphs[graph_name]
-        signature_name = graph_def.default_signature_name
-        signature_def = graph_def.signatures[signature_name]
-        with sess.open(graph_name, signature_def):
-            sess.compile(graph_def.op_list)
-
+        sess.load_saved_model(saved_model_path)
         # sess.print_job_set()
         sess.launch()
 
