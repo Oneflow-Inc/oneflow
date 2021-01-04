@@ -328,15 +328,17 @@ class InferenceSession(object):
         return {"shape": input_shape, "dtype": input_dtype}
 
     def run(self, job_name, **kwargs):
-        return asyncio.run_until_complete(self.async_run(job_name, **kwargs))
+        self._check_status(self.SessionStatus.RUNNING)
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.async_run(job_name, **kwargs))
 
     async def async_run(self, job_name, **kwargs):
         self._check_status(self.SessionStatus.RUNNING)
         self._run_push_jobs(**kwargs)
         job_inst = job_instance_util.MakeUserJobInstance(job_name)
         self._run_job(job_inst)
-        output_futures = self._run_pull_jobs()
-        await asyncio.gather(tuple(output_futures.values()))
+        output_futures = tuple(self._run_pull_jobs().values())
+        return await asyncio.gather(*output_futures)
 
     def _run_job(self, job_inst):
         self._increase_running_job_cnt()
