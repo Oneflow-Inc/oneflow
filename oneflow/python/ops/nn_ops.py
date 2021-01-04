@@ -2741,6 +2741,7 @@ def hard_sigmoid(
     For example: 
 
     .. code-block:: python 
+    
         import oneflow as flow 
         import oneflow.typing as tp 
         import numpy as np 
