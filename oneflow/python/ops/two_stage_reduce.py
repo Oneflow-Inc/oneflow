@@ -30,11 +30,11 @@ import oneflow_api
 
 @oneflow_export("math.two_stage_reduce_max")
 def api_two_stage_reduce_max(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([two_stage_reduce_max])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -47,11 +47,11 @@ def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.two_stage_reduce_min")
 def api_two_stage_reduce_min(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([two_stage_reduce_min])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
