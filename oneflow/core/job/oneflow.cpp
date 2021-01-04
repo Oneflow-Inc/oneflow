@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace std {
 
@@ -988,12 +989,17 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
 }  // namespace
 
 Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
+  OF_PROFILER_RANGE_GUARD("Oneflow::Init");
   // Runtime
+  OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
   JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
+  OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
+  OF_PROFILER_RANGE_PUSH("new Runtime");
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+  OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
 
