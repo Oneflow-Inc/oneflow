@@ -151,7 +151,7 @@ class LazyConsistentBlob(
 class MirroredBlob(
     oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
         cfg_lbi = lbi_util.LogicalBlobId()
         cfg_lbi.set_op_name(lbi.op_name)
         cfg_lbi.set_blob_name(lbi.blob_name)
