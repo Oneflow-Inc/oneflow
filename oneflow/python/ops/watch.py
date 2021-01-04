@@ -36,12 +36,13 @@ from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager as eager_util
 import oneflow
+import oneflow_api
 import inspect
 
 
 @oneflow_export("watch")
 def Watch(
-    blob_watched: remote_blob_util.BlobDef,
+    blob_watched: oneflow_api.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob. 
@@ -167,7 +168,7 @@ def LazyConsistentWatch(blob_watched, handler):
 
 @oneflow_export("watch_diff")
 def WatchDiff(
-    blob_watched: remote_blob_util.BlobDef,
+    blob_watched: oneflow_api.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.

@@ -29,17 +29,18 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 @oneflow_export("combined_margin_loss")
 def combined_margin_loss(
-    x: remote_blob_util.BlobDef,
-    label: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
+    label: oneflow_api.BlobDesc,
     m1: float = 1,
     m2: float = 0,
     m3: float = 0,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     depth = x.shape[1]
     y, theta = (
         flow.user_op_builder(
