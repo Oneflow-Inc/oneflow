@@ -64,6 +64,7 @@ def LazyRemoteBlob(lbi, **kw):
         blob_type = LazyMirroredBlob
     return blob_type(lbi, **kw)
 
+
 class ConsistentBlob(
     oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
