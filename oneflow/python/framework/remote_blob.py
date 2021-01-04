@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.python.framework.blob_desc as blob_desc
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
@@ -32,6 +32,7 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 import traceback
 import sys
@@ -65,10 +66,13 @@ def LazyRemoteBlob(lbi, **kw):
 
 
 class BlobDef(
-    blob_desc.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
+    oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 ):
-    def __init__(self, lbi, job_name=None, **kw):
-        blob_desc.BlobDesc.__init__(self, lbi, **kw)
+    def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        oneflow_api.BlobDesc.__init__(self, cfg_lbi, distribute)
         if job_name is None:
             job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         self.job_name_ = job_name
@@ -80,10 +84,6 @@ class BlobDef(
 
     @property
     def split_axis(self):
-        raise NotImplementedError
-
-    @property
-    def disable_boxing(self):
         raise NotImplementedError
 
     @property
@@ -100,8 +100,11 @@ class BlobDef(
 
     def with_distribute(self, distribute):
         oneflow.distribute.assert_is_valid_distribute(distribute)
-        ret = RemoteBlob(self.lbi_)
-        ret.distribute_ = distribute
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = self.op_name
+        lbi.blob_name = self.blob_name
+        ret = RemoteBlob(lbi)
+        ret.set_distribute(distribute)
         return ret
 
     def with_gradient_distribute(self, distribute):
@@ -128,40 +131,46 @@ class LazyConsistentBlob(ConsistentBlob):
                 file=sys.stderr,
             )
             print(traceback.format_stack()[-2])
-        return c_api_util.JobBuildAndInferCtx_GetStaticShape(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_GetStaticShape(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def dtype(self):
         return convert_proto_dtype_to_oneflow_dtype(
-            c_api_util.JobBuildAndInferCtx_GetDataType(self.job_name_, self.lbn_)
+            c_api_util.JobBuildAndInferCtx_GetDataType(
+                self.job_name_, self.logical_blob_name
+            )
         )
 
     @property
     def batch_axis(self):
-        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_GetBatchAxis(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def split_axis(self):
         return c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
     @property
     def is_dynamic(self):
-        return c_api_util.JobBuildAndInferCtx_IsDynamic(self.job_name_, self.lbn_)
-
-    @property
-    def disable_boxing(self):
-        return c_api_util.JobBuildAndInferCtx_DisableBoxing(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_IsDynamic(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def is_tensor_list(self):
-        return c_api_util.JobBuildAndInferCtx_IsTensorList(self.job_name_, self.lbn_)
+        return c_api_util.JobBuildAndInferCtx_IsTensorList(
+            self.job_name_, self.logical_blob_name
+        )
 
     @property
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
     def IdenticalTo(self, rhs):
@@ -171,7 +180,6 @@ class LazyConsistentBlob(ConsistentBlob):
             and self.batch_axis == rhs.batch_axis
             and self.split_axis == rhs.split_axis
             and self.is_dynamic == rhs.is_dynamic
-            and self.disable_boxing == rhs.disable_boxing
             and self.is_tensor_list == rhs.is_tensor_list
             and self.parallel_conf == rhs.parallel_conf
         )
@@ -213,49 +221,45 @@ class LazyMirroredBlob(MirroredBlob):
             )
             print(traceback.format_stack()[-2])
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
     @property
     def dtype(self):
         return convert_proto_dtype_to_oneflow_dtype(
             c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
-                self.job_name_, self.lbn_
+                self.job_name_, self.logical_blob_name
             )
         )
 
     @property
     def batch_axis(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
     @property
     def split_axis(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
     @property
     def is_dynamic(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
-
-    @property
-    def disable_boxing(self):
-        return True
 
     @property
     def is_tensor_list(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
     @property
     def parallel_conf(self):
         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
-            self.job_name_, self.lbn_
+            self.job_name_, self.logical_blob_name
         )
 
 
@@ -327,10 +331,6 @@ class EagerBlobTrait(object):
     @property
     def is_dynamic(self):
         return self.blob_object.op_arg_blob_attr.is_dynamic
-
-    @property
-    def disable_boxing(self):
-        return True
 
     @property
     def is_tensor_list(self):

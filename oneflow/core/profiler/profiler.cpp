@@ -15,6 +15,10 @@ limitations under the License.
 */
 
 #include "oneflow/core/profiler/profiler.h"
+#ifdef OF_ENABLE_PROFILER
+#include <nvtx3/nvToolsExt.h>
+#include <sys/syscall.h>
+#endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {
 
@@ -39,6 +43,54 @@ bool StringToBool(const std::string& str) {
 void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag) {
   const char* env_p = std::getenv(env_var.c_str());
   *flag = (env_p != nullptr && StringToBool(env_p));
+}
+
+void NameThisHostThread(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
+  nvtxNameOsThreadA(syscall(SYS_gettid), name.c_str());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void RangePush(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
+  nvtxRangePushA(name.c_str());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void RangePop() {
+#ifdef OF_ENABLE_PROFILER
+  nvtxRangePop();
+#endif  // OF_ENABLE_PROFILER
+}
+
+#ifdef OF_ENABLE_PROFILER
+
+class RangeGuardCtx {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RangeGuardCtx);
+  explicit RangeGuardCtx(nvtxRangeId_t range_id) : range_id_(range_id) {}
+  ~RangeGuardCtx() = default;
+
+  nvtxRangeId_t range_id() const { return range_id_; }
+
+ private:
+  nvtxRangeId_t range_id_;
+};
+#else
+class RangeGuardCtx {};
+#endif  // OF_ENABLE_PROFILER
+
+RangeGuard::RangeGuard(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
+  nvtxRangeId_t range_id = nvtxRangeStartA(name.c_str());
+  ctx_.reset(new RangeGuardCtx(range_id));
+#endif  // OF_ENABLE_PROFILER
+}
+
+RangeGuard::~RangeGuard() {
+#ifdef OF_ENABLE_PROFILER
+  nvtxRangeEnd(ctx_->range_id());
+#endif  // OF_ENABLE_PROFILER
 }
 
 }  // namespace profiler
