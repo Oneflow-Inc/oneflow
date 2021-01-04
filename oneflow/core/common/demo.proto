@@ -1,0 +1,89 @@
+syntax="proto2";
+
+package oneflow;
+
+enum Enum {
+  kInvalidEnum = 0;
+  kEnum0 = 2;
+}
+
+message Foo {
+  enum Type {
+    H2D = 0;
+    D2H = 1;
+  }
+  enum Data {
+    D = 3;
+    H = 57;
+  }
+  required Type type = 38;
+  required Data data = 39;
+  optional string name = 21 [default="unnamed"];
+  required int64 int_value = 10;
+  optional int64 opt_int_value = 11;
+  required string string_value = 50;
+  optional string opt_string_value = 51;
+  repeated int64 int_values = 12;
+  repeated Enum enum_values = 13;
+  repeated string string_values = 14;
+  repeated Bar bars = 15;
+  required Bar bar = 100;
+  optional Bar optional_bar = 101;
+
+  required Enum enum_value = 103;
+  optional Enum opt_enum_value = 104;
+
+  oneof oneof_type {
+    Bar of_bar = 2;
+    string of_string_value = 4;
+    bytes of_bytes_value = 5;
+    int64 of_int_value = 6;
+    Enum of_enum_value = 7;
+  }
+  oneof oneof_expermental_type {
+    Bar of_expermental_bar = 8;
+    string of_expermental_string_value = 18;
+    bytes of_expermental_bytes_value = 19;
+  }
+  map<int64, int64> map_int_int = 106;
+  map<int64, int64> map_temp = 107;
+  map<int64, Bar> map_bar = 108;
+  map<int64, Enum> map_enum = 109;
+}
+
+message Bar {
+  required string name = 1 [default = "undefined-name"];
+  optional string nickname = 2 [default = "undefined-nickname"];
+  required Doo doo = 3;
+  required Moo moo = 6;
+  oneof of_bar {
+    int64 of_int_value = 4;
+    float of_float_value = 5;
+  }
+}
+
+message Doo {
+  required string name = 1 [default = "undefined-name"];
+  optional string nickname = 2 [default = "undefined-nickname"];
+  required Noo noo = 3;
+  repeated Noo noos = 6;
+  oneof oneof_doo {
+    Noo of_noo = 4;
+    int32 of_int = 5;
+  }
+  map<int64, Noo> map_noo = 108;
+}
+
+message Moo {
+  required string name = 1 [default = "undefined-name"];
+  optional string nickname = 2 [default = "undefined-nickname"];
+  oneof oneof_noo {
+    Noo of_noo2 = 4;
+    int32 of_int = 5;
+  }
+}
+
+message Noo {
+  required string name = 1 [default = "undefined-name"];
+  optional string nickname = 2 [default = "undefined-nickname"];
+}

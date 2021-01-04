@@ -73,7 +73,11 @@ class _MapField_ {
 
   void Clear() { data_->clear(); }
   void CopyFrom(const _MapField_& other) {
-    *data_ = *other.data_;
+    if (other.freeze()) {
+      data_ = other.data_;
+    } else {
+      *data_ = *other.data_;
+    }
   }
 
   _MapField_& operator=(const _MapField_& other) {
@@ -85,8 +89,19 @@ class _MapField_ {
 
   const std::shared_ptr<std::map<Key, T>>& __SharedPtr__() { return data_; }
 
+  bool freeze() const {
+    return freeze_;
+  }
+
+  void set_freeze() {
+    if (!(std::is_scalar<T>::value || std::is_same<std::string, T>::value)) {
+      freeze_ = true;
+    }
+  }
+
  private:
   std::shared_ptr<std::map<Key, T>> data_;
+  bool freeze_ = false;
 };
 
 }

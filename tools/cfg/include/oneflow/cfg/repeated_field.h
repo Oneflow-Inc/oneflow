@@ -65,8 +65,12 @@ class _RepeatedField_ {
     if (std::is_scalar<T>::value || std::is_same<std::string, T>::value) {
       *data_ = *other.data_;
     } else {
-      data_->clear();
-      for (const auto& elem : other) { *Add() = elem; }
+      if (other.freeze()) {
+        data_ = other.data_;
+      } else {
+        data_->clear();
+        for (const auto& elem : other) { *Add() = elem; }
+      }
     }
   }
 
@@ -90,8 +94,17 @@ class _RepeatedField_ {
 
   const std::shared_ptr<std::vector<T>>& __SharedPtr__() { return data_; }
 
+  bool freeze() const {
+    return freeze_;
+  }
+
+  void set_freeze() {
+    freeze_ = true;
+  }
+
  private:
   std::shared_ptr<std::vector<T>> data_;
+  bool freeze_ = false;
 };
 
 }
