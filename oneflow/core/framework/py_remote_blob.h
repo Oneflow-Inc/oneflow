@@ -105,7 +105,7 @@ class LazyConsistentBlob : public ConsistentBlob {
 
   std::shared_ptr<Shape> shape() const override {
     const std::string& log_warning = get_shape_log_warning();
-    if (log_warning.empty()) { LOG(ERROR) << log_warning; }
+    if (!log_warning.empty()) { LOG(ERROR) << log_warning; }
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     auto shape = CHECK_JUST(ctx->GetStaticShape(logical_blob_name()));
     return shape;
