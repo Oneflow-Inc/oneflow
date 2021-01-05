@@ -46,7 +46,7 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
     def test_FixedTensorDef_no_batch_axis(test_case):
         @flow.global_function()
         def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=None)):
-            test_case.assertTrue(x.batch_axis == oneflow_api.INVALID_BATCH_AXIS)
+            test_case.assertTrue(x.batch_axis == flow.INVALID_BATCH_AXIS)
             return x
 
         data = np.ones((2, 5), dtype=np.float32)
