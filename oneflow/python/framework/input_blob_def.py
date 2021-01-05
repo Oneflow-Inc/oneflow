@@ -354,7 +354,12 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
         sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
             job_name, mirrored_lbn, i
         )
-        sub_consistent_blob_list.append(oneflow_api.ConsistentBlob(sub_lbi))
+        lbi = lbi_util.LogicalBlobId()
+        lbi.set_op_name(sub_lbi.op_name)
+        lbi.set_blob_name(sub_lbi.blob_name)
+        sub_consistent_blob_list.append(
+            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.distribute.auto())
+        )
 
 
 def _MakePushNdarrayCallback(ndarray):
