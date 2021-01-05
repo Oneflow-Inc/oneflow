@@ -210,7 +210,7 @@ class layers:
         weight_shape = (input.shape[1], filters, size, size)
         output_shape = (
             input.shape[0],
-            input.shape[1],
+            filters,
             input.shape[2] * strides,
             input.shape[3] * strides,
         )

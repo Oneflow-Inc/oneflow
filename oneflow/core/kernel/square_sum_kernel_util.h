@@ -20,9 +20,16 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename T>
+struct SquareSumParam {
+  const T* ptr;
+  int64_t count;
+};
+
 template<DeviceType device_type, typename T>
 struct SquareSumKernelUtil {
   static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y);
 };
 
 }  // namespace oneflow

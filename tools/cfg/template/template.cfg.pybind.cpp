@@ -133,8 +133,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% if not util.class_is_map_entry(cls) %}
   {
     pybind11::class_<Const{{ util.class_name(cls) }}, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
-    // the data of `self` will be moved to the result which is always mutable
-    registry.def("Move", &Const{{ util.class_name(cls) }}::__Move__);
     registry.def("__id__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
@@ -183,7 +181,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def("{{ util.oneof_name(oneof) }}_case",  &Const{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
-    registry.def("has_{{ util.oneof_name(oneof) }}",  &Const{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
         [](const pybind11::object&){ return {{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
 {% for field in util.oneof_type_fields(oneof) %}
@@ -198,7 +195,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
     registry.def("Clear", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::Clear);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const Const{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const {{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
-    registry.def("Move", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Move__);
     registry.def("__id__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
@@ -276,7 +272,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# oneof_fields #}
         ;
     registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
-    registry.def("has_{{ util.oneof_name(oneof) }}",  &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
 {% endfor %}{# oneofs #}
   }
 {% endif %}{# cls is not entry #}

@@ -99,8 +99,8 @@ def GetEmptyPlacementScope(device_tag, machine_device_ids):
 def GetNormalModePlacementScope(device_tag, machine_device_ids):
     sess = session_ctx.GetDefaultSession()
     scope = scope_util.MakeScope(
-        lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
-            builder, device_tag, machine_device_ids
+        lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
+            old_scope, device_tag, machine_device_ids
         )
     )
     return scope_util.ScopeContext(scope)
@@ -113,8 +113,8 @@ def GetGlobalModePlacementScope(device_tag, machine_device_ids):
     sess = session_ctx.GetDefaultSession()
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewParallelDesc(
-            builder, device_tag, machine_device_ids
+        return builder.BuildScopeWithNewParallelDesc(
+            old_scope, device_tag, machine_device_ids
         )
 
     scope_ctx = scope_util.ScopeContext(scope_util.MakeScope(BuildScope))

@@ -18,10 +18,10 @@ from __future__ import absolute_import
 import oneflow as flow
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
-
+import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.remote_blob import BlobDef
 from typing import Optional, Sequence, Union
 import random
 import sys
@@ -30,14 +30,14 @@ import traceback
 
 @oneflow_export("data.OFRecordRawDecoder", "data.ofrecord_raw_decoder")
 def OFRecordRawDecoder(
-    input_blob: BlobDef,
+    input_blob: oneflow_api.BlobDesc,
     blob_name: str,
     shape: Sequence[int],
     dtype: dtype_util.dtype,
     dim1_varying_length: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     if name is None:
         name = id_util.UniqueStr("OFRecordRawDecoder_")
     return (
@@ -58,8 +58,8 @@ def OFRecordRawDecoder(
 
 @oneflow_export("data.OFRecordBytesDecoder", "data.ofrecord_bytes_decoder")
 def OFRecordBytesDecoder(
-    input_blob: BlobDef, blob_name: str, name: Optional[str] = None,
-) -> BlobDef:
+    input_blob: oneflow_api.BlobDesc, blob_name: str, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     if name is None:
         name = id_util.UniqueStr("OFRecordBytesDecoder_")
     return (
@@ -78,7 +78,7 @@ def OFRecordBytesDecoder(
     "data.OFRecordImageDecoderRandomCrop", "data.ofrecord_image_decoder_random_crop"
 )
 def api_ofrecord_image_decoder_random_crop(
-    input_blob: BlobDef,
+    input_blob: oneflow_api.BlobDesc,
     blob_name: str,
     color_space: str = "BGR",
     num_attempts: int = 10,
@@ -86,11 +86,11 @@ def api_ofrecord_image_decoder_random_crop(
     random_area: Sequence[float] = [0.08, 1.0],
     random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
     name: str = "OFRecordImageDecoderRandomCrop",
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator is an image decoder with random crop. 
 
     Args:
-        input_blob (BlobDef): The input Blob
+        input_blob (oneflow_api.BlobDesc): The input Blob
         blob_name (str): The name of the Blob
         color_space (str, optional): The color space, such as "RGB", "BGR". Defaults to "BGR".
         num_attempts (int, optional): The maximum number of random cropping attempts. Defaults to 10.
@@ -100,7 +100,7 @@ def api_ofrecord_image_decoder_random_crop(
         name (str, optional): The name for the operation. Defaults to "OFRecordImageDecoderRandomCrop".
 
     Returns:
-        BlobDef: The random cropped Blob
+        oneflow_api.BlobDesc: The random cropped Blob
 
     For example: 
 
@@ -134,7 +134,7 @@ def api_ofrecord_image_decoder_random_crop(
             label = flow.data.OFRecordRawDecoder(
                 ofrecord, "class/label", shape=(1, ), dtype=flow.int32
             )
-            
+
             return res_image, label
 
         if __name__ == "__main__":
@@ -188,7 +188,7 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
         )
         self.op_module_builder.user_op_module.InitOpKernel()
 
-    def forward(self, input: BlobDef):
+    def forward(self, input: oneflow_api.BlobDesc):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
@@ -205,21 +205,21 @@ class OFRecordImageDecoderRandomCropModule(module_util.Module):
 
 @oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")
 def OFRecordImageDecoder(
-    input_blob: BlobDef,
+    input_blob: oneflow_api.BlobDesc,
     blob_name: str,
     color_space: str = "BGR",
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator is an image decoder. 
 
     Args:
-        input_blob (BlobDef): The input Blob
+        input_blob (oneflow_api.BlobDesc): The input Blob
         blob_name (str): The name of the input Blob
         color_space (str, optional): The color space, such as "RGB", "BGR". Defaults to "BGR".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob 
+        oneflow_api.BlobDesc: The result Blob 
 
     For example: 
 
@@ -253,7 +253,7 @@ def OFRecordImageDecoder(
             label = flow.data.OFRecordRawDecoder(
                 ofrecord, "class/label", shape=(1, ), dtype=flow.int32
             )
-            
+
             return res_image, label
 
         if __name__ == "__main__":
@@ -278,7 +278,7 @@ def OFRecordImageDecoder(
 
 @oneflow_export("image.Resize", "image.resize", "image_resize")
 def api_image_resize(
-    image: BlobDef,
+    image: oneflow_api.BlobDesc,
     target_size: Union[int, Sequence[int]] = None,
     min_size: Optional[int] = None,
     max_size: Optional[int] = None,
@@ -294,7 +294,7 @@ def api_image_resize(
     resize_shorter: int = 0,
     resize_x: int = 0,
     resize_y: int = 0,
-) -> Union[BlobDef, Sequence[BlobDef]]:
+) -> Union[oneflow_api.BlobDesc, Sequence[oneflow_api.BlobDesc]]:
     r"""Resize images to target size.
 
     Args:
@@ -351,7 +351,7 @@ def api_image_resize(
             label = flow.data.OFRecordRawDecoder(
                 ofrecord, "class/label", shape=(1, ), dtype=flow.int32
             )
-            
+
             return res_image, label
 
         if __name__ == "__main__":
@@ -490,18 +490,18 @@ def api_image_resize(
 
 @oneflow_export("image.target_resize", "image_target_resize")
 def api_image_target_resize(
-    images: BlobDef,
+    images: oneflow_api.BlobDesc,
     target_size: int,
     min_size: Optional[int] = None,
     max_size: Optional[int] = None,
     resize_side: str = "shorter",
     interpolation_type: str = "auto",
     name: Optional[str] = None,
-) -> Sequence[BlobDef]:
+) -> Sequence[oneflow_api.BlobDesc]:
     """This operator resizes image to target size. 
 
     Args:
-        images (BlobDef): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
+        images (oneflow_api.BlobDesc): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
         target_size (int): An int, the target size. 
         min_size (Optional[int], optional): If `min_size` is not None, the shorter side must be greater than or equal to `min_size`. Default is None. Defaults to None.
         max_size (Optional[int], optional): If `max_size` is not None, the longer side must be less than or equal to `max_size`. Defaults to None.
@@ -510,7 +510,7 @@ def api_image_target_resize(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        Sequence[BlobDef]: A Sequence includes the result Blob. 
+        Sequence[oneflow_api.BlobDesc]: A Sequence includes the result Blob. 
 
     For example: 
 
@@ -605,8 +605,8 @@ def api_image_target_resize(
 
 @oneflow_export("image.CropMirrorNormalize", "image.crop_mirror_normalize")
 def CropMirrorNormalize(
-    input_blob: BlobDef,
-    mirror_blob: Optional[BlobDef] = None,
+    input_blob: oneflow_api.BlobDesc,
+    mirror_blob: Optional[oneflow_api.BlobDesc] = None,
     color_space: str = "BGR",
     output_layout: str = "NCHW",
     crop_h: int = 0,
@@ -617,7 +617,7 @@ def CropMirrorNormalize(
     std: Sequence[float] = [1.0],
     output_dtype: dtype_util.dtype = dtype_util.float,
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator performs the cropping, normalization, and horizontal flip for input Blob. 
 
     If `crop_h` and `crop_w` are provided, the image cropping position is specified by "crop_pos_y" and "crop_pos_x". 
@@ -633,8 +633,8 @@ def CropMirrorNormalize(
     The `Width` and `Height` is the width and height of input Blob. 
 
     Args:
-        input_blob (BlobDef): The input Blob. 
-        mirror_blob (Optional[BlobDef], optional): The operation for horizontal flip, if it is `None`, the operator will not perform the horizontal flip. Defaults to None.
+        input_blob (oneflow_api.BlobDesc): The input Blob. 
+        mirror_blob (Optional[oneflow_api.BlobDesc], optional): The operation for horizontal flip, if it is `None`, the operator will not perform the horizontal flip. Defaults to None.
         color_space (str, optional): The color space for input Blob. Defaults to "BGR".
         output_layout (str, optional): The output format. Defaults to "NCHW".
         crop_h (int, optional): The image cropping window height. Defaults to 0.
@@ -650,7 +650,7 @@ def CropMirrorNormalize(
         NotImplementedError: The data type of input Blob should be `tensor_buffer` or `uint8`
 
     Returns:
-        BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -741,17 +741,17 @@ def CropMirrorNormalize(
 
 @oneflow_export("image.random_crop", "image_random_crop")
 def api_image_random_crop(
-    input_blob: BlobDef,
+    input_blob: oneflow_api.BlobDesc,
     num_attempts: int = 10,
     seed: Optional[int] = None,
     random_area: Sequence[float] = None,
     random_aspect_ratio: Sequence[float] = None,
     name: str = "ImageRandomCrop",
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator crops the input image randomly. 
 
     Args:
-        input_blob (BlobDef): The input Blob. 
+        input_blob (oneflow_api.BlobDesc): The input Blob. 
         num_attempts (int, optional): The maximum number of random cropping attempts. Defaults to 10.
         seed (Optional[int], optional): The random seed. Defaults to None.
         random_area (Sequence[float], optional): The random cropping area. Defaults to None.
@@ -759,7 +759,7 @@ def api_image_random_crop(
         name (str, optional): The name for the operation. Defaults to "ImageRandomCrop".
 
     Returns:
-        BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -869,7 +869,7 @@ class ImageRandomCropModule(module_util.Module):
         )
         self.op_module_builder.user_op_module.InitOpKernel()
 
-    def forward(self, input: BlobDef):
+    def forward(self, input: oneflow_api.BlobDesc):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
@@ -890,7 +890,7 @@ def api_coin_flip(
     seed: Optional[int] = None,
     probability: float = 0.5,
     name: str = "CoinFlip",
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator performs the horizontal flip. 
 
     Args:
@@ -900,7 +900,7 @@ def api_coin_flip(
         name (str, optional): The name for the operation. Defaults to "CoinFlip".
 
     Returns:
-        BlobDef: [description]
+        oneflow_api.BlobDesc: [description]
 
     For example: 
 
@@ -1005,21 +1005,21 @@ class CoinFlipModule(module_util.Module):
 
 @oneflow_export("image.decode", "image_decode")
 def image_decode(
-    images_bytes_buffer: BlobDef,
+    images_bytes_buffer: oneflow_api.BlobDesc,
     dtype: dtype_util.dtype = dtype_util.uint8,
     color_space: str = "BGR",
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator decode the image. 
 
     Args:
-        images_bytes_buffer (BlobDef): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
+        images_bytes_buffer (oneflow_api.BlobDesc): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
         dtype (dtype_util.dtype, optional): The data type. Defaults to dtype_util.uint8.
         color_space (str, optional): The color space. Defaults to "BGR".
         name (Optional[str], optional): The name for the opreation. Defaults to None.
 
     Returns:
-        BlobDef: The decoded image list. 
+        oneflow_api.BlobDesc: The decoded image list. 
 
     For example: 
 
@@ -1060,7 +1060,7 @@ def image_decode(
             ]
             decoded_images = image_decode_job([images_np_arr])
             return decoded_images[0]
-            
+
 
         if __name__ == "__main__": 
             img = _of_image_decode(['./img/1.jpg'])
@@ -1085,12 +1085,12 @@ def image_decode(
 
 @oneflow_export("image.batch_align", "image_batch_align")
 def image_batch_align(
-    images: BlobDef,
+    images: oneflow_api.BlobDesc,
     shape: Sequence[int],
     dtype: dtype_util.dtype,
     alignment: int,
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator aligns the shape for a batch of images. 
 
     The aligned shape is computed as: 
@@ -1102,14 +1102,14 @@ def image_batch_align(
         & shape_{height} = int(\frac{(shape_{height}+alignment-1)}{alignment})*alignment
 
     Args:
-        images (BlobDef): The images. 
+        images (oneflow_api.BlobDesc): The images. 
         shape (Sequence[int]): The maximum static shape of input images. 
         dtype (dtype_util.dtype): The data type. 
         alignment (int): The align factor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1194,21 +1194,21 @@ def image_batch_align(
 
 @oneflow_export("image.normalize", "image_normalize")
 def image_normalize(
-    image: BlobDef,
+    image: oneflow_api.BlobDesc,
     std: Sequence[float],
     mean: Sequence[float],
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator normalizes the image. 
 
     Args:
-        image (BlobDef): The input image. 
+        image (oneflow_api.BlobDesc): The input image. 
         std (Sequence[float]): The standard deviation of the images. 
         mean (Sequence[float]): The mean value of the images. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1289,8 +1289,10 @@ def image_normalize(
 
 @oneflow_export("image.flip", "image_flip")
 def image_flip(
-    image: BlobDef, flip_code: Union[int, BlobDef], name: Optional[str] = None
-) -> BlobDef:
+    image: oneflow_api.BlobDesc,
+    flip_code: Union[int, oneflow_api.BlobDesc],
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator flips the images. 
 
     The flip code corresponds to the different flip mode: 
@@ -1304,12 +1306,12 @@ def image_flip(
     17 (0x11): Both Horizontal and Vertical Flip
 
     Args:
-        image (BlobDef): The input images. 
-        flip_code (Union[int, BlobDef]): The flip code. 
+        image (oneflow_api.BlobDesc): The input images. 
+        flip_code (Union[int, oneflow_api.BlobDesc]): The flip code. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1366,12 +1368,12 @@ def image_flip(
                            flip_code=1)
 
     """
-    assert isinstance(image, BlobDef)
+    assert isinstance(image, oneflow_api.BlobDesc)
 
     if name is None:
         name = id_util.UniqueStr("ImageFlip_")
 
-    if not isinstance(flip_code, BlobDef):
+    if not isinstance(flip_code, oneflow_api.BlobDesc):
         assert isinstance(flip_code, int)
         flip_code = flow.constant(
             flip_code,
@@ -1395,11 +1397,11 @@ def image_flip(
 
 @oneflow_export("detection.object_bbox_flip", "object_bbox_flip")
 def object_bbox_flip(
-    bbox: BlobDef,
-    image_size: BlobDef,
-    flip_code: Union[int, BlobDef],
+    bbox: oneflow_api.BlobDesc,
+    image_size: oneflow_api.BlobDesc,
+    flip_code: Union[int, oneflow_api.BlobDesc],
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator flips the object bounding box. 
 
     The flip code corresponds to the different flip mode: 
@@ -1413,14 +1415,14 @@ def object_bbox_flip(
     17 (0x11): Both Horizontal and Vertical Flip
 
     Args:
-        bbox (BlobDef): The bounding box. 
-        image_size (BlobDef): The size of input image. 
-        flip_code (Union[int, BlobDef]): The flip code. 
+        bbox (oneflow_api.BlobDesc): The bounding box. 
+        image_size (oneflow_api.BlobDesc): The size of input image. 
+        flip_code (Union[int, oneflow_api.BlobDesc]): The flip code. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob 
-    
+        oneflow_api.BlobDesc: The result Blob 
+
     For example: 
 
     .. code-block:: python 
@@ -1476,18 +1478,18 @@ def object_bbox_flip(
                                             image_size, 
                                             flip_code=1) # Horizontal Flip
             print(bbox_flip[0][0])
-            
+
             # [[399.  40. 459. 160.]
             #  [409.  50. 449. 100.]]
     """
-    assert isinstance(bbox, BlobDef)
-    assert isinstance(image_size, BlobDef)
+    assert isinstance(bbox, oneflow_api.BlobDesc)
+    assert isinstance(image_size, oneflow_api.BlobDesc)
     assert bbox.shape[0] == image_size.shape[0]
 
     if name is None:
         name = id_util.UniqueStr("ObjectBboxFlip_")
 
-    if not isinstance(flip_code, BlobDef):
+    if not isinstance(flip_code, oneflow_api.BlobDesc):
         assert isinstance(flip_code, int)
         flip_code = flow.constant(
             flip_code,
@@ -1512,17 +1514,17 @@ def object_bbox_flip(
 
 @oneflow_export("detection.object_bbox_scale", "object_bbox_scale")
 def object_bbox_scale(
-    bbox: BlobDef, scale: BlobDef, name: Optional[str] = None
-) -> BlobDef:
+    bbox: oneflow_api.BlobDesc, scale: oneflow_api.BlobDesc, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator scales the input image and the corresponding bounding box. It returns the scaled bounding box. 
 
     Args:
-        bbox (BlobDef): The bounding box. 
-        scale (BlobDef): The scale factor. 
+        bbox (oneflow_api.BlobDesc): The bounding box. 
+        scale (oneflow_api.BlobDesc): The scale factor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob.
+        oneflow_api.BlobDesc: The result Blob.
 
     For example: 
 
@@ -1614,13 +1616,13 @@ def object_bbox_scale(
 
             # [[[ 16.0218    32.09169   64.0872   128.36676 ]
             #   [ 24.032698  40.114613  56.076298  80.229225]]]
-            
+
             # [[[ 24.186047  37.170418  80.       148.68167 ]
             #   [ 33.488373  52.038586  70.69768   98.5016  ]]]
 
     """
-    assert isinstance(bbox, BlobDef)
-    assert isinstance(scale, BlobDef)
+    assert isinstance(bbox, oneflow_api.BlobDesc)
+    assert isinstance(scale, oneflow_api.BlobDesc)
     assert bbox.shape[0] == scale.shape[0]
 
     if name is None:
@@ -1641,11 +1643,11 @@ def object_bbox_scale(
     "detection.object_segmentation_polygon_flip", "object_segmentation_polygon_flip"
 )
 def object_segm_poly_flip(
-    poly: BlobDef,
-    image_size: BlobDef,
-    flip_code: Union[int, BlobDef],
+    poly: oneflow_api.BlobDesc,
+    image_size: oneflow_api.BlobDesc,
+    flip_code: Union[int, oneflow_api.BlobDesc],
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator flips the segmentation points in image. 
 
     The flip code corresponds to the different flip mode: 
@@ -1659,14 +1661,14 @@ def object_segm_poly_flip(
     17 (0x11): Both Horizontal and Vertical Flip
 
     Args:
-        poly (BlobDef): The poly segmentation points. 
-        image_size (BlobDef): The image size. 
-        flip_code (Union[int, BlobDef]): The filp code. 
+        poly (oneflow_api.BlobDesc): The poly segmentation points. 
+        image_size (oneflow_api.BlobDesc): The image size. 
+        flip_code (Union[int, oneflow_api.BlobDesc]): The filp code. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob 
-    
+        oneflow_api.BlobDesc: The result Blob 
+
     For example: 
 
     .. code-block:: python 
@@ -1746,21 +1748,21 @@ def object_segm_poly_flip(
             # [[[460.  40.]
             #   [400. 160.]
             #   [380. 210.]]]
-            
+
             # of_segm_poly_list[1]
             # [[[615.  45.]
             #   [555. 165.]
             #   [535. 215.]]]
 
     """
-    assert isinstance(poly, BlobDef)
-    assert isinstance(image_size, BlobDef)
+    assert isinstance(poly, oneflow_api.BlobDesc)
+    assert isinstance(image_size, oneflow_api.BlobDesc)
     assert poly.shape[0] == image_size.shape[0]
 
     if name is None:
         name = id_util.UniqueStr("ObjectSegmPolyFilp_")
 
-    if not isinstance(flip_code, BlobDef):
+    if not isinstance(flip_code, oneflow_api.BlobDesc):
         assert isinstance(flip_code, int)
         flip_code = flow.constant(
             flip_code,
@@ -1787,17 +1789,17 @@ def object_segm_poly_flip(
     "detection.object_segmentation_polygon_scale", "object_segmentation_polygon_scale"
 )
 def object_segm_poly_scale(
-    poly: BlobDef, scale: BlobDef, name: Optional[str] = None
-) -> BlobDef:
+    poly: oneflow_api.BlobDesc, scale: oneflow_api.BlobDesc, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator scales the segmentation points in the images. 
 
     Args:
-        poly (BlobDef): The poly segmentation points. 
-        scale (BlobDef): The image scale. 
+        poly (oneflow_api.BlobDesc): The poly segmentation points. 
+        scale (oneflow_api.BlobDesc): The image scale. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -1897,19 +1899,19 @@ def object_segm_poly_scale(
             segm_poly_list = []
             segmentations = [[[20.0, 40.0], [80.0, 160.0], [100.0, 210.0]], # Image 1 segmentation point
                             [[25.0, 45.0], [85.0, 165.0], [105.0, 215.0]]] # Image 2 segmentation point
-            
+
             for segmentation in segmentations: 
                 polygon = []
                 for seg in segmentation: 
                     polygon.extend(seg)
                 poly_array = np.array(polygon, dtype=np.single).reshape(-1, 2) # Reshape it
                 segm_poly_list.append(poly_array)
-            
+
             bbox, size = _of_object_segm_poly_scale(images, segm_poly_list, 280, 350)
 
     """
-    assert isinstance(poly, BlobDef)
-    assert isinstance(scale, BlobDef)
+    assert isinstance(poly, oneflow_api.BlobDesc)
+    assert isinstance(scale, oneflow_api.BlobDesc)
     assert poly.shape[0] == scale.shape[0]
 
     if name is None:
@@ -1931,18 +1933,21 @@ def object_segm_poly_scale(
     "object_segmentation_polygon_to_mask",
 )
 def object_segm_poly_to_mask(
-    poly: BlobDef, poly_index: BlobDef, image_size: BlobDef, name: Optional[str] = None
-) -> BlobDef:
+    poly: oneflow_api.BlobDesc,
+    poly_index: oneflow_api.BlobDesc,
+    image_size: oneflow_api.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator converts the poly segment points to the segment mask array. 
 
     Args:
-        poly (BlobDef): The poly segment points. 
-        poly_index (BlobDef): The poly segment index. 
-        image_size (BlobDef): The input image size. 
+        poly (oneflow_api.BlobDesc): The poly segment points. 
+        poly_index (oneflow_api.BlobDesc): The poly segment index. 
+        image_size (oneflow_api.BlobDesc): The input image size. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     .. code-block:: python 
 
@@ -2073,10 +2078,10 @@ def object_segm_poly_to_mask(
         if __name__ == "__main__": 
             images = _read_images_by_cv(['./img/1.jpg', './img/2.jpg'])
             segm_poly_list = []
-            
+
             segmentations = [[[20.0, 40.0, 80.0, 160.0, 100.0, 210.0, 120.0, 215.0]], # Image 1 segmentation point
                             [[24.0, 42.0, 86.0, 168.0, 103.0, 223.0, 125.0, 235.0]]] # Image 2 segmentation point
-            
+
             for segmentation in segmentations: 
                 polygon = []
                 for seg in segmentation: 
@@ -2098,9 +2103,9 @@ def object_segm_poly_to_mask(
             ] # reshape it 
 
     """
-    assert isinstance(poly, BlobDef)
-    assert isinstance(poly_index, BlobDef)
-    assert isinstance(image_size, BlobDef)
+    assert isinstance(poly, oneflow_api.BlobDesc)
+    assert isinstance(poly_index, oneflow_api.BlobDesc)
+    assert isinstance(image_size, oneflow_api.BlobDesc)
     assert poly.shape[0] == poly_index.shape[0]
     assert poly.shape[0] == image_size.shape[0]
 
@@ -2129,7 +2134,7 @@ def api_coco_reader(
     group_by_aspect_ratio: bool = True,
     stride_partition: bool = True,
     name: str = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     assert name is not None
     module = flow.find_or_create_module(
         name,
@@ -2213,7 +2218,7 @@ def ofrecord_image_classification_reader(
     decode_buffer_size_per_thread: int = 32,
     num_decode_threads_per_machine: Optional[int] = None,
     name: Optional[str] = None,
-) -> BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator creates a reader for image classification tasks. 
 
     Args:
@@ -2233,7 +2238,7 @@ def ofrecord_image_classification_reader(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 

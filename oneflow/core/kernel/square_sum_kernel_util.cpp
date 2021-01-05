@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/square_sum_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -23,6 +22,15 @@ struct SquareSumKernelUtil<DeviceType::kCPU, T> {
   static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
     T sum = 0;
     FOR_RANGE(int64_t, i, 0, n) { sum += x[i] * x[i]; }
+    *y = sum;
+  }
+
+  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y) {
+    T sum = 0;
+    FOR_RANGE(int64_t, i, 0, params.size()) {
+      const auto& p = params[i];
+      FOR_RANGE(int64_t, j, 0, p.count) { sum += p.ptr[j] * p.ptr[j]; }
+    }
     *y = sum;
   }
 };

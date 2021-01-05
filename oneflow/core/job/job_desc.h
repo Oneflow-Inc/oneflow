@@ -27,6 +27,10 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace cfg {
+class JobConfigProto;
+}
+
 bool IsInterfaceOpConf(const OperatorConf& op_conf);
 
 class JobDesc final {
@@ -35,6 +39,11 @@ class JobDesc final {
   JobDesc(const JobConfigProto& job_conf, int64_t job_id);
   explicit JobDesc(const JobConfigProto& job_conf) : JobDesc(job_conf, -1) {}
   ~JobDesc() = default;
+
+  static Maybe<JobDesc> New(int64_t symbol_id, const JobConfigProto& job_conf);
+  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf() const { return cfg_job_conf_; }
+
   // Common
   int64_t job_id() const { return job_id_; }
   const std::string& job_name() const { return job_conf_.job_name(); }
@@ -58,9 +67,6 @@ class JobDesc final {
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
   };
-  bool enable_non_distributed_optimizer() const {
-    return job_conf_.enable_non_distributed_optimizer();
-  }
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
@@ -84,14 +90,16 @@ class JobDesc final {
   // Train conf
   int64_t TotalBatchNum() const;
   int64_t NumOfPiecesInBatch() const;
-  int32_t loss_scale_factor() const;
 
  private:
-  void Init();
+  Maybe<void> Init();
   const AttrValue& GetFunctionFlagVal(const std::string& field_name) const;
 
   JobConfigProto job_conf_;
   int64_t job_id_;
+  Maybe<int64_t> symbol_id_;
+  // merge job_conf_ and cfg_job_conf_ after cfg::JobConfigProto taken as a constructor argument
+  std::shared_ptr<cfg::JobConfigProto> cfg_job_conf_;
 };
 
 typedef HashMap<std::string, int64_t> JobName2JobId;

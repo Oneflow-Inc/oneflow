@@ -16,6 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
 #define ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
 
+#include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/operator/op_attribute.cfg.h"
+#include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/scope.cfg.h"
+
 namespace oneflow {
 
 class ForeignCallback {
@@ -23,12 +28,13 @@ class ForeignCallback {
   ForeignCallback() = default;
   virtual ~ForeignCallback() = default;
 
-  virtual void EagerMirroredCast(const std::string& op_attribute_str,
-                                 const std::string& parallel_conf_str) const {
+  virtual void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+                                 const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }
-  virtual void EagerInterpretCompletedOp(const std::string& op_attribute_str,
-                                         const std::string& parallel_conf_str) const {
+  virtual void EagerInterpretCompletedOp(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }
 
@@ -37,13 +43,15 @@ class ForeignCallback {
   virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
 
   // return scope_symbol_id
-  virtual int64_t MakeScopeSymbol(const std::string& job_conf, const std::string& parallel_conf,
+  virtual int64_t MakeScopeSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                  const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
                                   bool is_mirrored) const {
     UNIMPLEMENTED();
     return 0;
   }
   // return parallel_desc_symbol_id
-  virtual int64_t MakeParallelDescSymbol(const std::string& parallel_conf) const {
+  virtual int64_t MakeParallelDescSymbol(
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
     return 0;
   }

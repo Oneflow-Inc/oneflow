@@ -127,6 +127,7 @@ class UserOpWrapper final {
   void BindGradTensorWithOpInput(const std::string& logical_grad_blob_name,
                                  const std::string& input_arg_name, int32_t index) const;
   bool NeedGenGradTensor4OpInput(const std::string& input_arg_name, int32_t index) const;
+  bool HasGradTensor4OpOutput(const std::string& output_arg_name, int32_t index) const;
 
  private:
   UserOpConfWrapper conf_;

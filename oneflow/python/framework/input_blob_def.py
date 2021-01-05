@@ -23,8 +23,6 @@ import numpy as np
 
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as lbi_util
-import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
@@ -33,18 +31,20 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow_api
 from functools import reduce
 import traceback
 
 
-class ArgBlobDef(blob_desc.BlobDesc):
+class ArgBlobDef(oneflow_api.BlobDesc):
     def __init__(self, shape, dtype, batch_axis, name=None):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
             name = id_util.UniqueStr("Input_")
-        lbi.op_name = name
-        lbi.blob_name = "out"
-        blob_desc.BlobDesc.__init__(self, lbi)
+        lbi.set_op_name(name)
+        lbi.set_blob_name("out")
+        oneflow_api.BlobDesc.__init__(self, lbi, oneflow_api.distribute.auto())
         assert type(shape) is tuple
         for dim in shape:
             assert type(dim) is int
@@ -152,7 +152,7 @@ class FixedTensorDef(ArgBlobDef):
         parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
         if (
             parallel_symbol.device_tag == "gpu"
-            and list(parallel_symbol.machine_id2device_id_list.keys()) == [0]
+            and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0]
             and parallel_symbol.parallel_num == 1
         ):
             device_tag = "gpu"
@@ -312,7 +312,7 @@ class MirroredTensorListDef(ArgBlobDef):
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
     compile_context.CurJobAddMirroredOp(op_conf)
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
         job_name, mirrored_lbn
     )
