@@ -436,6 +436,8 @@ class EagerConsistentBlob(
             cfg_lbi.set_op_name(lbi.op_name)
             cfg_lbi.set_blob_name(lbi.blob_name)
             lbi = cfg_lbi
+        if job_name is None:
+            job_name = ""
         oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
         self._Init(blob_object)
 
