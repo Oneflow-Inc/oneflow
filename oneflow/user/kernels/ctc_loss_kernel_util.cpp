@@ -43,14 +43,14 @@ template<typename T, typename IDX>
 struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
   static void CtcLossForward(DeviceCtx* ctx, const IDX batch_size, const T* log_probs_ptr,
                              const int* targets_ptr, const IDX* input_lengths_ptr,
-                             const IDX* target_length_ptr, T* alpha_ptr, T* loss_ptr,
+                             const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<IDX, 3> input_helper,
                              NdIndexOffsetHelper<IDX, 3> alpha_helper, IDX max_target_length,
                              const int blank) {
     constexpr T neginf = -std::numeric_limits<T>::infinity();
     FOR_RANGE(int32_t, b, 0, batch_size) {
       IDX input_length = input_lengths_ptr[b];
-      IDX target_length = target_length_ptr[b];
+      IDX target_length = target_lengths_ptr[b];
 
       IDX alpha_idx = alpha_helper.NdIndexToOffset(b, 0, 0);
       for (IDX s = 0; s < 2 * target_length + 1; s++) { alpha_ptr[alpha_idx + s] = neginf; }
@@ -107,7 +107,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const IDX batch_size, const T* log_probs_ptr,
                               const int* targets_ptr, const IDX* input_lengths_ptr,
-                              const IDX* target_length_ptr, T* beta_ptr, T* grad_ptr,
+                              const IDX* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<IDX, 3> input_helper,
                               NdIndexOffsetHelper<IDX, 3> beta_helper, IDX max_input_length,
                               IDX max_target_length, IDX num_labels, const int blank) {
@@ -116,7 +116,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
 
     FOR_RANGE(int32_t, b, 0, batch_size) {
       IDX input_length = input_lengths_ptr[b];
-      IDX target_length = target_length_ptr[b];
+      IDX target_length = target_lengths_ptr[b];
       T nll = loss_ptr[b];
 
       if (input_length > 0) {

@@ -48,7 +48,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int* targets_ptr = targets->dptr<int>();
     const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
-    const IDX* target_length_ptr = target_lengths->dptr<IDX>();
+    const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
     const int blank = ctx->Attr<int>("blank");
     IDX max_input_length = log_probs->shape().At(0);
     IDX batch_size = log_probs->shape().At(1);
@@ -59,8 +59,8 @@ class CtcLossKernel final : public user_op::OpKernel {
     CHECK_EQ(target_lengths->shape().At(0), batch_size);
     CHECK_GE(blank, 0);
     CHECK_LT(blank, num_labels);
-    for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
-    for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_target_length, target_length_ptr[b]); }
+    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
+    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<IDX, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<IDX, 3> alpha_helper(batch_size, max_input_length,
                                              2 * max_target_length + 1);
@@ -68,7 +68,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     T* alpha_ptr = alpha->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
         ctx->device_ctx(), batch_size, log_probs_ptr, targets_ptr, input_lengths_ptr,
-        target_length_ptr, alpha_ptr, loss_ptr, input_helper, alpha_helper, max_target_length,
+        target_lengths_ptr, alpha_ptr, loss_ptr, input_helper, alpha_helper, max_target_length,
         blank);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -111,7 +111,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int* targets_ptr = targets->dptr<int>();
     const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
-    const IDX* target_length_ptr = target_lengths->dptr<IDX>();
+    const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
     const int blank = ctx->Attr<int>("blank");
 
     IDX max_input_length = log_probs->shape().At(0);
@@ -123,8 +123,8 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     CHECK_EQ(target_lengths->shape().At(0), batch_size);
     CHECK_GE(blank, 0);
     CHECK_LT(blank, num_labels);
-    for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
-    for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_target_length, target_length_ptr[b]); }
+    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
+    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<IDX, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<IDX, 3> beta_helper(batch_size, max_input_length,
                                             2 * max_target_length + 1);
@@ -132,7 +132,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     T* beta_ptr = beta->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossBackward(
         ctx->device_ctx(), grad_out_ptr, loss_ptr, alpha_ptr, batch_size, log_probs_ptr,
-        targets_ptr, input_lengths_ptr, target_length_ptr, beta_ptr, grad_ptr, input_helper,
+        targets_ptr, input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper,
         beta_helper, max_input_length, max_target_length, num_labels, blank);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -100,14 +100,6 @@ def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
 def compare_with_np(
     device_type, max_logit_length, batch_size, num_classes, max_label_length, data_type
 ):
-    print(
-        device_type,
-        max_logit_length,
-        batch_size,
-        num_classes,
-        max_label_length,
-        data_type,
-    )
     assert device_type in ["gpu", "cpu"]
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
@@ -157,11 +149,11 @@ def compare_with_np(
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu"]
-    arg_dict["max_logit_length"] = [100]  # Input sequence length
-    arg_dict["batch_size"] = [10]  # Batch size
-    arg_dict["num_classes"] = [10]  # Number of classes (including blank)
-    arg_dict["max_label_length"] = [100]  # Target length of longest target in batch
+    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["max_logit_length"] = [1000]
+    arg_dict["batch_size"] = [10]
+    arg_dict["num_classes"] = [10]
+    arg_dict["max_label_length"] = [100]
     arg_dict["data_type"] = ["float32"]
 
     return GenArgList(arg_dict)

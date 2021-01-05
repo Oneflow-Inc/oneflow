@@ -42,19 +42,15 @@ REGISTER_USER_OP("ctc_loss")
       *ctx->Shape4ArgNameAndIndex("alpha", 0) = Shape(
           {log_probs->shape().At(1), log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("log_probs", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
     });
-// .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-//   *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("log_probs", 0);
-//   return Maybe<void>::Ok();
-// })
-// .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-//   const user_op::TensorDesc& prediction_tensor =
-//       ctx->LogicalTensorDesc4InputArgNameAndIndex("log_probs", 0);
-//   FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
-//     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-//   }
-//   return Maybe<void>::Ok();
-// });
 
 REGISTER_USER_OP("ctc_loss_grad")
     .Input("grad_out")
@@ -84,19 +80,15 @@ REGISTER_USER_OP("ctc_loss_grad")
       *ctx->Shape4ArgNameAndIndex("beta", 0) = Shape(
           {log_probs->shape().At(1), log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("grad", 0) = *ctx->BatchAxis4ArgNameAndIndex("log_probs", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
     });
-// .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-//   *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("log_probs", 0);
-//   return Maybe<void>::Ok();
-// })
-// .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-//   const user_op::TensorDesc& prediction_tensor =
-//       ctx->LogicalTensorDesc4InputArgNameAndIndex("log_probs", 0);
-//   FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
-//     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-//   }
-//   return Maybe<void>::Ok();
-// });
 
 REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto ctc_loss_grad_op_name = ctx->FwOp().op_name() + "_grad";

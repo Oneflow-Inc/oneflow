@@ -43,14 +43,14 @@ __device__ __inline__ static int get_target_prime(const int* targets_ptr, int64_
 
 template<typename T, typename IDX>
 __global__ void CtcLossGpu(const IDX batch_size, const T* log_probs_ptr, const int* targets_ptr,
-                           const IDX* input_lengths_ptr, const IDX* target_length_ptr, T* alpha_ptr,
-                           T* loss_ptr, NdIndexOffsetHelper<IDX, 3> input_helper,
+                           const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                           T* alpha_ptr, T* loss_ptr, NdIndexOffsetHelper<IDX, 3> input_helper,
                            NdIndexOffsetHelper<IDX, 3> alpha_helper, IDX max_target_length,
                            const int blank) {
   constexpr T neginf = -INFINITY;
   CUDA_1D_KERNEL_LOOP(b, batch_size) {
     IDX input_length = input_lengths_ptr[b];
-    IDX target_length = target_length_ptr[b];
+    IDX target_length = target_lengths_ptr[b];
 
     IDX alpha_idx = alpha_helper.NdIndexToOffset(b, 0, 0);
     for (IDX s = 0; s < 2 * target_length + 1; s++) { alpha_ptr[alpha_idx + s] = neginf; }
@@ -108,7 +108,7 @@ __global__ void CtcLossGpu(const IDX batch_size, const T* log_probs_ptr, const i
 template<typename T, typename IDX>
 __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T* alpha_ptr,
                                const IDX batch_size, const T* log_probs_ptr, const int* targets_ptr,
-                               const IDX* input_lengths_ptr, const IDX* target_length_ptr,
+                               const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                                T* beta_ptr, T* grad_ptr, NdIndexOffsetHelper<IDX, 3> input_helper,
                                NdIndexOffsetHelper<IDX, 3> beta_helper, IDX max_input_length,
                                IDX max_target_length, IDX num_labels, const int blank) {
@@ -116,7 +116,7 @@ __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T
   FOR_RANGE(IDX, i, 0, input_helper.Size()) { grad_ptr[i] = neginf; }
   CUDA_1D_KERNEL_LOOP(b, batch_size) {
     IDX input_length = input_lengths_ptr[b];
-    IDX target_length = target_length_ptr[b];
+    IDX target_length = target_lengths_ptr[b];
     T nll = loss_ptr[b];
 
     if (input_length > 0) {
@@ -205,24 +205,24 @@ template<typename T, typename IDX>
 struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
   static void CtcLossForward(DeviceCtx* ctx, const IDX batch_size, const T* log_probs_ptr,
                              const int* targets_ptr, const IDX* input_lengths_ptr,
-                             const IDX* target_length_ptr, T* alpha_ptr, T* loss_ptr,
+                             const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<IDX, 3> input_helper,
                              NdIndexOffsetHelper<IDX, 3> alpha_helper, IDX max_target_length,
                              const int blank) {
     RUN_CUDA_KERNEL((CtcLossGpu<T, IDX>), ctx, batch_size, batch_size, log_probs_ptr, targets_ptr,
-                    input_lengths_ptr, target_length_ptr, alpha_ptr, loss_ptr, input_helper,
+                    input_lengths_ptr, target_lengths_ptr, alpha_ptr, loss_ptr, input_helper,
                     alpha_helper, max_target_length, blank);
   }
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const IDX batch_size, const T* log_probs_ptr,
                               const int* targets_ptr, const IDX* input_lengths_ptr,
-                              const IDX* target_length_ptr, T* beta_ptr, T* grad_ptr,
+                              const IDX* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<IDX, 3> input_helper,
                               NdIndexOffsetHelper<IDX, 3> beta_helper, IDX max_input_length,
                               IDX max_target_length, IDX num_labels, const int blank) {
     RUN_CUDA_KERNEL((CtcLossGradGpu<T, IDX>), ctx, batch_size, grad_out_ptr, loss_ptr, alpha_ptr,
-                    batch_size, log_probs_ptr, targets_ptr, input_lengths_ptr, target_length_ptr,
+                    batch_size, log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr,
                     beta_ptr, grad_ptr, input_helper, beta_helper, max_input_length,
                     max_target_length, num_labels, blank);
   }
