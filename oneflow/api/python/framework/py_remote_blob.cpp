@@ -27,6 +27,10 @@ std::shared_ptr<BlobDesc> ConsistentBlob::Clone() const {
   PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, ConsistentBlob, Clone, );
 }
 
+std::string LazyConsistentBlob::get_shape_log_warning() const {
+  PYBIND11_OVERRIDE_PURE(std::string, LazyConsistentBlob, get_shape_log_warning, );
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(
@@ -75,6 +79,24 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("parallel_size", &ConsistentBlob::parallel_size)
       .def("set_job_name", &ConsistentBlob::set_job_name)
       .def("with_distribute", &ConsistentBlob::with_distribute);
+
+  py::class_<LazyConsistentBlob, ConsistentBlob, std::shared_ptr<LazyConsistentBlob>>(
+      m, "LazyConsistentBlob")
+      .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
+                       std::shared_ptr<Distribute> distribute) {
+        return std::make_shared<LazyConsistentBlob>(lbi, job_name, distribute);
+      }))
+      .def_property_readonly("shape", &LazyConsistentBlob::shape)
+      .def_property_readonly(
+          "dtype", [](const std::shared_ptr<LazyConsistentBlob>& x) { return int(x->dtype()); })
+      .def_property_readonly("batch_axis", &LazyConsistentBlob::batch_axis)
+      .def_property_readonly("split_axis", &LazyConsistentBlob::batch_axis)
+      .def_property_readonly("is_dynamic", &LazyConsistentBlob::is_dynamic)
+      .def_property_readonly("is_tensor_list", &LazyConsistentBlob::is_tensor_list)
+      .def_property_readonly("parallel_conf", &LazyConsistentBlob::parallel_conf)
+      .def("IdenticalTo", &LazyConsistentBlob::IdenticalTo)
+      .def("with_gradient_distribute", &LazyConsistentBlob::with_gradient_distribute)
+      .def("get_shape_log_warning", &LazyConsistentBlob::get_shape_log_warning);
 }
 
 }  // namespace compatible_py

@@ -222,81 +222,11 @@ def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lb
     return parallel_conf_cfg
 
 
-def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    axis_str = oneflow_api.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
-        job_name, lbn
-    )
-    int_list = text_format.Parse(axis_str, record_util.Int64List())
-    return tuple(map(int, int_list.value))
-
-
-def JobBuildAndInferCtx_GetDataType(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    dtype = oneflow_api.JobBuildAndInferCtx_GetDataType(job_name, lbn)
-    return int(dtype)
-
-
-def JobBuildAndInferCtx_IsDynamic(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
-    return ret
-
-
 def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
     ret = oneflow_api.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
     return ret
-
-
-def JobBuildAndInferCtx_IsTensorList(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_IsTensorList(job_name, lbn)
-    return ret
-
-
-def JobBuildAndInferCtx_GetBatchAxis(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    batch_axis_str = oneflow_api.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
-    batch_axis = text_format.Parse(batch_axis_str, dtype_util.OptInt64())
-    if batch_axis.HasField("value"):
-        return batch_axis.value
-    return None
-
-
-def JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    split_axis_str = oneflow_api.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-        job_name, lbn
-    )
-    split_axis = text_format.Parse(split_axis_str, dtype_util.OptInt64())
-    if split_axis.HasField("value"):
-        return split_axis.value
-    return None
-
-
-def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    GetParallelConf = (
-        oneflow_api.JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView
-    )
-    parallel_conf = GetParallelConf(job_name, lbn)
-    parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
-    # TODO(oyy) change temporary transformation after python code migrated into cpp code
-    parallel_conf_cfg = placement_cfg.ParallelConf()
-    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-    for device_name in parallel_conf.device_name:
-        parallel_conf_cfg.add_device_name(device_name)
-
-    return parallel_conf_cfg
 
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):

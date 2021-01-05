@@ -42,8 +42,8 @@ class Tensor {
   virtual std::string op_name() const = 0;
   virtual std::string blob_name() const = 0;
   virtual std::shared_ptr<Shape> shape() const = 0;
-  virtual cfg::DataType dtype() const = 0;
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+  virtual DataType dtype() const = 0;
+  virtual const std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
 
 namespace user_op {

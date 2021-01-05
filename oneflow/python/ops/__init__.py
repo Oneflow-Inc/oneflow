@@ -31,6 +31,7 @@ import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
@@ -58,7 +59,7 @@ def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
 def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     assert isinstance(
         remote_blob,
-        (remote_blob_util.LazyMirroredBlob, remote_blob_util.LazyConsistentBlob),
+        (remote_blob_util.LazyMirroredBlob, oneflow_api.LazyConsistentBlob),
     )
     op_conf, lbi, scope = _GetReturnOpConfAndOutLbiAndScope(
         remote_blob, allow_cpu_return_op

@@ -78,42 +78,8 @@ inline void CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(const std::strin
   return oneflow::CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair).GetOrThrow();
 }
 
-inline std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
-                                                                        const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(job_name, lbn).GetOrThrow();
-}
-
-inline long long JobBuildAndInferCtx_GetDataType(const std::string& job_name,
-                                                 const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetDataType(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_IsDynamic(job_name, lbn).GetOrThrow();
-}
-
 inline bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
   return oneflow::JobBuildAndInferCtx_DisableBoxing(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
-                                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name, lbn)
-      .GetOrThrow();
 }
 
 inline void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {

@@ -118,55 +118,10 @@ inline Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
   return ctx->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
 }
 
-inline Maybe<std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  const auto& shape = JUST(ctx->GetStaticShape(lbn));
-  Int64List id_list;
-  *id_list.mutable_value() = {shape->dim_vec().begin(), shape->dim_vec().end()};
-  return PbMessage2TxtString(id_list);
-}
-
-inline Maybe<long long> JobBuildAndInferCtx_GetDataType(const std::string& job_name,
-                                                        const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return JUST(ctx->GetDataType(lbn));
-}
-
-inline Maybe<bool> JobBuildAndInferCtx_IsDynamic(const std::string& job_name,
-                                                 const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsDynamic(lbn);
-}
-
 inline Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name,
                                                      const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->DisableBoxing(lbn);
-}
-
-inline Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name,
-                                                    const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsTensorList(lbn);
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                           const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->GetBatchAxis(lbn)));
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->GetSplitAxisFromProducerView(lbn)));
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(JUST(ctx->GetParallelDescFromProducerView(lbn))->parallel_conf());
 }
 
 inline Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {

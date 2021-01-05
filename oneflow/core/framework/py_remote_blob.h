@@ -28,12 +28,17 @@ namespace compatible_py {
 
 namespace {
 
-Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
+inline Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
   if (EagerExecutionEnabled()) {
     return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
   } else {
     return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
   }
+}
+
+inline Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(job_name);
 }
 
 }  // namespace
@@ -54,7 +59,7 @@ class ConsistentBlob : public BlobDesc {
   ~ConsistentBlob() = default;
 
   std::string job_name() const { return job_name_; }
-  std::shared_ptr<BlobDesc> Clone() const override;
+  virtual std::shared_ptr<BlobDesc> Clone() const override;
 
   std::shared_ptr<BlobDesc> with_distribute(
       const std::shared_ptr<Distribute>& distribute) const override {
@@ -79,6 +84,78 @@ class ConsistentBlob : public BlobDesc {
  private:
   std::string job_name_;
   int64_t parallel_size_;
+};
+
+class LazyConsistentBlob : public ConsistentBlob {
+ public:
+  LazyConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+                     const std::shared_ptr<Distribute>& distribute)
+      : ConsistentBlob(lbi, job_name, distribute) {}
+  LazyConsistentBlob(const LazyConsistentBlob& lazy_consistent_blob) = default;
+  ~LazyConsistentBlob() = default;
+
+  std::shared_ptr<BlobDesc> Clone() const override {
+    std::shared_ptr<BlobDesc> ret;
+    BlobDesc* blob_desc = new LazyConsistentBlob(lbi(), job_name(), distribute());
+    ret.reset(blob_desc);
+    return ret;
+  }
+
+  std::string get_shape_log_warning() const;
+
+  std::shared_ptr<Shape> shape() const override {
+    const std::string& log_warning = get_shape_log_warning();
+    if (log_warning.empty()) { LOG(ERROR) << log_warning; }
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    auto shape = CHECK_JUST(ctx->GetStaticShape(logical_blob_name()));
+    return shape;
+  }
+
+  DataType dtype() const override {
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    return CHECK_JUST(ctx->GetDataType(logical_blob_name()));
+  }
+
+  int64_t batch_axis() const override {
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    auto opt_int64 = CHECK_JUST(ctx->GetBatchAxis(logical_blob_name()));
+    if (opt_int64->has_value()) { return opt_int64->value(); }
+    return HAS_NO_BATCH_AXIS;
+  }
+
+  int64_t split_axis() const {
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    auto opt_int64 = CHECK_JUST(ctx->GetSplitAxisFromProducerView(logical_blob_name()));
+    if (opt_int64->has_value()) { return opt_int64->value(); }
+    return HAS_NO_SPLIT_AXIS;
+  }
+
+  bool is_dynamic() const override {
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    return CHECK_JUST(ctx->IsDynamic(logical_blob_name()));
+  }
+
+  bool is_tensor_list() const override {
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    return CHECK_JUST(ctx->IsTensorList(logical_blob_name()));
+  }
+
+  const std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
+    auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+    return CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))
+        ->cfg_parallel_conf();
+  }
+
+  bool IdenticalTo(const LazyConsistentBlob& lhs, const LazyConsistentBlob& rhs) {
+    return true && lhs.unique_name() == rhs.unique_name() && lhs.shape() == rhs.shape()
+           && lhs.batch_axis() == rhs.batch_axis() && lhs.split_axis() == rhs.split_axis()
+           && lhs.is_dynamic() == rhs.is_dynamic() && lhs.is_tensor_list() == rhs.is_tensor_list();
+  }
+
+  std::shared_ptr<LazyConsistentBlob> with_gradient_distribute(
+      const std::shared_ptr<Distribute>& distribute) {
+    UNIMPLEMENTED();
+  }
 };
 
 }  // namespace compatible_py
