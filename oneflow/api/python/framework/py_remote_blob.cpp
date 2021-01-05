@@ -149,8 +149,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                }
                                return ret;
                              })
-      .def_property_readonly(
-          "dtype", [](const std::shared_ptr<LazyMirroredBlob>& x) { return int(x->dtype()); })
+      .def("get_dtype",
+           [](const std::shared_ptr<LazyConsistentBlob>& x) { return int(x->dtype()); })
       .def_property_readonly("batch_axis", &LazyMirroredBlob::batch_axis)
       .def_property_readonly("split_axis", &LazyMirroredBlob::batch_axis)
       .def_property_readonly("is_dynamic", &LazyMirroredBlob::is_dynamic)
