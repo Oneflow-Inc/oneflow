@@ -2890,6 +2890,60 @@ def hard_sigmoid(
     )
 
 
+@oneflow_export("nn.hardswish")
+def hardswish(
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    r"""The Hardswish activation. 
+
+    The formula is: 
+
+    .. math:: 
+
+        \text{Hardswish}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            x & \text{ if } x \ge +3 \\
+            x*(x+3)/6 & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardswish_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.hardswish(x)
+
+
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = hardswish_job(x)
+
+        # output [0.        0.6666667 3.5      ]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    """
+    if name is None:
+        name = id_util.UniqueStr("HardSwish_")
+    return (
+        flow.user_op_builder(name)
+        .Op("hardswish")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
     input: oneflow_api.BlobDesc,
