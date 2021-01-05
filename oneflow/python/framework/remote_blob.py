@@ -186,7 +186,7 @@ class EagerBlobTrait(object):
         if sbp_parallel.HasField("split_parallel"):
             return sbp_parallel.split_parallel.axis
         elif sbp_parallel.HasField("broadcast_parallel"):
-            return oneflow_api.HAS_NO_SPLIT_AXIS
+            return oneflow_api.INVALID_SPLIT_AXIS
         elif sbp_parallel.HasField("partial_sum_parallel"):
             return oneflow_api.HAS_NO_SPLIT_AXIS
         else:

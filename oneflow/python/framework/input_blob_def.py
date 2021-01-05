@@ -162,9 +162,9 @@ class FixedTensorDef(ArgBlobDef):
         name: Optional[str] = None,
     ) -> None:
         if batch_axis is None:
-            batch_axis = oneflow_api.HAS_NO_BATCH_AXIS
+            batch_axis = oneflow_api.INVALID_BATCH_AXIS
         assert type(batch_axis) is int
-        if batch_axis != oneflow_api.HAS_NO_BATCH_AXIS:
+        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
@@ -202,7 +202,7 @@ class FixedTensorDef(ArgBlobDef):
     def SetBatchAxisAndSplitAxis(
         self, interface_blob_conf: op_conf_util.InterfaceBlobConf
     ) -> None:
-        if self.batch_axis == oneflow_api.HAS_NO_BATCH_AXIS:
+        if self.batch_axis == oneflow_api.INVALID_BATCH_AXIS:
             interface_blob_conf.batch_axis.ClearField("value")
             interface_blob_conf.split_axis.ClearField("value")
         else:
@@ -228,7 +228,7 @@ class MirroredTensorDef(ArgBlobDef):
     ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
-        if batch_axis != oneflow_api.HAS_NO_BATCH_AXIS:
+        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
@@ -291,7 +291,7 @@ class MirroredTensorListDef(ArgBlobDef):
     ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
-        if batch_axis != oneflow_api.HAS_NO_BATCH_AXIS:
+        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
