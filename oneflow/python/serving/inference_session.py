@@ -13,10 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import contextlib
-import threading
-import inspect
 import asyncio
+import contextlib
+import inspect
 import numpy as np
 import os
 import enum
@@ -152,6 +151,8 @@ class InferenceSession(object):
         self.inter_user_job_info_ = None
         self.job_name2input_name2lbn_ = {}
         self.job_name2output_name2lbn_ = {}
+        self.input_name2input_info_ = {}
+        self.output_name2output_info_ = {}
         self.output_name2future_ = {}
         self.job_futures_ = []
         self.status_ = None
@@ -240,6 +241,12 @@ class InferenceSession(object):
             lbn = "{}/{}".format(output_def.lbi.op_name, output_def.lbi.blob_name)
             self.job_name2output_name2lbn_[job_name][output_name] = lbn
 
+    def set_job_batch_size(self, job_name, batch_size):
+        job_conf = self._get_job_conf(job_name)
+        for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
+            mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
+            mut_shape.mutable_dim()[0] = batch_size
+
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
             return self.job_name2job_conf_[job_name]
@@ -250,11 +257,13 @@ class InferenceSession(object):
             return job_conf
 
     @contextlib.contextmanager
-    def open(self, job_name, signature):
+    def open(self, job_name, signature, batch_size=None):
         self._check_status(self.SessionStatus.OPEN)
         c_api_util.JobBuildAndInferCtx_Open(job_name)
 
         self.set_job_signature(job_name, signature)
+        if isinstance(batch_size, int):
+            self.set_job_batch_size(job_name, batch_size)
         job_conf = self._get_job_conf(job_name)
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 
@@ -364,6 +373,13 @@ class InferenceSession(object):
             self.compile(graph_def.op_list)
 
     # TODO: list jobs
+    def print_job_set(self):
+        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
+        job_set = c_api_util.GetJobSet()
+        for job in job_set.job:
+            print("job_name:", job.job_conf.job_name)
+            for op_conf in job.net.op:
+                print("\top_name:", op_conf.name)
 
     def list_inputs(self):
         self._check_status(self.SessionStatus.RUNNING)
@@ -405,8 +421,28 @@ class InferenceSession(object):
 
         return output_lbn, output_job_name
 
+    def _fix_input_shape(self, job_name, input_name, origin_input_shape):
+        """
+            Fix batch size of intput tensor shape
+        """
+        job_conf = self._get_job_conf(job_name)
+        input_def = job_conf.signature().inputs()[input_name]
+        input_shape = tuple(input_def.blob_conf().shape().dim())
+        for dim_size, origin_dim_size in zip(input_shape[1:], origin_input_shape[1:]):
+            if dim_size != origin_dim_size:
+                raise ValueError(
+                    "input shape not match: {} vs {}".format(
+                        input_shape, origin_input_shape
+                    )
+                )
+
+        return input_shape
+
     def input_info(self, input_name):
         self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
+        if input_name in self.input_name2input_info_:
+            return self.input_name2input_info_[input_name]
+
         input_lbn, input_job_name = self._query_input_lbn(input_name)
         if input_job_name is None or input_lbn is None:
             raise ValueError('can not find input "{}"'.format(input_name))
@@ -414,13 +450,16 @@ class InferenceSession(object):
         input_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
             input_job_name, input_lbn
         )
+        input_shape = self._fix_input_shape(input_job_name, input_name, input_shape)
         input_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(
             input_job_name, input_lbn
         )
         input_dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(input_dtype)
         input_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(input_dtype)
         # TODO: other info
-        return {"shape": input_shape, "dtype": input_dtype}
+        input_info = dict(shape=input_shape, dtype=input_dtype)
+        self.input_name2input_info_[input_name] = input_info
+        return input_info
 
     def run(self, job_name, **kwargs):
         self._check_status(self.SessionStatus.RUNNING)
@@ -521,11 +560,3 @@ class InferenceSession(object):
         if len(self.job_futures_) > 0:
             await asyncio.gather(*self.job_futures_)
             self.job_futures_ = []
-
-    def print_job_set(self):
-        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
-        job_set = c_api_util.GetJobSet()
-        for job in job_set.job:
-            print("job_name:", job.job_conf.job_name)
-            for op_conf in job.net.op:
-                print("\top_name:", op_conf.name)

@@ -90,7 +90,7 @@ def alexnet(image, label, trainable=True):
     pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
     if len(pool5.shape) > 2:
-        pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
+        pool5 = flow.flatten(pool5, start_dim=1, end_dim=-1)
 
     initializer = flow.truncated_normal_initializer(stddev=0.816496580927726)
 

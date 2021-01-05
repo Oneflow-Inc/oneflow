@@ -25,7 +25,7 @@ import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 from alexnet import load_data, alexnet
 from imagenet_record_dataset import ImageNetRecordDataset
 
-DEFAULT_BATCH_SIZE = 4
+DEFAULT_BATCH_SIZE = 8
 DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_227/train/32/"
 DEFAULT_TRAIN_DATA_PART_NUM = 32
 DEFAULT_INFER_DATA_PATH = "/dataset/imagenet_227/train/32/"
@@ -69,9 +69,12 @@ def make_alexnet_infer_func(batch_size, image_size):
         input_lbns["image"] = image.logical_blob_name
         input_lbns["label"] = label.logical_blob_name
         image = flow.transpose(image, perm=(0, 3, 1, 2))
-        # label = flow.identity(label)
         loss = alexnet(image, label, trainable=False)
-        output = flow.math.reduce_mean(loss)
+        # reduce_mean calculate reduce_count in python api, we should only set attribute for op in python,
+        # so reduce_count is out of date when we have loaded model and set new batch_size.
+        # We will modify implementation of reduce_mean
+        # output = flow.math.reduce_mean(loss)
+        output = loss
         output_lbns["output"] = output.logical_blob_name
         return output
 
@@ -88,30 +91,11 @@ def load_saved_model(model_meta_file_path):
 @flow.unittest.skip_unless_1n1d()
 class TestSaveAndLoadModel(flow.unittest.TestCase):
     def test_alexnet(test_case, batch_size=DEFAULT_BATCH_SIZE, num_batchs=6):
-        # test data
-        dataset = ImageNetRecordDataset(
-            batch_size=batch_size,
-            image_resize_size=DEFAULT_IMAGE_SIZE,
-            data_format="NHWC",
-        )
-        image_list, label_list = dataset.load_batchs(num_batchs)
-        assert image_list[0].shape[0] == batch_size
-        image_size = tuple(image_list[0].shape[1:])
-
         init_env()
         alexnet_infer, input_lbns, output_lbns = make_alexnet_infer_func(
-            batch_size, image_size
+            batch_size, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE, 3)
         )
         flow.load_variables(flow.checkpoint.get(DEFAULT_CHECKPOINT_DIR))
-
-        print("alexnet inference result:")
-        origin_outputs = []
-        for i, (image, label) in enumerate(zip(image_list, label_list)):
-            output = alexnet_infer(image, label)
-            origin_outputs.append(output.item())
-            print("iter#{:<6} output:".format(i), output.item())
-
-        origin_outputs = np.array(origin_outputs, dtype=np.float32)
 
         # save model
         saved_model_path = "alexnet_models"
@@ -139,6 +123,31 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             signature_builder.Output(output_name, lbn)
         signature_builder.Complete().Complete().Save()
 
+        # test data
+        new_batch_size = int(batch_size / 2)
+        dataset = ImageNetRecordDataset(
+            batch_size=new_batch_size,
+            image_resize_size=DEFAULT_IMAGE_SIZE,
+            data_format="NHWC",
+        )
+        image_list, label_list = dataset.load_batchs(num_batchs)
+        assert image_list[0].shape[0] == new_batch_size
+        image_size = tuple(image_list[0].shape[1:])
+
+        flow.clear_default_session()
+        alexnet_infer, _, _ = make_alexnet_infer_func(new_batch_size, image_size)
+        flow.load_variables(flow.checkpoint.get(DEFAULT_CHECKPOINT_DIR))
+        print("alexnet inference result:")
+        origin_outputs = []
+        for i, (image, label) in enumerate(zip(image_list, label_list)):
+            output = alexnet_infer(image, label)
+            # origin_outputs.append(output.item())
+            # print("iter#{:<6} output:".format(i), output.item())
+            origin_outputs.append(output)
+            print("iter#{:<6} output:".format(i), output)
+
+        origin_outputs = np.array(origin_outputs, dtype=np.float32)
+
         # load model and run
         flow.clear_default_session()
         model_meta_file_path = os.path.join(
@@ -155,7 +164,7 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         graph_def = saved_model_proto.graphs[graph_name]
         signature_def = graph_def.signatures[graph_def.default_signature_name]
 
-        with sess.open(graph_name, signature_def):
+        with sess.open(graph_name, signature_def, new_batch_size):
             sess.compile(graph_def.op_list)
 
         # sess.print_job_set()
@@ -181,8 +190,10 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
                     print((image - image_list[i - 1]).mean())
 
             outputs = sess.run(alexnet_infer.__name__, image=image, label=label)
-            cmp_outputs.append(outputs[0].item())
-            print("iter#{:<6} output:".format(i), outputs[0].item())
+            # cmp_outputs.append(outputs[0].item())
+            # print("iter#{:<6} output:".format(i), outputs[0].item())
+            cmp_outputs.append(outputs[0])
+            print("iter#{:<6} output:".format(i), outputs[0])
 
         cmp_outputs = np.array(cmp_outputs, dtype=np.float32)
 

@@ -53,6 +53,14 @@ class ImageNetRecordDataset(object):
         self.num_read_batchs_ = 0
 
     @property
+    def batch_size(self):
+        return self.batch_size_
+
+    @batch_size.setter
+    def batch_size(self, bs):
+        self.batch_size_ = bs
+
+    @property
     def num_read_batchs(self):
         return self.num_read_batchs_
 
@@ -66,6 +74,13 @@ class ImageNetRecordDataset(object):
 
         while True:
             yield self._read_one_batch()
+
+    def reset(self):
+        self.epoch_cnt_ = 0
+        self.cur_data_part_idx_ = 0
+        if self.reader_ is not None:
+            self.reader_.close()
+        self.num_read_batchs_ = 0
 
     def load_batchs(self, num_batchs):
         image_list = []
