@@ -61,7 +61,7 @@ def LazyRemoteBlob(lbi, **kw):
     lbn = lbi.op_name + "/" + lbi.blob_name
     blob_type = PyLazyConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        blob_type = LazyMirroredBlob
+        blob_type = PyLazyMirroredBlob
     return blob_type(lbi, **kw)
 
 
@@ -92,102 +92,111 @@ class PyLazyConsistentBlob(
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class MirroredBlob(
-    oneflow_api.BlobDesc, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
+# class LazyMirroredBlob(
+#     oneflow_api.MirroredBlob, blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
+# ):
+#     def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
+#         if not isinstance(lbi, lbi_util.LogicalBlobId):
+#             cfg_lbi = lbi_util.LogicalBlobId()
+#             cfg_lbi.set_op_name(lbi.op_name)
+#             cfg_lbi.set_blob_name(lbi.blob_name)
+#             lbi = cfg_lbi
+#         oneflow_api.MirroredBlob.__init__(self, lbi, job_name, distribute)
+#         self.job_name_ = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+#         self.sub_consistent_blob_list_ = []
+#         lbn = self.logical_blob_name
+#         num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
+#             self.job_name_, lbn
+#         )
+#         for i in range(num_sub_lbi):
+#             sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
+#                 self.job_name_, lbn, i
+#             )
+#             consistent_blob = PyLazyConsistentBlob(sub_lbi)
+#             self.sub_consistent_blob_list_.append(consistent_blob)
+
+#     @property
+#     def sub_consistent_blob_list(self):
+#         return self.sub_consistent_blob_list_
+
+#     @property
+#     def shape(self):
+#         if oneflow.scope.consistent_view_enabled():
+#             print(
+#                 "WARNING:",
+#                 "You access a mirrored blob shape in consistent view, there may be problems,"
+#                 "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+#                 file=sys.stderr,
+#             )
+#             print(traceback.format_stack()[-2])
+#         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
+#             self.job_name_, self.logical_blob_name
+#         )
+
+#     @property
+#     def dtype(self):
+#         return convert_proto_dtype_to_oneflow_dtype(
+#             c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
+#                 self.job_name_, self.logical_blob_name
+#             )
+#         )
+
+#     @property
+#     def batch_axis(self):
+#         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(
+#             self.job_name_, self.logical_blob_name
+#         )
+
+#     @property
+#     def split_axis(self):
+#         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
+#             self.job_name_, self.logical_blob_name
+#         )
+
+#     @property
+#     def is_dynamic(self):
+#         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(
+#             self.job_name_, self.logical_blob_name
+#         )
+
+#     @property
+#     def is_tensor_list(self):
+#         return c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(
+#             self.job_name_, self.logical_blob_name
+#         )
+
+#     @property
+#     def parallel_conf(self):
+#         return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
+#             self.job_name_, self.logical_blob_name
+#         )
+
+
+class PyLazyMirroredBlob(
+    oneflow_api.LazyMirroredBlob,
+    blob_trait.BlobOperatorTrait,
+    blob_trait.BlobHeaderTrait,
 ):
-    def __init__(self, lbi, job_name=None, distribute=oneflow_api.distribute.auto()):
+    def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
         if not isinstance(lbi, lbi_util.LogicalBlobId):
             cfg_lbi = lbi_util.LogicalBlobId()
             cfg_lbi.set_op_name(lbi.op_name)
             cfg_lbi.set_blob_name(lbi.blob_name)
             lbi = cfg_lbi
+        oneflow_api.LazyMirroredBlob.__init__(self, lbi, job_name, distribute)
 
-        oneflow_api.BlobDesc.__init__(self, lbi, distribute)
-        if job_name is None:
-            job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
-        self.job_name_ = job_name
-        self.parallel_size_ = 0
-
-    @property
-    def parallel_size(self):
-        if self.parallel_size_ == 0:
-            self.parallel_size_ = placement_ctx.GetParallelSize(
-                placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
-            )
-        return self.parallel_size_
-
-
-class LazyMirroredBlob(MirroredBlob):
-    def __init__(self, lbi, **kw):
-        MirroredBlob.__init__(self, lbi, **kw)
-        self.job_name_ = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
-        self.sub_consistent_blob_list_ = []
-        lbn = self.logical_blob_name
-        num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
-            self.job_name_, lbn
-        )
-        for i in range(num_sub_lbi):
-            sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
-                self.job_name_, lbn, i
-            )
-            consistent_blob = PyLazyConsistentBlob(sub_lbi)
-            self.sub_consistent_blob_list_.append(consistent_blob)
-
-    @property
-    def sub_consistent_blob_list(self):
-        return self.sub_consistent_blob_list_
-
-    @property
-    def shape(self):
+    def get_shape_log_warning(self):
         if oneflow.scope.consistent_view_enabled():
-            print(
+            return ("%s\n%s\n%s") % (
                 "WARNING:",
-                "You access a mirrored blob shape in consistent view, there may be problems,"
+                "You access a mirrored blob shape in consistent view, there may be problems,",
                 "you should add 'x = flow.cast_to_current_logical_view(x)'.",
-                file=sys.stderr,
             )
-            print(traceback.format_stack()[-2])
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetStaticShape(
-            self.job_name_, self.logical_blob_name
-        )
+        else:
+            return ""
 
-    @property
-    def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(
-            c_api_util.JobBuildAndInferCtx_MirroredBlobGetDataType(
-                self.job_name_, self.logical_blob_name
-            )
-        )
-
-    @property
-    def batch_axis(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetBatchAxis(
-            self.job_name_, self.logical_blob_name
-        )
-
-    @property
-    def split_axis(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-            self.job_name_, self.logical_blob_name
-        )
-
-    @property
-    def is_dynamic(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobIsDynamic(
-            self.job_name_, self.logical_blob_name
-        )
-
-    @property
-    def is_tensor_list(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobIsTensorList(
-            self.job_name_, self.logical_blob_name
-        )
-
-    @property
-    def parallel_conf(self):
-        return c_api_util.JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(
-            self.job_name_, self.logical_blob_name
-        )
+    def with_gradient_distribute(self, distribute):
+        return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
 class EagerBlobTrait(object):
@@ -249,9 +258,9 @@ class EagerBlobTrait(object):
         if sbp_parallel.HasField("split_parallel"):
             return sbp_parallel.split_parallel.axis
         elif sbp_parallel.HasField("broadcast_parallel"):
-            return None
+            return oneflow_api.HAS_NO_SPLIT_AXIS
         elif sbp_parallel.HasField("partial_sum_parallel"):
-            return None
+            return oneflow_api.HAS_NO_SPLIT_AXIS
         else:
             raise NotImplementedError
 
@@ -397,7 +406,19 @@ class EagerConsistentBlob(
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class EagerMirroredBlob(EagerBlobTrait, MirroredBlob):
-    def __init__(self, lbi, blob_object=None, **kw):
-        MirroredBlob.__init__(self, lbi, **kw)
+class EagerMirroredBlob(
+    EagerBlobTrait,
+    oneflow_api.MirroredBlob,
+    blob_trait.BlobOperatorTrait,
+    blob_trait.BlobHeaderTrait,
+):
+    def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
+        if not isinstance(lbi, lbi_util.LogicalBlobId):
+            cfg_lbi = lbi_util.LogicalBlobId()
+            cfg_lbi.set_op_name(lbi.op_name)
+            cfg_lbi.set_blob_name(lbi.blob_name)
+            lbi = cfg_lbi
+        if job_name is None:
+            job_name = ""
+        oneflow_api.MirroredBlob.__init__(self, lbi, job_name, distribute)
         self._Init(blob_object)

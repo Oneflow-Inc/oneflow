@@ -58,6 +58,7 @@ class ArgBlobDef(object):
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
+        assert type(batch_axis) is int
         self.batch_axis_ = batch_axis
         self.distribute_ = distribute
 
@@ -160,13 +161,14 @@ class FixedTensorDef(ArgBlobDef):
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
-        if type(batch_axis) is int:
+        if batch_axis is None:
+            batch_axis = oneflow_api.HAS_NO_BATCH_AXIS
+        assert type(batch_axis) is int
+        if batch_axis != oneflow_api.HAS_NO_BATCH_AXIS:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
             assert batch_axis < len(shape)
-        else:
-            assert batch_axis is None
         ArgBlobDef.__init__(
             self, shape, dtype=dtype, batch_axis=batch_axis, name=name,
         )
@@ -200,7 +202,7 @@ class FixedTensorDef(ArgBlobDef):
     def SetBatchAxisAndSplitAxis(
         self, interface_blob_conf: op_conf_util.InterfaceBlobConf
     ) -> None:
-        if self.batch_axis is None:
+        if self.batch_axis == oneflow_api.HAS_NO_BATCH_AXIS:
             interface_blob_conf.batch_axis.ClearField("value")
             interface_blob_conf.split_axis.ClearField("value")
         else:
@@ -226,10 +228,11 @@ class MirroredTensorDef(ArgBlobDef):
     ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
-        if batch_axis < 0:
-            batch_axis += len(shape)
-        assert batch_axis >= 0
-        assert batch_axis < len(shape)
+        if batch_axis != oneflow_api.HAS_NO_BATCH_AXIS:
+            if batch_axis < 0:
+                batch_axis += len(shape)
+            assert batch_axis >= 0
+            assert batch_axis < len(shape)
         ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
         self.sub_consistent_blob_list_ = []
 
@@ -288,10 +291,11 @@ class MirroredTensorListDef(ArgBlobDef):
     ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
-        if batch_axis < 0:
-            batch_axis += len(shape)
-        assert batch_axis >= 0
-        assert batch_axis < len(shape)
+        if batch_axis != oneflow_api.HAS_NO_BATCH_AXIS:
+            if batch_axis < 0:
+                batch_axis += len(shape)
+            assert batch_axis >= 0
+            assert batch_axis < len(shape)
         ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
         self.sub_consistent_blob_list_ = []
 

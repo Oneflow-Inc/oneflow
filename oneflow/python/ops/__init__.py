@@ -58,8 +58,7 @@ def ReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def LazyReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     assert isinstance(
-        remote_blob,
-        (remote_blob_util.LazyMirroredBlob, oneflow_api.LazyConsistentBlob),
+        remote_blob, (oneflow_api.LazyMirroredBlob, oneflow_api.LazyConsistentBlob),
     )
     op_conf, lbi, scope = _GetReturnOpConfAndOutLbiAndScope(
         remote_blob, allow_cpu_return_op

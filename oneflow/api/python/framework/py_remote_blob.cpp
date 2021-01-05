@@ -31,7 +31,14 @@ std::string LazyConsistentBlob::get_shape_log_warning() const {
   PYBIND11_OVERRIDE_PURE(std::string, LazyConsistentBlob, get_shape_log_warning, );
 }
 
+std::string LazyMirroredBlob::get_shape_log_warning() const {
+  PYBIND11_OVERRIDE_PURE(std::string, LazyMirroredBlob, get_shape_log_warning, );
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.attr("HAS_NO_BATCH_AXIS") = HAS_NO_BATCH_AXIS;
+  m.attr("HAS_NO_SPLIT_AXIS") = HAS_NO_SPLIT_AXIS;
+
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(
           [](std::shared_ptr<cfg::LogicalBlobId> lbi, std::shared_ptr<Distribute> distribute) {
@@ -105,6 +112,54 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("IdenticalTo", &LazyConsistentBlob::IdenticalTo)
       .def("with_gradient_distribute", &LazyConsistentBlob::with_gradient_distribute)
       .def("get_shape_log_warning", &LazyConsistentBlob::get_shape_log_warning);
+
+  py::class_<MirroredBlob, BlobDesc, std::shared_ptr<MirroredBlob>>(m, "MirroredBlob")
+      .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
+                       std::shared_ptr<Distribute> distribute) {
+        return std::make_shared<MirroredBlob>(lbi, job_name, distribute);
+      }))
+      .def_property_readonly("lbi", &MirroredBlob::lbi)
+      .def_property_readonly("logical_blob_name", &MirroredBlob::logical_blob_name)
+      .def_property_readonly("op_name", &MirroredBlob::op_name)
+      .def_property_readonly("blob_name", &MirroredBlob::blob_name)
+      .def_property_readonly("shape", &MirroredBlob::shape)
+      .def_property_readonly("dtype", &MirroredBlob::dtype)
+      .def_property_readonly("batch_axis", &MirroredBlob::batch_axis)
+      .def_property_readonly("is_dynamic", &MirroredBlob::is_dynamic)
+      .def_property_readonly("is_tensor_list", &MirroredBlob::is_tensor_list)
+      .def_property_readonly("parallel_conf", &MirroredBlob::parallel_conf)
+      .def_property_readonly("distribute", &MirroredBlob::distribute)
+      .def_property_readonly("unique_name", &MirroredBlob::unique_name)
+      .def_property_readonly("job_name", &MirroredBlob::job_name)
+      .def_property_readonly("parallel_size", &MirroredBlob::parallel_size)
+      .def("set_job_name", &MirroredBlob::set_job_name);
+
+  py::class_<LazyMirroredBlob, MirroredBlob, std::shared_ptr<LazyMirroredBlob>>(m,
+                                                                                "LazyMirroredBlob")
+      .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
+                       std::shared_ptr<Distribute> distribute) {
+        return std::make_shared<LazyMirroredBlob>(lbi, job_name, distribute);
+      }))
+      .def_property_readonly("shape",
+                             [](const std::shared_ptr<LazyMirroredBlob>& x) {
+                               const auto& x_shape = x->shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
+      .def_property_readonly(
+          "dtype", [](const std::shared_ptr<LazyMirroredBlob>& x) { return int(x->dtype()); })
+      .def_property_readonly("batch_axis", &LazyMirroredBlob::batch_axis)
+      .def_property_readonly("split_axis", &LazyMirroredBlob::batch_axis)
+      .def_property_readonly("is_dynamic", &LazyMirroredBlob::is_dynamic)
+      .def_property_readonly("is_tensor_list", &LazyMirroredBlob::is_tensor_list)
+      .def_property_readonly("parallel_conf", &LazyMirroredBlob::parallel_conf)
+      .def_property_readonly("sub_consistent_blob_list",
+                             &LazyMirroredBlob::sub_consistent_blob_list)
+      .def("with_gradient_distribute", &LazyMirroredBlob::with_gradient_distribute)
+      .def("get_shape_log_warning", &LazyMirroredBlob::get_shape_log_warning);
 }
 
 }  // namespace compatible_py

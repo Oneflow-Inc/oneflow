@@ -121,7 +121,7 @@ def MakeLocalBlob(ndarray_lists, consistent_blob):
 
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
-    assert isinstance(mirrored_blob, remote_blob_util.MirroredBlob)
+    assert isinstance(mirrored_blob, oneflow_api.MirroredBlob)
     if mirrored_blob.is_tensor_list:
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensorList

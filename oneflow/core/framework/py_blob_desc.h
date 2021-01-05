@@ -28,8 +28,8 @@ namespace oneflow {
 
 namespace compatible_py {
 
-static int64_t HAS_NO_BATCH_AXIS = -1;
-static int64_t HAS_NO_SPLIT_AXIS = -1;
+static int64_t HAS_NO_BATCH_AXIS = -22;
+static int64_t HAS_NO_SPLIT_AXIS = -22;
 
 class BlobDesc : public Tensor {
  public:

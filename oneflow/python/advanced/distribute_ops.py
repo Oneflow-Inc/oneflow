@@ -175,7 +175,7 @@ def cast_to_current_logical_view(x: oneflow_api.BlobDesc,) -> oneflow_api.BlobDe
         isinstance(x, oneflow_api.ConsistentBlob)
         and oneflow.scope.mirrored_view_enabled()
     ) or (
-        isinstance(x, remote_blob_util.MirroredBlob)
+        isinstance(x, oneflow_api.MirroredBlob)
         and oneflow.scope.consistent_view_enabled()
     ):
         x = oneflow.identity(x)
@@ -186,7 +186,7 @@ def _SoleConsistentLbn(blob):
     assert blob.parallel_size == 1
     if isinstance(blob, oneflow_api.ConsistentBlob):
         return blob.unique_name
-    if isinstance(blob, remote_blob_util.MirroredBlob):
+    if isinstance(blob, oneflow_api.MirroredBlob):
         return blob.sub_consistent_blob_list[0].unique_name
     raise NotImplementedError
 

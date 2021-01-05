@@ -144,7 +144,7 @@ class LazyFutureRemoteBlobs(FutureRemoteBlobs):
     def _MakeRemoteBlobPullers(self, out_remote_blobs):
         if isinstance(out_remote_blobs, oneflow_api.ConsistentBlob):
             return _ConsistentBlobPuller(out_remote_blobs, self.session_)
-        if isinstance(out_remote_blobs, remote_blob_util.MirroredBlob):
+        if isinstance(out_remote_blobs, oneflow_api.MirroredBlob):
             return _MirroredBlobPuller(out_remote_blobs, self.session_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
             return type(out_remote_blobs)(
