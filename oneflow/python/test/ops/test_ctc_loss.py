@@ -18,18 +18,96 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as tp
 
-# gpus = tf.config.experimental.list_physical_devices("GPU")
-# for gpu in gpus:
-#     tf.config.experimental.set_memory_growth(gpu, True)
+
+def log_softmax(logits, axis=0):
+    max_value = np.max(logits, axis, keepdims=True)
+    exp = np.exp(logits - max_value)
+    exp_sum = np.sum(exp, axis, keepdims=True)
+    dist = exp / exp_sum
+    return np.log(dist)
 
 
-def compare_with_tensorflow(
+def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
+    ninf = -np.float("inf")
+
+    def _logsumexp(a, b):
+        if a < b:
+            a, b = b, a
+        if b == ninf:
+            return a
+        else:
+            return a + np.log(1 + np.exp(b - a))
+
+    def logsumexp(*args):
+        res = args[0]
+        for e in args[1:]:
+            res = _logsumexp(res, e)
+        return res
+
+    def get_target_prime(targets, b, s, blank):
+        if s % 2 == 0:
+            return blank
+        else:
+            return targets[b, s // 2]
+
+    max_input_length, batch_size, _ = log_probs.shape
+    _, max_target_length = targets.shape
+    loss = np.zeros(batch_size)
+    alpha = np.zeros([batch_size, max_input_length, 2 * max_target_length + 1])
+    alpha[:, 0] = ninf
+
+    for b in range(0, batch_size):
+        input_length = input_lengths[b]
+        target_length = target_lengths[b]
+        alpha[b, 0, 0] = log_probs[0, b, blank]
+        if target_length > 0:
+            target = get_target_prime(targets, b, 1, blank)
+            alpha[b, 0, 1] = log_probs[0, b, target]
+
+        for t in range(1, input_length):
+            for s in range(0, 2 * target_length + 1):
+                current_target_prime = get_target_prime(targets, b, s, blank)
+                la1 = alpha[b, t - 1, s]
+                if s > 0:
+                    la2 = alpha[b, t - 1, s - 1]
+                else:
+                    la2 = ninf
+                if (
+                    s > 1
+                    and get_target_prime(targets, b, s - 2, blank)
+                    != current_target_prime
+                ):
+                    la3 = alpha[b, t - 1, s - 2]
+                else:
+                    la3 = ninf
+
+                alpha[b, t, s] = (
+                    logsumexp(la1, la2, la3) + log_probs[t, b, current_target_prime]
+                )
+
+        if target_length == 0:
+            loss[b] = -alpha[b, input_length - 1, 0]
+        else:
+            l1 = alpha[b, input_length - 1, target_length * 2]
+            l2 = alpha[b, input_length - 1, target_length * 2 - 1]
+            loss[b] = -logsumexp(l1, l2)
+    return loss, alpha
+
+
+def compare_with_np(
     device_type, max_logit_length, batch_size, num_classes, max_label_length, data_type
 ):
+    print(
+        device_type,
+        max_logit_length,
+        batch_size,
+        num_classes,
+        max_label_length,
+        data_type,
+    )
     assert device_type in ["gpu", "cpu"]
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
@@ -56,7 +134,7 @@ def compare_with_tensorflow(
     log_probs = np.random.random(
         size=(max_logit_length, batch_size, num_classes)
     ).astype(type_name_to_np_type[data_type])
-    log_probs = tf.nn.log_softmax(log_probs, axis=2)
+    log_probs = log_softmax(log_probs, axis=2)
 
     targets = np.random.randint(
         1, high=num_classes, size=(batch_size, max_label_length)
@@ -67,28 +145,20 @@ def compare_with_tensorflow(
     target_lengths = np.random.randint(
         max_label_length / 2, high=max_label_length, size=(batch_size,)
     )
-    # print(log_probs)
-    # print(targets)
-    # print(input_lengths)
-    # print(target_lengths)
-    # OneFlow
-    of_out = ctc_loss_job(log_probs.numpy(), targets, input_lengths, target_lengths)
-    # TensorFlow
-    tf_out = tf.nn.ctc_loss(targets, log_probs, target_lengths, input_lengths)
 
-    print(of_out)
-    print(tf_out.numpy())
+    # OneFlow
+    of_out = ctc_loss_job(log_probs, targets, input_lengths, target_lengths)
+    # Numpy
+    np_out, _ = ctc_loss_np(log_probs, targets, input_lengths, target_lengths)
 
     tolerance = 1e-5
-    assert np.allclose(
-        of_out, tf_out.numpy(), rtol=tolerance, atol=tolerance, equal_nan=True
-    )
+    assert np.allclose(of_out, np_out, rtol=tolerance, atol=tolerance)
 
 
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu"]
-    arg_dict["max_logit_length"] = [1000]  # Input sequence length
+    arg_dict["max_logit_length"] = [100]  # Input sequence length
     arg_dict["batch_size"] = [10]  # Batch size
     arg_dict["num_classes"] = [10]  # Number of classes (including blank)
     arg_dict["max_label_length"] = [100]  # Target length of longest target in batch
@@ -101,7 +171,7 @@ def gen_arg_list():
 class TestSort(flow.unittest.TestCase):
     def test_sort(test_case):
         for arg in gen_arg_list():
-            compare_with_tensorflow(*arg)
+            compare_with_np(*arg)
 
 
 if __name__ == "__main__":

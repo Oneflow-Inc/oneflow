@@ -97,7 +97,7 @@ def ctc_loss(
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     name = name if name is not None else id_util.UniqueStr("CTCLoss_")
-    loss = (
+    loss, alpha = (
         flow.user_op_builder(name)
         .Op("ctc_loss")
         .Input("log_probs", [log_probs])
@@ -105,10 +105,11 @@ def ctc_loss(
         .Input("input_lengths", [input_lengths])
         .Input("target_lengths", [target_lengths])
         .Output("loss")
+        .Output("alpha")
         .Attr("blank", blank)
         .Build()
         .InferAndTryRun()
-        .RemoteBlobList()[0]
+        .RemoteBlobList()
     )
 
     if reduction == "mean":

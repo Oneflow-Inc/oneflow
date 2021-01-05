@@ -40,7 +40,7 @@ REGISTER_USER_OP("ctc_loss")
       *ctx->Shape4ArgNameAndIndex("loss", 0) = Shape({log_probs->shape().At(1)});
       *ctx->Dtype4ArgNameAndIndex("alpha", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
       *ctx->Shape4ArgNameAndIndex("alpha", 0) = Shape(
-          {log_probs->shape().At(1), log_probs->shape().At(1), 2 * targets->shape().At(1) + 1});
+          {log_probs->shape().At(1), log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
     });
 // .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
@@ -82,7 +82,7 @@ REGISTER_USER_OP("ctc_loss_grad")
       *ctx->Shape4ArgNameAndIndex("grad", 0) = log_probs->shape();
       *ctx->Dtype4ArgNameAndIndex("beta", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
       *ctx->Shape4ArgNameAndIndex("beta", 0) = Shape(
-          {log_probs->shape().At(1), log_probs->shape().At(1), 2 * targets->shape().At(1) + 1});
+          {log_probs->shape().At(1), log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
     });
 // .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
