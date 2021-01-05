@@ -102,7 +102,7 @@ class LazyConsistentBlob : public ConsistentBlob {
     return ret;
   }
 
-  std::string get_shape_log_warning() const;
+  virtual std::string get_shape_log_warning() const { return std::string(""); }
 
   std::shared_ptr<Shape> shape() const override {
     const std::string& log_warning = get_shape_log_warning();
