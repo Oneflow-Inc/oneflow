@@ -195,7 +195,7 @@ def _RecusiveMakeInputBlobDef(cls):
 def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
     if remote_blobs is None:
         return None
-    if isinstance(remote_blobs, remote_blob_util.BlobDef):
+    if isinstance(remote_blobs, oneflow_api.BlobDesc):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(
