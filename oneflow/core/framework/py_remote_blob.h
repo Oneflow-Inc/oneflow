@@ -146,10 +146,10 @@ class LazyConsistentBlob : public ConsistentBlob {
         ->cfg_parallel_conf();
   }
 
-  bool IdenticalTo(const LazyConsistentBlob& lhs, const LazyConsistentBlob& rhs) {
-    return true && lhs.unique_name() == rhs.unique_name() && lhs.shape() == rhs.shape()
-           && lhs.batch_axis() == rhs.batch_axis() && lhs.split_axis() == rhs.split_axis()
-           && lhs.is_dynamic() == rhs.is_dynamic() && lhs.is_tensor_list() == rhs.is_tensor_list();
+  bool IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) {
+    return true && unique_name() == rhs->unique_name() && *shape() == *rhs->shape()
+           && batch_axis() == rhs->batch_axis() && split_axis() == rhs->split_axis()
+           && is_dynamic() == rhs->is_dynamic() && is_tensor_list() == rhs->is_tensor_list();
   }
 
   std::shared_ptr<LazyConsistentBlob> with_gradient_distribute(
