@@ -1858,6 +1858,61 @@ def softmax(
     return out
 
 
+@oneflow_export("nn.logsoftmax")
+def logsoftmax(
+    logits: oneflow_api.BlobDesc,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""Computes logsoftmax activations.  
+
+    For each element, we apply: 
+    
+    .. math::
+    
+        LogSoftmax(x_i) = Log(\frac{e^i}{\sum_1^j e^j })
+    
+    Args:
+        logits (oneflow_api.BlobDesc): A non-empty `Blob`.
+        axis (Optional[int], optional): The dimension logsoftmax would be performed on. Defaults to None.
+        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc:  A `Blob` has the same type and shape as logits.
+    
+    Raises:
+        InvalidArgumentError: if logits is empty or axis is beyond the last dimension of logits.
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+    
+    
+        @flow.global_function()
+        def logsoftmax_Job(x: tp.Numpy.Placeholder((1, 5))
+        ) -> tp.Numpy:
+            logsoftmax_out = flow.nn.logsoftmax(x, axis=1)
+            return logsoftmax_out
+    
+    
+        x = np.array([[1, 2, 1, 5, 4]]).astype(np.float32)
+        out = logsoftmax_Job(x)
+    
+        # out [[-4.374523  -3.3745232 -4.374523  -0.3745232 -1.374523 ]]
+    """
+    if axis is None:
+        axis = -1
+    if name is None:
+        name = id_util.UniqueStr("logsoftmax")
+    return flow.math.log(
+        flow.nn.softmax(logits, axis, name=name + "_softmax"), name=name + "_log"
+    )
+
+
 @oneflow_export("nn.softmax_grad")
 def softmax_grad(
     y: oneflow_api.BlobDesc,
