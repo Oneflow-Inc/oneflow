@@ -44,7 +44,40 @@ class Tensor {
   virtual std::shared_ptr<Shape> shape() const = 0;
   virtual cfg::DataType dtype() const = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+
+  // Virtual interfaces for one::Tensor
+  virtual std::shared_ptr<Blob> storage() { UNIMPLEMENTED(); }
 };
+
+namespace one {
+
+// one::Tensor will replace oneflow::Tensor in the future
+class Tensor : public oneflow::Tensor {
+ public:
+  // Constructors
+  Tensor() = default;
+
+  ~Tensor() override = default;
+
+  // Basic Properties
+  std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
+  cfg::DataType dtype() const override { UNIMPLEMENTED(); }
+  std::shared_ptr<Blob> storage();
+
+  // Basic Operations
+
+  // Inherit some virtual unimplement interface
+  std::shared_ptr<cfg::LogicalBlobId> lbi() const { UNIMPLEMENTED(); }
+  std::string logical_blob_name() const { UNIMPLEMENTED(); }
+  std::string op_name() const { UNIMPLEMENTED(); }
+  std::string blob_name() const { UNIMPLEMENTED(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() { UNIMPLEMENTED(); }
+
+ private:
+  std::shared_ptr<Blob> storage_;
+};
+
+}  // namespace one
 
 namespace user_op {
 
