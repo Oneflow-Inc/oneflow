@@ -140,7 +140,7 @@ class LazyConsistentBlob : public ConsistentBlob {
     return CHECK_JUST(ctx->IsTensorList(logical_blob_name()));
   }
 
-  const std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     return CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))
         ->cfg_parallel_conf();
