@@ -136,6 +136,11 @@ class LazyConsistentBlob(
     def with_gradient_distribute(self, distribute):
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
+    def get_parallel_conf(self):
+        return c_api_util.JobBuildAndInferCtx_GetParallelConfFromProducerView(
+            self.job_name, self.logical_blob_name
+        )
+
     def IdenticalTo(self, rhs):
         return (
             self.unique_name == rhs.unique_name

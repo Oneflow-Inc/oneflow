@@ -27,6 +27,10 @@ std::shared_ptr<BlobDesc> ConsistentBlob::Clone() const {
   PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, ConsistentBlob, Clone, );
 }
 
+std::shared_ptr<cfg::ParallelConf> ConsistentBlob::get_parallel_conf() const {
+  PYBIND11_OVERRIDE(std::shared_ptr<cfg::ParallelConf>, ConsistentBlob, get_parallel_conf, );
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(
@@ -74,6 +78,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("job_name", &ConsistentBlob::job_name)
       .def_property_readonly("parallel_size", &ConsistentBlob::parallel_size)
       .def("set_job_name", &ConsistentBlob::set_job_name)
+      .def("get_parallel_conf", &ConsistentBlob::get_parallel_conf)
       .def("with_distribute", &ConsistentBlob::with_distribute);
 }
 

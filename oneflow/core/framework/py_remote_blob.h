@@ -55,6 +55,7 @@ class ConsistentBlob : public BlobDesc {
 
   std::string job_name() const { return job_name_; }
   std::shared_ptr<BlobDesc> Clone() const override;
+  std::shared_ptr<cfg::ParallelConf> get_parallel_conf() const override;
 
   std::shared_ptr<BlobDesc> with_distribute(
       const std::shared_ptr<Distribute>& distribute) const override {
