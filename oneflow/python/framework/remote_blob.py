@@ -78,6 +78,10 @@ class PyLazyConsistentBlob(
             lbi = cfg_lbi
         oneflow_api.LazyConsistentBlob.__init__(self, lbi, job_name, distribute)
 
+    @property
+    def dtype(self):
+        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
+
     def get_shape_log_warning(self):
         if oneflow.scope.mirrored_view_enabled():
             return ("%s\n%s\n%s") % (
