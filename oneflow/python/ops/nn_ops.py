@@ -2925,10 +2925,10 @@ def hardswish(
         # output [0.        0.6666667 3.5      ]
 
     Args:
-        x (remote_blob_util.BlobDef): The input Tensor. 
+        x (oneflow_api.BlobDesc): The input Tensor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
     Returns:
-        remote_blob_util.BlobDef: The activated Tensor.
+        oneflow_api.BlobDesc: The activated Tensor.
     """
     if name is None:
         name = id_util.UniqueStr("HardSwish_")
