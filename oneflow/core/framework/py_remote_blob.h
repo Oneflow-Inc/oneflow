@@ -121,14 +121,14 @@ class LazyConsistentBlob : public ConsistentBlob {
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     auto opt_int64 = CHECK_JUST(ctx->GetBatchAxis(logical_blob_name()));
     if (opt_int64->has_value()) { return opt_int64->value(); }
-    return HAS_NO_BATCH_AXIS;
+    return INVALID_BATCH_AXIS;
   }
 
   int64_t split_axis() const {
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     auto opt_int64 = CHECK_JUST(ctx->GetSplitAxisFromProducerView(logical_blob_name()));
     if (opt_int64->has_value()) { return opt_int64->value(); }
-    return HAS_NO_SPLIT_AXIS;
+    return INVALID_SPLIT_AXIS;
   }
 
   bool is_dynamic() const override {
@@ -234,14 +234,14 @@ class LazyMirroredBlob : public MirroredBlob {
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     auto opt_int64 = CHECK_JUST(ctx->MirroredBlobGetBatchAxis(logical_blob_name()));
     if (opt_int64->has_value()) { return opt_int64->value(); }
-    return HAS_NO_BATCH_AXIS;
+    return INVALID_BATCH_AXIS;
   }
 
   int64_t split_axis() const {
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     auto opt_int64 = CHECK_JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(logical_blob_name()));
     if (opt_int64->has_value()) { return opt_int64->value(); }
-    return HAS_NO_SPLIT_AXIS;
+    return INVALID_SPLIT_AXIS;
   }
 
   bool is_dynamic() const override {

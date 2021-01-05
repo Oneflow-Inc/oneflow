@@ -44,8 +44,8 @@ class TrampLazyMirroredBlob : public LazyMirroredBlob {
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.attr("HAS_NO_BATCH_AXIS") = HAS_NO_BATCH_AXIS;
-  m.attr("HAS_NO_SPLIT_AXIS") = HAS_NO_SPLIT_AXIS;
+  m.attr("INVALID_BATCH_AXIS") = INVALID_BATCH_AXIS;
+  m.attr("INVALID_SPLIT_AXIS") = INVALID_SPLIT_AXIS;
 
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(

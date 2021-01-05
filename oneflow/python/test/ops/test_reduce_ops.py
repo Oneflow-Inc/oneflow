@@ -860,7 +860,7 @@ class TestReduceOps(flow.unittest.TestCase):
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_max(x)
             test_case.assertTrue(y.split_axis == oneflow_api.INVALID_SPLIT_AXIS)
-            test_case.assertTrue(y.batch_axis == oneflow_api.HAS_NO_BATCH_AXIS)
+            test_case.assertTrue(y.batch_axis == oneflow_api.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
