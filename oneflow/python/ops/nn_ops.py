@@ -2891,8 +2891,8 @@ def hard_sigmoid(
 
 @oneflow_export("nn.hardswish")
 def hardswish(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""The Hardswish activation. 
 
     The formula is: 
