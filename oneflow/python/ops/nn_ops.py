@@ -2835,8 +2835,8 @@ def leaky_relu(
 
 @oneflow_export("nn.elu")
 def elu(
-    x: remote_blob_util.BlobDef, alpha: float = 1.0, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, alpha: float = 1.0, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""The ELU activation. 
 
     The formula is: 
@@ -2868,12 +2868,12 @@ def elu(
         # output [-0.9698026  1.         3.5      ]
 
     Args:
-        x (remote_blob_util.BlobDef): The input Tensor. 
+        x (oneflow_api.BlobDesc): The input Tensor. 
         alpha (float, optional): The `alpha` value for the ELU formula. Defaults to 1.0.
         name (Optional[str], optional): The name for the operator. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The activated Tensor.
+        oneflow_api.BlobDesc: The activated Tensor.
     """
     alpha = float(alpha)
     if name is None:
