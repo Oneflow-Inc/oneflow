@@ -35,9 +35,13 @@ class TrampLazyConsistentBlob : public LazyConsistentBlob {
   }
 };
 
-std::string LazyMirroredBlob::get_shape_log_warning() const {
-  PYBIND11_OVERRIDE_PURE(std::string, LazyMirroredBlob, get_shape_log_warning, );
-}
+class TrampLazyMirroredBlob : public LazyMirroredBlob {
+ public:
+  using LazyMirroredBlob::LazyMirroredBlob;
+  std::string get_shape_log_warning() const override {
+    PYBIND11_OVERRIDE(std::string, LazyMirroredBlob, get_shape_log_warning, );
+  }
+};
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("HAS_NO_BATCH_AXIS") = HAS_NO_BATCH_AXIS;
@@ -138,11 +142,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("parallel_size", &MirroredBlob::parallel_size)
       .def("set_job_name", &MirroredBlob::set_job_name);
 
-  py::class_<LazyMirroredBlob, MirroredBlob, std::shared_ptr<LazyMirroredBlob>>(m,
-                                                                                "LazyMirroredBlob")
+  py::class_<LazyMirroredBlob, TrampLazyMirroredBlob, MirroredBlob,
+             std::shared_ptr<LazyMirroredBlob>>(m, "LazyMirroredBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
                        std::shared_ptr<Distribute> distribute) {
-        return std::make_shared<LazyMirroredBlob>(lbi, job_name, distribute);
+        return std::make_shared<TrampLazyMirroredBlob>(lbi, job_name, distribute);
       }))
       .def_property_readonly("shape",
                              [](const std::shared_ptr<LazyMirroredBlob>& x) {
