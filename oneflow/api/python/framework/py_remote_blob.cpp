@@ -86,12 +86,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                        std::shared_ptr<Distribute> distribute) {
         return std::make_shared<LazyConsistentBlob>(lbi, job_name, distribute);
       }))
-      .def_property_readonly("shape", [](const std::shared_ptr<LazyConsistentBlob>& x) {
-        const auto& x_shape = x->shape();
-        py::tuple ret(x_shape->NumAxes());
-        for (int i = 0; i < x_shape->NumAxes(); ++i) { ret[i] = x_shape->At(i); }
-        return ret;
-      })
+      .def_property_readonly("shape",
+                             [](const std::shared_ptr<LazyConsistentBlob>& x) {
+                               const auto& x_shape = x->shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
       .def_property_readonly(
           "dtype", [](const std::shared_ptr<LazyConsistentBlob>& x) { return int(x->dtype()); })
       .def_property_readonly("batch_axis", &LazyConsistentBlob::batch_axis)

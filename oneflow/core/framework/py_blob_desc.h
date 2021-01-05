@@ -48,9 +48,7 @@ class BlobDesc : public Tensor {
   virtual std::string blob_name() const override { return lbi_->blob_name(); }
   virtual std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
   virtual DataType dtype() const override { UNIMPLEMENTED(); }
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
-    UNIMPLEMENTED();
-  }
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); }
 
   virtual int64_t batch_axis() const { UNIMPLEMENTED(); }
   virtual bool has_batch_axis() const { return batch_axis() != HAS_NO_BATCH_AXIS; }
