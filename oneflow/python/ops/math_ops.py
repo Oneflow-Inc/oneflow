@@ -1959,8 +1959,9 @@ def in_top_k(
         name (Optional[str], optional): The name for the operation. Defaults to None.
     Returns:
         oneflow_api.BlobDesc: A Blob of type bool. Computed Precision at k as a bool Blob.
-    
+
     For example:
+
     .. code-block:: python
 
         import oneflow as flow
