@@ -222,13 +222,6 @@ def JobBuildAndInferCtx_MirroredBlobGetParallelConfFromProducerView(job_name, lb
     return parallel_conf_cfg
 
 
-def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
-    return ret
-
-
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     serialized_parallel_conf = str(parallel_conf)
     ofrecord = oneflow_api.GetMachine2DeviceIdListOFRecordFromParallelConf(

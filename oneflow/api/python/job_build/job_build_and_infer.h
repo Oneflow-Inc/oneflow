@@ -118,12 +118,6 @@ inline Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
   return ctx->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name,
-                                                     const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->DisableBoxing(lbn);
-}
-
 inline Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
 }

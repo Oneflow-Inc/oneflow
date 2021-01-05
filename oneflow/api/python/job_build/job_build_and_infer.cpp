@@ -42,8 +42,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
         &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
 
-  m.def("JobBuildAndInferCtx_DisableBoxing", &JobBuildAndInferCtx_DisableBoxing);
-
   m.def("CurJobBuildAndInferCtx_AddLossLogicalBlobName",
         &CurJobBuildAndInferCtx_AddLossLogicalBlobName);
 

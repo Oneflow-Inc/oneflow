@@ -78,10 +78,6 @@ inline void CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(const std::strin
   return oneflow::CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair).GetOrThrow();
 }
 
-inline bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_DisableBoxing(job_name, lbn).GetOrThrow();
-}
-
 inline void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
   return oneflow::CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn).GetOrThrow();
 }

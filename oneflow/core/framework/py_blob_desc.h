@@ -48,13 +48,12 @@ class BlobDesc : public Tensor {
   virtual std::string blob_name() const override { return lbi_->blob_name(); }
   virtual std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
   virtual DataType dtype() const override { UNIMPLEMENTED(); }
-  virtual const std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
     UNIMPLEMENTED();
   }
 
   virtual int64_t batch_axis() const { UNIMPLEMENTED(); }
-  virtual bool has_batch_axis() const { return batch_axis_ != HAS_NO_BATCH_AXIS; }
-  virtual void set_batch_axis(int64_t val) { batch_axis_ = val; }
+  virtual bool has_batch_axis() const { return batch_axis() != HAS_NO_BATCH_AXIS; }
   virtual bool is_dynamic() const { UNIMPLEMENTED(); }
   virtual bool is_tensor_list() const { UNIMPLEMENTED(); }
   virtual std::shared_ptr<Distribute> distribute() const { return distribute_; }
@@ -92,7 +91,6 @@ class BlobDesc : public Tensor {
   std::shared_ptr<cfg::LogicalBlobId> lbi_;
   std::shared_ptr<Distribute> distribute_;
   std::string lbn_;
-  int64_t batch_axis_ = HAS_NO_BATCH_AXIS;
 };
 
 }  // namespace compatible_py
