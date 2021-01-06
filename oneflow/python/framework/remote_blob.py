@@ -92,6 +92,11 @@ class PyLazyConsistentBlob(
         else:
             return ""
 
+    def with_distribute(self, distribute):
+        new = type(self)(self.lbi, self.job_name)
+        new.set_distribute(distribute)
+        return new
+
     def with_gradient_distribute(self, distribute):
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
@@ -183,11 +188,11 @@ class EagerBlobTrait(object):
     @property
     def split_axis(self):
         sbp_parallel = self.blob_object.op_arg_parallel_attr.sbp_parallel
-        if sbp_parallel.HasField("split_parallel"):
-            return sbp_parallel.split_parallel.axis
-        elif sbp_parallel.HasField("broadcast_parallel"):
+        if sbp_parallel.has_split_parallel():
+            return sbp_parallel.split_parallel().axis()
+        elif sbp_parallel.has_broadcast_parallel():
             return oneflow_api.INVALID_SPLIT_AXIS
-        elif sbp_parallel.HasField("partial_sum_parallel"):
+        elif sbp_parallel.has_partial_sum_parallel():
             return oneflow_api.INVALID_SPLIT_AXIS
         else:
             raise NotImplementedError
@@ -329,6 +334,16 @@ class EagerConsistentBlob(
             job_name=self.job_name,
             distribute=self.distribute,
         )
+
+    def with_distribute(self, distribute):
+        new = type(self)(
+            self.lbi,
+            blob_object=self.blob_object,
+            job_name=self.job_name,
+            distribute=self.distribute,
+        )
+        new.set_distribute(distribute)
+        return new
 
     def with_gradient_distribute(self, distribute):
         return oneflow.parallel_cast(self, gradient_distribute=distribute)

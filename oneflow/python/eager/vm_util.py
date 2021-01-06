@@ -333,8 +333,8 @@ class InstructionsBuilder(object):
         parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
         logical_blob_attr = logical_blob_object.op_arg_blob_attr
         sbp_parallel = logical_blob_object.op_arg_parallel_attr.sbp_parallel
-        if sbp_parallel.HasField("split_parallel"):
-            split_axis = sbp_parallel.split_parallel.axis
+        if sbp_parallel.has_split_parallel():
+            split_axis = sbp_parallel.split_parallel().axis()
             return [
                 logical_blob_attr.GetPhysicalOpArgBlobAttr(split_axis, parallel_num, i)
                 for i in range(parallel_num)
