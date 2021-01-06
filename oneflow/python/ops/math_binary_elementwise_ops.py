@@ -156,7 +156,7 @@ def pow(
     if name is None:
         name = id_util.UniqueStr("Pow_")
 
-    if type(y) != oneflow_api.BlobDesc:
+    if isinstance(y, (int, float)):
         return (
             flow.user_op_builder(name)
             .Op("scalar_pow")
