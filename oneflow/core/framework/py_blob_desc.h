@@ -28,7 +28,8 @@ namespace oneflow {
 
 namespace compatible_py {
 
-static int HAS_NO_BATCH_AXIS = -1;
+static int64_t INVALID_BATCH_AXIS = -22;
+static int64_t INVALID_SPLIT_AXIS = -22;
 
 class BlobDesc : public Tensor {
  public:
@@ -46,20 +47,21 @@ class BlobDesc : public Tensor {
   virtual std::string op_name() const override { return lbi_->op_name(); }
   virtual std::string blob_name() const override { return lbi_->blob_name(); }
   virtual std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
-  virtual cfg::DataType dtype() const override { UNIMPLEMENTED(); }
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); };
+  virtual DataType dtype() const override { UNIMPLEMENTED(); }
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); }
 
-  virtual int batch_axis() const { UNIMPLEMENTED(); }
-  virtual bool has_batch_axis() const { return batch_axis_ != HAS_NO_BATCH_AXIS; }
-  virtual void set_batch_axis(int64_t val) { batch_axis_ = val; }
+  virtual int64_t batch_axis() const { UNIMPLEMENTED(); }
+  virtual bool has_batch_axis() const { return batch_axis() != INVALID_BATCH_AXIS; }
   virtual bool is_dynamic() const { UNIMPLEMENTED(); }
   virtual bool is_tensor_list() const { UNIMPLEMENTED(); }
   virtual std::shared_ptr<Distribute> distribute() const { return distribute_; }
   virtual std::string unique_name() const { return lbn_ + *CHECK_JUST(Distribute2Str()); }
 
-  virtual std::shared_ptr<BlobDesc> Clone() const = 0;
+  virtual std::shared_ptr<BlobDesc> Clone() const { UNIMPLEMENTED(); }
   virtual std::shared_ptr<BlobDesc> with_distribute(
-      const std::shared_ptr<Distribute>& distribute) const = 0;
+      const std::shared_ptr<Distribute>& distribute) const {
+    UNIMPLEMENTED();
+  }
 
   Maybe<BlobDesc> with_split_distribute(int64_t axis) {
     return with_distribute(JUST(GlobalSplitDistribute(axis)));
@@ -87,7 +89,6 @@ class BlobDesc : public Tensor {
   std::shared_ptr<cfg::LogicalBlobId> lbi_;
   std::shared_ptr<Distribute> distribute_;
   std::string lbn_;
-  int batch_axis_ = HAS_NO_BATCH_AXIS;
 };
 
 }  // namespace compatible_py

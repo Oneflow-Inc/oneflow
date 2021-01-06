@@ -85,7 +85,7 @@ def dynamic_binary_concat(
         source_blob.dtype.oneflow_proto_dtype
     )
     op_conf.dynamic_binary_concat_conf.out_shape.dim.extend(list(source_blob.shape))
-    if source_blob.batch_axis is not None:
+    if source_blob.batch_axis != oneflow_api.INVALID_BATCH_AXIS:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.value = source_blob.batch_axis
     else:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.SetInParent()
