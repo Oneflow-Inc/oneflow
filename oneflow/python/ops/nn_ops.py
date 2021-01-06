@@ -2888,25 +2888,6 @@ def leaky_relu(
     )
 
 
-<<<<<<< HEAD
-@oneflow_export("nn.hardtanh")
-def hardtanh(
-    x: remote_blob_util.BlobDef,
-    min_val: float = -1.0,
-    max_val: float = 1.0,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    r"""The Hardtanh activation. 
-
-    The equation is: 
-
-    .. math:: 
-
-        \text{HardTanh}(x) = \begin{cases}
-            max\_val & \text{ if } x > max\_val \\
-            -min\_val & \text{ if } x < min\_val \\
-            x & \text{ otherwise } \\
-=======
 @oneflow_export("nn.elu")
 def elu(
     x: oneflow_api.BlobDesc, alpha: float = 1.0, name: Optional[str] = None
@@ -2978,7 +2959,6 @@ def hard_sigmoid(
             0 & \text{ if } x \le -3  \\
             1 & \text{ if } x \ge +3 \\
             \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
->>>>>>> master
         \end{cases}
 
     For example: 
@@ -2991,42 +2971,6 @@ def hard_sigmoid(
 
 
         @flow.global_function()
-<<<<<<< HEAD
-        def hardtanh_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
-            return flow.nn.hardtanh(x, min_val=-1.25, max_val=1.2)
-
-
-        x = np.array([[-1.5, -1.1, 0.6], 
-                    [1.2, 1.3, 1.5]]).astype(np.float32)
-        out = hardtanh_job(x)
-
-        # output [[-1.25 -1.1   0.6 ]
-        #         [ 1.2   1.2   1.2 ]]
-
-    Args:
-        x (remote_blob_util.BlobDef): The input Tensor. 
-        min_val (float, optional): The minimum value of the linear region range. Defaults to -1.
-        max_val (float, optional): The maximum value of the linear region range. Defaults to 1.
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        remote_blob_util.BlobDef: The activated tensor. 
-    """
-    if name is None:
-        name = id_util.UniqueStr("Hardtanh_")
-
-    min_val = float(min_val)
-    max_val = float(max_val)
-
-    assert min_val < max_val, "max_val should be larger than min_val"
-
-    return (
-        flow.user_op_builder(name)
-        .Op("hardtanh")
-        .Input("in", [x])
-        .Attr("min_val", min_val)
-        .Attr("max_val", max_val)
-=======
         def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
             out = flow.math.hardsigmoid(x)
 
@@ -3105,7 +3049,74 @@ def hardswish(
         flow.user_op_builder(name)
         .Op("hardswish")
         .Input("in", [x])
->>>>>>> master
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.hardtanh")
+def hardtanh(
+    x: oneflow_api.BlobDesc,
+    min_val: float = -1.0,
+    max_val: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""The Hardtanh activation. 
+
+    The equation is: 
+
+    .. math:: 
+
+        \text{HardTanh}(x) = \begin{cases}
+            max\_val & \text{ if } x > max\_val \\
+            -min\_val & \text{ if } x < min\_val \\
+            x & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardtanh_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
+            return flow.nn.hardtanh(x, min_val=-1.25, max_val=1.2)
+        
+        
+        x = np.array([[-1.5, -1.1, 0.6], 
+                    [1.2, 1.3, 1.5]]).astype(np.float32)
+        out = hardtanh_job(x)
+        
+        # output [[-1.25 -1.1   0.6 ]
+        #         [ 1.2   1.2   1.2 ]]
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        min_val (float, optional): The minimum value of the linear region range. Defaults to -1.
+        max_val (float, optional): The maximum value of the linear region range. Defaults to 1.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        oneflow_api.BlobDesc: The activated tensor. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Hardtanh_")
+
+    min_val = float(min_val)
+    max_val = float(max_val)
+
+    assert min_val < max_val, "max_val should be larger than min_val"
+
+    return (
+        flow.user_op_builder(name)
+        .Op("hardtanh")
+        .Input("in", [x])
+        .Attr("min_val", min_val)
+        .Attr("max_val", max_val)
         .Output("out")
         .Build()
         .InferAndTryRun()
