@@ -31,7 +31,7 @@ class AutogradEngine {
 
   std::shared_ptr<FunctionNode> AddBackwardFuncPtrIf(std::function<void()> fn) {
     auto ptr = AddBackwardFuncPtr(fn);
-    CHECK_GT(ptr.use_count(), 1) << "返回的shared_ptr必须被autogradengine持有";
+    CHECK_GT(ptr.use_count(), 1) << "The returned shared_ptr must belong to autogradengine";
     return ptr;
   }
 
@@ -47,7 +47,7 @@ class StackAutogradEngine final : public AutogradEngine {
 
  private:
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(std::function<void()>) override;
-  std::vector<FunctionNode> func_list;  // ToDo: use other container instead of vector
+  std::vector<FunctionNode> func_list;  // TODO: use other container instead of vector
 };
 
 }  // namespace one

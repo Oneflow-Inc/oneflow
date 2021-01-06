@@ -56,6 +56,7 @@ class Tensor : public oneflow::Tensor {
   OF_DISALLOW_COPY_AND_MOVE(Tensor);
   // Constructors
   Tensor() = delete;
+  // TODO: add device info to constructors when Lazy/Eager Blob implement
   Tensor(const Shape& shape, cfg::DataType dtype) : shape_(shape), dtype_(dtype) {}
 
   ~Tensor() override = default;
@@ -63,6 +64,13 @@ class Tensor : public oneflow::Tensor {
   // Basic Properties
   const Shape& size() const { return shape_; }
   cfg::DataType dtype() const override { return dtype_; }
+  bool is_defined() { return storage_.use_count() > 0; }
+  int32_t dim() const { return shape_.NumAxes(); }
+  bool requires_grad() const { return is_requires_grad_; }
+  bool is_leaf() const { return is_leaf_; }
+  std::shared_ptr<Tensor> clone() const;  // malloc memory in same place and have same grad_function
+  std::shared_ptr<Tensor> detach() const;  // share blob but have no grad_function
+  // NOTE: all self-operator such as detach_() will be implement in python
 
   // Inherit some virtual unimplement interface
   std::shared_ptr<cfg::LogicalBlobId> lbi() const override { UNIMPLEMENTED(); }
@@ -75,12 +83,13 @@ class Tensor : public oneflow::Tensor {
   // autograd function
   void Backward(const std::shared_ptr<Tensor>& grad, bool retain_graph = false) { UNIMPLEMENTED(); }
   void SetFuncNode(const std::shared_ptr<FunctionNode>& func_ptr) { grad_func_ = func_ptr; }
-  bool is_defined() { return storage_.use_count() == 0; }
 
  protected:
   std::shared_ptr<Blob> storage_;
   std::weak_ptr<FunctionNode> grad_func_;
   std::shared_ptr<Tensor> grad_;
+  bool is_requires_grad_ = false;
+  bool is_leaf_ = false;
   Shape shape_;
   cfg::DataType dtype_;
 };
