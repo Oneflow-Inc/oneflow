@@ -44,37 +44,45 @@ class Tensor {
   virtual std::shared_ptr<Shape> shape() const = 0;
   virtual cfg::DataType dtype() const = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
-
-  // Virtual interfaces for one::Tensor
-  virtual std::shared_ptr<Blob> storage() { UNIMPLEMENTED(); }
 };
 
 namespace one {
 
+class FunctionNode;
+
 // one::Tensor will replace oneflow::Tensor in the future
 class Tensor : public oneflow::Tensor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(Tensor);
   // Constructors
-  Tensor() = default;
+  Tensor() = delete;
+  Tensor(const Shape& shape, cfg::DataType dtype) : shape_(shape), dtype_(dtype) {}
 
   ~Tensor() override = default;
 
   // Basic Properties
-  std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
-  cfg::DataType dtype() const override { UNIMPLEMENTED(); }
-  std::shared_ptr<Blob> storage();
-
-  // Basic Operations
+  const Shape& size() const { return shape_; }
+  cfg::DataType dtype() const override { return dtype_; }
 
   // Inherit some virtual unimplement interface
-  std::shared_ptr<cfg::LogicalBlobId> lbi() const { UNIMPLEMENTED(); }
-  std::string logical_blob_name() const { UNIMPLEMENTED(); }
-  std::string op_name() const { UNIMPLEMENTED(); }
-  std::string blob_name() const { UNIMPLEMENTED(); }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() { UNIMPLEMENTED(); }
+  std::shared_ptr<cfg::LogicalBlobId> lbi() const override { UNIMPLEMENTED(); }
+  std::string logical_blob_name() const override { UNIMPLEMENTED(); }
+  std::string op_name() const override { UNIMPLEMENTED(); }
+  std::string blob_name() const override { UNIMPLEMENTED(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); }
+  std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
 
- private:
+  // autograd function
+  void Backward(const std::shared_ptr<Tensor>& grad, bool retain_graph = false) { UNIMPLEMENTED(); }
+  void SetFuncNode(const std::shared_ptr<FunctionNode>& func_ptr) { grad_func_ = func_ptr; }
+  bool is_defined() { return storage_.use_count() == 0; }
+
+ protected:
   std::shared_ptr<Blob> storage_;
+  std::weak_ptr<FunctionNode> grad_func_;
+  std::shared_ptr<Tensor> grad_;
+  Shape shape_;
+  cfg::DataType dtype_;
 };
 
 }  // namespace one

@@ -32,18 +32,6 @@ void Tensor::CheckDataType<half>() const {
 
 }  // namespace user_op
 
-namespace one {
-
-/* std::shared_ptr<Shape> Tensor::shape() { */
-
-/* } */
-
-/* cfg::DataType Tensor::dtype() const { */
-
-/* } */
-
-std::shared_ptr<Blob> Tensor::storage() { return storage_; }
-
-}  // namespace one
+namespace one {}  // namespace one
 
 }  // namespace oneflow
