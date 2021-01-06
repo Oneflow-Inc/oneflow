@@ -26,7 +26,7 @@ from resnet_model import resnet50
 from imagenet_record_dataset import ImageNetRecordDataset
 
 DEFAULT_BATCH_SIZE = 4
-DEFAULT_CHECKPOINT_DIR = "./resnet_v15_of_best_model_val_top1_77318"
+DEFAULT_CHECKPOINT_DIR = "/dataset/model_zoo/resnet_v15_of_best_model_val_top1_77318"
 DEFAULT_IMAGE_SIZE = 224
 
 
