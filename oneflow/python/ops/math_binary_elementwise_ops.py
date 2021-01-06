@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-from typing import Optional
+from typing import Optional, Union
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
@@ -89,7 +89,9 @@ def atan2(
 
 @oneflow_export("math.pow")
 def pow(
-    x: oneflow_api.BlobDesc, y: oneflow_api.BlobDesc, name: Optional[str] = None
+    x: oneflow_api.BlobDesc,
+    y: Union[oneflow_api.BlobDesc, float],
+    name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator computes the Pow result. 
 
@@ -101,7 +103,7 @@ def pow(
 
     Args:
         x (oneflow_api.BlobDesc): A Blob
-        y (oneflow_api.BlobDesc): A Blob, the exponential factor of Pow
+        y (oneflow_api.BlobDesc): A Blob or float value, the exponential factor of Pow
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -128,7 +130,22 @@ def pow(
 
         # out [  4.  27. 256.]
     """
-    return build_math_binary_elementwise_op("pow", x, y, name)
+    if name is None:
+        name = id_util.UniqueStr("Pow_")
+
+    if type(y) != oneflow_api.BlobDesc:
+        return (
+            flow.user_op_builder(name)
+            .Op("scalar_pow")
+            .Input("in", [x])
+            .Attr("exponent", float(y))
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return build_math_binary_elementwise_op("pow", x, y, name)
 
 
 @oneflow_export("math.floordiv")
