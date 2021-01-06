@@ -15,16 +15,34 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
 namespace user_op {
 
+template<typename T>
+struct ScalarPowFunctor {
+  __host__ __device__ explicit ScalarPowFunctor(T exponent) : exponent(exponent) {}
+  __device__ T operator()(T x) const { return pow(x, exponent); }
+  const T exponent;
+};
+
+template<typename T>
+struct ScalarPowGradFunctor {
+  __host__ __device__ explicit ScalarPowGradFunctor(T exponent) : exponent(exponent) {}
+  __device__ T operator()(T x, T dy) const {
+    return exponent * (pow(x, exponent - static_cast<T>(1.0))) * dy;
+  }
+  const T exponent;
+};
+
 template<DeviceType device_type, typename T>
-class CpuScalarPowKernel final : public OpKernel {
+class GpuScalarPowKernel final : public OpKernel {
  public:
-  CpuScalarPowKernel() = default;
-  ~CpuScalarPowKernel() = default;
+  GpuScalarPowKernel() = default;
+  ~GpuScalarPowKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -35,25 +53,27 @@ class CpuScalarPowKernel final : public OpKernel {
     const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
 
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], exponent); }
+    OF_CUDA_CHECK(
+        (oneflow::cuda::elementwise::Unary(ScalarPowFunctor<T>(exponent), elem_cnt, out_ptr, in_ptr,
+                                           ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SCALAR_POW_KERNEL(device, dtype)   \
+#define REGISTER_GPU_SCALAR_POW_KERNEL(device, dtype)   \
   REGISTER_USER_KERNEL("scalar_pow")                    \
-      .SetCreateFn<CpuScalarPowKernel<device, dtype>>() \
+      .SetCreateFn<GpuScalarPowKernel<device, dtype>>() \
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, double);
+REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_SCALAR_POW_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuScalarPowGradKernel final : public OpKernel {
+class GpuScalarPowGradKernel final : public OpKernel {
  public:
-  CpuScalarPowGradKernel() = default;
-  ~CpuScalarPowGradKernel() = default;
+  GpuScalarPowGradKernel() = default;
+  ~GpuScalarPowGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -66,21 +86,21 @@ class CpuScalarPowGradKernel final : public OpKernel {
     const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = exponent * (std::pow(x_ptr[i], exponent - static_cast<T>(1))) * dy_ptr[i];
-    }
+    OF_CUDA_CHECK(
+        (oneflow::cuda::elementwise::Binary(ScalarPowGradFunctor<T>(exponent), elem_cnt, dx_ptr,
+                                            x_ptr, dy_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(device, dtype)  \
+#define REGISTER_GPU_ELU_BACKWARD_KERNEL(device, dtype)     \
   REGISTER_USER_KERNEL("scalar_pow_grad")                   \
-      .SetCreateFn<CpuScalarPowGradKernel<device, dtype>>() \
+      .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>() \
       .SetIsMatchedHob((HobDeviceTag() == device)           \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
+REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 
