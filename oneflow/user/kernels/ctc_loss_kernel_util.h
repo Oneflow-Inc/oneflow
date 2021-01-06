@@ -40,7 +40,7 @@ struct CtcLossKernelUtil {
                              const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<IDX, 3> input_helper,
                              NdIndexOffsetHelper<IDX, 3> alpha_helper, IDX max_target_length,
-                             const int blank);
+                             const int blank, const bool zero_infinity);
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const IDX batch_size, const T* log_probs_ptr,
@@ -48,7 +48,8 @@ struct CtcLossKernelUtil {
                               const IDX* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<IDX, 3> input_helper,
                               NdIndexOffsetHelper<IDX, 3> beta_helper, IDX max_input_length,
-                              IDX max_target_length, IDX num_labels, const int blank);
+                              IDX max_target_length, IDX num_labels, const int blank,
+                              const bool zero_infinity);
 };
 
 #define INSTANTIATE_CTC_LOSS_FUNCTOR(device_type_v, log_probs_dtype_pair,                  \

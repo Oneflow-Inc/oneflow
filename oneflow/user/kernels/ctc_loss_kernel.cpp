@@ -50,6 +50,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
     const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
     const int blank = ctx->Attr<int>("blank");
+    const bool zero_infinity = ctx->Attr<bool>("zero_infinity");
     IDX max_input_length = log_probs->shape().At(0);
     IDX batch_size = log_probs->shape().At(1);
     IDX num_labels = log_probs->shape().At(2);
@@ -69,7 +70,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
         ctx->device_ctx(), batch_size, log_probs_ptr, targets_ptr, input_lengths_ptr,
         target_lengths_ptr, alpha_ptr, loss_ptr, input_helper, alpha_helper, max_target_length,
-        blank);
+        blank, zero_infinity);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -113,6 +114,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
     const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
     const int blank = ctx->Attr<int>("blank");
+    const bool zero_infinity = ctx->Attr<bool>("zero_infinity");
 
     IDX max_input_length = log_probs->shape().At(0);
     IDX batch_size = log_probs->shape().At(1);
@@ -133,7 +135,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossBackward(
         ctx->device_ctx(), grad_out_ptr, loss_ptr, alpha_ptr, batch_size, log_probs_ptr,
         targets_ptr, input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper,
-        beta_helper, max_input_length, max_target_length, num_labels, blank);
+        beta_helper, max_input_length, max_target_length, num_labels, blank, zero_infinity);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

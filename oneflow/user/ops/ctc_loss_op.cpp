@@ -25,6 +25,7 @@ REGISTER_USER_OP("ctc_loss")
     .Output("loss")
     .Output("alpha")
     .Attr<int>("blank")
+    .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
       const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
@@ -63,6 +64,7 @@ REGISTER_USER_OP("ctc_loss_grad")
     .Output("grad")
     .Output("beta")
     .Attr<int>("blank")
+    .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
       const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
@@ -102,6 +104,7 @@ REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpC
         .InputBind("loss", ctx->FwOp().output("loss", 0))
         .InputBind("alpha", ctx->FwOp().output("alpha", 0))
         .Attr("blank", ctx->FwOp().attr<int>("blank"))
+        .Attr("zero_infinity", ctx->FwOp().attr<bool>("zero_infinity"))
         .Output("grad")
         .Output("beta")
         .Build();

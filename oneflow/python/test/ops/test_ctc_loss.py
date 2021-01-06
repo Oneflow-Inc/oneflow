@@ -30,8 +30,16 @@ def log_softmax(logits, axis=0):
     return np.log(dist)
 
 
-def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
-    ninf = -np.float("inf")
+def ctc_loss_np(
+    log_probs,
+    targets,
+    input_lengths,
+    target_lengths,
+    blank=0,
+    reduction="none",
+    zero_infinity=True,
+):
+    ninf = -float("inf")
 
     def _logsumexp(a, b):
         if a < b:
@@ -94,14 +102,35 @@ def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
             l1 = alpha[b, input_length - 1, target_length * 2]
             l2 = alpha[b, input_length - 1, target_length * 2 - 1]
             loss[b] = -logsumexp(l1, l2)
-    return loss, alpha
+        if zero_infinity and loss[b] == float("inf"):
+            loss[b] = 0
+
+    if reduction == "mean":
+        return np.mean(
+            np.divide(loss, np.clip(target_lengths, 1, a_max=None).astype(np.float))
+        )
+    elif reduction == "sum":
+        return np.sum(loss)
+    else:
+        return loss
 
 
 def compare_with_np(
-    device_type, max_logit_length, batch_size, num_classes, max_label_length, data_type
+    device_type,
+    data_type,
+    max_logit_length,
+    batch_size,
+    num_classes,
+    max_label_length,
+    blank,
+    reduction,
+    zero_infinity,
 ):
+    assert data_type in ["float32"]
     assert device_type in ["gpu", "cpu"]
-    assert data_type in ["float32", "double", "int8", "int32", "int64"]
+    assert reduction in ["none", "mean", "sum"]
+    assert zero_infinity in [False, True]
+
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
@@ -120,7 +149,13 @@ def compare_with_np(
     ) -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             return flow.ctc_loss(
-                log_probs, targets, input_lengths, target_lengths, reduction="none"
+                log_probs,
+                targets,
+                input_lengths,
+                target_lengths,
+                blank=blank,
+                reduction=reduction,
+                zero_infinity=zero_infinity,
             )
 
     log_probs = np.random.random(
@@ -141,8 +176,15 @@ def compare_with_np(
     # OneFlow
     of_out = ctc_loss_job(log_probs, targets, input_lengths, target_lengths)
     # Numpy
-    np_out, _ = ctc_loss_np(log_probs, targets, input_lengths, target_lengths)
-
+    np_out = ctc_loss_np(
+        log_probs,
+        targets,
+        input_lengths,
+        target_lengths,
+        blank,
+        reduction,
+        zero_infinity,
+    )
     tolerance = 1e-5
     assert np.allclose(of_out, np_out, rtol=tolerance, atol=tolerance)
 
@@ -150,11 +192,14 @@ def compare_with_np(
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["max_logit_length"] = [1000]
+    arg_dict["data_type"] = ["float32"]
+    arg_dict["max_logit_length"] = [100]
     arg_dict["batch_size"] = [10]
     arg_dict["num_classes"] = [10]
-    arg_dict["max_label_length"] = [100]
-    arg_dict["data_type"] = ["float32"]
+    arg_dict["max_label_length"] = [20]
+    arg_dict["blank"] = [0, 1, 9]
+    arg_dict["reduction"] = ["none", "mean", "sum"]
+    arg_dict["zero_infinity"] = [False, True]
 
     return GenArgList(arg_dict)
 

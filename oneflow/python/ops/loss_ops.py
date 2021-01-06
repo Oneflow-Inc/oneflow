@@ -88,12 +88,13 @@ def smooth_l1_loss(
 
 @oneflow_export("ctc_loss")
 def ctc_loss(
-    log_probs: remote_blob_util.BlobDef,  # Tensor of size (input_length, batch_size, number_of_classes)
-    targets: remote_blob_util.BlobDef,  # Tensor of size (batch_size, max_target_length)
-    input_lengths: remote_blob_util.BlobDef,  # Tuple or tensor of size (batch_size)
-    target_lengths: remote_blob_util.BlobDef,  # Tuple or tensor of size (batch_size)
-    blank: int = 0,  # blank label. Default 0.
-    reduction: str = "mean",  # Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'
+    log_probs: remote_blob_util.BlobDef,
+    targets: remote_blob_util.BlobDef,
+    input_lengths: remote_blob_util.BlobDef,
+    target_lengths: remote_blob_util.BlobDef,
+    blank: int = 0,
+    reduction: str = "mean",
+    zero_infinity: bool = False,
     name: Optional[str] = None,
 ) -> remote_blob_util.BlobDef:
     r"""Computes the CTC(Connectionist Temporal Classification) loss.
@@ -163,6 +164,7 @@ def ctc_loss(
         .Output("loss")
         .Output("alpha")
         .Attr("blank", blank)
+        .Attr("zero_infinity", zero_infinity)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()

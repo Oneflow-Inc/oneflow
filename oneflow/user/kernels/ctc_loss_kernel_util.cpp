@@ -46,7 +46,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
                              const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<IDX, 3> input_helper,
                              NdIndexOffsetHelper<IDX, 3> alpha_helper, IDX max_target_length,
-                             const int blank) {
+                             const int blank, const bool zero_infinity) {
     constexpr T neginf = -std::numeric_limits<T>::infinity();
     FOR_RANGE(int32_t, b, 0, batch_size) {
       IDX input_length = input_lengths_ptr[b];
@@ -101,6 +101,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
         T log_likelihood = std::log(std::exp(l1 - m) + std::exp(l2 - m)) + m;
         loss_ptr[b] = -log_likelihood;
       }
+      if (zero_infinity && loss_ptr[b] == std::numeric_limits<T>::infinity()) { loss_ptr[b] = 0; }
     }
   }
 
@@ -110,7 +111,8 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
                               const IDX* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<IDX, 3> input_helper,
                               NdIndexOffsetHelper<IDX, 3> beta_helper, IDX max_input_length,
-                              IDX max_target_length, IDX num_labels, const int blank) {
+                              IDX max_target_length, IDX num_labels, const int blank,
+                              const bool zero_infinity) {
     constexpr T neginf = -std::numeric_limits<T>::infinity();
     FOR_RANGE(IDX, i, 0, input_helper.Size()) { grad_ptr[i] = neginf; }
 
@@ -118,6 +120,14 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> {
       IDX input_length = input_lengths_ptr[b];
       IDX target_length = target_lengths_ptr[b];
       T nll = loss_ptr[b];
+      if (zero_infinity && nll == std::numeric_limits<T>::infinity()) {
+        for (IDX t = 0; t < input_length - 2; t++) {
+          for (IDX s = 0; s < 2 * target_length + 1; s++) {
+            grad_ptr[input_helper.NdIndexToOffset(t, b, s)] = 0;
+          }
+        }
+        continue;
+      }
 
       if (input_length > 0) {
         IDX beta_idx = beta_helper.NdIndexToOffset(b, input_length - 1, 0);
