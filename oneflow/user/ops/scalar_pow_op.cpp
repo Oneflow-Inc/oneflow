@@ -43,6 +43,47 @@ REGISTER_USER_OP("scalar_pow")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("scalar_pow_grad")
+    .Input("x")
+    .Input("dy")
+    .Attr<double>("exponent")
+    .Output("dx")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
+      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .Split(user_op::OpArg("dx", 0), i)
+            .Split(user_op::OpArg("dy", 0), i)
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("scalar_pow").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto scalar_pow_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(scalar_pow_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("scalar_pow_grad")
+        .InputBind("x", ctx->FwOp().input("in", 0))
+        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+        .Attr<double>("exponent", ctx->FwOp().attr<double>("exponent"))
+        .Output("dx")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                            [&ctx, &scalar_pow_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(scalar_pow_grad_op_name).output("dx", 0);
+                            });
+});
+
 }  // namespace
 
 }  // namespace oneflow

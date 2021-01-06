@@ -49,6 +49,39 @@ class CpuScalarPowKernel final : public OpKernel {
 REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, double);
 
+template<DeviceType device_type, typename T>
+class CpuScalarPowGradKernel final : public OpKernel {
+ public:
+  CpuScalarPowGradKernel() = default;
+  ~CpuScalarPowGradKernel() = default;
+
+ private:
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const T* x_ptr = x_tensor->dptr<T>();
+    const T* dy_ptr = dy_tensor->dptr<T>();
+    T* dx_ptr = dx_tensor->mut_dptr<T>();
+    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
+
+    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    FOR_RANGE(int32_t, i, 0, elem_cnt) {
+      dx_ptr[i] = exponent * (std::pow(x_ptr[i], exponent - static_cast<T>(1))) * dy_ptr[i];
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(device, dtype)  \
+  REGISTER_USER_KERNEL("scalar_pow_grad")                   \
+      .SetCreateFn<CpuScalarPowGradKernel<device, dtype>>() \
+      .SetIsMatchedHob((HobDeviceTag() == device)           \
+                       & (HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
+
 }  // namespace user_op
 
 }  // namespace oneflow
