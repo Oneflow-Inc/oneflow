@@ -118,9 +118,9 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             .AddSignature("regress")
         )
         for input_name, lbn in input_lbns.items():
-            signature_builder.Input(input_name, lbn)
+            signature_builder.Input(input_name, lbn, batch_axis=0)
         for output_name, lbn in output_lbns.items():
-            signature_builder.Output(output_name, lbn)
+            signature_builder.Output(output_name, lbn, batch_axis=0)
         signature_builder.Complete().Complete().Save()
 
         # test data
@@ -174,6 +174,14 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         print("input names:", input_names)
         for input_name in input_names:
             print('input "{}" info: {}'.format(input_name, sess.input_info(input_name)))
+        output_names = sess.list_outputs()
+        print("output names:", output_names)
+        for output_name in output_names:
+            print(
+                'output "{}" info: {}'.format(
+                    output_name, sess.output_info(output_name)
+                )
+            )
 
         print("load saved alexnet and inference result:")
         print_input_info = False

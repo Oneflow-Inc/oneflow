@@ -78,12 +78,16 @@ def _signature_proto_to_cfg(signature_proto, mut_signature_cfg):
         _inferface_blob_conf_proto_to_cfg(
             input_def.blob_conf, input_def_cfg.mutable_blob_conf()
         )
+        if input_def.HasField("batch_axis"):
+            input_def_cfg.set_batch_axis(input_def.batch_axis)
         mut_signature_cfg.mutable_inputs()[input_name].CopyFrom(input_def_cfg)
 
     for output_name, output_def in signature_proto.outputs.items():
         output_def_cfg = job_conf_proto_cfg.JobOutputDef()
         output_def_cfg.mutable_lbi().set_op_name(output_def.lbi.op_name)
         output_def_cfg.mutable_lbi().set_blob_name(output_def.lbi.blob_name)
+        if output_def.HasField("batch_axis"):
+            output_def_cfg.set_batch_axis(output_def.batch_axis)
         mut_signature_cfg.mutable_outputs()[output_name].CopyFrom(output_def_cfg)
 
 
@@ -151,6 +155,7 @@ class InferenceSession(object):
         self.inter_user_job_info_ = None
         self.job_name2input_name2lbn_ = {}
         self.job_name2output_name2lbn_ = {}
+        self.job_name2batch_size_ = {}
         self.input_name2input_info_ = {}
         self.output_name2output_info_ = {}
         self.output_name2future_ = {}
@@ -244,8 +249,15 @@ class InferenceSession(object):
     def set_job_batch_size(self, job_name, batch_size):
         job_conf = self._get_job_conf(job_name)
         for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
+            if not mut_input_def.has_batch_axis():
+                continue
+            batch_axis = mut_input_def.batch_axis()
             mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
-            mut_shape.mutable_dim()[0] = batch_size
+            mut_shape.mutable_dim()[batch_axis] = batch_size
+
+        self.job_name2batch_size_[job_name] = batch_size
+        self.input_name2input_info_ = {}
+        self.output_name2output_info_ = {}
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
@@ -428,8 +440,13 @@ class InferenceSession(object):
         job_conf = self._get_job_conf(job_name)
         input_def = job_conf.signature().inputs()[input_name]
         input_shape = tuple(input_def.blob_conf().shape().dim())
-        for dim_size, origin_dim_size in zip(input_shape[1:], origin_input_shape[1:]):
-            if dim_size != origin_dim_size:
+        for axis, (dim_size, origin_dim_size) in enumerate(
+            zip(input_shape, origin_input_shape)
+        ):
+            if dim_size != origin_dim_size and (
+                (input_def.has_batch_axis() and axis != input_def.batch_axis())
+                or (not input_def.has_batch_axis())
+            ):
                 raise ValueError(
                     "input shape not match: {} vs {}".format(
                         input_shape, origin_input_shape
@@ -437,6 +454,17 @@ class InferenceSession(object):
                 )
 
         return input_shape
+
+    def _fix_output_shape(self, job_name, output_name, origin_output_shape):
+        if job_name not in self.job_name2batch_size_:
+            return origin_output_shape
+
+        job_conf = self._get_job_conf(job_name)
+        output_def = job_conf.signature().outputs()[output_name]
+        output_shape = list(origin_output_shape)
+        if output_def.has_batch_axis():
+            output_shape[output_def.batch_axis()] = self.job_name2batch_size_[job_name]
+        return tuple(output_shape)
 
     def input_info(self, input_name):
         self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
@@ -460,6 +488,27 @@ class InferenceSession(object):
         input_info = dict(shape=input_shape, dtype=input_dtype)
         self.input_name2input_info_[input_name] = input_info
         return input_info
+
+    def output_info(self, output_name):
+        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
+        if output_name in self.output_name2output_info_:
+            return self.output_name2output_info_[output_name]
+
+        output_lbn, job_name = self._query_output_lbn(output_name)
+        if job_name is None or output_lbn is None:
+            raise ValueError('can not find input "{}"'.format(output_name))
+
+        output_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
+            job_name, output_lbn
+        )
+        output_shape = self._fix_output_shape(job_name, output_name, output_shape)
+        output_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, output_lbn)
+        output_dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(output_dtype)
+        output_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(output_dtype)
+        # TODO: other info
+        output_info = dict(shape=output_shape, dtype=output_dtype)
+        self.output_name2output_info_[output_name] = output_info
+        return output_info
 
     def run(self, job_name, **kwargs):
         self._check_status(self.SessionStatus.RUNNING)
