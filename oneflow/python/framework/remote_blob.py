@@ -340,7 +340,13 @@ class EagerMirroredBlob(
     blob_trait.BlobOperatorTrait,
     blob_trait.BlobHeaderTrait,
 ):
-    def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
+    def __init__(
+        self,
+        lbi,
+        blob_object=None,
+        job_name="",
+        distribute=oneflow_api.distribute.auto(),
+    ):
         if not isinstance(lbi, lbi_util.LogicalBlobId):
             cfg_lbi = lbi_util.LogicalBlobId()
             cfg_lbi.set_op_name(lbi.op_name)
