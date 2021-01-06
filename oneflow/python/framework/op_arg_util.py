@@ -17,6 +17,8 @@ from __future__ import absolute_import
 
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.core.job.mirrored_parallel_pb2 as mirrored_parallel_pb
+import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
+import oneflow.python.framework.balanced_splitter as balanced_splitter
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 
 
@@ -64,6 +66,18 @@ class OpArgBlobAttribute(object):
     @property
     def logical_blob_name(self):
         return self.logical_blob_name_
+
+    def GetPhysicalOpArgBlobAttr(self, split_axis, parallel_num, parallel_id):
+        blob_desc = blob_desc_pb.BlobDescProto()
+        blob_desc.CopyFrom(self.blob_desc)
+        physical_len = balanced_splitter.BalancedPartNums(
+            self.shape[split_axis], parallel_num
+        )[parallel_id]
+        blob_desc.body.shape.dim[split_axis] = physical_len
+        physical_blob_attr = OpArgBlobAttribute(
+            self.batch_axis, blob_desc, self.logical_blob_name,
+        )
+        return physical_blob_attr
 
     def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
         blob_sig = op_node_signature.logical_blob_desc_signature.bn_in_op2blob_desc
