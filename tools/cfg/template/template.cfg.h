@@ -524,6 +524,7 @@ struct hash<{{ util.module_package_cfg_namespace(module)}}::{{ util.enum_name(en
 {% endfor %}{# enm #}
 
 {% for cls in util.module_nested_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
 {% for enm in util.message_type_enums(cls) %}
 template<>
 struct hash<{{ util.module_package_cfg_namespace(module)}}::{{ util.enum_name(enm) }}> {
@@ -546,6 +547,7 @@ struct hash<{{ util.module_package_cfg_namespace(module)}}::{{ util.class_name(c
     return s.__CalcHash__();
   }
 };
+{% endif  %}
 {% endfor %}{# cls #}
 
 }

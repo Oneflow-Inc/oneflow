@@ -27,33 +27,33 @@ namespace test {
 TEST(std_hash_cfg, required_int) {
   std::srand(0);
   std::set<std::size_t> hash_values;
-  static const kNumMax = 10000;
+  static const int kNumMax = 10000;
   const auto& hash = std::hash<cfg::ReflectionTestFoo>();
   for (int i = 0; i < kNumMax; ++i) {
     cfg::ReflectionTestFoo foo;
     foo.set_required_int32(std::rand());
     hash_values.insert(hash(foo));
   }
-  ASSERT_GT(hash_values.size(), kNumMax / 2);
+  ASSERT_GT(hash_values.size(), int(kNumMax / 1.2));
 }
 
 TEST(std_hash_cfg, optional_string) {
   std::srand(0);
   std::set<std::size_t> hash_values;
-  static const kNumMax = 10000;
+  static const int kNumMax = 10000;
   const auto& hash = std::hash<cfg::ReflectionTestFoo>();
   for (int i = 0; i < kNumMax; ++i) {
     cfg::ReflectionTestFoo foo;
     foo.set_optional_string(std::to_string(std::rand()));
     hash_values.insert(hash(foo));
   }
-  ASSERT_GT(hash_values.size(), kNumMax / 2);
+  ASSERT_GT(hash_values.size(), int(kNumMax / 1.2));
 }
 
 TEST(std_hash_cfg, required_msg) {
   std::srand(0);
   std::set<std::size_t> hash_values;
-  static const kNumMax = 10000;
+  static const int kNumMax = 10000;
   const auto& hash = std::hash<cfg::ReflectionTestBar>();
   for (int i = 0; i < kNumMax; ++i) {
     cfg::ReflectionTestBar bar;
@@ -61,28 +61,28 @@ TEST(std_hash_cfg, required_msg) {
     foo->set_required_int32(std::rand());
     hash_values.insert(hash(bar));
   }
-  ASSERT_GT(hash_values.size(), kNumMax / 2);
+  ASSERT_GT(hash_values.size(), int(kNumMax / 1.2));
 }
 
 TEST(std_hash_cfg, repeated_msg) {
   std::srand(0);
   std::set<std::size_t> hash_values;
-  static const kNumMax = 10000;
+  static const int kNumMax = 10000;
   const auto& hash = std::hash<cfg::ReflectionTestBar>();
   for (int i = 0; i < kNumMax; ++i) {
     cfg::ReflectionTestBar bar;
     for (int j = 0; j < 10; ++j) {
-      bar.mutable_required_foo()->Add()->set_required_int32(std::rand());
+      bar.mutable_repeated_foo()->Add()->set_required_int32(std::rand());
     }
     hash_values.insert(hash(bar));
   }
-  ASSERT_GT(hash_values.size(), kNumMax / 2);
+  ASSERT_GT(hash_values.size(), int(kNumMax / 1.2));
 }
 
 TEST(std_hash_cfg, map_msg) {
   std::srand(0);
   std::set<std::size_t> hash_values;
-  static const kNumMax = 10000;
+  static const int kNumMax = 10000;
   const auto& hash = std::hash<cfg::ReflectionTestBar>();
   for (int i = 0; i < kNumMax; ++i) {
     cfg::ReflectionTestBar bar;
@@ -91,7 +91,7 @@ TEST(std_hash_cfg, map_msg) {
     }
     hash_values.insert(hash(bar));
   }
-  ASSERT_GT(hash_values.size(), kNumMax / 2);
+  ASSERT_GT(hash_values.size(), int(kNumMax / 1.2));
 }
 
 TEST(CfgReflection, FieldDefined_required_not_set) {
