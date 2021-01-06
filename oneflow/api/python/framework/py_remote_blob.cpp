@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/py_remote_blob.h"
 
@@ -164,6 +165,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_dynamic", &LazyMirroredBlob::is_dynamic)
       .def_property_readonly("is_tensor_list", &LazyMirroredBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &LazyMirroredBlob::parallel_conf)
+      // The major downside of these implicit conversions is that containers must be converted (i.e.
+      // copied) on every C++->Python transition, which can have implications on the program
+      // semantics and performance.
       .def_property_readonly("sub_consistent_blob_list",
                              &LazyMirroredBlob::sub_consistent_blob_list)
       .def("with_gradient_distribute", &LazyMirroredBlob::with_gradient_distribute)

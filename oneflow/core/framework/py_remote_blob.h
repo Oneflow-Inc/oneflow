@@ -205,13 +205,13 @@ class LazyMirroredBlob : public MirroredBlob {
       std::shared_ptr<cfg::LogicalBlobId> sub_lbi = std::make_shared<cfg::LogicalBlobId>(
           *CHECK_JUST(ctx->MirroredBlobGetSubLbi(this->logical_blob_name(), i)));
       sub_consistent_blob_list_.emplace_back(
-          std::make_shared<LazyMirroredBlob>(sub_lbi, "", GlobalAutoDistribute()));
+          std::make_shared<LazyConsistentBlob>(sub_lbi, "", GlobalAutoDistribute()));
     }
   }
   LazyMirroredBlob(const LazyMirroredBlob& lazy_mirrored_blob) = default;
   ~LazyMirroredBlob() = default;
 
-  std::vector<std::shared_ptr<LazyMirroredBlob>> sub_consistent_blob_list() {
+  std::vector<std::shared_ptr<LazyConsistentBlob>> sub_consistent_blob_list() {
     return sub_consistent_blob_list_;
   }
 
@@ -266,7 +266,7 @@ class LazyMirroredBlob : public MirroredBlob {
   }
 
  private:
-  std::vector<std::shared_ptr<LazyMirroredBlob>> sub_consistent_blob_list_;
+  std::vector<std::shared_ptr<LazyConsistentBlob>> sub_consistent_blob_list_;
 };
 
 }  // namespace compatible_py
