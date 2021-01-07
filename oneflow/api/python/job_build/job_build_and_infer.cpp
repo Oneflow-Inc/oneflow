@@ -40,6 +40,20 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
         &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
 
+  m.def("JobBuildAndInferCtx_GetSerializedIdListAsStaticShape",
+        &JobBuildAndInferCtx_GetSerializedIdListAsStaticShape);
+  m.def("JobBuildAndInferCtx_GetDataType", &JobBuildAndInferCtx_GetDataType);
+  m.def("JobBuildAndInferCtx_IsDynamic", &JobBuildAndInferCtx_IsDynamic);
+
+  m.def("JobBuildAndInferCtx_DisableBoxing", &JobBuildAndInferCtx_DisableBoxing);
+  m.def("JobBuildAndInferCtx_IsTensorList", &JobBuildAndInferCtx_IsTensorList);
+  m.def("JobBuildAndInferCtx_GetBatchAxis", &JobBuildAndInferCtx_GetBatchAxis);
+
+  m.def("JobBuildAndInferCtx_GetSplitAxisFromProducerView",
+        &JobBuildAndInferCtx_GetSplitAxisFromProducerView);
+  m.def("JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView",
+        &JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView);
+
   m.def("CurJobBuildAndInferCtx_AddLossLogicalBlobName",
         &CurJobBuildAndInferCtx_AddLossLogicalBlobName);
 
