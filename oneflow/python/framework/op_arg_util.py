@@ -15,9 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+from google.protobuf import text_format
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.core.job.mirrored_parallel_pb2 as mirrored_parallel_pb
+import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
+import oneflow.python.framework.balanced_splitter as balanced_splitter
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
+import oneflow_api
 
 
 class OpArgBlobAttribute(object):
@@ -65,6 +69,18 @@ class OpArgBlobAttribute(object):
     def logical_blob_name(self):
         return self.logical_blob_name_
 
+    def GetPhysicalOpArgBlobAttr(self, split_axis, parallel_num, parallel_id):
+        blob_desc = blob_desc_pb.BlobDescProto()
+        blob_desc.CopyFrom(self.blob_desc)
+        physical_len = balanced_splitter.BalancedPartNums(
+            self.shape[split_axis], parallel_num
+        )[parallel_id]
+        blob_desc.body.shape.dim[split_axis] = physical_len
+        physical_blob_attr = OpArgBlobAttribute(
+            self.batch_axis, blob_desc, self.logical_blob_name,
+        )
+        return physical_blob_attr
+
     def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
         blob_sig = op_node_signature.logical_blob_desc_signature.bn_in_op2blob_desc
         assert bn_in_op not in blob_sig
@@ -84,7 +100,15 @@ class OpArgBlobAttribute(object):
 class OpArgParallelAttribute(object):
     def __init__(self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel):
         self.parallel_desc_symbol_ = parallel_desc_symbol
+        if not isinstance(sbp_parallel, oneflow_api.CfgMessage):
+            sbp_parallel = oneflow_api.deprecated.MakeSbpParrallelByString(
+                str(sbp_parallel)
+            )
         self.sbp_parallel_ = sbp_parallel
+        if not isinstance(opt_mirrored_parallel, oneflow_api.CfgMessage):
+            opt_mirrored_parallel = oneflow_api.deprecated.MakeOptMirroredParrallelByString(
+                str(opt_mirrored_parallel)
+            )
         self.opt_mirrored_parallel_ = opt_mirrored_parallel
         self.hash_ = self._Hash()
 
@@ -101,7 +125,7 @@ class OpArgParallelAttribute(object):
         return self.opt_mirrored_parallel_
 
     def is_mirrored(self):
-        return self.opt_mirrored_parallel.HasField("mirrored_parallel")
+        return self.opt_mirrored_parallel.has_mirrored_parallel()
 
     def Assign(self, other):
         self.__init__(
@@ -111,12 +135,12 @@ class OpArgParallelAttribute(object):
     def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
         sbp_sig = op_node_signature.sbp_signature.bn_in_op2sbp_parallel
         assert bn_in_op not in sbp_sig
-        sbp_sig[bn_in_op].CopyFrom(self.sbp_parallel)
+        text_format.Parse(str(self.sbp_parallel), sbp_sig[bn_in_op])
         mirrored_sig = (
             op_node_signature.mirrored_signature.bn_in_op2opt_mirrored_parallel
         )
         assert bn_in_op not in mirrored_sig
-        mirrored_sig[bn_in_op].CopyFrom(self.opt_mirrored_parallel)
+        text_format.Parse(str(self.opt_mirrored_parallel), mirrored_sig[bn_in_op])
         parallel_sig = (
             op_node_signature.parallel_signature.bn_in_op2parallel_desc_symbol_id
         )
@@ -124,8 +148,10 @@ class OpArgParallelAttribute(object):
         parallel_sig[bn_in_op] = self.parallel_desc_symbol.symbol_id
 
     def DumpToToInterfaceBlobConf(self, interface_blob_conf):
-        if self.sbp_parallel.HasField("split_parallel"):
-            interface_blob_conf.split_axis.value = self.sbp_parallel.split_parallel.axis
+        if self.sbp_parallel.has_split_parallel():
+            interface_blob_conf.split_axis.value = (
+                self.sbp_parallel.split_parallel().axis()
+            )
         else:
             interface_blob_conf.ClearField("split_axis")
 
@@ -137,7 +163,7 @@ class OpArgParallelAttribute(object):
             self.parallel_desc_symbol_ == other.parallel_desc_symbol_
             and self.opt_mirrored_parallel_ == other.opt_mirrored_parallel_
             and (
-                self.opt_mirrored_parallel_.HasField("mirrored_parallel")
+                self.opt_mirrored_parallel_.has_mirrored_parallel()
                 or self.sbp_parallel_ == other.sbp_parallel_
             )
         )
@@ -153,13 +179,13 @@ class OpArgParallelAttribute(object):
         )
 
     def _Hash(self):
-        if self.opt_mirrored_parallel_.HasField("mirrored_parallel"):
+        if self.opt_mirrored_parallel_.has_mirrored_parallel():
             sbp_hash = 0
         else:
-            sbp_hash = hash(str(self.sbp_parallel_))
+            sbp_hash = hash(self.sbp_parallel_)
         return (
             hash(self.parallel_desc_symbol_)
-            ^ hash(str(self.opt_mirrored_parallel_))
+            ^ hash(self.opt_mirrored_parallel_)
             ^ sbp_hash
         )
 

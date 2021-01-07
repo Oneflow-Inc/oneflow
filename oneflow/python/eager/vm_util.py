@@ -333,28 +333,10 @@ class InstructionsBuilder(object):
         parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
         logical_blob_attr = logical_blob_object.op_arg_blob_attr
         sbp_parallel = logical_blob_object.op_arg_parallel_attr.sbp_parallel
-
-        def GetSplittedBlobAttr(
-            logical_blob_attr, split_axis, parallel_num, parallel_id
-        ):
-            blob_desc = blob_desc_pb.BlobDescProto()
-            blob_desc.CopyFrom(logical_blob_attr.blob_desc)
-            physical_len = balanced_splitter.BalancedPartNums(
-                logical_blob_attr.shape[split_axis], parallel_num
-            )[parallel_id]
-            blob_desc.body.shape.dim[split_axis] = physical_len
-            physical_blob_attr = op_arg_util.OpArgBlobAttribute(
-                logical_blob_attr.batch_axis,
-                blob_desc,
-                logical_blob_attr.logical_blob_name,
-            )
-            return physical_blob_attr
-
-        if sbp_parallel.HasField("split_parallel"):
-            split_axis = sbp_parallel.split_parallel.axis
-
+        if sbp_parallel.has_split_parallel():
+            split_axis = sbp_parallel.split_parallel().axis()
             return [
-                GetSplittedBlobAttr(logical_blob_attr, split_axis, parallel_num, i)
+                logical_blob_attr.GetPhysicalOpArgBlobAttr(split_axis, parallel_num, i)
                 for i in range(parallel_num)
             ]
         else:
