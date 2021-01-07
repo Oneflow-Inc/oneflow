@@ -852,7 +852,7 @@ def group_normalization(
     if name is None:
         name = id_util.UniqueStr("GroupNorm_")
 
-    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], x.shape[1] // num_groups, -1])
+    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], num_groups, -1])
     normalized_1d_out = flow.nn.InstanceNorm1d(
         reshape_to_1d, eps=eps, affine=affine, name=name
     )

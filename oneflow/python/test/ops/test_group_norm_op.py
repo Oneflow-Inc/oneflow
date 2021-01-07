@@ -30,10 +30,10 @@ def getGroupNormOutAndGrad(input, gout, num_groups, eps):
 
     # reshape to (N, C // num_groups, L)
     input_reshape_to_1d = np.reshape(
-        input, (input.shape[0], input.shape[1] // num_groups, -1)
+        input, (input.shape[0], num_groups, -1)
     )
     gout_reshape_to_1d = np.reshape(
-        gout, (gout.shape[0], gout.shape[1] // num_groups, -1)
+        gout, (gout.shape[0], num_groups, -1)
     )
 
     # compute group normalization in numpy
