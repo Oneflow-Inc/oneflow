@@ -590,6 +590,23 @@ std::size_t Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::__Cal
   ;
 }
 
+std::size_t Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::__CalcHash__() const {
+  return 0
+{% for field in util.message_type_fields(cls) %}
+{% if util.field_has_required_or_optional_label(field) %}
+    ^ (has_{{ util.field_name(field) }}() ? std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>()({{ util.field_name(field) }}()) : 0)
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
+    ^ {{ util.field_name(field) }}().__CalcHash__()
+{% endif %}{# field_label #}
+{% endfor %}{# fields #}
+{% for oneof in util.message_type_oneofs(cls) %}
+{% for field in util.oneof_type_fields(oneof) %}
+    ^ (has_{{ util.field_name(field) }}() ? std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>()({{ util.field_name(field) }}()) : 0)
+{% endfor %}{# oneof_field #}
+{% endfor %}{# oneofs #}
+  ;
+}
+
 bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator<(const _{{ util.class_name(cls) }}_& other) const {
   return false
 {% for field in util.message_type_fields(cls) %}
