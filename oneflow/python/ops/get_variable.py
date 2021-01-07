@@ -48,9 +48,9 @@ def api_get_variable(
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
-    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
     reuse: bool = True,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Create a variable or retrieve an existing one.
 
     Args:
@@ -171,7 +171,7 @@ def get_eager_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -232,7 +232,7 @@ def get_lazy_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -265,14 +265,14 @@ def get_lazy_variable(
             distribute=distribute,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
-        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
         if var_blob is not None:
-            assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+            assert isinstance(var_blob, oneflow_api.LazyConsistentBlob)
             assert var_blob.IdenticalTo(job_var_blob)
     else:
-        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
-        assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
+        assert isinstance(var_blob, oneflow_api.LazyConsistentBlob)
         assert var_blob.IdenticalTo(job_var_blob)
 
     return job_var_blob
@@ -287,7 +287,7 @@ def GenerateVariableOpConf(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -322,7 +322,7 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if type(distribute) is distribute_util.SplitDistribute:
+    if type(distribute) is oneflow_api.distribute.SplitDistribute:
         op_conf.variable_conf.split_axis.value = distribute.axis
     else:
         op_conf.variable_conf.split_axis.ClearField("value")

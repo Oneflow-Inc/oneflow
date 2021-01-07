@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import threading
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 
 
 class FutureRemoteBlobs(object):
@@ -141,9 +142,9 @@ class LazyFutureRemoteBlobs(FutureRemoteBlobs):
             raise NotImplementedError
 
     def _MakeRemoteBlobPullers(self, out_remote_blobs):
-        if isinstance(out_remote_blobs, remote_blob_util.ConsistentBlob):
+        if isinstance(out_remote_blobs, oneflow_api.ConsistentBlob):
             return _ConsistentBlobPuller(out_remote_blobs, self.session_)
-        if isinstance(out_remote_blobs, remote_blob_util.MirroredBlob):
+        if isinstance(out_remote_blobs, oneflow_api.MirroredBlob):
             return _MirroredBlobPuller(out_remote_blobs, self.session_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
             return type(out_remote_blobs)(

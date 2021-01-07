@@ -23,6 +23,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, List, Sequence
 
@@ -33,7 +34,7 @@ def dynamic_binary_split(
     base_shift: int = 2,
     out_num: int = 2,
     name: Optional[str] = None,
-) -> List[remote_blob_util.BlobDef]:
+) -> List[oneflow_api.BlobDesc]:
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("DynamicBinarySplit_")
@@ -62,11 +63,11 @@ def dynamic_binary_split(
 
 @oneflow_export("experimental.dynamic_binary_concat")
 def dynamic_binary_concat(
-    input_blob_list: Sequence[remote_blob_util.BlobDef],
+    input_blob_list: Sequence[oneflow_api.BlobDesc],
     source_blob: input_blob_util.ArgBlobDef,
     source_sbp: str = "S:0",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     op_conf = op_conf_util.OperatorConf()
     if name is None:
         op_conf.name = id_util.UniqueStr("DynamicBinaryConcat_")
@@ -84,7 +85,7 @@ def dynamic_binary_concat(
         source_blob.dtype.oneflow_proto_dtype
     )
     op_conf.dynamic_binary_concat_conf.out_shape.dim.extend(list(source_blob.shape))
-    if source_blob.batch_axis is not None:
+    if source_blob.batch_axis != oneflow_api.INVALID_BATCH_AXIS:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.value = source_blob.batch_axis
     else:
         op_conf.dynamic_binary_concat_conf.out_batch_axis.SetInParent()
