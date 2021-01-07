@@ -37,9 +37,11 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
     cublas_pmh_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_pmh_handle_.get()));
     OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmh_handle_, *cuda_stream()));
+#if CUDA_VERSION >= 11000
     if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
       OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_pmh_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
     }
+#endif
   }
   return cublas_pmh_handle_.get();
 }
