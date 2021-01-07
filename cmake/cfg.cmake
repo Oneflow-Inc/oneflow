@@ -103,6 +103,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/job_conf.proto
       oneflow/core/job/placement.proto
       oneflow/core/framework/user_op_attr.proto
+      oneflow/core/job/sbp_parallel.proto
       oneflow/core/job/scope.proto
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto

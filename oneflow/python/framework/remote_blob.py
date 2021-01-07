@@ -59,13 +59,13 @@ def EagerLogicalBlob(lbi, **kw):
 def LazyRemoteBlob(lbi, **kw):
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
-    blob_type = PyLazyConsistentBlob
+    blob_type = LazyConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        blob_type = PyLazyMirroredBlob
+        blob_type = LazyMirroredBlob
     return blob_type(lbi, **kw)
 
 
-class PyLazyConsistentBlob(
+class LazyConsistentBlob(
     oneflow_api.LazyConsistentBlob,
     blob_trait.BlobOperatorTrait,
     blob_trait.BlobHeaderTrait,
@@ -92,11 +92,16 @@ class PyLazyConsistentBlob(
         else:
             return ""
 
+    def with_distribute(self, distribute):
+        new = type(self)(self.lbi, self.job_name)
+        new.set_distribute(distribute)
+        return new
+
     def with_gradient_distribute(self, distribute):
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class PyLazyMirroredBlob(
+class LazyMirroredBlob(
     oneflow_api.LazyMirroredBlob,
     blob_trait.BlobOperatorTrait,
     blob_trait.BlobHeaderTrait,
@@ -183,11 +188,11 @@ class EagerBlobTrait(object):
     @property
     def split_axis(self):
         sbp_parallel = self.blob_object.op_arg_parallel_attr.sbp_parallel
-        if sbp_parallel.HasField("split_parallel"):
-            return sbp_parallel.split_parallel.axis
-        elif sbp_parallel.HasField("broadcast_parallel"):
+        if sbp_parallel.has_split_parallel():
+            return sbp_parallel.split_parallel().axis()
+        elif sbp_parallel.has_broadcast_parallel():
             return oneflow_api.INVALID_SPLIT_AXIS
-        elif sbp_parallel.HasField("partial_sum_parallel"):
+        elif sbp_parallel.has_partial_sum_parallel():
             return oneflow_api.INVALID_SPLIT_AXIS
         else:
             raise NotImplementedError
@@ -321,6 +326,15 @@ class EagerConsistentBlob(
             job_name = ""
         oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
         self._Init(blob_object)
+        self.parallel_size_ = 0
+
+    @property
+    def parallel_size(self):
+        if self.parallel_size_ == 0:
+            self.parallel_size_ = placement_ctx.GetParallelSize(
+                placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
+            )
+        return self.parallel_size_
 
     def Clone(self):
         return type(self)(
@@ -329,6 +343,16 @@ class EagerConsistentBlob(
             job_name=self.job_name,
             distribute=self.distribute,
         )
+
+    def with_distribute(self, distribute):
+        new = type(self)(
+            self.lbi,
+            blob_object=self.blob_object,
+            job_name=self.job_name,
+            distribute=self.distribute,
+        )
+        new.set_distribute(distribute)
+        return new
 
     def with_gradient_distribute(self, distribute):
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
