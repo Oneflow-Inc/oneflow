@@ -702,17 +702,6 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
     func_desc.job_config_proto.set_enable_auto_mixed_precision(value)
 
 
-@oneflow_function_config("enable_tensor_float_32_compute")
-def enable_tensor_float_32_compute(func_desc, value):
-    r"""If true, then job will use tensor float 32 during model training.
-
-    Args:
-        func_desc ([type]): [description]
-        value (bool, optional): [description].
-    """
-    func_desc.job_config_proto.set_enable_tensor_float_32_compute(value)
-
-
 @oneflow_function_config("enable_keep_header_only")
 def set_enable_keep_header_only(func_desc, value=True):
     r"""Whether keep header only or not

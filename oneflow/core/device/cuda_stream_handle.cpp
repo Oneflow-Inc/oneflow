@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
@@ -35,6 +37,9 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
     cublas_pmh_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_pmh_handle_.get()));
     OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmh_handle_, *cuda_stream()));
+    if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
+      OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_pmh_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
+    }
   }
   return cublas_pmh_handle_.get();
 }
@@ -57,17 +62,6 @@ const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
     OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
   }
   return cublas_tensor_op_math_handle_.get();
-}
-
-const cublasHandle_t* CudaStreamHandle::cublas_tf32_tensor_op_math_handle() {
-  if (!cublas_tf32_tensor_op_math_handle_) {
-    cublas_tf32_tensor_op_math_handle_.reset(new cublasHandle_t);
-    OF_CUBLAS_CHECK(cublasCreate(cublas_tf32_tensor_op_math_handle_.get()));
-    OF_CUBLAS_CHECK(cublasSetStream(*cublas_tf32_tensor_op_math_handle_, *cuda_stream()));
-    OF_CUBLAS_CHECK(
-        cublasSetMathMode(*cublas_tf32_tensor_op_math_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
-  }
-  return cublas_tf32_tensor_op_math_handle_.get();
 }
 
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
@@ -101,9 +95,6 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (cublas_pmd_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_)); }
   if (cublas_tensor_op_math_handle_) {
     OF_CUBLAS_CHECK(cublasDestroy(*cublas_tensor_op_math_handle_));
-  }
-  if (cublas_tf32_tensor_op_math_handle_) {
-    OF_CUBLAS_CHECK(cublasDestroy(*cublas_tf32_tensor_op_math_handle_));
   }
   if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
 }

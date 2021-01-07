@@ -64,7 +64,6 @@ class JobDesc final {
     return job_conf_.enable_float_compute_for_half_gemm();
   }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
-  bool enable_tensor_float_32_compute() const { return job_conf_.enable_tensor_float_32_compute(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
   };

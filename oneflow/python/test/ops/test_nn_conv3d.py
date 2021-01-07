@@ -30,6 +30,7 @@ for gpu in gpus:
 
 def compare_with_tensorflow(
     device_type,
+    enable_tf32,
     x_shape,
     filters,
     kernel_size,
@@ -48,7 +49,6 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.enable_tensor_float_32_compute(True)
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.cudnn_conv_heuristic_search_algo(False)
     if data_format == "NCDHW":
@@ -57,6 +57,10 @@ def compare_with_tensorflow(
     else:
         xy_data_transpose = (0, 1, 2, 3, 4)
         weight_data_transpose = (1, 2, 3, 4, 0)
+    if True == enable_tf32:
+        flow.config.enable_tensor_float_32_compute(True)
+    else:
+        flow.config.enable_tensor_float_32_compute(False)
 
     @flow.global_function(type="train", function_config=func_config)
     def ConvJob():
@@ -169,6 +173,7 @@ class TestNnConv3d(flow.unittest.TestCase):
     def test_padding_valid_NDHWC(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 10, 10, 10), (10, 32, 10, 10, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
@@ -186,6 +191,7 @@ class TestNnConv3d(flow.unittest.TestCase):
     def test_padding_valid_NCDHW(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 11, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
@@ -203,6 +209,7 @@ class TestNnConv3d(flow.unittest.TestCase):
     def test_padding_same(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 11, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [2]

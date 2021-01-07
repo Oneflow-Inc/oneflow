@@ -56,6 +56,7 @@ def grouped_convolution2D(
 
 def compare_with_tensorflow(
     device_type,
+    enable_tf32,
     x_shape,
     filters,
     kernel_size,
@@ -68,13 +69,16 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    func_config.enable_tensor_float_32_compute(True)
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
         weight_data_transpose = (2, 3, 1, 0)
     else:
         xy_data_transpose = (0, 1, 2, 3)
         weight_data_transpose = (1, 2, 3, 0)
+    if True == enable_tf32:
+        flow.config.enable_tensor_float_32_compute(True)
+    else:
+        flow.config.enable_tensor_float_32_compute(False)
 
     @flow.global_function(type="train", function_config=func_config)
     def ConvJob():
@@ -180,6 +184,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_cpu1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
+        arg_dict["enable_tf32"] = [False,]
         arg_dict["x_shape"] = [(10, 10, 10, 32)]
         arg_dict["filters"] = [128]
         arg_dict["kernel_size"] = [1]
@@ -191,6 +196,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_cpu2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
+        arg_dict["enable_tf32"] = [False,]
         arg_dict["x_shape"] = [(10, 32, 226, 226)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]
@@ -203,6 +209,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
+        arg_dict["enable_tf32"] = [False,]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [5]
@@ -213,6 +220,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_conv1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
@@ -224,6 +232,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_conv2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
@@ -234,6 +243,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_conv3(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
@@ -244,6 +254,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_conv4(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
@@ -254,6 +265,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_conv5(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]
@@ -264,6 +276,7 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_conv6(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]

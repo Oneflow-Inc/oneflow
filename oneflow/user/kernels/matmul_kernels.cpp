@@ -56,7 +56,6 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    const bool is_tf32 = ctx->job_desc().job_conf().enable_tensor_float_32_compute();
 
     T beta;
     if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
@@ -70,7 +69,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     } else {
       beta = GetZeroVal<T>();
     }
-    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), is_tf32, trans_a, trans_b, m, n, k,
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                        GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(), beta,
                                        out->mut_dptr<T>());
   }
@@ -131,7 +130,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
           b->dptr<float16>(), beta, out->mut_dptr<float16>());
     } else {
       const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
-      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), false, trans_a, trans_b, m, n, k,
+      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                               GetOneVal<float16>(), a->dptr<float16>(),
                                               b->dptr<float16>(), beta, out->mut_dptr<float16>());
     }
