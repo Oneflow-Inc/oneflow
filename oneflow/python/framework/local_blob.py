@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import numpy as np
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 import traceback
 
 
@@ -106,7 +107,7 @@ class LocalMirroredTensorList(object):
 
 
 def MakeLocalBlob(ndarray_lists, consistent_blob):
-    assert isinstance(consistent_blob, remote_blob_util.ConsistentBlob), type(
+    assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
         consistent_blob
     )
     if consistent_blob.is_tensor_list:
@@ -120,7 +121,7 @@ def MakeLocalBlob(ndarray_lists, consistent_blob):
 
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
-    assert isinstance(mirrored_blob, remote_blob_util.MirroredBlob)
+    assert isinstance(mirrored_blob, oneflow_api.MirroredBlob)
     if mirrored_blob.is_tensor_list:
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensorList

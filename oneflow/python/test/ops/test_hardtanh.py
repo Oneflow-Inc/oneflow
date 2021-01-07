@@ -24,19 +24,18 @@ import os
 import random
 
 
-def _compare_hardsigmoid_with_np(
+def _compare_hardtanh_with_np(
     input_shape, device_type, value_type, machine_ids, device_counts
 ):
-    if value_type[1] == flow.float16:
-        input_1 = np.random.uniform(-3.5, 3.5, size=input_shape).astype(np.float16)
-        input_1 += np.random.randn(*input_shape).astype(np.float16)
-        input_1 = np.array(input_1, dtype=value_type[0])
-    else:
-        input_1 = np.random.uniform(-3.5, 3.5, size=input_shape).astype(value_type[0])
-        input_1 += np.random.randn(*input_shape).astype(
-            value_type[0]
-        )  # add a randnom array, range from(0, 1)
-
+    min_val = random.randint(-10, -1)
+    max_val = random.randint(0, 10)
+    assert min_val < max_val
+    input_1 = np.random.uniform(min_val - 0.5, max_val + 0.5, size=input_shape).astype(
+        value_type[0]
+    )
+    input_1 += np.random.randn(*input_shape).astype(
+        value_type[0]
+    )  # add a randnom array, range from(0, 1)
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -53,50 +52,34 @@ def _compare_hardsigmoid_with_np(
     else:
         func_config.default_data_type(value_type[1])
 
-    def np_hardsigmoid(input):
+    def np_hardtanh(input, min_val, max_val):
+        out = np.clip(input, min_val, max_val)
+        return np.array(out).astype(value_type[0])
+
+    np_out_hardtanh = np_hardtanh(input_1, min_val, max_val)
+
+    def np_diff(input, min_val, max_val):
         input_shape = input.shape
         input = input.flatten()
         elem_cnt = input.size
-        _zero = np.zeros_like(input)
+        diff = np.zeros(shape=(elem_cnt,))
         for i in range(elem_cnt):
-            if input[i] >= 3:
-                _zero[i] = 1
-            elif input[i] <= -3:
-                _zero[i] = 0
-            else:
-                _zero[i] = input[i] / 6 + 0.5
-        np_hsigmoid_out = np.reshape(_zero, newshape=input_shape)
-
-        return np.array(np_hsigmoid_out).astype(value_type[0])
-
-    np_out_hardsigmoid = np_hardsigmoid(input_1)
-
-    def np_diff(input):
-        input_shape = input.shape
-        input = input.flatten()
-        elem_cnt = input.size
-        diff = np.zeros(shape=(elem_cnt,), dtype=value_type[0])
-
-        for i in range(elem_cnt):
-            if input[i] > -3 and input[i] < 3:
-                diff[i] = 1 / 6
+            if input[i] > min_val and input[i] < max_val:
+                diff[i] = 1
         diff = np.reshape(diff, newshape=input_shape)
         return diff
 
-    _np_grad = np_diff(input_1)
+    _np_grad = np_diff(input_1, min_val, max_val)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        if value_type[1] == flow.float16:
-            assert np.allclose(blob, _np_grad, atol=1e-3)
-        else:
-            assert np.allclose(blob, _np_grad, atol=1e-5)
+        assert np.allclose(blob, _np_grad)
 
     if value_type[1] == flow.float16:
 
         @flow.global_function(
             type="train", function_config=func_config,
         )
-        def oneflow_hardsigmoid(
+        def oneflow_hardtanh(
             of_input_1: tp.Numpy.Placeholder(shape=input_1.shape, dtype=flow.float32),
         ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
@@ -109,17 +92,17 @@ def _compare_hardsigmoid_with_np(
                 x_var = of_input_1 + v
                 x_f16 = flow.cast(x_var, flow.float16)
 
-            of_hardsigmoid_out_f16 = flow.nn.hardsigmoid(x_f16)
-            of_hardsigmoid_out_f32 = flow.cast(of_hardsigmoid_out_f16, flow.float32)
+            of_hardtanh_out_f16 = flow.nn.hardtanh(x_f16, min_val, max_val)
+            of_hardtanh_out_f32 = flow.cast(of_hardtanh_out_f16, flow.float32)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-                ).minimize(of_hardsigmoid_out_f32)
+                ).minimize(of_hardtanh_out_f32)
 
             flow.watch_diff(x_var, assert_prediction_grad)
 
-            return of_hardsigmoid_out_f32
+            return of_hardtanh_out_f32
 
     # Test float32/64
     else:
@@ -127,7 +110,7 @@ def _compare_hardsigmoid_with_np(
         @flow.global_function(
             type="train", function_config=func_config,
         )
-        def oneflow_hardsigmoid(
+        def oneflow_hardtanh(
             of_input_1: tp.Numpy.Placeholder(shape=input_1.shape, dtype=value_type[1]),
         ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
@@ -141,21 +124,21 @@ def _compare_hardsigmoid_with_np(
 
             flow.watch_diff(x_var, assert_prediction_grad)
 
-            of_hardsigmoid_out = flow.nn.hardsigmoid(x_var)
+            of_hardtanh_out = flow.nn.hardtanh(x_var, min_val, max_val)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-                ).minimize(of_hardsigmoid_out)
+                ).minimize(of_hardtanh_out)
 
-            return of_hardsigmoid_out
+            return of_hardtanh_out
 
-    of_out_hardsigmoid = oneflow_hardsigmoid(input_1)
+    of_out_hardtanh = oneflow_hardtanh(input_1)
 
     if value_type[1] == flow.float16:
-        assert np.allclose(of_out_hardsigmoid, np_out_hardsigmoid, atol=1e-2)
+        assert np.allclose(of_out_hardtanh, np_out_hardtanh, atol=1e-2)
     else:
-        assert np.allclose(of_out_hardsigmoid, np_out_hardsigmoid, atol=1e-5)
+        assert np.allclose(of_out_hardtanh, np_out_hardtanh, atol=1e-5)
 
 
 def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
@@ -180,35 +163,35 @@ def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testhardsigmoid1n1d(flow.unittest.TestCase):
-    def test_hardsigmoid_cpu(test_case):
+class Testhardtanh1n1d(flow.unittest.TestCase):
+    def test_hardtanh_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16),
+            shape=(16, 16),
             device_type="cpu",
             value_type="float",
             machine_ids="0:0",
             device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            _compare_hardsigmoid_with_np(*arg)
+            _compare_hardtanh_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_hardsigmoid_gpu(test_case):
+    def test_hardtanh_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(16, 16),
+            shape=(4, 8, 16),
             device_type="gpu",
             value_type="float",
             machine_ids="0:0",
             device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            _compare_hardsigmoid_with_np(*arg)
+            _compare_hardtanh_with_np(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
-class Testhardsigmoid1n2d(flow.unittest.TestCase):
+class Testhardtanh1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_hardsigmoid_gpu_1n2d(test_case):
+    def test_hardtanh_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 8, 16),
             device_type="gpu",
@@ -217,7 +200,7 @@ class Testhardsigmoid1n2d(flow.unittest.TestCase):
             device_counts=2,
         )
         for arg in GenArgList(arg_dict):
-            _compare_hardsigmoid_with_np(*arg)
+            _compare_hardtanh_with_np(*arg)
 
 
 if __name__ == "__main__":
