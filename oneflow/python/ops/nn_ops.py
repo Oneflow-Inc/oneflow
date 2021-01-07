@@ -803,6 +803,64 @@ def moments(
         )
 
 
+@oneflow_export("nn.GroupNorm")
+def group_normalization(
+    x: oneflow_api.BlobDesc,
+    num_groups: int = 32,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""Applies Group Normalization over a ND(N>=3) input.
+
+    Args:
+        x (oneflow_api.BlobDesc): input tensor with shape (N,C,∗), where C means the number of channels.
+        eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
+        affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
+                       initialized the same way as done for batch normalization. Default: True.
+        name (Optional[str], optional): Name of this op.
+
+    Returns:
+        oneflow_api.BlobDesc: The normalized input tensor.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def group_norm_Job(x: tp.Numpy.Placeholder((4, 4, 32, 32))
+        ) -> tp.Numpy:
+            group_norm = flow.nn.GroupNorm(
+                x,
+                num_group=2,
+                eps=1e-5,
+                affine=True,
+            )
+            return group_norm
+
+        x = np.random.random(size=(4, 4, 32, 32)).astype(np.float32)
+        out = group_norm_Job(x)
+
+    """
+    assert len(x.shape) >= 3
+    assert x.shape[1] % num_groups == 0
+
+    if name is None:
+        name = id_util.UniqueStr("GroupNorm_")
+
+    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], x.shape[1] // num_groups, -1])
+    normalized_1d_out = flow.nn.InstanceNorm1d(
+        reshape_to_1d, eps=eps, affine=affine, name=name
+    )
+    reshape_back = flow.reshape(normalized_1d_out, shape=list(x.shape))
+
+    return reshape_back
+
+
 @oneflow_export("nn.InstanceNorm1d")
 def instance_normalization1d(
     x: oneflow_api.BlobDesc,
