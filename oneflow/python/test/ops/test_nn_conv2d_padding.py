@@ -52,7 +52,7 @@ def compare_with_tensorflow(
         flow.config.enable_tensor_float_32_compute(True)
     else:
         flow.config.enable_tensor_float_32_compute(False)
-        
+
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
         weight_data_transpose = (2, 3, 1, 0)

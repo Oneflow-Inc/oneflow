@@ -43,8 +43,7 @@ template<typename T>
 void Gemm4ChannelFirst(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
                        const int n, const int k, const T alpha, const T* a, const T* b,
                        const T beta, T* c) {
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_a, trans_b, m, n, k, alpha, a, b,
-                                          beta, c);
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 template<typename T>
@@ -53,8 +52,7 @@ void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b
                       T* c) {
   trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
   trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_b, trans_a, n, m, k, alpha, b, a,
-                                          beta, c);
+  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
 }
 
 template<typename T>

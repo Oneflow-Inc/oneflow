@@ -184,7 +184,9 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_cpu1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
-        arg_dict["enable_tf32"] = [False,]
+        arg_dict["enable_tf32"] = [
+            False,
+        ]
         arg_dict["x_shape"] = [(10, 10, 10, 32)]
         arg_dict["filters"] = [128]
         arg_dict["kernel_size"] = [1]
@@ -196,7 +198,9 @@ class TestNnConv2d(flow.unittest.TestCase):
     def test_cpu2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
-        arg_dict["enable_tf32"] = [False,]
+        arg_dict["enable_tf32"] = [
+            False,
+        ]
         arg_dict["x_shape"] = [(10, 32, 226, 226)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]
@@ -209,7 +213,9 @@ class TestNnConv2d(flow.unittest.TestCase):
         return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
-        arg_dict["enable_tf32"] = [False,]
+        arg_dict["enable_tf32"] = [
+            False,
+        ]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [5]

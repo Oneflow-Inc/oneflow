@@ -64,9 +64,9 @@ struct CudnnConvArgsAndAlgo final {
         << byte_size_of_buf;
 
     if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
-        algo_perf.mathType = CUDNN_DEFAULT_MATH;
+      algo_perf.mathType = CUDNN_DEFAULT_MATH;
     } else {
-        algo_perf.mathType = CUDNN_FMA_MATH;
+      algo_perf.mathType = CUDNN_FMA_MATH;
     }
 
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));

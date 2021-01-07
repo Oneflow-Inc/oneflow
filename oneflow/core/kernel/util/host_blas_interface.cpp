@@ -38,8 +38,8 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
   const int n = c->shape().Count(1);
   const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
 
-  BlasIf<kCPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(),
-                       beta, c->mut_dptr<T>());
+  BlasIf<kCPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+                       c->mut_dptr<T>());
 }
 
 template<typename T>
@@ -89,7 +89,7 @@ void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans
 
 void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const double* a, 
+                                      const int k, const double alpha, const double* a,
                                       const double* b, const double beta, double* c) {
   Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }

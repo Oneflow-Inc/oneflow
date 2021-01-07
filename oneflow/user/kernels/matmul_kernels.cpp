@@ -69,9 +69,8 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     } else {
       beta = GetZeroVal<T>();
     }
-    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                       GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(), beta,
-                                       out->mut_dptr<T>());
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, GetOneVal<T>(),
+                                       a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
   }
 };
 
