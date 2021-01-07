@@ -13,7 +13,7 @@ def replaceGenericUserOp : NativeCodeCall<
 
 def : Pattern<(OneFlow_UserOp $operands, StrAttr:$op_type_name, DictionaryAttr:$attr),
           [(replaceGenericUserOp $operands, $op_type_name, $attr)],
-          [(IsDefinedByDialect $op_type_name)],
-          (addBenefit 1)>;
+          [(IsDefinedByDialect $op_type_name)]
+>;
 
 #endif  // ONEFLOW_TRANSLATE_REWRITES
