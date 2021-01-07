@@ -59,13 +59,13 @@ def EagerLogicalBlob(lbi, **kw):
 def LazyRemoteBlob(lbi, **kw):
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
-    blob_type = PyLazyConsistentBlob
+    blob_type = LazyConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        blob_type = PyLazyMirroredBlob
+        blob_type = LazyMirroredBlob
     return blob_type(lbi, **kw)
 
 
-class PyLazyConsistentBlob(
+class LazyConsistentBlob(
     oneflow_api.LazyConsistentBlob,
     blob_trait.BlobOperatorTrait,
     blob_trait.BlobHeaderTrait,
@@ -101,7 +101,7 @@ class PyLazyConsistentBlob(
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class PyLazyMirroredBlob(
+class LazyMirroredBlob(
     oneflow_api.LazyMirroredBlob,
     blob_trait.BlobOperatorTrait,
     blob_trait.BlobHeaderTrait,
