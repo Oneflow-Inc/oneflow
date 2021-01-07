@@ -620,57 +620,6 @@ def relu(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.Blo
     )
 
 
-@oneflow_export("math.relu6", "nn.relu6")
-def relu6(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
-    """Relu6 activation, it clips the value around (0, 6). 
-
-    The equation is: 
-
-    .. math:: 
-
-        relu6(x) = min(max(0,x),6) 
-
-    For example: 
-
-    .. code-block:: 
-
-        import oneflow as flow 
-        import oneflow.typing as tp 
-        import numpy as np
-
-
-        @flow.global_function()
-        def relu6_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
-            return flow.nn.relu6(x)
-
-        x = np.array([[-1, -0.5, 0.0], 
-                      [0.5, 6.0, 7]]).astype(np.float32)
-
-        out = relu6_job(x)
-
-        # output [[0.  0.  0. ]
-        #         [0.5 6.  6. ]]
-
-    Args:
-        x (remote_blob_util.BlobDef): The input Tensor. 
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        remote_blob_util.BlobDef: The activated Tensor. 
-    """
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Relu6_"))
-        .Op("relu6")
-        .Input("in", [x])
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
 @oneflow_export("math.sigmoid")
 def sigmoid(
     x: oneflow_api.BlobDesc, name: Optional[str] = None

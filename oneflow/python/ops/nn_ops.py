@@ -3124,6 +3124,49 @@ def hardtanh(
     )
 
 
+@oneflow_export("nn.relu6")
+def relu6(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
+    """Relu6 activation, it clips the value around (0, 6). 
+
+    The equation is: 
+
+    .. math:: 
+
+        relu6(x) = min(max(0,x),6) 
+
+    For example: 
+
+    .. code-block:: 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
+
+        @flow.global_function()
+        def relu6_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
+            return flow.nn.relu6(x)
+
+        x = np.array([[-1, -0.5, 0.0], 
+                      [0.5, 6.0, 7]]).astype(np.float32)
+
+        out = relu6_job(x)
+
+        # output [[0.  0.  0. ]
+        #         [0.5 6.  6. ]]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Relu6_")
+    return flow.nn.hardtanh(x, min_val=0.0, max_val=6.0, name=name)
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
     input: oneflow_api.BlobDesc,

@@ -26,7 +26,11 @@ import os
 def _compare_relu6_with_np(
     input_shape, device_type, value_type, machine_ids, device_counts
 ):
-    input_1 = np.random.uniform(-7, 7, size=input_shape).astype(value_type[0])
+    if value_type[1] == flow.float16:
+        input_1 = np.random.uniform(-1, 7, size=input_shape).astype(np.float16)
+        input_1 = np.array(input_1, dtype=value_type[0])
+    else:
+        input_1 = np.random.uniform(-1, 7, size=input_shape).astype(value_type[0])
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -44,7 +48,8 @@ def _compare_relu6_with_np(
         func_config.default_data_type(value_type[1])
 
     def np_relu6(input):
-        return np.clip(input, 0.0, 6.0)
+        out = np.clip(input, 0.0, 6.0)
+        return np.array(out).astype(value_type[0])
 
     np_out_relu6 = np_relu6(input_1)
 
@@ -57,12 +62,16 @@ def _compare_relu6_with_np(
             if input[i] > 0 and input[i] < 6:
                 diff[i] = 1
         diff = np.reshape(diff, newshape=input_shape)
+        diff = np.array(diff, dtype=value_type[0])
         return diff
 
     _np_grad = np_diff(input_1)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        assert np.allclose(blob, _np_grad)
+        if value_type[1] == flow.float16:
+            assert np.allclose(blob, _np_grad, atol=1e-3)
+        else:
+            assert np.allclose(blob, _np_grad, atol=1e-5)
 
     if value_type[1] == flow.float16:
 
@@ -82,7 +91,7 @@ def _compare_relu6_with_np(
                 x_var = of_input_1 + v
                 x_f16 = flow.cast(x_var, flow.float16)
 
-            of_relu6_out_f16 = flow.math.relu6(x_f16)
+            of_relu6_out_f16 = flow.nn.relu6(x_f16)
             of_relu6_out_f32 = flow.cast(of_relu6_out_f16, flow.float32)
 
             with flow.scope.placement(device_type, "0:0"):
@@ -114,7 +123,7 @@ def _compare_relu6_with_np(
 
             flow.watch_diff(x_var, assert_prediction_grad)
 
-            of_relu6_out = flow.math.relu6(x_var)
+            of_relu6_out = flow.nn.relu6(x_var)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
@@ -126,9 +135,9 @@ def _compare_relu6_with_np(
     of_out_relu6 = oneflow_relu6(input_1)
 
     if value_type[1] == flow.float16:
-        assert np.allclose(of_out_relu6, np_out_relu6, 1e-2, 1e-2)
+        assert np.allclose(of_out_relu6, np_out_relu6, atol=1e-3)
     else:
-        assert np.allclose(of_out_relu6, np_out_relu6)
+        assert np.allclose(of_out_relu6, np_out_relu6, atol=1e-5)
 
 
 def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
