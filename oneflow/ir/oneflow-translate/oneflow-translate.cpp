@@ -35,9 +35,23 @@
 #include <unordered_map>
 #include <vector>
 
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
 namespace mlir {
 
 namespace {
+
+Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
+                           ::mlir::Operation::operand_range operands,
+                           ::mlir::StringAttr op_type_name, ::mlir::DictionaryAttr attr) {
+  std::cout << "replacing generic user op: " << op_type_name.getValue().str() << "\n";
+  auto unknownLoc = FileLineColLoc::get("imported-protobuf", 0, 0, rewriter.getContext());
+  mlir::Value created = rewriter.create<oneflow::ReluOp>(unknownLoc, operands[0]).getResult();
+  return created;
+}
+
+#include "oneflow/ir/oneflow-translate/OneFlowTranslateRewrites.inc"
 
 using PbMessage = google::protobuf::Message;
 
@@ -71,7 +85,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   }
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
   const std::string &type_name = user_conf.op_type_name();
-  if (type_name == "relu") {
+  if (type_name == "relu1") {
     mlir::Value in = lbn2result.at(user_conf.input().at("in").s(0));
     mlir::Value created = b.create<oneflow::ReluOp>(unknownLoc, in).getResult();
     const std::string &lbn = user_conf.output().at("out").s(0);
@@ -169,7 +183,6 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     auto created =
         b.create<oneflow::UserOp>(unknownLoc, out_types, operands, op.user_conf().op_type_name(),
                                   b.getDictionaryAttr(named_attributes));
-
     for (auto kv : op.user_conf().output()) {
       // const std::string &obn = kv.first;
       for (const std::string &lbn : kv.second.s()) {
@@ -212,6 +225,13 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   Importer imp(context, module.get());
   if (failed(imp.processJob(&job))) { return {}; }
+
+  module->dump();
+  OwningRewritePatternList patterns;
+  populateWithGenerated(module->getContext(), patterns);
+  auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(patterns));
+  if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
+
   return module;
 }
 }  // namespace

@@ -52,8 +52,7 @@ def ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   let verifier = [{ return ::verify(*this); }];
 }
 
-def OneFlow_ReluOp : OneFlow_Op<"relu", [NoSideEffect,
-                                             SameOperandsAndResultType]> {
+def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "ReLU op";
 
     let arguments = (ins F32Tensor:$input);
@@ -64,7 +63,7 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [NoSideEffect,
     }];
 }
 
-def OneFlow_UserOp : OneFlow_Op<"user", [NoSideEffect]> {
+def OneFlow_UserOp : OneFlow_Op<"user", []> {
     let summary = "Generic op for all kinds of user op";
 
     let arguments = (ins
