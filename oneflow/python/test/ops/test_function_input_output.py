@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import oneflow_api
 from typing import Tuple
 
 
@@ -45,7 +46,7 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
     def test_FixedTensorDef_no_batch_axis(test_case):
         @flow.global_function()
         def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=None)):
-            test_case.assertTrue(x.batch_axis is None)
+            test_case.assertTrue(x.batch_axis == flow.INVALID_BATCH_AXIS)
             return x
 
         data = np.ones((2, 5), dtype=np.float32)
