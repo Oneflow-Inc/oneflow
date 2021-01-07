@@ -2161,6 +2161,7 @@ class COCOReader(module_util.Module):
         shuffle: bool = True,
         random_seed: Optional[int] = None,
         group_by_aspect_ratio: bool = True,
+        remove_images_without_annotations: bool = True,
         stride_partition: bool = True,
         name: str = None,
     ):
@@ -2184,6 +2185,9 @@ class COCOReader(module_util.Module):
             .Attr("shuffle_after_epoch", shuffle)
             .Attr("random_seed", random_seed)
             .Attr("group_by_ratio", group_by_aspect_ratio)
+            .Attr(
+                "remove_images_without_annotations", remove_images_without_annotations
+            )
             .Attr("stride_partition", stride_partition)
             .CheckAndComplete()
         )
