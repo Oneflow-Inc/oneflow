@@ -1,5 +1,8 @@
 include "mlir/IR/OpBase.td"
 
+#ifndef ONEFLOW_ENUMS
+#define ONEFLOW_ENUMS
+
 def OneFlow_InvalidDataType : I32EnumAttrCase<"InvalidDataType", 0>;
 def OneFlow_Char : I32EnumAttrCase<"Char", 1>;
 def OneFlow_Float : I32EnumAttrCase<"Float", 2>;
@@ -31,3 +34,5 @@ OneFlow_TensorBuffer,
   let stringToSymbolFnName = "ConvertToEnum";
   let symbolToStringFnName = "ConvertToString";
 }
+
+#endif // ONEFLOW_ENUMS
