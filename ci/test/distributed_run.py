@@ -68,7 +68,7 @@ chmod 777 {dotssh_dir}/*
         f.write(bash_cmd)
         f.flush()
         subprocess.check_call(
-            f"docker run -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
+            f"docker run --rm -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
             shell=True,
         )
     config_content = """Host *

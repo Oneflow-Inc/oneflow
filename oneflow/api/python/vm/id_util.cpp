@@ -25,4 +25,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("NewPhysicalObjectId", &NewPhysicalObjectId);
   m.def("NewPhysicalSymbolId", &NewPhysicalSymbolId);
+
+  m.def("NewTokenId", &NewTokenId);
 }

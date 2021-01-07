@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -22,14 +23,18 @@ namespace oneflow {
 
 GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   set_thrd_id(thrd_id);
-  mut_actor_thread() = std::thread([this, dev_id]() {
+  mut_actor_thread() = std::thread([this, dev_id, thrd_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Actor : ("
+                                      + std::to_string(thrd_id) + ")");
     OF_CUDA_CHECK(cudaSetDevice(dev_id));
     ThreadCtx ctx;
     ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });
-  cb_event_poller_ = std::thread([this, dev_id]() {
+  cb_event_poller_ = std::thread([this, dev_id, thrd_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
+                                      + std::to_string(thrd_id) + ")");
     OF_CUDA_CHECK(cudaSetDevice(dev_id));
     CudaCBEvent cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {

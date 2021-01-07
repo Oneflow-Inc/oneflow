@@ -60,8 +60,12 @@ import oneflow.python_gen.__export_symbols__
 import atexit
 import oneflow.python.framework.c_api_util
 import oneflow.python.framework.python_interpreter_util
+import oneflow_api
 
-atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
+INVALID_BATCH_AXIS = oneflow_api.INVALID_BATCH_AXIS
+INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
+
+atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
 del atexit

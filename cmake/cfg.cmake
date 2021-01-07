@@ -74,8 +74,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     DEPENDS ${Python_EXECUTABLE} of_protoobj
   )
 
-  set(PYBIND11_FILE_CONVERT_PROTO ${CFG_SOURCE_FILE_CONVERT_PROTO})
-
   foreach(FIL ${CFG_SOURCE_FILE_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
@@ -98,6 +96,23 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
     list(APPEND ${SRCS} ${CFG_CPP_FIL})
   endforeach()
+
+  list(APPEND PYBIND11_FILE_CONVERT_PROTO
+      oneflow/core/common/error.proto
+      oneflow/core/vm/instruction.proto
+      oneflow/core/job/job_conf.proto
+      oneflow/core/job/placement.proto
+      oneflow/core/framework/user_op_attr.proto
+      oneflow/core/job/scope.proto
+      oneflow/core/job/mirrored_parallel.proto
+      oneflow/core/operator/op_attribute.proto
+      oneflow/core/job/initializer_conf.proto
+      oneflow/core/job/regularizer_conf.proto
+      oneflow/core/job/learning_rate_schedule_conf.proto
+      oneflow/core/common/data_type.proto
+      oneflow/core/common/device_type.proto
+      oneflow/core/register/logical_blob_id.proto
+  )
 
   foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
