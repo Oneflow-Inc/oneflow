@@ -85,13 +85,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   }
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
   const std::string &type_name = user_conf.op_type_name();
-  if (type_name == "relu1") {
-    mlir::Value in = lbn2result.at(user_conf.input().at("in").s(0));
-    mlir::Value created = b.create<oneflow::ReluOp>(unknownLoc, in).getResult();
-    const std::string &lbn = user_conf.output().at("out").s(0);
-    lbn2result.insert({lbn, created});
-    return success();
-  } else if (type_name == "constant") {
+  if (type_name == "constant") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
       mlir::Value created = b.create<oneflow::ConstantOp>(
                                  unknownLoc, user_conf.attr().at("floating_value").at_double())
