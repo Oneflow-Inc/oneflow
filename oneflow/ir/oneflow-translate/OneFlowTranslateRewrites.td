@@ -11,7 +11,7 @@ def IsDefinedByDialect : Constraint<
 def replaceGenericUserOp : NativeCodeCall<
     "replaceGenericUserOp($_builder, $0, $1, $2)">;
 
-def : Pattern<(OneFlow_UserOp $operands, StrAttr:$op_type_name, DictionaryAttr:$attr),
+def replaceGenericUserOpWithDefinedOp : Pattern<(OneFlow_UserOp $operands, StrAttr:$op_type_name, DictionaryAttr:$attr),
           [(replaceGenericUserOp $operands, $op_type_name, $attr)],
           [(IsDefinedByDialect $op_type_name)]
 >;
