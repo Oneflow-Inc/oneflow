@@ -97,39 +97,18 @@ class OpArgBlobAttribute(object):
         interface_blob_conf.batch_axis.CopyFrom(self.batch_axis)
 
 
-class OpArgParallelAttribute(object):
+class OpArgParallelAttribute(oneflow_api.OpArgParallelAttribute):
     def __init__(self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel):
-        self.parallel_desc_symbol_ = parallel_desc_symbol
         if not isinstance(sbp_parallel, oneflow_api.CfgMessage):
             sbp_parallel = oneflow_api.deprecated.MakeSbpParrallelByString(
                 str(sbp_parallel)
             )
-        self.sbp_parallel_ = sbp_parallel
         if not isinstance(opt_mirrored_parallel, oneflow_api.CfgMessage):
             opt_mirrored_parallel = oneflow_api.deprecated.MakeOptMirroredParrallelByString(
                 str(opt_mirrored_parallel)
             )
-        self.opt_mirrored_parallel_ = opt_mirrored_parallel
-        self.hash_ = self._Hash()
-
-    @property
-    def parallel_desc_symbol(self):
-        return self.parallel_desc_symbol_
-
-    @property
-    def sbp_parallel(self):
-        return self.sbp_parallel_
-
-    @property
-    def opt_mirrored_parallel(self):
-        return self.opt_mirrored_parallel_
-
-    def is_mirrored(self):
-        return self.opt_mirrored_parallel.has_mirrored_parallel()
-
-    def Assign(self, other):
-        self.__init__(
-            other.parallel_desc_symbol, other.sbp_parallel, other.opt_mirrored_parallel
+        oneflow_api.OpArgParallelAttribute.__init__(
+            self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel
         )
 
     def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
@@ -154,40 +133,6 @@ class OpArgParallelAttribute(object):
             )
         else:
             interface_blob_conf.ClearField("split_axis")
-
-    def __hash__(self):
-        return self.hash_
-
-    def __eq__(self, other):
-        return (
-            self.parallel_desc_symbol_ == other.parallel_desc_symbol_
-            and self.opt_mirrored_parallel_ == other.opt_mirrored_parallel_
-            and (
-                self.opt_mirrored_parallel_.has_mirrored_parallel()
-                or self.sbp_parallel_ == other.sbp_parallel_
-            )
-        )
-
-    def __str__(self):
-        return (
-            "\nparallel_desc_symbol: %s\nsbp_parallel: %s\nopt_mirrored_parallel: %s\n"
-            % (
-                self.parallel_desc_symbol.parallel_conf,
-                self.sbp_parallel,
-                self.opt_mirrored_parallel,
-            )
-        )
-
-    def _Hash(self):
-        if self.opt_mirrored_parallel_.has_mirrored_parallel():
-            sbp_hash = 0
-        else:
-            sbp_hash = hash(self.sbp_parallel_)
-        return (
-            hash(self.parallel_desc_symbol_)
-            ^ hash(self.opt_mirrored_parallel_)
-            ^ sbp_hash
-        )
 
 
 def GetOpArgBlobAttribute(op_attribute, bn_in_op):
