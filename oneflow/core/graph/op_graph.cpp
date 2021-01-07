@@ -134,18 +134,18 @@ std::string OpNode::VisualStr() const {
     str += "Pre Op:" + producer_node->op().op_name() + ": " + ibn;
     const SbpParallel& this_sbp_parallel = SbpParallel4BnInOp(ibn);
     if (this_sbp_parallel.has_split_parallel())
-      str += " S" + std::to_string(this_sbp_parallel.split_parallel().axis());
-    if (this_sbp_parallel.has_broadcast_parallel()) str += " B";
-    if (this_sbp_parallel.has_partial_sum_parallel()) str += " P";
+      str += " [S]" + std::to_string(this_sbp_parallel.split_parallel().axis())+" ";
+    if (this_sbp_parallel.has_broadcast_parallel()) str += " [B] ";
+    if (this_sbp_parallel.has_partial_sum_parallel()) str += " [P] ";
   }
   for (const auto& ibn : op().output_bns()) {
     str += "\\n";
     str += "Out Op:" + ibn;
     const SbpParallel& this_sbp_parallel = SbpParallel4BnInOp(ibn);
     if (this_sbp_parallel.has_split_parallel())
-      str += " S" + std::to_string(this_sbp_parallel.split_parallel().axis());
-    if (this_sbp_parallel.has_broadcast_parallel()) str += " B";
-    if (this_sbp_parallel.has_partial_sum_parallel()) str += " P";
+      str += " [S]" + std::to_string(this_sbp_parallel.split_parallel().axis())+" ";
+    if (this_sbp_parallel.has_broadcast_parallel()) str += " [B] ";
+    if (this_sbp_parallel.has_partial_sum_parallel()) str += " [P] ";
   }
   return str;
 }

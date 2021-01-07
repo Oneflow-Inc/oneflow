@@ -153,6 +153,22 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn() {
       std::function<Maybe<void>(user_op::InferContext * ctx, const user_op::TensorDesc* x,
                                 user_op::TensorDesc* reserve_space)>());
 }
+/*
+Example for normalization:
+
+ComputationCost
+= |x| + |x|/m + 2|x| + |x|/m + 2|x| + 2|x|/m
+= 5|x| +4|x|/m
+≈ 5|x|
+*/
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  double cost = x->shape().elem_cnt() * 5;
+  if (ctx->SbpParallel4ArgNameAndIndex("y", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
 
 REGISTER_USER_OP("normalization")
     .Input("x")
@@ -171,7 +187,8 @@ REGISTER_USER_OP("normalization")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn())
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP("normalization_add_relu")
     .Input("x")
@@ -198,7 +215,8 @@ REGISTER_USER_OP("normalization_add_relu")
           return Maybe<void>::Ok();
         }))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
@@ -248,7 +266,8 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           return Maybe<void>::Ok();
         }))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 #endif
 
@@ -324,6 +343,16 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<double> BwGetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  double cost = x->shape().elem_cnt() * 5;
+  if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+
+}
+
 REGISTER_USER_OP("normalization_grad")
     .Input("x")
     .Input("dy")
@@ -337,7 +366,8 @@ REGISTER_USER_OP("normalization_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(BwGetComputationCostFn);
 
 REGISTER_USER_OP("normalization_add_relu_grad")
     .Input("x")
@@ -356,7 +386,8 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(BwGetComputationCostFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
@@ -377,7 +408,8 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetBatchAxisInferFn(BwBatchAxisInferFn)
-    .SetGetSbpFn(BwGetSbpFn);
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetComputeComplexityFn(BwGetComputationCostFn);
 
 #endif
 
