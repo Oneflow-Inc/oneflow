@@ -326,7 +326,16 @@ class EagerConsistentBlob(
             job_name = ""
         oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
         self._Init(blob_object)
+        self.parallel_size_ = 0
 
+    @property
+    def parallel_size(self):
+        if self.parallel_size_ == 0:
+            self.parallel_size_ = placement_ctx.GetParallelSize(
+                placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
+            )
+        return self.parallel_size_
+    
     def Clone(self):
         return type(self)(
             self.lbi,
