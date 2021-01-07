@@ -2418,22 +2418,20 @@ def ones(
 
 @oneflow_export("ndindex_to_offset")
 def ndindex_to_offset(
-    index: remote_blob_util.BlobDef,
-    dims: remote_blob_util.BlobDef,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+    index: oneflow_api.BlobDesc, dims: oneflow_api.BlobDesc, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator converts the n-dimensions index of Tensor to a flatten offset.
 
     Args:
-        index (remote_blob_util.BlobDef): The Tensor contains the n-dimensions index. 
-        dims (remote_blob_util.BlobDef): The Tensor represents the shape. 
+        index (oneflow_api.BlobDesc): The Tensor contains the n-dimensions index. 
+        dims (oneflow_api.BlobDesc): The Tensor represents the shape. 
         name (Optional[str], optional): The name for the operator. Defaults to None.
     
     Attention:
         The `index` Tensor must be in the range of `dims` Tensor. 
 
     Returns:
-        remote_blob_util.BlobDef: The flatten offset.
+        oneflow_api.BlobDesc: The flatten offset.
 
     For example: 
 
@@ -2483,22 +2481,22 @@ def ndindex_to_offset(
 
 @oneflow_export("offset_to_ndindex")
 def offset_to_ndindex(
-    offset: remote_blob_util.BlobDef,
-    dims: remote_blob_util.BlobDef,
+    offset: oneflow_api.BlobDesc,
+    dims: oneflow_api.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator converts the 1-D offset to N-D index Tensor.
 
     Args:
-        offset (remote_blob_util.BlobDef): The 1-D offset Tensor. 
-        dims (remote_blob_util.BlobDef): The N-D dims Tensor. 
+        offset (oneflow_api.BlobDesc): The 1-D offset Tensor. 
+        dims (oneflow_api.BlobDesc): The N-D dims Tensor. 
         name (Optional[str], optional): The name for the operator. Defaults to None.
 
     Attention: 
         The `offset` Tensor must be in the range of `dims` Tensor.
 
     Returns:
-        remote_blob_util.BlobDef: The N-D index Tensor. 
+        oneflow_api.BlobDesc: The N-D index Tensor. 
 
     For example: 
 
@@ -2516,11 +2514,11 @@ def offset_to_ndindex(
                 out = flow.offset_to_ndindex(offset, dims, name="offset_to_ndindex")
             return out 
 
+
         offset = np.array([5]).astype(np.int32)
         dims = np.array([3, 3]).astype(np.int32)
 
         out = offset_to_ndindex_job(offset, dims)
-
         # output [1 2]
 
     """
