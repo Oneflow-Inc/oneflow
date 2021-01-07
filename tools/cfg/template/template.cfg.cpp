@@ -565,8 +565,8 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator==(c
 {% for oneof in util.message_type_oneofs(cls) %}
     && {{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()
 {% for field in util.oneof_type_fields(oneof) %}
-    && {{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }} ? 
-      {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}() : true
+    && ({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }} ? 
+      {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}() : true)
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
   ;
@@ -582,6 +582,7 @@ std::size_t Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::__Cal
 {% endif %}{# field_label #}
 {% endfor %}{# fields #}
 {% for oneof in util.message_type_oneofs(cls) %}
+    ^ static_cast<std::size_t>({{ util.oneof_name(oneof) }}_case())
 {% for field in util.oneof_type_fields(oneof) %}
     ^ (has_{{ util.field_name(field) }}() ? std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>()({{ util.field_name(field) }}()) : 0)
 {% endfor %}{# oneof_field #}
