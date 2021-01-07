@@ -156,14 +156,14 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn() {
 /*
 Example for normalization:
 
-ComputationCost
-= |x| + |x|/m + 2|x| + |x|/m + 2|x| + 2|x|/m
-= 5|x| +4|x|/m
-≈ 5|x|
+ComputationCost (mean(|x|), variance (2|x|), moving mean(|x|), moving variance (2|x|), nomalization (2|x|))
+= |x| + |x|/m + 2|x| + |x|/m + 2|x| + 2|x|/m + 2|x|
+= 7|x| +4|x|/m
+≈ 7|x|
 */
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  double cost = x->shape().elem_cnt() * 5;
+  double cost = x->shape().elem_cnt() * 7;
   if (ctx->SbpParallel4ArgNameAndIndex("y", 0).has_split_parallel()) {
     return cost / ctx->parallel_desc().parallel_num();
   }
@@ -345,7 +345,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 
 Maybe<double> BwGetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  double cost = x->shape().elem_cnt() * 5;
+  double cost = x->shape().elem_cnt() * 7;
   if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
     return cost / ctx->parallel_desc().parallel_num();
   }
