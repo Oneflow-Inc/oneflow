@@ -35,11 +35,7 @@ def diag_forward_compute(device_type, input_shape, dtype):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(type="predict", function_config=func_config)
-    def diag_forward(
-            input_def: oft.Numpy.Placeholder(
-                shape=input_shape, dtype=type_name_to_flow_type[dtype]
-            )
-        ):
+    def diag_forward():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "input_tensor",
@@ -48,9 +44,9 @@ def diag_forward_compute(device_type, input_shape, dtype):
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=False,
             )
-        x = x + input_def
+        x = x 
         y = flow.diag(x)
-        return y
+        return 
 
     #input = np.random.rand(*input_shape).astype(type_name_to_flow_type[dtype])
     #print(input)

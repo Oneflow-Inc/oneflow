@@ -62,7 +62,7 @@ class DiagKernel final : public user_op::OpKernel {
     REGISTER_USER_KERNEL("diag")                                                \
         .SetCreateFn<DiagKernel<device, dtype>>()                               \
         .SetIsMatchedHob((user_op::HobDeviceTag() == device)                     \
-        & (user_op::HobDataType("diag_out", 0) == GetDataType<dtype>::value));
+        & (user_op::HobDataType("in_tensor", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_DIAG_KERNEL_WITH_DEVICE(device) \
         REGISTER_DIAG_KERNEL(device, float)            \

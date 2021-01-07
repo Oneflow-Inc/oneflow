@@ -20,14 +20,14 @@ import oneflow.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 from typing import Optional
-
+import oneflow_api
 
 @oneflow_export("diag")
 def tensor_list_to_tensor_buffer(
-    input_tensor: remote_blob_util.BlobDef, 
+    input_tensor: oneflow_api.BlobDesc, 
     dimension: Optional[int] = 0,
     name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+)-> oneflow_api.BlobDesc:
     """This operator compute diagonal. 
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
