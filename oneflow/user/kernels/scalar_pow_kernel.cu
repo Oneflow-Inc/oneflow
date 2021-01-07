@@ -24,14 +24,14 @@ namespace user_op {
 
 template<typename T>
 struct ScalarPowFunctor {
-  __host__ __device__ explicit ScalarPowFunctor(T exponent) : exponent(exponent) {}
+  OF_DEVICE_FUNC explicit ScalarPowFunctor(T exponent) : exponent(exponent) {}
   __device__ T operator()(T x) const { return pow(x, exponent); }
   const T exponent;
 };
 
 template<typename T>
 struct ScalarPowGradFunctor {
-  __host__ __device__ explicit ScalarPowGradFunctor(T exponent) : exponent(exponent) {}
+  OF_DEVICE_FUNC explicit ScalarPowGradFunctor(T exponent) : exponent(exponent) {}
   __device__ T operator()(T x, T dy) const {
     return exponent * (pow(x, exponent - static_cast<T>(1.0))) * dy;
   }
@@ -52,7 +52,7 @@ class GpuScalarPowKernel final : public OpKernel {
     T* out_ptr = out_tensor->mut_dptr<T>();
     const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
 
-    const int32_t elem_cnt = in_tensor->shape().elem_cnt();
+    const int64_t elem_cnt = in_tensor->shape().elem_cnt();
     OF_CUDA_CHECK(
         (oneflow::cuda::elementwise::Unary(ScalarPowFunctor<T>(exponent), elem_cnt, out_ptr, in_ptr,
                                            ctx->device_ctx()->cuda_stream())));

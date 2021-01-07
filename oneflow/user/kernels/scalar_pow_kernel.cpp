@@ -34,8 +34,8 @@ class CpuScalarPowKernel final : public OpKernel {
     T* out_ptr = out_tensor->mut_dptr<T>();
     const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
 
-    const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], exponent); }
+    const int64_t elem_cnt = in_tensor->shape().elem_cnt();
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], exponent); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
