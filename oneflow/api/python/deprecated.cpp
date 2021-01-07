@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/mirrored_parallel.cfg.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -33,11 +35,21 @@ Maybe<cfg::SbpParallel> MakeSbpParallel(const std::string& serialized_str) {
   return std::make_shared<cfg::SbpParallel>(sbp_parallel);
 }
 
+Maybe<cfg::OptMirroredParallel> MakeOptMirroredParallel(const std::string& serialized_str) {
+  OptMirroredParallel opt_mirrored_parallel;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &opt_mirrored_parallel))
+      << "opt_mirrored_parallel parse failed";
+  return std::make_shared<cfg::OptMirroredParallel>(opt_mirrored_parallel);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def("MakeSbpParrallelByString",
         [](const std::string& str) { return MakeSbpParallel(str).GetPtrOrThrow(); });
+
+  m.def("MakeOptMirroredParrallelByString",
+        [](const std::string& str) { return MakeOptMirroredParallel(str).GetPtrOrThrow(); });
 }
 
 }  // namespace oneflow

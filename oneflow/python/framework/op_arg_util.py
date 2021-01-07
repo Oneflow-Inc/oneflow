@@ -105,6 +105,10 @@ class OpArgParallelAttribute(object):
                 str(sbp_parallel)
             )
         self.sbp_parallel_ = sbp_parallel
+        if not isinstance(opt_mirrored_parallel, oneflow_api.CfgMessage):
+            opt_mirrored_parallel = oneflow_api.deprecated.MakeOptMirroredParrallelByString(
+                str(opt_mirrored_parallel)
+            )
         self.opt_mirrored_parallel_ = opt_mirrored_parallel
         self.hash_ = self._Hash()
 
@@ -121,7 +125,7 @@ class OpArgParallelAttribute(object):
         return self.opt_mirrored_parallel_
 
     def is_mirrored(self):
-        return self.opt_mirrored_parallel.HasField("mirrored_parallel")
+        return self.opt_mirrored_parallel.has_mirrored_parallel()
 
     def Assign(self, other):
         self.__init__(
@@ -136,7 +140,7 @@ class OpArgParallelAttribute(object):
             op_node_signature.mirrored_signature.bn_in_op2opt_mirrored_parallel
         )
         assert bn_in_op not in mirrored_sig
-        mirrored_sig[bn_in_op].CopyFrom(self.opt_mirrored_parallel)
+        text_format.Parse(str(self.opt_mirrored_parallel), mirrored_sig[bn_in_op])
         parallel_sig = (
             op_node_signature.parallel_signature.bn_in_op2parallel_desc_symbol_id
         )
@@ -159,7 +163,7 @@ class OpArgParallelAttribute(object):
             self.parallel_desc_symbol_ == other.parallel_desc_symbol_
             and self.opt_mirrored_parallel_ == other.opt_mirrored_parallel_
             and (
-                self.opt_mirrored_parallel_.HasField("mirrored_parallel")
+                self.opt_mirrored_parallel_.has_mirrored_parallel()
                 or self.sbp_parallel_ == other.sbp_parallel_
             )
         )
@@ -175,13 +179,13 @@ class OpArgParallelAttribute(object):
         )
 
     def _Hash(self):
-        if self.opt_mirrored_parallel_.HasField("mirrored_parallel"):
+        if self.opt_mirrored_parallel_.has_mirrored_parallel():
             sbp_hash = 0
         else:
             sbp_hash = hash(self.sbp_parallel_)
         return (
             hash(self.parallel_desc_symbol_)
-            ^ hash(str(self.opt_mirrored_parallel_))
+            ^ hash(self.opt_mirrored_parallel_)
             ^ sbp_hash
         )
 
