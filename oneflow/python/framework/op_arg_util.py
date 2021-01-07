@@ -126,14 +126,6 @@ class OpArgParallelAttribute(oneflow_api.OpArgParallelAttribute):
         assert bn_in_op not in parallel_sig
         parallel_sig[bn_in_op] = self.parallel_desc_symbol.symbol_id
 
-    def DumpToToInterfaceBlobConf(self, interface_blob_conf):
-        if self.sbp_parallel.has_split_parallel():
-            interface_blob_conf.split_axis.value = (
-                self.sbp_parallel.split_parallel().axis()
-            )
-        else:
-            interface_blob_conf.ClearField("split_axis")
-
 
 def GetOpArgBlobAttribute(op_attribute, bn_in_op):
     if not op_attribute.HasField("batch_axis_signature"):

@@ -40,6 +40,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("is_mirrored", &OpArgParallelAttribute::is_mirrored)
       .def("_Hash", &OpArgParallelAttribute::_Hash)
       .def("Assign", &OpArgParallelAttribute::Assign)
+      .def("DumpToInterfaceBlobConf", &OpArgParallelAttribute::DumpToInterfaceBlobConf)
       .def("__str__", &OpArgParallelAttribute::ToString)
       .def("__repr__", &OpArgParallelAttribute::ToString)
       .def(py::self == py::self)

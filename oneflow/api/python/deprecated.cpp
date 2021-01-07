@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
 #include "oneflow/core/job/mirrored_parallel.pb.h"
+#include "oneflow/core/operator/inter_face_blob_conf.cfg.h"
+#include "oneflow/core/operator/inter_face_blob_conf.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -42,6 +44,13 @@ Maybe<cfg::OptMirroredParallel> MakeOptMirroredParallel(const std::string& seria
   return std::make_shared<cfg::OptMirroredParallel>(opt_mirrored_parallel);
 }
 
+Maybe<cfg::InterfaceBlobConf> MakeInterfaceBlobConf(const std::string& serialized_str) {
+  InterfaceBlobConf inter_face_blob_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &inter_face_blob_conf))
+      << "inter_face_blob_conf parse failed";
+  return std::make_shared<cfg::InterfaceBlobConf>(inter_face_blob_conf);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -50,6 +59,9 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   m.def("MakeOptMirroredParrallelByString",
         [](const std::string& str) { return MakeOptMirroredParallel(str).GetPtrOrThrow(); });
+
+  m.def("MakeInterfaceBlobConfByString",
+        [](const std::string& str) { return MakeInterfaceBlobConf(str).GetPtrOrThrow(); });
 }
 
 }  // namespace oneflow

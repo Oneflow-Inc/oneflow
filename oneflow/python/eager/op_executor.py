@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.inter_face_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.symbol_storage as symbol_storage
@@ -395,7 +396,7 @@ def _GenModelIOPathInputOpConfAndRetLbi():
     op_conf.device_tag = "cpu"
     op_conf.input_conf.out = "out"
 
-    blob_conf = op_conf_util.InterfaceBlobConf()
+    blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
     blob_conf.data_type = dtype_util.int8.oneflow_proto_dtype
     blob_conf.batch_axis.value = 0

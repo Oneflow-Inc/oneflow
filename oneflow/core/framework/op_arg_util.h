@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
+#include "oneflow/core/common/data_type.cfg.h"
+#include "oneflow/core/operator/inter_face_blob_conf.cfg.h"
 
 namespace oneflow {
 
@@ -61,6 +63,14 @@ class OpArgParallelAttribute {
     sbp_parallel_ = other->sbp_parallel();
     opt_mirrored_parallel_ = other->opt_mirrored_parallel();
     hash_ = other->_Hash();
+  }
+
+  void DumpToInterfaceBlobConf(std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) {
+    if (sbp_parallel_->has_split_parallel()) {
+      interface_blob_conf->mutable_split_axis()->set_value(sbp_parallel_->split_parallel().axis());
+    } else {
+      interface_blob_conf->clear_split_axis();
+    }
   }
 
   std::string ToString() const {
