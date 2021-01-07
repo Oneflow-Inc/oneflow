@@ -335,7 +335,7 @@ class EagerConsistentBlob(
                 placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
             )
         return self.parallel_size_
-    
+
     def Clone(self):
         return type(self)(
             self.lbi,
