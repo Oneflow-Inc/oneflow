@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.core.record.record_pb2 as record_util
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -29,7 +28,7 @@ from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):
-    assert isinstance(blob_watched, remote_blob_util.ConsistentBlob)
+    assert isinstance(blob_watched, oneflow_api.ConsistentBlob)
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
 
@@ -57,4 +56,4 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
 
 # static lifetime
 _global_watcher = _Watcher()
-c_api_util.RegisterWatcherOnlyOnce(_global_watcher)
+oneflow_api.RegisterWatcherOnlyOnce(_global_watcher)

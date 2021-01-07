@@ -18,33 +18,22 @@ limitations under the License.
 
 #include "oneflow/api/python/env/env.h"
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> CurrentResource() {
-  return oneflow::CurrentResource().GetDataAndErrorProto(std::string(""));
+inline std::string CurrentResource() { return oneflow::CurrentResource().GetOrThrow(); }
+
+inline std::string EnvResource() { return oneflow::EnvResource().GetOrThrow(); }
+
+inline void EnableEagerEnvironment(bool enable_eager_execution) {
+  return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> EnvResource() {
-  return oneflow::EnvResource().GetDataAndErrorProto(std::string(""));
+inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
+
+inline void InitEnv(const std::string& env_proto_str) {
+  return oneflow::InitEnv(env_proto_str).GetOrThrow();
 }
 
-inline std::shared_ptr<oneflow::cfg::ErrorProto> EnableEagerEnvironment(
-    bool enable_eager_execution) {
-  return oneflow::EnableEagerEnvironment(enable_eager_execution).GetDataAndErrorProto();
-}
+inline void DestroyEnv() { return oneflow::DestroyEnv().GetOrThrow(); }
 
-inline std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsEnvInited() {
-  return oneflow::IsEnvInited().GetDataAndErrorProto(false);
-}
-
-inline std::shared_ptr<oneflow::cfg::ErrorProto> InitEnv(const std::string& env_proto_str) {
-  return oneflow::InitEnv(env_proto_str).GetDataAndErrorProto();
-}
-
-inline std::shared_ptr<oneflow::cfg::ErrorProto> DestroyEnv() {
-  return oneflow::DestroyEnv().GetDataAndErrorProto();
-}
-
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> CurrentMachineId() {
-  return oneflow::CurrentMachineId().GetDataAndErrorProto(0LL);
-}
+inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

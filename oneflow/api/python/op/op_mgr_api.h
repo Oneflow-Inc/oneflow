@@ -18,46 +18,37 @@ limitations under the License.
 
 #include "oneflow/api/python/op/op_mgr.h"
 
-inline std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsOpTypeCaseCpuSupportOnly(
-    int64_t op_type_case) {
-  return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case).GetDataAndErrorProto(false);
+inline bool IsOpTypeCaseCpuSupportOnly(int64_t op_type_case) {
+  return oneflow::IsOpTypeCaseCpuSupportOnly(op_type_case).GetOrThrow();
 }
 
-inline std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsOpTypeNameCpuSupportOnly(
-    const std::string& op_type_name) {
-  return oneflow::IsOpTypeNameCpuSupportOnly(op_type_name).GetDataAndErrorProto(false);
+inline bool IsOpTypeNameCpuSupportOnly(const std::string& op_type_name) {
+  return oneflow::IsOpTypeNameCpuSupportOnly(op_type_name).GetOrThrow();
 }
 
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> GetUserOpAttrType(
-    const std::string& op_type_name, const std::string& attr_name) {
-  return oneflow::GetUserOpAttrType(op_type_name, attr_name).GetDataAndErrorProto(0LL);
+inline long long GetUserOpAttrType(const std::string& op_type_name, const std::string& attr_name) {
+  return oneflow::GetUserOpAttrType(op_type_name, attr_name).GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> InferOpConf(
-    const std::string& serialized_op_conf, const std::string& serialized_op_input_signature) {
-  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature)
-      .GetDataAndErrorProto(std::string(""));
+inline std::string InferOpConf(const std::string& serialized_op_conf,
+                               const std::string& serialized_op_input_signature) {
+  return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature).GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>>
-GetSerializedOpAttributes() {
-  return oneflow::GetSerializedOpAttributes().GetDataAndErrorProto(std::string(""));
+inline std::string GetSerializedOpAttributes() {
+  return oneflow::GetSerializedOpAttributes().GetOrThrow();
 }
 
-inline std::pair<bool, std::shared_ptr<oneflow::cfg::ErrorProto>> IsInterfaceOpTypeCase(
-    int64_t op_type_case) {
-  return oneflow::IsInterfaceOpTypeCase(op_type_case).GetDataAndErrorProto(false);
+inline bool IsInterfaceOpTypeCase(int64_t op_type_case) {
+  return oneflow::IsInterfaceOpTypeCase(op_type_case).GetOrThrow();
 }
 
-inline std::pair<long long, std::shared_ptr<oneflow::cfg::ErrorProto>> GetOpParallelSymbolId(
-    const std::string& serialized_op_conf) {
-  return oneflow::GetOpParallelSymbolId(serialized_op_conf).GetDataAndErrorProto(0LL);
+inline long long GetOpParallelSymbolId(const std::string& serialized_op_conf) {
+  return oneflow::GetOpParallelSymbolId(serialized_op_conf).GetOrThrow();
 }
 
-inline std::pair<std::string, std::shared_ptr<oneflow::cfg::ErrorProto>> CheckAndCompleteUserOpConf(
-    const std::string& serialized_op_conf) {
-  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf)
-      .GetDataAndErrorProto(std::string(""));
+inline std::string CheckAndCompleteUserOpConf(const std::string& serialized_op_conf) {
+  return oneflow::CheckAndCompleteUserOpConf(serialized_op_conf).GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_OP_OP_MGR_API_H_

@@ -181,7 +181,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
     registry.def("{{ util.oneof_name(oneof) }}_case",  &Const{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
-    registry.def("has_{{ util.oneof_name(oneof) }}",  &Const{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
     registry.def_property_readonly_static("{{ util.oneof_name(oneof).upper() }}_NOT_SET",
         [](const pybind11::object&){ return {{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.oneof_name(oneof).upper() }}_NOT_SET; })
 {% for field in util.oneof_type_fields(oneof) %}
@@ -273,7 +272,6 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# oneof_fields #}
         ;
     registry.def("{{ util.oneof_name(oneof) }}_case",  &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.oneof_name(oneof) }}_case);
-    registry.def("has_{{ util.oneof_name(oneof) }}",  &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::has_{{ util.oneof_name(oneof) }});
 {% endfor %}{# oneofs #}
   }
 {% endif %}{# cls is not entry #}

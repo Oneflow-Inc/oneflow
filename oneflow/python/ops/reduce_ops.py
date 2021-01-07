@@ -23,6 +23,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 def _gen_unique_name_if_need(name, default_name):
@@ -66,21 +67,21 @@ def _do_reduce(x, name, op_type_name, keepdims, axis):
 
 @oneflow_export("math.reduce_sum")
 def reduce_sum(
-    input_tensor: remote_blob_util.BlobDef,
+    input_tensor: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the sum of elements across dimensions of a tensor
 
     Args:
-        input_tensor (remote_blob_util.BlobDef): A Blob
+        input_tensor (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the sum value is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of sum on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of sum on the specified axis of input Blob
 
     For example: 
 
@@ -125,21 +126,21 @@ def reduce_sum(
 
 @oneflow_export("math.reduce_any")
 def reduce_any(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the `logical or` of input Blob along the specified axis
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the logical and value is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of logical or on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of logical or on the specified axis of input Blob
 
     Note: 
 
@@ -177,21 +178,21 @@ def reduce_any(
 
 @oneflow_export("math.reduce_min")
 def reduce_min(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the minimum value of input Blob along the specified axis
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the minimum value is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of minimum value on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of minimum value on the specified axis of input Blob
     
     For example: 
 
@@ -225,21 +226,21 @@ def reduce_min(
 
 @oneflow_export("math.reduce_max")
 def reduce_max(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the maximum value of input Blob along the specified axis
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the maximum value is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of maximum value on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of maximum value on the specified axis of input Blob
     
     For example: 
 
@@ -273,21 +274,21 @@ def reduce_max(
 
 @oneflow_export("math.reduce_prod")
 def reduce_prod(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the product of input Blob along the specified axis
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the product is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of product value on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of product value on the specified axis of input Blob
     
     For example: 
 
@@ -321,21 +322,21 @@ def reduce_prod(
 
 @oneflow_export("math.reduce_all")
 def reduce_all(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the `logical and` of input Blob along the specified axis
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the logical and value is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of logical and value on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of logical and value on the specified axis of input Blob
     
     Note: 
 
@@ -373,11 +374,11 @@ def reduce_all(
 
 @oneflow_export("math.reduce_euclidean_norm")
 def reduce_euclidean_norm(
-    input_tensor: remote_blob_util.BlobDef,
+    input_tensor: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the Euclidean norm of input Blob along the specified axis
 
     The equation is: 
@@ -387,13 +388,13 @@ def reduce_euclidean_norm(
         out=\sqrt{\sum_{t=0}^{n} x_{t}^2}
 
     Args:
-        input_tensor (remote_blob_util.BlobDef): A Blob
+        input_tensor (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the Euclidean norm is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of Euclidean norm on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of Euclidean norm on the specified axis of input Blob
     
     For example: 
 
@@ -432,11 +433,11 @@ def reduce_euclidean_norm(
 
 @oneflow_export("math.reduce_logsumexp")
 def reduce_logsumexp(
-    input_tensor: remote_blob_util.BlobDef,
+    input_tensor: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the log of exponential sum of input Blob along the specified axis
 
 
@@ -447,13 +448,13 @@ def reduce_logsumexp(
         out = log(\sum_{t=0}^{t=n} e^{x_{t}})
 
     Args:
-        input_tensor (remote_blob_util.BlobDef): A Blob
+        input_tensor (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the log of exponential sum is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of log of exponential sum on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of log of exponential sum on the specified axis of input Blob
     
     For example: 
 
@@ -493,11 +494,11 @@ def reduce_logsumexp(
 
 @oneflow_export("math.reduce_std")
 def reduce_std(
-    input_tensor: remote_blob_util.BlobDef,
+    input_tensor: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the standard deviation of input Blob along the specified axis
 
     The equation is: 
@@ -507,13 +508,13 @@ def reduce_std(
         out=\sqrt{\frac{1}{n}*\sum_{i=1}^{n}(x_i-mean)^2}
     
     Args:
-        input_tensor (remote_blob_util.BlobDef): A Blob
+        input_tensor (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the standard deviation is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of standard deviation on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of standard deviation on the specified axis of input Blob
 
     For example: 
 
@@ -554,11 +555,11 @@ def reduce_std(
 
 @oneflow_export("math.reduce_variance")
 def reduce_variance(
-    input_tensor: remote_blob_util.BlobDef,
+    input_tensor: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the variance of input Blob along the specified axis
 
     The equation is: 
@@ -568,13 +569,13 @@ def reduce_variance(
         out=\frac{1}{n}*\sum_{i=1}^{n}(x_i-mean)^2
 
     Args:
-        input_tensor (remote_blob_util.BlobDef): A Blob
+        input_tensor (oneflow_api.BlobDesc): A Blob
         axis (Optional[Union[int, Sequence[int]]], optional): The dimension along which the variance is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result of variance on the specified axis of input Blob
+        oneflow_api.BlobDesc: The result of variance on the specified axis of input Blob
     
     For example: 
 

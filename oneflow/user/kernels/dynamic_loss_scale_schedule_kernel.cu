@@ -32,8 +32,7 @@ __global__ void DynamicLossScaleScheduleGpu(const int64_t increment_period, cons
     *good_step_counter = cur_good_step_counter;
   } else {
     *good_step_counter = 0;
-    *loss_scale = static_cast<float>(
-        max(static_cast<double>(*loss_scale) / multiplier, static_cast<double>(FLT_MIN)));
+    *loss_scale = static_cast<float>(max(static_cast<double>(*loss_scale) / multiplier, 1.0));
   }
 }
 

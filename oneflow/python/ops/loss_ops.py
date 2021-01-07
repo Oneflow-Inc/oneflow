@@ -19,16 +19,17 @@ import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 from typing import Optional
 
 
 @oneflow_export("smooth_l1_loss")
 def smooth_l1_loss(
-    prediction: remote_blob_util.BlobDef,
-    label: remote_blob_util.BlobDef,
+    prediction: oneflow_api.BlobDesc,
+    label: oneflow_api.BlobDesc,
     beta: float = 1.0,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the smooth l1 loss. 
 
     The equation is: 
@@ -41,13 +42,13 @@ def smooth_l1_loss(
 
 
     Args:
-        prediction (remote_blob_util.BlobDef): The prediction Blob
-        label (remote_blob_util.BlobDef): The label Blob
+        prediction (oneflow_api.BlobDesc): The prediction Blob
+        label (oneflow_api.BlobDesc): The label Blob
         beta (float, optional): The :math:`\beta` in the equation. Defaults to 1.0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob 
+        oneflow_api.BlobDesc: The result Blob 
 
     For example: 
 
