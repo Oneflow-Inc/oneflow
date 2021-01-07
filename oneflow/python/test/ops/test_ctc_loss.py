@@ -205,8 +205,8 @@ def gen_arg_list():
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestSort(flow.unittest.TestCase):
-    def test_sort(test_case):
+class TestCTCLoss(flow.unittest.TestCase):
+    def test_ctc_loss(test_case):
         for arg in gen_arg_list():
             compare_with_np(*arg)
 

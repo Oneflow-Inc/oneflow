@@ -34,7 +34,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename IDX>
-struct CtcLossKernelUtil {
+struct CtcLossKernelUtil final {
   static void CtcLossForward(DeviceCtx* ctx, const IDX batch_size, const T* log_probs_ptr,
                              const int* targets_ptr, const IDX* input_lengths_ptr,
                              const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
@@ -52,10 +52,6 @@ struct CtcLossKernelUtil {
                               const bool zero_infinity);
 };
 
-#define INSTANTIATE_CTC_LOSS_FUNCTOR(device_type_v, log_probs_dtype_pair,                  \
-                                     input_lengths_dtype_pair)                             \
-  template struct CtcLossKernelUtil<device_type_v, OF_PP_PAIR_FIRST(log_probs_dtype_pair), \
-                                    OF_PP_PAIR_FIRST(input_lengths_dtype_pair)>;
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_CTC_LOSS_KERNEL_UTIL_H_

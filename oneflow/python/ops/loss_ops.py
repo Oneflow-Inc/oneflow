@@ -89,31 +89,31 @@ def smooth_l1_loss(
 
 @oneflow_export("ctc_loss")
 def ctc_loss(
-    log_probs: remote_blob_util.BlobDef,
-    targets: remote_blob_util.BlobDef,
-    input_lengths: remote_blob_util.BlobDef,
-    target_lengths: remote_blob_util.BlobDef,
+    log_probs: oneflow_api.BlobDesc,
+    targets: oneflow_api.BlobDesc,
+    input_lengths: oneflow_api.BlobDesc,
+    target_lengths: oneflow_api.BlobDesc,
     blank: int = 0,
     reduction: str = "mean",
     zero_infinity: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes the CTC(Connectionist Temporal Classification) loss.
     This operator implements the CTC loss as presented in (Graves et al., 2006).
 
 
     Args:
-        log_probs (remote_blob_util.BlobDef): A Blob of shape [input_length, batch_size, num_labels].
-        targets (remote_blob_util.BlobDef): A Blob of shape [batch_size, max_target_length].
-        input_lengths (remote_blob_util.BlobDef): A Blob of shape [batch_size].
-        target_lengths (remote_blob_util.BlobDef): A Blob of shape [batch_size].
+        log_probs (oneflow_api.BlobDesc): A Blob of shape [input_length, batch_size, num_labels].
+        targets (oneflow_api.BlobDesc): A Blob of shape [batch_size, max_target_length].
+        input_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size].
+        target_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size].
         blank (int, optional): Blank label. Defaults to 0.
         reduction (str, optional): The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean".
         zero_infinity (bool, optional):  Whether to zero infinite losses and the associated gradients. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob.
+        oneflow_api.BlobDesc: The result Blob.
 
     For example: 
 
@@ -131,10 +131,10 @@ def ctc_loss(
             input_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int32),
             target_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int32),
         ) -> tp.Numpy:
-            out = flow.ctc_loss(
+            loss = flow.ctc_loss(
                 log_probs, targets, input_lengths, target_lengths, blank=0, reduction="none"
             )
-            return out
+            return loss
 
 
         log_input = np.array(
@@ -146,16 +146,16 @@ def ctc_loss(
                 [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
             ]
         ).astype(np.float32)
-        target = np.array([[1, 2, 2], [1, 2, 2]]).astype("int64")
-        input_lengths = np.array([5, 5]).astype("int64")
-        target_lengths = np.array([3, 3]).astype("int64")
+        target = np.array([[1, 2, 2], [1, 2, 2]]).astype("int32")
+        input_lengths = np.array([5, 5]).astype("int32")
+        target_lengths = np.array([3, 3]).astype("int32")
         loss = ctc_loss_job(log_input, target, input_lengths, target_lengths)
 
         # loss [3.918017 2.907672]
 
     """
     name = name if name is not None else id_util.UniqueStr("CTCLoss_")
-    loss, alpha = (
+    loss, _ = (
         flow.user_op_builder(name)
         .Op("ctc_loss")
         .Input("log_probs", [log_probs])

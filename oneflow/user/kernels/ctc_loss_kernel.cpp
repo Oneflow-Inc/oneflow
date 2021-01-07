@@ -83,10 +83,8 @@ class CtcLossKernel final : public user_op::OpKernel {
           & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                    \
           & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_KERNEL, DEVICE_TYPE_SEQ,
-                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat), INDEX_DATA_TYPE_SEQ)
-
-#undef REGISTER_CTC_LOSS_KERNEL
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T, typename IDX>
 class CtcLossGradKernel final : public user_op::OpKernel {
@@ -104,7 +102,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* input_lengths = ctx->Tensor4ArgNameAndIndex("input_lengths", 0);
     const user_op::Tensor* target_lengths = ctx->Tensor4ArgNameAndIndex("target_lengths", 0);
     user_op::Tensor* grad = ctx->Tensor4ArgNameAndIndex("grad", 0);
-    user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const T* grad_out_ptr = grad_out->dptr<T>();
     const T* loss_ptr = loss->dptr<T>();
@@ -131,7 +129,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     NdIndexOffsetHelper<IDX, 3> beta_helper(batch_size, max_input_length,
                                             2 * max_target_length + 1);
     T* grad_ptr = grad->mut_dptr<T>();
-    T* beta_ptr = beta->mut_dptr<T>();
+    T* beta_ptr = tmp_buffer->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossBackward(
         ctx->device_ctx(), grad_out_ptr, loss_ptr, alpha_ptr, batch_size, log_probs_ptr,
         targets_ptr, input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper,
@@ -140,18 +138,23 @@ class CtcLossGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, idx_dtype)                          \
-  REGISTER_USER_KERNEL("ctc_loss_grad")                                                      \
-      .SetCreateFn<                                                                          \
-          CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
-      .SetIsMatchedHob(                                                                      \
-          (user_op::HobDeviceTag() == device)                                                \
-          & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))               \
-          & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)));
+#define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, idx_dtype)                           \
+  REGISTER_USER_KERNEL("ctc_loss_grad")                                                       \
+      .SetCreateFn<                                                                           \
+          CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>()  \
+      .SetIsMatchedHob(                                                                       \
+          (user_op::HobDeviceTag() == device)                                                 \
+          & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                \
+          & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))       \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
+        const Shape* log_probs_shape = ctx->Shape4ArgNameAndIndex("log_probs", 0);            \
+        const Shape* targets_shape = ctx->Shape4ArgNameAndIndex("targets", 0);                \
+        int64_t elem_cnt =                                                                    \
+            log_probs_shape->At(1) * log_probs_shape->At(0) * (2 * targets_shape->At(1) + 1); \
+        return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                    \
+      });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_BACKWARD_KERNEL, DEVICE_TYPE_SEQ,
-                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat), INDEX_DATA_TYPE_SEQ)
-
-#undef REGISTER_CTC_LOSS_BACKWARD_KERNEL
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

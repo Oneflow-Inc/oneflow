@@ -239,7 +239,13 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_FUNCTOR, (DeviceType::kGPU),
-                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat), INDEX_DATA_TYPE_SEQ)
+#define INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU(device_type_v, log_probs_dtype_pair,          \
+                                             input_lengths_dtype_pair)                     \
+  template struct CtcLossKernelUtil<device_type_v, OF_PP_PAIR_FIRST(log_probs_dtype_pair), \
+                                    OF_PP_PAIR_FIRST(input_lengths_dtype_pair)>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU, (DeviceType::kGPU),
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#undef INSTANTIATE_CTC_LOSS_KERNEL_UTIL_GPU
 
 }  // namespace oneflow
