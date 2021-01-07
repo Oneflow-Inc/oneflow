@@ -9,9 +9,5 @@ mkdir -p $test_tmp_dir
 cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
-gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
-for CHUNK in 1
-do
-	export ONEFLOW_TEST_DEVICE_NUM=${CHUNK}
-    python3 -m unittest discover test/serving --failfast --verbose
-done
+export ONEFLOW_TEST_DEVICE_NUM=1
+python3 -m unittest discover test/serving --failfast --verbose
