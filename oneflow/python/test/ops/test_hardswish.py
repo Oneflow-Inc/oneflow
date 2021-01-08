@@ -45,7 +45,6 @@ def _compare_hardswish_with_np(
         input_1 += np.random.randn(*input_shape).astype(
             value_type[0]
         )  # add a randnom array, range from(0, 1)
-
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -57,7 +56,7 @@ def _compare_hardswish_with_np(
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
     # global function needs float32 as type of argument and return value
-    if value_type == flow.float16:
+    if value_type[1] == flow.float16:
         func_config.default_data_type(flow.float32)
     else:
         func_config.default_data_type(value_type[1])
