@@ -20,6 +20,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as tp
+import os
 
 
 def log_softmax(logits, axis=0):
@@ -117,6 +118,7 @@ def ctc_loss_np(
 
 def compare_with_np(
     device_type,
+    device_num,
     data_type,
     max_logit_length,
     batch_size,
@@ -126,20 +128,37 @@ def compare_with_np(
     reduction,
     zero_infinity,
 ):
-    assert data_type in ["float32"]
+    print(
+        device_type,
+        device_num,
+        data_type,
+        max_logit_length,
+        batch_size,
+        num_classes,
+        max_label_length,
+        blank,
+        reduction,
+        zero_infinity,
+    )
+    assert data_type in ["float32", "double"]
     assert device_type in ["gpu", "cpu"]
     assert reduction in ["none", "mean", "sum"]
     assert zero_infinity in [False, True]
 
     flow.clear_default_session()
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        flow.config.gpu_device_num(device_num)
+    flow_data_type = type_name_to_flow_type[data_type]
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.default_data_type(flow.float)
+    func_config.default_data_type(flow_data_type)
 
     @flow.global_function(function_config=func_config)
     def ctc_loss_job(
         log_probs: tp.Numpy.Placeholder(
-            shape=(max_logit_length, batch_size, num_classes)
+            shape=(max_logit_length, batch_size, num_classes), dtype=flow_data_type
         ),
         targets: tp.Numpy.Placeholder(
             shape=(batch_size, max_label_length), dtype=flow.int32
@@ -147,7 +166,7 @@ def compare_with_np(
         input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
         target_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
     ) -> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
             return flow.ctc_loss(
                 log_probs,
                 targets,
@@ -189,12 +208,17 @@ def compare_with_np(
     assert np.allclose(of_out, np_out, rtol=tolerance, atol=tolerance)
 
 
-def gen_arg_list():
+def gen_arg_list(type):
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["max_logit_length"] = [100]
-    arg_dict["batch_size"] = [10]
+    if type == "1n2d":
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["device_num"] = [2]
+    else:
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_num"] = [1]
+    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["max_logit_length"] = [50]
+    arg_dict["batch_size"] = [8]
     arg_dict["num_classes"] = [10]
     arg_dict["max_label_length"] = [20]
     arg_dict["blank"] = [0, 1, 9]
@@ -205,9 +229,17 @@ def gen_arg_list():
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestCTCLoss(flow.unittest.TestCase):
+class TestCTCLoss1n1d(flow.unittest.TestCase):
     def test_ctc_loss(test_case):
-        for arg in gen_arg_list():
+        for arg in gen_arg_list("1n1d"):
+            compare_with_np(*arg)
+
+
+@flow.unittest.skip_unless_1n2d()
+class TestCTCLoss1n2d(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dim_gather_float(test_case):
+        for arg in gen_arg_list("1n2d"):
             compare_with_np(*arg)
 
 

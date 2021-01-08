@@ -60,8 +60,8 @@ class CtcLossKernel final : public user_op::OpKernel {
     CHECK_EQ(target_lengths->shape().At(0), batch_size);
     CHECK_GE(blank, 0);
     CHECK_LT(blank, num_labels);
-    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
-    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
+    // FOR_RANGE(IDX, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
+    // FOR_RANGE(IDX, b, 0, batch_size) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<IDX, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<IDX, 3> alpha_helper(batch_size, max_input_length,
                                              2 * max_target_length + 1);
@@ -123,8 +123,8 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     CHECK_EQ(target_lengths->shape().At(0), batch_size);
     CHECK_GE(blank, 0);
     CHECK_LT(blank, num_labels);
-    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
-    // for (IDX b = 0; b < batch_size; b++) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
+    // FOR_RANGE(IDX, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
+    // FOR_RANGE(IDX, b, 0, batch_size) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<IDX, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<IDX, 3> beta_helper(batch_size, max_input_length,
                                             2 * max_target_length + 1);

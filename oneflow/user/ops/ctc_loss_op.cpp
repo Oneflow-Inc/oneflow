@@ -23,7 +23,7 @@ REGISTER_USER_OP("ctc_loss")
     .Input("input_lengths")
     .Input("target_lengths")
     .Output("loss")
-    .Output("alpha")
+    .Output("alpha") // 'alpha' is just for compute log_probs's grad, alpha's grad will be ignored
     .Attr<int>("blank")
     .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -45,11 +45,19 @@ REGISTER_USER_OP("ctc_loss")
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("log_probs", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("alpha", 0) = *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("log_probs", 0), 1)
+          .Split(user_op::OpArg("targets", 0), 0)
+          .Split(user_op::OpArg("input_lengths", 0), 0)
+          .Split(user_op::OpArg("target_lengths", 0), 0)
+          .Split(user_op::OpArg("loss", 0), 0)
+          .Split(user_op::OpArg("alpha", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 
@@ -84,7 +92,16 @@ REGISTER_USER_OP("ctc_loss_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("grad_out", 0), 0)
+          .Split(user_op::OpArg("log_probs", 0), 1)
+          .Split(user_op::OpArg("targets", 0), 0)
+          .Split(user_op::OpArg("input_lengths", 0), 0)
+          .Split(user_op::OpArg("target_lengths", 0), 0)
+          .Split(user_op::OpArg("loss", 0), 0)
+          .Split(user_op::OpArg("alpha", 0), 0)
+          .Split(user_op::OpArg("grad", 0), 0)
+          .Build();
       return Maybe<void>::Ok();
     });
 

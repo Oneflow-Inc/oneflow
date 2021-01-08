@@ -177,7 +177,7 @@ def ctc_loss(
                 loss,
                 flow.cast(
                     flow.math.clip_by_value(target_lengths, min_value=1),
-                    dtype=flow.float,
+                    dtype=log_probs.dtype,
                 ),
             ),
             name=name + "_reduce_mean",
