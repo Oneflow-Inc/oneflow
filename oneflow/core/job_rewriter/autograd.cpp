@@ -973,8 +973,7 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
             .Build();
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
                         {cast_to_static_shape_op.op_conf()});
-    diff_lbi.set_op_name(cast_to_static_shape_op.op_name());
-    diff_lbi.set_blob_name(cast_to_static_shape_op.output("output", 0));
+    diff_lbi = GenLogicalBlobId(cast_to_static_shape_op.output("output", 0));
   }
 }
 
