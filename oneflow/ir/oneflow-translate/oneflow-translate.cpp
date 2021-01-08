@@ -166,10 +166,11 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       // TODO: declare tensor containing field lbi
       // const std::string &ibn = kv.first;
       for (const std::string &lbn : kv.second.s()) {
-        // TODO: add placehorder tensors for tick
         if (lbn2result.find(lbn) != lbn2result.end()) {
           auto v = lbn2result.at(lbn);
           vs.push_back(v);
+        } else {
+          // TODO: add placehorder tensors for tick inputs
         }
       }
     }
