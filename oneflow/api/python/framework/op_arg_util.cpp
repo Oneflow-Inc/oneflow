@@ -25,6 +25,33 @@ namespace oneflow {
 namespace compatible_py {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<OpArgBlobAttribute, std::shared_ptr<OpArgBlobAttribute>>(m, "OpArgBlobAttribute")
+      .def(py::init([](const std::shared_ptr<cfg::OptInt64>& batch_axis,
+                       const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
+                       const std::string& logical_blob_name) {
+        return std::make_shared<OpArgBlobAttribute>(batch_axis, blob_desc, logical_blob_name);
+      }))
+      .def_property_readonly("batch_axis", &OpArgBlobAttribute::batch_axis)
+      .def_property_readonly("blob_desc", &OpArgBlobAttribute::blob_desc)
+      .def_property_readonly("logical_blob_name", &OpArgBlobAttribute::logical_blob_name)
+      .def_property_readonly("is_tensor_list", &OpArgBlobAttribute::is_tensor_list)
+      .def_property_readonly("is_dynamic", &OpArgBlobAttribute::is_dynamic)
+      .def_property_readonly("shape",
+                             [](const std::shared_ptr<OpArgBlobAttribute>& x) {
+                               const auto& x_shape = x->shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
+      .def("get_dtype",
+           [](const std::shared_ptr<OpArgBlobAttribute>& x) {
+             return static_cast<int>(x->get_dtype());
+           })
+      .def("DumpToInterfaceBlobConf", &OpArgBlobAttribute::DumpToInterfaceBlobConf)
+      .def(py::self == py::self);
+
   py::class_<OpArgParallelAttribute, std::shared_ptr<OpArgParallelAttribute>>(
       m, "OpArgParallelAttribute")
       .def(py::init([](std::shared_ptr<ParallelDesc> parallel_desc,

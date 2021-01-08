@@ -24,54 +24,24 @@ from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow_api
 
 
-class OpArgBlobAttribute(object):
+class OpArgBlobAttribute(oneflow_api.OpArgBlobAttribute):
     def __init__(self, batch_axis, blob_desc, logical_blob_name):
-        self.batch_axis_ = batch_axis
-        self.blob_desc_ = blob_desc
-        self.shape_ = tuple(self.blob_desc_.body.shape.dim)
-        self.logical_blob_name_ = logical_blob_name
+        if not isinstance(batch_axis, oneflow_api.CfgMessage):
+            batch_axis = oneflow_api.deprecated.MakeOptInt64ByString(str(batch_axis))
 
-    def __eq__(self, rhs):
-        return (
-            self.shape == rhs.shape
-            and self.dtype == rhs.dtype
-            and self.batch_axis == rhs.batch_axis
-            and self.is_tensor_list == rhs.is_tensor_list
-            and self.is_dynamic == rhs.is_dynamic
-            and self.logical_blob_name == rhs.logical_blob_name
+        if not isinstance(blob_desc, oneflow_api.CfgMessage):
+            blob_desc = oneflow_api.deprecated.MakeBlobDescProtoByString(str(blob_desc))
+        oneflow_api.OpArgBlobAttribute.__init__(
+            self, batch_axis, blob_desc, logical_blob_name
         )
 
     @property
-    def blob_desc(self):
-        return self.blob_desc_
-
-    @property
-    def shape(self):
-        return self.shape_
-
-    @property
     def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(self.blob_desc_.body.data_type)
-
-    @property
-    def batch_axis(self):
-        return self.batch_axis_
-
-    @property
-    def is_tensor_list(self):
-        return self.blob_desc_.is_tensor_list
-
-    @property
-    def is_dynamic(self):
-        return self.blob_desc_.is_dynamic
-
-    @property
-    def logical_blob_name(self):
-        return self.logical_blob_name_
+        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
     def GetPhysicalOpArgBlobAttr(self, split_axis, parallel_num, parallel_id):
         blob_desc = blob_desc_pb.BlobDescProto()
-        blob_desc.CopyFrom(self.blob_desc)
+        text_format.Parse(str(self.blob_desc), blob_desc)
         physical_len = balanced_splitter.BalancedPartNums(
             self.shape[split_axis], parallel_num
         )[parallel_id]
@@ -84,17 +54,10 @@ class OpArgBlobAttribute(object):
     def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
         blob_sig = op_node_signature.logical_blob_desc_signature.bn_in_op2blob_desc
         assert bn_in_op not in blob_sig
-        blob_sig[bn_in_op].CopyFrom(self.blob_desc_)
+        text_format.Parse(str(self.blob_desc), blob_sig[bn_in_op])
         batch_axis_sig = op_node_signature.batch_axis_signature.bn_in_op2batch_axis
         assert bn_in_op not in batch_axis_sig
-        batch_axis_sig[bn_in_op].CopyFrom(self.batch_axis_)
-
-    def DumpToToInterfaceBlobConf(self, interface_blob_conf):
-        interface_blob_conf.shape.dim.extend(self.shape)
-        interface_blob_conf.data_type = self.blob_desc_.body.data_type
-        interface_blob_conf.is_dynamic = self.is_dynamic
-        interface_blob_conf.is_tensor_list = self.is_tensor_list
-        interface_blob_conf.batch_axis.CopyFrom(self.batch_axis)
+        text_format.Parse(str(self.batch_axis), batch_axis_sig[bn_in_op])
 
 
 class OpArgParallelAttribute(oneflow_api.OpArgParallelAttribute):

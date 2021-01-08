@@ -1259,12 +1259,23 @@ def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
     op_conf.name = id_util.UniqueStr("Input")
     op_conf.device_tag = new_parallel_desc_symbol.device_tag
     op_conf.input_conf.out = "out"
-    cfg_interface_blob_conf = oneflow_api.deprecated.MakeInterfaceBlobConfByString(
+    cfg_interface_blob_conf_para_attr = oneflow_api.deprecated.MakeInterfaceBlobConfByString(
         str(op_conf.input_conf.blob_conf)
     )
-    blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
-    text_format.Parse(str(cfg_interface_blob_conf), op_conf.input_conf.blob_conf)
-    blob_object.op_arg_blob_attr.DumpToToInterfaceBlobConf(op_conf.input_conf.blob_conf)
+    blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(
+        cfg_interface_blob_conf_para_attr
+    )
+    text_format.Parse(
+        str(cfg_interface_blob_conf_para_attr), op_conf.input_conf.blob_conf
+    )
+    cfg_interface_blob_conf_blob_attr = oneflow_api.deprecated.MakeInterfaceBlobConfByString(
+        str(op_conf.input_conf.blob_conf)
+    )
+    blob_object.op_arg_blob_attr.DumpToInterfaceBlobConf(
+        cfg_interface_blob_conf_blob_attr
+    )
+    cfg_interface_blob_conf_blob_attr.clear_split_axis()
+    text_format.Parse(str(cfg_interface_blob_conf_blob_attr), op_conf.input_conf.blob_conf)
     op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
     upstream_signature = op_attribute_pb.OpNodeSignature()
     op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
