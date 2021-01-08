@@ -71,7 +71,7 @@ def OneFlow_UserOp : OneFlow_Op<"user", []> {
       StrAttr:$op_type_name,
       DictionaryAttr:$attr
     );
-    let results = (outs Variadic<AnyType>:$output);
+    let results = (outs Variadic<AnyType>:$outputs);
 }
 
 #endif // ONEFLOW_OPS
