@@ -49,7 +49,9 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
   });
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_cast_to_static_shape_conf()) { return; }
+    if (!op_conf.has_user_conf()) { return; }
+    const std::string& op_type_name = op_conf.user_conf().op_type_name();
+    if (op_type_name != "cast_to_static_shape") { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }
