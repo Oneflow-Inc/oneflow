@@ -1259,7 +1259,9 @@ def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
     op_conf.name = id_util.UniqueStr("Input")
     op_conf.device_tag = new_parallel_desc_symbol.device_tag
     op_conf.input_conf.out = "out"
-    cfg_interface_blob_conf = oneflow_api.oneflow.core.operator.inter_face_blob_conf.InterfaceBlobConf()
+    cfg_interface_blob_conf = (
+        oneflow_api.oneflow.core.operator.inter_face_blob_conf.InterfaceBlobConf()
+    )
     blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
     blob_object.op_arg_blob_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
     text_format.Parse(str(cfg_interface_blob_conf), op_conf.input_conf.blob_conf)
