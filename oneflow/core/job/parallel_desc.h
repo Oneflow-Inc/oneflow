@@ -89,7 +89,7 @@ class ParallelDesc final {
   bool Bigger(const ParallelDesc& rhs) const;
   bool ContainingMachineId(int64_t machine_id) const;
 
-  const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
+  std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);

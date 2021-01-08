@@ -67,53 +67,8 @@ inline std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(
   return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf).GetOrThrow();
 }
 
-inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-             job_name, lbn)
-      .GetOrThrow();
-}
-
 inline void CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(const std::string& lbi_uuid_pair) {
   return oneflow::CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(const std::string& job_name,
-                                                                        const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(job_name, lbn).GetOrThrow();
-}
-
-inline long long JobBuildAndInferCtx_GetDataType(const std::string& job_name,
-                                                 const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetDataType(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_IsDynamic(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_DisableBoxing(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
-                                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView(job_name, lbn)
-      .GetOrThrow();
 }
 
 inline void CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::string& lbn) {
@@ -134,38 +89,6 @@ inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(const std
                                                                        const std::string& lbn,
                                                                        int index) {
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(job_name, lbn)
-      .GetOrThrow();
-}
-
-inline long long JobBuildAndInferCtx_MirroredBlobGetDataType(const std::string& job_name,
-                                                             const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetDataType(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_MirroredBlobIsDynamic(const std::string& job_name,
-                                                      const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_MirroredBlobIsTensorList(const std::string& job_name,
-                                                         const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobIsTensorList(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_name,
-                                                                const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetBatchAxis(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn)
-      .GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_API_H_
