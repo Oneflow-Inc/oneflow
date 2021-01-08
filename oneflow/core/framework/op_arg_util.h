@@ -61,7 +61,7 @@ class OpArgBlobAttribute {
   bool is_dynamic() const { return blob_desc_->is_dynamic(); }
 
   bool operator==(const OpArgBlobAttribute& other) const {
-    return true && (*shape_ == *other.shape()) && (*batch_axis_ == *other.batch_axis())
+    return (*shape_ == *other.shape()) && (*batch_axis_ == *other.batch_axis())
            && (get_dtype() == other.get_dtype()) && (is_tensor_list() == other.is_tensor_list())
            && (is_dynamic() == other.is_dynamic())
            && (logical_blob_name_ == other.logical_blob_name());
@@ -124,7 +124,7 @@ class OpArgParallelAttribute {
   std::size_t _Hash() const { return hash_; }
 
   bool operator==(const OpArgParallelAttribute& other) const {
-    return true && (*parallel_desc_ == *other.parallel_desc_symbol())
+    return (*parallel_desc_ == *other.parallel_desc_symbol())
            && (*sbp_parallel_ == *other.sbp_parallel())
            && (*opt_mirrored_parallel_ == *other.opt_mirrored_parallel());
   }
