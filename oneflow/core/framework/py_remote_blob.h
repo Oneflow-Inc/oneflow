@@ -60,14 +60,6 @@ class ConsistentBlob : public BlobDesc {
   ~ConsistentBlob() = default;
 
   std::string job_name() const { return job_name_; }
-  virtual std::shared_ptr<BlobDesc> Clone() const override;
-
-  std::shared_ptr<BlobDesc> with_distribute(
-      const std::shared_ptr<Distribute>& distribute) const override {
-    std::shared_ptr<BlobDesc> ret = Clone();
-    ret->set_distribute(distribute);
-    return ret;
-  }
 
   int64_t parallel_size() {
     if (parallel_size_ == 0) {
@@ -94,13 +86,6 @@ class LazyConsistentBlob : public ConsistentBlob {
       : ConsistentBlob(lbi, job_name, distribute) {}
   LazyConsistentBlob(const LazyConsistentBlob& lazy_consistent_blob) = default;
   ~LazyConsistentBlob() = default;
-
-  std::shared_ptr<BlobDesc> Clone() const override {
-    std::shared_ptr<BlobDesc> ret;
-    BlobDesc* blob_desc = new LazyConsistentBlob(lbi(), job_name(), distribute());
-    ret.reset(blob_desc);
-    return ret;
-  }
 
   virtual std::string get_shape_log_warning() const { return std::string(""); }
 
@@ -151,11 +136,6 @@ class LazyConsistentBlob : public ConsistentBlob {
     return true && unique_name() == rhs->unique_name() && *shape() == *rhs->shape()
            && batch_axis() == rhs->batch_axis() && split_axis() == rhs->split_axis()
            && is_dynamic() == rhs->is_dynamic() && is_tensor_list() == rhs->is_tensor_list();
-  }
-
-  std::shared_ptr<LazyConsistentBlob> with_gradient_distribute(
-      const std::shared_ptr<Distribute>& distribute) {
-    UNIMPLEMENTED();
   }
 };
 
@@ -258,11 +238,6 @@ class LazyMirroredBlob : public MirroredBlob {
     auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
     return CHECK_JUST(ctx->MirroredBlobGetParallelDescFromProducerView(logical_blob_name()))
         ->cfg_parallel_conf();
-  }
-
-  std::shared_ptr<LazyMirroredBlob> with_gradient_distribute(
-      const std::shared_ptr<Distribute>& distribute) {
-    UNIMPLEMENTED();
   }
 
  private:

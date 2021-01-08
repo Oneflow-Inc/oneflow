@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/cfg/pybind_module_registry.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/cluster_instruction.h"
+#include "oneflow/cfg/message.h"
 
 namespace py = pybind11;
 
@@ -96,6 +97,7 @@ PYBIND11_MODULE(oneflow_api, m) {
              return Int2IntListMapContaining(*lhs, *rhs) && Int2IntListMapContaining(*rhs, *lhs);
            });
 
+  py::class_<::oneflow::cfg::Message, std::shared_ptr<::oneflow::cfg::Message>>(m, "CfgMessage");
   ::oneflow::cfg::Pybind11ModuleRegistry().ImportAll(m);
   ::oneflow::OneflowModuleRegistry().ImportAll(m);
 }
