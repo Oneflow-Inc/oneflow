@@ -847,7 +847,7 @@ def group_normalization(
 
     """
     assert len(x.shape) >= 3
-    assert x.shape[1] % num_groups == 0
+    assert x.shape[1] % num_groups == 0, "The channel should be divisible by num_groups."
 
     if name is None:
         name = id_util.UniqueStr("GroupNorm_")
