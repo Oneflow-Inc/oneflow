@@ -1268,6 +1268,7 @@ def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
         str(op_conf.input_conf.blob_conf)
     )
     blob_object.op_arg_blob_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
+    # avoid multiple split_axis when text_format.Parse
     cfg_interface_blob_conf.clear_split_axis()
     text_format.Parse(str(cfg_interface_blob_conf), op_conf.input_conf.blob_conf)
     op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
