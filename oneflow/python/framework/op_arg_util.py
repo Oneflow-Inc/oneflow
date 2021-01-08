@@ -30,7 +30,12 @@ class OpArgBlobAttribute(oneflow_api.OpArgBlobAttribute):
             batch_axis = oneflow_api.deprecated.MakeOptInt64ByString(str(batch_axis))
 
         if not isinstance(blob_desc, oneflow_api.CfgMessage):
-            blob_desc = oneflow_api.deprecated.MakeBlobDescProtoByString(str(blob_desc))
+            if str(blob_desc) is "":
+                blob_desc = oneflow_api.oneflow.core.register.blob_desc.BlobDescProto()
+            else:
+                blob_desc = oneflow_api.deprecated.MakeBlobDescProtoByString(
+                    str(blob_desc)
+                )
         oneflow_api.OpArgBlobAttribute.__init__(
             self, batch_axis, blob_desc, logical_blob_name
         )
