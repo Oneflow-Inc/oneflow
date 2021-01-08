@@ -1102,6 +1102,60 @@ class SGD(Optimizer):
             train_conf.model_update_conf.momentum_conf.beta = self.momentum
 
 
+@oneflow_export("optimizer.SGDW")
+class SGDW(Optimizer):
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        loss_scale_factor: Optional[float] = None,
+        momentum: float = 0.9,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
+        )
+        self.momentum = momentum
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        if self.momentum == 0:
+            train_conf.model_update_conf.naive_conf.SetInParent()
+        else:
+            train_conf.model_update_conf.momentum_conf.beta = self.momentum
+
+        if self.weight_decay is not None:
+            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            elif self.weight_decay_excludes is not None:
+                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )
+
+
 @oneflow_export("optimizer.Adam")
 class Adam(Optimizer):
     r"""The optimizer of the Adam algorithm.
