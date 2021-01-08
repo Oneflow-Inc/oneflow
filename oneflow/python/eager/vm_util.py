@@ -46,7 +46,6 @@ import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
-import oneflow_api.oneflow.core.operator.inter_face_blob_conf as inter_face_blob_conf_util
 from google.protobuf import text_format
 
 oneflow_api = oneflow.oneflow_api
@@ -1260,7 +1259,9 @@ def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
     op_conf.name = id_util.UniqueStr("Input")
     op_conf.device_tag = new_parallel_desc_symbol.device_tag
     op_conf.input_conf.out = "out"
-    cfg_interface_blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
+    cfg_interface_blob_conf = oneflow_api.deprecated.MakeInterfaceBlobConfByString(
+        str(op_conf.input_conf.blob_conf)
+    )
     blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
     text_format.Parse(str(cfg_interface_blob_conf), op_conf.input_conf.blob_conf)
     blob_object.op_arg_blob_attr.DumpToToInterfaceBlobConf(op_conf.input_conf.blob_conf)

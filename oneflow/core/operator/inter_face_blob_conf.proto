@@ -5,10 +5,10 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
 message InterfaceBlobConf {
-  required ShapeProto shape = 1;
-  required DataType data_type = 2;
+  optional ShapeProto shape = 1;
+  optional DataType data_type = 2;
   optional OptInt64 split_axis = 3;
-  required OptInt64 batch_axis = 4;
+  optional OptInt64 batch_axis = 4;
   optional bool is_dynamic = 5;
   optional bool is_tensor_list = 6 [default = false];
 }
