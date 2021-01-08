@@ -91,10 +91,10 @@ class TensorImpl {
 class Tensor : public oneflow::Tensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Tensor);
-  Tensor() = delete;
-  Tensor(const std::shared_ptr<Shape>& sizes, cfg::DataType dtype,
+  Tensor() {}
+  Tensor(const std::shared_ptr<Shape>& shape, cfg::DataType dtype,
          const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-    impl_ = std::make_shared<TensorImpl>(sizes, dtype, parallel_conf);
+    impl_ = std::make_shared<TensorImpl>(shape, dtype, parallel_conf);
   }
   ~Tensor() override = default;
 
