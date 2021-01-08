@@ -3126,13 +3126,17 @@ def hardtanh(
 
 @oneflow_export("nn.relu6")
 def relu6(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
-    """Relu6 activation, it clips the value around (0, 6). 
+    r"""Relu6 activation, it clips the value around (0, 6). 
 
     The equation is: 
 
     .. math:: 
 
-        relu6(x) = min(max(0,x),6) 
+        \text{Relu6}(x) = \begin{cases}
+            6 & \text{ if } x > 6 \\
+            0 & \text{ if } x < 0 \\
+            x & \text{ otherwise } \\
+        \end{cases}
 
     For example: 
 

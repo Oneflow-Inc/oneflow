@@ -41,7 +41,7 @@ def _compare_relu6_with_np(
 
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
-    # global function needs float32 as type of argument and return value
+
     if value_type == flow.float16:
         func_config.default_data_type(flow.float32)
     else:
@@ -103,8 +103,7 @@ def _compare_relu6_with_np(
 
             return of_relu6_out_f32
 
-    # Test float32/64
-    else:
+    elif value_type[1] == flow.float32 or value_type[1] == flow.float64:
 
         @flow.global_function(
             type="train", function_config=func_config,
@@ -141,7 +140,6 @@ def _compare_relu6_with_np(
 
 
 def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
-    # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]
     arg_dict["device_type"] = [device_type]
