@@ -229,9 +229,9 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
   std::cout << "import:\n";
   module->dump();
 
-  OwningRewritePatternList patterns;
-  patterns.insert<replaceGenericUserOpWithDefinedOp>(context);
-  auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(patterns));
+  OwningRewritePatternList import_patterns;
+  import_patterns.insert<replaceGenericUserOpWithDefinedOp>(context);
+  auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(import_patterns));
   if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
 
   std::cout << "optimized:\n";
