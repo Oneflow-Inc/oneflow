@@ -54,16 +54,16 @@ class FunctionNode;
 class TensorImpl {
  public:
   TensorImpl() = default;
-  TensorImpl(const std::shared_ptr<Shape>& sizes, cfg::DataType dtype,
+  TensorImpl(const std::shared_ptr<Shape>& shape, cfg::DataType dtype,
              const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
-      : sizes_(sizes), dtype_(dtype), parallel_conf_(parallel_conf) {}
+      : shape_(shape), dtype_(dtype), parallel_conf_(parallel_conf) {}
   ~TensorImpl() = default;
 
   std::shared_ptr<Blob> storage() const { return storage_; }
-  std::shared_ptr<Shape> sizes() const { return sizes_; }
+  std::shared_ptr<Shape> shape() const { return shape_; }
   cfg::DataType dtype() const { return dtype_; }
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return parallel_conf_; }
-  int32_t dim() const { return sizes_->NumAxes(); }
+  int32_t dim() const { return shape_->NumAxes(); }
 
   bool has_storage() const { return static_cast<bool>(storage_); }
 
@@ -81,7 +81,7 @@ class TensorImpl {
 
  private:
   std::shared_ptr<Blob> storage_;
-  std::shared_ptr<Shape> sizes_;
+  std::shared_ptr<Shape> shape_;
   cfg::DataType dtype_;
   std::shared_ptr<cfg::ParallelConf> parallel_conf_;
   // TODO: Strides related features will be supported later
@@ -102,7 +102,7 @@ class Tensor : public oneflow::Tensor {
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
     return impl_->parallel_conf();
   }
-  std::shared_ptr<Shape> sizes() const { return impl_->sizes(); }
+  std::shared_ptr<Shape> shape() const override { return impl_->shape(); }
   cfg::DataType dtype() const override { return impl_->dtype(); }
   bool defined() const { return static_cast<bool>(impl_); }
   bool has_storage() const { return defined() && impl_->has_storage(); }
@@ -111,13 +111,13 @@ class Tensor : public oneflow::Tensor {
   std::shared_ptr<Tensor> clone() const;  // malloc memory in same place and have same grad_function
   std::shared_ptr<Tensor> detach() const;  // share blob but have no grad_function
   int32_t dim() const { return impl_->dim(); }
+  std::shared_ptr<Tensor> grad() const { return grad_; }
 
   // Inherit some virtual unimplement interface
   std::shared_ptr<cfg::LogicalBlobId> lbi() const override { UNIMPLEMENTED(); }
   std::string logical_blob_name() const override { UNIMPLEMENTED(); }
   std::string op_name() const override { UNIMPLEMENTED(); }
   std::string blob_name() const override { UNIMPLEMENTED(); }
-  std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
 
   // Autograd
   void Backward(const std::shared_ptr<Tensor>& grad, bool retain_graph = false) { UNIMPLEMENTED(); }
