@@ -49,11 +49,12 @@ Attribute createEmptyDictionaryAttr(Builder &builder) { return builder.getDictio
 }
 
 Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
-                           ::mlir::Operation::operand_range operands,
+                           ::mlir::Operation::operand_range operands, ::mlir::StringAttr op_name,
                            ::mlir::StringAttr op_type_name, ::mlir::DictionaryAttr attr) {
   std::cout << "replacing generic user op: " << op_type_name.getValue().str() << "\n";
   auto unknownLoc = FileLineColLoc::get("imported-protobuf", 0, 0, rewriter.getContext());
-  mlir::Value created = rewriter.create<oneflow::ReluOp>(unknownLoc, operands[0]).getResult();
+  mlir::Value created =
+      rewriter.create<oneflow::ReluOp>(unknownLoc, operands[0], op_name).getResult();
   return created;
 }
 
@@ -181,9 +182,9 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       }
     }
     ::mlir::ValueRange operands(vs);
-    auto created =
-        b.create<oneflow::UserOp>(unknownLoc, out_types, operands, op.user_conf().op_type_name(),
-                                  b.getDictionaryAttr(named_attributes));
+    auto created = b.create<oneflow::UserOp>(unknownLoc, out_types, operands, op.name(),
+                                             op.user_conf().op_type_name(),
+                                             b.getDictionaryAttr(named_attributes));
     for (auto kv : op.user_conf().output()) {
       // const std::string &obn = kv.first;
       for (const std::string &lbn : kv.second.s()) {

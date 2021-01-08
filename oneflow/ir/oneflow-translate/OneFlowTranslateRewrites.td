@@ -9,19 +9,20 @@ def IsDefinedByDialect : Constraint<
     "is defined in OneFlow dialect">;
 
 def replaceGenericUserOp : NativeCodeCall<
-    "replaceGenericUserOp($_builder, $0, $1, $2)">;
+    "replaceGenericUserOp($_builder, $0, $1, $2, $3)">;
 
-def replaceGenericUserOpWithDefinedOp : Pattern<(OneFlow_UserOp $operands, StrAttr:$op_type_name, DictionaryAttr:$attr),
-          [(replaceGenericUserOp $operands, $op_type_name, $attr)],
-          [(IsDefinedByDialect $op_type_name)]
+def replaceGenericUserOpWithDefinedOp : Pattern<
+        (OneFlow_UserOp $operands, StrAttr:$op_name, StrAttr:$op_type_name, DictionaryAttr:$attr),
+        [(replaceGenericUserOp $operands, $op_name, $op_type_name, $attr)],
+        [(IsDefinedByDialect $op_type_name)]
 >;
 
 def createEmptyDictionaryAttr : NativeCodeCall<"createEmptyDictionaryAttr($_builder)">;
 def putInVariadic : NativeCodeCall<"putInVariadic($_builder, $0)">;
 
 def replaceReluOpWithGenericUserOp : Pat<
-        (OneFlow_ReluOp $x),
-        (OneFlow_UserOp (putInVariadic $x), ConstantAttr<StrAttr, "relu">, (createEmptyDictionaryAttr))
+        (OneFlow_ReluOp $x, StrAttr:$op_name),
+        (OneFlow_UserOp (putInVariadic $x), $op_name, ConstantAttr<StrAttr, "relu">, (createEmptyDictionaryAttr))
 >;
 
 #endif  // ONEFLOW_TRANSLATE_REWRITES

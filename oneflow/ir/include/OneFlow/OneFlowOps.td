@@ -55,7 +55,10 @@ def ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
 def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "ReLU op";
 
-    let arguments = (ins AnyType:$input);
+    let arguments = (
+      ins AnyType:$input,
+      StrAttr:$op_name
+    );
     let results = (outs AnyType:$res);
 
     let assemblyFormat = [{
@@ -68,6 +71,7 @@ def OneFlow_UserOp : OneFlow_Op<"user", []> {
 
     let arguments = (ins
       Variadic<AnyType>:$operands,
+      StrAttr:$op_name,
       StrAttr:$op_type_name,
       DictionaryAttr:$attr
     );
