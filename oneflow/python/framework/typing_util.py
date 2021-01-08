@@ -22,6 +22,7 @@ import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.pull_util as pull_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.experimental.enable_typing_check as enable_typing_check
+import oneflow_api
 
 
 def CheckGlobalFunctionAnnotation(signature):
@@ -114,7 +115,7 @@ def CheckReturnByAnnotation(function_name, ret, annotation):
     elif oft.OriginFrom(annotation, oft.Callback):
         _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
     elif oft.OriginFrom(annotation, oft.Bundle):
-        if isinstance(ret, remote_blob_util.BlobDef):
+        if isinstance(ret, oneflow_api.BlobDesc):
             _CheckReturnByAnnotation(function_name, ret, annotation.__args__[0])
         elif isinstance(ret, (list, tuple)):
             for elem in ret:
@@ -168,16 +169,16 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
             )
             _CheckReturnByAnnotation(function_name, val, annotation.__args__[1])
     elif oft.OriginFrom(annotation, oft.Numpy):
-        assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
+        assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
         assert not ret.is_dynamic, (
             "only fixed shaped blob compatible to oneflow.typing.Numpy. "
             "you can change annotation to oneflow.typing.ListNumpy "
             "or oneflow.typing.ListListNumpy"
         )
     elif oft.OriginFrom(annotation, oft.ListNumpy):
-        assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
+        assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
     elif oft.OriginFrom(annotation, oft.ListListNumpy):
-        assert isinstance(ret, remote_blob_util.BlobDef), "type(ret): %s" % type(ret)
+        assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
     else:
         raise NotImplementedError("invalid return annotation %s found" % annotation)
 
