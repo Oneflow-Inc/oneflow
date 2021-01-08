@@ -26,15 +26,16 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Union
+import oneflow_api
 
 
 @oneflow_export("distributed_partial_fc_sample")
 def distributed_partial_fc_sample(
-    weight: remote_blob_util.BlobDef,
-    label: remote_blob_util.BlobDef,
+    weight: oneflow_api.BlobDesc,
+    label: oneflow_api.BlobDesc,
     num_sample: int,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     parallel_num = flow.current_scope().device_parallel_desc_symbol.parallel_num
     assert num_sample % parallel_num == 0
     assert weight.shape[0] % parallel_num == 0
