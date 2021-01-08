@@ -226,11 +226,23 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
   Importer imp(context, module.get());
   if (failed(imp.processJob(&job))) { return {}; }
 
+  std::cout << "naive import \n";
   module->dump();
+
   OwningRewritePatternList patterns;
   patterns.insert<replaceGenericUserOpWithDefinedOp>(context);
   auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(patterns));
   if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
+
+  std::cout << "optimized \n";
+  module->dump();
+
+  std::cout << "to export \n";
+  OwningRewritePatternList export_patterns;
+  export_patterns.insert<replaceReluOpWithGenericUserOp>(context);
+  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
+    module->emitError("Failed to export user ops");
+  }
 
   return module;
 }
