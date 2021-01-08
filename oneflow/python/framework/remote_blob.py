@@ -183,7 +183,7 @@ class EagerBlobTrait(object):
         if opt_batch_axis.HasField("value"):
             return opt_batch_axis.value
         else:
-            return None
+            return oneflow_api.INVALID_BATCH_AXIS
 
     @property
     def split_axis(self):
