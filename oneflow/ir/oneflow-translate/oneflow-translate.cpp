@@ -42,6 +42,12 @@ namespace mlir {
 
 namespace {
 
+Attribute createEmptyDictionaryAttr(Builder &builder) { return builder.getDictionaryAttr({}); }
+::mlir::ValueRange putInVariadic(Builder &builder, Value v) {
+  ::mlir::ValueRange operands({v});
+  return operands;
+}
+
 Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
                            ::mlir::Operation::operand_range operands,
                            ::mlir::StringAttr op_type_name, ::mlir::DictionaryAttr attr) {
@@ -222,7 +228,7 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
 
   module->dump();
   OwningRewritePatternList patterns;
-  populateWithGenerated(module->getContext(), patterns);
+  patterns.insert<replaceGenericUserOpWithDefinedOp>(context);
   auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(patterns));
   if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
 

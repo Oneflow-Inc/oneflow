@@ -16,4 +16,12 @@ def replaceGenericUserOpWithDefinedOp : Pattern<(OneFlow_UserOp $operands, StrAt
           [(IsDefinedByDialect $op_type_name)]
 >;
 
+def createEmptyDictionaryAttr : NativeCodeCall<"createEmptyDictionaryAttr($_builder)">;
+def putInVariadic : NativeCodeCall<"putInVariadic($_builder, $0)">;
+
+def replaceReluOpWithGenericUserOp : Pat<
+        (OneFlow_ReluOp $x),
+        (OneFlow_UserOp (putInVariadic $x), ConstantAttr<StrAttr, "relu">, (createEmptyDictionaryAttr))
+>;
+
 #endif  // ONEFLOW_TRANSLATE_REWRITES
