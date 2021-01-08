@@ -30,12 +30,19 @@ def _compare_hardtanh_with_np(
     min_val = random.randint(-10, -1)
     max_val = random.randint(0, 10)
     assert min_val < max_val
-    input_1 = np.random.uniform(min_val - 0.5, max_val + 0.5, size=input_shape).astype(
-        value_type[0]
-    )
-    input_1 += np.random.randn(*input_shape).astype(
-        value_type[0]
-    )  # add a randnom array, range from(0, 1)
+
+    if value_type[1] == flow.float16:
+        input_1 = np.random.uniform(
+            min_val - 0.5, max_val + 0.5, size=input_shape
+        ).astype(np.float16)
+        input_1 += np.random.randn(*input_shape).astype(np.float16)
+        input_1 = np.array(input_1, dtype=value_type[0])
+    else:
+        input_1 = np.random.uniform(
+            min_val - 0.5, max_val + 0.5, size=input_shape
+        ).astype(value_type[0])
+        input_1 += np.random.randn(*input_shape).astype(value_type[0])
+
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -47,7 +54,7 @@ def _compare_hardtanh_with_np(
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
     # global function needs float32 as type of argument and return value
-    if value_type == flow.float16:
+    if value_type[1] == flow.float16:
         func_config.default_data_type(flow.float32)
     else:
         func_config.default_data_type(value_type[1])
@@ -72,7 +79,10 @@ def _compare_hardtanh_with_np(
     _np_grad = np_diff(input_1, min_val, max_val)
 
     def assert_prediction_grad(blob: tp.Numpy):
-        assert np.allclose(blob, _np_grad)
+        if value_type[1] == flow.float16:
+            assert np.allclose(blob, _np_grad, atol=1e-3)
+        else:
+            assert np.allclose(blob, _np_grad, atol=1e-5)
 
     if value_type[1] == flow.float16:
 
