@@ -19,9 +19,13 @@ namespace oneflow {
 
 namespace one {
 
-struct FunctionNode {
-  std::vector<std::shared_ptr<Tensor>> out_tensors;  // be used to release grad for non-leaf node
-  std::shared_ptr<std::function<void()>> func;
+class FunctionNode {
+ public:
+  FunctionNode() = delete;
+  virtual ~FunctionNode() = default;
+  // Be used to release grad for non-leaf nodes
+  virtual std::vector<std::shared_ptr<Tensor>> out_tensors() = 0;
+  virtual std::shared_ptr<std::function<void()>> func() = 0;
 };
 
 class AutogradEngine {
@@ -31,7 +35,7 @@ class AutogradEngine {
 
   std::shared_ptr<FunctionNode> AddBackwardFuncPtrIf(std::function<void()> fn) {
     auto ptr = AddBackwardFuncPtr(fn);
-    CHECK_GT(ptr.use_count(), 1) << "The returned shared_ptr must belong to autogradengine";
+    CHECK_GT(ptr.use_count(), 1) << "The returned shared_ptr must belong to AutogradEngine";
     return ptr;
   }
 

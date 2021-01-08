@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -50,48 +51,84 @@ namespace one {
 
 class FunctionNode;
 
+class TensorImpl {
+ public:
+  TensorImpl() = default;
+  TensorImpl(const std::shared_ptr<Shape>& sizes, cfg::DataType dtype,
+             const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
+      : sizes_(sizes), dtype_(dtype), parallel_conf_(parallel_conf) {}
+  ~TensorImpl() = default;
+
+  std::shared_ptr<Blob> storage() const { return storage_; }
+  std::shared_ptr<Shape> sizes() const { return sizes_; }
+  cfg::DataType dtype() const { return dtype_; }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return parallel_conf_; }
+  int32_t dim() const { return sizes_->NumAxes(); }
+
+  bool has_storage() const { return static_cast<bool>(storage_); }
+
+  template<typename T = void>
+  const T* data() const {
+    CHECK(has_storage());
+    return storage_->dptr<T>();
+  }
+
+  template<typename T = void>
+  T* mutable_data() {
+    CHECK(has_storage());
+    return storage_->mut_dptr<T>();
+  }
+
+ private:
+  std::shared_ptr<Blob> storage_;
+  std::shared_ptr<Shape> sizes_;
+  cfg::DataType dtype_;
+  std::shared_ptr<cfg::ParallelConf> parallel_conf_;
+  // TODO: Strides related features will be supported later
+};
+
 // one::Tensor will replace oneflow::Tensor in the future
 class Tensor : public oneflow::Tensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Tensor);
-  // Constructors
   Tensor() = delete;
-  // TODO: add device info to constructors when Lazy/Eager Blob implement
-  Tensor(const Shape& shape, cfg::DataType dtype) : shape_(shape), dtype_(dtype) {}
-
+  Tensor(const std::shared_ptr<Shape>& sizes, cfg::DataType dtype,
+         const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+    impl_ = std::make_shared<TensorImpl>(sizes, dtype, parallel_conf);
+  }
   ~Tensor() override = default;
 
   // Basic Properties
-  const Shape& size() const { return shape_; }
-  cfg::DataType dtype() const override { return dtype_; }
-  bool is_defined() { return storage_.use_count() > 0; }
-  int32_t dim() const { return shape_.NumAxes(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
+    return impl_->parallel_conf();
+  }
+  std::shared_ptr<Shape> sizes() const { return impl_->sizes(); }
+  cfg::DataType dtype() const override { return impl_->dtype(); }
+  bool defined() const { return static_cast<bool>(impl_); }
+  bool has_storage() const { return defined() && impl_->has_storage(); }
   bool requires_grad() const { return is_requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   std::shared_ptr<Tensor> clone() const;  // malloc memory in same place and have same grad_function
   std::shared_ptr<Tensor> detach() const;  // share blob but have no grad_function
-  // NOTE: all self-operator such as detach_() will be implement in python
+  int32_t dim() const { return impl_->dim(); }
 
   // Inherit some virtual unimplement interface
   std::shared_ptr<cfg::LogicalBlobId> lbi() const override { UNIMPLEMENTED(); }
   std::string logical_blob_name() const override { UNIMPLEMENTED(); }
   std::string op_name() const override { UNIMPLEMENTED(); }
   std::string blob_name() const override { UNIMPLEMENTED(); }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); }
   std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
 
-  // autograd function
+  // Autograd
   void Backward(const std::shared_ptr<Tensor>& grad, bool retain_graph = false) { UNIMPLEMENTED(); }
   void SetFuncNode(const std::shared_ptr<FunctionNode>& func_ptr) { grad_func_ = func_ptr; }
 
  protected:
-  std::shared_ptr<Blob> storage_;
+  std::shared_ptr<TensorImpl> impl_;
   std::weak_ptr<FunctionNode> grad_func_;
   std::shared_ptr<Tensor> grad_;
   bool is_requires_grad_ = false;
   bool is_leaf_ = false;
-  Shape shape_;
-  cfg::DataType dtype_;
 };
 
 }  // namespace one
