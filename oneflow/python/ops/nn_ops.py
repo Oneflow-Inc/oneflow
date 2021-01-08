@@ -195,20 +195,20 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
 
 @oneflow_export("nn.conv1d")
 def conv1d(
-    input: remote_blob_util.BlobDef,
-    filters: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    filters: oneflow_api.BlobDesc,
     strides: Union[int, Tuple[int]],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair]],
     data_format: str = "NCW",
     dilations: Optional[Union[int, Tuple[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""1D convolution layer.
 
     Args:
-        input (remote_blob_util.BlobDef): A 3D input `Blob`. [batch_num, channel, width]
-        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape [out_channels, in_channels//groups, filter_width] for `NCW`, or [out_channels, filter_width, in_channels//groups] for `NWC`
+        input (oneflow_api.BlobDesc): A 3D input `Blob`. [batch_num, channel, width]
+        filters (oneflow_api.BlobDesc): A `Blob` with the same type as `input` and has the shape [out_channels, in_channels//groups, filter_width] for `NCW`, or [out_channels, filter_width, in_channels//groups] for `NWC`
         strides (Union[int, Tuple[int]]): An int or list of `ints` that has length `1`. The stride of the sliding window for each dimension of `input`.
         padding (Union[str, Tuple[IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
         data_format (str, optional): `"NWC" or "NCW"`. Defaults to `"NCW"`.
@@ -226,7 +226,7 @@ def conv1d(
         ValueError: invalid data_format.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+        oneflow_api.BlobDesc: A `Blob` with the same type as `input` and the same outer batch shape.
     
     Note: 
 
@@ -367,20 +367,20 @@ class ConvUtil(object):
 
 @oneflow_export("nn.conv2d")
 def conv2d(
-    input: remote_blob_util.BlobDef,
-    filters: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    filters: oneflow_api.BlobDesc,
     strides: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCHW",
     dilations: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""2D convolution layer.
 
     Args:
-        input (remote_blob_util.BlobDef): A 4D input `Blob`. [batch_num, channel, height, width]
-        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
+        input (oneflow_api.BlobDesc): A 4D input `Blob`. [batch_num, channel, height, width]
+        filters (oneflow_api.BlobDesc): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
         strides (Union[int, IntPair]): An int or list of `ints` that has length `2`. The stride of the sliding window for each dimension of `input`.
         padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
         data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NCHW"`.
@@ -398,7 +398,7 @@ def conv2d(
         ValueError: invalid data_format.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+        oneflow_api.BlobDesc: A `Blob` with the same type as `input` and the same outer batch shape.
     
     Note: 
 
@@ -583,20 +583,20 @@ def conv2d_op(
 
 @oneflow_export("nn.conv3d")
 def conv3d(
-    input: remote_blob_util.BlobDef,
-    filters: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    filters: oneflow_api.BlobDesc,
     strides: Union[int, Sequence[int]],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCDHW",
     dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""3D convolution layer.
 
     Args:
-        input (remote_blob_util.BlobDef):  A 5D input `Blob`. [batch_num, channel, depth, height, width]
-        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_depth, filter_height, filter_width] for NCDHW, or [out_channels, filter_depth, filter_height, filter_width, in_channels//groups] for NDHWC`
+        input (oneflow_api.BlobDesc):  A 5D input `Blob`. [batch_num, channel, depth, height, width]
+        filters (oneflow_api.BlobDesc): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_depth, filter_height, filter_width] for NCDHW, or [out_channels, filter_depth, filter_height, filter_width, in_channels//groups] for NDHWC`
         strides (Union[int, Sequence[int]]): An `int` or `list of ints` that has length `3`. The stride of the sliding window for each dimension of `input`.
         padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
         data_format (str, optional): `"NDHWC" or "NCDHW"`. Defaults to `"NCDHW"`.
@@ -614,7 +614,7 @@ def conv3d(
         ValueError: invalid data_format.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as `input` and the same outer batch shape.
+        oneflow_api.BlobDesc: A `Blob` with the same type as `input` and the same outer batch shape.
     
     Note: 
 
@@ -754,15 +754,15 @@ def conv3d(
 
 @oneflow_export("nn.moments")
 def moments(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axes: List[int],
     keepdims: Optional[bool] = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the mean and variance value of input Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         axes (List): Array of ints. Axes along which to compute the mean and variance
         keepdims (bool, optional): Whether to keep the same dimensanality as the input x. Defaults to False.
         name (str, optional): The operator's name. Defaults to None.
@@ -805,22 +805,22 @@ def moments(
 
 @oneflow_export("nn.InstanceNorm1d")
 def instance_normalization1d(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     eps: float = 1e-05,
     affine: bool = True,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Applies Instance Normalization over a 3D input.
 
     Args:
-        x (remote_blob_util.BlobDef): 3D input tensor with NCL data layout.
+        x (oneflow_api.BlobDesc): 3D input tensor with NCL data layout.
         eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
         affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
                        initialized the same way as done for batch normalization. Default: True.
         name (Optional[str], optional): Name of this op.
 
     Returns:
-        remote_blob_util.BlobDef: The normalized input tensor.
+        oneflow_api.BlobDesc: The normalized input tensor.
     
     For example: 
 
@@ -874,22 +874,22 @@ def instance_normalization1d(
 
 @oneflow_export("nn.InstanceNorm2d")
 def instance_normalization2d(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     eps: float = 1e-05,
     affine: bool = True,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Applies Instance Normalization over a 4D input.
 
     Args:
-        x (remote_blob_util.BlobDef): 4D input tensor with NCHW data layout.
+        x (oneflow_api.BlobDesc): 4D input tensor with NCHW data layout.
         eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
         affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
                        initialized the same way as done for batch normalization. Default: True.
         name (Optional[str], optional): Name of this op.
 
     Returns:
-        remote_blob_util.BlobDef: The normalized input tensor.
+        oneflow_api.BlobDesc: The normalized input tensor.
     
     For example: 
 
@@ -929,22 +929,22 @@ def instance_normalization2d(
 
 @oneflow_export("nn.InstanceNorm3d")
 def instance_normalization3d(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     eps: float = 1e-05,
     affine: bool = True,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Applies Instance Normalization over a 5D input.
 
     Args:
-        x (remote_blob_util.BlobDef): 5D input tensor with NCDHW data layout.
+        x (oneflow_api.BlobDesc): 5D input tensor with NCDHW data layout.
         eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
         affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
                        initialized the same way as done for batch normalization. Default: True.
         name (Optional[str], optional): Name of this op.
 
     Returns:
-        remote_blob_util.BlobDef: The normalized input tensor.
+        oneflow_api.BlobDesc: The normalized input tensor.
     
     For example: 
 
@@ -984,31 +984,31 @@ def instance_normalization3d(
 
 @oneflow_export("nn.batch_normalization")
 def batch_normalization(
-    x: remote_blob_util.BlobDef,
-    mean: remote_blob_util.BlobDef,
-    variance: remote_blob_util.BlobDef,
-    offset: Optional[remote_blob_util.BlobDef] = None,
-    scale: Optional[remote_blob_util.BlobDef] = None,
+    x: oneflow_api.BlobDesc,
+    mean: oneflow_api.BlobDesc,
+    variance: oneflow_api.BlobDesc,
+    offset: Optional[oneflow_api.BlobDesc] = None,
+    scale: Optional[oneflow_api.BlobDesc] = None,
     variance_epsilon: Optional[float] = 1e-5,
     axis: int = 1,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This op does not fully align with tf.nn.batch_normalization. 
     
     The `mean`, `variable`, `offset` and `scale` are always 1D. Users need to specify `axis` to 1 for NCHW data format.
 
     Args:
-        x (remote_blob_util.BlobDef): Input `Blob` of arbitrary dimensionality.
-        mean (remote_blob_util.BlobDef): A 1D mean `Blob`.
-        variance (remote_blob_util.BlobDef):   A 1D variance `Blob`.
-        offset (Optional[remote_blob_util.BlobDef]): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
-        scale (Optional[remote_blob_util.BlobDef]): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
+        x (oneflow_api.BlobDesc): Input `Blob` of arbitrary dimensionality.
+        mean (oneflow_api.BlobDesc): A 1D mean `Blob`.
+        variance (oneflow_api.BlobDesc):   A 1D variance `Blob`.
+        offset (Optional[oneflow_api.BlobDesc]): An 1D offset `Blob`, often denoted  in equations, or None. If present, will be added to the normalized `Blob`.
+        scale (Optional[oneflow_api.BlobDesc]): A 1D scale `Blob`, often denoted  in equations, or None. If present, the scale is applied to the normalized `Blob`.
         variance_epsilon (float):   A small float number to avoid dividing by 0.
         axis (int, optional): 1 for '`NCHW'` data format. Defaults to 1.
         name (Optional[str], optional): This operator's name.
 
     Returns:
-        remote_blob_util.BlobDef:  the normalized, scaled, offset `Blob`.
+        oneflow_api.BlobDesc:  the normalized, scaled, offset `Blob`.
     
     Note: 
     
@@ -1109,27 +1109,27 @@ def batch_normalization(
 
 @oneflow_export("nn.layer_norm")
 def layer_norm(
-    inputs: remote_blob_util.BlobDef,
-    gamma: Optional[remote_blob_util.BlobDef] = None,
-    beta: Optional[remote_blob_util.BlobDef] = None,
+    inputs: oneflow_api.BlobDesc,
+    gamma: Optional[oneflow_api.BlobDesc] = None,
+    beta: Optional[oneflow_api.BlobDesc] = None,
     begin_norm_axis: int = 1,
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Layer Normalization.
 
     Args:
-        inputs (remote_blob_util.BlobDef): Input `Blob`.
-        gamma (Optional[remote_blob_util.BlobDef]).
-        beta (Optional[remote_blob_util.BlobDef]).
+        inputs (oneflow_api.BlobDesc): Input `Blob`.
+        gamma (Optional[oneflow_api.BlobDesc]).
+        beta (Optional[oneflow_api.BlobDesc]).
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         begin_params_axis (int, optional):  An integer specifies which axis params at . Defaults to -1.
         epsilon (float, optional): A small float is added to avoid division by zero. Defaults to 1e-5.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
+        oneflow_api.BlobDesc: A normalized `Blob` with same shape of input.
 
     For example:
 
@@ -1223,20 +1223,20 @@ def layer_norm(
 
 @oneflow_export("nn.compat_conv2d")
 def tf_conv2d(
-    input: remote_blob_util.BlobDef,
-    filters: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    filters: oneflow_api.BlobDesc,
     strides: Union[int, Sequence[int]],
     padding: str,
     data_format: str = "NCHW",
     dilations: Optional[Union[int, Sequence[int]]] = None,
     groups: int = 1,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes a 2-D convolution given `input` and 4-D `filters` `Blob`.
 
     Args:
-        input (remote_blob_util.BlobDef): A `Blob` of rank at least 4.
-        filters (remote_blob_util.BlobDef): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
+        input (oneflow_api.BlobDesc): A `Blob` of rank at least 4.
+        filters (oneflow_api.BlobDesc): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
         strides (Union[int, Sequence[int]]): An int or list of `ints` that has length `1`, or `2`. The stride of the sliding window for each dimension of `input`.
         padding (str): `"SAME"` or `"VALID"` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
         data_format (str, optional): `"NHWC"` or `"NCHW"`. Defaults to `"NCHW"`.
@@ -1254,7 +1254,7 @@ def tf_conv2d(
         ValueError: padding must be "SAME" or "VALID".
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` with the same type as `input` and the same outer batch shape.
+        oneflow_api.BlobDesc:  A `Blob` with the same type as `input` and the same outer batch shape.
     
     For example: 
 
@@ -1310,16 +1310,16 @@ def tf_conv2d(
 
 @oneflow_export("nn.bias_add")
 def bias_add(
-    value: remote_blob_util.BlobDef,
-    bias: remote_blob_util.BlobDef,
+    value: oneflow_api.BlobDesc,
+    bias: oneflow_api.BlobDesc,
     data_format: Optional[str] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator adds a bias to Blob. 
 
     Args:
-        value (remote_blob_util.BlobDef):  A `Blob`.
-        bias (remote_blob_util.BlobDef): A 1-D `Blob` with size matching the channel dimension of value. And has the same type as value unless value is a quantized type.
+        value (oneflow_api.BlobDesc):  A `Blob`.
+        bias (oneflow_api.BlobDesc): A 1-D `Blob` with size matching the channel dimension of value. And has the same type as value unless value is a quantized type.
         data_format (Optional[str], optional): A string. '`N...C'` or '`NC...'`. Defaults to None.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
@@ -1327,7 +1327,7 @@ def bias_add(
         ValueError: ValueError if data format is unrecognized, if value has less than two dimensions with '`N..C'`/None data_format or value has less than three dimensions with '`NC..'` data_format, if bias is a vector, or if the size of bias does not match the size of the channel dimension of value.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as value.
+        oneflow_api.BlobDesc: A `Blob` with the same type as value.
     
     For example: 
 
@@ -1388,17 +1388,17 @@ def bias_add(
 
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
     data_format: str = "NWC",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Performs the 1d-max pooling on the input.
 
     Args:
-        input (remote_blob_util.BlobDef): A 3-D `Blob` of the format specified by data_format.
+        input (oneflow_api.BlobDesc): A 3-D `Blob` of the format specified by data_format.
         ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str):  '`VALID'` or '`SAME'`. The padding algorithm.
@@ -1409,7 +1409,7 @@ def max_pool1d(
         NotImplementedError: TODO: fix cuDNN bugs in pooling_1d
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` of format specified by data_format. The max pooled output `Blob`.
+        oneflow_api.BlobDesc: A `Blob` of format specified by data_format. The max pooled output `Blob`.
     """
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
@@ -1417,17 +1417,17 @@ def max_pool1d(
 
 @oneflow_export("nn.avg_pool1d")
 def avg_pool1d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
     data_format: str = "NCW",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Performs the average pooling on the input `Blob`.
 
     Args:
-        input (remote_blob_util.BlobDef): A 3-D `Blob` of the format specified by data_format.
+        input (oneflow_api.BlobDesc): A 3-D `Blob` of the format specified by data_format.
         ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, Sequence[int]]): An int or list of ints that has length 1 or 3. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'`.
@@ -1438,7 +1438,7 @@ def avg_pool1d(
         NotImplementedError: TODO: fix cuDNN bugs in pooling_1d
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` of format specified by data_format. The max pooled output `Blob`.
+        oneflow_api.BlobDesc: A `Blob` of format specified by data_format. The max pooled output `Blob`.
     """
     # TODO: fix cuDNN bugs in pooling_1d
     raise NotImplementedError
@@ -1460,18 +1460,18 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 
 @oneflow_export("nn.max_pool2d")
 def max_pool2d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     ksize: Union[int, IntPair],
     strides: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r""" Performs the 2d-max pooling on the input `Blob`.
 
     Args:
-        input (remote_blob_util.BlobDef): A 4-D `Blob` of the format specified by data_format.
+        input (oneflow_api.BlobDesc): A 4-D `Blob` of the format specified by data_format.
         ksize (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm.
@@ -1479,7 +1479,7 @@ def max_pool2d(
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+        oneflow_api.BlobDesc:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
     
     For example: 
 
@@ -1538,18 +1538,18 @@ def max_pool2d(
 
 @oneflow_export("nn.avg_pool2d")
 def avg_pool2d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     ksize: Union[int, IntPair],
     strides: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
     data_format: str = "NCHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Performs the 2d-average pooling on the input. 
 
     Args:
-        input (remote_blob_util.BlobDef): A 4-D `Blob` of shape [batch, height, width, channels].
+        input (oneflow_api.BlobDesc): A 4-D `Blob` of shape [batch, height, width, channels].
         ksize (Union[int, IntPair]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]. The padding algorithm.
@@ -1557,7 +1557,7 @@ def avg_pool2d(
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` with the same type as '`value'`. The average pooled output `Blob`.
+        oneflow_api.BlobDesc:  A `Blob` with the same type as '`value'`. The average pooled output `Blob`.
     
     For example: 
 
@@ -1615,18 +1615,18 @@ def avg_pool2d(
 
 @oneflow_export("nn.max_pool3d")
 def max_pool3d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
     data_format: str = "NCDHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Performs the 3d-max pooling on the input.
 
     Args:
-        input (remote_blob_util.BlobDef):  A 5-D `Blob` of the format specified by data_format.
+        input (oneflow_api.BlobDesc):  A 5-D `Blob` of the format specified by data_format.
         ksize (Union[int, Sequence[int]]):  An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or '`Sequence[Sequence[int]]'`.
@@ -1634,7 +1634,7 @@ def max_pool3d(
         name (Optional[str], optional): This operator's name(optional).
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` of format specified by data_format. The max pooled output `Blob`.
+        oneflow_api.BlobDesc: A `Blob` of format specified by data_format. The max pooled output `Blob`.
     
     For example: 
 
@@ -1693,18 +1693,18 @@ def max_pool3d(
 
 @oneflow_export("nn.avg_pool3d")
 def avg_pool3d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     ksize: Union[int, Sequence[int]],
     strides: Union[int, Sequence[int]],
     padding: Union[str, Sequence[Sequence[int]]],
     data_format: str = "NCDHW",
     ceil_mode: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Performs the 3d-average pooling on the input. 
 
     Args:
-        input (remote_blob_util.BlobDef): A 5-D `Blob` of shape [batch, height, width, channels].
+        input (oneflow_api.BlobDesc): A 5-D `Blob` of shape [batch, height, width, channels].
         ksize (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The size of the window for each dimension of the input `Blob`.
         strides (Union[int, Sequence[int]]): An int or list of ints that has length 1, 3 or 5. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER or Sequence[Sequence[int]]'`.
@@ -1712,7 +1712,7 @@ def avg_pool3d(
         name (Optional[str], optional):  This operator's name(optional).Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as value. The average pooled output `Blob`.
+        oneflow_api.BlobDesc: A `Blob` with the same type as value. The average pooled output `Blob`.
     
     For example: 
 
@@ -1789,10 +1789,10 @@ def _softmax_need_transpose(x, axis):
 
 @oneflow_export("nn.softmax")
 def softmax(
-    logits: remote_blob_util.BlobDef,
+    logits: oneflow_api.BlobDesc,
     axis: Optional[int] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes softmax activations. 
 
     For each element, we apply: 
@@ -1801,12 +1801,12 @@ def softmax(
         S_i = \frac{e^i}{\sum_1^j e^j }
 
     Args:
-        logits (remote_blob_util.BlobDef): A non-empty `Blob`.
+        logits (oneflow_api.BlobDesc): A non-empty `Blob`.
         axis (Optional[int], optional): The dimension softmax would be performed on. Defaults to None.
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` has the same type and shape as logits.
+        oneflow_api.BlobDesc:  A `Blob` has the same type and shape as logits.
 
     Raises:
         InvalidArgumentError: if logits is empty or axis is beyond the last dimension of logits.
@@ -1858,23 +1858,78 @@ def softmax(
     return out
 
 
-@oneflow_export("nn.softmax_grad")
-def softmax_grad(
-    y: remote_blob_util.BlobDef,
-    dy: remote_blob_util.BlobDef,
+@oneflow_export("nn.logsoftmax")
+def logsoftmax(
+    logits: oneflow_api.BlobDesc,
     axis: Optional[int] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
+    r"""Computes logsoftmax activations.  
+
+    For each element, we apply: 
+    
+    .. math::
+    
+        LogSoftmax(x_i) = Log(\frac{e^i}{\sum_1^j e^j })
+    
+    Args:
+        logits (oneflow_api.BlobDesc): A non-empty `Blob`.
+        axis (Optional[int], optional): The dimension logsoftmax would be performed on. Defaults to None.
+        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc:  A `Blob` has the same type and shape as logits.
+    
+    Raises:
+        InvalidArgumentError: if logits is empty or axis is beyond the last dimension of logits.
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+    
+    
+        @flow.global_function()
+        def logsoftmax_Job(x: tp.Numpy.Placeholder((1, 5))
+        ) -> tp.Numpy:
+            logsoftmax_out = flow.nn.logsoftmax(x, axis=1)
+            return logsoftmax_out
+    
+    
+        x = np.array([[1, 2, 1, 5, 4]]).astype(np.float32)
+        out = logsoftmax_Job(x)
+    
+        # out [[-4.374523  -3.3745232 -4.374523  -0.3745232 -1.374523 ]]
+    """
+    if axis is None:
+        axis = -1
+    if name is None:
+        name = id_util.UniqueStr("logsoftmax")
+    return flow.math.log(
+        flow.nn.softmax(logits, axis, name=name + "_softmax"), name=name + "_log"
+    )
+
+
+@oneflow_export("nn.softmax_grad")
+def softmax_grad(
+    y: oneflow_api.BlobDesc,
+    dy: oneflow_api.BlobDesc,
+    axis: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     r"""Computes gradient of softmax activations.
 
     Args:
-        y (remote_blob_util.BlobDef):  A `Blob` representing the softmax of x.
-        dy (remote_blob_util.BlobDef):  gradient of y.
+        y (oneflow_api.BlobDesc):  A `Blob` representing the softmax of x.
+        dy (oneflow_api.BlobDesc):  gradient of y.
         axis (Optional[int], optional):  The dimension softmax would be performed on. Defaults to None.
         name (Optional[str], optional):  This operator's name(optional).
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` representing the gradient of x.
+        oneflow_api.BlobDesc:  A `Blob` representing the gradient of x.
     """
     if axis is None:
         axis = -1
@@ -1904,19 +1959,19 @@ def softmax_grad(
 
 @oneflow_export("nn.sparse_cross_entropy")
 def sparse_cross_entropy(
-    labels: remote_blob_util.BlobDef,
-    prediction: remote_blob_util.BlobDef,
+    labels: oneflow_api.BlobDesc,
+    prediction: oneflow_api.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes sparse cross entropy
 
     Args:
-        labels (remote_blob_util.BlobDef): A `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
-        prediction (remote_blob_util.BlobDef): A `Blob` with the rank that is equal to the rank of the labels plus one.
+        labels (oneflow_api.BlobDesc): A `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
+        prediction (oneflow_api.BlobDesc): A `Blob` with the rank that is equal to the rank of the labels plus one.
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` of the same shape as labels.
+        oneflow_api.BlobDesc: A `Blob` of the same shape as labels.
     
     Note: 
 
@@ -1992,19 +2047,19 @@ def sparse_cross_entropy(
 
 @oneflow_export("nn.softmax_cross_entropy_with_logits")
 def softmax_cross_entropy_with_logits(
-    labels: remote_blob_util.BlobDef,
-    logits: remote_blob_util.BlobDef,
+    labels: oneflow_api.BlobDesc,
+    logits: oneflow_api.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes softmax cross entropy between logits and labels. 
 
     Args:
-        labels (remote_blob_util.BlobDef): Each vector along the class dimension should hold a valid probability distribution.
-        logits (remote_blob_util.BlobDef): Per-label activations, typically a linear output. logits has same shape and dtype as labels.
+        labels (oneflow_api.BlobDesc): Each vector along the class dimension should hold a valid probability distribution.
+        logits (oneflow_api.BlobDesc): Per-label activations, typically a linear output. logits has same shape and dtype as labels.
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` that contains the softmax cross entropy loss. Its type is the same as logits and its shape is the same as labels except that it does not have the last dimension of labels.
+        oneflow_api.BlobDesc: A `Blob` that contains the softmax cross entropy loss. Its type is the same as logits and its shape is the same as labels except that it does not have the last dimension of labels.
     
     For example: 
 
@@ -2060,22 +2115,22 @@ def softmax_cross_entropy_with_logits(
 
 @oneflow_export("nn.sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits(
-    labels: remote_blob_util.BlobDef,
-    logits: remote_blob_util.BlobDef,
+    labels: oneflow_api.BlobDesc,
+    logits: oneflow_api.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes sparse softmax cross entropy between logits and labels. 
 
     Args:
-        labels (remote_blob_util.BlobDef): `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
-        logits (remote_blob_util.BlobDef): Unscaled log probabilities of shape [d_0, d_1, ..., d_{r-1},num_classes].
+        labels (oneflow_api.BlobDesc): `Blob` of shape [d_0, d_1, ..., d_{r-1}] (where r is rank of labels and result). Each entry in labels must be an index in [0, num_classes).
+        logits (oneflow_api.BlobDesc): Unscaled log probabilities of shape [d_0, d_1, ..., d_{r-1},num_classes].
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
     Raises:
         ValueError: If logits are scalars (need to have rank >= 1) or if the rank of the labels is not equal to the rank of the logits minus one.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` of the same shape as labels and of the same type as logits with the softmax cross entropy loss.
+        oneflow_api.BlobDesc:  A `Blob` of the same shape as labels and of the same type as logits with the softmax cross entropy loss.
     
     Note: 
 
@@ -2156,19 +2211,19 @@ def sparse_softmax_cross_entropy_with_logits(
 
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
-    labels: remote_blob_util.BlobDef,
-    logits: remote_blob_util.BlobDef,
+    labels: oneflow_api.BlobDesc,
+    logits: oneflow_api.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Computes sigmoid cross entropy given logits. 
 
     Args:
-        labels (remote_blob_util.BlobDef): A `Blob` of the same type and shape as logits.
-        logits (remote_blob_util.BlobDef): A `Blob` of type float.
+        labels (oneflow_api.BlobDesc): A `Blob` of the same type and shape as logits.
+        logits (oneflow_api.BlobDesc): A `Blob` of type float.
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:   A `Blob` of the same shape as logits with the componentwise logistic losses.
+        oneflow_api.BlobDesc:   A `Blob` of the same shape as logits with the componentwise logistic losses.
 
     Raises:
         ValueError: If logits and labels do not have the same shape.
@@ -2244,23 +2299,23 @@ def _GetSequence(value, n, name):
 
 @oneflow_export("nn.random_mask_like")
 def random_mask_like(
-    like: remote_blob_util.BlobDef,
+    like: oneflow_api.BlobDesc,
     rate: float,
     seed: Optional[int] = None,
     noise_shape: Optional[Sequence] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Random mask `Blob` with same shape as '`like'`.
 
     Args:
-        like (remote_blob_util.BlobDef): A `Blob`.
+        like (oneflow_api.BlobDesc): A `Blob`.
         rate (float): A float value for the probability that each element is dropped.
         seed (Optional[int], optional): Optional, int value. Defaults to None.
         noise_shape (Optional[Sequence], optional): Optional, A 1-D `Blob`, representing the shape for randomly generated keep/drop flags. Defaults to None.
         name (Optional[str], optional):  This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A random mask `Blob` of the same shape of `like`.
+        oneflow_api.BlobDesc: A random mask `Blob` of the same shape of `like`.
 
     Raises:
         ValueError: If rate is not in [0, 1). Rate=1 is not allowed.
@@ -2336,7 +2391,7 @@ class RandomMaskLike(module_util.Module):
         )
         self.op_module_builder.user_op_module.InitOpKernel()
 
-    def forward(self, like: remote_blob_util.BlobDef):
+    def forward(self, like: oneflow_api.BlobDesc):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
@@ -2352,23 +2407,23 @@ class RandomMaskLike(module_util.Module):
 
 @oneflow_export("nn.dropout")
 def dropout(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     rate: float,
-    noise_shape: Optional[remote_blob_util.BlobDef] = None,
+    noise_shape: Optional[oneflow_api.BlobDesc] = None,
     seed: Optional[int] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""For preventing overfitting, randomly set elements to zero. 
 
     Args:
-        x (remote_blob_util.BlobDef): A floating point `Blob`.
+        x (oneflow_api.BlobDesc): A floating point `Blob`.
         rate (float): A scalar `Blob` with the same type as x. The probability that each element is dropped.
-        noise_shape (Optional[remote_blob_util.BlobDef], optional):  optional: A 1-D `Blob`, representing the shape for randomly generated keep/drop flags. Defaults to None.Defaults to None.
+        noise_shape (Optional[oneflow_api.BlobDesc], optional):  optional: A 1-D `Blob`, representing the shape for randomly generated keep/drop flags. Defaults to None.Defaults to None.
         seed (Optional[int], optional):  Optional int value. Defaults to None.
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:   A `Blob` of the same shape of x.
+        oneflow_api.BlobDesc:   A `Blob` of the same shape of x.
 
     Raises:
         ValueError: If rate is not in [0, 1) or if x is not a floating point `Blob`. Rate=1 is not allowed.
@@ -2445,29 +2500,29 @@ def dropout(
 
 @oneflow_export("nn.conv2d_transpose")
 def deconv2d(
-    value: Optional[remote_blob_util.BlobDef] = None,
-    filter: Optional[remote_blob_util.BlobDef] = None,
+    value: Optional[oneflow_api.BlobDesc] = None,
+    filter: Optional[oneflow_api.BlobDesc] = None,
     output_shape: Tuple[int, int, int, int] = None,
     strides: Optional[Union[int, Sequence[int]]] = None,
     padding: str = "VALID",
     data_format: str = "NCHW",
     name: Optional[str] = None,
-    input: Optional[remote_blob_util.BlobDef] = None,
-    filters: Optional[remote_blob_util.BlobDef] = None,
+    input: Optional[oneflow_api.BlobDesc] = None,
+    filters: Optional[oneflow_api.BlobDesc] = None,
     dilations: Optional[Union[int, Sequence[int]]] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""2d transposed convolution.
 
     Args:
-        value (Optional[remote_blob_util.BlobDef], optional):   4-d `Blob`. Defaults to None.
-        filter (Optional[remote_blob_util.BlobDef], optional): Filter of transposed convolution, usually a variable. Defaults to None.
+        value (Optional[oneflow_api.BlobDesc], optional):   4-d `Blob`. Defaults to None.
+        filter (Optional[oneflow_api.BlobDesc], optional): Filter of transposed convolution, usually a variable. Defaults to None.
         output_shape (Tuple[int, int, int, int]): A 1-D `Blob` representing the output shape of the deconvolution op. Defaults to None.
         strides (Optional[Union[int, Sequence[int]]], optional): `int` or `int list`. Defaults to None.
         padding (str, optional):  `'VALID'` or `'SAME'`. Defaults to "VALID".
         data_format (str, optional): `'NHWC'` or `'NCHW'`. Defaults to "NCHW".
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
-        input (Optional[remote_blob_util.BlobDef], optional): Alias for value. Defaults to None.
-        filters (Optional[remote_blob_util.BlobDef], optional): Alias for filter. Defaults to None.
+        input (Optional[oneflow_api.BlobDesc], optional): Alias for value. Defaults to None.
+        filters (Optional[oneflow_api.BlobDesc], optional): Alias for filter. Defaults to None.
         dilations (Optional[Union[int, Sequence[int]]], optional): The dilation factor for each dimension of input. Defaults to None.
 
     Raises:
@@ -2477,7 +2532,7 @@ def deconv2d(
         ValueError: padding must be "SAME" or "VALID".
 
     Returns:
-        remote_blob_util.BlobDef: A `Blob` with the same type as `value`.
+        oneflow_api.BlobDesc: A `Blob` with the same type as `value`.
 
     For example: 
 
@@ -2781,20 +2836,20 @@ def deconv2d_torch(
 
 @oneflow_export("nn.leaky_relu")
 def leaky_relu(
-    x: remote_blob_util.BlobDef, alpha: float = 0.2, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, alpha: float = 0.2, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""Leaky ReLU activation. 
 
     .. math::
         out = max(x, alpha*x)
 
     Args:
-        x (remote_blob_util.BlobDef):  A `Blob` representing preactivation values.
+        x (oneflow_api.BlobDesc):  A `Blob` representing preactivation values.
         alpha (float, optional): Slope of the activation function at x < 0 with float type. Default value is 0.2.
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The activation `Blob`.
+        oneflow_api.BlobDesc: The activation `Blob`.
 
     For example: 
 
@@ -2833,13 +2888,249 @@ def leaky_relu(
     )
 
 
+@oneflow_export("nn.elu")
+def elu(
+    x: oneflow_api.BlobDesc, alpha: float = 1.0, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    r"""The ELU activation. 
+
+    The formula is: 
+
+    .. math::  
+
+        \text{ELU}(x) = \begin{cases}
+				x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0 \\
+    		    \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def elu_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.elu(x, alpha=1.0)
+
+
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = elu_job(x)
+
+        # output [-0.9698026  1.         3.5      ]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        alpha (float, optional): The `alpha` value for the ELU formula. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    """
+    alpha = float(alpha)
+    if name is None:
+        name = id_util.UniqueStr("Elu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("elu")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("alpha", alpha)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.hardsigmoid")
+def hard_sigmoid(
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    r"""The Hardsigmoid activation. 
+
+    The formula is: 
+
+    .. math:: 
+
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            1 & \text{ if } x \ge +3 \\
+            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            out = flow.math.hardsigmoid(x)
+
+            return out
+
+        
+        x = np.array([-3.1, 0, 3.3]).astype(np.float32)
+        out = hardsigmoid_job(x)
+
+        # output [0.  0.5 1. ]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor. 
+    """
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("HardSigmoid_")
+        )
+        .Op("hardsigmoid")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.hardswish")
+def hardswish(
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    r"""The Hardswish activation. 
+
+    The formula is: 
+
+    .. math:: 
+
+        \text{Hardswish}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            x & \text{ if } x \ge +3 \\
+            x*(x+3)/6 & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardswish_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.hardswish(x)
+
+
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = hardswish_job(x)
+
+        # output [0.        0.6666667 3.5      ]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    """
+    if name is None:
+        name = id_util.UniqueStr("HardSwish_")
+    return (
+        flow.user_op_builder(name)
+        .Op("hardswish")
+        .Input("in", [x])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.hardtanh")
+def hardtanh(
+    x: oneflow_api.BlobDesc,
+    min_val: float = -1.0,
+    max_val: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""The Hardtanh activation. 
+
+    The equation is: 
+
+    .. math:: 
+
+        \text{HardTanh}(x) = \begin{cases}
+            max\_val & \text{ if } x > max\_val \\
+            -min\_val & \text{ if } x < min\_val \\
+            x & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def hardtanh_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
+            return flow.nn.hardtanh(x, min_val=-1.25, max_val=1.2)
+        
+        
+        x = np.array([[-1.5, -1.1, 0.6], 
+                    [1.2, 1.3, 1.5]]).astype(np.float32)
+        out = hardtanh_job(x)
+        
+        # output [[-1.25 -1.1   0.6 ]
+        #         [ 1.2   1.2   1.2 ]]
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        min_val (float, optional): The minimum value of the linear region range. Defaults to -1.
+        max_val (float, optional): The maximum value of the linear region range. Defaults to 1.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    Returns:
+        oneflow_api.BlobDesc: The activated tensor. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Hardtanh_")
+
+    min_val = float(min_val)
+    max_val = float(max_val)
+
+    assert min_val < max_val, "max_val should be larger than min_val"
+
+    return (
+        flow.user_op_builder(name)
+        .Op("hardtanh")
+        .Input("in", [x])
+        .Attr("min_val", min_val)
+        .Attr("max_val", max_val)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
-    input: remote_blob_util.BlobDef,
-    target: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    target: oneflow_api.BlobDesc,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the L1 Loss between each element in `input` and `target`. 
 
     The equation is: 
@@ -2863,13 +3154,13 @@ def l1_loss(
         output = \sum_{i=1}^n|Target_i - Input_i|
 
     Args:
-        input (remote_blob_util.BlobDef): The input Blob.  
-        target (remote_blob_util.BlobDef): The target value. 
+        input (oneflow_api.BlobDesc): The input Blob.  
+        target (oneflow_api.BlobDesc): The target value. 
         reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -2952,12 +3243,12 @@ def l1_loss(
 
 @oneflow_export("nn.BCELoss")
 def bce_loss(
-    input: remote_blob_util.BlobDef,
-    target: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    target: oneflow_api.BlobDesc,
     weight: remote_blob_util = None,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the binary cross entropy loss. 
     
     The equation is: 
@@ -3009,8 +3300,8 @@ def bce_loss(
         # output [2.0611262]
 
     Args:
-        input (remote_blob_util.BlobDef): The input Blob. 
-        target (remote_blob_util.BlobDef): The target value. 
+        input (oneflow_api.BlobDesc): The input Blob. 
+        target (oneflow_api.BlobDesc): The target value. 
         weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default to None, whose corresponding weight value is 1.
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -3019,7 +3310,7 @@ def bce_loss(
         The input value must be in the range of (0, 1). Or the loss function may return `nan` value. 
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
     """
     # TODO: Check the input and target value range is in (0, 1)
     assert (
@@ -3059,13 +3350,13 @@ def bce_loss(
 
 @oneflow_export("nn.BCEWithLogitsLoss")
 def bce_with_logits_loss(
-    input: remote_blob_util.BlobDef,
-    target: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    target: oneflow_api.BlobDesc,
     weight: remote_blob_util = None,
     pos_weight: remote_blob_util = None,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability, 
     we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`. 
 
@@ -3122,15 +3413,15 @@ def bce_with_logits_loss(
         # output [2.4314096]
 
     Args:
-        input (remote_blob_util.BlobDef): The input Tensor. 
-        target (remote_blob_util.BlobDef): The target Tensor. 
+        input (oneflow_api.BlobDesc): The input Tensor. 
+        target (oneflow_api.BlobDesc): The target Tensor. 
         weight (remote_blob_util, optional): The manual rescaling weight to the loss. Defaults to None.
         pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples. Defaults to None.
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
     """
     assert (
         input.shape == target.shape
@@ -3191,11 +3482,11 @@ def bce_with_logits_loss(
 
 @oneflow_export("nn.MSELoss")
 def mse_loss(
-    input: remote_blob_util.BlobDef,
-    target: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    target: oneflow_api.BlobDesc,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the mean squared error between each element in `input` and `target`. 
     
     The equation is: 
@@ -3219,13 +3510,13 @@ def mse_loss(
         out = \sum_{i=1}^n(Target_i - Input_i)^2
     
     Args:
-        input (remote_blob_util.BlobDef): The input Blob.
-        target (remote_blob_util.BlobDef): The target value. 
+        input (oneflow_api.BlobDesc): The input Blob.
+        target (oneflow_api.BlobDesc): The target value. 
         reduction (str) = The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean". 
         name (Optional[str], optional): The name for the operation. Defaults to None.
     
     Returns:
-        remote_blob_util.BlobDef: The result Blob.
+        oneflow_api.BlobDesc: The result Blob.
     
     For example: 
     
@@ -3305,13 +3596,13 @@ def mse_loss(
 
 @oneflow_export("nn.MarginRankingLoss")
 def margin_ranking_loss(
-    input1: remote_blob_util.BlobDef,
-    input2: remote_blob_util.BlobDef,
-    target: remote_blob_util.BlobDef,
+    input1: oneflow_api.BlobDesc,
+    input2: oneflow_api.BlobDesc,
+    target: oneflow_api.BlobDesc,
     margin: float = 0.0,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the Margin Ranking loss. 
     
     The equation is: 
@@ -3365,15 +3656,15 @@ def margin_ranking_loss(
         # output [0.5555556]
     
     Args:
-        input1 (remote_blob_util.BlobDef): The ranking score of input1 Blob. 
-        input2 (remote_blob_util.BlobDef): The ranking score of input2 Blob. 
-        target (remote_blob_util.BlobDef): The target Blob. 
+        input1 (oneflow_api.BlobDesc): The ranking score of input1 Blob. 
+        input2 (oneflow_api.BlobDesc): The ranking score of input2 Blob. 
+        target (oneflow_api.BlobDesc): The target Blob. 
         margin (float): The margin value. Defaults to 0.0. 
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
     
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
     """
     assert (
         input1.shape == input2.shape
@@ -3406,16 +3697,16 @@ def margin_ranking_loss(
 
 @oneflow_export("nn.TripletMarginLoss")
 def triplet_margin_loss(
-    anchor: remote_blob_util.BlobDef,
-    positive: remote_blob_util.BlobDef,
-    negative: remote_blob_util.BlobDef,
+    anchor: oneflow_api.BlobDesc,
+    positive: oneflow_api.BlobDesc,
+    negative: oneflow_api.BlobDesc,
     margin: float = 1.0,
     p: float = 2.0,
     eps: float = 1e-6,
     swap: bool = False,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the Triplet Margin Loss. 
     
     The equation is: 
@@ -3469,9 +3760,9 @@ def triplet_margin_loss(
         # output [1.8449262]
     
     Args:
-        anchor (remote_blob_util.BlobDef): The anchor Blob. 
-        positive (remote_blob_util.BlobDef): The positive sample Blob. 
-        negative (remote_blob_util.BlobDef): The negative sample Blob. 
+        anchor (oneflow_api.BlobDesc): The anchor Blob. 
+        positive (oneflow_api.BlobDesc): The positive sample Blob. 
+        negative (oneflow_api.BlobDesc): The negative sample Blob. 
         margin (float, optional): The margin value. Defaults to 1.0.
         p (float, optional): The norm degree for computing distance. Defaults to 2.0.
         eps (float, optional): A small value use in norm computation. Defaults to 1e-6.
@@ -3481,7 +3772,7 @@ def triplet_margin_loss(
         name (Optional[str], optional): The name for the operation. Defaults to None.
     
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
     """
     assert reduction in [
         "none",
@@ -3561,8 +3852,8 @@ def triplet_margin_loss(
 
 @oneflow_export("nn.PixelShuffle")
 def pixel_shuffle(
-    input: remote_blob_util.BlobDef, upscale_factor: int, name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+    input: oneflow_api.BlobDesc, upscale_factor: int, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator do the pixel shuffle, the shape of input(B, C*r*r, H, W) is arranged to 
     (B, C, H*r, W*r). It can be used to do the sub-pixel convolution. 
 
@@ -3587,29 +3878,29 @@ def pixel_shuffle(
         # out.shape (3, 1, 4, 4)
 
     Args:
-        input (remote_blob_util.BlobDef): The input Blob. 
+        input (oneflow_api.BlobDesc): The input Blob. 
         upscale_factor (int): The upscale factor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
     """
     return flow.nn.PixelShufflev2(input, upscale_factor, upscale_factor, name=name)
 
 
 @oneflow_export("nn.PixelShufflev2")
 def pixel_shufflev2(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     h_upscale_factor: int,
     w_upscale_factor: int,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator is similar to `oneflow.nn.PixelShuffle`. The difference is that in 
     `oneflow.nn.PixelShuffle`, the upscale factor of height and width is the same. But in 
     `oneflow.nn.PixelShufflev2`, you can set different upscale factor for height and width. 
 
     Args:
-        input (remote_blob_util.BlobDef): The input Blob. 
+        input (oneflow_api.BlobDesc): The input Blob. 
         h_upscale_factor (int): The upscale factor of height. 
         w_upscale_factor (int): The upscale factor of width. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -3635,7 +3926,7 @@ def pixel_shufflev2(
         # out.shape (3, 2, 4, 16)
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob.
+        oneflow_api.BlobDesc: The result Blob.
     """
     assert (
         h_upscale_factor > 0 and w_upscale_factor > 0
@@ -3674,12 +3965,12 @@ def pixel_shufflev2(
 
 @oneflow_export("nn.KLDivLoss")
 def kldivloss(
-    input: remote_blob_util.BlobDef,
-    target: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
+    target: oneflow_api.BlobDesc,
     log_target: bool = False,
     reduction: str = "mean",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator computes the Kullback-Leiber divergence loss. 
     
     The equation is: 
@@ -3728,13 +4019,13 @@ def kldivloss(
         #         [-0.54243773 -0.3840736  -0.5065163 ]]
     
     Args:
-        input (remote_blob_util.BlobDef): The input tensor. 
-        target (remote_blob_util.BlobDef): The target tensor. 
+        input (oneflow_api.BlobDesc): The input tensor. 
+        target (oneflow_api.BlobDesc): The target tensor. 
         log_target (bool, optional): Whether the `target` is passed in the log space. Defaults to False.
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
         name (Optional[str], optional): The name for the operation. Defaults to None.
     Returns:
-        remote_blob_util.BlobDef: The result tensor. 
+        oneflow_api.BlobDesc: The result tensor. 
     """
     assert reduction in [
         "none",

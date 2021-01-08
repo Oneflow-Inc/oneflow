@@ -37,21 +37,46 @@ from functools import reduce
 import traceback
 
 
-class ArgBlobDef(oneflow_api.BlobDesc):
-    def __init__(self, shape, dtype, batch_axis, name=None):
+class ArgBlobDef(object):
+    def __init__(
+        self,
+        shape,
+        dtype,
+        batch_axis,
+        name=None,
+        distribute=oneflow_api.distribute.auto(),
+    ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
             name = id_util.UniqueStr("Input_")
         lbi.set_op_name(name)
         lbi.set_blob_name("out")
-        oneflow_api.BlobDesc.__init__(self, lbi, oneflow_api.distribute.auto())
+        self.lbi_ = lbi
         assert type(shape) is tuple
         for dim in shape:
             assert type(dim) is int
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
+        assert type(batch_axis) is int
         self.batch_axis_ = batch_axis
+        self.distribute_ = distribute
+
+    @property
+    def lbi(self):
+        return self.lbi_
+
+    @property
+    def op_name(self):
+        return self.lbi_.op_name()
+
+    @property
+    def blob_name(self):
+        return self.lbi_.blob_name()
+
+    @property
+    def unique_name(self):
+        return self.op_name + "/" + self.blob_name + self._Distribute2Str()
 
     @property
     def shape(self):
@@ -78,7 +103,7 @@ class ArgBlobDef(oneflow_api.BlobDesc):
             shape=self.shape_,
             dtype=self.dtype_,
             batch_axis=self.batch_axis_,
-            name=self.lbi.op_name,
+            name=self.op_name,
         )
 
     def Clone(self, op_name=None):
@@ -117,6 +142,16 @@ class ArgBlobDef(oneflow_api.BlobDesc):
         self.SetBatchAxisAndSplitAxis(interface_blob_conf)
         return interface_blob_conf
 
+    def _Distribute2Str(self):
+        if type(self.distribute_) is oneflow_api.distribute.AutoDistribute:
+            return ""
+        elif type(self.distribute_) is oneflow_api.distribute.SplitDistribute:
+            return ":S" + str(self.distribute_.axis)
+        elif type(self.distribute_) is oneflow_api.distribute.BroadcastDistribute:
+            return ":B"
+        else:
+            raise NotImplementedError
+
 
 class FixedTensorDef(ArgBlobDef):
     def __init__(
@@ -126,13 +161,14 @@ class FixedTensorDef(ArgBlobDef):
         batch_axis: int = 0,
         name: Optional[str] = None,
     ) -> None:
-        if type(batch_axis) is int:
+        if batch_axis is None:
+            batch_axis = oneflow_api.INVALID_BATCH_AXIS
+        assert type(batch_axis) is int
+        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
             if batch_axis < 0:
                 batch_axis += len(shape)
             assert batch_axis >= 0
             assert batch_axis < len(shape)
-        else:
-            assert batch_axis is None
         ArgBlobDef.__init__(
             self, shape, dtype=dtype, batch_axis=batch_axis, name=name,
         )
@@ -166,7 +202,7 @@ class FixedTensorDef(ArgBlobDef):
     def SetBatchAxisAndSplitAxis(
         self, interface_blob_conf: op_conf_util.InterfaceBlobConf
     ) -> None:
-        if self.batch_axis is None:
+        if self.batch_axis == oneflow_api.INVALID_BATCH_AXIS:
             interface_blob_conf.batch_axis.ClearField("value")
             interface_blob_conf.split_axis.ClearField("value")
         else:
@@ -192,10 +228,11 @@ class MirroredTensorDef(ArgBlobDef):
     ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
-        if batch_axis < 0:
-            batch_axis += len(shape)
-        assert batch_axis >= 0
-        assert batch_axis < len(shape)
+        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
+            if batch_axis < 0:
+                batch_axis += len(shape)
+            assert batch_axis >= 0
+            assert batch_axis < len(shape)
         ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
         self.sub_consistent_blob_list_ = []
 
@@ -254,10 +291,11 @@ class MirroredTensorListDef(ArgBlobDef):
     ) -> None:
         assert type(shape) is tuple
         assert type(batch_axis) is int
-        if batch_axis < 0:
-            batch_axis += len(shape)
-        assert batch_axis >= 0
-        assert batch_axis < len(shape)
+        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
+            if batch_axis < 0:
+                batch_axis += len(shape)
+            assert batch_axis >= 0
+            assert batch_axis < len(shape)
         ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
         self.sub_consistent_blob_list_ = []
 
@@ -320,7 +358,12 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
         sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetSubLbi(
             job_name, mirrored_lbn, i
         )
-        sub_consistent_blob_list.append(remote_blob_util.ConsistentBlob(sub_lbi))
+        lbi = lbi_util.LogicalBlobId()
+        lbi.set_op_name(sub_lbi.op_name)
+        lbi.set_blob_name(sub_lbi.blob_name)
+        sub_consistent_blob_list.append(
+            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.distribute.auto())
+        )
 
 
 def _MakePushNdarrayCallback(ndarray):
