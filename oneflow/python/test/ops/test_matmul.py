@@ -184,8 +184,7 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
-    # arg_dict["data_type"] = ["float16", "float32", "double"]
-    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["data_type"] = ["float16", "float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
     arg_dict["enable_tf32"] = [True, False]
     matmul_args = filter_args(GenArgList(arg_dict))
@@ -196,8 +195,7 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
-    # arg_dict["data_type"] = ["float16", "float32", "double"]
-    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["data_type"] = ["float16", "float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
     arg_dict["enable_tf32"] = [True, False]
     batch_matmul_args = filter_args(GenArgList(arg_dict))
