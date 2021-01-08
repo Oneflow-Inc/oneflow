@@ -134,7 +134,6 @@ def CompareOpWithTensorFlow(
 type_name_to_flow_type = {
     "float16": flow.float16,
     "float32": flow.float32,
-    "tensorfloat32": flow.float32,
     "double": flow.double,
     "int8": flow.int8,
     "int32": flow.int32,

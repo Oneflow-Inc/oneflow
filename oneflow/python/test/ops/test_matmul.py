@@ -43,10 +43,7 @@ def compare_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.enable_fuse_add_to_output(fuse_add_to_output)
-    if True == enable_tf32:
-        flow.config.enable_tensor_float_32_compute(True)
-    else:
-        flow.config.enable_tensor_float_32_compute(False)
+    flow.config.enable_tensor_float_32_compute(enable_tf32)
     if data_type == "float16":
         dtype = flow.float
     else:
@@ -187,7 +184,8 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(256, 1024), (1024, 256)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
-    arg_dict["data_type"] = ["float16", "float32", "double"]
+    # arg_dict["data_type"] = ["float16", "float32", "double"]
+    arg_dict["data_type"] = ["float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
     arg_dict["enable_tf32"] = [True, False]
     matmul_args = filter_args(GenArgList(arg_dict))
@@ -198,7 +196,8 @@ def gen_arg_list():
     arg_dict["b_shape"] = [(10, 10, 32, 128), (10, 10, 128, 32)]
     arg_dict["transpose_a"] = [True, False]
     arg_dict["transpose_b"] = [True, False]
-    arg_dict["data_type"] = ["float16", "float32", "double"]
+    # arg_dict["data_type"] = ["float16", "float32", "double"]
+    arg_dict["data_type"] = ["float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
     arg_dict["enable_tf32"] = [True, False]
     batch_matmul_args = filter_args(GenArgList(arg_dict))

@@ -20,8 +20,6 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
@@ -62,15 +60,6 @@ struct CudnnConvArgsAndAlgo final {
         << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
         << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
         << byte_size_of_buf;
-
-#if CUDA_VERSION >= 11000
-    if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
-      algo_perf.mathType = CUDNN_DEFAULT_MATH;
-    } else {
-      algo_perf.mathType = CUDNN_FMA_MATH;
-    }
-#endif
-
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
   }
   CudnnConvArgsAndAlgo() = delete;

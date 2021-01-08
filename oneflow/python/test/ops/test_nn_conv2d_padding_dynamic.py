@@ -41,7 +41,6 @@ def global_storage_setter(name):
 
 def compare_with_tensorflow(
     device_type,
-    enable_tf32,
     x_shape,
     filters,
     kernel_size,
@@ -56,10 +55,6 @@ def compare_with_tensorflow(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    if True == enable_tf32:
-        flow.config.enable_tensor_float_32_compute(True)
-    else:
-        flow.config.enable_tensor_float_32_compute(False)
 
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
@@ -171,7 +166,6 @@ class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_padding_valid(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]
@@ -186,7 +180,6 @@ class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_padding_same(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]
@@ -201,7 +194,6 @@ class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_pad_list1(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]
@@ -216,7 +208,6 @@ class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_pad_list2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]
@@ -231,7 +222,6 @@ class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_pad_list3(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]
@@ -246,7 +236,6 @@ class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_pad_list4(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 3, 10, 10), (10, 3, 11, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]

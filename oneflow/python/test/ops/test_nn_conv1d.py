@@ -30,7 +30,6 @@ for gpu in gpus:
 
 def compare_with_tensorflow(
     device_type,
-    enable_tf32,
     x_shape,
     filters,
     kernel_size,
@@ -47,10 +46,6 @@ def compare_with_tensorflow(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.cudnn_conv_heuristic_search_algo(False)
-    if True == enable_tf32:
-        flow.config.enable_tensor_float_32_compute(True)
-    else:
-        flow.config.enable_tensor_float_32_compute(False)
     if data_format == "NCW":
         xy_data_transpose = (0, 2, 1)
         weight_data_transpose = (2, 1, 0)
@@ -151,7 +146,6 @@ class TestNnConv1d(flow.unittest.TestCase):
     def test_padding_valid(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 10)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3, 2]
@@ -167,7 +161,6 @@ class TestNnConv1d(flow.unittest.TestCase):
     def test_padding_same(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["enable_tf32"] = [True, False]
         arg_dict["x_shape"] = [(10, 32, 11)]
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [2]

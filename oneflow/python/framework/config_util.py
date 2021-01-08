@@ -434,7 +434,7 @@ def num_callback_threads(val):
 
 @oneflow_export("config.enable_tensor_float_32_compute")
 def api_enable_tensor_float_32_compute(val: bool = True) -> None:
-    r"""Whether or not to enable Tensor-float-32 on A100 GPUs
+    r"""Whether or not to enable Tensor-float-32 on supported GPUs
 
     Args:
         val (bool, optional): True or False. Defaults to True.
