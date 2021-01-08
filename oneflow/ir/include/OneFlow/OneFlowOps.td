@@ -55,8 +55,8 @@ def ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
 def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "ReLU op";
 
-    let arguments = (ins F32Tensor:$input);
-    let results = (outs F32Tensor:$res);
+    let arguments = (ins AnyType:$input);
+    let results = (outs AnyType:$res);
 
     let assemblyFormat = [{
         $input attr-dict `:` type($input)
