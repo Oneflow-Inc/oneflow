@@ -87,7 +87,7 @@
 
     - To install dependencies, run:
       
-      On Centos:
+      On CentOS:
       
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
