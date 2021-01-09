@@ -29,6 +29,11 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/register/batch_axis_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
+#include "oneflow/core/common/data_type.cfg.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/register/blob_desc.cfg.h"
+#include "oneflow/core/register/blob_desc.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace py = pybind11;
 
@@ -66,6 +71,18 @@ Maybe<cfg::OpNodeSignature> MakeOpNodeSignatureFromSerializedOpAttribute(
   return op_node_signature;
 }
 
+Maybe<cfg::OptInt64> MakeOptInt64(const std::string& serialized_str) {
+  OptInt64 opt_int64;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &opt_int64)) << "opt_int64 parse failed";
+  return std::make_shared<cfg::OptInt64>(opt_int64);
+}
+
+Maybe<cfg::BlobDescProto> MakeBlobDescProto(const std::string& serialized_str) {
+  BlobDescProto blob_desc;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &blob_desc)) << "blob_desc parse failed";
+  return std::make_shared<cfg::BlobDescProto>(blob_desc);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -78,6 +95,11 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def("MakeOpNodeSignatureFromSerializedOpAttribute", [](const std::string& str) {
     return MakeOpNodeSignatureFromSerializedOpAttribute(str).GetPtrOrThrow();
   });
+  m.def("MakeOptInt64ByString",
+        [](const std::string& str) { return MakeOptInt64(str).GetPtrOrThrow(); });
+
+  m.def("MakeBlobDescProtoByString",
+        [](const std::string& str) { return MakeBlobDescProto(str).GetPtrOrThrow(); });
 }
 
 }  // namespace oneflow
