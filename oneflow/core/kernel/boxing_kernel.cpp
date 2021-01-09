@@ -45,6 +45,21 @@ void CalcSumOfBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnI
   }
 }
 
+template<>
+void CalcSumOfBlobs<float16>(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                             const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
+  const Blob* src_blob_0 = BnInOp2Blob(src_bns.Get(0));
+  Blob* dst_blob = BnInOp2Blob(dst_bn);
+  Memcpy<DeviceType::kCPU>(ctx, dst_blob->mut_dptr(), src_blob_0->dptr(),
+                           src_blob_0->ByteSizeOfBlobBody());
+  FOR_RANGE(size_t, i, 1, src_bns.size()) {
+    Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
+    FOR_RANGE(int, i, 0, dst_blob->static_shape().elem_cnt()) {
+      dst_blob->mut_dptr<float16>()[i] += src_blob_i->dptr<float16>()[i];
+    }
+  }
+}
+
 void CopyFromFirstToOtherBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                                const PbRpf<std::string>& bns, CopyBlobFieldMthd Copy) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
@@ -214,6 +229,7 @@ void BoxingKernel<T>::ForwardDataContent(
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel,
+                               ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
