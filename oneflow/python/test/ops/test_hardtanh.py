@@ -24,27 +24,25 @@ import os
 import random
 
 
-def _compare_hardswish_with_np(
+def _compare_hardtanh_with_np(
     input_shape, device_type, value_type, machine_ids, device_counts
 ):
-    min_val = random.randint(-4, -1)
-    max_val = random.randint(0, 4)
+    min_val = random.randint(-10, -1)
+    max_val = random.randint(0, 10)
     assert min_val < max_val
+
     if value_type[1] == flow.float16:
         input_1 = np.random.uniform(
             min_val - 0.5, max_val + 0.5, size=input_shape
         ).astype(np.float16)
-        input_1 += np.random.randn(*input_shape).astype(
-            np.float16
-        )  # add a randnom array, range from(0, 1)
+        input_1 += np.random.randn(*input_shape).astype(np.float16)
         input_1 = np.array(input_1, dtype=value_type[0])
     else:
         input_1 = np.random.uniform(
             min_val - 0.5, max_val + 0.5, size=input_shape
         ).astype(value_type[0])
-        input_1 += np.random.randn(*input_shape).astype(
-            value_type[0]
-        )  # add a randnom array, range from(0, 1)
+        input_1 += np.random.randn(*input_shape).astype(value_type[0])
+
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -61,44 +59,24 @@ def _compare_hardswish_with_np(
     else:
         func_config.default_data_type(value_type[1])
 
-    def np_hardswish(input):
-        elem_cnt = input.size
-        init_shape = input.shape
-        input = input.flatten()
-        out = np.zeros_like(input)
-
-        for i in range(elem_cnt):
-            if input[i] >= 3:
-                out[i] = input[i]
-            elif input[i] <= -3:
-                pass  # The out[i] = 0, But our `out` is a all zero array
-            else:
-                out[i] = input[i] * (input[i] + 3) / 6
-
-        out = np.reshape(out, init_shape)
-
+    def np_hardtanh(input, min_val, max_val):
+        out = np.clip(input, min_val, max_val)
         return np.array(out).astype(value_type[0])
 
-    np_out_hardswish = np_hardswish(input_1)
+    np_out_hardtanh = np_hardtanh(input_1, min_val, max_val)
 
-    def np_diff(input):
+    def np_diff(input, min_val, max_val):
         input_shape = input.shape
         input = input.flatten()
         elem_cnt = input.size
         diff = np.zeros(shape=(elem_cnt,))
         for i in range(elem_cnt):
-            if input[i] > -3 and input[i] < 3:
-                diff[i] = input[i] / 3 + 0.5
-            elif input[i] >= 3:
+            if input[i] > min_val and input[i] < max_val:
                 diff[i] = 1
-            else:
-                # input[i] <= -3, The Grad is zero, And out `diff` is an zero array
-                pass
         diff = np.reshape(diff, newshape=input_shape)
-        diff = np.array(diff, dtype=value_type[0])
         return diff
 
-    _np_grad = np_diff(input_1)
+    _np_grad = np_diff(input_1, min_val, max_val)
 
     def assert_prediction_grad(blob: tp.Numpy):
         if value_type[1] == flow.float16:
@@ -111,7 +89,7 @@ def _compare_hardswish_with_np(
         @flow.global_function(
             type="train", function_config=func_config,
         )
-        def oneflow_hardswish(
+        def oneflow_hardtanh(
             of_input_1: tp.Numpy.Placeholder(shape=input_1.shape, dtype=flow.float32),
         ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
@@ -124,17 +102,17 @@ def _compare_hardswish_with_np(
                 x_var = of_input_1 + v
                 x_f16 = flow.cast(x_var, flow.float16)
 
-            of_hardswish_out_f16 = flow.nn.hardswish(x_f16)
-            of_hardswish_out_f32 = flow.cast(of_hardswish_out_f16, flow.float32)
+            of_hardtanh_out_f16 = flow.nn.hardtanh(x_f16, min_val, max_val)
+            of_hardtanh_out_f32 = flow.cast(of_hardtanh_out_f16, flow.float32)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-                ).minimize(of_hardswish_out_f32)
+                ).minimize(of_hardtanh_out_f32)
 
             flow.watch_diff(x_var, assert_prediction_grad)
 
-            return of_hardswish_out_f32
+            return of_hardtanh_out_f32
 
     # Test float32/64
     else:
@@ -142,7 +120,7 @@ def _compare_hardswish_with_np(
         @flow.global_function(
             type="train", function_config=func_config,
         )
-        def oneflow_hardswish(
+        def oneflow_hardtanh(
             of_input_1: tp.Numpy.Placeholder(shape=input_1.shape, dtype=value_type[1]),
         ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
@@ -156,21 +134,21 @@ def _compare_hardswish_with_np(
 
             flow.watch_diff(x_var, assert_prediction_grad)
 
-            of_hardswish_out = flow.nn.hardswish(x_var)
+            of_hardtanh_out = flow.nn.hardtanh(x_var, min_val, max_val)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-                ).minimize(of_hardswish_out)
+                ).minimize(of_hardtanh_out)
 
-            return of_hardswish_out
+            return of_hardtanh_out
 
-    of_out_hardswish = oneflow_hardswish(input_1)
+    of_out_hardtanh = oneflow_hardtanh(input_1)
 
     if value_type[1] == flow.float16:
-        assert np.allclose(of_out_hardswish, np_out_hardswish, atol=1e-3)
+        assert np.allclose(of_out_hardtanh, np_out_hardtanh, atol=1e-2)
     else:
-        assert np.allclose(of_out_hardswish, np_out_hardswish, atol=1e-5)
+        assert np.allclose(of_out_hardtanh, np_out_hardtanh, atol=1e-5)
 
 
 def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
@@ -195,44 +173,44 @@ def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
 
 
 @flow.unittest.skip_unless_1n1d()
-class Testhardswish1n1d(flow.unittest.TestCase):
-    def test_hardswish_cpu(test_case):
+class Testhardtanh1n1d(flow.unittest.TestCase):
+    def test_hardtanh_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 3),
+            shape=(16, 16),
             device_type="cpu",
             value_type="float",
             machine_ids="0:0",
             device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            _compare_hardswish_with_np(*arg)
+            _compare_hardtanh_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_hardswish_gpu(test_case):
+    def test_hardtanh_gpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(4, 4, 4),
+            shape=(4, 8, 16),
             device_type="gpu",
             value_type="float",
             machine_ids="0:0",
             device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            _compare_hardswish_with_np(*arg)
+            _compare_hardtanh_with_np(*arg)
 
 
 @flow.unittest.skip_unless_1n2d()
-class Testhardswish1n2d(flow.unittest.TestCase):
+class Testhardtanh1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_hardswish_gpu_1n2d(test_case):
+    def test_hardtanh_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(4, 8, 4),
+            shape=(4, 8, 16),
             device_type="gpu",
             value_type="float",
             machine_ids="0:0-1",
             device_counts=2,
         )
         for arg in GenArgList(arg_dict):
-            _compare_hardswish_with_np(*arg)
+            _compare_hardtanh_with_np(*arg)
 
 
 if __name__ == "__main__":
