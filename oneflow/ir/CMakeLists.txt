@@ -19,28 +19,47 @@ project(oneflow-dialect LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 
-find_package(MLIR REQUIRED CONFIG)
+# llvm build options
+set(LLVM_ENABLE_RTTI ON) # turn this on to make it compatible with protobuf
+set(LLVM_INCLUDE_EXAMPLES OFF)
+set(LLVM_INCLUDE_TESTS OFF)
+set(LLVM_INCLUDE_BENCHMARKS OFF)
+set(LLVM_TARGETS_TO_BUILD "X86;NVPTX")
+set(LLVM_ENABLE_ASSERTIONS ON)
+set(LLVM_ENABLE_PROJECTS "mlir")
 
-message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
-set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
-set(MLIR_BINARY_DIR ${CMAKE_BINARY_DIR})
+set(ONEFLOW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+set(LLVM_ROOT /home/dev/files/repos/llvm-project)
+set(LLVM_BINARY_DIR ${PROJECT_BINARY_DIR}/third_party/llvm-project/llvm)
+set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
+set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/lib)
+add_subdirectory(${LLVM_ROOT}/llvm ${LLVM_BINARY_DIR})
+set(LLVM_CMAKE_DIR ${LLVM_ROOT}/llvm/cmake/modules)
+set(MLIR_CMAKE_DIR ${LLVM_ROOT}/mlir/cmake/modules)
 
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+# set MLIR_TABLEGEN_EXE for functions in AddMLIR
+set(MLIR_TABLEGEN_EXE mlir-tblgen)
+# set LLVM_TOOLS_BINARY_DIR for function `configure_lit_site_cfg`
+set(LLVM_TOOLS_BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
 include(HandleLLVMOptions)
 
+set(LLVM_INCLUDE_DIRS
+    ${LLVM_ROOT}/llvm/include
+    ${LLVM_BINARY_DIR}/include
+  )
+set(MLIR_INCLUDE_DIRS
+    ${LLVM_ROOT}/mlir/include
+    ${LLVM_BINARY_DIR}/tools/mlir/include
+    )
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
-link_directories(${LLVM_BUILD_LIBRARY_DIR})
-add_definitions(${LLVM_DEFINITIONS})
 
 add_subdirectory(include)
 add_subdirectory(lib)
