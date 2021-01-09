@@ -320,6 +320,12 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::add_{{ util.
   }
   return {{ util.field_name(field) }}_->Add(value);
 }
+void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
+  if (!{{ util.field_name(field) }}_) {
+    {{ util.field_name(field) }}_ = ::std::make_shared<{{ util.field_repeated_container_name(field) }}>();
+  }
+  return {{ util.field_name(field) }}_->Set(index, value);
+}
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
 // oneof field {{ util.oneof_name_of_oneof_type_field(field) }}: {{ util.field_name(field) }}
@@ -912,6 +918,9 @@ void {{ util.class_name(cls) }}::clear_{{ util.field_name(field) }}() {
 {% else %}
 void {{ util.class_name(cls) }}::add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
   return __SharedPtr__()->add_{{ util.field_name(field) }}(value);
+}
+void {{ util.class_name(cls) }}::set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
+  return __SharedPtr__()->set_{{ util.field_name(field) }}(index, value);
 }
 // used by pybind11 only
 ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> {{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }}() {
