@@ -3,7 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/framework/tensor.proto";
+import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
@@ -15,6 +15,7 @@ import "oneflow/core/graph/boxing/collective_boxing.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
+import "oneflow/core/operator/inter_face_blob_conf.proto";
 
 enum ActivationType {
   kNone = 0;

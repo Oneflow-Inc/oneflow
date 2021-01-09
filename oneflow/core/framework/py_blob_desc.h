@@ -57,19 +57,6 @@ class BlobDesc : public Tensor {
   virtual std::shared_ptr<Distribute> distribute() const { return distribute_; }
   virtual std::string unique_name() const { return lbn_ + *CHECK_JUST(Distribute2Str()); }
 
-  virtual std::shared_ptr<BlobDesc> Clone() const { UNIMPLEMENTED(); }
-  virtual std::shared_ptr<BlobDesc> with_distribute(
-      const std::shared_ptr<Distribute>& distribute) const {
-    UNIMPLEMENTED();
-  }
-
-  Maybe<BlobDesc> with_split_distribute(int64_t axis) {
-    return with_distribute(JUST(GlobalSplitDistribute(axis)));
-  }
-
-  std::shared_ptr<BlobDesc> with_broadcast_distribute() {
-    return with_distribute(GlobalBroadcastDistribute());
-  }
   void set_distribute(const std::shared_ptr<Distribute> distribute) { distribute_ = distribute; }
 
  protected:

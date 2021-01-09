@@ -24,10 +24,6 @@ namespace oneflow {
 
 namespace compatible_py {
 
-std::shared_ptr<BlobDesc> ConsistentBlob::Clone() const {
-  PYBIND11_OVERRIDE_PURE(std::shared_ptr<BlobDesc>, ConsistentBlob, Clone, );
-}
-
 class TrampLazyConsistentBlob : public LazyConsistentBlob {
  public:
   using LazyConsistentBlob::LazyConsistentBlob;
@@ -65,14 +61,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("parallel_conf", &BlobDesc::parallel_conf)
       .def_property_readonly("distribute", &BlobDesc::distribute)
       .def_property_readonly("unique_name", &BlobDesc::unique_name)
-      .def("Clone", &BlobDesc::Clone)
-      .def("set_distribute", &BlobDesc::set_distribute)
-      .def("with_distribute", &BlobDesc::with_distribute)
-      .def("with_split_distribute",
-           [](const std::shared_ptr<BlobDesc>& blob_desc, int64_t axis) {
-             return blob_desc->with_split_distribute(axis).GetPtrOrThrow();
-           })
-      .def("with_broadcast_distribute", &BlobDesc::with_broadcast_distribute);
+      .def("set_distribute", &BlobDesc::set_distribute);
 
   py::class_<ConsistentBlob, BlobDesc, std::shared_ptr<ConsistentBlob>>(m, "ConsistentBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
@@ -93,8 +82,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("unique_name", &ConsistentBlob::unique_name)
       .def_property_readonly("job_name", &ConsistentBlob::job_name)
       .def_property_readonly("parallel_size", &ConsistentBlob::parallel_size)
-      .def("set_job_name", &ConsistentBlob::set_job_name)
-      .def("with_distribute", &ConsistentBlob::with_distribute);
+      .def("set_job_name", &ConsistentBlob::set_job_name);
 
   py::class_<LazyConsistentBlob, TrampLazyConsistentBlob, ConsistentBlob,
              std::shared_ptr<LazyConsistentBlob>>(m, "LazyConsistentBlob")
@@ -111,15 +99,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                }
                                return ret;
                              })
-      .def("get_dtype",
-           [](const std::shared_ptr<LazyConsistentBlob>& x) { return int(x->dtype()); })
+      .def(
+          "get_dtype",
+          [](const std::shared_ptr<LazyConsistentBlob>& x) { return static_cast<int>(x->dtype()); })
       .def_property_readonly("batch_axis", &LazyConsistentBlob::batch_axis)
       .def_property_readonly("split_axis", &LazyConsistentBlob::batch_axis)
       .def_property_readonly("is_dynamic", &LazyConsistentBlob::is_dynamic)
       .def_property_readonly("is_tensor_list", &LazyConsistentBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &LazyConsistentBlob::parallel_conf)
       .def("IdenticalTo", &LazyConsistentBlob::IdenticalTo)
-      .def("with_gradient_distribute", &LazyConsistentBlob::with_gradient_distribute)
       .def("get_shape_log_warning", &LazyConsistentBlob::get_shape_log_warning);
 
   py::class_<MirroredBlob, BlobDesc, std::shared_ptr<MirroredBlob>>(m, "MirroredBlob")
@@ -158,7 +146,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                }
                                return ret;
                              })
-      .def("get_dtype", [](const std::shared_ptr<LazyMirroredBlob>& x) { return int(x->dtype()); })
+      .def("get_dtype",
+           [](const std::shared_ptr<LazyMirroredBlob>& x) { return static_cast<int>(x->dtype()); })
       .def_property_readonly("batch_axis", &LazyMirroredBlob::batch_axis)
       .def_property_readonly("split_axis", &LazyMirroredBlob::batch_axis)
       .def_property_readonly("is_dynamic", &LazyMirroredBlob::is_dynamic)
@@ -169,7 +158,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // semantics and performance.
       .def_property_readonly("sub_consistent_blob_list",
                              &LazyMirroredBlob::sub_consistent_blob_list)
-      .def("with_gradient_distribute", &LazyMirroredBlob::with_gradient_distribute)
       .def("get_shape_log_warning", &LazyMirroredBlob::get_shape_log_warning);
 }
 
