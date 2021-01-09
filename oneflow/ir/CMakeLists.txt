@@ -29,7 +29,7 @@ set(LLVM_ENABLE_ASSERTIONS ON)
 set(LLVM_ENABLE_PROJECTS "mlir")
 
 set(ONEFLOW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
-set(LLVM_ROOT /home/dev/files/repos/llvm-project)
+set(LLVM_ROOT ${ONEFLOW_ROOT}/third_party/llvm-project)
 set(LLVM_BINARY_DIR ${PROJECT_BINARY_DIR}/third_party/llvm-project/llvm)
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/lib)
