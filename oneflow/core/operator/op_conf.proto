@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
@@ -14,6 +15,7 @@ import "oneflow/core/graph/boxing/collective_boxing.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
+import "oneflow/core/operator/inter_face_blob_conf.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -116,15 +118,6 @@ message DynamicReshapeLikeOpConf {
   required string x = 1;
   required string y = 2;
   required string like = 3;
-}
-
-message InterfaceBlobConf {
-  required ShapeProto shape = 1;
-  required DataType data_type = 2;
-  optional OptInt64 split_axis = 3;
-  required OptInt64 batch_axis = 4;
-  optional bool is_dynamic = 5;
-  optional bool is_tensor_list = 6 [default = false];
 }
 
 message InputOpConf {
