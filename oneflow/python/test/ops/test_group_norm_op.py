@@ -29,12 +29,8 @@ def getGroupNormOutAndGrad(input, gout, num_groups, eps):
     assert len(input.shape) >= 3
 
     # reshape to (N, C // num_groups, L)
-    input_reshape_to_1d = np.reshape(
-        input, (input.shape[0], num_groups, -1)
-    )
-    gout_reshape_to_1d = np.reshape(
-        gout, (gout.shape[0], num_groups, -1)
-    )
+    input_reshape_to_1d = np.reshape(input, (input.shape[0], num_groups, -1))
+    gout_reshape_to_1d = np.reshape(gout, (gout.shape[0], num_groups, -1))
 
     # compute group normalization in numpy
     gamma = np.ones((1, input_reshape_to_1d.shape[1], 1), dtype=np.float32)
