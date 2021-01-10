@@ -105,6 +105,10 @@ class GpuElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKerne
     T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
     const int cnt = tensor_dz->shape().elem_cnt();
+    size_t bytes_size = cnt * GetSizeOfDataType(tensor_dz->data_type());
+    if (dptr_x) { Memset<DeviceType::kGPU>(ctx->device_ctx(), dptr_dx, 0, bytes_size); }
+    if (dptr_y) { Memset<DeviceType::kGPU>(ctx->device_ctx(), dptr_dy, 0, bytes_size); }
+
     ElementwiseBackwardGradGpu<GradFunctor, T>
         <<<BlocksNum4ThreadsNum(cnt), kCudaThreadsNumPerBlock, 0,
            ctx->device_ctx()->cuda_stream()>>>(cnt, dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);

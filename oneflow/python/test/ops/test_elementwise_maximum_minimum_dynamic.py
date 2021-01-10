@@ -26,15 +26,10 @@ import os
 def _compare_dynamic_Xmum_with_np(
     input_shape, data_shape, compare_type, device_type, machine_ids, device_counts
 ):
-    print("compare type is: ", compare_type)
-    print("data_shape is: ", data_shape)
     input_1 = np.random.random(size=input_shape).astype(np.float32)
-    print("input 1: ", input_1)
     input_2 = np.random.random(size=input_shape).astype(np.float32)
-    print("input 2: ", input_2)
 
     assert compare_type in ["maximum", "minimum"]
-
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
@@ -58,8 +53,6 @@ def _compare_dynamic_Xmum_with_np(
     np_out_Xmum = np_Xmum(input_1, input_2, compare_type)
 
     def np_diff(input1, input2, compare_type):
-        # compare_type is: "maximum" or "minimum"
-        # Only Test input1 Grad
         elem_cnt = input1.size
         init_shape = input1.shape
         input1 = input1.flatten()
@@ -77,8 +70,6 @@ def _compare_dynamic_Xmum_with_np(
     _np_grad = np_diff(input_1, input_2, compare_type)
 
     def assert_prediction_grad(blob: tp.ListNumpy):
-        print("OF Grad is: ", blob[0])
-        print("NP Grad is: ", _np_grad)
         assert np.allclose(blob[0], _np_grad)
 
     @flow.global_function(
@@ -121,10 +112,6 @@ def _compare_dynamic_Xmum_with_np(
         return of_Xmum_out
 
     of_out_Xmum = oneflow_Xmum([input_1], [input_2])
-
-    print("Of out is: ", of_out_Xmum[0])
-    print("Np out is: ", np_out_Xmum)
-
     assert np.allclose(of_out_Xmum[0], np_out_Xmum)
 
 

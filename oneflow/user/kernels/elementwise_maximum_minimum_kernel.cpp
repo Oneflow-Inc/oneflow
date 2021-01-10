@@ -59,6 +59,9 @@ class CpuElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKerne
 
     T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
     T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
+    size_t bytes_size = tensor_dz->shape().elem_cnt() * GetSizeOfDataType(tensor_dz->data_type());
+    if (dptr_x) { Memset<DeviceType::kCPU>(ctx->device_ctx(), dptr_dx, 0, bytes_size); }
+    if (dptr_y) { Memset<DeviceType::kCPU>(ctx->device_ctx(), dptr_dy, 0, bytes_size); }
 
     Functor<T>::Backward(tensor_dz->shape().elem_cnt(), dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);
   }
