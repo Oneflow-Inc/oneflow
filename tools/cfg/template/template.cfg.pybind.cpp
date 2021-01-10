@@ -235,9 +235,11 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {%elif util.field_is_enum_type(field) %}
     registry.def("{{ util.field_name(field) }}", (const {{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}& ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }});
     registry.def("add_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::add_{{ util.field_name(field) }});
+    registry.def("set_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% else %}
     registry.def("{{ util.field_name(field) }}", (const {{ util.field_type_name(field) }}& ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }});
     registry.def("add_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::add_{{ util.field_name(field) }});
+    registry.def("set_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
     registry.def("has_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
