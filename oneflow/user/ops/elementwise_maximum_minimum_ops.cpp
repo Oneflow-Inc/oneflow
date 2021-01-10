@@ -122,8 +122,8 @@ namespace user_op {
         ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);           \
       });
 
-#define REGISTER_ELEMENTWISE_BINOP(op_type_name)                           \
-  REGISTER_ELEMENTWISE_FW_OP(op_type_name);                                \
+#define REGISTER_ELEMENTWISE_BINOP(op_type_name)                            \
+  REGISTER_ELEMENTWISE_FW_OP(op_type_name);                                 \
   REGISTER_ELEMENTWISE_BW_OP(std::string("") + op_type_name + "_backward"); \
   REGISTER_BINOP_GRAD(op_type_name);
 
