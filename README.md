@@ -86,7 +86,9 @@
     - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
     - To install dependencies, run:
-
+      
+      On CentOS:
+      
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
       rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
