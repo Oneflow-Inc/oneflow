@@ -48,4 +48,18 @@ REGISTER_USER_OP("cast_to_static_shape")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("cast_to_static_shape")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("input", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper identity_op =
+            builder.Op("identity")
+                .Input("in", op.GetGradTensorWithOpOutput("output", 0))
+                .Output("out")
+                .Build();
+        op.BindGradTensorWithOpInput(identity_op.output("out", 0), "input", 0);
+        AddOp(identity_op);
+      }
+    });
+
 }  // namespace oneflow

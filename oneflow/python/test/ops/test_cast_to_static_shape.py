@@ -20,8 +20,11 @@ import oneflow as flow
 from test_util import GenArgDict, type_name_to_flow_type, type_name_to_np_type
 
 
-def _make_cast_to_static_shape_fn(test_case, shape, data_type, device_type, device_num):
+def _make_cast_to_static_shape_fn(
+    test_case, shape, data_type, device_type, device_num, compare_diff_fn
+):
     dtype = type_name_to_flow_type[data_type]
+    require_grad = dtype is flow.float32
 
     flow.clear_default_session()
     if device_type == "gpu":
@@ -39,12 +42,23 @@ def _make_cast_to_static_shape_fn(test_case, shape, data_type, device_type, devi
     )
     func_config.default_logical_view(flow.scope.mirrored_view())
 
-    @flow.global_function(function_config=func_config)
+    @flow.global_function(
+        type="train" if require_grad else "predict", function_config=func_config
+    )
     def cast_to_static_shape_fn(
         x: flow.typing.ListNumpy.Placeholder(shape=shape, dtype=dtype)
     ) -> flow.typing.ListNumpy:
+        x_var = flow.get_variable(
+            name="x_var", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer(),
+        )
+        x = x + x_var
         y = flow.cast_to_static_shape(x)
         test_case.assertFalse(y.is_dynamic)
+        if require_grad:
+            flow.watch_diff(x, compare_diff_fn)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(y)
         return y
 
     return cast_to_static_shape_fn
@@ -62,17 +76,19 @@ def _random_input(shape, data_type):
 
 def _check_cast_to_static_shape(test_case, shape, data_type, device_type, device_num):
     x = _random_input(shape, data_type)
-    cast_to_static_shape_fn = _make_cast_to_static_shape_fn(
-        test_case, shape, data_type, device_type, device_num
-    )
-    y = cast_to_static_shape_fn([x] * device_num)
 
     def comp(x, y):
-        # print("x:", x.shape)
-        # print(x)
-        # print("y:", y.shape)
-        # print(y)
         test_case.assertTrue(np.array_equal(x, y))
+
+    def comp_diff(diff):
+        dx = np.ones(shape)
+        for d in diff.numpy_list():
+            test_case.assertTrue(np.array_equal(d, dx))
+
+    cast_to_static_shape_fn = _make_cast_to_static_shape_fn(
+        test_case, shape, data_type, device_type, device_num, comp_diff
+    )
+    y = cast_to_static_shape_fn([x] * device_num)
 
     if isinstance(y, list):
         for y_ in y:
