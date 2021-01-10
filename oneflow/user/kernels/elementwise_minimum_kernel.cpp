@@ -20,6 +20,26 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
+template<typename T>
+class CpuElementwiseMinimumKernel final : public user_op::OpKernel {
+ public:
+  CpuElementwiseMinimumKernel() = default;
+  ~CpuElementwiseMinimumKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
+    const T* x = tensor_x->dptr<T>();
+    const T* y = tensor_y->dptr<T>();
+    T* z = tensor_z->mut_dptr<T>();
+    int64_t n = tensor_x->shape().elem_cnt();
+    FOR_RANGE(int64_t, i, 0, n) { z[i] = x[i] < y[i] ? x[i] : y[i]; }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 template<DeviceType device_type, typename T>
 class CpuElementwiseMinimumBackwardKernel final : public user_op::OpKernel {
  public:
@@ -41,7 +61,7 @@ class CpuElementwiseMinimumBackwardKernel final : public user_op::OpKernel {
     T* dptr_dx = tensor_dx->mut_dptr<T>();
     T* dptr_dy = tensor_dy->mut_dptr<T>();
 
-    FOR_RANGE(int64_t, idx, 0, tensor_dz->shape().elem_cnt()){
+    FOR_RANGE(int64_t, idx, 0, tensor_dz->shape().elem_cnt()) {
       if (dptr_x[idx] < dptr_y[idx]) {
         dptr_dx[idx] = dptr_dz[idx];
       } else {
@@ -52,10 +72,20 @@ class CpuElementwiseMinimumBackwardKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BW_MINIMUM_CPU_KERNEL(dtype)             \
-  REGISTER_USER_KERNEL("elementwise_minimum_backward")          \
+#define REGISTER_MINIMUM_CPU_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("elementwise_minimum")                                        \
+      .SetCreateFn<CpuElementwiseMinimumKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                 \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+REGISTER_MINIMUM_CPU_KERNEL(float);
+REGISTER_MINIMUM_CPU_KERNEL(double);
+
+#define REGISTER_BW_MINIMUM_CPU_KERNEL(dtype)                                      \
+  REGISTER_USER_KERNEL("elementwise_minimum_backward")                             \
       .SetCreateFn<CpuElementwiseMinimumBackwardKernel<DeviceType::kCPU, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)               \
                        & (user_op::HobDataType("dz", 0) == GetDataType<dtype>::value));
 
 REGISTER_BW_MINIMUM_CPU_KERNEL(float);

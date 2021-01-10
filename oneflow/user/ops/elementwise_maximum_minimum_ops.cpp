@@ -62,51 +62,50 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx){
-      OptInt64* dz_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dz", 0);
-      if (dz_batch_axis->has_value()) {
-        CHECK_GE_OR_RETURN(dz_batch_axis->value(), 0);
-        CHECK_LE_OR_RETURN(
-            dz_batch_axis->value(),
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0).shape().NumAxes() - 1);
-      }
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dz_batch_axis;
-      *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *dz_batch_axis;
-      return Maybe<void>::Ok();
+Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
+  OptInt64* dz_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dz", 0);
+  if (dz_batch_axis->has_value()) {
+    CHECK_GE_OR_RETURN(dz_batch_axis->value(), 0);
+    CHECK_LE_OR_RETURN(dz_batch_axis->value(),
+                       ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0).shape().NumAxes() - 1);
+  }
+  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dz_batch_axis;
+  *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *dz_batch_axis;
+  return Maybe<void>::Ok();
 }
-  
+
 }  // namespace
 
 namespace user_op {
 
-#define REGISTER_ELEMENTWISE_FW_OP(op_type_name) \
-  REGISTER_USER_OP(op_type_name)                                                \
-      .Input("x")                                                                               \
-      .Input("y")                                                                               \
-      .Output("z")                                                                              \
+#define REGISTER_ELEMENTWISE_FW_OP(op_type_name)                       \
+  REGISTER_USER_OP(op_type_name)                                       \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)            \
       .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
 
 #define REGISTER_ELEMENTWISE_BW_OP(op_type_name) \
-  REGISTER_USER_OP(op_type_name)\
-    .Input("dz")\
-    .Input("x")\
-    .Input("y")\
-    .Output("dx")\
-    .Output("dy")\
-    .SetTensorDescInferFn(InferTensorDesc)\
-    .SetGetSbpFn(GetSbpSignature)\
-    .SetBatchAxisInferFn(InferBatchAxis)
+  REGISTER_USER_OP(op_type_name)                 \
+      .Input("dz")                               \
+      .Input("x")                                \
+      .Input("y")                                \
+      .Output("dx")                              \
+      .Output("dy")                              \
+      .SetTensorDescInferFn(InferTensorDesc)     \
+      .SetGetSbpFn(GetSbpSignature)              \
+      .SetBatchAxisInferFn(InferBatchAxis)
 
-#define REGISTER_ELEMENTWISE_BINOP(op_type_name)\
-  REGISTER_ELEMENTWISE_FW_OP(op_type_name);\
-  REGISTER_ELEMENTWISE_BW_OP(std::string("") + op_type_name+"_backward");
+#define REGISTER_ELEMENTWISE_BINOP(op_type_name) \
+  REGISTER_ELEMENTWISE_FW_OP(op_type_name);      \
+  REGISTER_ELEMENTWISE_BW_OP(std::string("") + op_type_name + "_backward");
 
 REGISTER_ELEMENTWISE_BINOP("elementwise_maximum");
 REGISTER_ELEMENTWISE_BINOP("elementwise_minimum");
 
-REGISTER_USER_OP_GRAD("broadcast_maximum")
+REGISTER_USER_OP_GRAD("elementwise_maximum")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
@@ -130,7 +129,7 @@ REGISTER_USER_OP_GRAD("broadcast_maximum")
 
     });
 
-REGISTER_USER_OP_GRAD("broadcast_minimum")
+REGISTER_USER_OP_GRAD("elementwise_minimum")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {

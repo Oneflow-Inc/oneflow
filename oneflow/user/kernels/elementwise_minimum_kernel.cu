@@ -18,9 +18,35 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 namespace user_op {
+
+template<typename T>
+struct MinimumFunctor {
+  OF_DEVICE_FUNC T operator()(T x, T y) const { return x < y ? x : y; }
+};
+
+template<typename T>
+class GpuElementwiseMinimumKernel final : public user_op::OpKernel {
+ public:
+  GpuElementwiseMinimumKernel() = default;
+  ~GpuElementwiseMinimumKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
+    int64_t n = tensor_x->shape().elem_cnt();
+
+    OF_CUDA_CHECK(cuda::elementwise::Binary(MinimumFunctor<T>(), n, tensor_z->mut_dptr<T>(),
+                                            tensor_x->dptr<T>(), tensor_y->dptr<T>(),
+                                            ctx->device_ctx()->cuda_stream()));
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
 
 template<typename T>
 OF_DEVICE_FUNC void DoUpdateMinimumGrad(int64_t elem_cnt, const T* dz, const T* x, const T* y,
@@ -62,20 +88,30 @@ class GpuElementwiseMinimumBackwardKernel final : public user_op::OpKernel {
     T* dptr_dy = tensor_dy->mut_dptr<T>();
 
     const int cnt = tensor_dz->shape().elem_cnt();
-    RUN_CUDA_KERNEL((MinimumBackwardGpuKernel<T>), ctx->device_ctx(), cnt, 
-      cnt, dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);
+    RUN_CUDA_KERNEL((MinimumBackwardGpuKernel<T>), ctx->device_ctx(), cnt, cnt, dptr_dz, dptr_x,
+                    dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BW_MINIMUM_GPU_KERNEL(dtype)             \
-  REGISTER_USER_KERNEL("elementwise_minimum_backward")          \
+#define REGISTER_MINIMUM_GPU_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("elementwise_minimum")                                        \
+      .SetCreateFn<GpuElementwiseMinimumKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                 \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+REGISTER_MINIMUM_GPU_KERNEL(float);
+REGISTER_MINIMUM_GPU_KERNEL(double);
+
+#define REGISTER_BW_MINIMUM_GPU_KERNEL(dtype)                                      \
+  REGISTER_USER_KERNEL("elementwise_minimum_backward")                             \
       .SetCreateFn<GpuElementwiseMinimumBackwardKernel<DeviceType::kGPU, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)               \
                        & (user_op::HobDataType("dz", 0) == GetDataType<dtype>::value));
 
 REGISTER_BW_MINIMUM_GPU_KERNEL(float);
 REGISTER_BW_MINIMUM_GPU_KERNEL(double);
 }  // namespace user_op
 }  // namespace oneflow
-#endif //WITH_CUDA
+#endif  // WITH_CUDA
