@@ -53,9 +53,9 @@ OF_DEVICE_FUNC void DoUpdateMaximumGrad(int64_t elem_cnt, const T* dz, const T* 
                                         T* dx, T* dy) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
     if (x[idx] > y[idx]) {
-      dx[idx] = dz[idx];
+      if (dx) { dx[idx] = dz[idx]; }
     } else {
-      dy[idx] = dz[idx];
+      if (dy) { dy[idx] = dz[idx]; }
     }
   }
 }
@@ -84,8 +84,8 @@ class GpuElementwiseMaximumBackwardKernel final : public user_op::OpKernel {
     const T* dptr_x = tensor_x->dptr<T>();
     const T* dptr_y = tensor_y->dptr<T>();
 
-    T* dptr_dx = tensor_dx->mut_dptr<T>();
-    T* dptr_dy = tensor_dy->mut_dptr<T>();
+    T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
+    T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
     const int cnt = tensor_dz->shape().elem_cnt();
     RUN_CUDA_KERNEL((MaximumBackwardGpuKernel<T>), ctx->device_ctx(), cnt, cnt, dptr_dz, dptr_x,

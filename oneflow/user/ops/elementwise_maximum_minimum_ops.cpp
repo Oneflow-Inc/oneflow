@@ -92,65 +92,43 @@ namespace user_op {
       .Input("dz")                               \
       .Input("x")                                \
       .Input("y")                                \
-      .Output("dx")                              \
-      .Output("dy")                              \
+      .OptionalOutput("dx")                      \
+      .OptionalOutput("dy")                      \
       .SetTensorDescInferFn(InferTensorDesc)     \
       .SetGetSbpFn(GetSbpSignature)              \
       .SetBatchAxisInferFn(InferBatchAxis)
 
-#define REGISTER_ELEMENTWISE_BINOP(op_type_name) \
-  REGISTER_ELEMENTWISE_FW_OP(op_type_name);      \
-  REGISTER_ELEMENTWISE_BW_OP(std::string("") + op_type_name + "_backward");
+#define REGISTER_BINOP_GRAD(op_type_name)                                         \
+  REGISTER_USER_OP_GRAD(op_type_name)                                             \
+      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {           \
+        const auto grad_op_name = ctx->FwOp().op_name() + "_grad";                \
+        const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {  \
+          return builder.OpTypeName(std::string("") + op_type_name + "_backward") \
+              .InputBind("dz", ctx->FwOp().output_grad("z", 0))                   \
+              .InputBind("x", ctx->FwOp().input("x", 0))                          \
+              .InputBind("y", ctx->FwOp().input("y", 0))                          \
+              .Output("dx")                                                       \
+              .Output("dy")                                                       \
+              .Build();                                                           \
+        };                                                                        \
+        ctx->DefineOp(grad_op_name, grad_op_func);                                \
+        const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& { \
+          return ctx->GetOp(grad_op_name).output("dx", 0);                        \
+        };                                                                        \
+        const auto& dy_get_func = [&ctx, &grad_op_name]() -> const std::string& { \
+          return ctx->GetOp(grad_op_name).output("dy", 0);                        \
+        };                                                                        \
+        ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);           \
+        ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);           \
+      });
+
+#define REGISTER_ELEMENTWISE_BINOP(op_type_name)                           \
+  REGISTER_ELEMENTWISE_FW_OP(op_type_name);                                \
+  REGISTER_ELEMENTWISE_BW_OP(std::string("") + op_type_name + "_backward"); \
+  REGISTER_BINOP_GRAD(op_type_name);
 
 REGISTER_ELEMENTWISE_BINOP("elementwise_maximum");
 REGISTER_ELEMENTWISE_BINOP("elementwise_minimum");
-
-REGISTER_USER_OP_GRAD("elementwise_maximum")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-      const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("elementwise_maximum_backward")
-            .InputBind("dz", ctx->FwOp().output_grad("z", 0))
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("y", ctx->FwOp().input("y", 0))
-            .Output("dx")
-            .Output("dy")
-            .Build();
-      };
-      ctx->DefineOp(grad_op_name, grad_op_func);
-      const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("dx", 0);
-      };
-      const auto& dy_get_func = [&ctx, &grad_op_name]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("dy", 0);
-      };
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);
-
-    });
-
-REGISTER_USER_OP_GRAD("elementwise_minimum")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-      const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("elementwise_minimum_backward")
-            .InputBind("dz", ctx->FwOp().output_grad("z", 0))
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .InputBind("y", ctx->FwOp().input("y", 0))
-            .Output("dx")
-            .Output("dy")
-            .Build();
-      };
-      ctx->DefineOp(grad_op_name, grad_op_func);
-      const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("dx", 0);
-      };
-      const auto& dy_get_func = [&ctx, &grad_op_name]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("dy", 0);
-      };
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);
-    });
 }  // namespace user_op
 
 }  // namespace oneflow

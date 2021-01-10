@@ -58,14 +58,14 @@ class CpuElementwiseMinimumBackwardKernel final : public user_op::OpKernel {
     const T* dptr_x = tensor_x->dptr<T>();
     const T* dptr_y = tensor_y->dptr<T>();
 
-    T* dptr_dx = tensor_dx->mut_dptr<T>();
-    T* dptr_dy = tensor_dy->mut_dptr<T>();
+    T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
+    T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
     FOR_RANGE(int64_t, idx, 0, tensor_dz->shape().elem_cnt()) {
       if (dptr_x[idx] < dptr_y[idx]) {
-        dptr_dx[idx] = dptr_dz[idx];
+        if (dptr_dx) { dptr_dx[idx] = dptr_dz[idx]; }
       } else {
-        dptr_dy[idx] = dptr_dz[idx];
+        if (dptr_dy) { dptr_dy[idx] = dptr_dz[idx]; }
       }
     }
   }
