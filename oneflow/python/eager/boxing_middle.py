@@ -15,7 +15,6 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow_api.oneflow.core.job.placement as placement_cfg

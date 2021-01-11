@@ -23,7 +23,7 @@ import numpy as np
 
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.operator.inter_face_blob_conf_pb2 as inter_face_blob_conf_util
+import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util

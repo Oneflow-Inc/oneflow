@@ -36,7 +36,6 @@ import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
@@ -349,7 +348,7 @@ class InstructionsBuilder(object):
         phy_op_arg_blob_attrs = self._GetPhysicalOpArgBlobAttrs(blob_object)
 
         def GetPhysicalBlob(parallel_desc_sym, blob_attr):
-            op_arg_parallel_attr = op_arg_util.MakeMirroredOpArgParallelAttribute(
+            op_arg_parallel_attr = oneflow_api.MakeMirroredOpArgParallelAttribute(
                 parallel_desc_sym
             )
             pyhsical_blob_object = self._NewBlobObject(op_arg_parallel_attr, blob_attr)
@@ -382,10 +381,10 @@ class InstructionsBuilder(object):
         parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
         blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
 
-        op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-            blob_parallel_desc_sym, op_attribute, obn
+        op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+            blob_parallel_desc_sym, str(op_attribute), obn
         )
-        op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+        op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
 
         blob_object = self._NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
         self._LazyReference(blob_object, interface_op_name)
@@ -536,7 +535,7 @@ class InstructionsBuilder(object):
         object_id = self._BroadcastObjectReference(
             sole_mirrored_blob_object, parallel_desc_sym
         )
-        op_arg_parallel_attr = op_arg_util.MakeBroadcastOpArgParallelAttribute(
+        op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
             parallel_desc_sym
         )
         return object_util.BlobObject(
@@ -653,8 +652,8 @@ class InstructionsBuilder(object):
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                op_parallel_desc_sym, op_attribute, ibn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                op_parallel_desc_sym, str(op_attribute), ibn
             )
             return get_delegate_blob_object(
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
@@ -710,8 +709,8 @@ class InstructionsBuilder(object):
         op_parallel_desc_sym = opkernel_object.parallel_desc_symbol
 
         def DelegateBlobObject4Ibn(ibn):
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                op_parallel_desc_sym, op_attribute, ibn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                op_parallel_desc_sym, str(op_attribute), ibn
             )
             return get_delegate_blob_object(
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
@@ -833,10 +832,10 @@ class InstructionsBuilder(object):
 
         for obn in OutputBns():
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                GetOutBlobParallelDescSymbol(obn), op_attribute, obn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                GetOutBlobParallelDescSymbol(obn), str(op_attribute), obn
             )
-            op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+            op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
             out_blob_object = self._NewBlobObject(
                 op_arg_parallel_attr, op_arg_blob_attr
             )
@@ -877,10 +876,10 @@ class InstructionsBuilder(object):
             if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                GetOutBlobParallelDescSymbol(obn), op_attribute, obn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                GetOutBlobParallelDescSymbol(obn), str(op_attribute), obn
             )
-            op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+            op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
             out_blob_object = self._NewBlobObject(
                 op_arg_parallel_attr, op_arg_blob_attr
             )
@@ -1236,7 +1235,7 @@ def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
     op_conf.device_tag = new_parallel_desc_symbol.device_tag
     op_conf.input_conf.out = "out"
     cfg_interface_blob_conf = (
-        oneflow_api.oneflow.core.operator.inter_face_blob_conf.InterfaceBlobConf()
+        oneflow_api.oneflow.core.operator.interface_blob_conf.InterfaceBlobConf()
     )
     blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
     blob_object.op_arg_blob_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)

@@ -30,7 +30,6 @@ import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
@@ -173,7 +172,9 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        ret = self.blob_object.op_arg_blob_attr.dtype
+        ret = convert_proto_dtype_to_oneflow_dtype(
+            self.blob_object.op_arg_blob_attr.get_dtype()
+        )
         assert issubclass(ret, dtype_util.dtype)
         return ret
 

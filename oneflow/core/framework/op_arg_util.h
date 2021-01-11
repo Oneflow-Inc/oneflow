@@ -24,12 +24,14 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
-#include "oneflow/core/operator/inter_face_blob_conf.cfg.h"
+#include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/register/pod.cfg.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/register/batch_axis_signature.cfg.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -199,6 +201,19 @@ class OpArgParallelAttribute {
   std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel_;
   std::size_t hash_;
 };
+
+Maybe<OpArgBlobAttribute> GetOpArgBlobAttribute(const OpAttribute& op_attribute,
+                                                const std::string& bn_in_op);
+
+Maybe<OpArgParallelAttribute> GetOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol, const OpAttribute& op_attribute,
+    const std::string& bn_in_op);
+
+Maybe<OpArgParallelAttribute> MakeMirroredOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
+
+Maybe<OpArgParallelAttribute> MakeBroadcastOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
 
 }  // namespace compatible_py
 
