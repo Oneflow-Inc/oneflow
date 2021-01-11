@@ -30,7 +30,7 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
     yum update -y && yum install -y epel-release && \
     yum -y install centos-release-scl && \
-    yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel devtoolset-7-gcc*
+    yum install -y intel-mkl-64bit-2020.0-088 nasm rdma-core-devel devtoolset-7-gcc*
 
 RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 

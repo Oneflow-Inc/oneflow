@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/logical_node.h"
@@ -102,7 +102,7 @@ Maybe<void> Operator::InferParallelSignatureIf() {
 }
 
 Maybe<void> Operator::InferParallelSignature() {
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();
@@ -765,7 +765,7 @@ Maybe<void> InferOpSbpSignature(
   };
   auto OrderValue4SbpHint = [&](const std::string& ibn,
                                 const SbpParallel& sbp_parallel) -> int32_t {
-    return -3 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
+    return -8 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
   };
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {

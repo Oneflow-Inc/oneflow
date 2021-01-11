@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
 
 namespace oneflow {
@@ -49,7 +49,7 @@ __global__ void IndexedSlicesSGDUpdateGpu(const IDX data_elem_cnt, const K* indi
       const IDX local_feature_id = feature_id - feature_id_offset;
       if (local_feature_id >= 0 && local_feature_id < num_features) {
         const IDX update_offset = local_feature_id * feature_size + inner_idx;
-        gpu_atomic_add(model + update_offset, val * minus_lr);
+        cuda::atomic::Add(model + update_offset, val * minus_lr);
       }
     }
   }

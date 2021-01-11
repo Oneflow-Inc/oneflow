@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.c_api_util as c_api_util
+import oneflow_api
 
 
 class IdGenerator(object):
@@ -28,15 +28,15 @@ class IdGenerator(object):
 
 class PhysicalIdGenerator(IdGenerator):
     def NewSymbolId(self):
-        return c_api_util.NewPhysicalSymbolId()
+        return oneflow_api.NewPhysicalSymbolId()
 
     def NewObjectId(self):
-        return c_api_util.NewPhysicalObjectId()
+        return oneflow_api.NewPhysicalObjectId()
 
 
 class LogicalIdGenerator(IdGenerator):
     def NewSymbolId(self):
-        return c_api_util.NewLogicalSymbolId()
+        return oneflow_api.NewLogicalSymbolId()
 
     def NewObjectId(self):
-        return c_api_util.NewLogicalObjectId()
+        return oneflow_api.NewLogicalObjectId()

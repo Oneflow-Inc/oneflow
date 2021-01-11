@@ -15,6 +15,30 @@ limitations under the License.
 """
 
 
+def PythonDict2CFG(value, msg):
+    def extend_dict(values, msg):
+        for k, v in values.items():
+            if type(v) is dict:
+                extend_dict(v, getattr(msg, "mutable_" + k)())
+            elif type(v) is list or type(v) is tuple:
+                extend_list_or_tuple(v, msg, k)
+            else:
+                getattr(msg, "set_" + k)(v)
+
+    def extend_list_or_tuple(values, msg, attr):
+        if len(values) == 0 or type(values[0]) is dict:
+            msg = getattr(msg, "mutable_" + attr)()
+            for v in values:
+                cmd = msg.Add()
+                extend_dict(v, cmd)
+        else:
+            for v in values:
+                getattr(msg, "add_" + attr)(v)
+
+    extend_dict(value, msg)
+    return msg
+
+
 def PythonDict2PbMessage(value, msg):
     def extend_dict(values, msg):
         for k, v in values.items():
