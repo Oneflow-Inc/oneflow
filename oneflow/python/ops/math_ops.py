@@ -1222,7 +1222,7 @@ def logical_and(
 
 
 @oneflow_export("math.minimum")
-def broadcast_min(
+def minimum(
     x: oneflow_api.BlobDesc, y: oneflow_api.BlobDesc, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
     r"""Returns the min of x and y element-wise, this op supports broadcasting.
@@ -1256,11 +1256,23 @@ def broadcast_min(
         # out [2. 2. 1.]
 
     """
-    return build_broadcast_binary_op("broadcast_minimum", x, y, name)
+    if x.shape == y.shape:
+        return (
+            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMinimum_"))
+            .Op("elementwise_minimum")
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("z")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
 @oneflow_export("math.maximum")
-def broadcast_max(
+def maximum(
     x: oneflow_api.BlobDesc, y: oneflow_api.BlobDesc, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
     """Returns the max of x and y element-wise, this op supports broadcasting.
@@ -1294,7 +1306,19 @@ def broadcast_max(
         # out [4. 3. 4.]
 
     """
-    return build_broadcast_binary_op("broadcast_maximum", x, y, name)
+    if x.shape == y.shape:
+        return (
+            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMaximum_"))
+            .Op("elementwise_maximum")
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("z")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
 @oneflow_export("math.reduced_shape_elem_cnt")
