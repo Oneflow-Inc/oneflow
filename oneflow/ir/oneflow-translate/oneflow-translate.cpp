@@ -58,7 +58,7 @@ Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
   return created;
 }
 
-#include "oneflow/ir/oneflow-translate/OneFlowTranslateRewrites.inc"
+#include "OneFlow/OneFlowTranslateRewrites.inc"
 
 using PbMessage = google::protobuf::Message;
 
