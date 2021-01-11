@@ -171,13 +171,16 @@ def compare_with_np(
     log_probs = log_softmax(log_probs, axis=2)
 
     targets = np.random.randint(
-        1, high=num_classes, size=(batch_size, max_target_length)
+        1, high=num_classes, size=(batch_size, max_target_length), dtype=np.int32
     )
     input_lengths = np.random.randint(
-        max_input_length / 2, high=max_input_length, size=(batch_size,)
+        max_input_length / 2, high=max_input_length, size=(batch_size,), dtype=np.int32
     )
     target_lengths = np.random.randint(
-        max_target_length / 2, high=max_target_length, size=(batch_size,)
+        max_target_length / 2,
+        high=max_target_length,
+        size=(batch_size,),
+        dtype=np.int32,
     )
 
     # OneFlow
@@ -205,10 +208,10 @@ def gen_arg_list(type):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1]
     arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["max_logit_length"] = [20]
+    arg_dict["max_input_length"] = [20]
     arg_dict["batch_size"] = [4]
     arg_dict["num_classes"] = [5]
-    arg_dict["max_label_length"] = [10]
+    arg_dict["max_target_length"] = [10]
     arg_dict["blank"] = [0, 1, 4]
     arg_dict["reduction"] = ["none", "mean", "sum"]
     arg_dict["zero_infinity"] = [False, True]

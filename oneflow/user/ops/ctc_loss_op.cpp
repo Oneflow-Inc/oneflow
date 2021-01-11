@@ -33,7 +33,7 @@ REGISTER_USER_OP("ctc_loss")
           ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
       const user_op::TensorDesc* target_lengths =
           ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      int64_t batch_size = log_probs->shape().At(1);
+      const int64_t batch_size = log_probs->shape().At(1);
       CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
       CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
       CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
@@ -82,7 +82,7 @@ REGISTER_USER_OP("ctc_loss_grad")
           ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
       const user_op::TensorDesc* target_lengths =
           ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      int64_t batch_size = log_probs->shape().At(1);
+      const int64_t batch_size = log_probs->shape().At(1);
       CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
       CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
       CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
@@ -104,7 +104,7 @@ REGISTER_USER_OP("ctc_loss_grad")
           .Split(user_op::OpArg("target_lengths", 0), 0)
           .Split(user_op::OpArg("loss", 0), 0)
           .Split(user_op::OpArg("alpha", 0), 0)
-          .Split(user_op::OpArg("grad", 0), 0)
+          .Split(user_op::OpArg("grad", 0), 1)
           .Build();
       return Maybe<void>::Ok();
     });
