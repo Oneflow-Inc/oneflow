@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.inter_face_blob_conf_pb2 as inter_face_blob_conf_util
@@ -246,7 +246,7 @@ def _EagerRunModelInit(var_op_conf):
     bn_in_op2blob_object = {}
 
     def BuildModelInitInstruction(builder):
-        upstream_signature = op_attribute_pb.OpNodeSignature()
+        upstream_signature = op_node_signature_pb.OpNodeSignature()
         op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
         parallel_conf = (
