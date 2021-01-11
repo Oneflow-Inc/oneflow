@@ -269,7 +269,7 @@ void roundTripOneFlowJob(::oneflow::Job *job) {
   } else {
     std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
   }
-  applyPatterns(&context, module, true);
+  applyPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
 }
 
 void registerFromOneFlowJobTranslation() {
