@@ -45,13 +45,18 @@ class BlobObject : public Object {
       : Object(object_id, op_arg_parallel_attr->parallel_desc_symbol()),
         op_arg_parallel_attr_(op_arg_parallel_attr),
         op_arg_blob_attr_(op_arg_blob_attr) {}
-  ~BlobObject() override {
-    for (const auto& release : release_) { release(this); }
-  }
+  ~BlobObject() override { ForceReleaseAll(); }
 
-  std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr() { return op_arg_parallel_attr_; }
-  std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr() { return op_arg_blob_attr_; }
+  std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr() const {
+    return op_arg_parallel_attr_;
+  }
+  std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr() const { return op_arg_blob_attr_; }
   void add_releaser(std::function<void(BlobObject*)> release) { release_.emplace_back(release); }
+
+  void ForceReleaseAll() {
+    for (const auto& release : release_) { release(this); }
+    release_.clear();
+  }
 
  private:
   std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr_;

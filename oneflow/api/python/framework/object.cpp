@@ -43,7 +43,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("parallel_desc_symbol", &BlobObject::parallel_desc_symbol)
       .def_property_readonly("op_arg_parallel_attr", &BlobObject::op_arg_parallel_attr)
       .def_property_readonly("op_arg_blob_attr", &BlobObject::op_arg_blob_attr)
-      .def("add_releaser", &BlobObject::add_releaser);
+      .def("add_releaser", &BlobObject::add_releaser)
+      .def("__del__", &BlobObject::ForceReleaseAll);
 }
 
 }  // namespace compatible_py
