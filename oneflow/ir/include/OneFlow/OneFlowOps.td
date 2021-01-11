@@ -15,9 +15,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits>;
 
-class OneFlow_UserOp<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, traits>;
-
 def ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
