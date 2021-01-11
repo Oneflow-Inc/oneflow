@@ -565,16 +565,16 @@ def ConstructNaiveBoxingOpConf(
     op_conf.boxing_conf.in_num = in_parallel_num
     op_conf.boxing_conf.out_num = out_parallel_num
     in_sbp_parallel = produced_blob_object.op_arg_parallel_attr.sbp_parallel
-    if in_sbp_parallel.HasField("split_parallel"):
-        op_conf.boxing_conf.concat_box.axis = in_sbp_parallel.split_parallel.axis
+    if in_sbp_parallel.has_split_parallel():
+        op_conf.boxing_conf.concat_box.axis = in_sbp_parallel.split_parallel().axis()
     elif in_parallel_num == 1:
         op_conf.boxing_conf.concat_box.axis = 0
     else:
-        assert in_sbp_parallel.HasField("partial_sum_parallel")
+        assert in_sbp_parallel.has_partial_sum_parallel()
         op_conf.boxing_conf.add_box.SetInParent()
     out_sbp_parallel = consumer_op_arg_parallel_attr.sbp_parallel
-    if out_sbp_parallel.HasField("split_parallel"):
-        out_axis = out_sbp_parallel.split_parallel.axis
+    if out_sbp_parallel.has_split_parallel():
+        out_axis = out_sbp_parallel.split_parallel().axis()
     else:
         assert out_parallel_num == 1
         out_axis = 0
