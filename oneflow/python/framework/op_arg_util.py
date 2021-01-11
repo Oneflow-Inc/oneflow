@@ -56,44 +56,6 @@ class OpArgBlobAttribute(oneflow_api.OpArgBlobAttribute):
         )
         return physical_blob_attr
 
-    def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
-        blob_sig = op_node_signature.logical_blob_desc_signature.bn_in_op2blob_desc
-        assert bn_in_op not in blob_sig
-        text_format.Parse(str(self.blob_desc), blob_sig[bn_in_op])
-        batch_axis_sig = op_node_signature.batch_axis_signature.bn_in_op2batch_axis
-        assert bn_in_op not in batch_axis_sig
-        text_format.Parse(str(self.batch_axis), batch_axis_sig[bn_in_op])
-
-
-class OpArgParallelAttribute(oneflow_api.OpArgParallelAttribute):
-    def __init__(self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel):
-        if not isinstance(sbp_parallel, oneflow_api.CfgMessage):
-            sbp_parallel = oneflow_api.deprecated.MakeSbpParrallelByString(
-                str(sbp_parallel)
-            )
-        if not isinstance(opt_mirrored_parallel, oneflow_api.CfgMessage):
-            opt_mirrored_parallel = oneflow_api.deprecated.MakeOptMirroredParrallelByString(
-                str(opt_mirrored_parallel)
-            )
-        oneflow_api.OpArgParallelAttribute.__init__(
-            self, parallel_desc_symbol, sbp_parallel, opt_mirrored_parallel
-        )
-
-    def DumpToOpNodeSignature(self, bn_in_op, op_node_signature):
-        sbp_sig = op_node_signature.sbp_signature.bn_in_op2sbp_parallel
-        assert bn_in_op not in sbp_sig
-        text_format.Parse(str(self.sbp_parallel), sbp_sig[bn_in_op])
-        mirrored_sig = (
-            op_node_signature.mirrored_signature.bn_in_op2opt_mirrored_parallel
-        )
-        assert bn_in_op not in mirrored_sig
-        text_format.Parse(str(self.opt_mirrored_parallel), mirrored_sig[bn_in_op])
-        parallel_sig = (
-            op_node_signature.parallel_signature.bn_in_op2parallel_desc_symbol_id
-        )
-        assert bn_in_op not in parallel_sig
-        parallel_sig[bn_in_op] = self.parallel_desc_symbol.symbol_id
-
 
 def GetOpArgBlobAttribute(op_attribute, bn_in_op):
     if not op_attribute.HasField("batch_axis_signature"):
@@ -118,10 +80,10 @@ def GetOpArgParallelAttribute(parallel_desc_symbol, op_attribute, bn_in_op):
     mirrored_signature_map = (
         op_attribute.mirrored_signature.bn_in_op2opt_mirrored_parallel
     )
-    return OpArgParallelAttribute(
-        parallel_desc_symbol=parallel_desc_symbol,
-        sbp_parallel=sbp_signature_map[bn_in_op],
-        opt_mirrored_parallel=mirrored_signature_map[bn_in_op],
+    return oneflow_api.OpArgParallelAttribute(
+        parallel_desc_symbol,
+        str(sbp_signature_map[bn_in_op]),
+        str(mirrored_signature_map[bn_in_op]),
     )
 
 
@@ -129,10 +91,8 @@ def MakeMirroredOpArgParallelAttribute(parallel_desc_symbol):
     sbp_parallel = sbp_parallel_pb.SbpParallel()
     opt_mirrored_parallel = mirrored_parallel_pb.OptMirroredParallel()
     opt_mirrored_parallel.mirrored_parallel.SetInParent()
-    return OpArgParallelAttribute(
-        parallel_desc_symbol=parallel_desc_symbol,
-        sbp_parallel=sbp_parallel,
-        opt_mirrored_parallel=opt_mirrored_parallel,
+    return oneflow_api.OpArgParallelAttribute(
+        parallel_desc_symbol, str(sbp_parallel), str(opt_mirrored_parallel),
     )
 
 
@@ -140,8 +100,6 @@ def MakeBroadcastOpArgParallelAttribute(parallel_desc_symbol):
     sbp_parallel = sbp_parallel_pb.SbpParallel()
     sbp_parallel.broadcast_parallel.SetInParent()
     opt_mirrored_parallel = mirrored_parallel_pb.OptMirroredParallel()
-    return OpArgParallelAttribute(
-        parallel_desc_symbol=parallel_desc_symbol,
-        sbp_parallel=sbp_parallel,
-        opt_mirrored_parallel=opt_mirrored_parallel,
+    return oneflow_api.OpArgParallelAttribute(
+        parallel_desc_symbol, str(sbp_parallel), str(opt_mirrored_parallel),
     )

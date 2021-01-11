@@ -17,10 +17,31 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
+
+namespace {
+
+Maybe<cfg::SbpParallel> MakeSbpParallel(const std::string& serialized_str) {
+  SbpParallel sbp_parallel;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &sbp_parallel))
+      << "sbp_parallel parse failed";
+  return std::make_shared<cfg::SbpParallel>(sbp_parallel);
+}
+
+Maybe<cfg::OptMirroredParallel> MakeOptMirroredParallel(const std::string& serialized_str) {
+  OptMirroredParallel opt_mirrored_parallel;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &opt_mirrored_parallel))
+      << "opt_mirrored_parallel parse failed";
+  return std::make_shared<cfg::OptMirroredParallel>(opt_mirrored_parallel);
+}
+
+}  // namespace
 
 namespace compatible_py {
 
@@ -50,13 +71,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return static_cast<int>(x->get_dtype());
            })
       .def("DumpToInterfaceBlobConf", &OpArgBlobAttribute::DumpToInterfaceBlobConf)
+      .def("DumpToOpNodeSignature", &OpArgBlobAttribute::DumpToOpNodeSignature)
       .def(py::self == py::self);
 
   py::class_<OpArgParallelAttribute, std::shared_ptr<OpArgParallelAttribute>>(
       m, "OpArgParallelAttribute")
       .def(py::init([](std::shared_ptr<ParallelDesc> parallel_desc,
-                       std::shared_ptr<cfg::SbpParallel> sbp_parallel,
-                       std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel) {
+                       const std::string& sbp_parallel_str,
+                       const std::string& opt_mirrored_parallel_str) {
+        std::shared_ptr<cfg::SbpParallel> sbp_parallel =
+            MakeSbpParallel(sbp_parallel_str).GetPtrOrThrow();
+        std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel =
+            MakeOptMirroredParallel(opt_mirrored_parallel_str).GetPtrOrThrow();
         return std::make_shared<OpArgParallelAttribute>(parallel_desc, sbp_parallel,
                                                         opt_mirrored_parallel);
       }))
@@ -68,6 +94,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_Hash", &OpArgParallelAttribute::_Hash)
       .def("Assign", &OpArgParallelAttribute::Assign)
       .def("DumpToInterfaceBlobConf", &OpArgParallelAttribute::DumpToInterfaceBlobConf)
+      .def("DumpToOpNodeSignature", &OpArgParallelAttribute::DumpToOpNodeSignature)
       .def("__str__", &OpArgParallelAttribute::ToString)
       .def("__repr__", &OpArgParallelAttribute::ToString)
       .def(py::self == py::self)

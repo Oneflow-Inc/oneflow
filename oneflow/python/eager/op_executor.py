@@ -224,10 +224,10 @@ def _Assign(var_blob_object, value_blob_object):
         new_parallel_desc_symbol = boxing_util.TryReplaceDeviceTag(
             builder, var_blob_object.parallel_desc_symbol, "cpu"
         )
-        consumer_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
+        consumer_op_arg_parallel_attr = oneflow_api.OpArgParallelAttribute(
             new_parallel_desc_symbol,
-            var_blob_object.op_arg_parallel_attr.sbp_parallel,
-            var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+            str(var_blob_object.op_arg_parallel_attr.sbp_parallel),
+            str(var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
         )
         tmp_blob_object = boxing_util.BoxingTo(
             builder, value_blob_object, consumer_op_arg_parallel_attr

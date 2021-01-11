@@ -54,14 +54,16 @@ def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
     def GetOpArgParallelAttr(
         builder, produced_blob_object, consumer_op_arg_parallel_attr
     ):
-        return op_arg_util.OpArgParallelAttribute(
+        return oneflow_api.OpArgParallelAttribute(
             get_parallel_desc_symbol(
                 builder, produced_blob_object, consumer_op_arg_parallel_attr
             ),
-            get_sbp_parallel(
-                builder, produced_blob_object, consumer_op_arg_parallel_attr
+            str(
+                get_sbp_parallel(
+                    builder, produced_blob_object, consumer_op_arg_parallel_attr
+                )
             ),
-            produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+            str(produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
         )
 
     return GetOpArgParallelAttr

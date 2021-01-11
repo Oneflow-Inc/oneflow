@@ -243,10 +243,10 @@ class EagerBlobTrait(object):
                 )
                 parallel_conf.add_device_name("{}:{}".format(0, 0))
                 tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
-                tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
+                tmp_op_arg_parallel_attr = oneflow_api.OpArgParallelAttribute(
                     tmp_parallel_desc_symbol,
-                    blob_object.op_arg_parallel_attr.sbp_parallel,
-                    blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+                    str(blob_object.op_arg_parallel_attr.sbp_parallel),
+                    str(blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
                 )
                 with oneflow.scope.placement(
                     self.parallel_conf.device_tag(),

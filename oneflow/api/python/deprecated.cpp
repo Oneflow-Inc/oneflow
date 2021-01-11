@@ -41,20 +41,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<cfg::SbpParallel> MakeSbpParallel(const std::string& serialized_str) {
-  SbpParallel sbp_parallel;
-  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &sbp_parallel))
-      << "sbp_parallel parse failed";
-  return std::make_shared<cfg::SbpParallel>(sbp_parallel);
-}
-
-Maybe<cfg::OptMirroredParallel> MakeOptMirroredParallel(const std::string& serialized_str) {
-  OptMirroredParallel opt_mirrored_parallel;
-  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &opt_mirrored_parallel))
-      << "opt_mirrored_parallel parse failed";
-  return std::make_shared<cfg::OptMirroredParallel>(opt_mirrored_parallel);
-}
-
 Maybe<cfg::OpNodeSignature> MakeOpNodeSignatureFromSerializedOpAttribute(
     const std::string& op_attribute_str) {
   OpAttribute op_attribute;
@@ -86,12 +72,6 @@ Maybe<cfg::BlobDescProto> MakeBlobDescProto(const std::string& serialized_str) {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
-  m.def("MakeSbpParrallelByString",
-        [](const std::string& str) { return MakeSbpParallel(str).GetPtrOrThrow(); });
-
-  m.def("MakeOptMirroredParrallelByString",
-        [](const std::string& str) { return MakeOptMirroredParallel(str).GetPtrOrThrow(); });
-
   m.def("MakeOpNodeSignatureFromSerializedOpAttribute", [](const std::string& str) {
     return MakeOpNodeSignatureFromSerializedOpAttribute(str).GetPtrOrThrow();
   });
