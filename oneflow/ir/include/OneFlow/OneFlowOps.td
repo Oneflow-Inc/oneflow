@@ -78,4 +78,12 @@ def OneFlow_UserOp : OneFlow_Op<"user", []> {
     let results = (outs Variadic<AnyType>:$outputs);
 }
 
+def OneFlow_NoOp : OneFlow_Op<"NoOp", [NoSideEffect]> {
+  let summary = "Placeholder for ops with control edge or foreign input, etc";
+
+  let arguments = (ins);
+
+  let results = (outs);
+}
+
 #endif // ONEFLOW_OPS
