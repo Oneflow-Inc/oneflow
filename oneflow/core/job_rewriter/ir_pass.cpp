@@ -45,7 +45,7 @@ class IRPass final : public JobPass {
   ~IRPass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    // add compiler definition for MLIR and job conf flags
+    // TODO: add compiler definition for MLIR and job conf flags
     return true;
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
