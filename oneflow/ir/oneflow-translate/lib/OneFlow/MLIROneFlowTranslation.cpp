@@ -39,7 +39,6 @@ Attribute createEmptyDictionaryAttr(Builder &builder) { return builder.getDictio
 Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
                            ::mlir::Operation::operand_range operands, ::mlir::StringAttr op_name,
                            ::mlir::StringAttr op_type_name, ::mlir::DictionaryAttr attr) {
-  std::cout << "replacing generic user op: " << op_type_name.getValue().str() << "\n";
   auto unknownLoc = FileLineColLoc::get("imported-protobuf", 0, 0, rewriter.getContext());
   mlir::Value created =
       rewriter.create<oneflow::ReluOp>(unknownLoc, operands[0], op_name).getResult();
