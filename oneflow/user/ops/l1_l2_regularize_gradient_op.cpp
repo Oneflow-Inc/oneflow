@@ -36,6 +36,21 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/*
+For l1_l2_regularaize_gradient:
+
+ComputationCost
+= 4 * |model_size|
+*/
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  double cost = model->shape().elem_cnt()*4;
+  if (ctx->SbpParallel4ArgNameAndIndex("out", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
 }  // namespace
 
 REGISTER_USER_OP("l1_l2_regularize_gradient")
@@ -46,6 +61,7 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
     .Attr<float>("l2", 0)
     .SetTensorDescInferFn(InferTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
-    .SetGetSbpFn(GetSbpSignatures);
+    .SetGetSbpFn(GetSbpSignatures)
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 }  // namespace oneflow
