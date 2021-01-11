@@ -236,7 +236,21 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
 
   return module;
 }
+
 }  // namespace
+
+void translateFromOneFlowJobToMLIR(::oneflow::Job *job) {
+  mlir::MLIRContext context;
+  // Load our Dialect in this MLIR Context.
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+  OwningModuleRef module(
+      ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
+  Importer imp(&context, module.get());
+  if (failed(imp.processJob(job))) {
+    std::cerr << "fail to process job, job_name: " << job->job_conf().job_name();
+  }
+}
 
 void registerFromOneFlowJobTranslation() {
   TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",

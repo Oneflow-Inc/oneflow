@@ -1,8 +1,11 @@
 #ifndef ONEFLOW_MLIRONEFLOWTRANSLATION_H
 #define ONEFLOW_MLIRONEFLOWTRANSLATION_H
 
+#include "oneflow/core/job/job.pb.h"
+
 namespace mlir {
 
+void translateFromOneFlowJobToMLIR(::oneflow::Job *job);
 void registerFromOneFlowJobTranslation();
 
 }  // namespace mlir
