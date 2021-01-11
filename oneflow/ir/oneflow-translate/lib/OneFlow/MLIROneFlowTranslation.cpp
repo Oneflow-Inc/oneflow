@@ -250,11 +250,13 @@ void roundTripOneFlowJob(::oneflow::Job *job) {
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
   Importer imp(&context, module.get());
-  if (failed(imp.processJob(job))) {
+  if (succeeded(imp.processJob(job))) {
+    if (failed(imp.updateJob(job))) {
+      std::cerr << "fail to update job with IR, job will stay intact, job_name: "
+                << job->job_conf().job_name();
+    }
+  } else {
     std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
-  }
-  if (failed(imp.updateJob(job))) {
-    std::cerr << "fail to update job with IR, job_name: " << job->job_conf().job_name();
   }
 }
 
