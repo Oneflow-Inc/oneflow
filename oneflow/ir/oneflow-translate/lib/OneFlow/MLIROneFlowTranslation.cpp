@@ -24,7 +24,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "OneFlow/MLIROneFlowTranslate.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
 
 namespace mlir {
 

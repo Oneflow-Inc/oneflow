@@ -17,7 +17,7 @@ add_llvm_executable(oneflow-translate
   oneflow-translate.cpp
   DEPENDS
   MLIROneFlow
-  MLIROneFlowTranslate
+  MLIROneFlowTranslation
   )
 llvm_update_compile_flags(oneflow-translate)
 
@@ -26,7 +26,7 @@ target_link_libraries(oneflow-translate
   ${dialect_libs}
   ${translation_libs}
   MLIRTranslation
-  MLIROneFlowTranslate
+  MLIROneFlowTranslation
 )
 
 mlir_check_link_libraries(oneflow-translate)

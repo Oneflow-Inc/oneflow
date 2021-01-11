@@ -1,4 +1,4 @@
-#include "OneFlow/MLIROneFlowTranslate.h"
+#include "OneFlow/MLIROneFlowTranslation.h"
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Translation.h"
 #include "mlir/Support/LogicalResult.h"
