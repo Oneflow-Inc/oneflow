@@ -20,10 +20,10 @@ namespace oneflow {
 
 namespace {
 
-class IRPass final : public JobPass {
+class IRRoundTrip final : public JobPass {
  public:
-  IRPass() = default;
-  ~IRPass() override = default;
+  IRRoundTrip() = default;
+  ~IRRoundTrip() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
     // TODO: add compiler definition for MLIR and job conf flags
@@ -38,6 +38,6 @@ class IRPass final : public JobPass {
 
 }  // namespace
 
-REGISTER_JOB_PASS("IRPass", IRPass);
+REGISTER_JOB_PASS("IRRoundTrip", IRRoundTrip);
 
 }  // namespace oneflow

@@ -961,7 +961,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
-    JUST(DoPass("IRPass"));
+    if (HasJobPass("IRRoundTrip")) { JUST(DoPass("IRRoundTrip")); }
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     JUST(DoPass("FuseAddToOutputPass"));
