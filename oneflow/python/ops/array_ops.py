@@ -1934,6 +1934,60 @@ def identity_n(
     )
 
 
+@oneflow_export("cast_to_static_shape")
+def cast_to_static_shape(
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    r"""This operator returns a `Blob` that has identical content and data type to input `Blob`, and whose shape is converted from dynamic to static
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Blob which has dynamic shape. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc: The result Blob which is identical to input blob but has static shape. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def cast_to_static_shape_func(
+            x: tp.ListNumpy.Placeholder(shape=(3, 3), dtype=flow.float32),
+        ) -> tp.Numpy:
+            return flow.cast_to_static_shape(x)
+
+        x = np.array([[1, 1, 1], 
+                      [2, 2, 2], 
+                      [3, 3, 3]]).astype(np.float32)
+
+        out = cast_to_static_shape_func(x)
+
+        # out [[1 1 1]
+        #      [2 2 2]
+        #      [3 3 3]]
+
+    """
+    if not x.is_dynamic:
+        return x
+
+    if name is None:
+        name = id_util.UniqueStr("CastToStaticShape_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("cast_to_static_shape")
+        .Input("input", [x])
+        .Output("output")
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
 @oneflow_export("squeeze")
 def squeeze(
     input: oneflow_api.BlobDesc,
