@@ -36,16 +36,6 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 
 }  // namespace
 
-bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
-  return (order == ColIdOrder::kAscending && regst->col_id() == 0)
-         || (order == ColIdOrder::kDescending && regst->IsMaxCol());
-}
-
-bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
-  return (order == ColIdOrder::kAscending && regst->IsMaxCol())
-         || (order == ColIdOrder::kDescending && regst->col_id() == 0);
-}
-
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;

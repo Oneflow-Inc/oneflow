@@ -22,16 +22,19 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
+import oneflow_api
 from typing import Tuple, Optional, Union, Sequence, Text
+import traceback
 
 
 class ClipGradientConf:
     @property
-    def clip_conf(self) -> op_conf_pb.ClipConf:
+    def clip_conf(self) -> job_conf_pb.ClipConf:
         raise NotImplementedError()
 
 
@@ -89,14 +92,14 @@ class by_global_norm(ClipGradientConf):
 
     @property
     def clip_conf(self):
-        clip_conf = op_conf_pb.ClipConf()
+        clip_conf = job_conf_pb.ClipConf()
         clip_conf.clip_by_global_norm.clip_norm = self.clip_norm
         return clip_conf
 
 
 class WarmupConf:
     @property
-    def warmup_conf(self) -> op_conf_pb.WarmupConf:
+    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
         raise NotImplementedError()
 
 
@@ -153,8 +156,8 @@ class constant(WarmupConf):
         self.multiplier = multiplier
 
     @property
-    def warmup_conf(self) -> op_conf_pb.WarmupConf:
-        warmup_conf = op_conf_pb.WarmupConf()
+    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
+        warmup_conf = learning_rate_schedule_conf_pb.WarmupConf()
         warmup_conf.constant_conf.warmup_batches = self.steps
         warmup_conf.constant_conf.multiplier = self.multiplier
         return warmup_conf
@@ -208,8 +211,8 @@ class linear(WarmupConf):
         self.start_multiplier = start_multiplier
 
     @property
-    def warmup_conf(self) -> op_conf_pb.WarmupConf:
-        warmup_conf = op_conf_pb.WarmupConf()
+    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
+        warmup_conf = learning_rate_schedule_conf_pb.WarmupConf()
         warmup_conf.linear_conf.warmup_batches = self.steps
         warmup_conf.linear_conf.start_multiplier = self.start_multiplier
         return warmup_conf
@@ -227,7 +230,9 @@ class LrScheduler:
         self.warmup = warmup
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
         raise NotImplementedError()
 
     def SetLrFieldsInTrainConf(self, train_conf) -> None:
@@ -247,7 +252,7 @@ class LrScheduler:
             train_conf.primary_lr = self.base_lr
 
     @property
-    def warmup_conf(self) -> op_conf_pb.WarmupConf:
+    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
         if self.warmup is None:
             return None
         return self.warmup.warmup_conf
@@ -318,8 +323,12 @@ class CosineScheduler(LrScheduler):
         self.alpha = alpha
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.cosine_conf.decay_batches = self.steps
         learning_rate_decay_conf.cosine_conf.alpha = self.alpha
         return learning_rate_decay_conf
@@ -331,7 +340,9 @@ class CustomScheduler(LrScheduler):
         super().__init__(lr_lbn=lbn)
 
     @property
-    def learning_rate_decay_conf(self) -> op_conf_pb.LearningRateDecayConf:
+    def learning_rate_decay_conf(
+        self,
+    ) -> learning_rate_schedule_conf_pb.LearningRateDecayConf:
         return None
 
 
@@ -396,8 +407,12 @@ class PiecewiseConstantScheduler(LrScheduler):
         self.values = values
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.piecewise_constant_conf.boundaries.extend(
             self.boundaries
         )
@@ -472,8 +487,12 @@ class PiecewiseScalingScheduler(LrScheduler):
         self.scale = [1] + list(scale)
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.piecewise_scaling_conf.boundaries.extend(
             self.boundaries
         )
@@ -481,8 +500,8 @@ class PiecewiseScalingScheduler(LrScheduler):
         return learning_rate_decay_conf
 
 
-@oneflow_export("optimizer.PolynomialSchduler")
-class PolynomialSchduler(LrScheduler):
+@oneflow_export("optimizer.PolynomialScheduler")
+class PolynomialScheduler(LrScheduler):
     r"""This operator creates a polynomial decayed learning rate scheduler.
 
     The learning rate will be updated as follows:
@@ -529,7 +548,7 @@ class PolynomialSchduler(LrScheduler):
                         labels, logits, name="softmax_loss"
                     )
 
-                lr_scheduler = flow.optimizer.PolynomialSchduler(base_lr=0.001,
+                lr_scheduler = flow.optimizer.PolynomialScheduler(base_lr=0.001,
                                                                  steps=5,
                                                                  end_learning_rate=0.00001,
                                                                  power=2)
@@ -555,8 +574,12 @@ class PolynomialSchduler(LrScheduler):
         self.cycle = cycle
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.polynomial_conf.decay_batches = self.steps
         learning_rate_decay_conf.polynomial_conf.end_learning_rate = (
             self.end_learning_rate
@@ -564,6 +587,36 @@ class PolynomialSchduler(LrScheduler):
         learning_rate_decay_conf.polynomial_conf.power = self.power
         learning_rate_decay_conf.polynomial_conf.cycle = self.cycle
         return learning_rate_decay_conf
+
+
+@oneflow_export("optimizer.PolynomialSchduler")
+@oneflow_deprecate()
+class PolynomialSchduler(PolynomialScheduler):
+    def __init__(
+        self,
+        base_lr: float,
+        steps: int,
+        end_learning_rate: float = 0.0001,
+        power: float = 1.0,
+        cycle: bool = False,
+        warmup: Optional[WarmupConf] = None,
+    ):
+        print(
+            "WARNING:",
+            "oneflow.optimizer.PolynomialSchduler",
+            "will be removed in the future, use {} instead.".format(
+                "oneflow.optimizer.PolynomialScheduler"
+            ),
+        )
+        print(traceback.format_stack()[-2])
+        super().__init__(
+            base_lr=base_lr,
+            steps=steps,
+            end_learning_rate=end_learning_rate,
+            power=power,
+            cycle=cycle,
+            warmup=warmup,
+        )
 
 
 @oneflow_export("optimizer.LinearCosineScheduler")
@@ -634,8 +687,12 @@ class LinearCosineScheduler(LrScheduler):
         self.beta = beta
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.linear_cosine_conf.decay_batches = self.steps
         learning_rate_decay_conf.linear_cosine_conf.num_periods = self.num_periods
         learning_rate_decay_conf.linear_cosine_conf.alpha = self.alpha
@@ -713,8 +770,12 @@ class ExponentialScheduler(LrScheduler):
         self.staircase = staircase
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.exponential_conf.decay_batches = self.steps
         learning_rate_decay_conf.exponential_conf.decay_rate = self.decay_rate
         learning_rate_decay_conf.exponential_conf.staircase = self.staircase
@@ -791,8 +852,12 @@ class InverseTimeScheduler(LrScheduler):
         self.staircase = staircase
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.inverse_time_conf.decay_batches = self.steps
         learning_rate_decay_conf.inverse_time_conf.decay_rate = self.decay_rate
         learning_rate_decay_conf.inverse_time_conf.staircase = self.staircase
@@ -869,8 +934,12 @@ class NaturalExpScheduler(LrScheduler):
         self.staircase = staircase
 
     @property
-    def learning_rate_decay_conf(self) -> Optional[op_conf_pb.LearningRateDecayConf]:
-        learning_rate_decay_conf = op_conf_pb.LearningRateDecayConf()
+    def learning_rate_decay_conf(
+        self,
+    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+        learning_rate_decay_conf = (
+            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+        )
         learning_rate_decay_conf.natural_exp_conf.decay_batches = self.steps
         learning_rate_decay_conf.natural_exp_conf.decay_rate = self.decay_rate
         learning_rate_decay_conf.natural_exp_conf.staircase = self.staircase
@@ -885,6 +954,7 @@ class LossScalePolicy:
 @oneflow_export("optimizer.loss_scale.static_loss_scale")
 class StaticLossScalePolicy(LossScalePolicy):
     def __init__(self, loss_scale_factor: float):
+        super().__init__()
         self.loss_scale_factor = loss_scale_factor
 
     def SetLossScaleFieldsInTrainConf(self, train_conf):
@@ -894,8 +964,9 @@ class StaticLossScalePolicy(LossScalePolicy):
 @oneflow_export("optimizer.loss_scale.dynamic_loss_scale")
 class DynamicLossScalePolicy(LossScalePolicy):
     def __init__(
-        self, initial_loss_scale=(2 ** 15), increment_period=2000, multiplier=2.0
+        self, initial_loss_scale=(2 ** 30), increment_period=2000, multiplier=2.0
     ):
+        super().__init__()
         self.initial_loss_scale = initial_loss_scale
         self.increment_period = increment_period
         self.multiplier = multiplier
@@ -944,7 +1015,7 @@ class Optimizer:
         return train_conf
 
     def minimize(
-        self, loss: Union[Sequence[remote_blob_util.BlobDef], remote_blob_util.BlobDef]
+        self, loss: Union[Sequence[oneflow_api.BlobDesc], oneflow_api.BlobDesc]
     ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]

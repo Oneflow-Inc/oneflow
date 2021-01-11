@@ -19,7 +19,6 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -73,7 +72,7 @@ class Session(object):
         self.var_name2var_blob_ = {}
         # parallel desc symbol id in op attribute does not always correct
         # for lazy ops as parallel conf may be updated in some passes
-        # (like non_distributed_optimizer_pass)
+        # (like optimizer_placement_optimization_pass)
         self.interface_op_name2op_attr_ = {}
         self.interface_op_name2job_name_ = {}
         self.lazy_interface_op_name2parallel_conf_ = {}
@@ -186,7 +185,7 @@ class Session(object):
             self.Init()
         return self
 
-    def _UpdateInfo4LazyInterfaceOp(self):
+    def UpdateInfo4InterfaceOp(self):
         for op_attr in c_api_util.GetOpAttributes().op_attribute:
             op_conf = op_attr.op_conf
             if c_api_util.IsInterfaceOpConf(op_conf):
@@ -208,21 +207,21 @@ class Session(object):
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         self.status_ = SessionStatus.RUNNING
-        if not c_api_util.IsEnvInited():
+        if not oneflow_api.IsEnvInited():
             oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto)
         self.resource_ = self.config_proto.resource
-        if not c_api_util.EagerExecutionEnabled():
+        if not oneflow_api.EagerExecutionEnabled():
             c_api_util.InitLazyGlobalSession(self.config_proto)
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(self, func_desc, self.config_proto)
                 self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
-            c_api_util.StartLazyGlobalSession()
+            oneflow_api.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
             # Get latest op_attr and job_name after compiler.Compile
-            self._UpdateInfo4LazyInterfaceOp()
+            self.UpdateInfo4InterfaceOp()
             if not config_util.api_legacy_model_io_enabled():
                 check_point_v2.Init()
         else:
@@ -248,8 +247,8 @@ class Session(object):
         del self.job_name2module_name2module_
         self.ReleaseLazyRefBlob()
         self.ForceReleaseEagerBlobs()
-        c_api_util.StopLazyGlobalSession()
-        c_api_util.DestroyLazyGlobalSession()
+        oneflow_api.StopLazyGlobalSession()
+        oneflow_api.DestroyLazyGlobalSession()
         self.status_ = SessionStatus.CLOSED
         self.resource_ = None
         if self.eager_config_proto_ctx_:
@@ -307,7 +306,7 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         self._IncRunningJobCnt()
         job_instance.AddPostFinishCallback(lambda _: self._DecRunningJobCnt())
-        c_api_util.LaunchJob(job_instance)
+        oneflow_api.LaunchJob(job_instance)
 
     def AsyncPush(self, op_name, push_data_cb):
         assert self.status_ is SessionStatus.RUNNING
@@ -343,7 +342,7 @@ class Session(object):
             self.interface_op_name2op_attr_[interface_op_name] = op_attribute
             self.interface_op_name2job_name_[
                 interface_op_name
-            ] = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+            ] = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         else:
             # In lazy mode, we update fields with
             # the latest info in another function after compiler.Compile
@@ -423,7 +422,7 @@ def api_find_or_create_module(
 def find_or_create_module(module_name, create, reuse=False):
     assert callable(create)
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow.current_global_function_desc().job_config_proto.job_name
+    job_name = oneflow.current_global_function_desc().job_config_proto.job_name()
     if job_name not in sess.job_name2module_name2module_:
         sess.job_name2module_name2module_[job_name] = {}
     module_name2module = sess.job_name2module_name2module_[job_name]
@@ -451,7 +450,7 @@ def api_eager_execution_enabled() -> bool:
     Returns:
         bool: [description]
     """
-    return c_api_util.EagerExecutionEnabled()
+    return oneflow_api.EagerExecutionEnabled()
 
 
 @oneflow_export("clear_default_session")

@@ -61,6 +61,14 @@
     python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
     ```
 
+  - To install legacy version of OneFlow with CUDA support:
+
+    ```
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102==0.3.1 --user
+    ```
+
+    Some legacy versions available: `0.1.10`, `0.2.0`, `0.3.0`, `0.3.1`
+
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
     ```
     python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -78,12 +86,14 @@
     - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
     - To install dependencies, run:
-
+      
+      On CentOS:
+      
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
       rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
       yum update -y && yum install -y epel-release && \
-      yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
+      yum install -y intel-mkl-64bit-2020.0-088 nasm rdma-core-devel
       ```
 
       On CentOS, if you have MKL installed, please update the environment variable:

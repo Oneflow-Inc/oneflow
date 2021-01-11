@@ -24,8 +24,9 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
+import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.vm_util as vm_util
@@ -33,6 +34,7 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow
+import oneflow_api
 import os
 
 
@@ -41,14 +43,14 @@ def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
     dtype: Optional[dtype_util.dtype] = dtype_util.float32,
-    initializer: Optional[op_conf_util.InitializerConf] = None,
-    regularizer: Optional[op_conf_util.RegularizerConf] = None,
+    initializer: Optional[initializer_conf_util.InitializerConf] = None,
+    regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
-    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
     reuse: bool = True,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Create a variable or retrieve an existing one.
 
     Args:
@@ -169,7 +171,7 @@ def get_eager_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -177,7 +179,7 @@ def get_eager_variable(
         shape, (list, tuple)
     ), "param shape should be a list or tuple of dimension"
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -230,7 +232,7 @@ def get_lazy_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -238,7 +240,7 @@ def get_lazy_variable(
         shape, (list, tuple)
     ), "param shape should be a list or tuple of dimension"
 
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + name
     sess = session_ctx.GetDefaultSession()
     var_blob, job_var_blob = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -263,14 +265,14 @@ def get_lazy_variable(
             distribute=distribute,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
-        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
         if var_blob is not None:
-            assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+            assert isinstance(var_blob, oneflow_api.LazyConsistentBlob)
             assert var_blob.IdenticalTo(job_var_blob)
     else:
-        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
-        assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
+        assert isinstance(var_blob, oneflow_api.LazyConsistentBlob)
         assert var_blob.IdenticalTo(job_var_blob)
 
     return job_var_blob
@@ -285,7 +287,7 @@ def GenerateVariableOpConf(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -298,7 +300,7 @@ def GenerateVariableOpConf(
         root_path = None
     else:
         root_path = (
-            compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path
+            compile_context.GetCurJobConfigProto().default_initialize_with_snapshot_path()
         )
         dir_path = os.path.join(root_path, name)
         file_path = os.path.join(dir_path, "out")
@@ -320,7 +322,7 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if type(distribute) is distribute_util.SplitDistribute:
+    if type(distribute) is oneflow_api.distribute.SplitDistribute:
         op_conf.variable_conf.split_axis.value = distribute.axis
     else:
         op_conf.variable_conf.split_axis.ClearField("value")

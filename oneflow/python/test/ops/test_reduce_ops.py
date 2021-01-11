@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow_api
 import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as oft
@@ -336,8 +337,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
             y = flow.math.reduce_any(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.int8))
 
@@ -394,8 +395,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_prod(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -452,8 +453,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_min(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -510,8 +511,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
             y = flow.math.reduce_all(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.int8))
 
@@ -568,8 +569,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_sum(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -626,8 +627,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_euclidean_norm(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -684,8 +685,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_logsumexp(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -742,8 +743,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_std(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -800,8 +801,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_variance(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -858,8 +859,8 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_max(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
