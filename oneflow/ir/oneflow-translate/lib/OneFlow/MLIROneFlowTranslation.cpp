@@ -59,6 +59,7 @@ class Importer {
         unknownLoc(FileLineColLoc::get("imported-protobuf", 0, 0, context)) {}
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob(::oneflow::Job *job);
+  LogicalResult updateJob(::oneflow::Job *job);
 
  private:
   /// The current builder, pointing at where the next Instruction should be
@@ -205,6 +206,8 @@ LogicalResult Importer::processJob(::oneflow::Job *job) {
   return success();
 }
 
+LogicalResult Importer::updateJob(::oneflow::Job *job) { return success(); }
+
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
@@ -239,7 +242,7 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
 
 }  // namespace
 
-void translateFromOneFlowJobToMLIR(::oneflow::Job *job) {
+void roundTripOneFlowJob(::oneflow::Job *job) {
   mlir::MLIRContext context;
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
@@ -248,7 +251,10 @@ void translateFromOneFlowJobToMLIR(::oneflow::Job *job) {
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
   Importer imp(&context, module.get());
   if (failed(imp.processJob(job))) {
-    std::cerr << "fail to process job, job_name: " << job->job_conf().job_name();
+    std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+  }
+  if (failed(imp.updateJob(job))) {
+    std::cerr << "fail to update job with IR, job_name: " << job->job_conf().job_name();
   }
 }
 

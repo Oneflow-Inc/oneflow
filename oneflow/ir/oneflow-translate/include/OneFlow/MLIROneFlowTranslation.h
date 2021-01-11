@@ -5,7 +5,7 @@
 
 namespace mlir {
 
-void translateFromOneFlowJobToMLIR(::oneflow::Job *job);
+void roundTripOneFlowJob(::oneflow::Job *job);
 void registerFromOneFlowJobTranslation();
 
 }  // namespace mlir

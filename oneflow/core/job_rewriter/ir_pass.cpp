@@ -31,7 +31,7 @@ class IRPass final : public JobPass {
   }
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    mlir::translateFromOneFlowJobToMLIR(job);
+    mlir::roundTripOneFlowJob(job);
     return Maybe<void>::Ok();
   }
 };
