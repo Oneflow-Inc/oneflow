@@ -51,7 +51,7 @@ class StackAutogradEngine final : public AutogradEngine {
 
  private:
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(std::function<void()>) override;
-  std::vector<FunctionNode> func_list;  // TODO: use other container instead of vector
+  std::list<FunctionNode> func_list;  // TODO: use other container instead of vector
 };
 
 }  // namespace one

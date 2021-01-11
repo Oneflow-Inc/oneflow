@@ -104,12 +104,19 @@ class Tensor : public oneflow::Tensor {
   }
   std::shared_ptr<Shape> shape() const override { return impl_->shape(); }
   cfg::DataType dtype() const override { return impl_->dtype(); }
+  std::shared_ptr<Blob> storage() const { return impl_->storage(); }
   bool defined() const { return static_cast<bool>(impl_); }
   bool has_storage() const { return defined() && impl_->has_storage(); }
   bool requires_grad() const { return is_requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
-  std::shared_ptr<Tensor> clone() const;  // malloc memory in same place and have same grad_function
-  std::shared_ptr<Tensor> detach() const;  // share blob but have no grad_function
+  /* // Malloc memory in same place and have same grad_function */
+  /* std::shared_ptr<Tensor> clone() const { */
+  /*   return std::make_shared<Tensor>(); */
+  /* } */
+  /* // Share blob but have no grad_function */
+  /* std::shared_ptr<Tensor> detach() const { */
+  /*   return std::make_shared<Tensor>(); */
+  /* } */
   int32_t dim() const { return impl_->dim(); }
   std::shared_ptr<Tensor> grad() const { return grad_; }
 
