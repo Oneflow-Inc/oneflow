@@ -35,20 +35,20 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, typename IDX>
 struct CtcLossKernelUtil final {
-  static void CtcLossForward(DeviceCtx* ctx, const IDX batch_size, const T* log_probs_ptr,
+  static void CtcLossForward(DeviceCtx* ctx, const int64_t batch_size, const T* log_probs_ptr,
                              const int* targets_ptr, const IDX* input_lengths_ptr,
                              const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
-                             NdIndexOffsetHelper<IDX, 3> input_helper,
-                             NdIndexOffsetHelper<IDX, 3> alpha_helper, IDX max_target_length,
-                             const int blank, const bool zero_infinity);
+                             NdIndexOffsetHelper<int64_t, 3> input_helper,
+                             NdIndexOffsetHelper<int64_t, 3> alpha_helper,
+                             int64_t max_target_length, const int blank, const bool zero_infinity);
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
-                              const T* alpha_ptr, const IDX batch_size, const T* log_probs_ptr,
+                              const T* alpha_ptr, const int64_t batch_size, const T* log_probs_ptr,
                               const int* targets_ptr, const IDX* input_lengths_ptr,
                               const IDX* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
-                              NdIndexOffsetHelper<IDX, 3> input_helper,
-                              NdIndexOffsetHelper<IDX, 3> beta_helper, IDX max_input_length,
-                              IDX max_target_length, IDX num_labels, const int blank,
+                              NdIndexOffsetHelper<int64_t, 3> input_helper,
+                              NdIndexOffsetHelper<int64_t, 3> beta_helper, int64_t max_input_length,
+                              int64_t max_target_length, int64_t num_labels, const int blank,
                               const bool zero_infinity);
 };
 

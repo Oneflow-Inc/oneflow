@@ -120,26 +120,14 @@ def compare_with_np(
     device_type,
     device_num,
     data_type,
-    max_logit_length,
+    max_input_length,
     batch_size,
     num_classes,
-    max_label_length,
+    max_target_length,
     blank,
     reduction,
     zero_infinity,
 ):
-    print(
-        device_type,
-        device_num,
-        data_type,
-        max_logit_length,
-        batch_size,
-        num_classes,
-        max_label_length,
-        blank,
-        reduction,
-        zero_infinity,
-    )
     assert data_type in ["float32", "double"]
     assert device_type in ["gpu", "cpu"]
     assert reduction in ["none", "mean", "sum"]
@@ -152,16 +140,16 @@ def compare_with_np(
         flow.config.gpu_device_num(device_num)
     flow_data_type = type_name_to_flow_type[data_type]
     func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow_data_type)
 
     @flow.global_function(function_config=func_config)
     def ctc_loss_job(
         log_probs: tp.Numpy.Placeholder(
-            shape=(max_logit_length, batch_size, num_classes), dtype=flow_data_type
+            shape=(max_input_length, batch_size, num_classes), dtype=flow_data_type
         ),
         targets: tp.Numpy.Placeholder(
-            shape=(batch_size, max_label_length), dtype=flow.int32
+            shape=(batch_size, max_target_length), dtype=flow.int32
         ),
         input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
         target_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
@@ -178,18 +166,18 @@ def compare_with_np(
             )
 
     log_probs = np.random.random(
-        size=(max_logit_length, batch_size, num_classes)
+        size=(max_input_length, batch_size, num_classes)
     ).astype(type_name_to_np_type[data_type])
     log_probs = log_softmax(log_probs, axis=2)
 
     targets = np.random.randint(
-        1, high=num_classes, size=(batch_size, max_label_length)
+        1, high=num_classes, size=(batch_size, max_target_length)
     )
     input_lengths = np.random.randint(
-        max_logit_length / 2, high=max_logit_length, size=(batch_size,)
+        max_input_length / 2, high=max_input_length, size=(batch_size,)
     )
     target_lengths = np.random.randint(
-        max_label_length / 2, high=max_label_length, size=(batch_size,)
+        max_target_length / 2, high=max_target_length, size=(batch_size,)
     )
 
     # OneFlow
@@ -217,11 +205,11 @@ def gen_arg_list(type):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1]
     arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["max_logit_length"] = [50]
-    arg_dict["batch_size"] = [8]
-    arg_dict["num_classes"] = [10]
-    arg_dict["max_label_length"] = [20]
-    arg_dict["blank"] = [0, 1, 9]
+    arg_dict["max_logit_length"] = [20]
+    arg_dict["batch_size"] = [4]
+    arg_dict["num_classes"] = [5]
+    arg_dict["max_label_length"] = [10]
+    arg_dict["blank"] = [0, 1, 4]
     arg_dict["reduction"] = ["none", "mean", "sum"]
     arg_dict["zero_infinity"] = [False, True]
 

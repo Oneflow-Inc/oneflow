@@ -23,7 +23,7 @@ REGISTER_USER_OP("ctc_loss")
     .Input("input_lengths")
     .Input("target_lengths")
     .Output("loss")
-    .Output("alpha") // 'alpha' is just for compute log_probs's grad, alpha's grad will be ignored
+    .Output("alpha")  // 'alpha' is just for compute log_probs's grad, alpha's grad will be ignored
     .Attr<int>("blank")
     .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -33,20 +33,23 @@ REGISTER_USER_OP("ctc_loss")
           ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
       const user_op::TensorDesc* target_lengths =
           ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      CHECK_EQ_OR_RETURN(log_probs->shape().At(1), targets->shape().At(0));
-      CHECK_EQ_OR_RETURN(log_probs->shape().At(1), input_lengths->shape().At(0));
-      CHECK_EQ_OR_RETURN(log_probs->shape().At(1), target_lengths->shape().At(0));
+      int64_t batch_size = log_probs->shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
       *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
-      *ctx->Shape4ArgNameAndIndex("loss", 0) = Shape({log_probs->shape().At(1)});
+      *ctx->Shape4ArgNameAndIndex("loss", 0) = Shape({batch_size});
       *ctx->Dtype4ArgNameAndIndex("alpha", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
-      *ctx->Shape4ArgNameAndIndex("alpha", 0) = Shape(
-          {log_probs->shape().At(1), log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
+      *ctx->Shape4ArgNameAndIndex("alpha", 0) =
+          Shape({batch_size, log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("alpha", 0) = *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
+      *ctx->BatchAxis4ArgNameAndIndex("alpha", 0) =
+          *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -79,9 +82,10 @@ REGISTER_USER_OP("ctc_loss_grad")
           ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
       const user_op::TensorDesc* target_lengths =
           ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      CHECK_EQ_OR_RETURN(log_probs->shape().At(1), targets->shape().At(0));
-      CHECK_EQ_OR_RETURN(log_probs->shape().At(1), input_lengths->shape().At(0));
-      CHECK_EQ_OR_RETURN(log_probs->shape().At(1), target_lengths->shape().At(0));
+      int64_t batch_size = log_probs->shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
       *ctx->Dtype4ArgNameAndIndex("grad", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
       *ctx->Shape4ArgNameAndIndex("grad", 0) = log_probs->shape();
