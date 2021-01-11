@@ -19,8 +19,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
 #include "oneflow/core/job/mirrored_parallel.pb.h"
-<<<<<<< HEAD
-=======
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
@@ -31,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/register/batch_axis_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
->>>>>>> 813982bd16573331cba862136bfac5e184924d5a
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
