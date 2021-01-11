@@ -27,7 +27,6 @@ import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
@@ -512,7 +511,7 @@ class InstructionsBuilder(object):
         object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(
             parallel_desc_sym
         )
-        obj = object_util.Object(object_id, parallel_desc_sym)
+        obj = oneflow_api.Object(object_id, parallel_desc_sym)
         object_storage.SetSharedOpKernelObject4ParallelConfSymbol(
             parallel_desc_sym, obj
         )
@@ -538,11 +537,11 @@ class InstructionsBuilder(object):
         op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
             parallel_desc_sym
         )
-        return object_util.BlobObject(
-            object_id=object_id,
-            op_arg_parallel_attr=op_arg_parallel_attr,
-            op_arg_blob_attr=sole_mirrored_blob_object.op_arg_blob_attr,
-            release=self.release_object_,
+        return oneflow_api.BlobObject(
+            object_id,
+            op_arg_parallel_attr,
+            sole_mirrored_blob_object.op_arg_blob_attr,
+            self.release_object_,
         )
 
     def NewOpKernelObject(self, op_conf):
@@ -889,11 +888,8 @@ class InstructionsBuilder(object):
 
     def _NewBlobObject(self, op_arg_parallel_attr, op_arg_blob_attr):
         object_id = self._NewObjectId(op_arg_parallel_attr.parallel_desc_symbol)
-        return object_util.BlobObject(
-            object_id=object_id,
-            op_arg_parallel_attr=op_arg_parallel_attr,
-            op_arg_blob_attr=op_arg_blob_attr,
-            release=self.release_object_,
+        return oneflow_api.BlobObject(
+            object_id, op_arg_parallel_attr, op_arg_blob_attr, self.release_object_,
         )
 
     def _NewSymbolId4String(self, string):
