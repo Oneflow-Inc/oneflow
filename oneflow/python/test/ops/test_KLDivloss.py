@@ -79,7 +79,7 @@ def _compare_kldivloss_with_np(
 
     def assert_prediction_grad(blob: tp.Numpy):
         # validate the correstness of gradient
-        assert np.allclose(blob, np_grad_dict["np_kldivloss_grad_mean"], rtol=1e-4)
+        assert np.allclose(blob, np_grad_dict["np_kldivloss_grad_mean"], atol=1e-4)
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -135,7 +135,9 @@ def _compare_kldivloss_with_np(
     of_out_kldivloss_dict = oneflow_kldivloss(input, target)
 
     assert np.allclose(
-        of_out_kldivloss_dict["of_kldivloss"], np_out_kldivloss_dict["np_kldivloss"],
+        of_out_kldivloss_dict["of_kldivloss"],
+        np_out_kldivloss_dict["np_kldivloss"],
+        atol=1e-5,
     )
 
     assert np.allclose(
