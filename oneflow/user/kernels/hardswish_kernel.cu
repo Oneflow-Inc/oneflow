@@ -87,8 +87,8 @@ class GpuHardswishKernel final : public OpKernel {
 #define REGISTER_GPU_HARDSWISH_KERNEL(device, dtype)    \
   REGISTER_USER_KERNEL("hardswish")                     \
       .SetCreateFn<GpuHardswishKernel<device, dtype>>() \
-      .SetIsMatchedHob((HobDeviceTag() == device) \ 
-                            &(HobDataType("out", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((HobDeviceTag() == device)       \
+                       & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_HARDSWISH_KERNEL(DeviceType::kGPU, half)
 REGISTER_GPU_HARDSWISH_KERNEL(DeviceType::kGPU, float)
@@ -120,8 +120,8 @@ class GpuHardswishGradKernel final : public OpKernel {
 #define REGISTER_GPU_HARDSWISH_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("hardswish_grad")                      \
       .SetCreateFn<GpuHardswishGradKernel<device, dtype>>()   \
-      .SetIsMatchedHob((HobDeviceTag() == device) \ 
-                            &(HobDataType("dx", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((HobDeviceTag() == device)             \
+                       & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_HARDSWISH_BACKWARD_KERNEL(DeviceType::kGPU, half)
 REGISTER_GPU_HARDSWISH_BACKWARD_KERNEL(DeviceType::kGPU, float)
