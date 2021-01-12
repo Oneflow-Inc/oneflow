@@ -16,7 +16,9 @@
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include <cstdint>
 #include <iostream>
+#include <map>
 #include <new>
 #include <string>
 #include <unordered_map>
@@ -75,6 +77,7 @@ class Importer {
   Location unknownLoc;
   std::unordered_map<std::string, mlir::Value> lbn2result;
   ::oneflow::Job *job;
+  std::map<std::string, ::oneflow::OperatorConf *> oneflowOps;
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
@@ -194,10 +197,11 @@ LogicalResult Importer::processJob() {
   auto &entryBlock = *function.addEntryBlock();
   b.setInsertionPointToStart(&entryBlock);
 
-  for (size_t i = 0; i < job->net().op_size(); i++) {
-    ::oneflow::OperatorConf op = job->net().op(i);
-    if (op.has_user_conf()) {
-      if (failed(processUserOp(op))) { return failure(); }
+  for (int64_t i = 0; i < job->net().op_size(); i++) {
+    auto *op = job->mutable_net()->mutable_op(i);
+    if (op->has_user_conf()) {
+      oneflowOps.insert({op->name(), op});
+      if (failed(processUserOp(*op))) { return failure(); }
     }
   }
   ReturnOp returnOp;
@@ -210,9 +214,8 @@ LogicalResult Importer::processJob() {
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   auto dumpOps = [](Operation *op) {
-    op->getName().dump();
     oneflow::UserOp usro = llvm::dyn_cast<oneflow::UserOp>(op);
-    // if (!usro) { return; }
+    if (!usro) { return; }
     op->dump();
   };
   module.getRegion().walk(dumpOps);
