@@ -27,7 +27,6 @@ import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
