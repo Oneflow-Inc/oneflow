@@ -33,9 +33,13 @@ __global__ void GpuForward(const int64_t n, const int64_t num_classes, const int
     T out_data = in_data;
     K label = labels[row_id] - lower_bound;
     if (label == col_id) {
-      const T theta_data = AcosFunctor<T>::Forward(in_data);
-      out_data = CosFunctor<T>::Forward(theta_data * m1 + m2) - m3;
-      theta[row_id] = theta_data;
+      if (m1 == 1.0 && m2 == 0.0) {
+        out_data = in_data - m3;
+      } else {
+        const T theta_data = AcosFunctor<T>::Forward(in_data);
+        out_data = CosFunctor<T>::Forward(theta_data * m1 + m2) - m3;
+        theta[row_id] = theta_data;
+      }
     } else if ((label < 0 || label >= num_classes) && col_id == 0) {
       theta[row_id] = 0;
     }
@@ -54,7 +58,7 @@ __global__ void GpuBackward(const int64_t n, const int64_t num_classes, const in
     const T dy_data = dy[i];
     const T theta_data = theta[row_id];
     T dx_data = dy_data;
-    if (label == col_id) {
+    if (label == col_id && (m1 != 1.0 || m2 != 0.0)) {
       dx_data = dy_data * SinFunctor<T>::Forward(theta_data * m1 + m2) * m1
                 / SinFunctor<T>::Forward(theta_data);
     }
