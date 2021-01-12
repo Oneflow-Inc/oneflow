@@ -81,20 +81,18 @@ REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
-std::tuple<int64_t, int64_t> CalcSize(const std::vector<int32_t>& axis, const ShapeView& in_shape) {
-  const int32_t reduce_begin_axis = axis.at(0);
-  const int32_t reduce_end_axis = axis.at(axis.size() - 1);
-  int64_t outer_size = in_shape.Count(0, reduce_begin_axis);
-  int64_t inner_size = in_shape.Count(reduce_end_axis + 1);
-  return std::make_tuple(outer_size, inner_size);
+namespace {
+
+void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_shape,
+                        bool* is_axis_contiguous, int64_t* outer_size, int64_t* inner_size,
+                        int64_t* reduce_size) {
+  *is_axis_contiguous = ((axis.back() - axis.front() + 1) == axis.size());
+  *outer_size = in_shape.Count(0, axis.front());
+  *inner_size = in_shape.Count(axis.back() + 1);
+  *reduce_size = in_shape.Count(axis.front(), axis.back() + 1);
 }
 
-bool CanUseGemm(const std::vector<int32_t>& axis, const ShapeView& in_shape) {
-  bool is_axis_contiguous = ((axis.at(axis.size() - 1) - axis.at(0) + 1) == axis.size());
-  int64_t outer_size = 0, inner_size = 0;
-  std::tie(outer_size, inner_size) = CalcSize(axis, in_shape);
-  return (is_axis_contiguous && (outer_size == 1 || inner_size == 1));
-}
+}  // namespace
 
 class ReduceSumHalfKernel final : public user_op::OpKernel {
  public:
@@ -108,11 +106,11 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const ShapeView& in_shape = input_tensor->shape();
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-
-    if (CanUseGemm(axis, in_shape)) {
-      int64_t outer_size = 0, inner_size = 0;
-      std::tie(outer_size, inner_size) = CalcSize(axis, in_shape);
-      const int64_t reduce_size = in_shape.elem_cnt() / outer_size / inner_size;
+    bool is_axis_contiguous = false;
+    int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
+    GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
+    if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
+      CHECK_EQ(reduce_size, in_shape.elem_cnt() / outer_size / inner_size);
       CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
@@ -164,11 +162,12 @@ REGISTER_USER_KERNEL("reduce_sum")
       const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->shape();
       const Shape& out_shape = ctx->TensorDesc4ArgNameAndIndex("output_tensor", 0)->shape();
       const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+      bool is_axis_contiguous = false;
+      int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
+      GetReduceSumLayout(axis, ShapeView(in_shape), &is_axis_contiguous, &outer_size, &inner_size,
+                         &reduce_size);
       size_t tmp_bytes = 0;
-      if (CanUseGemm(axis, ShapeView(in_shape))) {
-        int64_t outer_size = 0, inner_size = 0;
-        std::tie(outer_size, inner_size) = CalcSize(axis, ShapeView(in_shape));
-        const int64_t reduce_size = in_shape.elem_cnt() / outer_size / inner_size;
+      if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
         tmp_bytes = GetCudaAlignedSize(reduce_size * sizeof(float16));
       } else {
         tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float))
