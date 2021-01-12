@@ -30,10 +30,10 @@ IntPair = Tuple[int, int]
 
 @oneflow_export("layers.dense")
 def dense(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     units: int,
     activation: Optional[
-        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -43,15 +43,15 @@ def dense(
     trainable: bool = True,
     name: str = "Dense",
     model_distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Fully-connected layer. 
 
     The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
 
     Args:
-        inputs (remote_blob_util.BlobDef): A 2D input `Blob`.
+        inputs (oneflow_api.BlobDesc): A 2D input `Blob`.
         units (int): A positive integer for the dimensionality of the output space.
-        activation (Optional[remote_blob_util.BlobDef], optional):  Activation function. Defaults to None.
+        activation (Optional[oneflow_api.BlobDesc], optional):  Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -62,7 +62,7 @@ def dense(
         model_distribute (oneflow_api.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow_api.distribute.broadcast().
 
     Returns:
-        remote_blob_util.BlobDef:  A N-D `Blob` with the shape of (batch_size, units).
+        oneflow_api.BlobDesc:  A N-D `Blob` with the shape of (batch_size, units).
 
     Raises:
         ValueError: The dimension of input `Blob` must be less than 2.
@@ -162,7 +162,7 @@ def dense(
 
 @oneflow_export("layers.conv1d")
 def conv1d(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     filters: int,
     kernel_size: Union[int, Tuple[int]] = 1,
     strides: Union[int, Tuple[int]] = 1,
@@ -171,7 +171,7 @@ def conv1d(
     dilation_rate: Optional[Union[int, Tuple[int]]] = None,
     groups: int = 1,
     activation: Optional[
-        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -182,13 +182,13 @@ def conv1d(
     name: str = "Conv1d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""1D convolution layer. 
 
     This layer computes a 1-D convolution with 3D input Blob and filters. 
 
     Args:
-        inputs (remote_blob_util.BlobDef): A 3D input `Blob`.
+        inputs (oneflow_api.BlobDesc): A 3D input `Blob`.
         filters (int): An integer specifies the dimensionality of the output space.
         kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
@@ -199,7 +199,7 @@ def conv1d(
                         "NWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, width). Defaults to "NCW".
         dilation_rate (Optional[Union[int, Tuple[int]]], optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
-        activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
+        activation (Optional[ Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -216,7 +216,7 @@ def conv1d(
         ValueError: Number of group must be one when data_format is 'NWC'.
 
     Returns:
-        remote_blob_util.BlobDef: A 3D `Blob` with the shape of (batch_size, filters, new_width).
+        oneflow_api.BlobDesc: A 3D `Blob` with the shape of (batch_size, filters, new_width).
 
     For example: 
 
@@ -356,7 +356,7 @@ def conv1d(
 
 @oneflow_export("layers.conv2d")
 def conv2d(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     filters: int,
     kernel_size: Union[int, IntPair] = 1,
     strides: Union[int, IntPair] = 1,
@@ -365,7 +365,7 @@ def conv2d(
     dilation_rate: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     activation: Optional[
-        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -376,13 +376,13 @@ def conv2d(
     name: str = "Conv2d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""2D convolution layer. 
 
     This layer computes a 2D convolution with 4D input Blob and filters. 
 
     Args:
-        inputs (remote_blob_util.BlobDef): A 4D input `Blob`.
+        inputs (oneflow_api.BlobDesc): A 4D input `Blob`.
         filters (int): An integer specifies the dimensionality of the output space.
         kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
@@ -393,7 +393,7 @@ def conv2d(
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels). Defaults to "NCHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
-        activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
+        activation (Optional[ Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -412,7 +412,7 @@ def conv2d(
         ValueError: Number of group must be one when data_format is 'NHWC'.
 
     Returns:
-        remote_blob_util.BlobDef: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
+        oneflow_api.BlobDesc: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
 
     For example: 
 
@@ -553,7 +553,7 @@ def conv2d(
 
 @oneflow_export("layers.conv3d")
 def conv3d(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     filters: int,
     kernel_size: Union[int, Sequence[int]] = 1,
     strides: Union[int, Sequence[int]] = 1,
@@ -562,7 +562,7 @@ def conv3d(
     dilation_rate: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     activation: Optional[
-        Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef]
+        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -573,13 +573,13 @@ def conv3d(
     name: str = "Conv3d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""3D convolution layer. 
 
     This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
-        inputs (remote_blob_util.BlobDef): A 5D input `Blob`.
+        inputs (oneflow_api.BlobDesc): A 5D input `Blob`.
         filters (int): An integer specifies the dimensionality of the output space.
         kernel_size (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
@@ -590,7 +590,7 @@ def conv3d(
                         "NDHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). Defaults to "NCDHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
-        activation (Optional[ Callable[[remote_blob_util.BlobDef, str], remote_blob_util.BlobDef] ], optional): Activation function. Defaults to None.
+        activation (Optional[ Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -609,7 +609,7 @@ def conv3d(
         ValueError: Number of group must be one when data_format is 'NDHWC'.
 
     Returns:
-        remote_blob_util.BlobDef: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
+        oneflow_api.BlobDesc: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
 
     For example: 
 
@@ -760,7 +760,7 @@ def conv3d(
 
 @oneflow_export("layers.layer_norm")
 def layer_norm(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     center: bool = True,
     scale: bool = True,
     trainable: bool = True,
@@ -768,11 +768,11 @@ def layer_norm(
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
     name: str = "LayerNorm",
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Layer Normalization. 
 
     Args:
-        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        inputs (oneflow_api.BlobDesc): Input `Blob`.
         center (bool, optional): A boolean specifies whether to shift input `Blob`. Defaults to True.
         scale (bool, optional): A boolean specifies whether to scale input `Blob`. Defaults to True.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
@@ -782,7 +782,7 @@ def layer_norm(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: A normalized `Blob` with same shape of input.
+        oneflow_api.BlobDesc: A normalized `Blob` with same shape of input.
 
     For example: 
 
@@ -900,25 +900,25 @@ def layer_norm(
 
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy: remote_blob_util.BlobDef,
-    x: remote_blob_util.BlobDef,
-    mean: remote_blob_util.BlobDef,
-    inv_variance: remote_blob_util.BlobDef,
+    dy: oneflow_api.BlobDesc,
+    x: oneflow_api.BlobDesc,
+    mean: oneflow_api.BlobDesc,
+    inv_variance: oneflow_api.BlobDesc,
     begin_norm_axis: int = 1,
     name: str = "LayerNormGrad",
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Layer normalization
 
     Args:
-        dy (remote_blob_util.BlobDef): Upstream derivstives.
-        x (remote_blob_util.BlobDef): Input `Blob`.
-        mean (remote_blob_util.BlobDef): Mean over neurons.
-        inv_variance (remote_blob_util.BlobDef): Variance over neurons.
+        dy (oneflow_api.BlobDesc): Upstream derivstives.
+        x (oneflow_api.BlobDesc): Input `Blob`.
+        mean (oneflow_api.BlobDesc): Mean over neurons.
+        inv_variance (oneflow_api.BlobDesc): Variance over neurons.
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: Gradient with respect to input `Blob`.
+        oneflow_api.BlobDesc: Gradient with respect to input `Blob`.
     """
     op = (
         flow.user_op_builder(name)
@@ -937,25 +937,23 @@ def layer_norm_grad(
 
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy: remote_blob_util.BlobDef,
-    norm: remote_blob_util.BlobDef,
-    gamma: remote_blob_util.BlobDef,
+    dy: oneflow_api.BlobDesc,
+    norm: oneflow_api.BlobDesc,
+    gamma: oneflow_api.BlobDesc,
     begin_params_axis: int = -1,
     name: str = "LayerNormParamGrad",
-) -> Tuple[
-    remote_blob_util.BlobDef, remote_blob_util.BlobDef, remote_blob_util.BlobDef
-]:
+) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
     r"""Backward pass for layer normalization
 
     Args:
-        dy (remote_blob_util.BlobDef): Upstream derivstives.
-        norm (remote_blob_util.BlobDef): Normalized output.
-        gamma (remote_blob_util.BlobDef): Scale parameter.
+        dy (oneflow_api.BlobDesc): Upstream derivstives.
+        norm (oneflow_api.BlobDesc): Normalized output.
+        gamma (oneflow_api.BlobDesc): Scale parameter.
         begin_params_axis (int, optional): From which parameters to begin with. Defaults to -1.
         name (Optional[str], optional): This layer's name. Defaults to 'LayerNormParamGrad'.
 
     Returns:
-        Tuple[remote_blob_util.BlobDef]:
+        Tuple[oneflow_api.BlobDesc]:
                 normalized_diff: Gradient with respect to input `Blob`.
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
@@ -1053,7 +1051,7 @@ def _get_batch_normalization_variables(
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1068,7 +1066,7 @@ def batch_normalization(
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""The BatchNormalization Layer. 
 
     This layer can be used in conv or dense layer.
@@ -1076,7 +1074,7 @@ def batch_normalization(
     The input data will be normalized by the mean and variance of the current batch data
 
     Args:
-        inputs (remote_blob_util.BlobDef): Input `Blob`.
+        inputs (oneflow_api.BlobDesc): Input `Blob`.
         axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
         momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
@@ -1093,7 +1091,7 @@ def batch_normalization(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` with same shape of input.
+        oneflow_api.BlobDesc:  A `Blob` with same shape of input.
 
     Raises:
         ValueError: If axis is out of dimension of input.
@@ -1222,8 +1220,8 @@ def batch_normalization(
 
 @oneflow_export("layers.batch_normalization_add_relu")
 def batch_normalization_add_relu(
-    inputs: remote_blob_util.BlobDef,
-    addend: Optional[remote_blob_util.BlobDef] = None,
+    inputs: oneflow_api.BlobDesc,
+    addend: Optional[oneflow_api.BlobDesc] = None,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1238,12 +1236,12 @@ def batch_normalization_add_relu(
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Fused flow.layers.batch_normalization + flow.math.add + flow.math.relu
 
     Args:
-        inputs (remote_blob_util.BlobDef): Input `Blob`.
-        addend (remote_blob_util.BlobDef): `Blob` add to batch_normalization output.
+        inputs (oneflow_api.BlobDesc): Input `Blob`.
+        addend (oneflow_api.BlobDesc): `Blob` add to batch_normalization output.
         axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
         momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
@@ -1260,7 +1258,7 @@ def batch_normalization_add_relu(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` with same shape of input.
+        oneflow_api.BlobDesc:  A `Blob` with same shape of input.
 
     Raises:
         ValueError: If axis is out of dimension of input.
@@ -1341,7 +1339,7 @@ def batch_normalization_add_relu(
 
 @oneflow_export("layers.batch_normalization_relu")
 def batch_normalization_relu(
-    inputs: remote_blob_util.BlobDef,
+    inputs: oneflow_api.BlobDesc,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1356,11 +1354,11 @@ def batch_normalization_relu(
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Fused flow.layers.batch_normalization + flow.math.relu
 
 Args:
-    inputs (remote_blob_util.BlobDef): Input `Blob`.
+    inputs (oneflow_api.BlobDesc): Input `Blob`.
     axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
     momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
     epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
@@ -1377,7 +1375,7 @@ Args:
     name (Optional[str], optional): This layer's name. Defaults to None.
 
 Returns:
-    remote_blob_util.BlobDef:  A `Blob` with same shape of input.
+    oneflow_api.BlobDesc:  A `Blob` with same shape of input.
 
 Raises:
     ValueError: If axis is out of dimension of input.
@@ -1404,7 +1402,7 @@ Raises:
 
 @oneflow_export("layers.upsample_2d")
 def upsample(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     size: Sequence[int] = (2, 2),
     data_format: str = "NCHW",
     interpolation: str = "nearest",
@@ -1425,7 +1423,7 @@ def upsample(
         ValueError: data_format must be "NHWC" or "NCHW"
 
     Returns:
-        [type]: remote_blob_util.BlobDef:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
+        [type]: oneflow_api.BlobDesc:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
 
     For example: 
 

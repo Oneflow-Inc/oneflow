@@ -194,10 +194,10 @@ class FeedContext(object):
         )
         sbp_parallel = self.op_arg_parallel_attr_.sbp_parallel
         parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
-        if sbp_parallel.HasField("broadcast_parallel") or parallel_num == 1:
+        if sbp_parallel.has_broadcast_parallel() or parallel_num == 1:
             return self._AsContiguousNdArray(self.arg_ndarray_)
-        elif sbp_parallel.HasField("split_parallel"):
-            axis = sbp_parallel.split_parallel.axis
+        elif sbp_parallel.has_split_parallel():
+            axis = sbp_parallel.split_parallel().axis()
             start, end = self._GetBalancedRanges(logical_shape[axis])[self.rank_]
             slc = [slice(None)] * len(logical_shape)
             slc[axis] = slice(start, end)

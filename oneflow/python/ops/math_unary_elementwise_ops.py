@@ -27,6 +27,7 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 def build_unary_elemwise_math_op(math_op, x, name=None):
@@ -44,17 +45,15 @@ def build_unary_elemwise_math_op(math_op, x, name=None):
 
 
 @oneflow_export("math.abs")
-def abs(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def abs(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator returns the absolute value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -81,17 +80,15 @@ def abs(
 
 
 @oneflow_export("math.acos")
-def acos(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def acos(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the acos value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -120,9 +117,7 @@ def acos(
 
 
 @oneflow_export("math.acosh")
-def acosh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def acosh(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the inverse hyperbolic cosine value of Blob.
 
     The equation is: 
@@ -132,11 +127,11 @@ def acosh(
         out = log(x+(x^2-1)^\frac{1}{2})
     
     Args:
-        x (remote_blob_util.BlobDef): A Blob, the range is [1, inf]
+        x (oneflow_api.BlobDesc): A Blob, the range is [1, inf]
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -163,17 +158,15 @@ def acosh(
 
 
 @oneflow_export("math.asin")
-def asin(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def asin(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the arcsin value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -202,9 +195,7 @@ def asin(
 
 
 @oneflow_export("math.asinh")
-def asinh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def asinh(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the inverse hyperbolic sine value of Blob.
 
     The equation is: 
@@ -214,11 +205,11 @@ def asinh(
         out = log(x+(x^2+1)^\frac{1}{2})
     
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -245,17 +236,15 @@ def asinh(
 
 
 @oneflow_export("math.atan")
-def atan(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def atan(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the arctan value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -283,9 +272,7 @@ def atan(
 
 
 @oneflow_export("math.atanh")
-def atanh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def atanh(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the inverse hyperbolic tangent value of Blob.
 
     The equation is: 
@@ -295,11 +282,11 @@ def atanh(
         out = \frac{1}{2}*log(\frac{1+x}{1-x})
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
     
@@ -326,17 +313,15 @@ def atanh(
 
 
 @oneflow_export("math.ceil")
-def ceil(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def ceil(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the ceiling value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     
     For example: 
 
@@ -363,17 +348,15 @@ def ceil(
 
 
 @oneflow_export("math.cos")
-def cos(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def cos(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the cosine value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -399,9 +382,7 @@ def cos(
 
 
 @oneflow_export("math.cosh")
-def cosh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def cosh(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes hyperbolic cosine value of Blob.
 
     The equation is: 
@@ -411,11 +392,11 @@ def cosh(
         out = \frac{e^x+e^{-x}}{2}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -442,9 +423,7 @@ def cosh(
 
 
 @oneflow_export("math.erf")
-def erf(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def erf(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the Gauss error value of Blob.
 
     The equation is: 
@@ -454,11 +433,11 @@ def erf(
         out = \frac{2}{\sqrt{\pi}}*\int_{0}^{x}e^{-z^2}\mathrm{d}{z}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     
     For example: 
 
@@ -485,18 +464,16 @@ def erf(
 
 
 @oneflow_export("math.erfc")
-def erfc(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def erfc(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the :math:`1-erf(x)`, for more details of `erf` function 
     please refer to `math.erf`.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     
     For example: 
 
@@ -523,9 +500,7 @@ def erfc(
 
 
 @oneflow_export("math.exp")
-def exp(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def exp(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the exponential of Blob.
 
     The equation is: 
@@ -535,11 +510,11 @@ def exp(
         out = e^x
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -565,17 +540,15 @@ def exp(
 
 
 @oneflow_export("math.expm1")
-def expm1(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def expm1(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes :math:`y=e^x-1`.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -602,17 +575,15 @@ def expm1(
 
 
 @oneflow_export("math.floor")
-def floor(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def floor(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the largest integer not greater than input Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     
     For example: 
 
@@ -639,9 +610,7 @@ def floor(
 
 
 @oneflow_export("math.lgamma")
-def lgamma(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def lgamma(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the :math:`Gamma(x)` value.
 
     The equation is: 
@@ -651,11 +620,11 @@ def lgamma(
         out = \int_{0}^{\infty}t^{x-1}*e^{-t}\mathrm{d}{t}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -682,17 +651,15 @@ def lgamma(
 
 
 @oneflow_export("math.log")
-def log(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def log(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the log value of input Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -719,17 +686,15 @@ def log(
 
 
 @oneflow_export("math.log1p")
-def log1p(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def log1p(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the :math:`log(x)+1` value of input Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -757,8 +722,8 @@ def log1p(
 
 @oneflow_export("math.log_sigmoid")
 def log_sigmoid(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the log sigmoid value of input Blob.
 
     The equation is: 
@@ -768,11 +733,11 @@ def log_sigmoid(
         out = log(\frac{1}{1+e^{-x}})
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -800,16 +765,16 @@ def log_sigmoid(
 
 @oneflow_export("math.negative")
 def negative(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     """This operator computes the negative value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -837,8 +802,8 @@ def negative(
 
 @oneflow_export("math.reciprocal")
 def reciprocal(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the reciprocal of x.
 
     The equation is: 
@@ -848,11 +813,11 @@ def reciprocal(
         out = \frac{1}{x}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     
     For example: 
 
@@ -880,17 +845,17 @@ def reciprocal(
 
 @oneflow_export("math.reciprocal_no_nan")
 def reciprocal_no_nan(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     """This operator computes the safe reciprocal of x. If x is zero, the reciprocal will 
     be also set to zero.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -917,17 +882,15 @@ def reciprocal_no_nan(
 
 
 @oneflow_export("math.rint")
-def rint(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def rint(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the closest integer to Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -954,17 +917,15 @@ def rint(
 
 
 @oneflow_export("math.round")
-def round(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def round(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator rounds the value of Blob to the nearest integer. 
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
     
@@ -991,9 +952,7 @@ def round(
 
 
 @oneflow_export("math.rsqrt")
-def rsqrt(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def rsqrt(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the reciprocal of square root value of Blob.
 
     The equation is: 
@@ -1003,11 +962,11 @@ def rsqrt(
         out=\frac{1}{\sqrt{x}}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1035,8 +994,8 @@ def rsqrt(
 
 @oneflow_export("math.sigmoid_v2")
 def sigmoid_v2(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the sigmoid value of Blob. 
 
     The equation is: 
@@ -1046,11 +1005,11 @@ def sigmoid_v2(
         out=\frac{1}{1+e^{-x}}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1076,17 +1035,15 @@ def sigmoid_v2(
 
 
 @oneflow_export("math.sign")
-def sign(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def sign(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator returns the sign of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1113,17 +1070,15 @@ def sign(
 
 
 @oneflow_export("math.sin")
-def sin(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def sin(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the sin value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1150,9 +1105,7 @@ def sin(
 
 
 @oneflow_export("math.sinh")
-def sinh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def sinh(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the hyperbolic sine value of Blob.
 
     The equation is: 
@@ -1162,11 +1115,11 @@ def sinh(
         out =\frac{e^x-e^{-x}}{2}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1194,8 +1147,8 @@ def sinh(
 
 @oneflow_export("math.softplus")
 def softplus(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     """This operator computes the softplus value of Blob.
 
     The equation is: 
@@ -1205,11 +1158,11 @@ def softplus(
         out = log(e^x+1)
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     
     For example: 
 
@@ -1236,17 +1189,15 @@ def softplus(
 
 
 @oneflow_export("math.sqrt")
-def sqrt(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def sqrt(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the sqrt root value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1273,17 +1224,15 @@ def sqrt(
 
 
 @oneflow_export("math.square")
-def square(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def square(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the square value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1310,17 +1259,15 @@ def square(
 
 
 @oneflow_export("math.tan")
-def tan(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def tan(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     """This operator computes the tan value of Blob.
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1347,9 +1294,7 @@ def tan(
 
 
 @oneflow_export("math.tanh")
-def tanh(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+def tanh(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
     r"""This operator computes the hyperbolic tangent value of Blob.
 
     The equation is: 
@@ -1359,11 +1304,11 @@ def tanh(
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -1391,8 +1336,8 @@ def tanh(
 
 @oneflow_export("math.tanh_v2")
 def tanh_v2(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     r"""This operator computes the hyperbolic tangent value of Blob.
 
     The equation is:
@@ -1402,11 +1347,11 @@ def tanh_v2(
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
     Args:
-        x (remote_blob_util.BlobDef): A Blob
+        x (oneflow_api.BlobDesc): A Blob
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
     """
 
     print(
