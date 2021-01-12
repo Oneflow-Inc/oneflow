@@ -38,6 +38,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
 import oneflow
@@ -1343,6 +1344,9 @@ def _GetOpConfBlobNameAttr(pb_message, field):
 
 
 def _ReleaseLogicalObject(obj):
+    is_shutting_down = python_interpreter_util.IsShuttingDown
+    if is_shutting_down():
+        return
     LogicalRun(lambda builder: builder.DeleteObject(obj))
 
 
