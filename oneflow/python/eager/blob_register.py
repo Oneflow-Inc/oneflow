@@ -102,6 +102,8 @@ class BlobRegister(object):
             self.ClearObject4BlobName(blob_name)
 
     def ForceReleaseAll(self):
+        # Bind `python_interpreter_util.IsShuttingDown` early.
+        # See the comments of `python_interpreter_util.IsShuttingDown`
         is_shutting_down = python_interpreter_util.IsShuttingDown
         for blob_name, blob_object in self.blob_name2object.items():
             if is_shutting_down():
