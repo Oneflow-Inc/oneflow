@@ -86,9 +86,6 @@ namespace {
 std::vector<int32_t> RegularAxis(const std::vector<int32_t>& axis) {
   std::vector<int32_t> regular_axis = axis;
   std::sort(regular_axis.begin(), regular_axis.end());
-  for (int i = 0; i < regular_axis.size(); i++) {
-    LOG(INFO) << "regular_axis " << i << regular_axis.at(i);
-  }
   return regular_axis;
 }
 
