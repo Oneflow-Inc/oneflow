@@ -29,8 +29,8 @@ class Object {
       : object_id_(object_id), parallel_desc_symbol_(parallel_desc_symbol) {}
   virtual ~Object() = default;
 
-  int64_t object_id() { return object_id_; }
-  std::shared_ptr<ParallelDesc> parallel_desc_symbol() { return parallel_desc_symbol_; }
+  int64_t object_id() const { return object_id_; }
+  std::shared_ptr<ParallelDesc> parallel_desc_symbol() const { return parallel_desc_symbol_; }
 
  private:
   int64_t object_id_;
