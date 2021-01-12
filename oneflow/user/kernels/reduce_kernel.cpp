@@ -83,6 +83,15 @@ REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
 namespace {
 
+std::vector<int32_t> RegularAxis(const std::vector<int32_t>& axis) {
+  std::vector<int32_t> regular_axis = axis;
+  std::sort(regular_axis.begin(), regular_axis.end());
+  for (int i = 0; i < regular_axis.size(); i++) {
+    LOG(INFO) << "regular_axis " << i << regular_axis.at(i);
+  }
+  return regular_axis;
+}
+
 void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_shape,
                         bool* is_axis_contiguous, int64_t* outer_size, int64_t* inner_size,
                         int64_t* reduce_size) {
@@ -96,7 +105,9 @@ void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_sh
 
 class ReduceSumHalfKernel final : public user_op::OpKernel {
  public:
-  ReduceSumHalfKernel() = default;
+  explicit ReduceSumHalfKernel(user_op::KernelCreateContext* ctx) {
+    axis_ = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
+  }
   ~ReduceSumHalfKernel() = default;
 
  private:
@@ -105,10 +116,10 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const ShapeView& in_shape = input_tensor->shape();
-    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
-    GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
+    GetReduceSumLayout(axis_, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
+                       &reduce_size);
     if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
       CHECK_EQ(reduce_size, in_shape.elem_cnt() / outer_size / inner_size);
       CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
@@ -125,7 +136,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
                                               tmp_buffer->dptr<float16>(), beta,
                                               output_tensor->mut_dptr<float16>());
     } else {
-      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
+      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis_.begin(), axis_.end()});
       float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
       const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       float* out_tmp_buffer =
@@ -152,16 +163,19 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  std::vector<int32_t> axis_;
 };
 
 REGISTER_USER_KERNEL("reduce_sum")
-    .SetCreateFn<ReduceSumHalfKernel>()
+    .SetCreateWithCtxFn<ReduceSumHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->shape();
       const Shape& out_shape = ctx->TensorDesc4ArgNameAndIndex("output_tensor", 0)->shape();
-      const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+      const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
       GetReduceSumLayout(axis, ShapeView(in_shape), &is_axis_contiguous, &outer_size, &inner_size,
