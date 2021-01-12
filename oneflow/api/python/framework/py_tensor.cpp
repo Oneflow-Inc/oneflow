@@ -25,20 +25,13 @@ namespace oneflow {
 
 namespace one {
 
-class PyTensor : public Tensor {
- public:
-  using Tensor::Tensor;
-};
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Tensor, PyTensor, std::shared_ptr<Tensor>>(m, "Tensor")
-      .def(py::init([](std::shared_ptr<Shape> shape, cfg::DataType dtype,
-                       std::shared_ptr<cfg::ParallelConf> parallel_conf) {
-        return std::make_shared<PyTensor>(shape, dtype, parallel_conf);
+  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
+      .def(py::init([](std::shared_ptr<Shape>& shape, DataType dtype,
+                       std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+        return std::make_shared<Tensor>(shape, dtype, parallel_conf);
       }))
-      .def(py::init([](){
-        return std::make_shared<PyTensor>();
-      }))
+      .def(py::init([]() { return std::make_shared<Tensor>(); }))
       .def_property_readonly("parallel_conf", &Tensor::parallel_conf)
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &Tensor::dtype)
@@ -49,8 +42,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property_readonly("dim", &Tensor::dim)
       .def_property_readonly("grad", &Tensor::grad)
-      .def("Backward", &Tensor::Backward)
-      .def("SetFuncNode", &Tensor::SetFuncNode);
+      .def("Backward", &Tensor::Backward);
 }
 
 }  // namespace one

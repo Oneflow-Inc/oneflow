@@ -54,14 +54,14 @@ class FunctionNode;
 class TensorImpl {
  public:
   TensorImpl() = default;
-  TensorImpl(const std::shared_ptr<Shape>& shape, cfg::DataType dtype,
+  TensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
              const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
       : shape_(shape), dtype_(dtype), parallel_conf_(parallel_conf) {}
   ~TensorImpl() = default;
 
   std::shared_ptr<Blob> storage() const { return storage_; }
   std::shared_ptr<Shape> shape() const { return shape_; }
-  cfg::DataType dtype() const { return dtype_; }
+  DataType dtype() const { return dtype_; }
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return parallel_conf_; }
   int32_t dim() const { return shape_->NumAxes(); }
 
@@ -82,7 +82,7 @@ class TensorImpl {
  private:
   std::shared_ptr<Blob> storage_;
   std::shared_ptr<Shape> shape_;
-  cfg::DataType dtype_;
+  DataType dtype_;
   std::shared_ptr<cfg::ParallelConf> parallel_conf_;
   // TODO: Strides related features will be supported later
 };
@@ -91,7 +91,7 @@ class TensorImpl {
 class Tensor : public oneflow::Tensor {
  public:
   Tensor() {}
-  Tensor(const std::shared_ptr<Shape>& shape, cfg::DataType dtype,
+  Tensor(const std::shared_ptr<Shape>& shape, DataType dtype,
          const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
     impl_ = std::make_shared<TensorImpl>(shape, dtype, parallel_conf);
   }
@@ -102,7 +102,7 @@ class Tensor : public oneflow::Tensor {
     return impl_->parallel_conf();
   }
   std::shared_ptr<Shape> shape() const override { return impl_->shape(); }
-  cfg::DataType dtype() const override { return impl_->dtype(); }
+  DataType dtype() const override { return impl_->dtype(); }
   std::shared_ptr<Blob> storage() const { return impl_->storage(); }
   bool defined() const { return static_cast<bool>(impl_); }
   bool has_storage() const { return defined() && impl_->has_storage(); }
