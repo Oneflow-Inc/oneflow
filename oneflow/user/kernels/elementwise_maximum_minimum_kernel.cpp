@@ -16,9 +16,48 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 namespace user_op {
+
+namespace {
+template<typename T>
+struct CpuMaximumFunctor {
+  static T Forward(const T x, const T y) { return x > y ? x : y; }
+
+  static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+    if (*x > *y) {
+      if (dx) { *dx = *dz; }
+    } else {
+      if (dy) { *dy = *dz; }
+    }
+  }
+};
+
+template<typename T>
+struct CpuMinimumFunctor {
+  static T Forward(const T x, const T y) { return x < y ? x : y; }
+
+  static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+    if (*x < *y) {
+      if (dx) { *dx = *dz; }
+    } else {
+      if (dy) { *dy = *dz; }
+    }
+  }
+};
+
+template<template<typename> class BackwardFunctor, typename T>
+void ElementwiseBackwardGradCpu(int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
+                                T* dy) {
+  XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
+    BackwardFunctor<T>::Backward(&dz[idx], &x[idx], &y[idx], dx ? &dx[idx] : nullptr,
+                                 dy ? &dy[idx] : nullptr);
+  }
+}
+}  // namespace
+
 template<template<typename> class Functor, typename T>
 class CpuElementwiseMaximumMinimumKernel final : public user_op::OpKernel {
  public:
@@ -63,7 +102,8 @@ class CpuElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKerne
     if (dptr_x) { Memset<DeviceType::kCPU>(ctx->device_ctx(), dptr_dx, 0, bytes_size); }
     if (dptr_y) { Memset<DeviceType::kCPU>(ctx->device_ctx(), dptr_dy, 0, bytes_size); }
 
-    Functor<T>::Backward(tensor_dz->shape().elem_cnt(), dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);
+    ElementwiseBackwardGradCpu<Functor, T>(tensor_dz->shape().elem_cnt(), dptr_dz, dptr_x, dptr_y,
+                                           dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -84,38 +124,6 @@ class CpuElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKerne
 #define REGISTER_FORWARD_BACKWARD_KERNELS(op_type_name, functor, dtype) \
   REGISTER_FORWARD_CPU_KERNEL(op_type_name, functor, dtype);            \
   REGISTER_BACKWARD_CPU_KERNEL(op_type_name, functor, dtype);
-
-namespace {
-template<typename T>
-struct CpuMaximumFunctor {
-  static T Forward(const T x, const T y) { return x > y ? x : y; }
-
-  static void Backward(const int64_t n, const T* dz, const T* x, const T* y, T* dx, T* dy) {
-    FOR_RANGE(int64_t, idx, 0, n) {
-      if (x[idx] > y[idx]) {
-        if (dx) { dx[idx] = dz[idx]; }
-      } else {
-        if (dy) { dy[idx] = dz[idx]; }
-      }
-    }
-  }
-};
-
-template<typename T>
-struct CpuMinimumFunctor {
-  static T Forward(const T x, const T y) { return x < y ? x : y; }
-
-  static void Backward(const int64_t n, const T* dz, const T* x, const T* y, T* dx, T* dy) {
-    FOR_RANGE(int64_t, idx, 0, n) {
-      if (x[idx] < y[idx]) {
-        if (dx) { dx[idx] = dz[idx]; }
-      } else {
-        if (dy) { dy[idx] = dz[idx]; }
-      }
-    }
-  }
-};
-}  // namespace
 
 REGISTER_FORWARD_BACKWARD_KERNELS("elementwise_maximum", CpuMaximumFunctor, float);
 REGISTER_FORWARD_BACKWARD_KERNELS("elementwise_maximum", CpuMaximumFunctor, double);
