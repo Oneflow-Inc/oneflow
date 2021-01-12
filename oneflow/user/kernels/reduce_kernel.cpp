@@ -82,7 +82,7 @@ REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
 bool IsAxisContiguous(const std::vector<int32_t>& axis) {
-  return (axis.at(axis.size()-1)-axis.at(0) + 1==axis.size());
+  return (axis.at(axis.size() - 1) - axis.at(0) + 1 == axis.size());
 }
 
 class ReduceSumHalfKernel final : public user_op::OpKernel {
@@ -98,30 +98,32 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
 
     const int64_t before_reduce = input_tensor->shape().Count(0, axis.at(0));
-    const int64_t after_reduce = input_tensor->shape().Count(axis.at(axis.size()-1));
-    if(IsAxisContiguous(axis) && (before_reduce == 1 || after_reduce == 1)) {
+    const int64_t after_reduce = input_tensor->shape().Count(axis.at(axis.size() - 1) + 1);
+    if (IsAxisContiguous(axis) && (before_reduce == 1 || after_reduce == 1)) {
       CBLAS_TRANSPOSE trans_a;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;
-      const int64_t reduce_elem_cnt = input_tensor->shape().Count(axis.at(0), axis.at(axis.size()-1));
-      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), reduce_elem_cnt, static_cast<float16>(1.0),
+      const int64_t reduce_elem_cnt =
+          input_tensor->shape().Count(axis.at(0), axis.at(axis.size() - 1) + 1);
+      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), reduce_elem_cnt,
+                                            static_cast<float16>(1.0),
                                             tmp_buffer->mut_dptr<float16>());
       int32_t m = 0, n = 0, k = 0;
-      if(after_reduce == 1) {
+      if (after_reduce == 1) {
         trans_a = CblasNoTrans;
         m = before_reduce;
         n = 1;
         k = reduce_elem_cnt;
-      } else if(before_reduce ==1) {
+      } else if (before_reduce == 1) {
         trans_a = CblasTrans;
         m = after_reduce;
         n = 1;
         k = reduce_elem_cnt;
       }
-      LOG(INFO)<<" m "<<m<<" n "<<n<<" k "<<k;
       const float16 beta = GetZeroVal<float16>();
       NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                               GetOneVal<float16>(), input_tensor->dptr<float16>(),
-                                              tmp_buffer->dptr<float16>(), beta, out->mut_dptr<float16>());
+                                              tmp_buffer->dptr<float16>(), beta,
+                                              output_tensor->mut_dptr<float16>());
     } else {
       const Shape& reduced_shape =
           CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
@@ -150,7 +152,6 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
                                     output_tensor->mut_dptr<float16>(),
                                     output_tensor->shape().elem_cnt());
     }
-
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
