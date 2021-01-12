@@ -81,8 +81,19 @@ REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
-bool IsAxisContiguous(const std::vector<int32_t>& axis) {
-  return (axis.at(axis.size() - 1) - axis.at(0) + 1 == axis.size());
+std::tuple<int64_t, int64_t> CalcSize(const std::vector<int32_t>& axis, const ShapeView& in_shape) {
+  const int32_t reduce_begin_axis = axis.at(0);
+  const int32_t reduce_end_axis = axis.at(axis.size() - 1);
+  int64_t outer_size = in_shape.Count(0, reduce_begin_axis);
+  int64_t inner_size = in_shape.Count(reduce_end_axis + 1);
+  return std::make_tuple(outer_size, inner_size);
+}
+
+bool CanUseGemm(const std::vector<int32_t>& axis, const ShapeView& in_shape) {
+  bool is_axis_contiguous = ((axis.at(axis.size() - 1) - axis.at(0) + 1) == axis.size());
+  int64_t outer_size = 0, inner_size = 0;
+  std::tie(outer_size, inner_size) = CalcSize(axis, in_shape);
+  return (is_axis_contiguous && (outer_size == 1 || inner_size == 1));
 }
 
 class ReduceSumHalfKernel final : public user_op::OpKernel {
@@ -95,41 +106,30 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const ShapeView& in_shape = input_tensor->shape();
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
 
-    const int64_t before_reduce = input_tensor->shape().Count(0, axis.at(0));
-    const int64_t after_reduce = input_tensor->shape().Count(axis.at(axis.size() - 1) + 1);
-    if (IsAxisContiguous(axis) && (before_reduce == 1 || after_reduce == 1)) {
-      CBLAS_TRANSPOSE trans_a;
+    if (CanUseGemm(axis, in_shape)) {
+      int64_t outer_size = 0, inner_size = 0;
+      std::tie(outer_size, inner_size) = CalcSize(axis, in_shape);
+      const int64_t reduce_size = in_shape.elem_cnt() / outer_size / inner_size;
+      CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;
-      const int64_t reduce_elem_cnt =
-          input_tensor->shape().Count(axis.at(0), axis.at(axis.size() - 1) + 1);
-      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), reduce_elem_cnt,
+      const int32_t m = (inner_size == 1) ? outer_size : inner_size;
+      const int32_t n = 1;
+      const int32_t k = reduce_size;
+      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), reduce_size,
                                             static_cast<float16>(1.0),
                                             tmp_buffer->mut_dptr<float16>());
-      int32_t m = 0, n = 0, k = 0;
-      if (after_reduce == 1) {
-        trans_a = CblasNoTrans;
-        m = before_reduce;
-        n = 1;
-        k = reduce_elem_cnt;
-      } else if (before_reduce == 1) {
-        trans_a = CblasTrans;
-        m = after_reduce;
-        n = 1;
-        k = reduce_elem_cnt;
-      }
       const float16 beta = GetZeroVal<float16>();
       NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
                                               GetOneVal<float16>(), input_tensor->dptr<float16>(),
                                               tmp_buffer->dptr<float16>(), beta,
                                               output_tensor->mut_dptr<float16>());
     } else {
-      const Shape& reduced_shape =
-          CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
+      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
       float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
-      const size_t in_tmp_buffer_bytes =
-          GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
+      const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       float* out_tmp_buffer =
           reinterpret_cast<float*>(tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes);
       const size_t out_tmp_buffer_bytes =
@@ -137,16 +137,16 @@ class ReduceSumHalfKernel final : public user_op::OpKernel {
       float* reduce_tmp_buffer = reinterpret_cast<float*>(
           tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes + out_tmp_buffer_bytes);
       const size_t reduce_tmp_buffer_bytes =
-          GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
+          GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
                tmp_buffer->shape().elem_cnt() * sizeof(float));
       CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
-                                    input_tensor->shape().elem_cnt());
+                                    in_shape.elem_cnt());
 
       NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
           ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
-          XpuVarNdarray<const float>(input_tensor->shape(), in_tmp_buffer),
-          XpuVarNdarray<float>(input_tensor->shape(), reduce_tmp_buffer));
+          XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
+          XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
       CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
                                     output_tensor->mut_dptr<float16>(),
@@ -161,10 +161,20 @@ REGISTER_USER_KERNEL("reduce_sum")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
-      const Shape* out_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
-      return (2 * GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(float))
-              + GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float)));
+      const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->shape();
+      const Shape& out_shape = ctx->TensorDesc4ArgNameAndIndex("output_tensor", 0)->shape();
+      const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+      size_t tmp_bytes = 0;
+      if (CanUseGemm(axis, ShapeView(in_shape))) {
+        int64_t outer_size = 0, inner_size = 0;
+        std::tie(outer_size, inner_size) = CalcSize(axis, ShapeView(in_shape));
+        const int64_t reduce_size = in_shape.elem_cnt() / outer_size / inner_size;
+        tmp_bytes = GetCudaAlignedSize(reduce_size * sizeof(float16));
+      } else {
+        tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float))
+                     + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));
+      }
+      return tmp_bytes;
     });
 
 #endif
