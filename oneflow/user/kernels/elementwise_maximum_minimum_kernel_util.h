@@ -23,15 +23,59 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template<DeviceType device_type, template<typename> class GradFunctor, typename T>
-struct RunKernelUtil final {
-  static void ForwardKernel(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
-                  T* dy);
-  static void BackwardKernel(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
-                  T* dy);
+template<typename T>
+struct MaximumUtil {
+  OF_DEVICE_FUNC T operator()(T x, T y) const { return x > y ? x : y; }
+
+  OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+    if (*x > *y) {
+      if (dx) { *dx = *dz; }
+    } else {
+      if (dy) { *dy = *dz; }
+    }
+  }
 };
 
-template<DeviceType device_type, template<typename> class GradFunctor, typename T>
+template<typename T>
+struct MinimumUtil {
+  OF_DEVICE_FUNC T operator()(T x, T y) const { return x < y ? x : y; }
+
+  OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+    if (*x < *y) {
+      if (dx) { *dx = *dz; }
+    } else {
+      if (dy) { *dy = *dz; }
+    }
+  }
+};
+
+template<DeviceType device_type, template<typename> class XmumUtil, typename T>
+struct RunKernelUtil final {
+  static void ForwardKernel(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y);
+  static void BackwardKernel(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y,
+                             T* dx, T* dy);
+};
+
+template<DeviceType device_type, template<typename> class XmumUtil, typename T>
+class ElementwiseMaximumMinimumKernel final : public user_op::OpKernel {
+ public:
+  ElementwiseMaximumMinimumKernel() = default;
+  ~ElementwiseMaximumMinimumKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
+    int64_t n = tensor_x->shape().elem_cnt();
+
+    RunKernelUtil<device_type, XmumUtil, T>::ForwardKernel(
+        ctx->device_ctx(), n, tensor_z->mut_dptr<T>(), tensor_x->dptr<T>(), tensor_y->dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<DeviceType device_type, template<typename> class XmumUtil, typename T>
 class ElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKernel {
  public:
   ElementwiseMaximumMinimumBackwardKernel() = default;
@@ -57,12 +101,26 @@ class ElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKernel {
     if (dptr_x) { Memset<device_type>(ctx->device_ctx(), dptr_dx, 0, bytes_size); }
     if (dptr_y) { Memset<device_type>(ctx->device_ctx(), dptr_dy, 0, bytes_size); }
 
-    RunKernelUtil<device_type, GradFunctor, T>::BackwardKernel(ctx->device_ctx(), cnt, dptr_dz, dptr_x,
-                                                     dptr_y, dptr_dx, dptr_dy);
+    RunKernelUtil<device_type, XmumUtil, T>::BackwardKernel(ctx->device_ctx(), cnt, dptr_dz, dptr_x,
+                                                            dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
 }  // namespace user_op
 }  // namespace oneflow
+
+#define REGISTER_FORWARD_KERNEL(dev_type, op_type_name, util, dtype)                 \
+  REGISTER_USER_KERNEL(op_type_name)                                                 \
+      .SetCreateFn<ElementwiseMaximumMinimumKernel<dev_type, util, dtype>>()         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == dev_type)                         \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_BACKWARD_KERNEL(dev_type, op_type_name, util, dtype)                \
+  REGISTER_USER_KERNEL(std::string("") + op_type_name + "_backward")                 \
+      .SetCreateFn<ElementwiseMaximumMinimumBackwardKernel<dev_type, util, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == dev_type)                         \
+                       & (user_op::HobDataType("dz", 0) == GetDataType<dtype>::value));
 
 #endif  // _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_UTIL_H
