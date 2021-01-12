@@ -15,7 +15,7 @@ import "oneflow/core/graph/boxing/collective_boxing.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
-import "oneflow/core/operator/inter_face_blob_conf.proto";
+import "oneflow/core/operator/interface_blob_conf.proto";
 
 enum ActivationType {
   kNone = 0;
