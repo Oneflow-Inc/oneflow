@@ -86,7 +86,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
           .InputBind("dz", ctx->FwOp().output_grad("z", 0))
           .InputBind("x", ctx->FwOp().input("x", 0))
           .InputBind("y", ctx->FwOp().input("y", 0))
-          .Output("dx")
+          .Output("dx")  // TODO(yaochi): set dx/dy according to NeedGenGradTensor4OpInput
           .Output("dy")
           .Build();
     };
