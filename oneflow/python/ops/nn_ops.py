@@ -1580,7 +1580,7 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 
 @oneflow_export("nn.MaxPool2d")
 def MaxPool2d(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
@@ -1589,12 +1589,12 @@ def MaxPool2d(
     ceil_mode: bool = False,
     data_format: str = "NCHW",
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r""" Performs the 2d-max pooling on the input `Blob`.
          Different from nn.max_pool2d, nn.MaxPool2d supports more params e.g. dilation,return_indices.
 
     Args:
-        input (remote_blob_util.BlobDef): A 4-D `Blob` of the format specified by data_format.
+        input (remote_blob_util.BlobDesc): A 4-D `Blob` of the format specified by data_format.
         kernel_size (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
         stride (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm.
@@ -1605,7 +1605,7 @@ def MaxPool2d(
         name (Optional[str], optional): This operator's name(optional). Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+        remote_blob_util.BlobDesc:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
     
     For example: 
 
