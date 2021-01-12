@@ -88,24 +88,20 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       builder.OpTypeName(op_type_name + "_backward")
           .InputBind("dz", ctx->FwOp().output_grad("z", 0))
           .InputBind("x", ctx->FwOp().input("x", 0))
-          .InputBind("y", ctx->FwOp().input("y", 0));
-      if (x_need_grad) { builder.Output("dx"); }
-      if (y_need_grad) { builder.Output("dy"); }
+          .InputBind("y", ctx->FwOp().input("y", 0))
+          .Output("dx")
+          .Output("dy");
       return builder.Build();
     };
     ctx->DefineOp(grad_op_name, BuildGradOp);
 
-    if (x_need_grad) {
       ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [=]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dx", 0);
       });
-    }
 
-    if (y_need_grad) {
       ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [=]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dy", 0);
       });
-    }
   };
 }
 
