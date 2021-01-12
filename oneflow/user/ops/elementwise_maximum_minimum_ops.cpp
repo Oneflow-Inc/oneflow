@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <cstdint>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -74,6 +75,40 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
+  printf("yaochi:out most:%s\n", op_type_name.c_str());
+  return [=](user_op::BackwardOpConfContext* ctx) -> void {
+    const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);
+    const bool y_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("y", 0);
+    const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+
+    printf("yaochi:in lambda:%s\n", op_type_name.c_str());
+    auto BuildGradOp = [=](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
+      printf("yaochi:inner most:%s\n", op_type_name.c_str());
+      builder.OpTypeName(op_type_name + "_backward")
+          .InputBind("dz", ctx->FwOp().output_grad("z", 0))
+          .InputBind("x", ctx->FwOp().input("x", 0))
+          .InputBind("y", ctx->FwOp().input("y", 0));
+      if (x_need_grad) { builder.Output("dx"); }
+      if (y_need_grad) { builder.Output("dy"); }
+      return builder.Build();
+    };
+    ctx->DefineOp(grad_op_name, BuildGradOp);
+
+    if (x_need_grad) {
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [=]() -> const std::string& {
+        return ctx->GetOp(grad_op_name).output("dx", 0);
+      });
+    }
+
+    if (y_need_grad) {
+      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [=]() -> const std::string& {
+        return ctx->GetOp(grad_op_name).output("dy", 0);
+      });
+    }
+  };
+}
+
 }  // namespace
 
 namespace user_op {
@@ -100,62 +135,7 @@ namespace user_op {
 
 #define REGISTER_BINOP_GRAD(op_type_name)                                           \
   REGISTER_USER_OP_GRAD(op_type_name)                                               \
-      .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {             \
-        const auto grad_op_name = ctx->FwOp().op_name() + "_grad";                  \
-        if (ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)                           \
-            && ctx->FwOp().NeedGenGradTensor4OpInput("y", 0)) {                     \
-          const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {  \
-            return builder.OpTypeName(std::string("") + op_type_name + "_backward") \
-                .InputBind("dz", ctx->FwOp().output_grad("z", 0))                   \
-                .InputBind("x", ctx->FwOp().input("x", 0))                          \
-                .InputBind("y", ctx->FwOp().input("y", 0))                          \
-                .Output("dx")                                                       \
-                .Output("dy")                                                       \
-                .Build();                                                           \
-          };                                                                        \
-          ctx->DefineOp(grad_op_name, grad_op_func);                                \
-          const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& { \
-            return ctx->GetOp(grad_op_name).output("dx", 0);                        \
-          };                                                                        \
-          const auto& dy_get_func = [&ctx, &grad_op_name]() -> const std::string& { \
-            return ctx->GetOp(grad_op_name).output("dy", 0);                        \
-          };                                                                        \
-          ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);           \
-          ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);           \
-        } else if (ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)                    \
-                   && !ctx->FwOp().NeedGenGradTensor4OpInput("y", 0)) {             \
-          const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {  \
-            return builder.OpTypeName(std::string("") + op_type_name + "_backward") \
-                .InputBind("dz", ctx->FwOp().output_grad("z", 0))                   \
-                .InputBind("x", ctx->FwOp().input("x", 0))                          \
-                .InputBind("y", ctx->FwOp().input("y", 0))                          \
-                .Output("dx")                                                       \
-                .Build();                                                           \
-          };                                                                        \
-          ctx->DefineOp(grad_op_name, grad_op_func);                                \
-          const auto& dx_get_func = [&ctx, &grad_op_name]() -> const std::string& { \
-            return ctx->GetOp(grad_op_name).output("dx", 0);                        \
-          };                                                                        \
-          ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), dx_get_func);           \
-        } else if (!ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)                   \
-                   && ctx->FwOp().NeedGenGradTensor4OpInput("y", 0)) {              \
-          const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {  \
-            return builder.OpTypeName(std::string("") + op_type_name + "_backward") \
-                .InputBind("dz", ctx->FwOp().output_grad("z", 0))                   \
-                .InputBind("x", ctx->FwOp().input("x", 0))                          \
-                .InputBind("y", ctx->FwOp().input("y", 0))                          \
-                .Output("dy")                                                       \
-                .Build();                                                           \
-          };                                                                        \
-          ctx->DefineOp(grad_op_name, grad_op_func);                                \
-          const auto& dy_get_func = [&ctx, &grad_op_name]() -> const std::string& { \
-            return ctx->GetOp(grad_op_name).output("dy", 0);                        \
-          };                                                                        \
-          ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), dy_get_func);           \
-        } else {                                                                    \
-          UNIMPLEMENTED();                                                          \
-        }                                                                           \
-      });
+      .SetBackwardOpConfGenFn(MakeGenBackwardOpFn(std::string(op_type_name)));
 
 #define REGISTER_ELEMENTWISE_BINOP(op_type_name)                            \
   REGISTER_ELEMENTWISE_FW_OP(op_type_name);                                 \
@@ -164,6 +144,6 @@ namespace user_op {
 
 REGISTER_ELEMENTWISE_BINOP("elementwise_maximum");
 REGISTER_ELEMENTWISE_BINOP("elementwise_minimum");
-}  // namespace oneflow
+}  // namespace user_op
 
 }  // namespace oneflow

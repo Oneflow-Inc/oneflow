@@ -28,13 +28,16 @@ struct MaximumUtil {
   OF_DEVICE_FUNC T operator()(T x, T y) const { return x > y ? x : y; }
 
   OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+    const T dz_val = *dz;
+    T dx_val = 0;
+    T dy_val = 0;
     if (*x > *y) {
-      if (dx) { *dx = *dz; }
-      if (dy) { *dy = 0; }
+      dx_val = dz_val;
     } else {
-      if (dy) { *dy = *dz; }
-      if (dx) { *dx = 0; }
+      dy_val = dz_val;
     }
+    if (dx) { *dx = dx_val; }
+    if (dy) { *dy = dy_val; }
   }
 };
 
@@ -43,13 +46,16 @@ struct MinimumUtil {
   OF_DEVICE_FUNC T operator()(T x, T y) const { return x < y ? x : y; }
 
   OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+    const T dz_val = *dz;
+    T dx_val = 0;
+    T dy_val = 0;
     if (*x < *y) {
-      if (dx) { *dx = *dz; }
-      if (dy) { *dy = 0; }
+      dx_val = dz_val;
     } else {
-      if (dy) { *dy = *dz; }
-      if (dx) { *dx = 0; }
+      dy_val = dz_val;
     }
+    if (dx) { *dx = dx_val; }
+    if (dy) { *dy = dy_val; }
   }
 };
 
