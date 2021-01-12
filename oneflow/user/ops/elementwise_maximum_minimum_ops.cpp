@@ -76,38 +76,28 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
 }
 
 user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
-  printf("yaochi:out most:%s\n", op_type_name.c_str());
   return [=](user_op::BackwardOpConfContext* ctx) -> void {
     const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);
     const bool y_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("y", 0);
     const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
 
-    printf("yaochi:in lambda:%s\n", op_type_name.c_str());
     auto BuildGradOp = [=](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-      printf("yaochi:inner most:%s\n", op_type_name.c_str());
-      builder.OpTypeName(op_type_name + "_backward")
+      return builder.OpTypeName(op_type_name + "_backward")
           .InputBind("dz", ctx->FwOp().output_grad("z", 0))
           .InputBind("x", ctx->FwOp().input("x", 0))
-          .InputBind("y", ctx->FwOp().input("y", 0));
-      if(x_need_grad){
-        printf("need dx\n");
-        builder.Output("dx", 1);
-      }
-      if(y_need_grad){
-        printf("need dy\n");
-        builder.Output("dy", 1);
-      }
-
-      return builder.Build();
+          .InputBind("y", ctx->FwOp().input("y", 0))
+          .Output("dx")
+          .Output("dy")
+          .Build();
     };
     ctx->DefineOp(grad_op_name, BuildGradOp);
-    if(x_need_grad){
+    if (x_need_grad) {
       ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dx", 0);
       });
     }
 
-    if(y_need_grad){
+    if (y_need_grad) {
       ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [&]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dy", 0);
       });
@@ -139,8 +129,8 @@ namespace user_op {
       .SetGetSbpFn(GetSbpSignature)              \
       .SetBatchAxisInferFn(InferBatchAxis)
 
-#define REGISTER_BINOP_GRAD(op_type_name)                                           \
-  REGISTER_USER_OP_GRAD(op_type_name)                                               \
+#define REGISTER_BINOP_GRAD(op_type_name) \
+  REGISTER_USER_OP_GRAD(op_type_name)     \
       .SetBackwardOpConfGenFn(MakeGenBackwardOpFn(std::string(op_type_name)));
 
 #define REGISTER_ELEMENTWISE_BINOP(op_type_name)                            \

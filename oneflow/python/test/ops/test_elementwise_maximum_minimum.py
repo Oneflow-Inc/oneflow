@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -106,7 +103,6 @@ def _compare_Xmum_with_np(
             )
             x2_var = of_input_2 + v2
         else:
-            print("constant y branch")
             x2_var = flow.constant(
                 value=1.5, shape=of_input_2.shape, dtype=value_type["of_type"]
             )
@@ -136,7 +132,7 @@ def _gen_arg_dict(
     machine_ids,
     device_counts,
     value_type,
-    dx_only=False,
+    dx_only,
 ):
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [*shape]
@@ -159,57 +155,57 @@ class TestXmum1n1d(flow.unittest.TestCase):
             machine_ids="0:0",
             device_counts=1,
             value_type=[{"np_type": np.float32, "of_type": flow.float32}],
-            dx_only=[True],
+            dx_only=[True, False],
         )
         for arg in GenArgList(arg_dict):
             _compare_Xmum_with_np(*arg)
 
-#     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-#     def test_Xmum_gpu(test_case):
-#         arg_dict = _gen_arg_dict(
-#             shape=[(3, 3)],
-#             compare_type=["maximum", "minimum"],
-#             device_type="gpu",
-#             machine_ids="0:0",
-#             device_counts=1,
-#             value_type=[
-#                 {"np_type": np.float32, "of_type": flow.float32},
-#                 {"np_type": np.float64, "of_type": flow.float64},
-#             ],
-#             dx_only=[True, False],
-#         )
-#         for arg in GenArgList(arg_dict):
-#             _compare_Xmum_with_np(*arg)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_Xmum_gpu(test_case):
+        arg_dict = _gen_arg_dict(
+            shape=[(3, 3)],
+            compare_type=["maximum", "minimum"],
+            device_type="gpu",
+            machine_ids="0:0",
+            device_counts=1,
+            value_type=[
+                {"np_type": np.float32, "of_type": flow.float32},
+                {"np_type": np.float64, "of_type": flow.float64},
+            ],
+            dx_only=[True, False],
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_Xmum_with_np(*arg)
 
 
-# @flow.unittest.skip_unless_1n2d()
-# class TestXmum1n2d(flow.unittest.TestCase):
-#     def test_Xmum_cpu(test_case):
-#         arg_dict = _gen_arg_dict(
-#             shape=[(3, 3)],
-#             compare_type=["maximum", "minimum"],
-#             device_type="cpu",
-#             machine_ids="0:0-1",
-#             device_counts=2,
-#             value_type=[{"np_type": np.float32, "of_type": flow.float32}],
-#             dx_only=[True, False],
-#         )
-#         for arg in GenArgList(arg_dict):
-#             _compare_Xmum_with_np(*arg)
+@flow.unittest.skip_unless_1n2d()
+class TestXmum1n2d(flow.unittest.TestCase):
+    def test_Xmum_cpu(test_case):
+        arg_dict = _gen_arg_dict(
+            shape=[(3, 3)],
+            compare_type=["maximum", "minimum"],
+            device_type="cpu",
+            machine_ids="0:0-1",
+            device_counts=2,
+            value_type=[{"np_type": np.float32, "of_type": flow.float32}],
+            dx_only=[True, False],
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_Xmum_with_np(*arg)
 
-#     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-#     def test_Xmum_gpu(test_case):
-#         arg_dict = _gen_arg_dict(
-#             shape=[(3, 3)],
-#             compare_type=["maximum", "minimum"],
-#             device_type="gpu",
-#             machine_ids="0:0-1",
-#             device_counts=2,
-#             value_type=[{"np_type": np.float32, "of_type": flow.float32}],
-#             dx_only=[True, False],
-#         )
-#         for arg in GenArgList(arg_dict):
-#             _compare_Xmum_with_np(*arg)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_Xmum_gpu(test_case):
+        arg_dict = _gen_arg_dict(
+            shape=[(3, 3)],
+            compare_type=["maximum", "minimum"],
+            device_type="gpu",
+            machine_ids="0:0-1",
+            device_counts=2,
+            value_type=[{"np_type": np.float32, "of_type": flow.float32}],
+            dx_only=[True, False],
+        )
+        for arg in GenArgList(arg_dict):
+            _compare_Xmum_with_np(*arg)
 
 
 if __name__ == "__main__":
