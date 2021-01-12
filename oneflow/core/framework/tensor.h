@@ -90,7 +90,6 @@ class TensorImpl {
 // one::Tensor will replace oneflow::Tensor in the future
 class Tensor : public oneflow::Tensor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Tensor);
   Tensor() {}
   Tensor(const std::shared_ptr<Shape>& shape, cfg::DataType dtype,
          const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
@@ -109,14 +108,6 @@ class Tensor : public oneflow::Tensor {
   bool has_storage() const { return defined() && impl_->has_storage(); }
   bool requires_grad() const { return is_requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
-  /* // Malloc memory in same place and have same grad_function */
-  /* std::shared_ptr<Tensor> clone() const { */
-  /*   return std::make_shared<Tensor>(); */
-  /* } */
-  /* // Share blob but have no grad_function */
-  /* std::shared_ptr<Tensor> detach() const { */
-  /*   return std::make_shared<Tensor>(); */
-  /* } */
   int32_t dim() const { return impl_->dim(); }
   std::shared_ptr<Tensor> grad() const { return grad_; }
 
