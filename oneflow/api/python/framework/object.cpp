@@ -32,7 +32,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<BlobObject, std::shared_ptr<BlobObject>>(m, "BlobObject")
       .def(py::init<int64_t, const std::shared_ptr<OpArgParallelAttribute>&,
-                    const std::shared_ptr<OpArgBlobAttribute>&, std::function<void(BlobObject*)>>())
+                    const std::shared_ptr<OpArgBlobAttribute>&,
+                    const std::function<void(BlobObject*)>&>())
       .def(py::init([](int64_t object_id,
                        const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
                        const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr, py::none) {
