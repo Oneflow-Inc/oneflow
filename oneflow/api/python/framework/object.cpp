@@ -26,26 +26,25 @@ namespace compatible_py {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Object, std::shared_ptr<Object>>(m, "Object")
-      .def(py::init<int64_t, const std::shared_ptr<ParallelDesc>&>())
+      .def(py::init(
+          [](int64_t object_id, const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+            return std::make_shared<Object>(object_id, parallel_desc_symbol);
+          }))
       .def_property_readonly("object_id", &Object::object_id)
       .def_property_readonly("parallel_desc_symbol", &Object::parallel_desc_symbol);
 
   py::class_<BlobObject, std::shared_ptr<BlobObject>>(m, "BlobObject")
-      .def(py::init<int64_t, const std::shared_ptr<OpArgParallelAttribute>&,
-                    const std::shared_ptr<OpArgBlobAttribute>&,
-                    const std::function<void(BlobObject*)>&>())
       .def(py::init([](int64_t object_id,
                        const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
-                       const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr, py::none) {
-        return std::make_shared<BlobObject>(object_id, op_arg_parallel_attr, op_arg_blob_attr,
-                                            [](BlobObject*) {});
+                       const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr) {
+        return std::make_shared<BlobObject>(object_id, op_arg_parallel_attr, op_arg_blob_attr);
       }))
       .def_property_readonly("object_id", &BlobObject::object_id)
       .def_property_readonly("parallel_desc_symbol", &BlobObject::parallel_desc_symbol)
       .def_property_readonly("op_arg_parallel_attr", &BlobObject::op_arg_parallel_attr)
       .def_property_readonly("op_arg_blob_attr", &BlobObject::op_arg_blob_attr)
       .def("add_releaser", &BlobObject::add_releaser)
-      .def("__del__", &BlobObject::ForceReleaseAll);
+      .def("ForceReleaseAll", &BlobObject::ForceReleaseAll);
 }
 
 }  // namespace compatible_py

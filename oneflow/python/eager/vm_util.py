@@ -537,12 +537,11 @@ class InstructionsBuilder(object):
         op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
             parallel_desc_sym
         )
-        return oneflow_api.BlobObject(
-            object_id,
-            op_arg_parallel_attr,
-            sole_mirrored_blob_object.op_arg_blob_attr,
-            self.release_object_,
+        obj = oneflow_api.BlobObject(
+            object_id, op_arg_parallel_attr, sole_mirrored_blob_object.op_arg_blob_attr,
         )
+        obj.add_releaser(self.release_object_)
+        return obj
 
     def NewOpKernelObject(self, op_conf):
         assert op_conf.HasField("scope_symbol_id")
@@ -666,6 +665,10 @@ class InstructionsBuilder(object):
         op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
             op_parallel_desc_sym
+        )
+        assert opkernel_obj.parallel_desc_symbol == op_parallel_desc_sym, (
+            str(opkernel_obj.parallel_desc_symbol.parallel_conf),
+            str(op_parallel_desc_sym.parallel_conf),
         )
         const_input_operand_blob_objects = self._GetConstInputOperandBlobObjects(
             op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
@@ -888,9 +891,9 @@ class InstructionsBuilder(object):
 
     def _NewBlobObject(self, op_arg_parallel_attr, op_arg_blob_attr):
         object_id = self._NewObjectId(op_arg_parallel_attr.parallel_desc_symbol)
-        return oneflow_api.BlobObject(
-            object_id, op_arg_parallel_attr, op_arg_blob_attr, self.release_object_,
-        )
+        obj = oneflow_api.BlobObject(object_id, op_arg_parallel_attr, op_arg_blob_attr)
+        obj.add_releaser(self.release_object_)
+        return obj
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()

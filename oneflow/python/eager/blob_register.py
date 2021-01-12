@@ -107,7 +107,7 @@ class BlobRegister(object):
             if is_shutting_down():
                 return
             print("Forcely release blob %s." % blob_name)
-            blob_object.__del__()
+            blob_object.ForceReleaseAll()
 
     @contextmanager
     def BnInOp2BlobObjectScope(self, op_attribute):

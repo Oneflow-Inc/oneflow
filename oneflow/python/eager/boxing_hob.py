@@ -67,7 +67,6 @@ class ComposeHob(BoolFunctor):
                 ctx.produced_blob_object.object_id,
                 ctx.produced_blob_object.op_arg_parallel_attr,
                 ctx.produced_blob_object.op_arg_blob_attr,
-                None,
             )
             value = BoxingHobContext(
                 blob_object, self._GetMiddleOpArgParallelAttr(ctx),
@@ -81,7 +80,6 @@ class ComposeHob(BoolFunctor):
                 ctx.produced_blob_object.object_id,
                 self._GetMiddleOpArgParallelAttr(ctx),
                 ctx.produced_blob_object.op_arg_blob_attr,
-                None,
             )
             value = BoxingHobContext(
                 middle_blob_object, ctx.consumer_op_arg_parallel_attr,
