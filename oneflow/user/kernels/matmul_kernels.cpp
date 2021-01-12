@@ -135,6 +135,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     }
   }
 };
+
 #endif
 
 #ifdef WITH_CUDA
