@@ -30,8 +30,10 @@ struct MaximumUtil {
   OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
     if (*x > *y) {
       if (dx) { *dx = *dz; }
+      if (dy) { *dy = 0; }
     } else {
       if (dy) { *dy = *dz; }
+      if (dx) { *dx = 0; }
     }
   }
 };
@@ -43,8 +45,10 @@ struct MinimumUtil {
   OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
     if (*x < *y) {
       if (dx) { *dx = *dz; }
+      if (dy) { *dy = 0; }
     } else {
       if (dy) { *dy = *dz; }
+      if (dx) { *dx = 0; }
     }
   }
 };
@@ -96,13 +100,9 @@ class ElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKernel {
     T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
     T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
-    const int cnt = tensor_dz->shape().elem_cnt();
-    size_t bytes_size = cnt * GetSizeOfDataType(tensor_dz->data_type());
-    if (dptr_x) { Memset<device_type>(ctx->device_ctx(), dptr_dx, 0, bytes_size); }
-    if (dptr_y) { Memset<device_type>(ctx->device_ctx(), dptr_dy, 0, bytes_size); }
-
-    RunKernelUtil<device_type, XmumUtil, T>::BackwardKernel(ctx->device_ctx(), cnt, dptr_dz, dptr_x,
-                                                            dptr_y, dptr_dx, dptr_dy);
+    RunKernelUtil<device_type, XmumUtil, T>::BackwardKernel(ctx->device_ctx(),
+                                                            tensor_dz->shape().elem_cnt(), dptr_dz,
+                                                            dptr_x, dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
