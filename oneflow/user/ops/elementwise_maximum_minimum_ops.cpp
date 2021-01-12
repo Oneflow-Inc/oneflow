@@ -88,20 +88,30 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       builder.OpTypeName(op_type_name + "_backward")
           .InputBind("dz", ctx->FwOp().output_grad("z", 0))
           .InputBind("x", ctx->FwOp().input("x", 0))
-          .InputBind("y", ctx->FwOp().input("y", 0))
-          .Output("dx")
-          .Output("dy");
+          .InputBind("y", ctx->FwOp().input("y", 0));
+      if(x_need_grad){
+        printf("need dx\n");
+        builder.Output("dx", 1);
+      }
+      if(y_need_grad){
+        printf("need dy\n");
+        builder.Output("dy", 1);
+      }
+
       return builder.Build();
     };
     ctx->DefineOp(grad_op_name, BuildGradOp);
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [=]() -> const std::string& {
+    if(x_need_grad){
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dx", 0);
       });
+    }
 
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [=]() -> const std::string& {
+    if(y_need_grad){
+      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [&]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("dy", 0);
       });
+    }
   };
 }
 
