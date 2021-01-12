@@ -1349,4 +1349,6 @@ def _ReleaseLogicalObject(obj):
 
 
 def _ReleasePhysicalObject(obj):
+    if obj is None:
+        return
     PhysicalRun(lambda builder: builder.DeleteObject(obj))
