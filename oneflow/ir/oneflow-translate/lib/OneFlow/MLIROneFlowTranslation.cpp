@@ -1,6 +1,7 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
@@ -51,14 +52,16 @@ using PbMessage = google::protobuf::Message;
 
 class Importer {
  public:
-  Importer(MLIRContext *context, ModuleOp module)
+  Importer(::oneflow::Job *job, MLIRContext *context, ModuleOp module)
       : b(context),
         context(context),
         module(module),
-        unknownLoc(FileLineColLoc::get("imported-protobuf", 0, 0, context)) {}
+        unknownLoc(FileLineColLoc::get("imported-protobuf", 0, 0, context)),
+        job(job) {}
+
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
-  LogicalResult processJob(::oneflow::Job *job);
-  LogicalResult updateJob(::oneflow::Job *job);
+  LogicalResult processJob();
+  LogicalResult tryToUpdateJob();
 
  private:
   /// The current builder, pointing at where the next Instruction should be
@@ -71,6 +74,7 @@ class Importer {
   /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
   Location unknownLoc;
   std::unordered_map<std::string, mlir::Value> lbn2result;
+  ::oneflow::Job *job;
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
@@ -184,7 +188,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   }
 }  // namespace
 
-LogicalResult Importer::processJob(::oneflow::Job *job) {
+LogicalResult Importer::processJob() {
   auto func_type = b.getFunctionType(llvm::None, llvm::None);
   auto function = mlir::FuncOp::create(unknownLoc, job->job_conf().job_name(), func_type);
   auto &entryBlock = *function.addEntryBlock();
@@ -203,9 +207,19 @@ LogicalResult Importer::processJob(::oneflow::Job *job) {
   return success();
 }
 
-LogicalResult Importer::updateJob(::oneflow::Job *job) { return success(); }
+LogicalResult Importer::tryToUpdateJob() {
+  std::cout << "try updating job\n";
+  auto dumpOps = [](Operation *op) {
+    op->getName().dump();
+    oneflow::UserOp usro = llvm::dyn_cast<oneflow::UserOp>(op);
+    // if (!usro) { return; }
+    op->dump();
+  };
+  module.getRegion().walk(dumpOps);
+  return success();
+}
 
-void applyPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
+void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
   if (debug) {
     std::cout << "import:\n";
     module->dump();
@@ -241,9 +255,9 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
 
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
-  Importer imp(context, module.get());
-  if (succeeded(imp.processJob(&job))) {
-    applyPatterns(context, module, true);
+  Importer imp(&job, context, module.get());
+  if (succeeded(imp.processJob())) {
+    applyRoundTripPatterns(context, module, true);
   } else {
     return {};
   }
@@ -259,16 +273,16 @@ void roundTripOneFlowJob(::oneflow::Job *job) {
   context.loadDialect<StandardOpsDialect>();
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
-  Importer imp(&context, module.get());
-  if (succeeded(imp.processJob(job))) {
-    if (failed(imp.updateJob(job))) {
+  Importer imp(job, &context, module.get());
+  if (succeeded(imp.processJob())) {
+    applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
+    if (failed(imp.tryToUpdateJob())) {
       std::cerr << "fail to update job with IR, job will stay intact, job_name: "
                 << job->job_conf().job_name();
     }
   } else {
     std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
   }
-  applyPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
 }
 
 void registerFromOneFlowJobTranslation() {
