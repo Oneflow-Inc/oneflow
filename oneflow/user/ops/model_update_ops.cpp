@@ -195,6 +195,67 @@ void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifie
   SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0);
 }
 
+/*
+SGD Update Computation Cost 
+= cast scale regularize gradient cost + model update cost
+= 6 * |model| + 4 * |model|
+= 10 * |model|
+*/
+Maybe<double> GetSGDUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  double cost = model->shape().elem_cnt() * 10;
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+/*
+Momentum Update Computation Cost 
+= cast scale regularize gradient cost + momentum compute cost + model update cost
+= 6 * |model| + 3 * |model| + 3 * |model|
+= 12 * |model|
+*/
+Maybe<double> GetMomentumUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  double cost = model->shape().elem_cnt() * 12;
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+/*
+Adam Update Computation Cost 
+= cast scale regularize gradient cost + m compute cost + v compute cost + model update cost
+ 6 * |model| + 3 * |model| + 4 * |model| + 7 * |model|
+= 20 * |model|
+*/
+Maybe<double> GetAdamUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  double cost = model->shape().elem_cnt() * 20;
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+
+/*
+Lamb Update Computation Cost 
+= cast scale regularize gradient cost + m compute cost + v compute cost + adam diff cost + LambLR cost + model update cost
+≈ 6 * |model| + 3 * |model| + 4 * |model| + 7 * |model| + 4 * |model|
+= 24 * |model|
+*/
+Maybe<double> GetLambUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  double cost = model->shape().elem_cnt() * 24;
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
 REGISTER_USER_OP("sgd_update")
     .Input("model")
     .Input("model_diff")
@@ -220,7 +281,8 @@ REGISTER_USER_OP("sgd_update")
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
-    });
+    })
+    .SetComputeComplexityFn(GetSGDUpdateComputationCostFn);
 
 REGISTER_USER_OP("indexed_slices_sgd_update")
     .Input("model")
@@ -284,7 +346,8 @@ REGISTER_USER_OP("momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-    });
+    })
+    .SetComputeComplexityFn(GetMomentumUpdateComputationCostFn);
 
 REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model")
@@ -353,7 +416,8 @@ REGISTER_USER_OP("adam_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(AdamInputArgModifyFn);
+    .SetInputArgModifyFn(AdamInputArgModifyFn)
+    .SetComputeComplexityFn(GetAdamUpdateComputationCostFn);
 
 REGISTER_USER_OP("indexed_slices_adam_update")
     .Input("model")
@@ -414,7 +478,8 @@ REGISTER_USER_OP("lamb_update")
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     // every bn has sbp broadcast signature
-    .SetInputArgModifyFn(LambInputArgModifyFn);
+    .SetInputArgModifyFn(LambInputArgModifyFn)
+    .SetComputeComplexityFn(GetLambUpdateComputationCostFn);
 
 REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Input("learning_rate")
