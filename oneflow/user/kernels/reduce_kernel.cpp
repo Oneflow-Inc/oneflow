@@ -81,11 +81,14 @@ REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
 
-template<template<typename> class BinaryFunc>
-class ReduceHalfKernel final : public user_op::OpKernel {
+bool IsAxisContiguous(const std::vector<int32_t>& axis) {
+  return (axis.at(axis.size()-1)-axis.at(0) + 1==axis.size());
+}
+
+class ReduceSumHalfKernel final : public user_op::OpKernel {
  public:
-  ReduceHalfKernel() = default;
-  ~ReduceHalfKernel() = default;
+  ReduceSumHalfKernel() = default;
+  ~ReduceSumHalfKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -93,38 +96,67 @@ class ReduceHalfKernel final : public user_op::OpKernel {
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    const Shape& reduced_shape =
-        CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
-    float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
-    const size_t in_tmp_buffer_bytes =
-        GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
-    float* out_tmp_buffer =
-        reinterpret_cast<float*>(tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes);
-    const size_t out_tmp_buffer_bytes =
-        GetCudaAlignedSize(reduced_shape.elem_cnt() * sizeof(float));
-    float* reduce_tmp_buffer = reinterpret_cast<float*>(
-        tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes + out_tmp_buffer_bytes);
-    const size_t reduce_tmp_buffer_bytes =
-        GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
-    CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
-             tmp_buffer->shape().elem_cnt() * sizeof(float));
-    CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
-                                  input_tensor->shape().elem_cnt());
 
-    NdarrayReduce<DeviceType::kGPU, float, BinaryFunc>::Reduce(
-        ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
-        XpuVarNdarray<const float>(input_tensor->shape(), in_tmp_buffer),
-        XpuVarNdarray<float>(input_tensor->shape(), reduce_tmp_buffer));
+    const int64_t before_reduce = input_tensor->shape().Count(0, axis.at(0));
+    const int64_t after_reduce = input_tensor->shape().Count(axis.at(axis.size()-1));
+    if(IsAxisContiguous(axis) && (before_reduce == 1 || after_reduce == 1)) {
+      CBLAS_TRANSPOSE trans_a;
+      CBLAS_TRANSPOSE trans_b = CblasNoTrans;
+      const int64_t reduce_elem_cnt = input_tensor->shape().Count(axis.at(0), axis.at(axis.size()-1));
+      NewKernelUtil<DeviceType::kGPU>::Fill(ctx->device_ctx(), reduce_elem_cnt, static_cast<float16>(1.0),
+                                            tmp_buffer->mut_dptr<float16>());
+      int32_t m = 0, n = 0, k = 0;
+      if(after_reduce == 1) {
+        trans_a = CblasNoTrans;
+        m = before_reduce;
+        n = 1;
+        k = reduce_elem_cnt;
+      } else if(before_reduce ==1) {
+        trans_a = CblasTrans;
+        m = after_reduce;
+        n = 1;
+        k = reduce_elem_cnt;
+      }
+      LOG(INFO)<<" m "<<m<<" n "<<n<<" k "<<k;
+      const float16 beta = GetZeroVal<float16>();
+      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
+                                              GetOneVal<float16>(), input_tensor->dptr<float16>(),
+                                              tmp_buffer->dptr<float16>(), beta, out->mut_dptr<float16>());
+    } else {
+      const Shape& reduced_shape =
+          CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
+      float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
+      const size_t in_tmp_buffer_bytes =
+          GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
+      float* out_tmp_buffer =
+          reinterpret_cast<float*>(tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes);
+      const size_t out_tmp_buffer_bytes =
+          GetCudaAlignedSize(reduced_shape.elem_cnt() * sizeof(float));
+      float* reduce_tmp_buffer = reinterpret_cast<float*>(
+          tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes + out_tmp_buffer_bytes);
+      const size_t reduce_tmp_buffer_bytes =
+          GetCudaAlignedSize(input_tensor->shape().elem_cnt() * sizeof(float));
+      CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
+               tmp_buffer->shape().elem_cnt() * sizeof(float));
+      CopyElemOnGpu<float16, float>(ctx->device_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
+                                    input_tensor->shape().elem_cnt());
 
-    CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
-                                  output_tensor->mut_dptr<float16>(),
-                                  output_tensor->shape().elem_cnt());
+      NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
+          ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+          XpuVarNdarray<const float>(input_tensor->shape(), in_tmp_buffer),
+          XpuVarNdarray<float>(input_tensor->shape(), reduce_tmp_buffer));
+
+      CopyElemOnGpu<float, float16>(ctx->device_ctx(), out_tmp_buffer,
+                                    output_tensor->mut_dptr<float16>(),
+                                    output_tensor->shape().elem_cnt());
+    }
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("reduce_sum")
-    .SetCreateFn<ReduceHalfKernel<BinaryFuncSum>>()
+    .SetCreateFn<ReduceSumHalfKernel>()
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
