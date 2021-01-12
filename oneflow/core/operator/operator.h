@@ -39,6 +39,7 @@ struct OpContext {
 
 class LogicalNode;
 class MirroredSigInferHint;
+class OpNodeSignature;
 class Scope;
 
 class Operator {
