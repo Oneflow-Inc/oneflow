@@ -136,7 +136,7 @@ def api_user_op_builder(op_name):
 
     For instance::
         def myargmax(
-            input: remote_blob_util.BlobDef) -> remote_blob_util.BlobDef:
+            input: oneflow_api.BlobDesc) -> oneflow_api.BlobDesc:
             return (
             flow.user_op_builder("myargmax")
             .Op("argmax")

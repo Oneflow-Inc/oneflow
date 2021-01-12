@@ -432,6 +432,23 @@ def num_callback_threads(val):
     sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
 
 
+@oneflow_export("config.enable_tensor_float_32_compute")
+def api_enable_tensor_float_32_compute(val: bool = True) -> None:
+    r"""Whether or not to enable Tensor-float-32 on supported GPUs
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_tensor_float_32_compute, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_tensor_float_32_compute(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_tensor_float_32_compute = val
+
+
 @oneflow_export("config.collective_boxing.nccl_num_streams")
 def api_nccl_num_streams(val: int) -> None:
     r"""Set up the number of nccl parallel streams while use boxing
