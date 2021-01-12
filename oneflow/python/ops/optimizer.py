@@ -1103,6 +1103,120 @@ class SGD(Optimizer):
             train_conf.model_update_conf.momentum_conf.beta = self.momentum
 
 
+@oneflow_export("optimizer.SGDW")
+class SGDW(Optimizer):
+    r"""The optimizer of the stochastic-gradient-descent-weight-decay algorithm.
+
+    (More details please refer to `Decoupled Weight Decay Regularization <https://arxiv.org/abs/1711.05101>`_).
+
+    When the momentum = 0, the equation of parameters updating is:
+
+    .. math::
+
+        param_{new} = param_{old} - learning\_rate*(grad + \lambda*param_{old}))
+
+    With momentum, the equation of parameters updating is:
+
+    .. math::
+
+        & V_{t} = \beta*V_{t-1} - learning\_rate*g_t
+
+        & param_{new} = param_{old} + V_{t} - learning\_rate * \lambda*param_{old}
+
+    Args:
+        lr_scheduler (LrScheduler): The scheduler of learning rate.
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        momentum (float, optional): Momentum factor (:math:`\beta`). Defaults to 0.9.
+        weight_decay (Optional[float], optional): The weight decay factor (In the equation is :math:`\lambda`). Defaults to None.
+        weight_decay_includes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that use weight decay. Defaults to None.
+        weight_decay_excludes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that do not use weight decay. Defaults to None.
+        grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+
+    Note:
+
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None,
+        all the model parameters will use weight decay.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import oneflow.typing as tp
+
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((BATCH_SIZE, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((BATCH_SIZE,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = lenet(images, train=True)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+
+            # Set Learning rate as 0.1
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            # Set Momentum=0.9 SGDW optimizer, weight_decay factor is 0.00005
+            flow.optimizer.SGDW(lr_scheduler, momentum=0.9, weight_decay=0.00005).minimize(loss)
+
+            return loss
+    """
+
+    def __init__(
+        self,
+        lr_scheduler: LrScheduler,
+        loss_scale_factor: Optional[float] = None,
+        momentum: float = 0.9,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
+        grad_clipping: Optional[ClipGradientConf] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+    ):
+        super().__init__(
+            lr_scheduler,
+            loss_scale_factor,
+            grad_clipping,
+            train_step_lbn,
+            loss_scale_policy,
+        )
+        self.momentum = momentum
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
+
+    def _SetSpecificFieldsInTrainConf(self, train_conf):
+        if self.momentum == 0:
+            train_conf.model_update_conf.naive_conf.SetInParent()
+        else:
+            train_conf.model_update_conf.momentum_conf.beta = self.momentum
+
+        if self.weight_decay is not None:
+            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            elif self.weight_decay_excludes is not None:
+                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )
+
+
 @oneflow_export("optimizer.Adam")
 class Adam(Optimizer):
     r"""The optimizer of the Adam algorithm.

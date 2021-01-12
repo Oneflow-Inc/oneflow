@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
@@ -35,6 +37,11 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmh_handle() {
     cublas_pmh_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_pmh_handle_.get()));
     OF_CUBLAS_CHECK(cublasSetStream(*cublas_pmh_handle_, *cuda_stream()));
+#if CUDA_VERSION >= 11000
+    if (Global<ResourceDesc, ForSession>::Get()->enable_tensor_float_32_compute()) {
+      OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_pmh_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
+    }
+#endif
   }
   return cublas_pmh_handle_.get();
 }
@@ -88,6 +95,9 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { OF_CUDNN_CHECK(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { OF_CUBLAS_CHECK(cublasDestroy(*cublas_pmd_handle_)); }
+  if (cublas_tensor_op_math_handle_) {
+    OF_CUBLAS_CHECK(cublasDestroy(*cublas_tensor_op_math_handle_));
+  }
   if (cuda_stream_) { OF_CUDA_CHECK(cudaStreamDestroy(*cuda_stream_)); }
 }
 
