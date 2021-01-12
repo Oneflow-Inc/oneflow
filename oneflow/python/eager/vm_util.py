@@ -23,7 +23,7 @@ import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
@@ -36,7 +36,6 @@ import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
@@ -46,9 +45,9 @@ import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow_api.oneflow.core.operator.op_node_signature as op_node_signature_cfg
 from google.protobuf import text_format
-
-oneflow_api = oneflow.oneflow_api
+import oneflow_api
 
 
 def PhysicalRun(build):
@@ -349,7 +348,7 @@ class InstructionsBuilder(object):
         phy_op_arg_blob_attrs = self._GetPhysicalOpArgBlobAttrs(blob_object)
 
         def GetPhysicalBlob(parallel_desc_sym, blob_attr):
-            op_arg_parallel_attr = op_arg_util.MakeMirroredOpArgParallelAttribute(
+            op_arg_parallel_attr = oneflow_api.MakeMirroredOpArgParallelAttribute(
                 parallel_desc_sym
             )
             pyhsical_blob_object = self._NewBlobObject(op_arg_parallel_attr, blob_attr)
@@ -382,10 +381,10 @@ class InstructionsBuilder(object):
         parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
         blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
 
-        op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-            blob_parallel_desc_sym, op_attribute, obn
+        op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+            blob_parallel_desc_sym, str(op_attribute), obn
         )
-        op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+        op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
 
         blob_object = self._NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
         self._LazyReference(blob_object, interface_op_name)
@@ -536,7 +535,7 @@ class InstructionsBuilder(object):
         object_id = self._BroadcastObjectReference(
             sole_mirrored_blob_object, parallel_desc_sym
         )
-        op_arg_parallel_attr = op_arg_util.MakeBroadcastOpArgParallelAttribute(
+        op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
             parallel_desc_sym
         )
         return object_util.BlobObject(
@@ -653,8 +652,8 @@ class InstructionsBuilder(object):
         assert op_parallel_desc_sym is not None
 
         def DelegateBlobObject4Ibn(ibn):
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                op_parallel_desc_sym, op_attribute, ibn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                op_parallel_desc_sym, str(op_attribute), ibn
             )
             return get_delegate_blob_object(
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
@@ -710,8 +709,8 @@ class InstructionsBuilder(object):
         op_parallel_desc_sym = opkernel_object.parallel_desc_symbol
 
         def DelegateBlobObject4Ibn(ibn):
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                op_parallel_desc_sym, op_attribute, ibn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                op_parallel_desc_sym, str(op_attribute), ibn
             )
             return get_delegate_blob_object(
                 bn_in_op2blob_object[ibn], op_arg_parallel_attr
@@ -777,34 +776,14 @@ class InstructionsBuilder(object):
         return symbol
 
     def _GetOpNodeSignatureSymbol(self, op_attribute):
-        new_op_node_signature = op_attribute_pb.OpNodeSignature()
-        new_op_node_signature.sbp_signature.CopyFrom(op_attribute.sbp_signature)
-        new_op_node_signature.mirrored_signature.CopyFrom(
-            op_attribute.mirrored_signature
+        new_op_node_signature = oneflow_api.deprecated.MakeOpNodeSignatureFromSerializedOpAttribute(
+            str(op_attribute)
         )
-        new_op_node_signature.logical_blob_desc_signature.CopyFrom(
-            op_attribute.logical_blob_desc_signature
-        )
-        new_op_node_signature.batch_axis_signature.CopyFrom(
-            op_attribute.batch_axis_signature
-        )
-        new_op_node_signature.parallel_signature.CopyFrom(
-            op_attribute.parallel_signature
-        )
-        serialized_op_node_signature = new_op_node_signature.SerializeToString()
-        if symbol_storage.HasSymbol4SerializedOpNodeSignature(
-            serialized_op_node_signature
-        ):
-            return symbol_storage.GetSymbol4SerializedOpNodeSignature(
-                serialized_op_node_signature
-            )
+        if oneflow_api.HasOpNodeSignatureSymbol(new_op_node_signature):
+            return oneflow_api.GetOpNodeSignatureSymbol(new_op_node_signature)
         symbol_id = self._NewSymbolId4OpNodeSignature(new_op_node_signature)
-        symbol = symbol_util.Symbol(symbol_id, new_op_node_signature)
-        symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4SerializedOpNodeSignature(
-            serialized_op_node_signature, symbol
-        )
-        return symbol
+        oneflow_api.AddOpNodeSignatureSymbol(symbol_id, new_op_node_signature)
+        return oneflow_api.GetOpNodeSignatureSymbol(symbol_id)
 
     def _GetConstInputOperandBlobObjects(self, op_attribute, blob_object4ibn=None):
         assert callable(blob_object4ibn)
@@ -853,10 +832,10 @@ class InstructionsBuilder(object):
 
         for obn in OutputBns():
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                GetOutBlobParallelDescSymbol(obn), op_attribute, obn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                GetOutBlobParallelDescSymbol(obn), str(op_attribute), obn
             )
-            op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+            op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
             out_blob_object = self._NewBlobObject(
                 op_arg_parallel_attr, op_arg_blob_attr
             )
@@ -897,10 +876,10 @@ class InstructionsBuilder(object):
             if obn2modifier[obn].header_infered_before_compute:
                 continue
             obn_sym = self.GetSymbol4String(obn)
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                GetOutBlobParallelDescSymbol(obn), op_attribute, obn
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                GetOutBlobParallelDescSymbol(obn), str(op_attribute), obn
             )
-            op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, obn)
+            op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
             out_blob_object = self._NewBlobObject(
                 op_arg_parallel_attr, op_arg_blob_attr
             )
@@ -942,9 +921,9 @@ class InstructionsBuilder(object):
         self._InitOpConfSymbol(symbol_id, op_conf)
         return symbol_id
 
-    def _NewSymbolId4OpNodeSignature(self, op_node_signature):
+    def _NewSymbolId4OpNodeSignature(self, op_node_signature_sym):
         symbol_id = self._NewSymbolId()
-        self._InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature)
+        self._InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature_sym)
         return symbol_id
 
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
@@ -1141,9 +1120,7 @@ class InstructionsBuilder(object):
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         # TODO(oyy) change temporary transformation after python code migrated into cpp code
-        eager_symbol.parallel_conf_symbol.CopyFrom(
-            text_format.Parse(str(parallel_conf), placement_pb.ParallelConf())
-        )
+        text_format.Parse(str(parallel_conf), eager_symbol.parallel_conf_symbol)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _NewScopeSymbol(self, symbol_id, scope_proto):
@@ -1154,9 +1131,7 @@ class InstructionsBuilder(object):
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         # TODO(oyy): text_format.Parse will be removed after eager_symbol proto obj is replaced with cfg obj in python side
-        eager_symbol.scope_symbol.CopyFrom(
-            text_format.Parse(str(scope_proto), scope_pb.ScopeProto())
-        )
+        text_format.Parse(str(scope_proto), eager_symbol.scope_symbol)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitJobConfSymbol(self, symbol_id, job_conf):
@@ -1167,9 +1142,7 @@ class InstructionsBuilder(object):
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
         # TODO(oyy) change temporary transformation after python code migrated into cpp code
-        eager_symbol.job_conf_symbol.CopyFrom(
-            text_format.Parse(str(job_conf), job_conf_pb.JobConfigProto())
-        )
+        text_format.Parse(str(job_conf), eager_symbol.job_conf_symbol)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
@@ -1182,14 +1155,16 @@ class InstructionsBuilder(object):
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
-    def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature):
+    def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature_sym):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitOpNodeSignatureDescSymbol")
         instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
         eager_symbol.symbol_id = symbol_id
-        eager_symbol.op_node_signature_symbol.CopyFrom(op_node_signature)
+        text_format.Parse(
+            str(op_node_signature_sym), eager_symbol.op_node_signature_symbol
+        )
         self.eager_symbol_list_.eager_symbol.append(eager_symbol)
 
     def _FetchBlob(self, instruction_name, blob_object, fetcher):
@@ -1260,13 +1235,13 @@ def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
     op_conf.device_tag = new_parallel_desc_symbol.device_tag
     op_conf.input_conf.out = "out"
     cfg_interface_blob_conf = (
-        oneflow_api.oneflow.core.operator.inter_face_blob_conf.InterfaceBlobConf()
+        oneflow_api.oneflow.core.operator.interface_blob_conf.InterfaceBlobConf()
     )
     blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
     blob_object.op_arg_blob_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
     text_format.Parse(str(cfg_interface_blob_conf), op_conf.input_conf.blob_conf)
     op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
-    upstream_signature = op_attribute_pb.OpNodeSignature()
+    upstream_signature = op_node_signature_pb.OpNodeSignature()
     op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
     parallel_conf = new_parallel_desc_symbol.parallel_conf
     bn_in_op2blob_object = {}
