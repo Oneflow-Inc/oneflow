@@ -44,11 +44,6 @@ def np_norm(x, p="fro", axis=None, keepdim=False, name=None):
                 out_broadcasted = np.transpose(out_broadcasted, [1, 0])
             grad = (np.abs(input) == out_broadcasted) * np.sign(input)
             return out, grad
-        elif porder == 0:
-            # Zero norm
-            out = np.sum((input != 0), keepdims=keepdim)
-            grad = np.ones_like(input != 0)
-            return out, grad
         else:
             abs_x = np.abs(input)
             pow_x = np.power(abs_x, porder)
@@ -82,6 +77,10 @@ def np_norm(x, p="fro", axis=None, keepdim=False, name=None):
             grad = (np.abs(input) == np.broadcast_to(out, input.shape)) * np.sign(input)
             return out, grad
 
+    def zero_norm(input, axis=None, keepdim=False, name=None):
+        # Add zero norm
+        return np.sum(input != 0, axis=axis, keepdims=keepdim)
+
     def p_matrix_norm(input, porder, axis, keepdim=False, name=None):
         abs_x = np.abs(input)
         out = np.power(abs_x, porder)
@@ -94,6 +93,9 @@ def np_norm(x, p="fro", axis=None, keepdim=False, name=None):
         )
 
         return out, grad
+
+    if p == float(0):
+        return zero_norm(x, axis, keepdim)
 
     if axis is None and p is not None:
         if isinstance(p, str):
@@ -131,12 +133,6 @@ def np_norm(x, p="fro", axis=None, keepdim=False, name=None):
             return frobenius_norm(x, axis=axis, keepdim=keepdim, name=name)
         elif p == np.inf or p == -np.inf:
             return inf_norm(x, porder=p, axis=axis, keepdim=keepdim, name=name)
-        elif p == 0:
-            raise ValueError(
-                "just suport axis type int or list (length of list <=1) if p = 0, found {}".format(
-                    axis
-                )
-            )
         else:
             return p_matrix_norm(x, porder=p, axis=axis, keepdim=keepdim, name=name)
     else:

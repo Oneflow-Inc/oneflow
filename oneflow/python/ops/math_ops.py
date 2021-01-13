@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import os
 from typing import Union, Optional, Sequence, List, Tuple
+import numpy as np 
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -2103,3 +2104,30 @@ def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.B
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("norm")
+def norm(x: oneflow_api.BlobDesc, 
+         p: Union[int, str, float]='fro', 
+         axis: int=None, 
+         keepdims: bool=False, 
+         name: Optional[str] = None) -> oneflow_api.BlobDesc:
+    if name is None: 
+        name = id_util.UniqueStr("Norm_")
+    
+    def _zero_norm(input, axis=None, keepdim=False, name=None):
+        _not_equal = flow.math.not_equal(x, flow.zeros_like(x, name=name+"zero"), name=name+"not_equal")
+        return flow.math.reduce_sum(_not_equal, axis=axis, keepdims=keepdims, name=name+"sum")
+    
+    def _vector_norm(x, p, axis, keepdims, name): 
+        p = float(p) if p is not None else 2.0
+
+        if p == np.inf:
+            return flow.math.reduce_max(flow.math.abs(x, name=name+"abs"), axis=axis, keepdims=keepdims, name=name+"max")
+        elif p == -np.inf:
+            return flow.math.reduce_min(flow.math.abs(x, name=name+"abs"), axis=axis, keepdims=keepdims, name=name+"min")
+        else:
+            _abs_x = flow.math.abs(x, name=name+"abs")
+            _pow_x = flow.math.pow(_abs_x, p, name=name+"pow1")
+            _sum_x = flow.math.reduce_sum(_pow_x, axis=axis, keepdims=keepdims)
+            _final_pow_x = flow.math.pow(_sum_x, 1.0 / p, name=name+"pow2")
