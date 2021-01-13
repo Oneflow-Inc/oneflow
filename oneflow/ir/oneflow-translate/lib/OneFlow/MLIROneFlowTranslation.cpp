@@ -128,6 +128,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
     named_attr_vec.emplace_back(kv);                                                       \
   }
+      // TODO: Define a shape attribute type backed by i64 array storage
       DEFINE_ONE_ELIF(at_shape, getI64ArrayAttr, dim)
       DEFINE_ONE_ELIF(at_list_int32, getI32ArrayAttr, val)
       DEFINE_ONE_ELIF(at_list_int64, getI64ArrayAttr, val)
