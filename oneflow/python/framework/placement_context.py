@@ -22,7 +22,7 @@ import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.scope_symbol as scope_symbol
+import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 
@@ -75,25 +75,7 @@ def MakeParallelConf4Resource(device_tag, resource):
         machine_device_ids = GetCpuMachineDeviceIds(resource)
     else:
         raise NotImplementedError
-    return MakeParallelConf(device_tag, machine_device_ids)
-
-
-def MakeParallelConf(device_tag, machine_device_ids):
-    assert isinstance(machine_device_ids, collections.Sized)
-
-    parallel_conf = placement_cfg.ParallelConf()
-    parallel_conf.set_device_tag(device_tag)
-    for machine_device_id in machine_device_ids:
-        assert isinstance(
-            machine_device_id, str
-        ), "type of machine_device_id (%s) is not string" % type(machine_device_id)
-        assert re.match("^\d+:\d+(-\d+)?$", machine_device_id) is not None, (
-            "machine_device_id: %s is not valid" % machine_device_id
-        )
-        pair = machine_device_id.split(":")
-        parallel_conf.add_device_name("%s:%s" % (pair[0], pair[1]))
-
-    return parallel_conf
+    return parallel_conf_util.MakeParallelConf(device_tag, machine_device_ids)
 
 
 def MakeMachineId2DeviceIdList(parallel_conf):
