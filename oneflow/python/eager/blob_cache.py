@@ -71,10 +71,9 @@ class BlobCache(object):
             self.numpy_ = fetch(self.blob_object_)
         return self.numpy_
 
-    def __del__(self):
+    def __del__(self, is_shutting_down=python_interpreter_util.IsShuttingDown):
         # Bind `python_interpreter_util.IsShuttingDown` early.
         # See the comments of `python_interpreter_util.IsShuttingDown`
-        is_shutting_down = python_interpreter_util.IsShuttingDown
         for key in list(self.delegate_blob_object_.keys()):
             if is_shutting_down():
                 return

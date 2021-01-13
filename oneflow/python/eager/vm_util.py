@@ -38,6 +38,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
 import oneflow
@@ -1195,8 +1196,6 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
 
     def _TryClearObject(self, obj):
-        if obj is None:
-            return
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("TryClearObject")
         instruction.set_parallel_desc_symbol_id(obj.parallel_desc_symbol.symbol_id)
@@ -1204,8 +1203,6 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
 
     def _DeleteObject(self, blob_object):
-        if blob_object is None:
-            return
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("DeleteObject")
         instruction.set_parallel_desc_symbol_id(
@@ -1346,27 +1343,15 @@ def _GetOpConfBlobNameAttr(pb_message, field):
     return repeated_field[index]
 
 
-def _ReleaseLogicalObject(obj):
-    if obj is None:
+def _ReleaseLogicalObject(obj, is_shutting_down=python_interpreter_util.IsShuttingDown):
+    if is_shutting_down():
         return
-
-    def DeleteObj(builder):
-        if builder is None:
-            return
-        else:
-            builder.DeleteObject(obj)
-
-    LogicalRun(DeleteObj)
+    LogicalRun(lambda builder: builder.DeleteObject(obj))
 
 
-def _ReleasePhysicalObject(obj):
-    if obj is None:
+def _ReleasePhysicalObject(
+    obj, is_shutting_down=python_interpreter_util.IsShuttingDown
+):
+    if is_shutting_down():
         return
-
-    def DeleteObj(builder):
-        if builder is None:
-            return
-        else:
-            builder.DeleteObject(obj)
-
-    PhysicalRun(DeleteObj)
+    PhysicalRun(lambda builder: builder.DeleteObject(obj))
