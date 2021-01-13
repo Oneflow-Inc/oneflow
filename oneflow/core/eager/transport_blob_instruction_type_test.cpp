@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/test_util.h"

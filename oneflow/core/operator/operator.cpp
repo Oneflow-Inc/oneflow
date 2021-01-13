@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 
 namespace oneflow {
 
