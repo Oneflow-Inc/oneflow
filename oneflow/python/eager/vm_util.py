@@ -1345,10 +1345,24 @@ def _GetOpConfBlobNameAttr(pb_message, field):
 def _ReleaseLogicalObject(obj):
     if obj is None:
         return
-    LogicalRun(lambda builder: builder.DeleteObject(obj))
+
+    def DeleteObj(builder):
+        if builder is None:
+            return
+        else:
+            builder.DeleteObject(obj)
+
+    LogicalRun(DeleteObj)
 
 
 def _ReleasePhysicalObject(obj):
     if obj is None:
         return
-    PhysicalRun(lambda builder: builder.DeleteObject(obj))
+
+    def DeleteObj(builder):
+        if builder is None:
+            return
+        else:
+            builder.DeleteObject(obj)
+
+    PhysicalRun(DeleteObj)
