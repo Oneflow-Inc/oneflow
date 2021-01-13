@@ -54,12 +54,13 @@ using PbMessage = google::protobuf::Message;
 
 class Importer {
  public:
-  Importer(const ::oneflow::Job *job, MLIRContext *context, ModuleOp module)
+  Importer(RoundTripOneFlowJobWrapperInterface &job_wrapper, MLIRContext *context, ModuleOp module)
       : b(context),
         context(context),
         module(module),
         unknownLoc(FileLineColLoc::get("imported-protobuf", 0, 0, context)),
-        job(job) {}
+        job(job_wrapper.job()),
+        job_wrapper(job_wrapper) {}
 
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
@@ -77,6 +78,7 @@ class Importer {
   Location unknownLoc;
   std::unordered_map<std::string, mlir::Value> lbn2result;
   const ::oneflow::Job *job;
+  RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
@@ -260,19 +262,13 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
 
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
-  Importer imp(&job, context, module.get());
-  if (succeeded(imp.processJob())) {
-    applyRoundTripPatterns(context, module, true);
-  } else {
-    return {};
-  }
   return module;
 }
 
 }  // namespace
 
 void RoundTripOneFlowJob(
-    const RoundTripOneFlowJobWrapperInterface &job_wrapper,
+    RoundTripOneFlowJobWrapperInterface &job_wrapper,
     std::function<bool(::oneflow::Job *job, std::string &reason)> is_legit_job) {
   const ::oneflow::Job *job = job_wrapper.job();
   mlir::MLIRContext context;
@@ -281,7 +277,7 @@ void RoundTripOneFlowJob(
   context.loadDialect<StandardOpsDialect>();
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
-  Importer imp(job, &context, module.get());
+  Importer imp(job_wrapper, &context, module.get());
   if (succeeded(imp.processJob())) {
     applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
     if (failed(imp.tryToUpdateJob())) {

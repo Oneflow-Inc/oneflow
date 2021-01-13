@@ -8,11 +8,11 @@ namespace mlir {
 class RoundTripOneFlowJobWrapperInterface {
  public:
   virtual const ::oneflow::Job* job() const = 0;
-  virtual const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) = 0;
+  virtual const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const = 0;
 };
 
 void RoundTripOneFlowJob(
-    const RoundTripOneFlowJobWrapperInterface& job_wrapper,
+    RoundTripOneFlowJobWrapperInterface& job_wrapper,
     std::function<bool(::oneflow::Job* job, std::string& reason)> is_legit_job);
 void registerFromOneFlowJobTranslation();
 

@@ -24,7 +24,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
  public:
   const Job* job() const { return job_; }
   RoundTripOneFlowJobWrapper(::oneflow::Job* job) : job_(job), op_graph_(*job), job_builder_(job) {}
-  const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) {
+  const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
   }
 
@@ -46,7 +46,7 @@ class IRRoundTrip final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
-    const auto& w = RoundTripOneFlowJobWrapper(job);
+    RoundTripOneFlowJobWrapper w(job);
     mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) { return true; });
     return Maybe<void>::Ok();
   }
