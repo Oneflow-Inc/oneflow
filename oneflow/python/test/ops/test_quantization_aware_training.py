@@ -24,7 +24,6 @@ from test_util import GenArgList
 
 
 def _test(test_case, per_channel, symmetric, build_backbone_fn):
-
     def run_with_func_config(build_backbone_fn, func_config):
         flow.clear_default_session()
 
