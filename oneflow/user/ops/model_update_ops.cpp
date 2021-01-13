@@ -256,6 +256,76 @@ Maybe<double> GetLambUpdateComputationCostFn(user_op::ComputeComplexityFnContext
   return cost;
 }
 
+/*
+Index sliced SGD Update Computation Cost 
+= num_indeces * ( feature_id compute + from compute + to compute + feature_size * (local feature update cost))
+= |model_diff_induces| * ( 3 + 2 + 2 + feature_size * （2）)
+= |model_diff_induces| * ( 7 + 2 * |model->shape().Count(1)|)
+*/
+Maybe<double> GetIndexedSlicesSGDUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc* model_diff_indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+  double cost = model_diff_indices->shape().elem_cnt() * (7 + 2 * model->shape().Count(1));
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+/*
+Index sliced Momentum Update Computation Cost 
+= reduce sum cost + update cost
+= unique cost + unsorted segment sum cost + n' * identity_update cost
+= 4 * n + ( init + from + to + transform) * n + num_unique_instance * m * ( 6 + momentum_update cost ) 
+= 4 * n + ( 2 + 5 + 5 + m) * n + num_unique_instance * m * （6 + 12）
+≈ 4 * n + ( 12 + m ) * n + n * m * 18
+= (16  + 30 * m) * n 
+= (16 + 30 * |model_diff_values| / |model_diff_indices|) * |model_diff_indices|
+= 16 * |model_diff_indices| + 30 * |model_diff_values|
+where 
+n = num_indices 
+  = |model_diff_indices|
+m = feature_size 
+  = num_values / num_indices
+  = |model_diff_values| / |model_diff_indices|
+*/
+Maybe<double> GetIndexedSlicesMomentumUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model_diff_indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+  const user_op::TensorDesc* model_diff_values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
+  double cost = 16 * model_diff_indices->shape().elem_cnt() + 30 * model_diff_values->shape().elem_cnt();
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+/*
+Index sliced Adam Update Computation Cost 
+= reduce sum cost + update cost
+= unique cost + unsorted segment sum cost + n' * identity_update cost
+= 4 * n + ( init + from + to + transform) * n + num_unique_instance * m * ( 6 + adam_update cost ) 
+= 4 * n + ( 2 + 5 + 5 + m) * n + num_unique_instance * m * （6 + 20）
+≈ 4 * n + ( 12 + m ) * n + n * m * 26
+= (16  + 38 * m) * n 
+= (16 + 38 * |model_diff_values| / |model_diff_indices|) * |model_diff_indices|
+= 16 * |model_diff_indices| + 38 * |model_diff_values|
+where 
+n = num_indices 
+  = |model_diff_indices|
+m = feature_size 
+  = num_values / num_indices
+  = |model_diff_values| / |model_diff_indices|
+*/
+Maybe<double> GetIndexedSlicesAdamUpdateComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* model_diff_indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+  const user_op::TensorDesc* model_diff_values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
+  double cost = 16 * model_diff_indices->shape().elem_cnt() + 38 * model_diff_values->shape().elem_cnt();
+  if (ctx->SbpParallel4ArgNameAndIndex("model", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
 REGISTER_USER_OP("sgd_update")
     .Input("model")
     .Input("model_diff")
@@ -315,7 +385,8 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
-    });
+    })
+    .SetComputeComplexityFn(GetIndexedSlicesSGDUpdateComputationCostFn);
 
 REGISTER_USER_OP("momentum_update")
     .Input("model")
@@ -385,7 +456,8 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-    });
+    })
+    .SetComputeComplexityFn(GetIndexedSlicesMomentumUpdateComputationCostFn);
 
 REGISTER_USER_OP("adam_update")
     .Input("model")
@@ -457,7 +529,8 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       }
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn(AdamInputArgModifyFn);
+    .SetInputArgModifyFn(AdamInputArgModifyFn)
+    .SetComputeComplexityFn(GetIndexedSlicesAdamUpdateComputationCostFn);
 
 REGISTER_USER_OP("lamb_update")
     .Input("m")
