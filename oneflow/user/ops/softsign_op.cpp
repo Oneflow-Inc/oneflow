@@ -44,7 +44,7 @@ REGISTER_USER_OP("softsign")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("relu_grad")
+REGISTER_USER_OP("softsign_grad")
     .Input("y")
     .Input("dy")
     .Output("dx")
@@ -73,9 +73,9 @@ REGISTER_USER_OP("relu_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto relu_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(relu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+REGISTER_USER_OP_GRAD("softsign").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto softsign_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(softsign_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("relu_grad")
         .InputBind("y", ctx->FwOp().output("out", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
@@ -83,8 +83,8 @@ REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
         .Build();
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &relu_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(relu_grad_op_name).output("dx", 0);
+                            [&ctx, &softsign_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(softsign_grad_op_name).output("dx", 0);
                             });
 });
 
