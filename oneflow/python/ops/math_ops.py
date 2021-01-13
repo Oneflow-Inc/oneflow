@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 import os
 from typing import Union, Optional, Sequence, List, Tuple
-import numpy as np 
+import numpy as np
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -2107,27 +2107,87 @@ def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.B
 
 
 @oneflow_export("norm")
-def norm(x: oneflow_api.BlobDesc, 
-         p: Union[int, str, float]='fro', 
-         axis: int=None, 
-         keepdims: bool=False, 
-         name: Optional[str] = None) -> oneflow_api.BlobDesc:
-    if name is None: 
-        name = id_util.UniqueStr("Norm_")
-    
-    def _zero_norm(input, axis=None, keepdim=False, name=None):
-        _not_equal = flow.math.not_equal(x, flow.zeros_like(x, name=name+"zero"), name=name+"not_equal")
-        return flow.math.reduce_sum(_not_equal, axis=axis, keepdims=keepdims, name=name+"sum")
-    
-    def _vector_norm(x, p, axis, keepdims, name): 
-        p = float(p) if p is not None else 2.0
+def norm(
+    x: oneflow_api.BlobDesc,
+    p: Union[int, str, float] = "fro",
+    axis: int = None,
+    keepdims: bool = False,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
 
+    if name is None:
+        name = id_util.UniqueStr("Norm_")
+
+    def _p_norm(x, p=2.0, axis=None, keepdims=False, name=None):
         if p == np.inf:
-            return flow.math.reduce_max(flow.math.abs(x, name=name+"abs"), axis=axis, keepdims=keepdims, name=name+"max")
+            _out = flow.math.reduce_max(
+                flow.math.abs(x, name=name + "abs"), name=name + "max"
+            )
         elif p == -np.inf:
-            return flow.math.reduce_min(flow.math.abs(x, name=name+"abs"), axis=axis, keepdims=keepdims, name=name+"min")
+            _out = flow.math.reduce_min(
+                flow.math.abs(x, name=name + "abs"), name=name + "min"
+            )
+        # elif p == float(0):
+        #     _out = flow.math.reduce_sum(flow.math.not_equal(x,
+        #                                                     # flow.constant_scalar(0., dtype=flow.float32, name=name+"zero_scalar"),
+        #                                                     flow.zeros_like(x, dtype=flow.float32, name=name+"zero_scalar"),
+        #                                                     name=name+"not_eq"),
+        #                                                     axis=axis,
+        #                                                     keepdims=keepdims,
+        #                                                     name=name+"sum")
+        elif p == float(1):
+            _out = flow.math.reduce_sum(
+                flow.math.abs(x, name=name + "abs"),
+                axis=axis,
+                keepdims=keepdims,
+                name=name + "sum",
+            )
+        elif p == -float(1):
+            _out = flow.math.divide(
+                1.0,
+                flow.math.reduce_sum(
+                    flow.math.divide(
+                        1.0, flow.math.abs(x, name=name + "abs"), name=name + "divide1"
+                    ),
+                    axis=axis,
+                    keepdims=keepdims,
+                    name=name + "sum",
+                ),
+                name=name + "divide2",
+            )
         else:
-            _abs_x = flow.math.abs(x, name=name+"abs")
-            _pow_x = flow.math.pow(_abs_x, p, name=name+"pow1")
-            _sum_x = flow.math.reduce_sum(_pow_x, axis=axis, keepdims=keepdims)
-            _final_pow_x = flow.math.pow(_sum_x, 1.0 / p, name=name+"pow2")
+            _abs_x = flow.math.abs(x, name=name + "abs")
+            _pow_x = flow.math.pow(_abs_x, p, name=name + "pow1")
+            _sum_x = flow.math.reduce_sum(
+                _pow_x, axis=axis, keepdims=keepdims, name=name + "sum"
+            )
+            _out = flow.math.pow(_sum_x, 1.0 / p, name=name + "pow2")
+        return _out
+
+    def _frobenius_norm(x, axis=None, keepdims=False, name=None):
+        if axis is not None:
+            assert (
+                len(axis) <= 2
+            ), "Frobenius Norm expected at most 2 dimensions, but got {} dimensions instead.".format(
+                len(axis)
+            )
+
+        _square_x = flow.math.square(x, name=name + "square")
+        _sum_x = flow.math.reduce_sum(
+            _square_x, axis=axis, keepdims=keepdims, name=name + "sum"
+        )
+        _sqrt_x = flow.math.sqrt(_sum_x, name=name + "sqrt")
+        return _sqrt_x
+
+    if not isinstance(p, str):
+        p = float(p)
+
+    if isinstance(axis, int):
+        _axis = [axis]
+    else:
+        _axis = axis
+
+    if p == "fro":
+        return _frobenius_norm(x, keepdims=keepdims, name=name + "Fro_norm_")
+    elif isinstance(p, float):
+        return _p_norm(x, p=p, axis=_axis, keepdims=keepdims, name=name + "P_norm_")
