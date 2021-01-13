@@ -22,6 +22,10 @@ sub graph -> function
 1. find original user op to get bn, convert Variadic operands and outputs to `ArgDef`, keeping the same order
 2. convert attributes
 
+### Basic principles for a legit rewrite
+
+1. Source op of control edge shouldn't be erased
+2. Erasing, creating op shouldn't introduce boxing
 ### Information not included in OpConf
 
 - There are information in job not included in `OpConf`:
