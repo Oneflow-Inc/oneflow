@@ -35,7 +35,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/job_conf.proto
       oneflow/core/job/placement.proto
       oneflow/core/operator/op_conf.proto
-      oneflow/core/operator/inter_face_blob_conf.proto
+      oneflow/core/operator/interface_blob_conf.proto
       oneflow/core/common/shape.proto
       oneflow/core/record/image.proto
       oneflow/core/record/record.proto
@@ -52,6 +52,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/scope.proto
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto
+      oneflow/core/operator/op_node_signature.proto
       oneflow/core/register/batch_axis_signature.proto
       oneflow/core/operator/arg_modifier_signature.proto
       oneflow/core/job/blob_lifetime_signature.proto
@@ -108,13 +109,16 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/scope.proto
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto
+      oneflow/core/operator/op_node_signature.proto
+      oneflow/core/register/batch_axis_signature.proto
+      oneflow/core/job/parallel_signature.proto
       oneflow/core/job/initializer_conf.proto
       oneflow/core/job/regularizer_conf.proto
       oneflow/core/job/learning_rate_schedule_conf.proto
       oneflow/core/common/data_type.proto
       oneflow/core/common/device_type.proto
       oneflow/core/register/logical_blob_id.proto
-      oneflow/core/operator/inter_face_blob_conf.proto
+      oneflow/core/operator/interface_blob_conf.proto
       oneflow/core/common/shape.proto
       oneflow/core/register/blob_desc.proto
       oneflow/core/register/pod.proto

@@ -21,10 +21,10 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuHardSwishKernel final : public OpKernel {
+class CpuScalarPowKernel final : public OpKernel {
  public:
-  CpuHardSwishKernel() = default;
-  ~CpuHardSwishKernel() = default;
+  CpuScalarPowKernel() = default;
+  ~CpuScalarPowKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -32,35 +32,28 @@ class CpuHardSwishKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
+    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
 
-    const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      if (in_ptr[i] <= static_cast<T>(-3)) {
-        out_ptr[i] = static_cast<T>(0);
-      } else if (in_ptr[i] >= static_cast<T>(3)) {
-        out_ptr[i] = in_ptr[i];
-      } else {
-        out_ptr[i] = (in_ptr[i] * (in_ptr[i] + static_cast<T>(3))) / static_cast<T>(6);
-      }
-    }
+    const int64_t elem_cnt = in_tensor->shape().elem_cnt();
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = std::pow(in_ptr[i], exponent); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDSWISH_KERNEL(device, dtype)    \
-  REGISTER_USER_KERNEL("hardswish")                     \
-      .SetCreateFn<CpuHardSwishKernel<device, dtype>>() \
+#define REGISTER_CPU_SCALAR_POW_KERNEL(device, dtype)   \
+  REGISTER_USER_KERNEL("scalar_pow")                    \
+      .SetCreateFn<CpuScalarPowKernel<device, dtype>>() \
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, double)
+REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_SCALAR_POW_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuHardSwishGradKernel final : public OpKernel {
+class CpuScalarPowGradKernel final : public OpKernel {
  public:
-  CpuHardSwishGradKernel() = default;
-  ~CpuHardSwishGradKernel() = default;
+  CpuScalarPowGradKernel() = default;
+  ~CpuScalarPowGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -70,29 +63,24 @@ class CpuHardSwishGradKernel final : public OpKernel {
     const T* x_ptr = x_tensor->dptr<T>();
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
+    const T exponent = static_cast<T>(ctx->Attr<double>("exponent"));
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      if (x_ptr[i] <= static_cast<T>(-3)) {
-        dx_ptr[i] = 0;
-      } else if (x_ptr[i] >= static_cast<T>(3)) {
-        dx_ptr[i] = dy_ptr[i];
-      } else {
-        dx_ptr[i] = ((x_ptr[i] / static_cast<T>(3)) + static_cast<T>(0.5)) * dy_ptr[i];
-      }
+      dx_ptr[i] = exponent * (std::pow(x_ptr[i], exponent - static_cast<T>(1))) * dy_ptr[i];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDSWISH_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("hardswish_grad")                      \
-      .SetCreateFn<CpuHardSwishGradKernel<device, dtype>>()   \
-      .SetIsMatchedHob((HobDeviceTag() == device)             \
+#define REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(device, dtype)  \
+  REGISTER_USER_KERNEL("scalar_pow_grad")                   \
+      .SetCreateFn<CpuScalarPowGradKernel<device, dtype>>() \
+      .SetIsMatchedHob((HobDeviceTag() == device)           \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_HARDSWISH_BACKWARD_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_HARDSWISH_BACKWARD_KERNEL(DeviceType::kCPU, double)
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace user_op
 

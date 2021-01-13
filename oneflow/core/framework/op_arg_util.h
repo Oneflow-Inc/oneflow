@@ -24,9 +24,14 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
-#include "oneflow/core/operator/inter_face_blob_conf.cfg.h"
+#include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/register/pod.cfg.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
+#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/job/parallel_signature.cfg.h"
+#include "oneflow/core/register/batch_axis_signature.cfg.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -90,6 +95,19 @@ class OpArgBlobAttribute {
     }
   }
 
+  void DumpToOpNodeSignature(std::string bn_in_op,
+                             std::shared_ptr<cfg::OpNodeSignature> op_node_signature) {
+    auto& blob_sig =
+        *(op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc());
+    CHECK(blob_sig.find(bn_in_op) == blob_sig.end());
+    blob_sig[bn_in_op].CopyFrom(*blob_desc_);
+
+    auto& batch_axis_sig =
+        *(op_node_signature->mutable_batch_axis_signature()->mutable_bn_in_op2batch_axis());
+    CHECK(batch_axis_sig.find(bn_in_op) == batch_axis_sig.end());
+    batch_axis_sig[bn_in_op].CopyFrom(*batch_axis_);
+  }
+
  private:
   std::shared_ptr<cfg::OptInt64> batch_axis_;
   std::shared_ptr<cfg::BlobDescProto> blob_desc_;
@@ -144,6 +162,23 @@ class OpArgParallelAttribute {
     }
   }
 
+  void DumpToOpNodeSignature(std::string bn_in_op,
+                             std::shared_ptr<cfg::OpNodeSignature> op_node_signature) {
+    auto& sbp_sig = *(op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel());
+    CHECK(sbp_sig.find(bn_in_op) == sbp_sig.end());
+    sbp_sig[bn_in_op].CopyFrom(*sbp_parallel_);
+
+    auto& mirrored_sig = *(
+        op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel());
+    CHECK(mirrored_sig.find(bn_in_op) == mirrored_sig.end());
+    mirrored_sig[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
+
+    auto& parallel_sig = *(op_node_signature->mutable_parallel_signature()
+                               ->mutable_bn_in_op2parallel_desc_symbol_id());
+    CHECK(parallel_sig.find(bn_in_op) == parallel_sig.end());
+    parallel_sig[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
+  }
+
   std::string ToString() const {
     return std::string("\nparallel_desc_symbol: ") + parallel_desc_->parallel_conf().DebugString()
            + "\nsbp_parallel: " + sbp_parallel_->DebugString()
@@ -166,6 +201,19 @@ class OpArgParallelAttribute {
   std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel_;
   std::size_t hash_;
 };
+
+Maybe<OpArgBlobAttribute> GetOpArgBlobAttribute(const OpAttribute& op_attribute,
+                                                const std::string& bn_in_op);
+
+Maybe<OpArgParallelAttribute> GetOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol, const OpAttribute& op_attribute,
+    const std::string& bn_in_op);
+
+Maybe<OpArgParallelAttribute> MakeMirroredOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
+
+Maybe<OpArgParallelAttribute> MakeBroadcastOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
 
 }  // namespace compatible_py
 

@@ -56,6 +56,7 @@ class ResourceDesc final {
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
+  bool enable_tensor_float_32_compute() const { return resource_.enable_tensor_float_32_compute(); }
   const Resource& resource() const { return resource_; }
 
  private:
