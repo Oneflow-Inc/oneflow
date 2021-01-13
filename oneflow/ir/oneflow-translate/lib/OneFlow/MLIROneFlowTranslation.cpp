@@ -85,14 +85,15 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     return failure();
   }
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
-  const std::string &type_name = user_conf.op_type_name();
-  if (type_name == "constant") {
+  const std::string &op_type_name = user_conf.op_type_name();
+  const std::string &op_name = op.name();
+  mlir::ArrayAttr placement = b.getStrArrayAttr({});
+  if (op_type_name == "constant") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
-      auto placement = b.getStrArrayAttr({});
       auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
       mlir::Value created =
           b.create<oneflow::ConstantOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
-                                        placement, fv)
+                                        b.getStringAttr(op_name), placement, fv)
               .getResult();
       const std::string &lbn = user_conf.output().at("out").s(0);
       lbn2result.insert({lbn, created});
@@ -180,9 +181,8 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       }
     }
     ::mlir::ValueRange operands(vs);
-    auto created = b.create<oneflow::UserOp>(unknownLoc, out_types, operands, op.name(),
-                                             op.user_conf().op_type_name(),
-                                             b.getDictionaryAttr(named_attributes));
+    auto created = b.create<oneflow::UserOp>(unknownLoc, out_types, operands, op_name, placement,
+                                             op_type_name, b.getDictionaryAttr(named_attributes));
     for (auto kv : op.user_conf().output()) {
       // const std::string &obn = kv.first;
       for (const std::string &lbn : kv.second.s()) {

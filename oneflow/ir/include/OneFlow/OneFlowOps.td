@@ -31,16 +31,17 @@ def OneFlow_PlacementAttr : OneFlow_Placement;
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag mandatory_attrs = (ins
+    StrAttr:$op_name,
     OneFlow_PlacementAttr:$placement
   );
   dag attrs = (ins);
   dag data_in = (ins);
   dag ctrl_in = (ins);
   let arguments = !con(
-      mandatory_attrs,
-      attrs,
       data_in,
-      ctrl_in
+      ctrl_in,
+      mandatory_attrs,
+      attrs
   );
 }
 
@@ -58,18 +59,16 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsA
       StrAttr:$op_name
     );
     let results = (outs AnyType:$res);
-
     let assemblyFormat = [{
         $input attr-dict `:` type($input)
     }];
 }
 
 def OneFlow_UserOp : OneFlow_Op<"user", []> {
-    let arguments = (ins
-      Variadic<AnyType>:$operands,
-      StrAttr:$op_name,
-      StrAttr:$op_type_name,
-      DictionaryAttr:$attr
+    let data_in = (ins Variadic<AnyType>:$operands);
+    let attrs = (ins
+        StrAttr:$op_type_name,
+        DictionaryAttr:$attr
     );
     let results = (outs Variadic<AnyType>:$outputs);
 }
