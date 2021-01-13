@@ -35,7 +35,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> final {
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
                              const int64_t batch_size, const int64_t max_target_length,
-                             const int blank, const bool zero_infinity);
+                             const int blank);
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
@@ -53,8 +53,7 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
     DeviceCtx* ctx, const T* log_probs_ptr, const int* targets_ptr, const IDX* input_lengths_ptr,
     const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
     NdIndexOffsetHelper<int64_t, 3>& input_helper, NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
-    const int64_t batch_size, const int64_t max_target_length, const int blank,
-    const bool zero_infinity) {
+    const int64_t batch_size, const int64_t max_target_length, const int blank) {
   constexpr T neginf = -std::numeric_limits<T>::infinity();
   FOR_RANGE(int32_t, b, 0, batch_size) {
     IDX input_length = input_lengths_ptr[b];
@@ -109,7 +108,6 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
       T log_likelihood = std::log(std::exp(l1 - m) + std::exp(l2 - m)) + m;
       loss_ptr[b] = -log_likelihood;
     }
-    if (zero_infinity && loss_ptr[b] == std::numeric_limits<T>::infinity()) { loss_ptr[b] = 0; }
   }
 }
 
@@ -130,9 +128,9 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
     IDX target_length = target_lengths_ptr[b];
     T nll = loss_ptr[b];
     if (zero_infinity && nll == std::numeric_limits<T>::infinity()) {
-      for (IDX t = 0; t < input_length - 2; t++) {
-        for (IDX s = 0; s < 2 * target_length + 1; s++) {
-          grad_ptr[input_helper.NdIndexToOffset(t, b, s)] = 0;
+      for (IDX t = 0; t < max_input_length; t++) {
+        for (IDX c = 0; c < num_labels; c++) {
+          grad_ptr[input_helper.NdIndexToOffset(t, b, c)] = 0;
         }
       }
       continue;

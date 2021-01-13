@@ -29,7 +29,7 @@ struct CtcLossKernelUtil final {
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
                              const int64_t batch_size, const int64_t max_target_length,
-                             const int blank, const bool zero_infinity);
+                             const int blank);
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,

@@ -171,6 +171,12 @@ def ctc_loss(
         .RemoteBlobList()
     )
 
+    if zero_infinity:
+        inf = flow.constant(float("inf"), dtype=loss.dtype, shape=loss.shape)
+        cond = flow.math.equal(loss, inf)
+        zero = flow.zeros(dtype=loss.dtype, shape=loss.shape)
+        loss = flow.where(cond, zero, loss)
+
     if reduction == "mean":
         return flow.math.reduce_mean(
             flow.math.xdivy(

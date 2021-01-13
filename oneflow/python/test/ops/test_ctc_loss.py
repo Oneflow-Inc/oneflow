@@ -56,15 +56,7 @@ def get_target_prime(targets, b, s, blank):
         return targets[b, s // 2]
 
 
-def ctc_loss_np(
-    log_probs,
-    targets,
-    input_lengths,
-    target_lengths,
-    blank=0,
-    reduction="mean",
-    zero_infinity=False,
-):
+def ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank=0):
 
     max_input_length, batch_size, _ = log_probs.shape
     _, max_target_length = targets.shape
@@ -107,18 +99,7 @@ def ctc_loss_np(
             l1 = alpha[b, input_length - 1, target_length * 2]
             l2 = alpha[b, input_length - 1, target_length * 2 - 1]
             loss[b] = -logsumexp(l1, l2)
-        if zero_infinity and loss[b] == float("inf"):
-            loss[b] = 0
-
-    if reduction == "mean":
-        reduction_loss = np.mean(
-            np.divide(loss, np.clip(target_lengths, 1, a_max=None).astype(np.float))
-        )
-    elif reduction == "sum":
-        reduction_loss = np.sum(loss)
-    else:
-        reduction_loss = loss
-    return reduction_loss, loss, alpha
+    return loss, alpha
 
 
 def ctc_loss_grad_np(
@@ -130,14 +111,13 @@ def ctc_loss_grad_np(
     input_lengths,
     target_lengths,
     blank=0,
-    reduction="mean",
     zero_infinity=False,
 ):
     max_input_length, batch_size, num_labels = log_probs.shape
     _, max_target_length = targets.shape
 
     beta = np.zeros([batch_size, max_input_length, 2 * max_target_length + 1])
-    grad = np.zeros(log_probs.shape)
+    grad = np.zeros(log_probs.shape, dtype=log_probs.dtype)
     grad.fill(ninf)
 
     for b in range(0, batch_size):
@@ -145,11 +125,11 @@ def ctc_loss_grad_np(
         target_length = target_lengths[b]
         nll = loss[b]
         if zero_infinity and nll == float("inf"):
-            grad[0 : input_length - 2, b, 0 : 2 * target_length + 1] = 0
+            grad[:, b, :] = 0
             continue
 
         if input_length > 0:
-            beta[b, input_length - 1, 0 : 2 * target_length + 1] = ninf
+            beta[b, input_length - 1, :] = ninf
             beta[b, input_length - 1, 2 * target_length] = log_probs[
                 input_length - 1, b, blank
             ]
@@ -196,14 +176,12 @@ def ctc_loss_grad_np(
                     grad[t, b, current_target_prime] = alpha_beta
                 else:
                     grad[t, b, current_target_prime] = logsumexp(lcab, alpha_beta)
+
         for t in range(0, input_length):
             for c in range(0, num_labels):
                 res = grad[t, b, c]
                 lp = log_probs[t, b, c]
-                if res == -nll:
-                    grad[t, b, c] = 0
-                else:
-                    grad[t, b, c] = (np.exp(lp) - np.exp(res + nll - lp)) * grad_out[b]
+                grad[t, b, c] = (np.exp(lp) - np.exp(res + nll - lp)) * grad_out[b]
         if input_length < max_input_length:
             grad[input_length:max_input_length, b] = 0
     return grad
@@ -253,16 +231,21 @@ def compare_with_np(
         dtype=np.int32,
     )
 
-    np_out, loss, alpha = ctc_loss_np(
-        log_probs,
-        targets,
-        input_lengths,
-        target_lengths,
-        blank,
-        reduction,
-        zero_infinity,
-    )
+    loss, alpha = ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank)
+    np_out = np.where(loss == float("inf"), 0, loss) if zero_infinity else loss
+    if reduction == "mean":
+        np_out = np.mean(
+            np.divide(np_out, np.clip(target_lengths, 1, a_max=None).astype(np.float))
+        )
+    elif reduction == "sum":
+        np_out = np.sum(np_out)
+
     grad_out = np.ones_like(loss, np.float32)
+    if reduction == "mean":
+        grad_out = np.divide(
+            grad_out, np.clip(target_lengths, 1, a_max=None).astype(np.float)
+        )
+        grad_out /= target_lengths.size
 
     _np_grad = ctc_loss_grad_np(
         grad_out,
@@ -273,7 +256,6 @@ def compare_with_np(
         input_lengths,
         target_lengths,
         blank,
-        reduction,
         zero_infinity,
     )
 
@@ -337,8 +319,8 @@ def gen_arg_list(type):
     arg_dict["batch_size"] = [4]
     arg_dict["num_classes"] = [5]
     arg_dict["max_target_length"] = [10]
-    arg_dict["blank"] = [0, 1]
-    arg_dict["reduction"] = ["none"]
+    arg_dict["blank"] = [0, 1, 4]
+    arg_dict["reduction"] = ["mean", "sum", "none"]
     arg_dict["zero_infinity"] = [False, True]
 
     return GenArgList(arg_dict)

@@ -38,7 +38,6 @@ class CtcLossKernel final : public user_op::OpKernel {
     const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
     const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
     const int blank = ctx->Attr<int>("blank");
-    const bool zero_infinity = ctx->Attr<bool>("zero_infinity");
     const int64_t max_input_length = log_probs->shape().At(0);
     const int64_t batch_size = log_probs->shape().At(1);
     const int64_t num_labels = log_probs->shape().At(2);
@@ -58,8 +57,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     T* alpha_ptr = alpha->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
         ctx->device_ctx(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr,
-        alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_target_length, blank,
-        zero_infinity);
+        alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_target_length, blank);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
