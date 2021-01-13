@@ -151,6 +151,159 @@ DEFINE_STATIC_SWITCH_FUNC(void, ImageNormalizeByChannel, MAKE_IMAGE_NORMALIZE_SW
 
 #undef MAKE_IMAGE_NORMALIZE_SWITCH_ENTRY
 
+template<typename T>
+void Rle4DensePoints(std::vector<std::vector<cv::Point_<T>>> &poly_point_vec,
+                     std::vector<std::vector<int32_t>> &upsample_poly_point_vec,
+                     int32_t im_w, int32_t im_h) {
+  /* upsample and get discrete points densely along entire boundary */
+  double scale = 5;
+  std::vector<int32_t> x_vec, y_vec;
+  std::vector<int32_t> up_x_vec, up_y_vec;
+  FOR_RANGE(int, i, 0, poly_point_vec.size()) {
+    std::vector<cv::Point_<T>>* poly_point = &poly_point_vec[i];
+    size_t num_points = poly_point->size();
+    FOR_RANGE(int, j, 0, num_points) {
+      x_vec.push_back(static_cast<int>(scale * (*poly_point)[j].x + .5));
+      y_vec.push_back(static_cast<int>(scale * (*poly_point)[j].y + .5));
+    }
+    x_vec.push_back(x_vec[0]);
+    y_vec.push_back(y_vec[0]);
+    FOR_RANGE(int, j, 0, num_points) {
+      int x_start = x_vec[j], x_end = x_vec[j+1], y_start = y_vec[j], y_end = y_vec[j+1], temp = 0;
+      int dx = std::abs(x_end - x_start);
+      int dy = std::abs(y_start - y_end);
+      bool flip = (dx >= dy && x_start > x_end) || (dx < dy && y_start > y_end);
+      if (flip) {
+        temp = x_start;
+        x_start = x_end;
+        x_end = temp;
+        temp = y_start;
+        y_start = y_end;
+        y_end = temp;
+      }
+      double point_scale = dx >= dy ? static_cast<double>(y_end - y_start) / dx : static_cast<double>(x_end - x_start) / dy;
+      if (dx >= dy) {
+        FOR_RANGE(int, d, 0, dx + 1) {
+          temp = flip ? dx - d : d;
+          up_x_vec.push_back(temp + x_start);
+          up_y_vec.push_back(static_cast<int>(y_start + point_scale * temp + .5));
+        }
+      } else {
+        FOR_RANGE(int, d, 0, dy + 1) {
+          temp = flip ? dy - d : d;
+          up_y_vec.push_back(temp + y_start);
+          up_x_vec.push_back(static_cast<int>(x_start + point_scale * temp + .5));
+        }
+      }
+    }
+    x_vec.clear();
+    y_vec.clear();
+    /* get points along y-boundary and downsample */
+    FOR_RANGE(int, j, 1, up_y_vec.size()) {
+      if (up_y_vec[j] != up_y_vec[j - 1]) {
+        double down_y = static_cast<double>(up_y_vec[j] < up_y_vec[j-1] ? up_y_vec[j] : up_y_vec[j] - 1);
+        down_y = (down_y + .5) / scale - .5;
+        if (floor(down_y) != down_y || down_y < 0 || down_y > im_h - 1) { continue; }
+        double down_x = static_cast<double>(up_x_vec[j] < up_x_vec[j-1] ? up_x_vec[j] : up_x_vec[j - 1]);
+        down_x = (down_x + .5) / scale - .5;
+        if (down_x < 0) { 
+          down_x = 0;
+        } else if (down_x > im_w) { down_x = im_w; }
+        down_x = ceil(down_x);
+        x_vec.push_back(static_cast<int>(down_x));
+        y_vec.push_back(static_cast<int>(down_y));
+      }
+    }
+    /* compute rle encoding given x-boundary points */
+    std::vector<int32_t> temp_rle_vec;
+    FOR_RANGE(int, j, 0, y_vec.size()) {
+      temp_rle_vec.push_back(static_cast<int>(y_vec[j] * static_cast<int>(im_w) + x_vec[j]));
+    }
+    temp_rle_vec.push_back(static_cast<int>(im_h * im_w));
+    x_vec.clear();
+    y_vec.clear();
+    up_x_vec.clear();
+    up_y_vec.clear();
+    std::sort(temp_rle_vec.begin(), temp_rle_vec.end());
+    unsigned int p = 0;
+    size_t rle_size = temp_rle_vec.size();
+    FOR_RANGE(int, j, 0, rle_size) {
+      unsigned int temp = temp_rle_vec[j];
+      temp_rle_vec[j] -= p;
+      p = temp;
+    }
+    int m = 0, j = 0;
+    upsample_poly_point_vec[i].push_back(temp_rle_vec[j++]);
+    ++m;
+    while (j < rle_size) {
+      if (temp_rle_vec[j] > 0) {
+        upsample_poly_point_vec[i].push_back(temp_rle_vec[j++]);
+        ++m;
+      } else {
+        ++j;
+        if (j < rle_size) {
+          upsample_poly_point_vec[i][m - 1] += temp_rle_vec[j++];
+        }
+      }
+    }
+    temp_rle_vec.clear();
+  }
+}
+
+std::vector<uchar> RleDecode(std::vector<int32_t> &rle_encode_vec) {
+  uchar v = 0;
+  std::vector<uchar> mask_vec;
+  FOR_RANGE(int, i, 0, rle_encode_vec.size()) {
+    FOR_RANGE(int, j, 0, rle_encode_vec[i]) {
+      mask_vec.push_back(v);
+    }
+    v = !v;
+  }
+  return mask_vec;
+}
+
+std::vector<int32_t> RleMerge(std::vector<std::vector<int32_t>> &upsample_poly_point_vec) {
+  if (upsample_poly_point_vec.size() == 1) {
+    return upsample_poly_point_vec[0];
+  }
+  std::vector<int32_t> merge_rle_vec;
+  std::vector<int32_t> rle_encode_vec = upsample_poly_point_vec[0];
+  FOR_RANGE(int, i, 1, upsample_poly_point_vec.size()) {
+    std::vector<int32_t> temp_encode_vec = upsample_poly_point_vec[i];
+    if (temp_encode_vec.size() == 0) { break; }
+    unsigned int ct = 1, ca = rle_encode_vec[0], cb = temp_encode_vec[0], cc = 0;
+    size_t a = 1, b = 1;
+    int v = 0, vp = 0, va = 0, vb = 0;
+    while (ct > 0) {
+      unsigned int c = std::min(ca, cb);
+      cc += c;
+      ct = 0;
+
+      ca -= c;
+      if (!ca && a < rle_encode_vec.size()) {
+        ca = rle_encode_vec[a++];
+        va = !va;
+      }
+      ct += ca;
+
+      cb -= c;
+      if (!cb && b < temp_encode_vec.size()) {
+        cb = temp_encode_vec[b++];
+        vb = !vb;
+      }
+      ct += cb;
+
+      vp = v;
+      v = va || vb;
+      if (v != vp || ct == 0) {
+        merge_rle_vec.push_back(cc);
+        cc = 0;
+      }
+    }
+  }
+  return merge_rle_vec;
+}
+
 template<typename T, typename I>
 void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_index,
                     TensorBuffer* masks, int32_t im_w, int32_t im_h) {
@@ -161,15 +314,19 @@ void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_inde
   int num_points = polys.shape().At(0);
   CHECK_EQ(polys_nd_index.shape().At(0), num_points);
 
-  std::vector<std::vector<cv::Point>> poly_point_vec;
+  std::vector<std::vector<cv::Point_<T>>> poly_point_vec;
+  std::vector<std::vector<int32_t>> upsample_poly_point_vec;
   std::vector<cv::Mat> mask_mat_vec;
   auto PolyToMask = [&]() {
     CHECK_GT(poly_point_vec.size(), 0);
     CHECK_GT(poly_point_vec.front().size(), 0);
-    cv::Mat mask_mat = cv::Mat(im_h, im_w, CV_8SC1, cv::Scalar(0));
-    cv::fillPoly(mask_mat, poly_point_vec, cv::Scalar(1), cv::LINE_8);
+    Rle4DensePoints<T>(poly_point_vec, upsample_poly_point_vec, im_w, im_h);
+    std::vector<int32_t> rle_encode_vec = RleMerge(upsample_poly_point_vec);
+    std::vector<uchar> mask_vec = RleDecode(rle_encode_vec);
+    cv::Mat mask_mat = cv::Mat(mask_vec, true).reshape(1, im_h);
     mask_mat_vec.emplace_back(std::move(mask_mat));
     poly_point_vec.clear();
+    upsample_poly_point_vec.clear();
   };
 
   int origin_round_way = std::fegetround();
@@ -180,14 +337,14 @@ void PolygonsToMask(const TensorBuffer& polys, const TensorBuffer& polys_nd_inde
     const I segm_idx = polys_nd_index.data<I>()[i * 3 + 2];
     if (segm_idx != mask_mat_vec.size()) { PolyToMask(); }
     if (poly_idx == poly_point_vec.size()) {
-      poly_point_vec.emplace_back(std::vector<cv::Point>());
+      poly_point_vec.emplace_back(std::vector<cv::Point_<T>>());
+      upsample_poly_point_vec.emplace_back(std::vector<int32_t>());
     }
     CHECK_EQ(segm_idx, mask_mat_vec.size());
     CHECK_EQ(poly_idx, poly_point_vec.size() - 1);
     CHECK_EQ(pt_idx, poly_point_vec.back().size());
     const T* pts_ptr = polys.data<T>() + i * 2;
-    cv::Point pt{static_cast<int>(std::nearbyint(pts_ptr[0])),
-                 static_cast<int>(std::nearbyint(pts_ptr[1]))};
+    cv::Point_<T> pt{pts_ptr[0], pts_ptr[1]};
     poly_point_vec.back().emplace_back(std::move(pt));
   }
   PolyToMask();
