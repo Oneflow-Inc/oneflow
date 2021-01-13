@@ -137,7 +137,7 @@ def ctc_loss(
             return loss
 
 
-        log_input = np.array(
+        log_probs = np.array(
             [
                 [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
                 [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
@@ -146,10 +146,10 @@ def ctc_loss(
                 [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
             ]
         ).astype(np.float32)
-        target = np.array([[1, 2, 2], [1, 2, 2]]).astype("int32")
+        targets = np.array([[1, 2, 2], [1, 2, 2]]).astype("int32")
         input_lengths = np.array([5, 5]).astype("int32")
         target_lengths = np.array([3, 3]).astype("int32")
-        loss = ctc_loss_job(log_input, target, input_lengths, target_lengths)
+        loss = ctc_loss_job(log_probs, targets, input_lengths, target_lengths)
 
         # loss [3.918017 2.907672]
 

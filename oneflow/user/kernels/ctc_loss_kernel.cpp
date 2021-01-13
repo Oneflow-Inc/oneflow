@@ -48,6 +48,7 @@ class CtcLossKernel final : public user_op::OpKernel {
     CHECK_EQ(batch_size, target_lengths->shape().At(0));
     CHECK_GE(blank, 0);
     CHECK_LT(blank, num_labels);
+    // TODO
     // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
     // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
@@ -110,6 +111,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     CHECK_LT(blank, num_labels);
     const int64_t max_input_length = log_probs->shape().At(0);
     const int64_t max_target_length = targets->shape().At(1);
+    // TODO
     // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
     // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);

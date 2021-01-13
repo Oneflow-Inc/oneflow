@@ -111,13 +111,14 @@ def ctc_loss_np(
             loss[b] = 0
 
     if reduction == "mean":
-        return np.mean(
+        reduction_loss = np.mean(
             np.divide(loss, np.clip(target_lengths, 1, a_max=None).astype(np.float))
         )
     elif reduction == "sum":
-        return np.sum(loss)
+        reduction_loss = np.sum(loss)
     else:
-        return loss
+        reduction_loss = loss
+    return reduction_loss, loss, alpha
 
 
 def ctc_loss_grad_np(
@@ -199,7 +200,10 @@ def ctc_loss_grad_np(
             for c in range(0, num_labels):
                 res = grad[t, b, c]
                 lp = log_probs[t, b, c]
-                grad[t, b, c] = (np.exp(lp) - np.exp(res + nll - lp)) * grad_out[b]
+                if res == -nll:
+                    grad[t, b, c] = 0
+                else:
+                    grad[t, b, c] = (np.exp(lp) - np.exp(res + nll - lp)) * grad_out[b]
         if input_length < max_input_length:
             grad[input_length:max_input_length, b] = 0
     return grad
@@ -232,65 +236,10 @@ def compare_with_np(
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow_data_type)
 
-    @flow.global_function(function_config=func_config)
-    def ctc_loss_job(
-        log_probs: tp.Numpy.Placeholder(
-            shape=(max_input_length, batch_size, num_classes), dtype=flow_data_type
-        ),
-        targets: tp.Numpy.Placeholder(
-            shape=(batch_size, max_target_length), dtype=flow.int32
-        ),
-        input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
-        target_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
-    ) -> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
-            return flow.ctc_loss(
-                log_probs,
-                targets,
-                input_lengths,
-                target_lengths,
-                blank=blank,
-                reduction=reduction,
-                zero_infinity=zero_infinity,
-            )
-
-    def print_grad(blob: tp.Numpy):
-        print(blob)
-
-    @flow.global_function(type="train", function_config=func_config)
-    def ctc_loss_train_job(
-        log_probs: tp.Numpy.Placeholder(shape=(5, 2, 3), dtype=flow.float32),
-        targets: tp.Numpy.Placeholder(shape=(2, 3), dtype=flow.int32),
-        input_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int32),
-        target_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int32),
-    ) -> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
-            v = flow.get_variable(
-                shape=log_probs.shape,
-                dtype=flow.float32,
-                initializer=flow.zeros_initializer(),
-                name="x_var",
-            )
-            x_var = log_probs + v
-
-        flow.watch_diff(x_var, print_grad)
-
-        loss = flow.ctc_loss(
-            log_probs, targets, input_lengths, target_lengths, blank=0, reduction="none"
-        )
-
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(loss)
-
-        return loss
-
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
     ).astype(type_name_to_np_type[data_type])
     log_probs = log_softmax(log_probs, axis=2)
-
     targets = np.random.randint(
         1, high=num_classes, size=(batch_size, max_target_length), dtype=np.int32
     )
@@ -304,10 +253,7 @@ def compare_with_np(
         dtype=np.int32,
     )
 
-    # OneFlow
-    of_out = ctc_loss_train_job(log_probs, targets, input_lengths, target_lengths)
-    # Numpy
-    np_out = ctc_loss_np(
+    np_out, loss, alpha = ctc_loss_np(
         log_probs,
         targets,
         input_lengths,
@@ -316,6 +262,64 @@ def compare_with_np(
         reduction,
         zero_infinity,
     )
+    grad_out = np.ones_like(loss, np.float32)
+
+    _np_grad = ctc_loss_grad_np(
+        grad_out,
+        loss,
+        alpha,
+        log_probs,
+        targets,
+        input_lengths,
+        target_lengths,
+        blank,
+        reduction,
+        zero_infinity,
+    )
+
+    def assert_loss_grad(blob: tp.Numpy):
+        assert np.allclose(blob, _np_grad, atol=1e-5, equal_nan=True)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def ctc_loss_job(
+        log_probs: tp.Numpy.Placeholder(
+            shape=(max_input_length, batch_size, num_classes), dtype=flow_data_type
+        ),
+        targets: tp.Numpy.Placeholder(
+            shape=(batch_size, max_target_length), dtype=flow.int32
+        ),
+        input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
+        target_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
+    ) -> tp.Numpy:
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+            v = flow.get_variable(
+                shape=log_probs.shape,
+                dtype=flow_data_type,
+                initializer=flow.zeros_initializer(),
+                name="x_var",
+            )
+            x_var = log_probs + v
+
+        flow.watch_diff(x_var, assert_loss_grad)
+
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+            loss = flow.ctc_loss(
+                x_var,
+                targets,
+                input_lengths,
+                target_lengths,
+                blank,
+                reduction,
+                zero_infinity,
+            )
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(loss)
+
+        return loss
+
+    # OneFlow
+    of_out = ctc_loss_job(log_probs, targets, input_lengths, target_lengths)
     tolerance = 1e-5
     assert np.allclose(of_out, np_out, rtol=tolerance, atol=tolerance)
 
@@ -333,8 +337,8 @@ def gen_arg_list(type):
     arg_dict["batch_size"] = [4]
     arg_dict["num_classes"] = [5]
     arg_dict["max_target_length"] = [10]
-    arg_dict["blank"] = [0, 1, 4]
-    arg_dict["reduction"] = ["none", "mean", "sum"]
+    arg_dict["blank"] = [0, 1]
+    arg_dict["reduction"] = ["none"]
     arg_dict["zero_infinity"] = [False, True]
 
     return GenArgList(arg_dict)
@@ -350,7 +354,7 @@ class TestCTCLoss1n1d(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n2d()
 class TestCTCLoss1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_dim_gather_float(test_case):
+    def test_ctc_loss(test_case):
         for arg in gen_arg_list("1n2d"):
             compare_with_np(*arg)
 

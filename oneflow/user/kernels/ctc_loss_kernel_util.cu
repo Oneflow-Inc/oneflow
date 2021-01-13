@@ -106,7 +106,9 @@ __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T
                                const int64_t max_target_length, const int64_t num_labels,
                                const int blank, const bool zero_infinity) {
   constexpr T neginf = -INFINITY;
-  FOR_RANGE(int64_t, i, 0, input_helper.Size()) { grad_ptr[i] = neginf; }
+  int64_t elem_cnt = max_input_length * batch_size * num_labels;
+  FOR_RANGE(int64_t, i, 0, elem_cnt) { grad_ptr[i] = neginf; }
+
   CUDA_1D_KERNEL_LOOP(b, batch_size) {
     IDX input_length = input_lengths_ptr[b];
     IDX target_length = target_lengths_ptr[b];
@@ -191,9 +193,9 @@ __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T
 
     // zero the remainder
     if (input_length < max_input_length) {
-      for (IDX t = input_length; t < max_input_length; t++) {
-        for (int64_t s = 0; s < num_labels; s++) {
-          int64_t grad_idx = input_helper.NdIndexToOffset(b, t, s);
+      for (int64_t t = input_length; t < max_input_length; t++) {
+        for (int64_t c = 0; c < num_labels; c++) {
+          int64_t grad_idx = input_helper.NdIndexToOffset(t, b, c);
           grad_ptr[grad_idx] = 0;
         }
       }
@@ -208,10 +210,10 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
   static void CtcLossForward(DeviceCtx* ctx, const T* log_probs_ptr, const int* targets_ptr,
                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
-                             NdIndexOffsetHelper<int64_t, 3> input_helper,
-                             NdIndexOffsetHelper<int64_t, 3> alpha_helper, const int64_t batch_size,
-                             const int64_t max_target_length, const int blank,
-                             const bool zero_infinity) {
+                             NdIndexOffsetHelper<int64_t, 3>& input_helper,
+                             NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
+                             const int64_t batch_size, const int64_t max_target_length,
+                             const int blank, const bool zero_infinity) {
     RUN_CUDA_KERNEL((CtcLossGpu<T, IDX>), ctx, batch_size, log_probs_ptr, targets_ptr,
                     input_lengths_ptr, target_lengths_ptr, alpha_ptr, loss_ptr, input_helper,
                     alpha_helper, batch_size, max_target_length, blank, zero_infinity);
@@ -221,10 +223,11 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
                               const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                               T* beta_ptr, T* grad_ptr,
-                              NdIndexOffsetHelper<int64_t, 3> input_helper,
-                              NdIndexOffsetHelper<int64_t, 3> beta_helper, const int64_t batch_size,
-                              const int64_t max_input_length, const int64_t max_target_length,
-                              const int64_t num_labels, const int blank, const bool zero_infinity) {
+                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
+                              NdIndexOffsetHelper<int64_t, 3>& beta_helper,
+                              const int64_t batch_size, const int64_t max_input_length,
+                              const int64_t max_target_length, const int64_t num_labels,
+                              const int blank, const bool zero_infinity) {
     RUN_CUDA_KERNEL((CtcLossGradGpu<T, IDX>), ctx, batch_size, grad_out_ptr, loss_ptr, alpha_ptr,
                     log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr, beta_ptr,
                     grad_ptr, input_helper, beta_helper, batch_size, max_input_length,
