@@ -21,18 +21,14 @@ class OneFlow_ShapeAttr: TypedArrayAttrBase<I64Attr, "">;
 class OneFlow_Blob<list<Type> allowedTypes> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], "">;
 
-// TODO: make placement hashable and comparable
-class OneFlow_Placement : TypedArrayAttrBase<StrAttr, "">;
-
-def OneFlow_PlacementAttr : OneFlow_Placement;
-
 // TODO: add control in operand, which should be optional
 // TODO: add control out result, could be optional
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag mandatory_attrs = (ins
     StrAttr:$op_name,
-    OneFlow_PlacementAttr:$placement
+    StrAttr:$device,
+    StrArrayAttr:$placement
   );
   dag attrs = (ins);
   dag data_in = (ins);

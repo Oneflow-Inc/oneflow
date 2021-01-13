@@ -1,8 +1,10 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
@@ -89,13 +91,17 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
   const std::string &op_type_name = user_conf.op_type_name();
   const std::string &op_name = op.name();
-  mlir::ArrayAttr placement = b.getStrArrayAttr({});
+  const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op_name);
+  const std::string &device_tag = pc.device_tag();
+  std::vector<llvm::StringRef> dv = {pc.device_name().begin(), pc.device_name().end()};
+  mlir::ArrayAttr placement = b.getStrArrayAttr(dv);
   if (op_type_name == "constant") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
       auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
       mlir::Value created =
           b.create<oneflow::ConstantOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
-                                        b.getStringAttr(op_name), placement, fv)
+                                        b.getStringAttr(op_name), b.getStringAttr(device_tag),
+                                        placement, fv)
               .getResult();
       const std::string &lbn = user_conf.output().at("out").s(0);
       lbn2result.insert({lbn, created});
@@ -140,10 +146,8 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       DEFINE_ONE_ELIF(at_list_float, getF32ArrayAttr, val)
 #undef DEFINE_ONE_ELIF
       else if (value.has_at_list_string()) {
-        auto s_vec = std::vector<std::string>(
-            {value.at_list_string().val().begin(), value.at_list_string().val().end()});
-        auto r_vec = std::vector<llvm::StringRef>();
-        for (auto s : s_vec) { r_vec.push_back(s); }
+        std::vector<llvm::StringRef> r_vec = {value.at_list_string().val().begin(),
+                                              value.at_list_string().val().end()};
         std::pair<mlir::Identifier, mlir::Attribute> kv =
             b.getNamedAttr(name, b.getStrArrayAttr(r_vec));
         named_attr_vec.emplace_back(kv);
@@ -183,8 +187,9 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       }
     }
     ::mlir::ValueRange operands(vs);
-    auto created = b.create<oneflow::UserOp>(unknownLoc, out_types, operands, op_name, placement,
-                                             op_type_name, b.getDictionaryAttr(named_attributes));
+    auto created = b.create<oneflow::UserOp>(
+        unknownLoc, out_types, operands, b.getStringAttr(op_name), b.getStringAttr(device_tag),
+        placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes));
     for (auto kv : op.user_conf().output()) {
       // const std::string &obn = kv.first;
       for (const std::string &lbn : kv.second.s()) {
