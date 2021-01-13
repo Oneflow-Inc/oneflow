@@ -253,13 +253,14 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
   }
 }
 
+// Move this into another cpp which will be another target
 OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   context->loadDialect<oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
-  // Move this into another cpp which will be another target
+  // Reimplement the logic after this function is moved to a independent target
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
   return module;
