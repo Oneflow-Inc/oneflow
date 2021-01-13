@@ -48,8 +48,6 @@ def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   let summary = "constant";
   let attrs = (ins F64Attr:$double_value);
   let results = (outs F32Tensor);
-  let parser = [{ return ::parseConstantOp(parser, result); }];
-  let verifier = [{ return ::verify(*this); }];
 }
 
 def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
