@@ -12,16 +12,21 @@
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// TODO: Define placement attribute type
 // TODO: Define SBP attribute type
-// TODO: Define Blob type
 // TODO: OneFlow_Op should has a placement attribute
-// TODO: OneFlow_Op, placement attr, SBP attr should all have a to proto method, it could also be implemented in helper functions
+
+// Replace i64 arr with shape arr in op
+class OneFlow_ShapeAttr: TypedArrayAttrBase<I64Attr, "">;
+
+class OneFlow_Blob<list<Type> allowedTypes> :
+  AnyTypeOf<[TensorOf<allowedTypes>, NoneType], "">;
+
+class OneFlow_Placement : TypedArrayAttrBase<StrAttr, "">;
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits>;
 
-def ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
+def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
