@@ -16,6 +16,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // TODO: Define SBP attribute type
 // TODO: Define Blob type
 // TODO: OneFlow_Op should has a placement attribute
+// TODO: OneFlow_Op, placement attr, SBP attr should all have a to proto method.
+
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits>;
 
