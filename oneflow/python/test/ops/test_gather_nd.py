@@ -127,7 +127,7 @@ def _gather_nd_np(x, index, require_grad=False, init_grad_value=1.0):
         dy.fill(init_grad_value)
         dx = np.zeros(shape=x.shape, dtype=np.float32)
         flat_index = index.reshape(-1, ndim)
-        flat_dy = dy.reshape(-1, *y.shape[index.ndim - 1:])
+        flat_dy = dy.reshape(-1, *y.shape[index.ndim - 1 :])
         for i, nd_index in enumerate(flat_index):
             if dx.ndim == ndim:
                 ravel_index = np.ravel_multi_index(nd_index, dx.shape)
