@@ -29,9 +29,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   }
 
  private:
-  const Job* job_;
+  Job* job_;
   const OpGraph op_graph_;
-  const JobBuilder job_builder_;
+  JobBuilder job_builder_;
 };
 
 class IRRoundTrip final : public JobPass {
