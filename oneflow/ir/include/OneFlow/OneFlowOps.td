@@ -12,6 +12,10 @@
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+// TODO: Define placement attribute type
+// TODO: Define SBP attribute type
+// TODO: Define Blob type
+// TODO: OneFlow_Op should has a placement attribute
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits>;
 
