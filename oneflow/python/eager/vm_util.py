@@ -1195,6 +1195,8 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
 
     def _TryClearObject(self, obj):
+        if obj is None:
+            return
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("TryClearObject")
         instruction.set_parallel_desc_symbol_id(obj.parallel_desc_symbol.symbol_id)
@@ -1202,6 +1204,8 @@ class InstructionsBuilder(object):
         self.instruction_list_.mutable_instruction().Add().CopyFrom(instruction)
 
     def _DeleteObject(self, blob_object):
+        if blob_object is None:
+            return
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("DeleteObject")
         instruction.set_parallel_desc_symbol_id(
