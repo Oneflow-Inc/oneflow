@@ -65,8 +65,6 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsA
 }
 
 def OneFlow_UserOp : OneFlow_Op<"user", []> {
-    let summary = "Generic op for all kinds of user op";
-
     let arguments = (ins
       Variadic<AnyType>:$operands,
       StrAttr:$op_name,
@@ -76,12 +74,10 @@ def OneFlow_UserOp : OneFlow_Op<"user", []> {
     let results = (outs Variadic<AnyType>:$outputs);
 }
 
-def OneFlow_NoOp : OneFlow_Op<"NoOp", [NoSideEffect]> {
+def OneFlow_PlaceholderOp : OneFlow_Op<"NoOp", [NoSideEffect]> {
   let summary = "Placeholder for ops with control edge or foreign input, etc";
-
-  let arguments = (ins);
-
-  let results = (outs);
+  let data_in = (ins Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>:$outputs);
 }
 
 #endif // ONEFLOW_OPS
