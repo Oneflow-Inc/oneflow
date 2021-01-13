@@ -20,6 +20,20 @@ namespace oneflow {
 
 namespace {
 
+class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
+ public:
+  const Job* job() const { return job_; }
+  RoundTripOneFlowJobWrapper(::oneflow::Job* job) : job_(job), op_graph_(*job), job_builder_(job) {}
+  const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) {
+    return job_builder_.ParallelConf4OpName(op_name);
+  }
+
+ private:
+  const Job* job_;
+  const OpGraph op_graph_;
+  const JobBuilder job_builder_;
+};
+
 class IRRoundTrip final : public JobPass {
  public:
   IRRoundTrip() = default;
@@ -31,7 +45,9 @@ class IRRoundTrip final : public JobPass {
   }
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    mlir::roundTripOneFlowJob(job);
+    const OpGraph op_graph(*job);
+    const auto& w = RoundTripOneFlowJobWrapper(job);
+    mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) { return true; });
     return Maybe<void>::Ok();
   }
 };

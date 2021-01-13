@@ -28,6 +28,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "OneFlow/MLIROneFlowTranslation.h"
+
 namespace mlir {
 
 namespace {
@@ -53,7 +54,7 @@ using PbMessage = google::protobuf::Message;
 
 class Importer {
  public:
-  Importer(::oneflow::Job *job, MLIRContext *context, ModuleOp module)
+  Importer(const ::oneflow::Job *job, MLIRContext *context, ModuleOp module)
       : b(context),
         context(context),
         module(module),
@@ -75,8 +76,7 @@ class Importer {
   /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
   Location unknownLoc;
   std::unordered_map<std::string, mlir::Value> lbn2result;
-  ::oneflow::Job *job;
-  std::map<std::string, ::oneflow::OperatorConf *> oneflowOps;
+  const ::oneflow::Job *job;
 };
 
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
@@ -201,10 +201,9 @@ LogicalResult Importer::processJob() {
   b.setInsertionPointToStart(&entryBlock);
 
   for (int64_t i = 0; i < job->net().op_size(); i++) {
-    auto *op = job->mutable_net()->mutable_op(i);
-    if (op->has_user_conf()) {
-      oneflowOps.insert({op->name(), op});
-      if (failed(processUserOp(*op))) { return failure(); }
+    const auto op = job->net().op(i);
+    if (op.has_user_conf()) {
+      if (failed(processUserOp(op))) { return failure(); }
     }
   }
   ReturnOp returnOp;
@@ -272,7 +271,10 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *co
 
 }  // namespace
 
-void roundTripOneFlowJob(::oneflow::Job *job) {
+void RoundTripOneFlowJob(
+    const RoundTripOneFlowJobWrapperInterface &job_wrapper,
+    std::function<bool(::oneflow::Job *job, std::string &reason)> is_legit_job) {
+  const ::oneflow::Job *job = job_wrapper.job();
   mlir::MLIRContext context;
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
