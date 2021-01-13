@@ -21,19 +21,34 @@ class OneFlow_ShapeAttr: TypedArrayAttrBase<I64Attr, "">;
 class OneFlow_Blob<list<Type> allowedTypes> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], "">;
 
+// TODO: make placement hashable and comparable
 class OneFlow_Placement : TypedArrayAttrBase<StrAttr, "">;
 
+def OneFlow_PlacementAttr : OneFlow_Placement;
+
+// TODO: add control in operand, which should be optional
+// TODO: add control out result, could be optional
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, traits>;
+        Op<OneFlow_Dialect, mnemonic, traits> {
+  dag mandatory_attrs = (ins
+    OneFlow_PlacementAttr:$placement
+  );
+  dag attrs = (ins);
+  dag data_in = (ins);
+  dag ctrl_in = (ins);
+  let arguments = !con(
+      mandatory_attrs,
+      attrs,
+      data_in,
+      ctrl_in
+  );
+}
 
 def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   let summary = "constant";
-  let arguments = (ins F64Attr:$double_value);
+  let attrs = (ins F64Attr:$double_value);
   let results = (outs F32Tensor);
   let parser = [{ return ::parseConstantOp(parser, result); }];
-    let builders = [
-    OpBuilderDAG<(ins "double":$value)>
-  ];
   let verifier = [{ return ::verify(*this); }];
 }
 

@@ -28,7 +28,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "OneFlow/MLIROneFlowTranslation.h"
-
 namespace mlir {
 
 namespace {
@@ -89,9 +88,12 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &type_name = user_conf.op_type_name();
   if (type_name == "constant") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
-      mlir::Value created = b.create<oneflow::ConstantOp>(
-                                 unknownLoc, user_conf.attr().at("floating_value").at_double())
-                                .getResult();
+      auto placement = b.getStrArrayAttr({});
+      auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
+      mlir::Value created =
+          b.create<oneflow::ConstantOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
+                                        placement, fv)
+              .getResult();
       const std::string &lbn = user_conf.output().at("out").s(0);
       lbn2result.insert({lbn, created});
     } else {

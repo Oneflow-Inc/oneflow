@@ -25,11 +25,6 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser, mlir::Operat
 
 static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
-void ConstantOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, double value) {
-  ConstantOp::build(builder, state, RankedTensorType::get({}, builder.getF32Type()),
-                    builder.getFloatAttr(builder.getF64Type(), value));
-}
-
 #include "OneFlow/OneFlowEnums.cpp.inc"
 
 #define GET_OP_CLASSES
