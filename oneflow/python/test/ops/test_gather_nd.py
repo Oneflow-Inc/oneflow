@@ -313,7 +313,7 @@ class TestGatherNdParallel(flow.unittest.TestCase):
         arg_dict["index_dtype"] = ["int32", "int64"]
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["device_num"] = [4]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
