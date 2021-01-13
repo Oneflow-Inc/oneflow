@@ -28,6 +28,7 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
   dag mandatory_attrs = (ins
     StrAttr:$op_name,
     StrAttr:$device,
+    // TODO: change placement to dict and parse the literal fmt like "0:0-0"
     StrArrayAttr:$placement
   );
   dag attrs = (ins);
