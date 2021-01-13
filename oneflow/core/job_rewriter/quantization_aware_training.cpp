@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_CUDA
-
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include <algorithm>
@@ -473,5 +471,3 @@ REGISTER_JOB_PASS("QuantAwareTraining", QuantAwareTraining);
 }  // namespace
 
 }  // namespace oneflow
-
-#endif  // WITH_CUDA
