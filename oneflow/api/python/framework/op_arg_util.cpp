@@ -17,6 +17,14 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
+#include "oneflow/core/common/data_type.cfg.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/register/blob_desc.cfg.h"
+#include "oneflow/core/register/blob_desc.pb.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace py = pybind11;
 
@@ -24,12 +32,79 @@ namespace oneflow {
 
 namespace compatible_py {
 
+namespace {
+
+Maybe<cfg::SbpParallel> MakeSbpParallel(const std::string& serialized_str) {
+  SbpParallel sbp_parallel;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &sbp_parallel))
+      << "sbp_parallel parse failed";
+  return std::make_shared<cfg::SbpParallel>(sbp_parallel);
+}
+
+Maybe<cfg::OptMirroredParallel> MakeOptMirroredParallel(const std::string& serialized_str) {
+  OptMirroredParallel opt_mirrored_parallel;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &opt_mirrored_parallel))
+      << "opt_mirrored_parallel parse failed";
+  return std::make_shared<cfg::OptMirroredParallel>(opt_mirrored_parallel);
+}
+
+Maybe<cfg::OptInt64> MakeOptInt64(const std::string& serialized_str) {
+  if (serialized_str.empty()) { return std::make_shared<cfg::OptInt64>(); }
+  OptInt64 opt_int64;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &opt_int64)) << "opt_int64 parse failed";
+  return std::make_shared<cfg::OptInt64>(opt_int64);
+}
+
+Maybe<cfg::BlobDescProto> MakeBlobDescProto(const std::string& serialized_str) {
+  if (serialized_str.empty()) { return std::make_shared<cfg::BlobDescProto>(); }
+  BlobDescProto blob_desc;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &blob_desc)) << "blob_desc parse failed";
+  return std::make_shared<cfg::BlobDescProto>(blob_desc);
+}
+
+Maybe<OpArgBlobAttribute> CreatOpArgBlobAttribute(const std::string& batch_axis_str,
+                                                  const std::string& blob_desc_str,
+                                                  const std::string& logical_blob_name) {
+  const std::shared_ptr<cfg::OptInt64>& batch_axis = JUST(MakeOptInt64(batch_axis_str));
+  const std::shared_ptr<cfg::BlobDescProto>& blob_desc = JUST(MakeBlobDescProto(blob_desc_str));
+  return std::make_shared<OpArgBlobAttribute>(batch_axis, blob_desc, logical_blob_name);
+}
+
+Maybe<OpArgParallelAttribute> CreatOpArgParallelAttribute(
+    std::shared_ptr<ParallelDesc> parallel_desc, const std::string& sbp_parallel_str,
+    const std::string& opt_mirrored_parallel_str) {
+  std::shared_ptr<cfg::SbpParallel> sbp_parallel = JUST(MakeSbpParallel(sbp_parallel_str));
+  std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel =
+      JUST(MakeOptMirroredParallel(opt_mirrored_parallel_str));
+  return std::make_shared<OpArgParallelAttribute>(parallel_desc, sbp_parallel,
+                                                  opt_mirrored_parallel);
+}
+
+Maybe<OpArgBlobAttribute> ApiGetOpArgBlobAttribute(const std::string& op_attribute_str,
+                                                   const std::string& bn_in_op) {
+  OpAttribute op_attribute;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_attribute_str, &op_attribute))
+      << "op_attribute parse failed";
+  return GetOpArgBlobAttribute(op_attribute, bn_in_op);
+}
+
+Maybe<OpArgParallelAttribute> ApiGetOpArgParallelAttribute(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol, const std::string& op_attribute_str,
+    const std::string& bn_in_op) {
+  OpAttribute op_attribute;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_attribute_str, &op_attribute))
+      << "op_attribute parse failed";
+  return GetOpArgParallelAttribute(parallel_desc_symbol, op_attribute, bn_in_op);
+}
+
+}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OpArgBlobAttribute, std::shared_ptr<OpArgBlobAttribute>>(m, "OpArgBlobAttribute")
-      .def(py::init([](const std::shared_ptr<cfg::OptInt64>& batch_axis,
-                       const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
+      .def(py::init([](const std::string& batch_axis_str, const std::string& blob_desc_str,
                        const std::string& logical_blob_name) {
-        return std::make_shared<OpArgBlobAttribute>(batch_axis, blob_desc, logical_blob_name);
+        return CreatOpArgBlobAttribute(batch_axis_str, blob_desc_str, logical_blob_name)
+            .GetPtrOrThrow();
       }))
       .def_property_readonly("batch_axis", &OpArgBlobAttribute::batch_axis)
       .def_property_readonly("blob_desc", &OpArgBlobAttribute::blob_desc)
@@ -49,16 +124,19 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<OpArgBlobAttribute>& x) {
              return static_cast<int>(x->get_dtype());
            })
+      .def("GetPhysicalOpArgBlobAttr", &OpArgBlobAttribute::GetPhysicalOpArgBlobAttr)
       .def("DumpToInterfaceBlobConf", &OpArgBlobAttribute::DumpToInterfaceBlobConf)
+      .def("DumpToOpNodeSignature", &OpArgBlobAttribute::DumpToOpNodeSignature)
       .def(py::self == py::self);
 
   py::class_<OpArgParallelAttribute, std::shared_ptr<OpArgParallelAttribute>>(
       m, "OpArgParallelAttribute")
       .def(py::init([](std::shared_ptr<ParallelDesc> parallel_desc,
-                       std::shared_ptr<cfg::SbpParallel> sbp_parallel,
-                       std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel) {
-        return std::make_shared<OpArgParallelAttribute>(parallel_desc, sbp_parallel,
-                                                        opt_mirrored_parallel);
+                       const std::string& sbp_parallel_str,
+                       const std::string& opt_mirrored_parallel_str) {
+        return CreatOpArgParallelAttribute(parallel_desc, sbp_parallel_str,
+                                           opt_mirrored_parallel_str)
+            .GetPtrOrThrow();
       }))
       .def_property_readonly("parallel_desc_symbol", &OpArgParallelAttribute::parallel_desc_symbol)
       .def_property_readonly("sbp_parallel", &OpArgParallelAttribute::sbp_parallel)
@@ -68,10 +146,29 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_Hash", &OpArgParallelAttribute::_Hash)
       .def("Assign", &OpArgParallelAttribute::Assign)
       .def("DumpToInterfaceBlobConf", &OpArgParallelAttribute::DumpToInterfaceBlobConf)
+      .def("DumpToOpNodeSignature", &OpArgParallelAttribute::DumpToOpNodeSignature)
       .def("__str__", &OpArgParallelAttribute::ToString)
       .def("__repr__", &OpArgParallelAttribute::ToString)
       .def(py::self == py::self)
       .def(py::hash(py::self));
+  m.def("GetOpArgBlobAttribute",
+        [](const std::string& op_attribute_str, const std::string& bn_in_op) {
+          return ApiGetOpArgBlobAttribute(op_attribute_str, bn_in_op).GetPtrOrThrow();
+        });
+  m.def("GetOpArgParallelAttribute",
+        [](const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+           const std::string& op_attribute_str, const std::string& bn_in_op) {
+          return ApiGetOpArgParallelAttribute(parallel_desc_symbol, op_attribute_str, bn_in_op)
+              .GetPtrOrThrow();
+        });
+  m.def("MakeMirroredOpArgParallelAttribute",
+        [](const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+          return MakeMirroredOpArgParallelAttribute(parallel_desc_symbol).GetPtrOrThrow();
+        });
+  m.def("MakeBroadcastOpArgParallelAttribute",
+        [](const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+          return MakeBroadcastOpArgParallelAttribute(parallel_desc_symbol).GetPtrOrThrow();
+        });
 }
 
 }  // namespace compatible_py
