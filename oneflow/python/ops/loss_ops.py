@@ -164,7 +164,7 @@ def ctc_loss(
         .Input("target_lengths", [target_lengths])
         .Output("loss")
         .Output("alpha")
-        .Attr("blank", blank)
+        .Attr("blank", int(blank))
         .Attr("zero_infinity", zero_infinity)
         .Build()
         .InferAndTryRun()
@@ -176,9 +176,13 @@ def ctc_loss(
             flow.math.xdivy(
                 loss,
                 flow.cast(
-                    flow.math.clip_by_value(target_lengths, min_value=1),
+                    flow.math.clip_by_value(
+                        target_lengths, min_value=1, name=name + "_clip_by_value"
+                    ),
                     dtype=log_probs.dtype,
+                    name=name + "_cast",
                 ),
+                name=name + "_xdivy",
             ),
             name=name + "_reduce_mean",
         )

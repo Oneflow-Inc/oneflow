@@ -22,6 +22,24 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as tp
 import os
 
+ninf = -float("inf")
+
+
+def _logsumexp(a, b):
+    if a < b:
+        a, b = b, a
+    if b == ninf:
+        return a
+    else:
+        return a + np.log(1 + np.exp(b - a))
+
+
+def logsumexp(*args):
+    res = args[0]
+    for e in args[1:]:
+        res = _logsumexp(res, e)
+    return res
+
 
 def log_softmax(logits, axis=0):
     max_value = np.max(logits, axis, keepdims=True)
@@ -31,36 +49,22 @@ def log_softmax(logits, axis=0):
     return np.log(dist)
 
 
+def get_target_prime(targets, b, s, blank):
+    if s % 2 == 0:
+        return blank
+    else:
+        return targets[b, s // 2]
+
+
 def ctc_loss_np(
     log_probs,
     targets,
     input_lengths,
     target_lengths,
     blank=0,
-    reduction="none",
-    zero_infinity=True,
+    reduction="mean",
+    zero_infinity=False,
 ):
-    ninf = -float("inf")
-
-    def _logsumexp(a, b):
-        if a < b:
-            a, b = b, a
-        if b == ninf:
-            return a
-        else:
-            return a + np.log(1 + np.exp(b - a))
-
-    def logsumexp(*args):
-        res = args[0]
-        for e in args[1:]:
-            res = _logsumexp(res, e)
-        return res
-
-    def get_target_prime(targets, b, s, blank):
-        if s % 2 == 0:
-            return blank
-        else:
-            return targets[b, s // 2]
 
     max_input_length, batch_size, _ = log_probs.shape
     _, max_target_length = targets.shape
@@ -73,8 +77,8 @@ def ctc_loss_np(
         target_length = target_lengths[b]
         alpha[b, 0, 0] = log_probs[0, b, blank]
         if target_length > 0:
-            target = get_target_prime(targets, b, 1, blank)
-            alpha[b, 0, 1] = log_probs[0, b, target]
+            current_target_prime = get_target_prime(targets, b, 1, blank)
+            alpha[b, 0, 1] = log_probs[0, b, current_target_prime]
 
         for t in range(1, input_length):
             for s in range(0, 2 * target_length + 1):
@@ -114,6 +118,91 @@ def ctc_loss_np(
         return np.sum(loss)
     else:
         return loss
+
+
+def ctc_loss_grad_np(
+    grad_out,
+    loss,
+    alpha,
+    log_probs,
+    targets,
+    input_lengths,
+    target_lengths,
+    blank=0,
+    reduction="mean",
+    zero_infinity=False,
+):
+    max_input_length, batch_size, num_labels = log_probs.shape
+    _, max_target_length = targets.shape
+
+    beta = np.zeros([batch_size, max_input_length, 2 * max_target_length + 1])
+    grad = np.zeros(log_probs.shape)
+    grad.fill(ninf)
+
+    for b in range(0, batch_size):
+        input_length = input_lengths[b]
+        target_length = target_lengths[b]
+        nll = loss[b]
+        if zero_infinity and nll == float("inf"):
+            grad[0 : input_length - 2, b, 0 : 2 * target_length + 1] = 0
+            continue
+
+        if input_length > 0:
+            beta[b, input_length - 1, 0 : 2 * target_length + 1] = ninf
+            beta[b, input_length - 1, 2 * target_length] = log_probs[
+                input_length - 1, b, blank
+            ]
+            grad[input_length - 1, b, blank] = (
+                alpha[b, input_length - 1, 2 * target_length]
+                + beta[b, input_length - 1, 2 * target_length]
+            )
+
+            if target_length > 0:
+                current_target_prime = get_target_prime(
+                    targets, b, 2 * target_length - 1, blank
+                )
+                beta[b, input_length - 1, 2 * target_length - 1] = log_probs[
+                    input_length - 1, b, current_target_prime
+                ]
+                grad[input_length - 1, b, current_target_prime] = (
+                    alpha[b, input_length - 1, 2 * target_length - 1]
+                    + beta[b, input_length - 1, 2 * target_length - 1]
+                )
+
+        for t in range(input_length - 2, -1, -1):
+            for s in range(2 * target_length, -1, -1):
+                current_target_prime = get_target_prime(targets, b, s, blank)
+                lb1 = beta[b, t + 1, s]
+                if s < 2 * target_length:
+                    lb2 = beta[b, t + 1, s + 1]
+                else:
+                    lb2 = ninf
+                if (
+                    s < 2 * target_length - 1
+                    and get_target_prime(targets, b, s + 2, blank)
+                    != current_target_prime
+                ):
+                    lb3 = beta[b, t + 1, s + 2]
+                else:
+                    lb3 = ninf
+
+                beta[b, t, s] = (
+                    logsumexp(lb1, lb2, lb3) + log_probs[t, b, current_target_prime]
+                )
+                alpha_beta = alpha[b, t, s] + beta[b, t, s]
+                lcab = grad[t, b, current_target_prime]
+                if lcab == ninf:
+                    grad[t, b, current_target_prime] = alpha_beta
+                else:
+                    grad[t, b, current_target_prime] = logsumexp(lcab, alpha_beta)
+        for t in range(0, input_length):
+            for c in range(0, num_labels):
+                res = grad[t, b, c]
+                lp = log_probs[t, b, c]
+                grad[t, b, c] = (np.exp(lp) - np.exp(res + nll - lp)) * grad_out[b]
+        if input_length < max_input_length:
+            grad[input_length:max_input_length, b] = 0
+    return grad
 
 
 def compare_with_np(
@@ -165,6 +254,38 @@ def compare_with_np(
                 zero_infinity=zero_infinity,
             )
 
+    def print_grad(blob: tp.Numpy):
+        print(blob)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def ctc_loss_train_job(
+        log_probs: tp.Numpy.Placeholder(shape=(5, 2, 3), dtype=flow.float32),
+        targets: tp.Numpy.Placeholder(shape=(2, 3), dtype=flow.int32),
+        input_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int32),
+        target_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int32),
+    ) -> tp.Numpy:
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+            v = flow.get_variable(
+                shape=log_probs.shape,
+                dtype=flow.float32,
+                initializer=flow.zeros_initializer(),
+                name="x_var",
+            )
+            x_var = log_probs + v
+
+        flow.watch_diff(x_var, print_grad)
+
+        loss = flow.ctc_loss(
+            log_probs, targets, input_lengths, target_lengths, blank=0, reduction="none"
+        )
+
+        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
+            ).minimize(loss)
+
+        return loss
+
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
     ).astype(type_name_to_np_type[data_type])
@@ -184,7 +305,7 @@ def compare_with_np(
     )
 
     # OneFlow
-    of_out = ctc_loss_job(log_probs, targets, input_lengths, target_lengths)
+    of_out = ctc_loss_train_job(log_probs, targets, input_lengths, target_lengths)
     # Numpy
     np_out = ctc_loss_np(
         log_probs,

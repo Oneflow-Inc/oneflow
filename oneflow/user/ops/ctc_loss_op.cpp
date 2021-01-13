@@ -54,7 +54,7 @@ REGISTER_USER_OP("ctc_loss")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
-          .Split(user_op::OpArg("log_probs", 0), 1)
+          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
           .Split(user_op::OpArg("targets", 0), 0)
           .Split(user_op::OpArg("input_lengths", 0), 0)
           .Split(user_op::OpArg("target_lengths", 0), 0)
@@ -98,7 +98,7 @@ REGISTER_USER_OP("ctc_loss_grad")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("grad_out", 0), 0)
-          .Split(user_op::OpArg("log_probs", 0), 1)
+          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
           .Split(user_op::OpArg("targets", 0), 0)
           .Split(user_op::OpArg("input_lengths", 0), 0)
           .Split(user_op::OpArg("target_lengths", 0), 0)
