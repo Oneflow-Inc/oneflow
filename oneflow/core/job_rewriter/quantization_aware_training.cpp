@@ -412,7 +412,7 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
         } else if (IsNodeInList(transparent_list_, node)) {
           JUST(PropagateScale(node));
         } else {
-          // bias_add/relu/bn in conv -> bias_add -> bn -> relu
+          // this is bias_add, relu or bn op in "conv -> bias_add -> bn -> relu" pattern,
           // do nothing
         }
       }
