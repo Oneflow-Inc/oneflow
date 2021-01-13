@@ -25,7 +25,7 @@ class OneFlow_Blob<list<Type> allowedTypes> :
 // TODO: add control out result, could be optional
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
-  dag mandatory_attrs = (ins
+  dag sys_attrs = (ins
     StrAttr:$op_name,
     StrAttr:$device,
     // TODO: change placement to dict and parse the literal fmt like "0:0-0"
@@ -37,7 +37,7 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
   let arguments = !con(
       data_in,
       ctrl_in,
-      mandatory_attrs,
+      sys_attrs,
       attrs
   );
 }
