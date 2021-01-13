@@ -26,6 +26,7 @@ sub graph -> function
 
 1. Source op of control edge shouldn't be erased
 2. Erasing, creating op shouldn't introduce boxing
+3. Results' shapes should stay identical
 ### Information not included in OpConf
 
 - There are information in job not included in `OpConf`:
