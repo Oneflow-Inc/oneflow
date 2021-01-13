@@ -232,17 +232,15 @@ void Rle4DensePoints(std::vector<std::vector<cv::Point_<T>>> &poly_point_vec,
       temp_rle_vec[j] -= p;
       p = temp;
     }
-    int m = 0, j = 0;
+    int j = 0;
     upsample_poly_point_vec[i].push_back(temp_rle_vec[j++]);
-    ++m;
     while (j < rle_size) {
       if (temp_rle_vec[j] > 0) {
         upsample_poly_point_vec[i].push_back(temp_rle_vec[j++]);
-        ++m;
       } else {
         ++j;
         if (j < rle_size) {
-          upsample_poly_point_vec[i][m - 1] += temp_rle_vec[j++];
+          upsample_poly_point_vec[i].back() += temp_rle_vec[j++];
         }
       }
     }
