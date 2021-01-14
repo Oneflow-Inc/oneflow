@@ -620,7 +620,9 @@ Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lb
 
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
-  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->shape();
+  const Shape& shape = lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->shape();
+  std::shared_ptr<Shape> ret(new Shape(shape));
+  return ret;
 }
 
 Maybe<DataType> JobBuildAndInferCtx::GetDataType(const std::string& lbn) const {
