@@ -13,45 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/elementwise_maximum_minimum_kernel_util.h"
+#include "oneflow/user/kernels/elementwise_maximum_minimum_kernel.h"
 
 namespace oneflow {
 namespace user_op {
 
-#define REGISTER_MAXIMUM_KERNELS(device, dtype)                                          \
-  REGISTER_USER_KERNEL("elementwise_maximum")                                            \
-      .SetCreateFn<ElemwiseXimumKernel<device, MaximumForwardFunctor, dtype>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));   \
-  REGISTER_USER_KERNEL("elementwise_maximum_backward")                                   \
-      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MaximumBackwardFunctor, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+template<template<typename> class functor, typename T>
+struct ElemwiseXimumBackwardFunctor<DeviceType::kCPU, functor, T> final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
+                  T* dy) {
+    XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
+      functor<T>()(&dz[idx], &x[idx], &y[idx], dx ? &dx[idx] : nullptr, dy ? &dy[idx] : nullptr);
+    }
+  }
+};
 
-#define REGISTER_MINIMUM_KERNELS(device, dtype)                                          \
-  REGISTER_USER_KERNEL("elementwise_minimum")                                            \
-      .SetCreateFn<ElemwiseXimumKernel<device, MinimumForwardFunctor, dtype>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));   \
-  REGISTER_USER_KERNEL("elementwise_minimum_backward")                                   \
-      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MinimumBackwardFunctor, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+template<template<typename> class functor, typename T>
+struct ElemwiseXimumForwardFunctor<DeviceType::kCPU, functor, T> final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y) {
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) { z[idx] = functor<T>()(x[idx], y[idx]); }
+  }
+};
 
 REGISTER_MAXIMUM_KERNELS(DeviceType::kCPU, float);
 REGISTER_MAXIMUM_KERNELS(DeviceType::kCPU, double);
 REGISTER_MINIMUM_KERNELS(DeviceType::kCPU, float);
 REGISTER_MINIMUM_KERNELS(DeviceType::kCPU, double);
-
-#ifdef WITH_CUDA
-REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, float);
-REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, double);
-REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, float);
-REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, double);
-#endif
 }  // namespace user_op
 }  // namespace oneflow

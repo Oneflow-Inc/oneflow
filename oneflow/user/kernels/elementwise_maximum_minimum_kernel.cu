@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/user/kernels/elementwise_maximum_minimum_kernel_util.h"
+#include "oneflow/user/kernels/elementwise_maximum_minimum_kernel.h"
 
 namespace oneflow {
 namespace user_op {
@@ -45,15 +45,10 @@ struct ElemwiseXimumForwardFunctor<DeviceType::kGPU, functor, T> final {
   }
 };
 
-INSTANTIATE_FORWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MaximumForwardFunctor, float);
-INSTANTIATE_FORWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MaximumForwardFunctor, double);
-INSTANTIATE_FORWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MinimumForwardFunctor, float);
-INSTANTIATE_FORWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MinimumForwardFunctor, double);
-
-INSTANTIATE_BACKWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MaximumBackwardFunctor, float);
-INSTANTIATE_BACKWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MaximumBackwardFunctor, double);
-INSTANTIATE_BACKWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MinimumBackwardFunctor, float);
-INSTANTIATE_BACKWARD_KERNEL_FUNCTOR(DeviceType::kGPU, MinimumBackwardFunctor, double);
+REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, float);
+REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, double);
+REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, float);
+REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, double);
 }  // namespace user_op
 }  // namespace oneflow
 #endif  // WITH_CUDA

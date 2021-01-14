@@ -123,11 +123,29 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define INSTANTIATE_FORWARD_KERNEL_FUNCTOR(device_type_v, functor, dtype) \
-  template struct ElemwiseXimumForwardFunctor<device_type_v, functor, dtype>;
+#define REGISTER_MAXIMUM_KERNELS(device, dtype)                                          \
+  REGISTER_USER_KERNEL("elementwise_maximum")                                            \
+      .SetCreateFn<ElemwiseXimumKernel<device, MaximumForwardFunctor, dtype>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));   \
+  REGISTER_USER_KERNEL("elementwise_maximum_backward")                                   \
+      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MaximumBackwardFunctor, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-#define INSTANTIATE_BACKWARD_KERNEL_FUNCTOR(device_type_v, functor, dtype) \
-  template struct ElemwiseXimumBackwardFunctor<device_type_v, functor, dtype>;
+#define REGISTER_MINIMUM_KERNELS(device, dtype)                                          \
+  REGISTER_USER_KERNEL("elementwise_minimum")                                            \
+      .SetCreateFn<ElemwiseXimumKernel<device, MinimumForwardFunctor, dtype>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));   \
+  REGISTER_USER_KERNEL("elementwise_minimum_backward")                                   \
+      .SetCreateFn<ElemwiseXimumBackwardKernel<device, MinimumBackwardFunctor, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)     \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 }  // namespace user_op
 }  // namespace oneflow
