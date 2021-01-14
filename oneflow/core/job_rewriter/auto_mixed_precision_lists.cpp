@@ -74,7 +74,10 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "flatten",
                                "squeeze",
                                "expand_dims",
-                               "cast_to_static_shape", "repeat",      "unpack",       "pack"};
+                               "cast_to_static_shape",
+                               "repeat",
+                               "unpack",
+                               "pack"};
 
   return clear_list;
 }
