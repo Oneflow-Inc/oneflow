@@ -219,33 +219,6 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 }
 #endif
 
-void BatchedHGemmWithFloatImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                               const enum CBLAS_TRANSPOSE trans_a,
-                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
-                               int k, const float* alpha, const half* a, const half* b,
-                               const float* beta, half* c, half** buf) {
-  int a_stride, b_stride, c_stride;
-  int lda, ldb, ldc;
-  cublasOperation_t cublas_trans_a, cublas_trans_b;
-  half** dev_a_ptrs;
-  half** dev_b_ptrs;
-  half** dev_c_ptrs;
-  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b, dev_a_ptrs,
-           dev_b_ptrs, dev_c_ptrs) =
-      PrepareToCallBatchedGemm<half>(ctx, trans_a, trans_b, batch_size, m, n, k, a, b, c, buf);
-
-#if CUDA_VERSION >= 9010
-  cublasGemmBatchedEx(
-      ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-      reinterpret_cast<const void*>(alpha),
-      reinterpret_cast<const void**>(const_cast<const half**>(dev_b_ptrs)), CUDA_R_16F, ldb,
-      reinterpret_cast<const void**>(const_cast<const half**>(dev_a_ptrs)), CUDA_R_16F, lda,
-      reinterpret_cast<const void*>(beta), reinterpret_cast<void**>(dev_c_ptrs), CUDA_R_16F, ldc,
-      batch_size, CUDA_R_32F, CUBLAS_GEMM_DEFAULT);
-#else
-  LOG(FATAL) << "BatchedHGemmWithFloatImpl() does not support CUDA_VERSION below 9010";
-#endif
-}
 __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
                             const int incy) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
@@ -338,15 +311,6 @@ void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
                         reinterpret_cast<const half*>(&alpha), reinterpret_cast<const half*>(a),
                         reinterpret_cast<const half*>(b), reinterpret_cast<const half*>(&beta),
                         reinterpret_cast<half*>(c), reinterpret_cast<half**>(buf));
-}
-
-void BlasIf<DeviceType::kGPU>::OFBatchedHGemmWithFloat(
-    DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-    const int batch_size, const int m, const int n, const int k, const float alpha,
-    const float16* a, const float16* b, const float beta, float16* c, float16** buf) {
-  BatchedHGemmWithFloatImpl(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, &alpha,
-                            reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b),
-                            &beta, reinterpret_cast<half*>(c), reinterpret_cast<half**>(buf));
 }
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
