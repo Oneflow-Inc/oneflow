@@ -210,6 +210,7 @@ def compare_with_np(
     else:
         flow.config.gpu_device_num(device_num)
     flow_data_type = type_name_to_flow_type[data_type]
+    np_data_type = type_name_to_np_type[data_type]
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow_data_type)
@@ -219,7 +220,7 @@ def compare_with_np(
 
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
-    ).astype(type_name_to_np_type[data_type])
+    ).astype(np_data_type)
     log_probs = log_softmax(log_probs, axis=2)
     targets = np.random.randint(
         1, high=num_classes, size=(batch_size, max_target_length), dtype=np.int32
@@ -234,26 +235,31 @@ def compare_with_np(
         dtype=np.int32,
     )
 
-    loss, alpha = ctc_loss_np(log_probs, targets, input_lengths, target_lengths, blank)
-    np_out = np.where(loss == float("inf"), 0, loss) if zero_infinity else loss
+    np_loss, np_alpha = ctc_loss_np(
+        log_probs, targets, input_lengths, target_lengths, blank
+    )
+
+    np_out = np.where(np_loss == float("inf"), 0, np_loss) if zero_infinity else np_loss
     if reduction == "mean":
         np_out = np.mean(
-            np.divide(np_out, np.clip(target_lengths, 1, a_max=None).astype(np.float))
+            np.divide(
+                np_out, np.clip(target_lengths, 1, a_max=None).astype(np_data_type)
+            )
         )
     elif reduction == "sum":
         np_out = np.sum(np_out)
 
-    grad_out = np.ones_like(loss, np.float32)
+    np_grad_out = np.ones_like(np_loss, dtype=np_data_type)
     if reduction == "mean":
-        grad_out = np.divide(
-            grad_out, np.clip(target_lengths, 1, a_max=None).astype(np.float)
+        np_grad_out = np.divide(
+            np_grad_out, np.clip(target_lengths, 1, a_max=None).astype(np_data_type)
         )
-        grad_out /= target_lengths.size
+        np_grad_out /= target_lengths.size
 
-    _np_grad = ctc_loss_grad_np(
-        grad_out,
-        loss,
-        alpha,
+    np_grad = ctc_loss_grad_np(
+        np_grad_out,
+        np_loss,
+        np_alpha,
         log_probs,
         targets,
         input_lengths,
@@ -263,7 +269,7 @@ def compare_with_np(
     )
 
     def assert_loss_grad(blob: tp.Numpy):
-        assert np.allclose(blob, _np_grad, atol=1e-5, equal_nan=True)
+        assert np.allclose(blob, np_grad, atol=1e-5, equal_nan=True)
 
     @flow.global_function(type="train", function_config=func_config)
     def ctc_loss_job(
@@ -286,27 +292,25 @@ def compare_with_np(
             x_var = log_probs + v
 
         flow.watch_diff(x_var, assert_loss_grad)
+        loss = flow.ctc_loss(
+            x_var,
+            targets,
+            input_lengths,
+            target_lengths,
+            blank,
+            reduction,
+            zero_infinity,
+        )
 
         with flow.scope.placement(device_type, "0:0"):
-            loss = flow.ctc_loss(
-                x_var,
-                targets,
-                input_lengths,
-                target_lengths,
-                blank,
-                reduction,
-                zero_infinity,
-            )
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(loss)
 
         return loss
 
-    # OneFlow
     of_out = ctc_loss_job(log_probs, targets, input_lengths, target_lengths)
-    tolerance = 1e-5
-    assert np.allclose(of_out, np_out, rtol=tolerance, atol=tolerance)
+    assert np.allclose(of_out, np_out, atol=1e-5)
 
 
 def gen_arg_list(type):
@@ -317,13 +321,13 @@ def gen_arg_list(type):
     else:
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1]
-    arg_dict["data_type"] = ["float32", "double"]
+    arg_dict["data_type"] = ["float32"]
     arg_dict["max_input_length"] = [20]
     arg_dict["batch_size"] = [4]
     arg_dict["num_classes"] = [5]
     arg_dict["max_target_length"] = [10]
-    arg_dict["blank"] = [0, 1, 4]
-    arg_dict["reduction"] = ["mean", "sum", "none"]
+    arg_dict["blank"] = [0, 4] # 0 <= blank < num_classes
+    arg_dict["reduction"] = ["mean", "none"]
     arg_dict["zero_infinity"] = [False, True]
 
     return GenArgList(arg_dict)
