@@ -326,7 +326,7 @@ def gen_arg_list(type):
     arg_dict["batch_size"] = [4]
     arg_dict["num_classes"] = [5]
     arg_dict["max_target_length"] = [10]
-    arg_dict["blank"] = [0, 4] # 0 <= blank < num_classes
+    arg_dict["blank"] = [0, 4]  # 0 <= blank < num_classes
     arg_dict["reduction"] = ["mean", "none"]
     arg_dict["zero_infinity"] = [False, True]
 
