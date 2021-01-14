@@ -14,6 +14,7 @@ class DiagKernel final : public user_op::OpKernel {
         ~DiagKernel() = default;
     private:
         void Compute(user_op::KernelComputeContext *ctx) const override {
+            std::cout << "*****************diag_kernel****************" << std::endl;
             const int32_t dimension = ctx->Attr<int32_t>("dimension");
             const user_op::Tensor *in_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
             user_op::Tensor *out_tensor = ctx->Tensor4ArgNameAndIndex("diag_out", 0);
@@ -23,53 +24,103 @@ class DiagKernel final : public user_op::OpKernel {
             if (in_dim == 1) {
                 int32_t stride_0 = out_shape.At(1);
                 int32_t stride_1 = 1;
-                int32_t in_stride = 1;
-                //const TensorBuffer& out_data = out_tensor->dptr<TensorBuffer>();
-                //auto* in_data = in_tensor->mut_dptr<unsigned char>();
-                //const TensorBuffer& in_data = in_tensor->dptr<TensorBuffer>();
+                //int32_t in_stride = 1;
                 
                 out_tensor += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
-
                 for (int32_t i = 0; i < in_dim; i++) {
-                    out_tensor[i * (stride_0 + stride_1)] = in_tensor[i * in_stride];
+                    out_tensor[i * (stride_0 + stride_1)] = in_tensor[i];
                 }
             } else {
                 int32_t stride_0 = in_shape.At(1);
                 int32_t stride_1 = 1;
-                int32_t out_stride = 1;
-                //auto out_data = out_tensor->mut_dptr;
-                //auto in_data = in_tensor->mut_dptr;
-                int32_t sz = 9;
+                
+                int32_t sz = 0;
  
-                out_tensor += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
+                in_tensor += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
                 if (dimension >= 0) {
                         sz = std::min(in_shape.At(0), in_shape.At(1) - dimension);
                     } else {
                         sz = std::min(in_shape.At(0) + dimension, in_shape.At(1));
                     }
                 for (int32_t i = 0; i < sz; i++) {
-                    out_tensor[i * out_stride] = in_tensor[i * (stride_0 + stride_1)];
+                    out_tensor[i] = in_tensor[i * (stride_0 + stride_1)];
                     }
             }
 
 
          }
+
+    
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<typename T>
+class DiagGradKernel final : public user_op::OpKernel {
+ public:
+  DiagGradKernel() = default;
+  ~DiagGradKernel() = default;
+
+  private:
+    void Compute(user_op::KernelComputeContext* ctx) const override {
+        const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+        user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+        int32_t dimension = ctx->Attr<int32_t>("dimension");
+        const ShapeView& dx_shape = dx->shape();
+        const ShapeView& dy_shape = dy->shape();
+        int32_t in_dim = dx_shape.NumAxes();
+        int32_t dy_num_cnt = dy_shape.At(0);
+        int32_t dx_num_cnt = dx_shape.Count(0);
+        auto dx_ptr =  dx->mut_dptr<T>();
+        auto dy_ptr = dy->dptr<T>();
+
+        if (in_dim == 1) {
+           
+           for (int32_t i = 0; i < dy_num_cnt; i++) {
+               if (dy_ptr[i] != 0) {
+                    dx_ptr[i] = dy_ptr[i];
+               }
+           }
+        } else {
+                int32_t stride_0 = dx_shape.At(1);
+                int32_t stride_1 = 1;
+                for (int32_t i = 0; i < dx_num_cnt; i++) {
+                    dx_ptr[i] = 0;
+                }
+
+                //std::memset
+
+                for (int32_t i = 0; i < dy_num_cnt; i++) {
+                    dx_ptr[i * (stride_0 + stride_1)] = dy_ptr[i];
+                }   
+        }
+    }
+  };
 } // namespace
+
 
 #define REGISTER_DIAG_KERNEL(device, dtype)                                     \
     REGISTER_USER_KERNEL("diag")                                                \
         .SetCreateFn<DiagKernel<device, dtype>>()                               \
         .SetIsMatchedHob((user_op::HobDeviceTag() == device)                     \
-        & (user_op::HobDataType("in_tensor", 0) == GetDataType<dtype>::value));
+        & (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_DIAG_GRAD_KERNEL(device, dtype)                                     \
+    REGISTER_USER_KERNEL("diag_grad")                                                \
+        .SetCreateFn<DiagKernel<device, dtype>>()                               \
+        .SetIsMatchedHob((user_op::HobDeviceTag() == device)                     \
+        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_DIAG_KERNEL_WITH_DEVICE(device) \
         REGISTER_DIAG_KERNEL(device, float)            \
         REGISTER_DIAG_KERNEL(device, double)           \
         REGISTER_DIAG_KERNEL(device, int8_t)           \
         REGISTER_DIAG_KERNEL(device, int32_t)          \
-        REGISTER_DIAG_KERNEL(device, int64_t)
+        REGISTER_DIAG_KERNEL(device, int64_t)           \
+        REGISTER_DIAG_GRAD_KERNEL(device, float)            \
+        REGISTER_DIAG_GRAD_KERNEL(device, double)           \
+        REGISTER_DIAG_GRAD_KERNEL(device, int8_t)           \
+        REGISTER_DIAG_GRAD_KERNEL(device, int32_t)          \
+        REGISTER_DIAG_GRAD_KERNEL(device, int64_t)           
 
 REGISTER_DIAG_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA

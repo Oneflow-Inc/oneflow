@@ -19,6 +19,7 @@ using namespace std;
 namespace oneflow {
 namespace {
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+    std::cout << "*****************diag_op****************" << std::endl;
     const user_op::TensorDesc* input_tensor = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0);
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
     const ShapeView& in_shape = input_tensor->shape();
@@ -35,6 +36,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
                 out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - dimension);
             } else {
                 out_dim_vec[0] = std::min(in_shape.At(0) + dimension, in_shape.At(1));
+                
             }
     }
 
@@ -68,5 +70,18 @@ REGISTER_USER_OP("diag")
     .SetGetSbpFn(GetSbpSignatures4Diag)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
 
-    //REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOpDiag);
+REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                                                           user_op::AddOpFn AddOp){
+    if (op.NeedGenGradTensor4OpInput("input_tensor", 0)){
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = 
+            builder.Op("diag_grad")
+                .Input("dy", op.GetGradTensorWithOpOutput("dy", 0))
+                .Attr("dimension", op.attr<int32_t>("dimension"))
+                .Output("dx")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input_tensor", 0);
+        AddOp(grad_op);
+    }
+});
 }  // namespace oneflow
