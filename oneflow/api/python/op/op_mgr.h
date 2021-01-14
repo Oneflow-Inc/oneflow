@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/framework.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/framework/user_op_conf.h"

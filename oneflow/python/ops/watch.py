@@ -32,10 +32,10 @@ import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
-from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager as eager_util
 import oneflow
+from oneflow_api import ConsistentBlob, MirroredBlob
 import oneflow_api
 import inspect
 

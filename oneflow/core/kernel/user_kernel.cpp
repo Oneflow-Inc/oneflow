@@ -502,7 +502,7 @@ void UserKernel::ForwardShape(const KernelCtx& ctx,
       const auto& out_arg_pair = infer_ctx_->outputs().at(i);
       MutShapeView* mut_shape_view =
           infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
+      if (mut_shape_view) { mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i)); }
     }
   }
 }
