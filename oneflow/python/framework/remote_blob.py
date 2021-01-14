@@ -30,7 +30,6 @@ import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
@@ -173,7 +172,9 @@ class EagerBlobTrait(object):
 
     @property
     def dtype(self):
-        ret = self.blob_object.op_arg_blob_attr.dtype
+        ret = convert_proto_dtype_to_oneflow_dtype(
+            self.blob_object.op_arg_blob_attr.get_dtype()
+        )
         assert issubclass(ret, dtype_util.dtype)
         return ret
 
@@ -243,10 +244,10 @@ class EagerBlobTrait(object):
                 )
                 parallel_conf.add_device_name("{}:{}".format(0, 0))
                 tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
-                tmp_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
+                tmp_op_arg_parallel_attr = oneflow_api.OpArgParallelAttribute(
                     tmp_parallel_desc_symbol,
-                    blob_object.op_arg_parallel_attr.sbp_parallel,
-                    blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+                    str(blob_object.op_arg_parallel_attr.sbp_parallel),
+                    str(blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
                 )
                 with oneflow.scope.placement(
                     self.parallel_conf.device_tag(),

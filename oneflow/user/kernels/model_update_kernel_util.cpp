@@ -43,35 +43,39 @@ void SGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(DeviceCtx* ctx, int64_t
 template struct SGDUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct SGDUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
-template<typename T, typename K>
-struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K> {
-  static void Update(DeviceCtx* ctx, int64_t num_indices, int64_t num_features,
-                     int64_t feature_size, int64_t feature_id_offset, const float* learning_rate,
-                     const K* indices, const T* values, T* model);
+template<typename T, typename K, typename IDX>
+struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
+  static void Update(DeviceCtx* ctx, float weight_decay, int64_t num_indices, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model);
 };
 
-template<typename T, typename K>
-void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K>::Update(
-    DeviceCtx* ctx, int64_t num_indices, int64_t num_features, int64_t feature_size,
-    int64_t feature_id_offset, const float* learning_rate, const K* indices, const T* values,
-    T* model) {
-  FOR_RANGE(int64_t, i, 0, num_indices) {
-    const K feature_id = indices[i];
-    CHECK_GE(feature_id, 0);
-    const K local_feature_id = feature_id - feature_id_offset;
-    if (local_feature_id >= 0 && local_feature_id < num_features) {
-      const T* from = values + i * feature_size;
-      T* to = model + local_feature_id * feature_size;
-      for (int64_t j = 0; j < feature_size; ++j) { to[j] -= from[j] * (*learning_rate); }
+template<typename T, typename K, typename IDX>
+void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Update(
+    DeviceCtx* ctx, float weight_decay, int64_t num_indices, int64_t feature_size,
+    int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+    const float* learning_rate, const K* indices, const T* values, T* model) {
+  const int64_t n = *num_unique_instance * feature_size;
+  const T lr = *learning_rate;
+  FOR_RANGE(int64_t, i, 0, n) {
+    const IDX indices_idx = i / feature_size;
+    const IDX inner_idx = i - indices_idx * feature_size;
+    const IDX instance_id = indices[indices_idx];
+    if (instance_id >= lower_bound && instance_id < upper_bound) {
+      const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
+      SGDUpdateFunctor<T, T>()(values + i, model + model_idx, static_cast<T>(1), 0.0, 0.0,
+                               weight_decay, lr);
     }
   }
 }
 
-#define INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CPU(in_type_pair, index_type_pair) \
+#define INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CPU(val_type_pair, key_type_pair,  \
+                                                           idx_type_pair)                 \
   template struct IndexedSlicesSGDUpdateKernelUtil<                                       \
-      DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(index_type_pair)>;
+      DeviceType::kCPU, OF_PP_PAIR_FIRST(val_type_pair), OF_PP_PAIR_FIRST(key_type_pair), \
+      OF_PP_PAIR_FIRST(idx_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CPU,
-                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_CPU
 
 template<typename T, typename G>
@@ -100,17 +104,17 @@ template struct MomentumUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
-  static void Update(DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size,
-                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const K* indices, const T* values, T* model,
-                     T* momentum);
+  static void Update(DeviceCtx* ctx, T beta, float weight_decay, int64_t num_instance,
+                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
+                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
+                     const T* values, T* model, T* momentum);
 };
 
 template<typename T, typename K, typename IDX>
 void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Update(
-    DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size, int64_t lower_bound,
-    int64_t upper_bound, const IDX* num_unique_instance, const float* learning_rate,
-    const K* indices, const T* values, T* model, T* momentum) {
+    DeviceCtx* ctx, T beta, float weight_decay, int64_t num_instance, int64_t feature_size,
+    int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+    const float* learning_rate, const K* indices, const T* values, T* model, T* momentum) {
   const int64_t n = *num_unique_instance * feature_size;
   const T lr = *learning_rate;
   for (int64_t i = 0; i != n; ++i) {
@@ -120,7 +124,7 @@ void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Updat
     if (instance_id >= lower_bound && instance_id < upper_bound) {
       const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       MomentumUpdateFunctor<T, T>()(values + i, model + model_idx, momentum + model_idx, 1.0, 0.0,
-                                    0.0, beta, 0.0, lr);
+                                    0.0, beta, weight_decay, lr);
     }
   }
 }
@@ -161,10 +165,11 @@ template struct AdamUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
-  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, int64_t num_instance,
-                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
-                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
-                     const T* values, T* model, T* m, T* v) {
+  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay,
+                     int64_t num_instance, int64_t feature_size, int64_t lower_bound,
+                     int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model, T* m,
+                     T* v) {
     const float lr = *learning_rate;
     const int64_t n = *num_unique_instance * feature_size;
     FOR_RANGE(int64_t, i, 0, n) {
@@ -174,7 +179,7 @@ struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
       if (instance_id >= lower_bound && instance_id < upper_bound) {
         const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
         AdamUpdateFunctor<T, T>()(values + i, model + model_idx, m + model_idx, v + model_idx, 1, 0,
-                                  0, beta1, beta2, epsilon, 0, lr);
+                                  0, beta1, beta2, epsilon, weight_decay, lr);
       }
     }
   }
