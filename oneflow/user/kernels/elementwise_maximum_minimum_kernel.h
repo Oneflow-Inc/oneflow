@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_UTIL_H
-#define _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_UTIL_H
+#ifndef _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_H
+#define _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_H
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
