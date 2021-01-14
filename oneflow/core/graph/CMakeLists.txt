@@ -5,5 +5,7 @@ add_library(of_graph
 )
 
 target_link_libraries(of_graph
-    of_protoobj
+    PRIVATE of_protoobj
+    PRIVATE ${GLOG_STATIC_LIBRARIES}
+    PRIVATE ${GFLAGS_STATIC_LIBRARIES}
 )
