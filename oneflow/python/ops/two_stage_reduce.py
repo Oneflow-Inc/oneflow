@@ -25,15 +25,16 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 @oneflow_export("math.two_stage_reduce_max")
 def api_two_stage_reduce_max(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([two_stage_reduce_max])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -46,11 +47,11 @@ def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.two_stage_reduce_min")
 def api_two_stage_reduce_min(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([two_stage_reduce_min])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -162,6 +163,6 @@ def _check_axis(axis, shape):
 
 def check_x_dictribute(x, axis):
     for i in axis:
-        if x.distribute is distribute_util.split(i):
+        if x.distribute is oneflow_api.distribute.split(i):
             return True
     return False

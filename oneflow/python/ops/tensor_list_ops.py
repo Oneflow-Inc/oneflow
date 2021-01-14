@@ -24,23 +24,24 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Tuple
+import oneflow_api
 
 
 @oneflow_export("tensor_list_to_tensor_buffer")
 def tensor_list_to_tensor_buffer(
-    input: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    input: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
     """This operator converts `TensorList` to `TensorBuffer`. 
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorList. 
 
     Args:
-        input (remote_blob_util.BlobDef): The input `TensorList`. 
+        input (oneflow_api.BlobDesc): The input `TensorList`. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -85,24 +86,24 @@ def tensor_list_to_tensor_buffer(
 
 @oneflow_export("tensor_buffer_to_tensor_list")
 def tensor_buffer_to_tensor_list(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     shape: Sequence[int],
     dtype: dtype_util.dtype,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator converts `TensorBuffer` to `TensorList`. 
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
     for more about TensorList. 
 
     Args:
-        input (remote_blob_util.BlobDef): The input Tensor Buffer. 
+        input (oneflow_api.BlobDesc): The input Tensor Buffer. 
         shape (Sequence[int]): The shape of input Tensor Buffer. 
         dtype (dtype_util.dtype): The data type. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
     
     For example: 
 
@@ -152,16 +153,16 @@ def tensor_buffer_to_tensor_list(
 
 @oneflow_export("tensor_list_split")
 def tensor_list_split(
-    input_tensor_list: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]:
+    input_tensor_list: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> Tuple[oneflow_api.BlobDesc]:
     """This operator splits the input `TensorList`. 
 
     Args:
-        input_tensor_list (remote_blob_util.BlobDef): The input `TensorList`. 
+        input_tensor_list (oneflow_api.BlobDesc): The input `TensorList`. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        Tuple[remote_blob_util.BlobDef]: A Tuple of `ListNumpy`. 
+        Tuple[oneflow_api.BlobDesc]: A Tuple of `ListNumpy`. 
 
     For example: 
 

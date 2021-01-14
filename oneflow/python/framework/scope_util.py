@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import traceback
-import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.attr_util as attr_util
 import oneflow.python.eager.vm_util as vm_util
@@ -38,7 +37,9 @@ def api_scope_config(**kwargs):
 
     sess = session_ctx.GetDefaultSession()
     scope = MakeScope(
-        lambda old_scope, builder: old_scope.BuildBySetter(builder, SetScopeProto)
+        lambda old_scope, builder: builder.BuildScopeByProtoSetter(
+            old_scope, SetScopeProto
+        )
     )
     return ScopeContext(scope)
 
@@ -85,8 +86,8 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
     def BuildInitialScope(builder):
         nonlocal scope
         session_id = session_ctx.GetDefaultSession().id
-        scope = scope_symbol.BuildInitialScope(
-            builder, session_id, job_conf, device_tag, machine_device_ids, is_mirrored
+        scope = builder.BuildInitialScope(
+            session_id, job_conf, device_tag, machine_device_ids, is_mirrored
         )
 
     vm_util.LogicalRun(BuildInitialScope)
