@@ -147,7 +147,7 @@ class TestXmum1n1d(flow.unittest.TestCase):
     def test_Xmum_cpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=[(3, 3)],
-            compare_type=["maximum"],
+            compare_type=["maximum", "minimum"],
             device_type="cpu",
             machine_ids="0:0",
             device_counts=1,
