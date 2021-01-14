@@ -86,9 +86,9 @@
     - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
     - To install dependencies, run:
-      
+
       On CentOS:
-      
+
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
       rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
@@ -117,7 +117,7 @@
     - #### Option 1: Clone source code from github
 
       ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow
+      git clone https://github.com/Oneflow-Inc/oneflow --depth=1
       ```
 
     - #### Option 2: Download from Aliyun
