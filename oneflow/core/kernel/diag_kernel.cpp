@@ -21,40 +21,39 @@ class DiagKernel final : public user_op::OpKernel {
             const ShapeView& out_shape = out_tensor->shape();
             const ShapeView& in_shape = in_tensor->shape();
             int32_t in_dim = in_shape.NumAxes();
+
+            const T* in_buf =  in_tensor->dptr<T>();
+            T* out_buf =  out_tensor->mut_dptr<T>();
+
             if (in_dim == 1) {
                 int32_t stride_0 = out_shape.At(1);
                 int32_t stride_1 = 1;
-                //int32_t in_stride = 1;
                 
-                out_tensor += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
+                out_buf += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
                 for (int32_t i = 0; i < in_dim; i++) {
-                    out_tensor[i * (stride_0 + stride_1)] = in_tensor[i];
+                    out_buf[i * (stride_0 + stride_1)] = in_buf[i];
                 }
             } else {
                 int32_t stride_0 = in_shape.At(1);
                 int32_t stride_1 = 1;
-                
                 int32_t sz = 0;
  
-                in_tensor += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
+                in_buf += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
                 if (dimension >= 0) {
                         sz = std::min(in_shape.At(0), in_shape.At(1) - dimension);
                     } else {
                         sz = std::min(in_shape.At(0) + dimension, in_shape.At(1));
                     }
                 for (int32_t i = 0; i < sz; i++) {
-                    out_tensor[i] = in_tensor[i * (stride_0 + stride_1)];
+                    out_buf[i] = in_buf[i * (stride_0 + stride_1)];
                     }
             }
-
-
          }
-
-    
+  
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
+template<DeviceType device_type, typename T>
 class DiagGradKernel final : public user_op::OpKernel {
  public:
   DiagGradKernel() = default;
@@ -70,30 +69,30 @@ class DiagGradKernel final : public user_op::OpKernel {
         int32_t in_dim = dx_shape.NumAxes();
         int32_t dy_num_cnt = dy_shape.At(0);
         int32_t dx_num_cnt = dx_shape.Count(0);
-        auto dx_ptr =  dx->mut_dptr<T>();
-        auto dy_ptr = dy->dptr<T>();
+        T* dx_buf =  dx->mut_dptr<T>();
+        const T* dy_buf = dy->dptr<T>();
 
         if (in_dim == 1) {
-           
-           for (int32_t i = 0; i < dy_num_cnt; i++) {
-               if (dy_ptr[i] != 0) {
-                    dx_ptr[i] = dy_ptr[i];
-               }
-           }
+            int32_t stride_1 = 1;
+            int32_t stride_0 = dy_shape.At(1);
+            dy_buf += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
+            for (int32_t i = 0; i < dx_num_cnt; i++) {
+                    dx_buf[i] = dy_buf[i *  (stride_0 + stride_1)];
+            }
         } else {
                 int32_t stride_0 = dx_shape.At(1);
                 int32_t stride_1 = 1;
                 for (int32_t i = 0; i < dx_num_cnt; i++) {
-                    dx_ptr[i] = 0;
+                    dx_buf[i] = 0;
                 }
 
-                //std::memset
-
                 for (int32_t i = 0; i < dy_num_cnt; i++) {
-                    dx_ptr[i * (stride_0 + stride_1)] = dy_ptr[i];
+                    dx_buf[i * (stride_0 + stride_1)] = dy_buf[i];
                 }   
         }
     }
+
+     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   };
 } // namespace
 

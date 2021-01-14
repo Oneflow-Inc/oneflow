@@ -18,7 +18,7 @@ using namespace std;
 
 namespace oneflow {
 namespace {
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
     std::cout << "*****************diag_op****************" << std::endl;
     const user_op::TensorDesc* input_tensor = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0);
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
@@ -49,16 +49,17 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
 }
 
-Maybe<void> GetSbpSignatures4Diag(user_op::SbpContext* ctx) {
-    const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input_tensor", 0);
-    int32_t axis = in_tensor.shape().NumAxes();
-    FOR_RANGE(int32_t, i, 0, axis) {
-        if (i == axis) { continue; }
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-    }
-    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
+    std::cout << "*****************diag_op_grad****************" << std::endl;
+    const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+    const int32_t dimension = ctx->Attr<int32_t>("dimension");
+    Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+    CHECK_EQ_OR_RETURN(*dy_shape, *y_shape);
+    
     return Maybe<void>::Ok();
+
 }
+
 
 }
 
@@ -66,17 +67,43 @@ REGISTER_USER_OP("diag")
     .Input("input_tensor")
     .Output("diag_out")
     .Attr<int32_t>("dimension", 0)
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignatures4Diag)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetTensorDescInferFn(InferForwardTensorDesc)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+        const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input_tensor", 0);
+        int32_t axis = in_tensor.shape().NumAxes();
+        FOR_RANGE(int32_t, i, 0, axis) {
+            if (i == axis) { continue; }
+            ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+        }
+        ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+        return Maybe<void>::Ok();
+    });
 
-REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+REGISTER_USER_OP("diag_grad")
+    .Input("dy")
+    .Output("grad")
+    .Attr<int32_t>("dimension", 0)
+    .SetTensorDescInferFn(InferBackwardTensorDesc)
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+        const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+        int32_t axis = y_tensor.shape().NumAxes();
+        FOR_RANGE(int32_t, i, 0, axis) {
+            if (i == axis) { continue; }
+            ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+        }
+        ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+        return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("diag").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp){
     if (op.NeedGenGradTensor4OpInput("input_tensor", 0)){
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = 
             builder.Op("diag_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("dy", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("diag_out", 0))
                 .Attr("dimension", op.attr<int32_t>("dimension"))
                 .Output("dx")
                 .Build();
