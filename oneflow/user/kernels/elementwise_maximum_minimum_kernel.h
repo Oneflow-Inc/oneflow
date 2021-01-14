@@ -150,4 +150,4 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif  // _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_UTIL_H
+#endif  // _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_H

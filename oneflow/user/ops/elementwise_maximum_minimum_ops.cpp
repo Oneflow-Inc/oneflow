@@ -88,7 +88,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
     const bool y_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("y", 0);
     const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
 
-    auto BuildGradOp = [=](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
+    auto BuildGradOp = [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
       builder.OpTypeName(op_type_name + "_backward")
           .InputBind("dz", ctx->FwOp().output_grad("z", 0))
           .InputBind("x", ctx->FwOp().input("x", 0))
