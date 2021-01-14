@@ -213,6 +213,9 @@ def compare_with_np(
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow_data_type)
+    func_config.default_placement_scope(
+        flow.scope.placement(device_type, "0:0-{}".format(device_num - 1))
+    )
 
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
@@ -273,7 +276,7 @@ def compare_with_np(
         input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
         target_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
     ) -> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+        with flow.scope.placement(device_type, "0:0"):
             v = flow.get_variable(
                 shape=log_probs.shape,
                 dtype=flow_data_type,
@@ -284,7 +287,7 @@ def compare_with_np(
 
         flow.watch_diff(x_var, assert_loss_grad)
 
-        with flow.scope.placement(device_type, "0:0-{}".format(device_num - 1)):
+        with flow.scope.placement(device_type, "0:0"):
             loss = flow.ctc_loss(
                 x_var,
                 targets,

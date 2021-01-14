@@ -172,10 +172,22 @@ def ctc_loss(
     )
 
     if zero_infinity:
-        inf = flow.constant(float("inf"), dtype=loss.dtype, shape=loss.shape)
-        cond = flow.math.equal(loss, inf)
-        zero = flow.zeros(dtype=loss.dtype, shape=loss.shape)
-        loss = flow.where(cond, zero, loss)
+        cond = flow.math.equal(
+            loss,
+            flow.constant(
+                float("inf"),
+                dtype=loss.dtype,
+                shape=loss.shape,
+                name=name + "_constant",
+            ),
+            name=name + "_equal",
+        )
+        loss = flow.where(
+            cond,
+            flow.zeros(dtype=loss.dtype, shape=loss.shape, name=name + "_zeros"),
+            loss,
+            name=name + "_where",
+        )
 
     if reduction == "mean":
         return flow.math.reduce_mean(
