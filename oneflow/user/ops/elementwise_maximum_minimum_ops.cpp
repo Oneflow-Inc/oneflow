@@ -39,7 +39,6 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
 
 using namespace user_op;
 Maybe<void> InferTensorDesc(InferContext* ctx) {
-  // backward(dz, x, y) -> dx, dy
   const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
@@ -54,11 +53,15 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
   TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
 
-  *tensor_dx->mut_data_type() = tensor_dz->data_type();
-  *tensor_dx->mut_shape() = tensor_x->shape();
+  if (tensor_dx) {
+    *tensor_dx->mut_data_type() = tensor_dz->data_type();
+    *tensor_dx->mut_shape() = tensor_x->shape();
+  }
 
-  *tensor_dy->mut_data_type() = tensor_dz->data_type();
-  *tensor_dy->mut_shape() = tensor_y->shape();
+  if (tensor_dy) {
+    *tensor_dy->mut_data_type() = tensor_dz->data_type();
+    *tensor_dy->mut_shape() = tensor_y->shape();
+  }
 
   return Maybe<void>::Ok();
 }
@@ -70,8 +73,12 @@ Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
     CHECK_LE_OR_RETURN(dz_batch_axis->value(),
                        ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0).shape().NumAxes() - 1);
   }
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dz_batch_axis;
-  *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *dz_batch_axis;
+  if (ctx->user_op_conf().has_input("dx", 0)) {
+    *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dz_batch_axis;
+  }
+  if (ctx->user_op_conf().has_input("dy", 0)) {
+    *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *dz_batch_axis;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -82,13 +89,13 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
     const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
 
     auto BuildGradOp = [=](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-      return builder.OpTypeName(op_type_name + "_backward")
+      builder.OpTypeName(op_type_name + "_backward")
           .InputBind("dz", ctx->FwOp().output_grad("z", 0))
           .InputBind("x", ctx->FwOp().input("x", 0))
-          .InputBind("y", ctx->FwOp().input("y", 0))
-          .Output("dx")  // TODO(yaochi): set dx/dy according to NeedGenGradTensor4OpInput
-          .Output("dy")
-          .Build();
+          .InputBind("y", ctx->FwOp().input("y", 0));
+      if (x_need_grad) { builder.Output("dx"); }
+      if (y_need_grad) { builder.Output("dy"); }
+      return builder.Build();
     };
     ctx->DefineOp(grad_op_name, BuildGradOp);
     if (x_need_grad) {

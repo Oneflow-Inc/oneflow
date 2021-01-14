@@ -24,10 +24,13 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-struct MaximumUtil {
+struct MaximumForwardFunctor {
   OF_DEVICE_FUNC T operator()(T x, T y) const { return x > y ? x : y; }
+};
 
-  OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+template<typename T>
+struct MaximumBackwardFunctor {
+  OF_DEVICE_FUNC void operator()(const T* dz, const T* x, const T* y, T* dx, T* dy) {
     const T dz_val = *dz;
     T dx_val = 0;
     T dy_val = 0;
@@ -42,10 +45,13 @@ struct MaximumUtil {
 };
 
 template<typename T>
-struct MinimumUtil {
+struct MinimumForwardFunctor {
   OF_DEVICE_FUNC T operator()(T x, T y) const { return x < y ? x : y; }
+};
 
-  OF_DEVICE_FUNC static void Backward(const T* dz, const T* x, const T* y, T* dx, T* dy) {
+template<typename T>
+struct MinimumBackwardFunctor {
+  OF_DEVICE_FUNC void operator()(const T* dz, const T* x, const T* y, T* dx, T* dy) {
     const T dz_val = *dz;
     T dx_val = 0;
     T dy_val = 0;
@@ -59,18 +65,22 @@ struct MinimumUtil {
   }
 };
 
-template<DeviceType device_type, template<typename> class XmumUtil, typename T>
-struct RunKernelUtil final {
-  static void ForwardKernel(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y);
-  static void BackwardKernel(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y,
-                             T* dx, T* dy);
+template<DeviceType device_type, template<typename> class functor, typename T>
+struct ElemwiseXimumBackwardFunctor final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
+                  T* dy);
 };
 
-template<DeviceType device_type, template<typename> class XmumUtil, typename T>
-class ElementwiseMaximumMinimumKernel final : public user_op::OpKernel {
+template<DeviceType device_type, template<typename> class functor, typename T>
+struct ElemwiseXimumForwardFunctor final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y);
+};
+
+template<DeviceType device_type, template<typename> class functor, typename T>
+class ElemwiseXimumKernel final : public user_op::OpKernel {
  public:
-  ElementwiseMaximumMinimumKernel() = default;
-  ~ElementwiseMaximumMinimumKernel() = default;
+  ElemwiseXimumKernel() = default;
+  ~ElemwiseXimumKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -79,17 +89,17 @@ class ElementwiseMaximumMinimumKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
     int64_t n = tensor_x->shape().elem_cnt();
 
-    RunKernelUtil<device_type, XmumUtil, T>::ForwardKernel(
+    ElemwiseXimumForwardFunctor<device_type, functor, T>()(
         ctx->device_ctx(), n, tensor_z->mut_dptr<T>(), tensor_x->dptr<T>(), tensor_y->dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, template<typename> class XmumUtil, typename T>
-class ElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKernel {
+template<DeviceType device_type, template<typename> class functor, typename T>
+class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
  public:
-  ElementwiseMaximumMinimumBackwardKernel() = default;
-  ~ElementwiseMaximumMinimumBackwardKernel() = default;
+  ElemwiseXimumBackwardKernel() = default;
+  ~ElemwiseXimumBackwardKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -106,27 +116,20 @@ class ElementwiseMaximumMinimumBackwardKernel final : public user_op::OpKernel {
     T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
     T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
-    RunKernelUtil<device_type, XmumUtil, T>::BackwardKernel(ctx->device_ctx(),
+    ElemwiseXimumBackwardFunctor<device_type, functor, T>()(ctx->device_ctx(),
                                                             tensor_dz->shape().elem_cnt(), dptr_dz,
                                                             dptr_x, dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+#define INSTANTIATE_FORWARD_KERNEL_FUNCTOR(device_type_v, functor, dtype) \
+  template struct ElemwiseXimumForwardFunctor<device_type_v, functor, dtype>;
+
+#define INSTANTIATE_BACKWARD_KERNEL_FUNCTOR(device_type_v, functor, dtype) \
+  template struct ElemwiseXimumBackwardFunctor<device_type_v, functor, dtype>;
+
 }  // namespace user_op
 }  // namespace oneflow
-
-#define REGISTER_FORWARD_KERNEL(dev_type, op_type_name, util, dtype)                 \
-  REGISTER_USER_KERNEL(op_type_name)                                                 \
-      .SetCreateFn<ElementwiseMaximumMinimumKernel<dev_type, util, dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == dev_type)                         \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
-
-#define REGISTER_BACKWARD_KERNEL(dev_type, op_type_name, util, dtype)                \
-  REGISTER_USER_KERNEL(std::string("") + op_type_name + "_backward")                 \
-      .SetCreateFn<ElementwiseMaximumMinimumBackwardKernel<dev_type, util, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == dev_type)                         \
-                       & (user_op::HobDataType("dz", 0) == GetDataType<dtype>::value));
 
 #endif  // _ONEFLOW_USER_KERNEL_ELEMENTWISE_MAXIMUM_MINIMUM_KERNEL_UTIL_H
