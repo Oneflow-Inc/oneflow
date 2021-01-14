@@ -164,6 +164,7 @@ ComputationCost (mean(|x|), variance (2|x|), moving mean(|x|), moving variance (
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   double cost = x->shape().elem_cnt() * 7;
+
   if (ctx->SbpParallel4ArgNameAndIndex("y", 0).has_split_parallel()) {
     return cost / ctx->parallel_desc().parallel_num();
   }
@@ -346,6 +347,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 Maybe<double> BwGetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   double cost = x->shape().elem_cnt() * 7;
+
   if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
     return cost / ctx->parallel_desc().parallel_num();
   }
