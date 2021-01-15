@@ -26,10 +26,14 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   const auto& train_conf = job_builder->job().job_conf().train_conf();
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
   user_op::UserOpConfWrapperBuilder sgd_update_op_builder(op.op_name() + "_optimizer");
+  std::string lr_lbn = train_conf.primary_lr_lbn();
+  if (train_conf.has_secondary_lr_lbn() && op.op_conf().variable_conf().model_name() == "bias") {
+    lr_lbn = train_conf.secondary_lr_lbn();
+  }
   sgd_update_op_builder.OpTypeName("sgd_update")
       .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
       .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
-      .Input("learning_rate", train_conf.primary_lr_lbn())
+      .Input("learning_rate", lr_lbn)
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
       .ScopeSymbolId(op.op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &sgd_update_op_builder);

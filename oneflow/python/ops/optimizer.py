@@ -222,11 +222,15 @@ class LrScheduler:
     def __init__(
         self,
         base_lr: Optional[float] = None,
+        secondary_lr: Optional[float] = None,
         lr_lbn: Optional[Text] = None,
+        secondary_lr_lbn: Optional[Text] = None,
         warmup: Optional[WarmupConf] = None,
     ):
         self.base_lr = base_lr
+        self.secondary_lr = secondary_lr
         self.lr_lbn = lr_lbn
+        self.secondary_lr_lbn = secondary_lr_lbn
         self.warmup = warmup
 
     @property
@@ -244,12 +248,18 @@ class LrScheduler:
             train_conf.primary_lr_lbn = self.lr_lbn
             # primary_lr is a required field
             train_conf.primary_lr = 0
+            if self.secondary_lr_lbn is not None:
+                assert self.secondary_lr is None
+                train_conf.secondary_lr_lbn = self.secondary_lr_lbn
+                train_conf.secondary_lr = 0
         else:
             assert self.learning_rate_decay_conf is not None
             train_conf.model_update_conf.learning_rate_decay.CopyFrom(
                 self.learning_rate_decay_conf
             )
             train_conf.primary_lr = self.base_lr
+            if self.secondary_lr is not None:
+                train_conf.secondary_lr = self.secondary_lr
 
     @property
     def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
@@ -477,9 +487,10 @@ class PiecewiseScalingScheduler(LrScheduler):
         base_lr: float,
         boundaries: Sequence[int],
         scale: Union[float, Sequence[float]],
+        secondary_lr: Optional[float] = None,
         warmup: Optional[WarmupConf] = None,
     ):
-        super().__init__(base_lr=base_lr, warmup=warmup)
+        super().__init__(base_lr=base_lr, secondary_lr=secondary_lr, warmup=warmup)
         self.boundaries = boundaries
         if not isinstance(scale, collections.abc.Sequence):
             scale = [scale] * len(boundaries)

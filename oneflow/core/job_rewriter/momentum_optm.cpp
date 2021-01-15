@@ -53,10 +53,14 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
   job_builder->AddOps(parallel_conf, {momentum_var});
 
   user_op::UserOpConfWrapperBuilder momentum_update_op_builder(op.op_name() + "_optimizer");
+  std::string lr_lbn = train_conf.primary_lr_lbn();
+  if (train_conf.has_secondary_lr_lbn() && op.op_conf().variable_conf().model_name() == "bias") {
+    lr_lbn = train_conf.secondary_lr_lbn();
+  }
   momentum_update_op_builder.OpTypeName("momentum_update")
       .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
       .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
-      .Input("learning_rate", train_conf.primary_lr_lbn())
+      .Input("learning_rate", lr_lbn)
       .Input("momentum", GenLogicalBlobName(op_name, momentum_var.variable_conf().out()))
       .Attr<float>("beta", model_update_conf.momentum_conf().beta())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
