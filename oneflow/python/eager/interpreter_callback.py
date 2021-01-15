@@ -86,7 +86,7 @@ def _AddOutputBlobObjectReleaser4InputBlobObject(op_attribute, blob_register):
 
 
 def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):
-    def ReleaseMirroredBlobObject(*args):
+    def ReleaseMirroredBlobObject(obj):
         for obn in op_attribute.output_bns:
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)

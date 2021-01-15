@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 from contextlib import contextmanager
 
 
@@ -100,10 +101,14 @@ class BlobRegister(object):
         if self.HasObject4BlobName(blob_name):
             self.ClearObject4BlobName(blob_name)
 
-    def ForceReleaseAll(self):
+    def ForceReleaseAll(self, is_shutting_down=python_interpreter_util.IsShuttingDown):
+        # Bind `python_interpreter_util.IsShuttingDown` early.
+        # See the comments of `python_interpreter_util.IsShuttingDown`
         for blob_name, blob_object in self.blob_name2object.items():
+            if is_shutting_down():
+                return
             print("Forcely release blob %s." % blob_name)
-            blob_object.__del__()
+            blob_object.ForceReleaseAll()
 
     @contextmanager
     def BnInOp2BlobObjectScope(self, op_attribute):
