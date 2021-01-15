@@ -62,13 +62,15 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
     set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
   } else if (copy_type == CopyHdOpConf::D2H) {
     set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+  } else if (copy_type == CopyHdOpConf::D2D) {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2DThrdId(dev_phy_id));
   } else {
     UNIMPLEMENTED();
   }
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (copy_type_ == CopyHdOpConf::H2D) {
+  if (copy_type_ == CopyHdOpConf::H2D || copy_type_ == CopyHdOpConf::D2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
     mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());

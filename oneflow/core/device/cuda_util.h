@@ -131,6 +131,7 @@ size_t GetAvailableGpuMemSize(int dev_id);
   OF_PP_MAKE_TUPLE_SEQ(kCompute) \
   OF_PP_MAKE_TUPLE_SEQ(kCopyH2D) \
   OF_PP_MAKE_TUPLE_SEQ(kCopyD2H) \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyD2D) \
   OF_PP_MAKE_TUPLE_SEQ(kNccl)    \
   OF_PP_MAKE_TUPLE_SEQ(kMix)     \
   OF_PP_MAKE_TUPLE_SEQ(kDecodeH2D)
