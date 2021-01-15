@@ -18,14 +18,14 @@ limitations under the License.
 
 namespace oneflow {
 
-int GetSmVersion() {
+int GetCudaSmVersion() {
   int sm_version, device_ordinal;
   OF_CUDA_CHECK(cudaGetDevice(&device_ordinal));
   OF_CUDA_CHECK(cub::SmVersion(sm_version, device_ordinal));
   return sm_version;
 }
 
-int GetPtxVersion() {
+int GetCudaPtxVersion() {
   int ptx_version;
   OF_CUDA_CHECK(cub::PtxVersion(ptx_version));
   return ptx_version;

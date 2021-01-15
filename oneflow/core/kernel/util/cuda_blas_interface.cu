@@ -76,7 +76,7 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
-  if (GetSmVersion() >= 500) {
+  if (GetCudaSmVersion() >= 500) {
     OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
                                  CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc, CUDA_R_32F,
@@ -143,7 +143,7 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
-  if (CUDA_VERSION >= 9010 && GetSmVersion() >= 500) {
+  if (CUDA_VERSION >= 9010 && GetCudaSmVersion() >= 500) {
 #if CUDA_VERSION >= 9010
     cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
@@ -175,12 +175,11 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
-  if (GetSmVersion() >= 500) {
-    cublasGemmAlgo_t algo;
+  if (GetCudaSmVersion() >= 500) {
 #if CUDA_VERSION >= 11000
-    algo = CUBLAS_GEMM_DEFAULT;
+    cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
-    algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
+    cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
 #endif
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
         ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
