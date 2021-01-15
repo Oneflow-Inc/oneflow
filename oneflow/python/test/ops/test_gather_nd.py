@@ -127,7 +127,7 @@ def _gather_nd_np(x, index, require_grad=False, init_grad_value=1.0):
         dy.fill(init_grad_value)
         dx = np.zeros(shape=x.shape, dtype=np.float32)
         flat_index = index.reshape(-1, ndim)
-        flat_dy = dy.reshape(-1, *y.shape[index.ndim - 1 :])
+        flat_dy = dy.reshape(-1, *y.shape[(index.ndim - 1) :])
         for i, nd_index in enumerate(flat_index):
             if dx.ndim == ndim:
                 ravel_index = np.ravel_multi_index(nd_index, dx.shape)
@@ -135,7 +135,7 @@ def _gather_nd_np(x, index, require_grad=False, init_grad_value=1.0):
                 np.put(dx_partial, ravel_index, flat_dy[i])
                 dx += dx_partial
             else:
-                dx[nd_index] += flat_dy[i]
+                dx[tuple(nd_index)] += flat_dy[i]
 
     return y, dx
 
@@ -161,7 +161,6 @@ def _compare_with_np(
 ):
     x_is_floating = _is_floating_dtype(dtype)
     need_grad = True if x_is_floating else False
-    need_grad = False
     x_of_dtype = type_name_to_flow_type[dtype]
     index_of_dtype = type_name_to_flow_type[index_dtype]
     x_dtype = type_name_to_np_type[dtype]
@@ -178,29 +177,29 @@ def _compare_with_np(
         dynamic = True
 
     if dynamic:
-        x, index, y, dy = [], [], [], []
+        x, index, y, dx = [], [], [], []
         for _ in range(device_num):
             x_, index_ = _random_inputs(
                 dynamic_shape, x_dtype, dynamic_index_shape, index_dtype
             )
-            y_, dy_ = _gather_nd_np(x_, index_, need_grad)
+            y_, dx_ = _gather_nd_np(x_, index_, need_grad)
             x.append(x_)
             index.append(index_)
             y.append(y_)
-            dy.append(dy_)
+            dx.append(dx_)
 
-        def comp_diff(dy_blob):
-            for dy_blob_, dy_ in zip(dy_blob.numpy_list(), dy):
-                test_case.assertTrue(np.array_equal(dy_blob_, dy_))
+        def comp_diff(dx_blob: flow.typing.ListNumpy):
+            for dx_blob_, dx_ in zip(dx_blob, dx):
+                test_case.assertTrue(np.array_equal(dx_blob_, dx_))
 
     else:
         x, index = _random_inputs(
             dynamic_shape, x_dtype, dynamic_index_shape, index_dtype
         )
-        y, dy = _gather_nd_np(x, index, need_grad)
+        y, dx = _gather_nd_np(x, index, need_grad)
 
-        def comp_diff(dy_blob: flow.typing.Numpy):
-            test_case.assertTrue(np.array_equal(dy_blob, dy))
+        def comp_diff(dx_blob: flow.typing.Numpy):
+            test_case.assertTrue(np.array_equal(dx_blob, dx))
 
     flow.clear_default_session()
     gather_nd_fn = _make_gather_nd_fn(
