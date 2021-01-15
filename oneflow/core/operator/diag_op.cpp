@@ -52,9 +52,10 @@ Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
     std::cout << "*****************diag_op_grad****************" << std::endl;
     const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+    Shape* out_shape = ctx->Shape4ArgNameAndIndex("diag_out", 0);
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
     Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-    CHECK_EQ_OR_RETURN(*dy_shape, *y_shape);
+    CHECK_EQ_OR_RETURN(*dy_shape, *out_shape);
     
     return Maybe<void>::Ok();
 

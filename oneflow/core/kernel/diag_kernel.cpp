@@ -105,7 +105,7 @@ class DiagGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_DIAG_GRAD_KERNEL(device, dtype)                                     \
     REGISTER_USER_KERNEL("diag_grad")                                                \
-        .SetCreateFn<DiagKernel<device, dtype>>()                               \
+        .SetCreateFn<DiagGradKernel<device, dtype>>()                               \
         .SetIsMatchedHob((user_op::HobDeviceTag() == device)                     \
         & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

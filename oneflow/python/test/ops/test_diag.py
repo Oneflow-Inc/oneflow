@@ -22,6 +22,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+import oneflow.typing as tp 
+
 
 def _random_input( x_shape):
     x = np.random.standard_normal(x_shape).astype(np.float32)
@@ -62,9 +64,10 @@ def diag_forward_np(input_tensor, dim):
         output_arr = np.zeros([output_size], dtype = input_dtype)
         for i in range(output_size):
             beg = beg + i * (stride1 + stride0)
-            output_arr[i] = input[i][int(beg/stride0)]
+            output_arr[i] = input_tensor[i][int(beg/stride0)]
+            #output_arr[i] = 1
 
-        return output_tensor
+        return output_arr
 
 def diag_grad_np(input_tensor, dim, output, grad):
     input_shape = input_ten.shape
@@ -110,28 +113,33 @@ def forward_cpmputer_with_np(device_type, input_tensor, dim):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(type="predict", function_config=func_config)
-    def diag_forward():
+    def diag_forward()-> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
-                "input_tensor",
-                shape=[5, 4],
+                name="x_pre",
+                shape=[2, 2],
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=False,
             )
         x = x 
-        y = flow.diag(x)
+        y = flow.diag(x, 0)
+        print('------------y---------------')
+        print(y)
         return y
 
     #input = np.random.rand(*input_shape).astype(type_name_to_flow_type[dtype])
     #print(input)
+    check_point = flow.train.CheckPoint()
+    check_point.init()
     forward_of_out = diag_forward()
     print(forward_of_out)
    
     forward_np_out = diag_forward_np(input_tensor, dim)
+    print(forward_np_out)
     assert np.allclose(forward_of_out, forward_np_out)
 
-
+'''
 def backward_cpmputer_with_np(device_type, input_tensor, dim):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -148,38 +156,38 @@ def backward_cpmputer_with_np(device_type, input_tensor, dim):
     def DiagForwardJob():
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
-                "x",
+                name="x_train",
                 shape=input_shape,
                 dtype=type_name_to_flow_type[dtype],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
             
-            x = flow.cast_to_current_logical_view(x)
-            loss = flow.diag(x, dim)
+            #x = flow.cast_to_current_logical_view(x)
+            output = flow.diag(x, dim)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
-            ).minimize(loss)
+            ).minimize(output)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
-            flow.watch(loss, test_global_storage.Setter("loss"))
-            flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
+            flow.watch(loss, test_global_storage.Setter("output"))
+            flow.watch_diff(loss, test_global_storage.Setter("output_diff"))
 
-            return loss
+            return output
 
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    backward_of_out = ConcatJob().get()
+    backward_of_out = DiagForwardJob().get()
 
     backward_np_out = diag_grad_np(input_tensor, dim, output_tensor, grad)
     assert np.allclose(backward_of_out, backward_np_out)
-
-def test_fun(device_type, input_shape, dtype):
+'''
+def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(dtype)
     forward_cpmputer_with_np(device_type, input_tensor, dim)
-    backward_cpmputer_with_np(device_type, input_tensor, dim)
+    #backward_cpmputer_with_np(device_type, input_tensor, dim)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -187,11 +195,11 @@ class TestCast(flow.unittest.TestCase):
     def test_cast_forward(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
-        arg_dict["input_shape"] = [(5, 4)]
+        arg_dict["input_shape"] = [(2, 2)]
         arg_dict["dim"] = [0]
         arg_dict["dtype"] = ["float32"]
         for arg in GenArgList(arg_dict):
-            test_fun(test_case, *arg)
+            test_fun( *arg)
 
 if __name__ == "__main__":
     unittest.main()
