@@ -225,7 +225,6 @@ LogicalResult Importer::tryToUpdateJob() {
   auto dumpOps = [](Operation *op) {
     oneflow::UserOp usro = llvm::dyn_cast<oneflow::UserOp>(op);
     if (!usro) { return; }
-    op->dump();
   };
   module.getRegion().walk(dumpOps);
   return success();
