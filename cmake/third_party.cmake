@@ -100,6 +100,11 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
+set(oneflow_exe_third_party_libs
+    ${GLOG_STATIC_LIBRARIES}
+    ${GFLAGS_STATIC_LIBRARIES}
+)
+
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
