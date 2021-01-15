@@ -76,9 +76,16 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
-  OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a,
-                               n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a, CUDA_R_16F, lda, &beta_f,
-                               c, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP));
+  if (GetSmVersion() >= 500) {
+    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                 cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
+                                 CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc, CUDA_R_32F,
+                                 CUBLAS_GEMM_DFALT_TENSOR_OP));
+  } else {
+    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
+                                  CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc));
+  }
 }
 
 std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
@@ -136,19 +143,21 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
+  if (CUDA_VERSION >= 9010 && GetSmVersion() >= 500) {
 #if CUDA_VERSION >= 9010
-  cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
-  cublasGemmStridedBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                             reinterpret_cast<const void*>(alpha), reinterpret_cast<const void*>(b),
-                             data_type, ldb, b_stride, reinterpret_cast<const void*>(a), data_type,
-                             lda, a_stride, reinterpret_cast<const void*>(beta),
-                             reinterpret_cast<void*>(c), data_type, ldc, c_stride, batch_size,
-                             data_type, CUBLAS_GEMM_DEFAULT);
-#else
-  cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                               alpha, b, ldb, b_stride, a, lda, a_stride, beta, c, ldc, c_stride,
-                               batch_size);
+    cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
+    OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
+        ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+        reinterpret_cast<const void*>(alpha), reinterpret_cast<const void*>(b), data_type, ldb,
+        b_stride, reinterpret_cast<const void*>(a), data_type, lda, a_stride,
+        reinterpret_cast<const void*>(beta), reinterpret_cast<void*>(c), data_type, ldc, c_stride,
+        batch_size, data_type, CUBLAS_GEMM_DEFAULT));
 #endif
+  } else {
+    cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                                 alpha, b, ldb, b_stride, a, lda, a_stride, beta, c, ldc, c_stride,
+                                 batch_size);
+  }
 }
 
 #if CUDA_VERSION >= 9010
@@ -166,17 +175,23 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
-  cublasGemmAlgo_t algo;
+  if (GetSmVersion() >= 500) {
+    cublasGemmAlgo_t algo;
 #if CUDA_VERSION >= 11000
-  algo = CUBLAS_GEMM_DEFAULT;
+    algo = CUBLAS_GEMM_DEFAULT;
 #else
-  algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
+    algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
 #endif
-  cublasGemmStridedBatchedEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n,
-                             m, k, &alpha_f, reinterpret_cast<const void*>(b), CUDA_R_16F, ldb,
-                             b_stride, reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride,
-                             &beta_f, reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride,
-                             batch_size, CUDA_R_32F, algo);
+    OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
+        ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
+        reinterpret_cast<const void*>(b), CUDA_R_16F, ldb, b_stride,
+        reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride, &beta_f,
+        reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride, batch_size, CUDA_R_32F, algo));
+  } else {
+    cublas_gemmStridedBatched<half>(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                    cublas_trans_a, n, m, k, alpha, b, ldb, b_stride, a, lda,
+                                    a_stride, beta, c, ldc, c_stride, batch_size);
+  }
 }
 #endif
 
