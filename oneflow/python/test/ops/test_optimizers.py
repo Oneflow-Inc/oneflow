@@ -473,6 +473,68 @@ def compare_with_tensorflow_sgd(
     assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
 
 
+def compare_with_tensorflow_sgd_secondary_lr(
+    device_type, x_shape, momentum, primary_lr, secondary_lr, train_iters
+):
+    assert device_type in ["gpu", "cpu"]
+    flow.clear_default_session()
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def testSGD(
+        random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
+    ) -> flow.typing.Numpy:
+        with flow.scope.placement(device_type, "0:0-0"):
+            x = flow.get_variable(
+                name="x",
+                shape=x_shape,
+                dtype=flow.float32,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                trainable=True,
+                model_name="bias",
+            )
+            loss = flow.math.reduce_sum(x * random_mask)
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseScalingScheduler(
+                    base_lr=primary_lr,
+                    secondary_lr=secondary_lr,
+                    boundaries=[],
+                    scale=1,
+                ),
+                momentum=momentum,
+            ).minimize(loss)
+            return x
+
+    checkpoint = flow.train.CheckPoint()
+    checkpoint.init()
+
+    # generate random number sequences
+    random_masks_seq = []
+    for i in range(train_iters + 1):
+        random_masks_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
+    init_value = None
+    for i in range(train_iters + 1):
+        x = testSGD(random_masks_seq[i])
+        if i == 0:
+            init_value = np.copy(x)
+
+    var = tf.Variable(init_value)
+    opt = tf.keras.optimizers.SGD(
+        learning_rate=secondary_lr, momentum=momentum, nesterov=False
+    )
+
+    for i in range(train_iters):
+        with tf.GradientTape() as tape:
+            random_mask = tf.Variable(random_masks_seq[i])
+            loss = tf.reduce_sum(var * random_mask)
+        gradients = tape.gradient(loss, var)
+        opt.apply_gradients(zip([gradients], [var]))
+
+    assert np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4,)
+
+
 def unique_grads(sparse_ids, sparse_grads):
     num_ids = np.prod(sparse_ids.shape)
     sparse_grads_shape = (num_ids,) + sparse_grads.shape[len(sparse_ids.shape) :]
@@ -1051,6 +1113,17 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow_sgd(*arg)
+
+    def test_sgd_secondary_lr(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["momentum"] = [0.9, 0.0]
+        arg_dict["primary_lr"] = [1]
+        arg_dict["secondary_lr"] = [2]
+        arg_dict["train_iters"] = [10]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_sgd_secondary_lr(*arg)
 
     def test_indexed_slices_sgd(test_case):
         arg_dict = OrderedDict()
