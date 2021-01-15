@@ -65,7 +65,8 @@ def OneFlow_UserOp : OneFlow_Op<"user", []> {
     let data_in = (ins Variadic<AnyType>:$operands);
     let attrs = (ins
         StrAttr:$op_type_name,
-        DictionaryAttr:$attr
+        DictionaryAttr:$attr,
+        StrArrayAttr:$output_lbns
     );
     let results = (outs Variadic<AnyType>:$outputs);
 }

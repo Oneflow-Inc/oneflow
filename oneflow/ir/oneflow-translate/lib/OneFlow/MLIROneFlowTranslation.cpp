@@ -110,7 +110,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     }
     return success();
   } else {
-    std::vector<NamedAttribute> named_attr_vec;
+    std::vector<NamedAttribute> attr_vec;
     for (const class google::protobuf::MapPair<class std::basic_string<char>,
                                                class ::oneflow::AttrValue> &attr :
          op.user_conf().attr()) {
@@ -119,13 +119,13 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       if (value.has_at_int32()) {
         std::pair<mlir::Identifier, mlir::Attribute> kv =
             b.getNamedAttr(name, b.getI32IntegerAttr(value.at_int32()));
-        named_attr_vec.emplace_back(kv);
+        attr_vec.emplace_back(kv);
       }
 #define DEFINE_ONE_ELIF(at_key, get_attr)                 \
   else if (value.has_##at_key()) {                        \
     std::pair<mlir::Identifier, mlir::Attribute> kv =     \
         b.getNamedAttr(name, b.get_attr(value.at_key())); \
-    named_attr_vec.emplace_back(kv);                      \
+    attr_vec.emplace_back(kv);                            \
   }
       DEFINE_ONE_ELIF(at_int64, getI64IntegerAttr)
       DEFINE_ONE_ELIF(at_bool, getBoolAttr)
@@ -137,7 +137,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   else if (value.has_##at_key()) {                                                         \
     std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                      \
         name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
-    named_attr_vec.emplace_back(kv);                                                       \
+    attr_vec.emplace_back(kv);                                                             \
   }
       // TODO: Define a shape attribute type backed by i64 array storage
       DEFINE_ONE_ELIF(at_shape, getI64ArrayAttr, dim)
@@ -150,7 +150,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
                                               value.at_list_string().val().end()};
         std::pair<mlir::Identifier, mlir::Attribute> kv =
             b.getNamedAttr(name, b.getStrArrayAttr(r_vec));
-        named_attr_vec.emplace_back(kv);
+        attr_vec.emplace_back(kv);
       }
       else if (value.has_at_data_type()) {
         auto dt = ::mlir::oneflow::symbolizeDataType(value.at_data_type());
@@ -158,14 +158,14 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
             dt.getValueOr(::mlir::oneflow::DataType::InvalidDataType));
         std::pair<mlir::Identifier, mlir::Attribute> kv =
             b.getNamedAttr(name, b.getStringAttr(dt_str));
-        named_attr_vec.emplace_back(kv);
+        attr_vec.emplace_back(kv);
       }
       else {
         module.emitError("can't handle user op attr: " + name);
         return failure();
       }
     }
-    ArrayRef<NamedAttribute> named_attributes(named_attr_vec);
+    ArrayRef<NamedAttribute> named_attributes(attr_vec);
 
     std::vector<::mlir::Value> vs;
     for (auto kv : op.user_conf().input()) {
@@ -176,20 +176,23 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
           auto v = lbn2result.at(lbn);
           vs.push_back(v);
         } else {
-          // TODO: add placehorder tensors for tick inputs
+          // TODO: add placehorder ops for tick inputs
         }
       }
     }
     auto out_types = llvm::SmallVector<Type, 8>();
+    std::vector<StringRef> lbns{};
     for (auto kv : op.user_conf().output()) {
       for (const std::string &lbn : kv.second.s()) {
         out_types.append({RankedTensorType::get({}, b.getF32Type())});
+        lbns.push_back(lbn);
       }
     }
     ::mlir::ValueRange operands(vs);
     auto created = b.create<oneflow::UserOp>(
         unknownLoc, out_types, operands, b.getStringAttr(op_name), b.getStringAttr(device_tag),
-        placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes));
+        placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes),
+        b.getStrArrayAttr(ArrayRef<StringRef>(lbns)));
     for (auto kv : op.user_conf().output()) {
       // const std::string &obn = kv.first;
       for (const std::string &lbn : kv.second.s()) {
