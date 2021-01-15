@@ -34,6 +34,7 @@ def compare_with_tensorflow(
     filters,
     kernel_size,
     groups,
+    enable_tf32,
     of_padding="SAME",
     tf_padding="SAME",
     stride_d=1,
@@ -50,6 +51,7 @@ def compare_with_tensorflow(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.cudnn_conv_heuristic_search_algo(False)
+    flow.config.enable_tensor_float_32_compute(enable_tf32)
     if data_format == "NCDHW":
         xy_data_transpose = (0, 2, 3, 4, 1)
         weight_data_transpose = (2, 3, 4, 1, 0)
@@ -172,6 +174,7 @@ class TestNnConv3d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
         arg_dict["groups"] = [1]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["of_padding"] = ["VALID"]
         arg_dict["tf_padding"] = ["VALID"]
         arg_dict["stride_d"] = [1]
@@ -189,6 +192,7 @@ class TestNnConv3d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
         arg_dict["groups"] = [1]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["of_padding"] = ["SAME_UPPER"]
         arg_dict["tf_padding"] = ["SAME"]
         arg_dict["stride_d"] = [1]
@@ -206,6 +210,7 @@ class TestNnConv3d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [2]
         arg_dict["groups"] = [1]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["of_padding"] = ["VALID"]
         arg_dict["tf_padding"] = ["VALID"]
         arg_dict["stride_d"] = [2]

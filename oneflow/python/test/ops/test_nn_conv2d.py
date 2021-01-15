@@ -60,6 +60,7 @@ def compare_with_tensorflow(
     filters,
     kernel_size,
     groups,
+    enable_tf32=True,
     data_format="NCHW",
     padding="VALID",
     stride=1,
@@ -68,6 +69,7 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    flow.config.enable_tensor_float_32_compute(enable_tf32)
     if data_format == "NCHW":
         xy_data_transpose = (0, 2, 3, 1)
         weight_data_transpose = (2, 3, 1, 0)
@@ -183,6 +185,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [128]
         arg_dict["kernel_size"] = [1]
         arg_dict["groups"] = [32]
+        arg_dict["enable_tf32"] = [False]
         arg_dict["data_format"] = ["NHWC"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
@@ -194,6 +197,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]
         arg_dict["groups"] = [4]
+        arg_dict["enable_tf32"] = [False]
         arg_dict["data_format"] = ["NCHW"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
@@ -206,6 +210,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [5]
         arg_dict["groups"] = [1]
+        arg_dict["enable_tf32"] = [False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -216,6 +221,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
         arg_dict["groups"] = [32]
+        arg_dict["enable_tf32"] = [True, False]
         arg_dict["data_format"] = ["NCHW"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
@@ -227,6 +233,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
         arg_dict["groups"] = [4]
+        arg_dict["enable_tf32"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -237,6 +244,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
         arg_dict["groups"] = [8]
+        arg_dict["enable_tf32"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -247,6 +255,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [3]
         arg_dict["groups"] = [32]
+        arg_dict["enable_tf32"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -257,6 +266,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]
         arg_dict["groups"] = [8]
+        arg_dict["enable_tf32"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -267,6 +277,7 @@ class TestNnConv2d(flow.unittest.TestCase):
         arg_dict["filters"] = [64]
         arg_dict["kernel_size"] = [1]
         arg_dict["groups"] = [32]
+        arg_dict["enable_tf32"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
