@@ -414,7 +414,36 @@ def conv2d(
     Returns:
         oneflow_api.BlobDesc: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
 
+    The shape formula is: 
+
+    When `padding` is a tuple, the output shape is: 
+
+        .. math:: 
+
+            & H_{out} = \frac{H_{in}+2*padding\_height - dilation[0]*(kernel\_size[0]-1)-1}{stride[0]} + 1 
+
+            & W_{out} = \frac{W_{in}+2*padding\_width - dilation[1]*(kernel\_size[1]-1)-1}{stride[1]} + 1
+
+    if `padding` == "SAME", the output shape is: 
+        
+        .. math:: 
+
+            & H_{out} = \frac{H_{in}+stride[0]+1}{stride[0]} + 1
+
+            & W_{out} = \frac{W_{in}+stride[1]+1}{stride[1]} + 1
+
+    if `padding` == "VALID", the output shape is: 
+
+        .. math:: 
+
+            & H_{out} = \frac{H_{in} - (dilation[0]*(kernel\_size[0]-1)+1)}{stride[0]} + 1
+
+            & W_{out} = \frac{W_{in} - (dilation[1]*(kernel\_size[1]-1)+1)}{stride[1]} + 1
+
+
     For example: 
+
+    Example 1: 
 
     .. code-block:: python 
 
@@ -432,9 +461,11 @@ def conv2d(
                 filters=128,
                 kernel_size=3,
                 strides=1,
-                padding='SAME',
+                padding=(0, 0, 1, 1),
                 kernel_initializer=initializer,
-                name="Conv2d"
+                name="Conv2d", 
+                data_format="NCHW",
+                activation=flow.nn.relu
             )
             return conv2d
 
@@ -443,6 +474,38 @@ def conv2d(
         out = conv2d_Job(x)
 
         # out.shape (1, 128, 32, 32)
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def conv2d_Job(x: tp.Numpy.Placeholder((1, 16, 16, 8))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            conv2d = flow.layers.conv2d(
+                x,
+                filters=64,
+                kernel_size=3,
+                strides=2,
+                padding=(0, 1, 1, 0),
+                kernel_initializer=initializer,
+                name="Conv2d", 
+                data_format="NHWC",
+                activation=flow.nn.swish
+            )
+            return conv2d
+
+
+        x = np.random.randn(1, 16, 16, 8).astype(np.float32)
+        out = conv2d_Job(x)
+
+        # out.shape (1, 8, 8, 64)
 
     """
 
@@ -585,7 +648,13 @@ def conv3d(
                         When it is an integer, a square window is applied to the input. Defaults to 1.
         strides (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the strides of the convolution window along the height and width.
                         When it is an integer, the same value for the all spatial dimesions is applied. Defaults to 1.
-        padding (str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair], optional): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension. Defaults to "VALID".
+        padding (str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair], optional): The padding mode. It can be `string` type like `"SAME"` or `"SAME_LOWER"` 
+            or `"SAME_UPPER" or `"VALID". 
+            It can also be a Tuple with four elements, each element contains one or two int values. 
+            if `data_format` is `NCHW`, the `padding` should be like ([0, 0], [0, 0], [padding_height_top, padding_height_bottom], [padding_width_top, padding_width_bottom])
+            or (0, 0, padding_height, padding_width). 
+            if `data_format` is `NHWC`, the `padding` should be like ([0, 0], [padding_height_top, padding_height_bottom], [padding_width_top, padding_width_bottom], [0, 0])
+            or (0, padding_height, padding_width, 0).
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCDHW" or "NDHWC" (default: "NCDHW"). "NCDHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width).
                         "NDHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). Defaults to "NCDHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
@@ -613,6 +682,8 @@ def conv3d(
 
     For example: 
 
+    Example 1: 
+
     .. code-block:: python 
 
         import oneflow as flow
@@ -621,25 +692,27 @@ def conv3d(
 
 
         @flow.global_function()
-        def conv3d_Job(x: tp.Numpy.Placeholder((1, 64, 16, 16, 16))
+        def conv3d_Job(x: tp.Numpy.Placeholder((1, 32, 10, 16, 16))
         ) -> tp.Numpy:
             initializer = flow.truncated_normal(0.1)
             conv3d = flow.layers.conv3d(
                 x,
-                filters=128,
+                filters=64,
                 kernel_size=3,
-                strides=1,
-                padding='SAME',
+                strides=2,
+                padding=(0, 0, 1, 1, 1),
                 kernel_initializer=initializer,
-                name="Conv3d"
+                name="Conv3d", 
+                data_format="NCDHW",
+                activation=flow.nn.relu
             )
             return conv3d
 
 
-        x = np.random.randn(1, 64, 16, 16, 16).astype(np.float32)
+        x = np.random.randn(1, 32, 10, 16, 16).astype(np.float32)
         out = conv3d_Job(x)
 
-        # out.shape (1, 128, 16, 16, 16)
+        # out.shape (1, 64, 5, 8, 8)
 
     """
     need_transpose = 0
