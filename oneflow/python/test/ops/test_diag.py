@@ -66,11 +66,12 @@ def diag_forward_np(input_tensor, dim):
             beg = beg + i * (stride1 + stride0)
             output_arr[i] = input_tensor[i][int(beg/stride0)]
             #output_arr[i] = 1
-
+        
         return output_arr
 
 def diag_grad_np(input_tensor, dim, output, grad):
-    input_shape = input_ten.shape
+    print('output_tensor is {}'.format(output_tensor))
+    input_shape = input_tensor.shape
     output_shape = output.shape
     grad_output = np.zeros(input_shape) 
     
@@ -105,7 +106,6 @@ def diag_grad_np(input_tensor, dim, output, grad):
 
 
 
-
 def forward_cpmputer_with_np(device_type, input_tensor, dim):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -113,16 +113,7 @@ def forward_cpmputer_with_np(device_type, input_tensor, dim):
     func_config.default_data_type(flow.float)
 
     @flow.global_function(type="predict", function_config=func_config)
-    def diag_forward()-> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0"):
-            x = flow.get_variable(
-                name="x_pre",
-                shape=[2, 2],
-                dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
-                trainable=False,
-            )
-        x = x 
+    def diag_forward(x: tp.Numpy.Placeholder((2,2)))-> tp.Numpy:
         y = flow.diag(x, 0)
         print('------------y---------------')
         print(y)
@@ -132,7 +123,7 @@ def forward_cpmputer_with_np(device_type, input_tensor, dim):
     #print(input)
     check_point = flow.train.CheckPoint()
     check_point.init()
-    forward_of_out = diag_forward()
+    forward_of_out = diag_forward(input_tensor)
     print(forward_of_out)
    
     forward_np_out = diag_forward_np(input_tensor, dim)
@@ -147,24 +138,15 @@ def backward_cpmputer_with_np(device_type, input_tensor, dim):
     func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
-    output_tensor = diag_forward_np(input, dim)
+    output_tensor = diag_forward_np(input_tensor, dim)
+    print('output_tensor shape is {}'.format(output_tensor.shape))
     output_shape = output_tensor.shape
-    output_shape = output_tensor.dtype
+    output_dtype = output_tensor.dtype
     grad = np.random.random(output_shape).astype(output_dtype)
 
     @flow.global_function(type="train", function_config=func_config)
-    def DiagForwardJob():
-        with flow.scope.placement(device_type, "0:0"):
-            x = flow.get_variable(
-                name="x_train",
-                shape=input_shape,
-                dtype=type_name_to_flow_type[dtype],
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
-                trainable=True,
-            )
-            
-            #x = flow.cast_to_current_logical_view(x)
-            output = flow.diag(x, dim)
+    def DiagForwardJob(x: tp.Numpy.Placeholder((2,2)))-> tp.Numpy:
+            output = flow.diag(x, 0)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(output)
@@ -179,13 +161,17 @@ def backward_cpmputer_with_np(device_type, input_tensor, dim):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    backward_of_out = DiagForwardJob().get()
+    backward_of_out = DiagForwardJob(input_tensor).get()
+    print(backward_of_out)
 
     backward_np_out = diag_grad_np(input_tensor, dim, output_tensor, grad)
     assert np.allclose(backward_of_out, backward_np_out)
+
 '''
 def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(dtype)
+    input_tensor = x = input_tensor.reshape((2, 2)).astype(np.float32)
+    print('input_tensor is {}'.format(input_tensor.shape))
     forward_cpmputer_with_np(device_type, input_tensor, dim)
     #backward_cpmputer_with_np(device_type, input_tensor, dim)
 
