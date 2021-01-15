@@ -25,12 +25,11 @@ namespace compatible_py {
 
 class Object {
  public:
-  Object(int64_t object_id, const std::shared_ptr<ParallelDesc>& parallel_desc_symbol)
-      : object_id_(object_id), parallel_desc_symbol_(parallel_desc_symbol) {}
+  Object(int64_t object_id, const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
   virtual ~Object() = default;
 
-  int64_t object_id() const { return object_id_; }
-  std::shared_ptr<ParallelDesc> parallel_desc_symbol() const { return parallel_desc_symbol_; }
+  int64_t object_id() const;
+  std::shared_ptr<ParallelDesc> parallel_desc_symbol() const;
 
  private:
   int64_t object_id_;
@@ -40,22 +39,16 @@ class Object {
 class BlobObject : public Object {
  public:
   BlobObject(int64_t object_id, const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
-             const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr)
-      : Object(object_id, op_arg_parallel_attr->parallel_desc_symbol()),
-        op_arg_parallel_attr_(op_arg_parallel_attr),
-        op_arg_blob_attr_(op_arg_blob_attr) {}
+             const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr);
   ~BlobObject() override { ForceReleaseAll(); }
 
-  std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr() const {
-    return op_arg_parallel_attr_;
-  }
-  std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr() const { return op_arg_blob_attr_; }
-  void add_releaser(std::function<void(BlobObject*)> release) { release_.emplace_back(release); }
+  std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr() const;
 
-  void ForceReleaseAll() {
-    for (const auto& release : release_) { release(this); }
-    release_.clear();
-  }
+  std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr() const;
+
+  void add_releaser(std::function<void(BlobObject*)> release);
+
+  void ForceReleaseAll();
 
  private:
   std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr_;
