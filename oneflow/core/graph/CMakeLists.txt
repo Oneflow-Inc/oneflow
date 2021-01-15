@@ -6,7 +6,6 @@ add_library(of_graph
 
 # TODO: graph doesn't need gflags
 target_link_libraries(of_graph
-    PRIVATE of_protoobj
-    PRIVATE ${GLOG_STATIC_LIBRARIES}
-    PRIVATE ${GFLAGS_STATIC_LIBRARIES}
+    of_protoobj
+    ${oneflow_exe_third_party_libs}
 )
