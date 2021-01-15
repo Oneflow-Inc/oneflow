@@ -22,46 +22,40 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-struct HardsigmoidFunctor {
+struct SoftSignFunctor {
   OF_DEVICE_FUNC T operator()(T x) const {
-    if (x <= static_cast<T>(-3))
-      return static_cast<T>(0);
-    else if (x >= static_cast<T>(3))
-      return static_cast<T>(1);
-    else
-      return (x / static_cast<T>(6)) + static_cast<T>(0.5);
+    return x / (static_cast<T>(1) + static_cast<T>(abs(x)));
   }
 };
 
 template<typename T>
-struct HardsigmoidGradFunctor {
+struct SoftSignGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x > static_cast<T>(-3) && x < static_cast<T>(3)) ? dy / static_cast<T>(6)
-                                                             : static_cast<T>(0);
+    return (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>abs(dy)) / (static_cast<T>(1.0) + static_cast<T>abs(dy)));
   }
 };
 
 template<>
-struct HardsigmoidFunctor<half> {
-  HardsigmoidFunctor<float> float_functor;
+struct SoftSignFunctor<half> {
+  SoftSignFunctor<float> float_functor;
   OF_DEVICE_FUNC half operator()(half x) const {
     return __float2half(float_functor(__half2float(x)));
   }
 };
 
 template<>
-struct HardsigmoidGradFunctor<half> {
-  HardsigmoidGradFunctor<float> float_functor;
+struct SoftSignGradFunctor<half> {
+  SoftSignGradFunctor<float> float_functor;
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
 };
 
 template<DeviceType device_type, typename T>
-class GpuHardsigmoidKernel final : public OpKernel {
+class GpuSoftSignKernel final : public OpKernel {
  public:
-  GpuHardsigmoidKernel() = default;
-  ~GpuHardsigmoidKernel() = default;
+  GpuSoftSignKernel() = default;
+  ~GpuSoftSignKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -70,27 +64,27 @@ class GpuHardsigmoidKernel final : public OpKernel {
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    OF_CUDA_CHECK((oneflow::cuda::elementwise::Unary(HardsigmoidFunctor<T>(), elem_cnt, out_ptr,
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Unary(SoftSignFunctor<T>(), elem_cnt, out_ptr,
                                                      in_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_HARDSIGMOID_KERNEL(device, dtype)    \
-  REGISTER_USER_KERNEL("hardsigmoid")                     \
-      .SetCreateFn<GpuHardsigmoidKernel<device, dtype>>() \
+#define REGISTER_GPU_SOFTSIGN_KERNEL(device, dtype)    \
+  REGISTER_USER_KERNEL("softsign")                     \
+      .SetCreateFn<GpuSoftSignKernel<device, dtype>>() \
       .SetIsMatchedHob((HobDeviceTag() == device)         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, half);
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_HARDSIGMOID_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_SOFTSIGN_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_SOFTSIGN_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_SOFTSIGN_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuHardsigmoidGradKernel final : public OpKernel {
+class GpuSoftSignGradKernel final : public OpKernel {
  public:
-  GpuHardsigmoidGradKernel() = default;
-  ~GpuHardsigmoidGradKernel() = default;
+  GpuSoftSignGradKernel() = default;
+  ~GpuSoftSignGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -103,21 +97,21 @@ class GpuHardsigmoidGradKernel final : public OpKernel {
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     OF_CUDA_CHECK(
-        (oneflow::cuda::elementwise::Binary(HardsigmoidGradFunctor<T>(), elem_cnt, dx_ptr, x_ptr,
+        (oneflow::cuda::elementwise::Binary(SoftSignGradFunctor<T>(), elem_cnt, dx_ptr, x_ptr,
                                             dy_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("hardsigmoid_grad")                      \
-      .SetCreateFn<GpuHardsigmoidGradKernel<device, dtype>>()   \
+#define REGISTER_GPU_SOFTSIGN_BACKWARD_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("softsign_grad")                      \
+      .SetCreateFn<GpuSoftSignGradKernel<device, dtype>>()   \
       .SetIsMatchedHob((HobDeviceTag() == device)               \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, half);
-REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_SOFTSIGN_BACKWARD_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_SOFTSIGN_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_SOFTSIGN_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 

@@ -66,7 +66,7 @@ class CpuSoftSignGradKernel final : public OpKernel {
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-        dx_ptr[i] = (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>abs(dy_ptr[i])));
+        dx_ptr[i] = (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>abs(dy_ptr[i])) / (static_cast<T>(1.0) + static_cast<T>abs(dy_ptr[i])));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
