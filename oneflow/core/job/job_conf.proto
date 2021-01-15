@@ -89,7 +89,7 @@ message NormalModelUpdateOpUserConf {
 
 
 message DynamicLossScalePolicy {
-  optional float initial_loss_scale = 1 [default = 32768.0];
+  optional float initial_loss_scale = 1 [default = 1073741824.0];
   optional float increment_period = 2 [default = 2000];
   optional float multiplier = 3 [default=2.0];
 }
@@ -138,6 +138,13 @@ message XrtConfig {
   optional TensorRTConfig tensorrt_config = 4;
 }
 
+message QatConfig {
+  optional bool per_channel_weight_quantization = 1 [default = false];
+  optional bool symmetric = 2 [default = true];
+  optional float moving_min_max_momentum = 3 [default = 0.95];
+  optional float moving_min_max_stop_update_after_iters = 4;
+}
+
 message IndexedSlicesOptimizerConf {
   optional bool enable = 1 [default = true];
   required OpNameSet include_op_names = 2;
@@ -176,6 +183,8 @@ message JobConfigProto {
   optional string optimizer_placement_optimization_mode = 107;
   optional int64 optimizer_placement_optimization_threshold = 108 [default = 1024];
 
+  optional QatConfig qat_config = 109;
+
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
   optional int32 cudnn_conv_force_fwd_algo = 202;
@@ -199,6 +208,7 @@ message JobConfigProto {
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
+  optional bool enable_quantization_aware_training = 603 [default = false];
   
   optional bool enable_keep_header_only = 700 [default = false];
 

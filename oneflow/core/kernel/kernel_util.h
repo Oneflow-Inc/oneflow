@@ -170,9 +170,6 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                               T* dx);
-  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
-                           T* dx);
   static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
@@ -278,9 +275,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                               T* dx);
-  static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y);
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
-                           T* dx);
   static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);

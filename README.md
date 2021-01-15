@@ -61,6 +61,14 @@
     python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
     ```
 
+  - To install legacy version of OneFlow with CUDA support:
+
+    ```
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102==0.3.1 --user
+    ```
+
+    Some legacy versions available: `0.1.10`, `0.2.0`, `0.3.0`, `0.3.1`
+
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
     ```
     python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -78,6 +86,8 @@
     - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
 
     - To install dependencies, run:
+
+      On CentOS:
 
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
@@ -107,7 +117,7 @@
     - #### Option 1: Clone source code from github
 
       ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow
+      git clone https://github.com/Oneflow-Inc/oneflow --depth=1
       ```
 
     - #### Option 2: Download from Aliyun

@@ -38,6 +38,7 @@ import random
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow as flow
+import oneflow_api
 import traceback
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
@@ -135,7 +136,7 @@ def api_user_op_builder(op_name):
 
     For instance::
         def myargmax(
-            input: remote_blob_util.BlobDef) -> remote_blob_util.BlobDef:
+            input: oneflow_api.BlobDesc) -> oneflow_api.BlobDesc:
             return (
             flow.user_op_builder("myargmax")
             .Op("argmax")
@@ -158,7 +159,7 @@ def api_user_op_builder(op_name):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_builder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(LazyUserOp, op_name, None)
 
@@ -177,7 +178,7 @@ class LazyUserOp(UserOp):
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_user_op_builder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(EagerUserOp, op_name, None)
 
@@ -196,7 +197,7 @@ class EagerUserOp(UserOp):
 
 @oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(ConsistentUserOp, op_name, None)
 
@@ -234,7 +235,7 @@ class UserOpConfBuilder(object):
         return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
-        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
 
         self.user_op_.op_conf_.name = op_name
@@ -331,7 +332,7 @@ class UserOpConfBuilder(object):
 
         attribute = attr_value_pb.AttrValue()
         assert isinstance(attr_name, str)
-        attr_type = c_api_util.GetUserOpAttrType(
+        attr_type = oneflow_api.GetUserOpAttrType(
             self.user_op_.op_conf_.user_conf.op_type_name, attr_name
         )
         if attr_type == attr_value_pb.kAtInt32:
@@ -428,14 +429,14 @@ class UserOpModuleBuilder(UserOpConfBuilder):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(LazyUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_logical_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(EagerLogicalUserOpModule, op_name, op_type_name)
 
@@ -488,14 +489,14 @@ def api_consistent_user_op_module_builder(op_type_name):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_consistent_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(LazyConsistentUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_consistent_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(EagerConsistentUserOpModule, op_name, op_type_name)
 

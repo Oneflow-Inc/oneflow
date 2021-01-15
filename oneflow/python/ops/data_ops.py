@@ -27,6 +27,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import oneflow_api
 import traceback
 
 
@@ -208,7 +209,7 @@ def decode_ofrecord(
     shuffle: bool = False,
     buffer_size: int = 1024,
     name: str = None,
-) -> Tuple[remote_blob_util.BlobDef]:
+) -> Tuple[oneflow_api.BlobDesc]:
     print(
         "WARNING:",
         "oneflow.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
@@ -255,7 +256,7 @@ def ofrecord_loader(
     shuffle: bool = False,
     shuffle_buffer_size: int = 1024,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     if name is None:
         name = id_util.UniqueStr("OFRecord_Loader_")
 
@@ -290,7 +291,7 @@ def ofrecord_reader(
     shuffle_buffer_size: int = 1024,
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Get ofrecord object from ofrecord dataset.
 
     Args:
@@ -305,7 +306,7 @@ def ofrecord_reader(
         name (Optional[str], optional): Optional name. Defaults to None.
         
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 
@@ -377,9 +378,9 @@ def decode_random(
     dtype: dtype_util.dtype,
     batch_size: int = 1,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
-    tick: Optional[remote_blob_util.BlobDef] = None,
+    tick: Optional[oneflow_api.BlobDesc] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     op_conf = op_conf_util.OperatorConf()
 
     if name is None:
@@ -418,7 +419,7 @@ def decode_random(
     "data.image_decoder_random_crop_resize", "data.ImageDecoderRandomCropResize"
 )
 def image_decoder_random_crop_resize(
-    input_blob: remote_blob_util.BlobDef,
+    input_blob: oneflow_api.BlobDesc,
     target_width: int,
     target_height: int,
     num_attempts: Optional[int] = None,
@@ -429,7 +430,7 @@ def image_decoder_random_crop_resize(
     warmup_size: Optional[int] = None,
     max_num_pixels: Optional[int] = None,
     name: Optional[str] = None,
-) -> Tuple[remote_blob_util.BlobDef]:
+) -> Tuple[oneflow_api.BlobDesc]:
     if name is None:
         name = id_util.UniqueStr("ImageDecoderRandomCropResize_")
 

@@ -71,7 +71,7 @@ def _compare_mish_with_np(input_shape, device_type, machine_ids, device_counts):
 
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        of_mish_out = flow.math.mish(x_var)
+        of_mish_out = flow.nn.mish(x_var)
 
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(
