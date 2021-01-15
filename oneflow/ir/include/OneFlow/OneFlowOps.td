@@ -48,6 +48,7 @@ def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   let results = (outs F32Tensor);
 }
 
+// TODO: lbn should be a tensor attr
 def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "ReLU op";
 
