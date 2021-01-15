@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from oneflow.python.lib.core.high_order_bool import bool_functor
 from oneflow.python.lib.core.high_order_bool import hob_context_attr
 from oneflow.python.lib.core.high_order_bool import BoolFunctor
-from oneflow.python.eager.object import BlobObject
+import oneflow_api
 
 
 class BoxingHobContext(object):
@@ -63,11 +63,10 @@ class ComposeHob(BoolFunctor):
 
     def _GetLhsContext(self, ctx):
         if self not in ctx.composer2lhs_context:
-            blob_object = BlobObject(
-                object_id=ctx.produced_blob_object.object_id,
-                op_arg_parallel_attr=ctx.produced_blob_object.op_arg_parallel_attr,
-                op_arg_blob_attr=ctx.produced_blob_object.op_arg_blob_attr,
-                release=None,
+            blob_object = oneflow_api.BlobObject(
+                ctx.produced_blob_object.object_id,
+                ctx.produced_blob_object.op_arg_parallel_attr,
+                ctx.produced_blob_object.op_arg_blob_attr,
             )
             value = BoxingHobContext(
                 blob_object, self._GetMiddleOpArgParallelAttr(ctx),
@@ -77,11 +76,10 @@ class ComposeHob(BoolFunctor):
 
     def _GetRhsContext(self, ctx):
         if self not in ctx.composer2rhs_context:
-            middle_blob_object = BlobObject(
-                object_id=ctx.produced_blob_object.object_id,
-                op_arg_parallel_attr=self._GetMiddleOpArgParallelAttr(ctx),
-                op_arg_blob_attr=ctx.produced_blob_object.op_arg_blob_attr,
-                release=None,
+            middle_blob_object = oneflow_api.BlobObject(
+                ctx.produced_blob_object.object_id,
+                self._GetMiddleOpArgParallelAttr(ctx),
+                ctx.produced_blob_object.op_arg_blob_attr,
             )
             value = BoxingHobContext(
                 middle_blob_object, ctx.consumer_op_arg_parallel_attr,
