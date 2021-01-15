@@ -25,12 +25,12 @@ Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
     const ShapeView& in_shape = input_tensor->shape();
     const int32_t in_dim = in_shape.NumAxes();
     int32_t output_dim = (in_dim == 1 ? 2 : 1);
-    DimVector out_dim_vec = {output_dim, 0};
+    DimVector out_dim_vec = {0};
 
     if (in_dim == 1) {
         int32_t out_tensor_size = in_shape.At(0) + std::abs(dimension);
         out_dim_vec[0] = out_tensor_size;
-        out_dim_vec[1] = out_tensor_size;
+        out_dim_vec.push_back(out_tensor_size);
     } else {
         if (dimension >= 0) {
                 out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - dimension);

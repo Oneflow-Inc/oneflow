@@ -111,6 +111,7 @@ def forward_cpmputer_with_np(device_type, input_tensor, dim):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
+    func_config.default_placement_scope(flow.scope.placement("cpu", '0:0'))
 
     @flow.global_function(type="predict", function_config=func_config)
     def diag_forward(x: tp.Numpy.Placeholder((2,2)))-> tp.Numpy:
