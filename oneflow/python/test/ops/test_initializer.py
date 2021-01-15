@@ -55,7 +55,7 @@ def CompareTwoDistribution(test_case, dtype, initializer):
 
     s = ks_2samp(legacy_init_res.flatten(), new_init_res.flatten())
     pvalue = s.pvalue
-    test_case.assertGreater(pvalue, 0.001, msg=initializer)
+    test_case.assertGreater(pvalue, 0.0001, msg=initializer)
 
 
 class TestInitializer(flow.unittest.TestCase):
