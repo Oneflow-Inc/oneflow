@@ -78,6 +78,9 @@ def _compare_softsign_with_np(
         return diff
 
     _np_grad = np_diff(input_1)
+    print(input_1)
+    print(np_out_softsign)
+    print(_np_grad)
 
     def assert_prediction_grad(blob: tp.Numpy):
         if value_type[1] == flow.float16:
@@ -110,7 +113,6 @@ def _compare_softsign_with_np(
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
                 ).minimize(of_softsign_out_f32)
-
             flow.watch_diff(x_var, assert_prediction_grad)
 
             return of_softsign_out_f32
@@ -132,7 +134,7 @@ def _compare_softsign_with_np(
                     name="x_var",
                 )
                 x_var = of_input_1 + v
-
+            
             flow.watch_diff(x_var, assert_prediction_grad)
 
             of_softsign_out = flow.nn.softsign(x_var)
@@ -141,6 +143,8 @@ def _compare_softsign_with_np(
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
                 ).minimize(of_softsign_out)
+
+            print(flow.watch(x_var))
 
             return of_softsign_out
 

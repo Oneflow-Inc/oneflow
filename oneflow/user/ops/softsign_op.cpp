@@ -76,7 +76,7 @@ REGISTER_USER_OP("softsign_grad")
 REGISTER_USER_OP_GRAD("softsign").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto softsign_grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(softsign_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("relu_grad")
+    return builder.OpTypeName("softsign_grad")
         .InputBind("y", ctx->FwOp().output("out", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
         .Output("dx")
