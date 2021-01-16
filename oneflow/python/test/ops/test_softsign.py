@@ -13,73 +13,78 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
-import math
-import unittest
 import oneflow as flow
 import numpy as np
 import oneflow.typing as tp
 from test_util import GenArgList
+import unittest
 from collections import OrderedDict
 from typing import Dict
-
-# use numpy calc softsign forward
-def np_softsign_forward(input):
-    input_shape = input.shape
-    input = input.flatten()
-    len = input.size()
-    out = np.zeros_like(input)
-    for i in range(len):
-        out[i] = input[i] / (1 + abs(input[i]))
-    return np.reshape(out, newshape=input_shape)
-
-# use numpy calc softsign backward
-def np_softsign_backward(input):
-    input_shape = input.shape
-    input = input.flatten()
-    len = input.size()
-    out = np.zeros_like(input)
-    for i in range(len):
-        out[i] = 1.0 / (1 + abs(input[i])) / (1 + abs(input[i]))
-    return np.reshape(out, newshape=input_shape)
+import os
+import random
 
 
-def compare_softsign_with_np(
+def _compare_softsign_with_np(
     input_shape, device_type, value_type, machine_ids, device_counts
 ):
     if value_type[1] == flow.float16:
-        input_1 = np.random.uniform(-1, 7, size=input_shape).astype(np.float16)
+        input_1 = np.random.uniform(-3.5, 3.5, size=input_shape).astype(np.float16)
+        input_1 += np.random.randn(*input_shape).astype(np.float16)
         input_1 = np.array(input_1, dtype=value_type[0])
     else:
-        input_1 = np.random.uniform(-1, 7, size=input_shape).astype(value_type[0])
+        input_1 = np.random.uniform(-3.5, 3.5, size=input_shape).astype(value_type[0])
+        input_1 += np.random.randn(*input_shape).astype(
+            value_type[0]
+        )  # add a randnom array, range from(0, 1)
+
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
-
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
-    
+
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
-
-    if value_type == flow.float16:
+    # global function needs float32 as type of argument and return value
+    if value_type[1] == flow.float16:
         func_config.default_data_type(flow.float32)
     else:
         func_config.default_data_type(value_type[1])
-    
-    np_softsign_out = np_softsign_forward(input_1)
-    np_softsign_diff = np_softsign_backward(input_1)
 
-    np_softsign_out = np.array(np_softsign_out).astype(value_type[0])
+    def np_softsign(input):
+        input_shape = input.shape
+        input = input.flatten()
+        elem_cnt = input.size
+        _zero = np.zeros_like(input)
+        for i in range(elem_cnt):
+            _zero[i] = input[i] / (1.0 + abs(input[i]))
+        np_hsigmoid_out = np.reshape(_zero, newshape=input_shape)
+
+        return np.array(np_hsigmoid_out).astype(value_type[0])
+
+    np_out_softsign = np_softsign(input_1)
+
+    def np_diff(input):
+        input_shape = input.shape
+        input = input.flatten()
+        elem_cnt = input.size
+        diff = np.zeros(shape=(elem_cnt,), dtype=value_type[0])
+
+        for i in range(elem_cnt):
+            diff[i]  = 1.0 / (1 + abs(input[i])) / (1 + abs(input[i]))
+        diff = np.reshape(diff, newshape=input_shape)
+        return diff
+
+    _np_grad = np_diff(input_1)
 
     def assert_prediction_grad(blob: tp.Numpy):
         if value_type[1] == flow.float16:
             assert np.allclose(blob, _np_grad, atol=1e-3)
         else:
             assert np.allclose(blob, _np_grad, atol=1e-5)
-    
+
     if value_type[1] == flow.float16:
 
         @flow.global_function(
@@ -146,8 +151,8 @@ def compare_softsign_with_np(
     else:
         assert np.allclose(of_out_softsign, np_out_softsign, atol=1e-5)
 
-    
-def gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
+
+def _gen_arg_dict(shape, device_type, value_type, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]
@@ -179,11 +184,11 @@ class Testsoftsign1n1d(flow.unittest.TestCase):
             device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            compare_softsign_with_np(*arg)
+            _compare_softsign_with_np(*arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_softsign_gpu(test_case):
-        arg_dict = gen_arg_dict(
+        arg_dict = _gen_arg_dict(
             shape=(16, 16),
             device_type="gpu",
             value_type="float",
@@ -191,13 +196,14 @@ class Testsoftsign1n1d(flow.unittest.TestCase):
             device_counts=1,
         )
         for arg in GenArgList(arg_dict):
-            compare_softsign_with_np(*arg)
+            _compare_softsign_with_np(*arg)
+
 
 @flow.unittest.skip_unless_1n2d()
 class Testsoftsign1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_softsign_gpu_1n2d(test_case):
-        arg_dict = gen_arg_dict(
+        arg_dict = _gen_arg_dict(
             shape=(4, 8, 16),
             device_type="gpu",
             value_type="float",
@@ -205,7 +211,8 @@ class Testsoftsign1n2d(flow.unittest.TestCase):
             device_counts=2,
         )
         for arg in GenArgList(arg_dict):
-            compare_softsign_with_np(*arg)
+            _compare_softsign_with_np(*arg)
+
 
 if __name__ == "__main__":
     unittest.main()
