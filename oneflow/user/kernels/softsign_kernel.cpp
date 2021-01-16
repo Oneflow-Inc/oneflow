@@ -32,11 +32,12 @@ class CpuSoftsignKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
-
+    // printf("softsign forward start\n");
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-        out_ptr[i] = (in_ptr[i] / (static_cast<T>(1) + static_cast<T>(abs(in_ptr[i]))));
+      out_ptr[i] = (in_ptr[i] / (static_cast<T>(1) + static_cast<T>(abs(in_ptr[i]))));
     }
+    // printf("softsign forward end\n");
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -65,11 +66,11 @@ class CpuSoftsignGradKernel final : public OpKernel {
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    printf("softsign backward start\n");
+    // printf("softsign backward start\n");
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-        dx_ptr[i] = static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(x_ptr[i]))) / (static_cast<T>(1.0) + static_cast<T>(abs(x_ptr[i]))) * dy_ptr[i];
+      dx_ptr[i] = static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(dy_ptr[i]))) / (static_cast<T>(1.0) + static_cast<T>(abs(dy_ptr[i])));
+    // printf("softsign backward end\n");
     }
-    printf("softsign backward end!\n");
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
