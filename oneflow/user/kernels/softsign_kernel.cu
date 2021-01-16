@@ -22,40 +22,40 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-struct SoftSignFunctor {
+struct SoftsignFunctor {
   OF_DEVICE_FUNC T operator()(T x) const {
     return x / (static_cast<T>(1) + static_cast<T>(abs(x)));
   }
 };
 
 template<typename T>
-struct SoftSignGradFunctor {
+struct SoftsignGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(dy))) / (static_cast<T>(1.0) + static_cast<T>(abs(dy))));
   }
 };
 
 template<>
-struct SoftSignFunctor<half> {
-  SoftSignFunctor<float> float_functor;
+struct SoftsignFunctor<half> {
+  SoftsignFunctor<float> float_functor;
   OF_DEVICE_FUNC half operator()(half x) const {
     return __float2half(float_functor(__half2float(x)));
   }
 };
 
 template<>
-struct SoftSignGradFunctor<half> {
-  SoftSignGradFunctor<float> float_functor;
+struct SoftsignGradFunctor<half> {
+  SoftsignGradFunctor<float> float_functor;
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
 };
 
 template<DeviceType device_type, typename T>
-class GpuSoftSignKernel final : public OpKernel {
+class GpuSoftsignKernel final : public OpKernel {
  public:
-  GpuSoftSignKernel() = default;
-  ~GpuSoftSignKernel() = default;
+  GpuSoftsignKernel() = default;
+  ~GpuSoftsignKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -64,7 +64,7 @@ class GpuSoftSignKernel final : public OpKernel {
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
     const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    OF_CUDA_CHECK((oneflow::cuda::elementwise::Unary(SoftSignFunctor<T>(), elem_cnt, out_ptr,
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Unary(SoftsignFunctor<T>(), elem_cnt, out_ptr,
                                                      in_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -72,7 +72,7 @@ class GpuSoftSignKernel final : public OpKernel {
 
 #define REGISTER_GPU_SOFTSIGN_KERNEL(device, dtype)    \
   REGISTER_USER_KERNEL("softsign")                     \
-      .SetCreateFn<GpuSoftSignKernel<device, dtype>>() \
+      .SetCreateFn<GpuSoftsignKernel<device, dtype>>() \
       .SetIsMatchedHob((HobDeviceTag() == device)         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
@@ -81,10 +81,10 @@ REGISTER_GPU_SOFTSIGN_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_SOFTSIGN_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
-class GpuSoftSignGradKernel final : public OpKernel {
+class GpuSoftsignGradKernel final : public OpKernel {
  public:
-  GpuSoftSignGradKernel() = default;
-  ~GpuSoftSignGradKernel() = default;
+  GpuSoftsignGradKernel() = default;
+  ~GpuSoftsignGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -97,7 +97,7 @@ class GpuSoftSignGradKernel final : public OpKernel {
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     OF_CUDA_CHECK(
-        (oneflow::cuda::elementwise::Binary(SoftSignGradFunctor<T>(), elem_cnt, dx_ptr, x_ptr,
+        (oneflow::cuda::elementwise::Binary(SoftsignGradFunctor<T>(), elem_cnt, dx_ptr, x_ptr,
                                             dy_ptr, ctx->device_ctx()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -105,7 +105,7 @@ class GpuSoftSignGradKernel final : public OpKernel {
 
 #define REGISTER_GPU_SOFTSIGN_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("softsign_grad")                      \
-      .SetCreateFn<GpuSoftSignGradKernel<device, dtype>>()   \
+      .SetCreateFn<GpuSoftsignGradKernel<device, dtype>>()   \
       .SetIsMatchedHob((HobDeviceTag() == device)               \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 

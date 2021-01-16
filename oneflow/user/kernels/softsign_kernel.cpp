@@ -21,10 +21,10 @@ namespace oneflow {
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class CpuSoftSignKernel final : public OpKernel {
+class CpuSoftsignKernel final : public OpKernel {
  public:
-  CpuSoftSignKernel() = default;
-  ~CpuSoftSignKernel() = default;
+  CpuSoftsignKernel() = default;
+  ~CpuSoftsignKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -43,7 +43,7 @@ class CpuSoftSignKernel final : public OpKernel {
 
 #define REGISTER_CPU_SOFTSIGN_KERNEL(device, dtype)    \
   REGISTER_USER_KERNEL("softsign")                     \
-      .SetCreateFn<CpuSoftSignKernel<device, dtype>>() \
+      .SetCreateFn<CpuSoftsignKernel<device, dtype>>() \
       .SetIsMatchedHob((HobDeviceTag() == device)         \
                        & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
@@ -51,10 +51,10 @@ REGISTER_CPU_SOFTSIGN_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SOFTSIGN_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuSoftSignGradKernel final : public OpKernel {
+class CpuSoftsignGradKernel final : public OpKernel {
  public:
-  CpuSoftSignGradKernel() = default;
-  ~CpuSoftSignGradKernel() = default;
+  CpuSoftsignGradKernel() = default;
+  ~CpuSoftsignGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
@@ -74,7 +74,7 @@ class CpuSoftSignGradKernel final : public OpKernel {
 
 #define REGISTER_CPU_SOFTSIGN_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("softsign_grad")                      \
-      .SetCreateFn<CpuSoftSignGradKernel<device, dtype>>()   \
+      .SetCreateFn<CpuSoftsignGradKernel<device, dtype>>()   \
       .SetIsMatchedHob((HobDeviceTag() == device)               \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
