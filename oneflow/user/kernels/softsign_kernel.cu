@@ -31,7 +31,7 @@ struct SoftSignFunctor {
 template<typename T>
 struct SoftSignGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>abs(dy)) / (static_cast<T>(1.0) + static_cast<T>abs(dy)));
+    return (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(dy))) / (static_cast<T>(1.0) + static_cast<T>(abs(dy))));
   }
 };
 
