@@ -27,7 +27,6 @@ import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.object as object_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
@@ -39,6 +38,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow.python.vm.id_util as vm_id_util
 import oneflow
@@ -512,7 +512,7 @@ class InstructionsBuilder(object):
         object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(
             parallel_desc_sym
         )
-        obj = object_util.Object(object_id, parallel_desc_sym)
+        obj = oneflow_api.Object(object_id, parallel_desc_sym)
         object_storage.SetSharedOpKernelObject4ParallelConfSymbol(
             parallel_desc_sym, obj
         )
@@ -538,12 +538,11 @@ class InstructionsBuilder(object):
         op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
             parallel_desc_sym
         )
-        return object_util.BlobObject(
-            object_id=object_id,
-            op_arg_parallel_attr=op_arg_parallel_attr,
-            op_arg_blob_attr=sole_mirrored_blob_object.op_arg_blob_attr,
-            release=self.release_object_,
+        obj = oneflow_api.BlobObject(
+            object_id, op_arg_parallel_attr, sole_mirrored_blob_object.op_arg_blob_attr,
         )
+        obj.add_releaser(self.release_object_)
+        return obj
 
     def NewOpKernelObject(self, op_conf):
         assert op_conf.HasField("scope_symbol_id")
@@ -667,6 +666,10 @@ class InstructionsBuilder(object):
         op_node_signature_sym = self._GetOpNodeSignatureSymbol(op_attribute)
         opkernel_obj = self.GetSharedOpKernelObject4ParallelConfSymbol(
             op_parallel_desc_sym
+        )
+        assert opkernel_obj.parallel_desc_symbol == op_parallel_desc_sym, (
+            str(opkernel_obj.parallel_desc_symbol.parallel_conf),
+            str(op_parallel_desc_sym.parallel_conf),
         )
         const_input_operand_blob_objects = self._GetConstInputOperandBlobObjects(
             op_attribute, blob_object4ibn=DelegateBlobObject4Ibn
@@ -889,12 +892,9 @@ class InstructionsBuilder(object):
 
     def _NewBlobObject(self, op_arg_parallel_attr, op_arg_blob_attr):
         object_id = self._NewObjectId(op_arg_parallel_attr.parallel_desc_symbol)
-        return object_util.BlobObject(
-            object_id=object_id,
-            op_arg_parallel_attr=op_arg_parallel_attr,
-            op_arg_blob_attr=op_arg_blob_attr,
-            release=self.release_object_,
-        )
+        obj = oneflow_api.BlobObject(object_id, op_arg_parallel_attr, op_arg_blob_attr)
+        obj.add_releaser(self.release_object_)
+        return obj
 
     def _NewSymbolId4String(self, string):
         symbol_id = self._NewSymbolId()
@@ -1343,9 +1343,15 @@ def _GetOpConfBlobNameAttr(pb_message, field):
     return repeated_field[index]
 
 
-def _ReleaseLogicalObject(obj):
+def _ReleaseLogicalObject(obj, is_shutting_down=python_interpreter_util.IsShuttingDown):
+    if is_shutting_down():
+        return
     LogicalRun(lambda builder: builder.DeleteObject(obj))
 
 
-def _ReleasePhysicalObject(obj):
+def _ReleasePhysicalObject(
+    obj, is_shutting_down=python_interpreter_util.IsShuttingDown
+):
+    if is_shutting_down():
+        return
     PhysicalRun(lambda builder: builder.DeleteObject(obj))
