@@ -67,7 +67,7 @@ class CpuSoftsignGradKernel final : public OpKernel {
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     printf("softsign backward start\n");
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-        dx_ptr[i] = static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(dy_ptr[i]))) / (static_cast<T>(1.0) + static_cast<T>(abs(dy_ptr[i])));
+        dx_ptr[i] = static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(x_ptr[i]))) / (static_cast<T>(1.0) + static_cast<T>(abs(x_ptr[i]))) * dy_ptr[i];
     }
     printf("softsign backward end!\n");
   }
