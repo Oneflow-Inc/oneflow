@@ -150,11 +150,11 @@ def _compare_softsign_with_np(
 
             return of_softsign_out
 
+    print('debug here')
+
     of_out_softsign = oneflow_softsign(input_1)
 
-    print('*'*100)
-    flow.watch(of_out_softsign)
-
+    print('debug here')
     if value_type[1] == flow.float16:
         assert np.allclose(of_out_softsign, np_out_softsign, atol=1e-2)
     else:

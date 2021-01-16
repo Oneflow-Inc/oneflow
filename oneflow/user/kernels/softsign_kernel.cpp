@@ -65,11 +65,11 @@ class CpuSoftsignGradKernel final : public OpKernel {
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    printf("backward start\n");
+    printf("softsign backward start\n");
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
         dx_ptr[i] = static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(dy_ptr[i]))) / (static_cast<T>(1.0) + static_cast<T>(abs(dy_ptr[i])));
     }
-    printf("backward end!\n");
+    printf("softsign backward end!\n");
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
