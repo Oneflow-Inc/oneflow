@@ -142,6 +142,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/graph/.*\\.cpp$")
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -216,8 +217,9 @@ add_dependencies(of_cfgobj of_protoobj)
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/core)
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
+target_link_libraries(of_ccobj of_graph ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
@@ -227,7 +229,7 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
-oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
+add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(of_pyext_obj of_ccobj)
 add_dependencies(of_pyext_obj of_ccobj)
