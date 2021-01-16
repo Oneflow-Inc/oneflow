@@ -18,20 +18,20 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template<template<typename> class functor, typename T>
-struct ElemwiseXimumBackwardFunctor<DeviceType::kCPU, functor, T> final {
+template<template<typename> class Opt, typename T>
+struct ElemwiseXimumGradFunctor<DeviceType::kCPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
                   T* dy) {
     XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
-      functor<T>()(&dz[idx], &x[idx], &y[idx], dx ? &dx[idx] : nullptr, dy ? &dy[idx] : nullptr);
+      Opt<T>()(dz[idx], x[idx], y[idx], dx ? &dx[idx] : nullptr, dy ? &dy[idx] : nullptr);
     }
   }
 };
 
-template<template<typename> class functor, typename T>
-struct ElemwiseXimumForwardFunctor<DeviceType::kCPU, functor, T> final {
+template<template<typename> class Opt, typename T>
+struct ElemwiseXimumFunctor<DeviceType::kCPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y) {
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) { z[idx] = functor<T>()(x[idx], y[idx]); }
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) { z[idx] = Opt<T>()(x[idx], y[idx]); }
   }
 };
 

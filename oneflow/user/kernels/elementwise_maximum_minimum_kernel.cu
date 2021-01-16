@@ -20,28 +20,28 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template<template<typename> class functor, typename T>
-__global__ void ElementwiseBackwardGradGpu(int64_t elem_cnt, const T* dz, const T* x, const T* y,
-                                           T* dx, T* dy) {
+template<template<typename> class Opt, typename T>
+__global__ void ElementwiseXimumGradGpuKernel(int64_t elem_cnt, const T* dz, const T* x, const T* y,
+                                              T* dx, T* dy) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) {
-    functor<T>()(&dz[idx], &x[idx], &y[idx], dx ? &dx[idx] : nullptr, dy ? &dy[idx] : nullptr);
+    Opt<T>()(dz[idx], x[idx], y[idx], dx ? &dx[idx] : nullptr, dy ? &dy[idx] : nullptr);
   }
 }
 
-template<template<typename> class functor, typename T>
-struct ElemwiseXimumBackwardFunctor<DeviceType::kGPU, functor, T> final {
+template<template<typename> class Opt, typename T>
+struct ElemwiseXimumGradFunctor<DeviceType::kGPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
                   T* dy) {
-    ElementwiseBackwardGradGpu<functor, T>
+    ElementwiseXimumGradGpuKernel<Opt, T>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, dz, x, y, dx, dy);
   }
 };
 
-template<template<typename> class functor, typename T>
-struct ElemwiseXimumForwardFunctor<DeviceType::kGPU, functor, T> final {
+template<template<typename> class Opt, typename T>
+struct ElemwiseXimumFunctor<DeviceType::kGPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* z, const T* x, const T* y) {
-    OF_CUDA_CHECK(cuda::elementwise::Binary(functor<T>(), elem_cnt, z, x, y, ctx->cuda_stream()));
+    OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<T>(), elem_cnt, z, x, y, ctx->cuda_stream()));
   }
 };
 

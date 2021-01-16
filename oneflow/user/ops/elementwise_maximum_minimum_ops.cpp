@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
 namespace {
+using namespace user_op;
+
 Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
@@ -37,7 +35,6 @@ Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-using namespace user_op;
 Maybe<void> InferTensorDesc(InferContext* ctx) {
   const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -114,9 +111,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
 
 }  // namespace
 
-namespace user_op {
-
-#define REGISTER_ELEMENTWISE_FW_OP(op_type_name)                       \
+#define REGISTER_ELEMENTWISE_XIMUM_FW_OP(op_type_name)                 \
   REGISTER_USER_OP(op_type_name)                                       \
       .Input("x")                                                      \
       .Input("y")                                                      \
@@ -125,28 +120,27 @@ namespace user_op {
       .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)            \
       .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
 
-#define REGISTER_ELEMENTWISE_BW_OP(op_type_name) \
-  REGISTER_USER_OP(op_type_name)                 \
-      .Input("dz")                               \
-      .Input("x")                                \
-      .Input("y")                                \
-      .OptionalOutput("dx")                      \
-      .OptionalOutput("dy")                      \
-      .SetTensorDescInferFn(InferTensorDesc)     \
-      .SetGetSbpFn(GetSbpSignature)              \
+#define REGISTER_ELEMENTWISE_XIMUM_BW_OP(op_type_name) \
+  REGISTER_USER_OP(op_type_name)                       \
+      .Input("dz")                                     \
+      .Input("x")                                      \
+      .Input("y")                                      \
+      .OptionalOutput("dx")                            \
+      .OptionalOutput("dy")                            \
+      .SetTensorDescInferFn(InferTensorDesc)           \
+      .SetGetSbpFn(GetSbpSignature)                    \
       .SetBatchAxisInferFn(InferBatchAxis)
 
-#define REGISTER_BINOP_GRAD(op_type_name) \
-  REGISTER_USER_OP_GRAD(op_type_name)     \
+#define REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name) \
+  REGISTER_USER_OP_GRAD(op_type_name)                 \
       .SetBackwardOpConfGenFn(MakeGenBackwardOpFn(std::string(op_type_name)));
 
-#define REGISTER_ELEMENTWISE_BINOP(op_type_name)                            \
-  REGISTER_ELEMENTWISE_FW_OP(op_type_name);                                 \
-  REGISTER_ELEMENTWISE_BW_OP(std::string("") + op_type_name + "_backward"); \
-  REGISTER_BINOP_GRAD(op_type_name);
+#define REGISTER_ELEMENTWISE_XIMUM_OP(op_type_name)           \
+  REGISTER_ELEMENTWISE_XIMUM_FW_OP(op_type_name);             \
+  REGISTER_ELEMENTWISE_XIMUM_BW_OP(op_type_name "_backward"); \
+  REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name);
 
-REGISTER_ELEMENTWISE_BINOP("elementwise_maximum");
-REGISTER_ELEMENTWISE_BINOP("elementwise_minimum");
-}  // namespace user_op
+REGISTER_ELEMENTWISE_XIMUM_OP("elementwise_maximum");
+REGISTER_ELEMENTWISE_XIMUM_OP("elementwise_minimum");
 
 }  // namespace oneflow
