@@ -72,7 +72,6 @@ class CpuHardSwishGradKernel final : public OpKernel {
     T* dx_ptr = dx_tensor->mut_dptr<T>();
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    printf("hardswish backward start\n");
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       if (x_ptr[i] <= static_cast<T>(-3)) {
         dx_ptr[i] = 0;
@@ -82,7 +81,6 @@ class CpuHardSwishGradKernel final : public OpKernel {
         dx_ptr[i] = ((x_ptr[i] / static_cast<T>(3)) + static_cast<T>(0.5)) * dy_ptr[i];
       }
     }
-    printf("hardswish backward end\n");
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
