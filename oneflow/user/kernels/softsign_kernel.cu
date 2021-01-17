@@ -24,14 +24,14 @@ namespace user_op {
 template<typename T>
 struct SoftsignFunctor {
   OF_DEVICE_FUNC T operator()(T x) const {
-    return x / (static_cast<T>(1) + static_cast<T>(abs(x)));
+    return x / (static_cast<T>(1) + static_cast<T>(fabs(x)));
   }
 };
 
 template<typename T>
 struct SoftsignGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(abs(dy))) / (static_cast<T>(1.0) + static_cast<T>(abs(dy))));
+    return static_cast<T>(1.0) / (static_cast<T>(1.0) + static_cast<T>(fabs(x))) / (static_cast<T>(1.0) + static_cast<T>(fabs(x))) * dy;
   }
 };
 

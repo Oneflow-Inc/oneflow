@@ -76,10 +76,17 @@ def _compare_softsign_with_np(
 
     _np_grad = np_diff(input_1)
 
+    # print('*'*100)
+    # print(input_1)
+    # print(np_out_softsign)
+    # print(_np_grad)
+    # print('*'*100)
+
     def assert_prediction_grad(blob: tp.Numpy):
         if value_type[1] == flow.float16:
             assert np.allclose(blob, _np_grad, atol=1e-3)
         else:
+            # print(blob)
             assert np.allclose(blob, _np_grad, atol=1e-5)
 
     if value_type[1] == flow.float16:
@@ -139,8 +146,6 @@ def _compare_softsign_with_np(
                 ).minimize(of_softsign_out)
 
             return of_softsign_out
-
-
     of_out_softsign = oneflow_softsign(input_1)
     if value_type[1] == flow.float16:
         assert np.allclose(of_out_softsign, np_out_softsign, atol=1e-2)
