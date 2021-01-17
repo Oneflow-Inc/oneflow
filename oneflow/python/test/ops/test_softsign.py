@@ -16,9 +16,7 @@ import oneflow.typing as tp
 from test_util import GenArgList
 import unittest
 from collections import OrderedDict
-from typing import Dict
 import os
-import random
 
 
 def _compare_softsign_with_np(
@@ -32,7 +30,7 @@ def _compare_softsign_with_np(
         input_1 = np.random.uniform(-3.5, 3.5, size=input_shape).astype(value_type[0])
         input_1 += np.random.randn(*input_shape).astype(
             value_type[0]
-        )  # add a randnom array, range from(0, 1)
+        )
 
     assert device_type in ["cpu", "gpu"]
 
@@ -44,7 +42,7 @@ def _compare_softsign_with_np(
 
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
-    # global function needs float32 as type of argument and return value
+
     if value_type[1] == flow.float16:
         func_config.default_data_type(flow.float32)
     else:
@@ -57,9 +55,9 @@ def _compare_softsign_with_np(
         _zero = np.zeros_like(input)
         for i in range(elem_cnt):
             _zero[i] = input[i] / (1.0 + abs(input[i]))
-        np_hsigmoid_out = np.reshape(_zero, newshape=input_shape)
+        np_softsign_out = np.reshape(_zero, newshape=input_shape)
 
-        return np.array(np_hsigmoid_out).astype(value_type[0])
+        return np.array(np_softsign_out).astype(value_type[0])
 
     np_out_softsign = np_softsign(input_1)
 
@@ -76,17 +74,10 @@ def _compare_softsign_with_np(
 
     _np_grad = np_diff(input_1)
 
-    # print('*'*100)
-    # print(input_1)
-    # print(np_out_softsign)
-    # print(_np_grad)
-    # print('*'*100)
-
     def assert_prediction_grad(blob: tp.Numpy):
         if value_type[1] == flow.float16:
             assert np.allclose(blob, _np_grad, atol=1e-3)
         else:
-            # print(blob)
             assert np.allclose(blob, _np_grad, atol=1e-5)
 
     if value_type[1] == flow.float16:
@@ -118,8 +109,7 @@ def _compare_softsign_with_np(
 
             return of_softsign_out_f32
 
-    # Test float32/64
-    else:
+    elif value_type[1] == flow.float32 or value_type[1] == flow.float64:
 
         @flow.global_function(
             type="train", function_config=func_config,
@@ -214,7 +204,6 @@ class Testsoftsign1n2d(flow.unittest.TestCase):
         )
         for arg in GenArgList(arg_dict):
             _compare_softsign_with_np(*arg)
-
 
 if __name__ == "__main__":
     unittest.main()
