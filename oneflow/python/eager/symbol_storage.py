@@ -71,22 +71,3 @@ def SetSymbol4SerializedOpConf(serialized_op_conf, symbol):
 
 
 serialized_op_conf2symbol = {}
-
-
-def HasSymbol4SerializedOpNodeSignature(serialized_op_node_signature):
-    global serialized_op_node_signature2symbol
-    return serialized_op_node_signature in serialized_op_node_signature2symbol
-
-
-def GetSymbol4SerializedOpNodeSignature(serialized_op_node_signature):
-    global serialized_op_node_signature2symbol
-    return serialized_op_node_signature2symbol[serialized_op_node_signature]
-
-
-def SetSymbol4SerializedOpNodeSignature(serialized_op_node_signature, symbol):
-    assert not HasSymbol4SerializedOpNodeSignature(serialized_op_node_signature)
-    global serialized_op_node_signature2symbol
-    serialized_op_node_signature2symbol[serialized_op_node_signature] = symbol
-
-
-serialized_op_node_signature2symbol = {}
