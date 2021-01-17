@@ -3327,9 +3327,7 @@ def softsign(
 
     .. math:: 
 
-        \text{Softsign}(x) = \begin{cases} 
-            \frac{x}{1+|x|} 
-        \end{cases}
+        {Softsign}(x) = \frac{x}{1+|x|}
 
     For example: 
 
