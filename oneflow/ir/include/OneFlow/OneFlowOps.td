@@ -48,7 +48,20 @@ def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   let results = (outs F32Tensor);
 }
 
-// TODO: Add sharding op for SBP
+def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndResultType]> {
+    let summary = "Sharding op for SBP";
+
+    let arguments = (
+      ins AnyType:$input,
+      StrArrayAttr:$input_signature,
+      StrArrayAttr:$output_signature
+    );
+    let results = (outs AnyType:$res);
+    let assemblyFormat = [{
+        $input attr-dict `:` type($input)
+    }];
+}
+
 def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "ReLU op";
 
