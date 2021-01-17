@@ -60,9 +60,6 @@ class JobDesc final {
   bool enable_experiment_run() const;
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
-  bool enable_float_compute_for_half_gemm() const {
-    return job_conf_.enable_float_compute_for_half_gemm();
-  }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();

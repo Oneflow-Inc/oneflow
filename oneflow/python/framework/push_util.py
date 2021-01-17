@@ -25,9 +25,9 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
-import oneflow.python.eager.object as object_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow_api
 import numpy
 from functools import reduce
 
@@ -251,7 +251,7 @@ class FeedContext(object):
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
-    assert isinstance(blob_object, object_util.BlobObject)
+    assert isinstance(blob_object, oneflow_api.BlobObject)
 
     FeedBlob = _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object)
     assert callable(FeedBlob)

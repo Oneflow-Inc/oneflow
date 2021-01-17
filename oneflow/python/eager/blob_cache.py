@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
+import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 
 
 def FindOrCreateBlobCache(blob_object):
@@ -70,9 +71,14 @@ class BlobCache(object):
             self.numpy_ = fetch(self.blob_object_)
         return self.numpy_
 
-    def __del__(self):
+    def __del__(self, is_shutting_down=python_interpreter_util.IsShuttingDown):
+        # Bind `python_interpreter_util.IsShuttingDown` early.
+        # See the comments of `python_interpreter_util.IsShuttingDown`
         for key in list(self.delegate_blob_object_.keys()):
-            del self.delegate_blob_object_[key]
+            if is_shutting_down():
+                return
+            if self.delegate_blob_object_[key] is not None:
+                del self.delegate_blob_object_[key]
 
 
 object_id2blob_cache = {}
