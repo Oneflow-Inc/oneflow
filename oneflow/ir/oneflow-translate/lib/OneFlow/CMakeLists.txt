@@ -7,7 +7,6 @@ add_llvm_library(MLIROneFlowTranslation
         ${PROJECT_SOURCE_DIR}/oneflow-translate/include/OneFlow
 
         DEPENDS
-        OneFlowTranslateRewritesIncGen
 
 	LINK_LIBS PUBLIC
 	MLIRIR

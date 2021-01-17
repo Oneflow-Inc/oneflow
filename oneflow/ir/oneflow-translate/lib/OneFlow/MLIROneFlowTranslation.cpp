@@ -5,7 +5,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -49,8 +48,6 @@ Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
       rewriter.create<oneflow::ReluOp>(unknownLoc, operands[0], op_name).getResult();
   return created;
 }
-
-#include "OneFlow/OneFlowTranslateRewrites.inc"
 
 using PbMessage = google::protobuf::Message;
 
@@ -229,7 +226,7 @@ LogicalResult Importer::tryToUpdateJob() {
     oneflow::UserOp usro = llvm::dyn_cast<oneflow::UserOp>(op);
     if (!usro) { return; }
   };
-  module.getRegion().walk(dumpOps);
+  module.getBodyRegion().walk(dumpOps);
   return success();
 }
 
@@ -240,7 +237,6 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
   }
 
   OwningRewritePatternList import_patterns;
-  import_patterns.insert<replaceGenericUserOpWithDefinedOp>(context);
   auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(import_patterns));
   if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
   if (debug) {
@@ -249,7 +245,6 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
   }
 
   OwningRewritePatternList export_patterns;
-  export_patterns.insert<replaceReluOpWithGenericUserOp>(context);
   if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
     module->emitError("Failed to export user ops");
   }
