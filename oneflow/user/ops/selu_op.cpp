@@ -29,7 +29,7 @@ REGISTER_USER_OP("selu")
       [](const user_op::UserOpDefWrapper& def,
         const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       double lambda_ = conf.attr<double>("lambda_");
-      if (lambda_ >= 1.0) {
+      if (lambda_ > 1.0) {
         return Maybe<void>::Ok();
       }
       return oneflow::Error::CheckFailedError()
@@ -67,7 +67,7 @@ REGISTER_USER_OP("selu_grad")
       [](const user_op::UserOpDefWrapper& def,
         const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       double lambda_ = conf.attr<double>("lambda_");
-      if (lambda_ >= 1.0) {
+      if (lambda_ > 1.0) {
         return Maybe<void>::Ok();
       }
       return oneflow::Error::CheckFailedError()
