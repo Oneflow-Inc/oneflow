@@ -102,8 +102,8 @@ REGISTER_USER_OP("diag_grad")
 
 REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx){
     //if (op.NeedGenGradTensor4OpInput("input_tensor", 0)){
-        const auto op_name = ctx->FwOp().op_name() + "_grad";
-        ctx->DefineOp(op_name,
+        const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+        ctx->DefineOp(grad_op_name,
         [&ctx](user_op::BackwardOpBuilder& builder) { 
             return builder.OpTypeName("diag_grad")
                 .InputBind("dy", ctx->FwOp().output_grad("diag_out", 0))
@@ -113,8 +113,8 @@ REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
         });
 
         ctx->FwOp().InputGradBind(user_op::OpArg("input_tensor", 0),
-        [&ctx, &op_name]() -> const std::string& {
-          return ctx->GetOp(op_name)
+        [&ctx, &grad_op_name]() -> const std::string& {
+          return ctx->GetOp(grad_op_name)
                 .output("dx", 0);
         });
 });

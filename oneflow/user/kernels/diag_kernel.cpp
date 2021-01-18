@@ -21,6 +21,9 @@ class DiagKernel final : public user_op::OpKernel {
             const ShapeView& out_shape = out_tensor->shape();
             const ShapeView& in_shape = in_tensor->shape();
             int32_t in_dim = in_shape.NumAxes();
+            Memset<device_type>(ctx->device_ctx(), out_tensor->mut_dptr(), 0,
+                        out_shape.elem_cnt() * sizeof(T));
+
 
             const T* in_buf =  in_tensor->dptr<T>();
             T* out_buf =  out_tensor->mut_dptr<T>();
@@ -71,6 +74,9 @@ class DiagGradKernel final : public user_op::OpKernel {
         int32_t dx_num_cnt = dx_shape.Count(0);
         T* dx_buf =  dx->mut_dptr<T>();
         const T* dy_buf = dy->dptr<T>();
+
+        Memset<DeviceType::kCPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
+                             dx_shape.elem_cnt() * sizeof(T));
 
         if (in_dim == 1) {
             int32_t stride_1 = 1;

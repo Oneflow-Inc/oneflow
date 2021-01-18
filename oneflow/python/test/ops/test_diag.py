@@ -184,7 +184,7 @@ def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(dtype)
     input_tensor = x = input_tensor.reshape((2, 2)).astype(np.float32)
     print('input_tensor is {}'.format(input_tensor.shape))
-    #forward_cpmputer_with_np(device_type, input_tensor, dim)
+    forward_cpmputer_with_np(device_type, input_tensor, dim)
     backward_cpmputer_with_np(device_type, input_tensor, dim)
 
 
