@@ -3005,6 +3005,67 @@ def elu(
     )
 
 
+@oneflow_export("nn.selu")
+def selu(
+    x: oneflow_api.BlobDesc, lambda_: float = 1.0, alpha_: float = 1.0, name: Optional[str] = None
+
+) -> oneflow_api.BlobDesc:
+    r"""The SELU activation. 
+
+    The formula is: 
+
+    .. math::  
+
+        \text{SELU}(x) = \begin{cases}
+				lambda_ * (x & \text{ if } x \gt 0  \\
+                \alpha_*(exp(x)-1) & \text{ if } x \le 0) \\
+    		    \end{cases}
+
+    For example: make 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def selu_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            return flow.nn.selu(x, lambda_=1.2, alpha_=1.0)
+
+
+        x = np.array([-3.5, 1, 3.5]).astype(np.float32)
+        out = selu_job(x)
+
+        # output [-1.16376312  1.2         4.2      ]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        lambda_ (float, optional): The `lambda` value for the SELU formula. Defaults to 1.0.
+        alpha_ (float, optional): The `alpha` value for the SELU formula. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    """
+    lambda_ = float(lambda_)
+    alpha_ = float(alpha_)
+    if name is None:
+        name = id_util.UniqueStr("SElu_")
+    return (
+        flow.user_op_builder(name)
+        .Op("selu")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("lambda_", lambda_)
+        .Attr("alpha_", alpha_)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.hardsigmoid")
 def hard_sigmoid(
     x: oneflow_api.BlobDesc, name: Optional[str] = None
