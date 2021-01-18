@@ -17,6 +17,26 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+/*
+Unsorted Segment Sum Computation Cost 
+= outer_dim_size * num_sgment_ids * ( idx + to + from + transform)
+= outer_dim_size * num_segment_ids * ( 1 + 4 + 4 + inner_dim_size )
+= outer_dim_size * num_segment_ids *  9 + outer_dim_size * num_segment_ids * inner_dim_size
+= |segment_idx| * (9 * |out（0）| + |out| )
+*/
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
+  const user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  double cost = segment_ids->shape().elem_cnt() * ( 9 * out->shape().Count(0) + out->shape().elem_cnt());
+  if (ctx->SbpParallel4ArgNameAndIndex("data", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+}  // namespace
+
 REGISTER_USER_OP("unsorted_segment_sum")
     .Input("data")
     .Input("segment_ids")
@@ -97,7 +117,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("unsorted_segment_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
@@ -209,6 +230,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
           .Split(user_op::OpArg("out", 0), axis)
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 }  // namespace oneflow
