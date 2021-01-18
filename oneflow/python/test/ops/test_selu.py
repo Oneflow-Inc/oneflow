@@ -180,7 +180,7 @@ class Testselu1n1d(flow.unittest.TestCase):
     def test_selu_cpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 3),
-            lambda_=1.0,
+            lambda_=1.2,
             alpha_=1.0,
             device_type="cpu",
             value_type="float",
@@ -211,7 +211,7 @@ class Testselu1n2d(flow.unittest.TestCase):
     def test_selu_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 8, 4),
-            lambda_=1.0, 
+            lambda_=2.0, 
             alpha_=1.0,
             device_type="gpu",
             value_type="float",
