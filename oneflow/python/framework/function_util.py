@@ -688,7 +688,11 @@ def set_enable_float_compute_for_half_gemm(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_float_compute_for_half_gemm(value)
+    print(
+        """WARNING: enable_float_compute_for_half_gemm has been deprecated, because we always use float compute for half gemm. Please remove it.
+        """
+    )
+    print(traceback.format_stack()[-3])
 
 
 @oneflow_function_config("enable_quantization_aware_training")

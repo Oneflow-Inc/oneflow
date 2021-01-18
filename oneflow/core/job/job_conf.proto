@@ -206,7 +206,6 @@ message JobConfigProto {
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
 
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
-  optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
   
