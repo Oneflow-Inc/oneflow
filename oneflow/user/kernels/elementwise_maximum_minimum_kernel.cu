@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/user/kernels/elementwise_maximum_minimum_kernel.h"
 
 namespace oneflow {
-namespace user_op {
 
+namespace {
 template<template<typename> class Opt, typename T>
 __global__ void ElementwiseXimumGradGpuKernel(int64_t elem_cnt, const T* dz, const T* x, const T* y,
                                               T* dx, T* dy) {
@@ -44,11 +44,11 @@ struct ElemwiseXimumFunctor<DeviceType::kGPU, Opt, T> final {
     OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<T>(), elem_cnt, z, x, y, ctx->cuda_stream()));
   }
 };
+}  // namespace
 
 REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, float);
 REGISTER_MAXIMUM_KERNELS(DeviceType::kGPU, double);
 REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, float);
 REGISTER_MINIMUM_KERNELS(DeviceType::kGPU, double);
-}  // namespace user_op
 }  // namespace oneflow
 #endif  // WITH_CUDA

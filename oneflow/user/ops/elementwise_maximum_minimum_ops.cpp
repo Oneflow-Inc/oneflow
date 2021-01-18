@@ -20,7 +20,7 @@ namespace oneflow {
 namespace {
 using namespace user_op;
 
-Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
+Maybe<void> GetSbpSignature(SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
 

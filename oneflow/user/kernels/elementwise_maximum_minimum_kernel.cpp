@@ -16,8 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/elementwise_maximum_minimum_kernel.h"
 
 namespace oneflow {
-namespace user_op {
-
+namespace {
 template<template<typename> class Opt, typename T>
 struct ElemwiseXimumGradFunctor<DeviceType::kCPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, const T* dz, const T* x, const T* y, T* dx,
@@ -34,10 +33,10 @@ struct ElemwiseXimumFunctor<DeviceType::kCPU, Opt, T> final {
     FOR_RANGE(int64_t, idx, 0, elem_cnt) { z[idx] = Opt<T>()(x[idx], y[idx]); }
   }
 };
+}  // namespace
 
 REGISTER_MAXIMUM_KERNELS(DeviceType::kCPU, float);
 REGISTER_MAXIMUM_KERNELS(DeviceType::kCPU, double);
 REGISTER_MINIMUM_KERNELS(DeviceType::kCPU, float);
 REGISTER_MINIMUM_KERNELS(DeviceType::kCPU, double);
-}  // namespace user_op
 }  // namespace oneflow
