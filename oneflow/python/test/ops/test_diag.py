@@ -21,6 +21,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as tp 
 
@@ -131,13 +132,15 @@ def forward_cpmputer_with_np(device_type, input_tensor, dim):
     print(forward_np_out)
     assert np.allclose(forward_of_out, forward_np_out)
 
-'''
+
 def backward_cpmputer_with_np(device_type, input_tensor, dim):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
+    func_config.default_placement_scope(flow.scope.placement("cpu", '0:0'))
+
 
     output_tensor = diag_forward_np(input_tensor, dim)
     print('output_tensor shape is {}'.format(output_tensor.shape))
@@ -146,7 +149,15 @@ def backward_cpmputer_with_np(device_type, input_tensor, dim):
     grad = np.random.random(output_shape).astype(output_dtype)
 
     @flow.global_function(type="train", function_config=func_config)
-    def DiagForwardJob(x: tp.Numpy.Placeholder((2,2)))-> tp.Numpy:
+    def DiagForwardJob():
+            x = flow.get_variable(
+                "input",
+                shape=(2, 2),
+                dtype=type_name_to_flow_type["float32"],
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
+                trainable=True,
+            )
+
             output = flow.diag(x, 0)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
@@ -154,8 +165,8 @@ def backward_cpmputer_with_np(device_type, input_tensor, dim):
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
-            flow.watch(loss, test_global_storage.Setter("output"))
-            flow.watch_diff(loss, test_global_storage.Setter("output_diff"))
+            flow.watch(output, test_global_storage.Setter("output"))
+            flow.watch_diff(output, test_global_storage.Setter("output_diff"))
 
             return output
 
@@ -168,13 +179,13 @@ def backward_cpmputer_with_np(device_type, input_tensor, dim):
     backward_np_out = diag_grad_np(input_tensor, dim, output_tensor, grad)
     assert np.allclose(backward_of_out, backward_np_out)
 
-'''
+
 def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(dtype)
     input_tensor = x = input_tensor.reshape((2, 2)).astype(np.float32)
     print('input_tensor is {}'.format(input_tensor.shape))
-    forward_cpmputer_with_np(device_type, input_tensor, dim)
-    #backward_cpmputer_with_np(device_type, input_tensor, dim)
+    #forward_cpmputer_with_np(device_type, input_tensor, dim)
+    backward_cpmputer_with_np(device_type, input_tensor, dim)
 
 
 @flow.unittest.skip_unless_1n1d()

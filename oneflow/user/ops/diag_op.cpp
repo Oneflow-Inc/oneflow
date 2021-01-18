@@ -52,10 +52,12 @@ Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
     std::cout << "*****************diag_op_grad****************" << std::endl;
     const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
     Shape* out_shape = ctx->Shape4ArgNameAndIndex("diag_out", 0);
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
     Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-    CHECK_EQ_OR_RETURN(*dy_shape, *out_shape);
+    *dx_shape = *x_shape;
+    //CHECK_EQ_OR_RETURN(*dy_shape, *out_shape);
     
     return Maybe<void>::Ok();
 
@@ -83,8 +85,8 @@ REGISTER_USER_OP("diag")
 
 REGISTER_USER_OP("diag_grad")
     .Input("dy")
-    .Output("grad")
     .Attr<int32_t>("dimension", 0)
+    .Output("dx")
     .SetTensorDescInferFn(InferBackwardTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -98,18 +100,32 @@ REGISTER_USER_OP("diag_grad")
         return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("diag").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp){
-    if (op.NeedGenGradTensor4OpInput("input_tensor", 0)){
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = 
-            builder.Op("diag_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("diag_out", 0))
-                .Attr("dimension", op.attr<int32_t>("dimension"))
+REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx){
+    //if (op.NeedGenGradTensor4OpInput("input_tensor", 0)){
+        const auto op_name = ctx->FwOp().op_name() + "_grad";
+        ctx->DefineOp(op_name,
+        [&ctx](user_op::BackwardOpBuilder& builder) { 
+            return builder.OpTypeName("diag_grad")
+                .InputBind("dy", ctx->FwOp().output_grad("diag_out", 0))
+                .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
                 .Output("dx")
                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input_tensor", 0);
-        AddOp(grad_op);
-    }
+        });
+
+        ctx->FwOp().InputGradBind(user_op::OpArg("input_tensor", 0),
+        [&ctx, &op_name]() -> const std::string& {
+          return ctx->GetOp(op_name)
+                .output("dx", 0);
+        });
 });
 }  // namespace oneflow
+
+
+
+
+
+
+
+
+
+
