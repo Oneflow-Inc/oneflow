@@ -1,11 +1,7 @@
-file(GLOB_RECURSE ONEFLOW_GRAPH_SRCS "*.h")
-file(GLOB_RECURSE ONEFLOW_GRAPH_HDRS "*.cpp")
+file(GLOB_RECURSE ONEFLOW_GRAPH_HDRS "*.h")
+file(GLOB_RECURSE ONEFLOW_GRAPH_SRCS "*.cpp")
 add_library(of_graph
-    ${ONEFLOW_GRAPH_SRCS} ${ONEFLOW_GRAPH_HDRS}
+    ${ONEFLOW_GRAPH_HDRS} ${ONEFLOW_GRAPH_SRCS}
 )
-
-# TODO: graph doesn't need gflags
-target_link_libraries(of_graph
-    of_protoobj
-    ${oneflow_exe_third_party_libs}
-)
+add_dependencies(of_graph of_cfgobj)
+add_dependencies(of_graph of_protoobj)
