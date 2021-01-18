@@ -3032,7 +3032,7 @@ def hard_sigmoid(
 
         @flow.global_function()
         def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            out = flow.math.hardsigmoid(x)
+            out = flow.nn.hardsigmoid(x)
 
             return out
 
@@ -3128,6 +3128,8 @@ def swish(
         @flow.global_function()
         def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
             return flow.nn.swish(x)
+
+
         x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
 
 
