@@ -674,6 +674,10 @@ def conv3d(
     if need_transpose:
         input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
         filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+        # padding for `NDHWC` is [0, 0, 1, 1, 1] to `NCDHW` format [0, 1, 1, 1, 0]
+        if isinstance(padding, (list, tuple)):
+            padding = list(padding)
+            padding[1], padding[4] = padding[4], padding[1]
 
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
