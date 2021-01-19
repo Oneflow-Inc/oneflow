@@ -63,6 +63,9 @@ class Importer {
         job(job_wrapper.job()),
         job_wrapper(job_wrapper) {}
 
+  LogicalResult namedAttributesFromProto(
+      const ::google::protobuf::Map<::std::string, ::oneflow::AttrValue> &attrs,
+      std::vector<NamedAttribute> &attr_vec);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
   LogicalResult tryToUpdateJob();
@@ -82,6 +85,65 @@ class Importer {
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
 
+LogicalResult Importer::namedAttributesFromProto(
+    const ::google::protobuf::Map<::std::string, ::oneflow::AttrValue> &attrs,
+    std::vector<NamedAttribute> &attr_vec) {
+  for (const google::protobuf::MapPair<class std::basic_string<char>, ::oneflow::AttrValue> &attr :
+       attrs) {
+    const std::string &name = attr.first;
+    const ::oneflow::AttrValue &value = attr.second;
+    if (value.has_at_int32()) {
+      std::pair<mlir::Identifier, mlir::Attribute> kv =
+          b.getNamedAttr(name, b.getI32IntegerAttr(value.at_int32()));
+      attr_vec.emplace_back(kv);
+    }
+#define DEFINE_ONE_ELIF(at_key, get_attr)                 \
+  else if (value.has_##at_key()) {                        \
+    std::pair<mlir::Identifier, mlir::Attribute> kv =     \
+        b.getNamedAttr(name, b.get_attr(value.at_key())); \
+    attr_vec.emplace_back(kv);                            \
+  }
+    DEFINE_ONE_ELIF(at_int64, getI64IntegerAttr)
+    DEFINE_ONE_ELIF(at_bool, getBoolAttr)
+    DEFINE_ONE_ELIF(at_float, getF32FloatAttr)
+    DEFINE_ONE_ELIF(at_double, getF64FloatAttr)
+    DEFINE_ONE_ELIF(at_string, getStringAttr)
+#undef DEFINE_ONE_ELIF
+#define DEFINE_ONE_ELIF(at_key, get_attr, field)                                           \
+  else if (value.has_##at_key()) {                                                         \
+    std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                      \
+        name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
+    attr_vec.emplace_back(kv);                                                             \
+  }
+    // TODO: Define a shape attribute type backed by i64 array storage
+    DEFINE_ONE_ELIF(at_shape, getI64ArrayAttr, dim)
+    DEFINE_ONE_ELIF(at_list_int32, getI32ArrayAttr, val)
+    DEFINE_ONE_ELIF(at_list_int64, getI64ArrayAttr, val)
+    DEFINE_ONE_ELIF(at_list_float, getF32ArrayAttr, val)
+#undef DEFINE_ONE_ELIF
+    else if (value.has_at_list_string()) {
+      std::vector<llvm::StringRef> r_vec = {value.at_list_string().val().begin(),
+                                            value.at_list_string().val().end()};
+      std::pair<mlir::Identifier, mlir::Attribute> kv =
+          b.getNamedAttr(name, b.getStrArrayAttr(r_vec));
+      attr_vec.emplace_back(kv);
+    }
+    else if (value.has_at_data_type()) {
+      auto dt = ::mlir::oneflow::symbolizeDataType(value.at_data_type());
+      auto dt_str =
+          ::mlir::oneflow::stringifyEnum(dt.getValueOr(::mlir::oneflow::DataType::InvalidDataType));
+      std::pair<mlir::Identifier, mlir::Attribute> kv =
+          b.getNamedAttr(name, b.getStringAttr(dt_str));
+      attr_vec.emplace_back(kv);
+    }
+    else {
+      module.emitError("can't handle user op attr: " + name);
+      return failure();
+    }
+  }
+  return success();
+}
+
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) {
     module.emitError("Not a user op. op name: " + op.name());
@@ -94,6 +156,9 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &device_tag = pc.device_tag();
   std::vector<llvm::StringRef> dv = {pc.device_name().begin(), pc.device_name().end()};
   mlir::ArrayAttr placement = b.getStrArrayAttr(dv);
+  std::vector<NamedAttribute> attr_vec;
+  if (failed(namedAttributesFromProto(op.user_conf().attr(), attr_vec))) { return failure(); }
+  ArrayRef<NamedAttribute> named_attributes(attr_vec);
   if (op_type_name == "constant1") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
       auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
@@ -108,64 +173,12 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       // b.create<ConstantOp>(unknownLoc, user_conf.attr().at("integer_value").at_int64());
     }
     return success();
+  } else if (op_type_name == "relu1") {
+    OperationState state(unknownLoc, "oneflow." + op_type_name);
+    state.addAttributes(named_attributes);
+    b.createOperation(state);
+    return success();
   } else {
-    std::vector<NamedAttribute> attr_vec;
-    for (const class google::protobuf::MapPair<class std::basic_string<char>,
-                                               class ::oneflow::AttrValue> &attr :
-         op.user_conf().attr()) {
-      const std::string &name = attr.first;
-      const ::oneflow::AttrValue &value = attr.second;
-      if (value.has_at_int32()) {
-        std::pair<mlir::Identifier, mlir::Attribute> kv =
-            b.getNamedAttr(name, b.getI32IntegerAttr(value.at_int32()));
-        attr_vec.emplace_back(kv);
-      }
-#define DEFINE_ONE_ELIF(at_key, get_attr)                 \
-  else if (value.has_##at_key()) {                        \
-    std::pair<mlir::Identifier, mlir::Attribute> kv =     \
-        b.getNamedAttr(name, b.get_attr(value.at_key())); \
-    attr_vec.emplace_back(kv);                            \
-  }
-      DEFINE_ONE_ELIF(at_int64, getI64IntegerAttr)
-      DEFINE_ONE_ELIF(at_bool, getBoolAttr)
-      DEFINE_ONE_ELIF(at_float, getF32FloatAttr)
-      DEFINE_ONE_ELIF(at_double, getF64FloatAttr)
-      DEFINE_ONE_ELIF(at_string, getStringAttr)
-#undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(at_key, get_attr, field)                                           \
-  else if (value.has_##at_key()) {                                                         \
-    std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                      \
-        name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
-    attr_vec.emplace_back(kv);                                                             \
-  }
-      // TODO: Define a shape attribute type backed by i64 array storage
-      DEFINE_ONE_ELIF(at_shape, getI64ArrayAttr, dim)
-      DEFINE_ONE_ELIF(at_list_int32, getI32ArrayAttr, val)
-      DEFINE_ONE_ELIF(at_list_int64, getI64ArrayAttr, val)
-      DEFINE_ONE_ELIF(at_list_float, getF32ArrayAttr, val)
-#undef DEFINE_ONE_ELIF
-      else if (value.has_at_list_string()) {
-        std::vector<llvm::StringRef> r_vec = {value.at_list_string().val().begin(),
-                                              value.at_list_string().val().end()};
-        std::pair<mlir::Identifier, mlir::Attribute> kv =
-            b.getNamedAttr(name, b.getStrArrayAttr(r_vec));
-        attr_vec.emplace_back(kv);
-      }
-      else if (value.has_at_data_type()) {
-        auto dt = ::mlir::oneflow::symbolizeDataType(value.at_data_type());
-        auto dt_str = ::mlir::oneflow::stringifyEnum(
-            dt.getValueOr(::mlir::oneflow::DataType::InvalidDataType));
-        std::pair<mlir::Identifier, mlir::Attribute> kv =
-            b.getNamedAttr(name, b.getStringAttr(dt_str));
-        attr_vec.emplace_back(kv);
-      }
-      else {
-        module.emitError("can't handle user op attr: " + name);
-        return failure();
-      }
-    }
-
-    ArrayRef<NamedAttribute> named_attributes(attr_vec);
     std::vector<::mlir::Value> operand_vec;
     std::vector<StringRef> ibn_vec;
     std::vector<int> ibn_idx_vec;
