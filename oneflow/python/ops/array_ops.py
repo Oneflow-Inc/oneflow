@@ -2468,3 +2468,54 @@ def ones(
         dtype = flow.float32
 
     return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
+
+    @oneflow_export("eye")
+    def eye(
+        n: int,
+        m: Optional[int] = None,
+        dtype: Optional[dtype_util.dtype] = None,
+        name: Optional[str] = None,
+    ) -> oneflow_api.BlobDesc:
+        """This operator creates a 2-D tensor with ones on the diagonal and zeros elsewhere.
+
+        Args:
+            n (int): the number of rows
+            m (Optional[int], optional): The number of columns. Defaults to n.
+            dtype (Optional[dtype_util.dtype], optional): The data type Defaults to None.
+            name (Optional[str], optional): The name for the operator. Defaults to None.
+
+        Returns:
+            oneflow_api.BlobDesc: A 2-D tensor with ones on the diagonal and zeros elsewhere.
+
+        For example:
+        
+        .. code-block:: python 
+        
+            import oneflow as flow
+            import oneflow.typing as tp 
+        
+        
+            @flow.global_function()
+            def ones_job() -> tp.Numpy: 
+                return flow.ones(n=3, dtype=flow.float32)
+        
+        
+            out = ones_job()
+        
+            # output: [[1. 0. 0.]
+            #          [0. 1. 0.]
+            #          [0. 0. 1.]]
+        """
+
+        if m is None:
+            m = n
+
+        shape = [n, m]
+
+        if name is None:
+            name = id_util.UniqueStr("Eye_")
+
+        if dtype is None:
+            dtype = flow.float32
+
+        return flow.diag(flow.ones(shape=shape, dtype=dtype), dtype)
