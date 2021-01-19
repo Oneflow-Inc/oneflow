@@ -72,8 +72,6 @@ class BlobRegister : public std::enable_shared_from_this<BlobRegister> {
 
   void ForceReleaseAll();
 
-  // std::shared_ptr<BlobRegister> SharedToSelf();
-
  private:
   std::shared_ptr<std::map<std::string, std::shared_ptr<BlobObject>>> blob_name2object_;
   std::shared_ptr<std::map<std::string, std::shared_ptr<RegisteredBlobAccess>>> blob_name2access_;
