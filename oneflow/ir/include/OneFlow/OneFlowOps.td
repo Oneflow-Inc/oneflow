@@ -80,8 +80,8 @@ def OneFlow_UserOp : OneFlow_Op<"user", []> {
     let attrs = (ins
         StrAttr:$op_type_name,
         DictionaryAttr:$attr,
-        // input_bns is a nested array [["x", 0], ["x", 1]]
-        ArrayAttr:$input_bns,
+        StrArrayAttr:$input_bns,
+        ArrayAttr:$input_bn_idx,
         StrArrayAttr:$output_lbns
     );
     let results = (outs Variadic<AnyType>:$outputs);
