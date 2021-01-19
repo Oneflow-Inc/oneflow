@@ -17,6 +17,46 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+  
+/*
+For l2_normalize:
+
+ComputationCost
+= n * c * 2 * 3 
+= 6 * n * c
+= 6 * |x| / c * c
+= 6 * |x|
+*/
+Maybe<double> GetForwardComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  double cost = x->shape().elem_cnt() * 6;
+  if (ctx->SbpParallel4ArgNameAndIndex("x", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+/*
+For l2_normalize backward:
+
+ComputationCost
+= n * c * 2 * 4 
+= 8 * n * c
+= 8 * |dy| / c * c
+= 8 * |dy|
+*/
+Maybe<double> GetBackwardComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  double cost =dy->shape().elem_cnt() * 8;
+  if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+} // namespace
+
 REGISTER_USER_OP("l2_normalize")
     .Input("x")
     .Output("y")
@@ -60,7 +100,8 @@ REGISTER_USER_OP("l2_normalize")
         }
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetForwardComputationCostFn);
 
 REGISTER_USER_OP("l2_normalize_grad")
     .Input("dy")
@@ -108,7 +149,8 @@ REGISTER_USER_OP("l2_normalize_grad")
         }
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetBackwardComputationCostFn);
 
 REGISTER_USER_OP_GRAD("l2_normalize")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
