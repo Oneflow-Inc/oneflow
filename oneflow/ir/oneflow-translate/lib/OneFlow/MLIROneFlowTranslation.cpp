@@ -63,9 +63,10 @@ class Importer {
         job(job_wrapper.job()),
         job_wrapper(job_wrapper) {}
 
-  LogicalResult namedAttributesFromProto(
-      const ::google::protobuf::Map<::std::string, ::oneflow::AttrValue> &attrs,
-      std::vector<NamedAttribute> &attr_vec);
+  LogicalResult namedAttributesFromUserOp(const ::oneflow::OperatorConf &op,
+                                          std::vector<NamedAttribute> &attr_vec);
+  LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
+                                   std::vector<::mlir::Value> &operand_vec);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
   LogicalResult tryToUpdateJob();
@@ -85,11 +86,14 @@ class Importer {
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
 
-LogicalResult Importer::namedAttributesFromProto(
-    const ::google::protobuf::Map<::std::string, ::oneflow::AttrValue> &attrs,
-    std::vector<NamedAttribute> &attr_vec) {
+LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf &op,
+                                                  std::vector<NamedAttribute> &attr_vec) {
+  if (op.has_user_conf() == false) {
+    module.emitError("Not a user op. op name: " + op.name());
+    return failure();
+  }
   for (const google::protobuf::MapPair<class std::basic_string<char>, ::oneflow::AttrValue> &attr :
-       attrs) {
+       op.user_conf().attr()) {
     const std::string &name = attr.first;
     const ::oneflow::AttrValue &value = attr.second;
     if (value.has_at_int32()) {
@@ -144,6 +148,27 @@ LogicalResult Importer::namedAttributesFromProto(
   return success();
 }
 
+LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
+                                           std::vector<Value> &operand_vec) {
+  if (op.has_user_conf() == false) {
+    module.emitError("Not a user op. op name: " + op.name());
+    return failure();
+  }
+  for (auto kv : op.user_conf().input()) {
+    // TODO: declare tensor containing field lbi
+    for (int i = 0; i < kv.second.s_size(); i++) {
+      const std::string &lbn = kv.second.s(i);
+      if (lbn2result.find(lbn) != lbn2result.end()) {
+        auto v = lbn2result.at(lbn);
+        operand_vec.push_back(v);
+      } else {
+        // TODO: add placehorder ops for tick inputs
+      }
+    }
+  }
+  return success();
+}
+
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) {
     module.emitError("Not a user op. op name: " + op.name());
@@ -157,8 +182,11 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   std::vector<llvm::StringRef> dv = {pc.device_name().begin(), pc.device_name().end()};
   mlir::ArrayAttr placement = b.getStrArrayAttr(dv);
   std::vector<NamedAttribute> attr_vec;
-  if (failed(namedAttributesFromProto(op.user_conf().attr(), attr_vec))) { return failure(); }
+  std::vector<::mlir::Value> operand_vec;
+  if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   ArrayRef<NamedAttribute> named_attributes(attr_vec);
+  if (failed(operandsFromUserOp(op, operand_vec))) { return failure(); }
+  ::mlir::ValueRange operands(operand_vec);
   if (op_type_name == "constant1") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
       auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
@@ -173,13 +201,30 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       // b.create<ConstantOp>(unknownLoc, user_conf.attr().at("integer_value").at_int64());
     }
     return success();
-  } else if (op_type_name == "relu1") {
+  } else if (op_type_name == "relu") {
     OperationState state(unknownLoc, "oneflow." + op_type_name);
     state.addAttributes(named_attributes);
-    b.createOperation(state);
+    state.addOperands(operands);
+
+    auto out_types = llvm::SmallVector<Type, 8>();
+    std::vector<StringRef> lbns{};
+    for (auto kv : op.user_conf().output()) {
+      for (const std::string &lbn : kv.second.s()) {
+        out_types.append({RankedTensorType::get({}, b.getF32Type())});
+        lbns.push_back(lbn);
+      }
+    }
+    state.addTypes(out_types);
+    auto created = b.createOperation(state);
+    for (auto kv : op.user_conf().output()) {
+      int i = 0;
+      for (const std::string &lbn : kv.second.s()) {
+        lbn2result.insert({lbn, created->getResult(i)});
+        i++;
+      }
+    }
     return success();
   } else {
-    std::vector<::mlir::Value> operand_vec;
     std::vector<StringRef> ibn_vec;
     std::vector<int> ibn_idx_vec;
 
@@ -190,7 +235,6 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         const std::string &lbn = kv.second.s(i);
         if (lbn2result.find(lbn) != lbn2result.end()) {
           auto v = lbn2result.at(lbn);
-          operand_vec.push_back(v);
           ibn_vec.push_back(ibn);
           ibn_idx_vec.push_back(i);
         } else {
@@ -206,7 +250,6 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         lbns.push_back(lbn);
       }
     }
-    ::mlir::ValueRange operands(operand_vec);
     auto created = b.create<oneflow::UserOp>(
         unknownLoc, out_types, operands, b.getStringAttr(op_name), b.getStringAttr(device_tag),
         placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes),
@@ -275,6 +318,7 @@ LogicalResult Importer::tryToUpdateJob() {
     for (int operand_idx = 0; operand_idx < dst.getNumOperands(); operand_idx++) {
       auto o = dst->getOperand(operand_idx);
       oneflow::UserOp src = llvm::dyn_cast<oneflow::UserOp>(o.getDefiningOp());
+      if (!src) { return; }
       const int result_idx = getResultIndex(o, src);
       dumpUse(src, dst, operand_idx, result_idx);
     }
