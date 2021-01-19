@@ -5,6 +5,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -19,6 +20,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <new>
 #include <string>
@@ -191,9 +193,10 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes),
         b.getStrArrayAttr(ArrayRef<StringRef>(lbns)));
     for (auto kv : op.user_conf().output()) {
-      // const std::string &obn = kv.first;
+      int i = 0;
       for (const std::string &lbn : kv.second.s()) {
-        lbn2result.insert({lbn, created.getResults().back()});
+        lbn2result.insert({lbn, created.getResult(i)});
+        i++;
       }
     }
 
@@ -223,8 +226,16 @@ LogicalResult Importer::processJob() {
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   auto dumpOps = [](Operation *op) {
-    oneflow::UserOp usro = llvm::dyn_cast<oneflow::UserOp>(op);
-    if (!usro) { return; }
+    oneflow::UserOp src = llvm::dyn_cast<oneflow::UserOp>(op);
+    if (!src) { return; }
+    for (int i = 0; i < src.getNumResults(); i++) {
+      auto r = src.getResult(i);
+      for (auto use : r.getUsers()) {
+        oneflow::UserOp dst = llvm::dyn_cast<oneflow::UserOp>(use);
+        if (!dst) { return; }
+        std::cout << "use:" << src.output_lbns()[i].dyn_cast<StringAttr>().getValue().str() << "\n";
+      }
+    }
   };
   module.getBodyRegion().walk(dumpOps);
   return success();
