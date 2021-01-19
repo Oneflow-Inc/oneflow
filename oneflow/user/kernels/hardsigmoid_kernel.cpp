@@ -13,82 +13,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/user/kernels/hardsigmoid_kernel.h"
 
 namespace oneflow {
 
-namespace user_op {
+namespace {
 
-template<DeviceType device_type, typename T>
-class CpuHardsigmoidKernel final : public OpKernel {
- public:
-  CpuHardsigmoidKernel() = default;
-  ~CpuHardsigmoidKernel() = default;
-
- private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const T* in_ptr = in_tensor->dptr<T>();
-    T* out_ptr = out_tensor->mut_dptr<T>();
-
-    const int32_t elem_cnt = in_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      if (in_ptr[i] <= static_cast<T>(-3)) {
-        out_ptr[i] = static_cast<T>(0);
-      } else if (in_ptr[i] >= static_cast<T>(3)) {
-        out_ptr[i] = static_cast<T>(1);
+template<template<typename> class Opt, typename T>
+struct ElemwiseHardsigmoidFunctor<DeviceType::kCPU, Opt, T> final {
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T* out, const T* in) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      if (in[i] <= static_cast<T>(-3)) {
+        out[i] = static_cast<T>(0);
+      } else if (in[i] >= static_cast<T>(3)) {
+        out[i] = static_cast<T>(1);
       } else {
-        out_ptr[i] = (in_ptr[i] / static_cast<T>(6)) + static_cast<T>(0.5);
+        out[i] = (in[i] / static_cast<T>(6)) + static_cast<T>(0.5);
       }
     }
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDSIGMOID_KERNEL(device, dtype)    \
-  REGISTER_USER_KERNEL("hardsigmoid")                     \
-      .SetCreateFn<CpuHardsigmoidKernel<device, dtype>>() \
-      .SetIsMatchedHob((HobDeviceTag() == device)         \
-                       & (HobDataType("out", 0) == GetDataType<dtype>::value));
-
-REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_HARDSIGMOID_KERNEL(DeviceType::kCPU, double);
-
-template<DeviceType device_type, typename T>
-class CpuHardsigmoidGradKernel final : public OpKernel {
- public:
-  CpuHardsigmoidGradKernel() = default;
-  ~CpuHardsigmoidGradKernel() = default;
-
- private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const T* x_ptr = x_tensor->dptr<T>();
-    const T* dy_ptr = dy_tensor->dptr<T>();
-    T* dx_ptr = dx_tensor->mut_dptr<T>();
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = (x_ptr[i] > static_cast<T>(-3) && x_ptr[i] < static_cast<T>(3))
-                      ? dy_ptr[i] / static_cast<T>(6)
-                      : static_cast<T>(0);
+template<template<typename> class Opt, typename T>
+struct ElemwiseHardsigmoidGradFunctor<DeviceType::kCPU, Opt, T> final {
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T* dx, const T* x, const T* dy) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      dx[i] = (x[i] > static_cast<T>(-3) && x[i] < static_cast<T>(3)) ? dy[i] / static_cast<T>(6)
+                                                                      : static_cast<T>(0);
     }
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("hardsigmoid_grad")                      \
-      .SetCreateFn<CpuHardsigmoidGradKernel<device, dtype>>()   \
-      .SetIsMatchedHob((HobDeviceTag() == device)               \
-                       & (HobDataType("dx", 0) == GetDataType<dtype>::value));
+}  // namespace
 
-REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCPU, double);
-
-}  // namespace user_op
+REGISTER_HARDSIGMOID_KERNELS(DeviceType::kCPU, float);
+REGISTER_HARDSIGMOID_KERNELS(DeviceType::kCPU, double);
 
 }  // namespace oneflow
