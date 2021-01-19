@@ -51,6 +51,13 @@ Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
     std::cout << "*****************diag_op_grad****************" << std::endl;
+    const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0);
+    const Shape&  in_shape = in_desc->shape();
+    user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+    *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
+    //user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+    /**
     const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
     Shape* out_shape = ctx->Shape4ArgNameAndIndex("diag_out", 0);
@@ -58,6 +65,7 @@ Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
     Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
     *dx_shape = *x_shape;
     //CHECK_EQ_OR_RETURN(*dy_shape, *out_shape);
+    **/
     
     return Maybe<void>::Ok();
 
@@ -85,6 +93,7 @@ REGISTER_USER_OP("diag")
 
 REGISTER_USER_OP("diag_grad")
     .Input("dy")
+    .Input("input_tensor")
     .Attr<int32_t>("dimension", 0)
     .Output("dx")
     .SetTensorDescInferFn(InferBackwardTensorDesc)
@@ -106,6 +115,7 @@ REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
         ctx->DefineOp(grad_op_name,
         [&ctx](user_op::BackwardOpBuilder& builder) { 
             return builder.OpTypeName("diag_grad")
+                .InputBind("input_tensor", ctx->FwOp().input("input_tensor", 0))
                 .InputBind("dy", ctx->FwOp().output_grad("diag_out", 0))
                 .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
                 .Output("dx")
