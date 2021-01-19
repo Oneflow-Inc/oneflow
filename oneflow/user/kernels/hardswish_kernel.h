@@ -50,12 +50,12 @@ namespace {
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseHardswishFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T* in, T* out);
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T* out, const T* in);
 };
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseHardswishGradFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T* x, const T* dy, T* dx);
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T* dx, const T* x, const T* dy);
 };
 
 }  // namespace
