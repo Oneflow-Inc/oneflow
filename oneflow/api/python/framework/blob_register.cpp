@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/blob_register.h"
 
@@ -67,7 +68,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            py::keep_alive<0, 1>());
 
   py::class_<BlobRegister, std::shared_ptr<BlobRegister>>(m, "BlobRegister")
-      .def(py::init([]() { return std::make_shared<BlobRegister>(); }))
+      .def(py::init([](const std::function<void(std::shared_ptr<BlobObject>)>& release) {
+        return std::make_shared<BlobRegister>(release);
+      }))
       .def_property_readonly("blob_name2object", &BlobRegister::blob_name2object)
       .def("OpenRegisteredBlobAccess", &BlobRegister::OpenRegisteredBlobAccess)
       .def("CloseRegisteredBlobAccess", &BlobRegister::CloseRegisteredBlobAccess)
@@ -100,8 +103,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("blob_register", &RegisteredBlobAccess::blob_register)
       .def("increase_reference_counter", &RegisteredBlobAccess::increase_reference_counter)
       .def("decrease_reference_counter", &RegisteredBlobAccess::decrease_reference_counter);
-
-  m.def("GetDefaultBlobRegister", &GetDefaultBlobRegister);
 }
 
 }  // namespace compatible_py

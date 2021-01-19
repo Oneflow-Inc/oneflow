@@ -74,9 +74,7 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
         )
 
     def __del__(self):
-        blob_register_util.ClearObjectOfBlobRegister4BlobName(
-            blob_register, self.unique_name
-        )
+        blob_register.ClearObject4BlobName(self.unique_name)
 
 
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):

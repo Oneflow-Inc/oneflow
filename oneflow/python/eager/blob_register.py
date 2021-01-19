@@ -21,12 +21,7 @@ from contextlib import contextmanager
 
 
 def GetDefaultBlobRegister():
-    return oneflow_api.GetDefaultBlobRegister()
-
-
-def ClearObjectOfBlobRegister4BlobName(blob_register, blob_name):
-    blob_cache_util.TryDisableBlobCache(blob_register.GetObject4BlobName(blob_name))
-    blob_register.ClearObject4BlobName(blob_name)
+    return default_blob_register_
 
 
 @contextmanager
@@ -43,3 +38,6 @@ def BnInOp2BlobObjectScope(blob_register, op_attribute):
         blob_register.SetObject4BlobName(
             "%s/%s" % (lbi.op_name, lbi.blob_name), bn_in_op2blob_object[obn]
         )
+
+
+default_blob_register_ = oneflow_api.BlobRegister(blob_cache_util.TryDisableBlobCache)

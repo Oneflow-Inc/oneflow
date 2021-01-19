@@ -19,6 +19,7 @@ import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -85,7 +86,9 @@ class Session(object):
         self._UpdateScopeAttrName2DefaultVal()
         self.instruction_list_ = instr_cfg.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
-        self.backward_blob_register_ = oneflow_api.BlobRegister()
+        self.backward_blob_register_ = oneflow_api.BlobRegister(
+            blob_cache_util.TryDisableBlobCache
+        )
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 

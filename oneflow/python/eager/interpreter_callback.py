@@ -91,6 +91,6 @@ def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
             blob_object = blob_register.GetObject4BlobName(lbn)
-            blob_register_util.ClearObjectOfBlobRegister4BlobName(blob_register, lbn)
+            blob_register.ClearObject4BlobName(lbn)
 
     return ReleaseMirroredBlobObject
