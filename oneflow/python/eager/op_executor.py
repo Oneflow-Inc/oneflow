@@ -29,6 +29,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 from google.protobuf import text_format
 
@@ -61,7 +62,9 @@ def Interpret(op_attribute, parallel_conf, blob_register):
 
 def OpKernelCall(opkernel_object, op_attribute, blob_register):
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             builder.StatefulCall(
                 op_attribute,
                 opkernel_object=opkernel_object,
@@ -73,7 +76,9 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
 
 def MirroredCast(op_attribute, blob_register):
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
             parallel_desc_symbol = in_blob_object.parallel_desc_symbol
             op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
@@ -101,7 +106,9 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
         )
 
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             physical_out_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
                 GetInBlobObject(builder, "in", bn_in_op2blob_object)
             )
@@ -134,7 +141,9 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
         )
 
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
 
             def GetPhysicalInBlob(i):
                 return GetInBlobObject(builder, i, bn_in_op2blob_object)
@@ -181,7 +190,9 @@ def _Watch(op_attribute, parallel_conf, blob_register):
 
 def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             builder.StatelessCall(
                 op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object,
             )
