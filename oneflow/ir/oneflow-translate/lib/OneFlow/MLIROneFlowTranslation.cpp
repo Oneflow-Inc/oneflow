@@ -94,7 +94,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &device_tag = pc.device_tag();
   std::vector<llvm::StringRef> dv = {pc.device_name().begin(), pc.device_name().end()};
   mlir::ArrayAttr placement = b.getStrArrayAttr(dv);
-  if (op_type_name == "constant") {
+  if (op_type_name == "constant1") {
     if (user_conf.attr().at("is_floating_value").at_bool()) {
       auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
       mlir::Value created =
@@ -231,18 +231,37 @@ LogicalResult Importer::processJob() {
   return success();
 }
 
+int getOperandIndex(Value operand, oneflow::UserOp op) {
+  for (int i = 0; i < op->getNumOperands(); i++) {
+    if (op->getOperand(i) == operand) { return i; }
+  }
+  return -1;
+}
+
+int getResultIndex(Value operand, oneflow::UserOp op) {
+  for (int i = 0; i < op.getNumResults(); i++) {
+    if (op.getResult(i) == operand) { return i; }
+  }
+  return -1;
+}
+
+void dumpUse(oneflow::UserOp src, oneflow::UserOp dst, int operand_idx, int result_idx) {
+  std::cout << "use: " << src.output_lbns()[result_idx].dyn_cast<StringAttr>().getValue().str()
+            << " -> " << dst.op_nameAttr().getValue().str()
+            << " :: " << dst.input_bns()[operand_idx].dyn_cast<StringAttr>().getValue().str() << "-"
+            << dst.input_bn_idxAttr()[operand_idx].dyn_cast<IntegerAttr>().getInt() << "\n";
+}
+
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   auto dumpOps = [](Operation *op) {
-    oneflow::UserOp src = llvm::dyn_cast<oneflow::UserOp>(op);
-    if (!src) { return; }
-    for (int i = 0; i < src.getNumResults(); i++) {
-      auto r = src.getResult(i);
-      for (mlir::Value::user_range use : r.getUsers()) {
-        oneflow::UserOp dst = llvm::dyn_cast<oneflow::UserOp>(use);
-        if (!dst) { return; }
-        std::cout << "use:" << src.output_lbns()[i].dyn_cast<StringAttr>().getValue().str() << "\n";
-      }
+    oneflow::UserOp dst = llvm::dyn_cast<oneflow::UserOp>(op);
+    if (!dst) { return; }
+    for (int operand_idx = 0; operand_idx < dst.getNumOperands(); operand_idx++) {
+      auto o = dst->getOperand(operand_idx);
+      oneflow::UserOp src = llvm::dyn_cast<oneflow::UserOp>(o.getDefiningOp());
+      const int result_idx = getResultIndex(o, src);
+      dumpUse(src, dst, operand_idx, result_idx);
     }
   };
   module.getBodyRegion().walk(dumpOps);
