@@ -164,16 +164,19 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         return failure();
       }
     }
-    ArrayRef<NamedAttribute> named_attributes(attr_vec);
 
-    std::vector<::mlir::Value> vs;
+    ArrayRef<NamedAttribute> named_attributes(attr_vec);
+    std::vector<::mlir::Value> operand_vec;
+    std::vector<StringRef> ibn_vec;
+
     for (auto kv : op.user_conf().input()) {
       // TODO: declare tensor containing field lbi
-      // const std::string &ibn = kv.first;
+      const std::string &ibn = kv.first;
       for (const std::string &lbn : kv.second.s()) {
         if (lbn2result.find(lbn) != lbn2result.end()) {
           auto v = lbn2result.at(lbn);
-          vs.push_back(v);
+          operand_vec.push_back(v);
+          ibn_vec.push_back(ibn);
         } else {
           // TODO: add placehorder ops for tick inputs
         }
@@ -187,10 +190,11 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         lbns.push_back(lbn);
       }
     }
-    ::mlir::ValueRange operands(vs);
+    ::mlir::ValueRange operands(operand_vec);
     auto created = b.create<oneflow::UserOp>(
         unknownLoc, out_types, operands, b.getStringAttr(op_name), b.getStringAttr(device_tag),
         placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes),
+        b.getStrArrayAttr(ArrayRef<StringRef>(ibn_vec)),
         b.getStrArrayAttr(ArrayRef<StringRef>(lbns)));
     for (auto kv : op.user_conf().output()) {
       int i = 0;
