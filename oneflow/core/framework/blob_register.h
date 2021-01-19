@@ -34,7 +34,7 @@ class RegisteredBlobAccess {
 
   int64_t reference_counter() const;
   std::shared_ptr<BlobObject> blob_object() const;
-  int64_t increase_reference_counter();
+  void increase_reference_counter();
   int64_t decrease_reference_counter();
 
   std::shared_ptr<BlobRegister> blob_register() const;
@@ -54,7 +54,7 @@ class BlobRegister : public std::enable_shared_from_this<BlobRegister> {
   std::shared_ptr<RegisteredBlobAccess> OpenRegisteredBlobAccess(
       const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object);
 
-  int64_t CloseRegisteredBlobAccess(const std::string& blob_name);
+  void CloseRegisteredBlobAccess(const std::string& blob_name);
 
   std::shared_ptr<std::map<std::string, std::shared_ptr<BlobObject>>> blob_name2object() const;
 
@@ -62,16 +62,15 @@ class BlobRegister : public std::enable_shared_from_this<BlobRegister> {
 
   std::shared_ptr<BlobObject> GetObject4BlobName(const std::string& blob_name) const;
 
-  int64_t SetObject4BlobName(const std::string& blob_name, const std::shared_ptr<BlobObject>& obj);
+  void SetObject4BlobName(const std::string& blob_name, const std::shared_ptr<BlobObject>& obj);
 
-  int64_t TrySetObject4BlobName(const std::string& blob_name,
-                                const std::shared_ptr<BlobObject>& obj);
+  void TrySetObject4BlobName(const std::string& blob_name, const std::shared_ptr<BlobObject>& obj);
 
-  int64_t ClearObject4BlobName(const std::string& blob_name);
+  void ClearObject4BlobName(const std::string& blob_name);
 
-  int64_t TryClearObject4BlobName(const std::string& blob_name);
+  void TryClearObject4BlobName(const std::string& blob_name);
 
-  int64_t ForceReleaseAll();
+  void ForceReleaseAll();
 
   // std::shared_ptr<BlobRegister> SharedToSelf();
 

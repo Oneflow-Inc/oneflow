@@ -35,9 +35,8 @@ RegisteredBlobAccess::~RegisteredBlobAccess() { blob_register_->ClearObject4Blob
 
 int64_t RegisteredBlobAccess::reference_counter() const { return reference_counter_; }
 std::shared_ptr<BlobObject> RegisteredBlobAccess::blob_object() const { return blob_object_; }
-int64_t RegisteredBlobAccess::increase_reference_counter() {
+void RegisteredBlobAccess::increase_reference_counter() {
   reference_counter_ = reference_counter_ + 1;
-  return 0;
 }
 int64_t RegisteredBlobAccess::decrease_reference_counter() {
   reference_counter_ = reference_counter_ - 1;
@@ -62,13 +61,12 @@ std::shared_ptr<RegisteredBlobAccess> BlobRegister::OpenRegisteredBlobAccess(
   return access;
 }
 
-int64_t BlobRegister::CloseRegisteredBlobAccess(const std::string& blob_name) {
+void BlobRegister::CloseRegisteredBlobAccess(const std::string& blob_name) {
   if (blob_name2access_->find(blob_name) != blob_name2access_->end()) {
     if (blob_name2access_->at(blob_name)->decrease_reference_counter() == 0) {
       blob_name2access_->erase(blob_name);
     }
   }
-  return 0;
 }
 
 std::shared_ptr<std::map<std::string, std::shared_ptr<BlobObject>>> BlobRegister::blob_name2object()
@@ -85,38 +83,33 @@ std::shared_ptr<BlobObject> BlobRegister::GetObject4BlobName(const std::string& 
   return blob_name2object_->at(blob_name);
 }
 
-int64_t BlobRegister::SetObject4BlobName(const std::string& blob_name,
-                                         const std::shared_ptr<BlobObject>& obj) {
+void BlobRegister::SetObject4BlobName(const std::string& blob_name,
+                                      const std::shared_ptr<BlobObject>& obj) {
   CHECK(blob_name2object_->find(blob_name) == blob_name2object_->end());
   (*blob_name2object_)[blob_name] = obj;
-  return 0;
 }
 
-int64_t BlobRegister::TrySetObject4BlobName(const std::string& blob_name,
-                                            const std::shared_ptr<BlobObject>& obj) {
+void BlobRegister::TrySetObject4BlobName(const std::string& blob_name,
+                                         const std::shared_ptr<BlobObject>& obj) {
   if (blob_name2object_->find(blob_name) == blob_name2object_->end()) {
     SetObject4BlobName(blob_name, obj);
   }
-  return 0;
 }
 
-int64_t BlobRegister::ClearObject4BlobName(const std::string& blob_name) {
+void BlobRegister::ClearObject4BlobName(const std::string& blob_name) {
   CHECK(HasObject4BlobName(blob_name)) << "blob_name " << blob_name << " not found";
   blob_name2object_->erase(blob_name);
-  return 0;
 }
 
-int64_t BlobRegister::TryClearObject4BlobName(const std::string& blob_name) {
+void BlobRegister::TryClearObject4BlobName(const std::string& blob_name) {
   if (HasObject4BlobName(blob_name)) { ClearObject4BlobName(blob_name); }
-  return 0;
 }
 
-int64_t BlobRegister::ForceReleaseAll() {
+void BlobRegister::ForceReleaseAll() {
   for (auto& pair : *blob_name2object_) {
     LOG(INFO) << "Forcely release blob " << (pair.first);
     pair.second->ForceReleaseAll();
   }
-  return 0;
 }
 
 std::shared_ptr<BlobRegister> GetDefaultBlobRegister() {
