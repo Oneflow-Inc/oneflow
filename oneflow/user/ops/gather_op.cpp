@@ -17,6 +17,28 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+/*
+Gather Computation Cost 
+= outer_dim_size * num_indices * ( idx + to + from + copy)
+= outer_dim_size * num_indices * ( 1 + 4 + 4 + inner_dim_size )
+= outer_dim_size * num_indices *  9 + outer_dim_size * num_indices * inner_dim_size
+= |indices| * |in（0, axis）| * (9 + |in(axis + 1)|)
+*/
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const int64_t axis = ctx->Attr<int64_t>("axis");
+  double cost = indices->shape().elem_cnt() * in->shape().Count(0, axis) * ( 9  + in->shape().Count(axis+1));
+  if (ctx->SbpParallel4ArgNameAndIndex("in", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+} // namespace
+
 REGISTER_USER_OP("gather")
     .Input("in")
     .Input("indices")
