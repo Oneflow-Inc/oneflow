@@ -22,15 +22,12 @@ limitations under the License.
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::map<std::string, std::shared_ptr<::oneflow::compatible_py::BlobObject>>);
-PYBIND11_MAKE_OPAQUE(
-    std::map<std::string, std::shared_ptr<::oneflow::compatible_py::RegisteredBlobAccess>>);
 
 namespace oneflow {
 
 namespace compatible_py {
 
 using BlobName2Object = std::map<std::string, std::shared_ptr<BlobObject>>;
-using BlobName2Access = std::map<std::string, std::shared_ptr<RegisteredBlobAccess>>;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<BlobName2Object, std::shared_ptr<BlobName2Object>>(m, "BlobName2Object")
@@ -46,23 +43,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                               & BlobName2Object::operator[])
       .def("__iter__",
            [](std::shared_ptr<BlobName2Object>& v) {
-             return py::make_iterator(v->begin(), v->end());
-           },
-           py::keep_alive<0, 1>());
-
-  py::class_<BlobName2Access, std::shared_ptr<BlobName2Access>>(m, "BlobName2Access")
-      .def(py::init<>())
-      .def("__len__", [](const std::shared_ptr<BlobName2Access>& v) { return v->size(); })
-      .def("items",
-           [](std::shared_ptr<BlobName2Access>& v) {
-             return py::make_iterator(v->begin(), v->end());
-           },
-           py::keep_alive<0, 1>())
-      .def("__getitem__", (BlobName2Access::mapped_type
-                           & (BlobName2Access::*)(const BlobName2Access::key_type& pos))
-                              & BlobName2Access::operator[])
-      .def("__iter__",
-           [](std::shared_ptr<BlobName2Access>& v) {
              return py::make_iterator(v->begin(), v->end());
            },
            py::keep_alive<0, 1>());
