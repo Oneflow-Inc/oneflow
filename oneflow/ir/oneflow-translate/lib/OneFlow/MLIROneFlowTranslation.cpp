@@ -238,7 +238,7 @@ LogicalResult Importer::tryToUpdateJob() {
     if (!src) { return; }
     for (int i = 0; i < src.getNumResults(); i++) {
       auto r = src.getResult(i);
-      for (auto use : r.getUsers()) {
+      for (mlir::Value::user_range use : r.getUsers()) {
         oneflow::UserOp dst = llvm::dyn_cast<oneflow::UserOp>(use);
         if (!dst) { return; }
         std::cout << "use:" << src.output_lbns()[i].dyn_cast<StringAttr>().getValue().str() << "\n";
