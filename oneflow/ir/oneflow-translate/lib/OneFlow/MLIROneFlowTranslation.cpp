@@ -246,9 +246,10 @@ int getResultIndex(Value operand, oneflow::UserOp op) {
 }
 
 void dumpUse(oneflow::UserOp src, oneflow::UserOp dst, int operand_idx, int result_idx) {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") == nullptr) { return; }
   std::cout << "use: " << src.output_lbns()[result_idx].dyn_cast<StringAttr>().getValue().str()
             << " -> " << dst.op_nameAttr().getValue().str()
-            << " :: " << dst.input_bns()[operand_idx].dyn_cast<StringAttr>().getValue().str() << "_"
+            << "::" << dst.input_bns()[operand_idx].dyn_cast<StringAttr>().getValue().str() << "_"
             << dst.input_bn_idxAttr()[operand_idx].dyn_cast<IntegerAttr>().getInt() << "\n";
 }
 
