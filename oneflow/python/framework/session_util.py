@@ -85,7 +85,7 @@ class Session(object):
         self._UpdateScopeAttrName2DefaultVal()
         self.instruction_list_ = instr_cfg.InstructionListProto()
         self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
-        self.backward_blob_register_ = blob_register_util.BlobRegister()
+        self.backward_blob_register_ = oneflow_api.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 
@@ -393,9 +393,9 @@ class Session(object):
             self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             self.eager_global_function_desc_stack_.pop(0)
-            keys = list(self.backward_blob_register.blob_name2object.keys())
+            keys = list(dict(self.backward_blob_register.blob_name2object).keys())
             for key in keys:
-                del self.backward_blob_register.blob_name2object[key]
+                self.backward_blob_register.ClearObject4BlobName(key)
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING

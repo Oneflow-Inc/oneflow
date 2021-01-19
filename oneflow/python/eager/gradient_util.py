@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.session_context as session_ctx
 
 
@@ -31,7 +32,7 @@ def ReleaseUnusedBlobObject(op_attribute, blob_register):
             continue
         lbi = bn_in_op2lbi[bn_in_op]
         lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
-        blob_register.ClearObject4BlobName(lbn)
+        blob_register_util.ClearObjectOfBlobRegister4BlobName(blob_register, lbn)
 
 
 def TrySetBackwardUsedBlobObject(op_attribute, fw_blob_register, bw_blob_register):
