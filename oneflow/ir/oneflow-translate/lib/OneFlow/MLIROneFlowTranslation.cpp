@@ -193,51 +193,50 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &device_tag = pc.device_tag();
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   std::vector<NamedAttribute> attr_vec;
-  attr_vec.push_back(b.getNamedAttr("device_tag", b.getStringAttr(device_tag)));
+  attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(device_tag)));
   attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   ArrayRef<NamedAttribute> named_attributes(attr_vec);
   if (failed(operandsFromUserOp(op, operand_vec))) { return failure(); }
   ::mlir::ValueRange operands(operand_vec);
-  if (op_type_name == "constant1") {
-    if (user_conf.attr().at("is_floating_value").at_bool()) {
-      auto fv = b.getFloatAttr(b.getF64Type(), user_conf.attr().at("floating_value").at_double());
-      mlir::Value created =
-          b.create<oneflow::ConstantOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
-                                        b.getStringAttr(op_name), b.getStringAttr(device_tag),
-                                        b.getStrArrayAttr(device_vec), fv)
-              .getResult();
-      const std::string &lbn = user_conf.output().at("out").s(0);
-      lbn2result.insert({lbn, created});
-    } else {
-      // b.create<ConstantOp>(unknownLoc, user_conf.attr().at("integer_value").at_int64());
-    }
-    return success();
+
+  Operation *created_op = nullptr;
+
+  if (op_type_name == "constant") {
+    auto t = user_conf.attr().at("is_floating_value").at_bool()
+                 ? RankedTensorType::get({}, b.getF32Type())
+                 : RankedTensorType::get({}, b.getI32Type());
+    created_op = b.create<oneflow::ConstantOp>(unknownLoc, t, operands, named_attributes);
   } else {
+    auto out_types = llvm::SmallVector<Type, 8>();
+    for (auto kv : op.user_conf().output()) {
+      for (int i = 0; i < kv.second.s_size(); i++) {
+        out_types.append({RankedTensorType::get({}, b.getF32Type())});
+      }
+    }
     OperationState state(unknownLoc, "oneflow." + op_type_name);
     state.addAttributes(named_attributes);
     state.addOperands(operands);
-
-    auto out_types = llvm::SmallVector<Type, 8>();
-    std::vector<StringRef> lbns{};
-    for (auto kv : op.user_conf().output()) {
-      for (const std::string &lbn : kv.second.s()) {
-        out_types.append({RankedTensorType::get({}, b.getF32Type())});
-        lbns.push_back(lbn);
-      }
-    }
     state.addTypes(out_types);
-    auto created = b.createOperation(state);
-    for (auto kv : op.user_conf().output()) {
-      int i = 0;
-      for (const std::string &lbn : kv.second.s()) {
-        lbn2result.insert({lbn, created->getResult(i)});
-        i++;
-      }
-    }
-    return success();
+    created_op = b.createOperation(state);
   }
+
+  if (created_op == nullptr) {
+    module->emitError("fail to create " + op.user_conf().op_type_name()
+                      + " op, name: " + op.name());
+    return failure();
+  }
+
+  for (auto kv : op.user_conf().output()) {
+    int i = 0;
+    for (const std::string &lbn : kv.second.s()) {
+      lbn2result.insert({lbn, created_op->getResult(i)});
+      i++;
+    }
+  }
+
+  return success();
 }  // namespace
 
 LogicalResult Importer::processJob() {
@@ -263,10 +262,11 @@ LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
   auto convertOps = [](Operation *op) {
-    if (op->hasAttr("op_type_name")
-        && op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")) {
-      auto defined = llvm::dyn_cast<oneflow::ReluOp>(op);
-      if (defined) { defined->dump(); }
+    if (op->hasAttr("op_type_name")) {
+      oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
+      if (defined_relu) { defined_relu->dump(); }
+      oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
+      if (defined_const) { defined_const->dump(); }
     }
   };
   module.getBodyRegion().walk(convertOps);
@@ -328,10 +328,10 @@ void RoundTripOneFlowJob(
     applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
     if (failed(imp.tryToUpdateJob())) {
       std::cerr << "fail to update job with IR, job will stay intact, job_name: "
-                << job->job_conf().job_name();
+                << job->job_conf().job_name() << "\n";
     }
   } else {
-    std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
   }
 }
 

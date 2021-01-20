@@ -41,7 +41,10 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
 
 def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
   let summary = "constant";
-  let attrs = (ins F64Attr:$double_value);
+  let attrs = (ins
+    OptionalAttr<F64Attr>:$floating_value,
+    OptionalAttr<I64Attr>:$integer_value
+  );
   let results = (outs F32Tensor);
 }
 
@@ -51,7 +54,8 @@ def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndRe
     let arguments = (
       ins AnyType:$input,
       StrArrayAttr:$input_signature,
-      StrArrayAttr:$output_signature
+      StrArrayAttr:$output_signature,
+      I64ArrayAttr:$shape
     );
     let results = (outs AnyType:$res);
     let assemblyFormat = [{
