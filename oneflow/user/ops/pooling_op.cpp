@@ -110,7 +110,7 @@ GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t 
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
-          builder.Op("maxpool_2d_grad")
+          builder.Op(mode + "pool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
               .Input("y", op.output("y", 0))
               .Input("indice", op.output("indice", 0))
@@ -171,5 +171,44 @@ REGISTER_USER_OP("maxpool_2d_grad")
     .SetGetSbpFn(BackwardGetSbpFn);
 
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 2));
+
+
+REGISTER_USER_OP("maxpool_3d")
+    .Input("x")
+    .Output("y")
+    .Output("indice")
+    .Attr<std::string>("padding")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::vector<int32_t>>("padding_after")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("stride")
+    .Attr<std::vector<int32_t>>("dilation")
+    .Attr<bool>("return_indices")
+    .Attr<bool>("ceil_mode")
+    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(3))
+    .SetBatchAxisInferFn(ForwardBatchAxisInferFn)
+    .SetGetSbpFn(ForwardGetSbpFn);
+
+REGISTER_USER_OP("maxpool_3d_grad")
+    .Input("x")
+    .Input("y")
+    .Input("indice")
+    .Input("dy")
+    .Output("dx")
+    .Attr<std::string>("padding")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::vector<int32_t>>("padding_after")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("stride")
+    .Attr<std::vector<int32_t>>("dilation")
+    .Attr<bool>("return_indices")
+    .Attr<bool>("ceil_mode")
+    .SetTensorDescInferFn(BackwardTensorDescInferFn)
+    .SetBatchAxisInferFn(BackwardBatchAxisInferFn)
+    .SetGetSbpFn(BackwardGetSbpFn);
+
+REGISTER_USER_OP_GRAD("maxpool_3d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 3));
 
 }  // namespace oneflow
