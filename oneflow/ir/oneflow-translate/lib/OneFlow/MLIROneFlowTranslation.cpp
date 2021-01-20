@@ -42,15 +42,6 @@ Attribute createEmptyDictionaryAttr(Builder &builder) { return builder.getDictio
   return operands;
 }
 
-Value replaceGenericUserOp(mlir::PatternRewriter &rewriter,
-                           ::mlir::Operation::operand_range operands, ::mlir::StringAttr op_name,
-                           ::mlir::StringAttr op_type_name, ::mlir::DictionaryAttr attr) {
-  auto unknownLoc = FileLineColLoc::get("imported-protobuf", 0, 0, rewriter.getContext());
-  mlir::Value created =
-      rewriter.create<oneflow::ReluOp>(unknownLoc, operands[0], op_name).getResult();
-  return created;
-}
-
 using PbMessage = google::protobuf::Message;
 
 class Importer {
@@ -145,6 +136,20 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
       return failure();
     }
   }
+
+  std::vector<NamedAttribute> inputs;
+  for (auto input : op.user_conf().input()) {
+    std::vector<llvm::StringRef> lbns = {input.second.s().begin(), input.second.s().end()};
+    inputs.push_back(b.getNamedAttr(input.first, b.getStrArrayAttr(lbns)));
+  }
+  attr_vec.push_back(b.getNamedAttr("input", b.getDictionaryAttr(inputs)));
+
+  std::vector<NamedAttribute> outputs;
+  for (auto output : op.user_conf().output()) {
+    std::vector<llvm::StringRef> lbns = {output.second.s().begin(), output.second.s().end()};
+    outputs.push_back(b.getNamedAttr(output.first, b.getStrArrayAttr(lbns)));
+  }
+  attr_vec.push_back(b.getNamedAttr("output", b.getDictionaryAttr(outputs)));
   return success();
 }
 
@@ -201,7 +206,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       // b.create<ConstantOp>(unknownLoc, user_conf.attr().at("integer_value").at_int64());
     }
     return success();
-  } else if (op_type_name == "relu") {
+  } else {
     OperationState state(unknownLoc, "oneflow." + op_type_name);
     state.addAttributes(named_attributes);
     state.addOperands(operands);
@@ -223,47 +228,6 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         i++;
       }
     }
-    return success();
-  } else {
-    std::vector<StringRef> ibn_vec;
-    std::vector<int> ibn_idx_vec;
-
-    for (auto kv : op.user_conf().input()) {
-      // TODO: declare tensor containing field lbi
-      const std::string &ibn = kv.first;
-      for (int i = 0; i < kv.second.s_size(); i++) {
-        const std::string &lbn = kv.second.s(i);
-        if (lbn2result.find(lbn) != lbn2result.end()) {
-          auto v = lbn2result.at(lbn);
-          ibn_vec.push_back(ibn);
-          ibn_idx_vec.push_back(i);
-        } else {
-          // TODO: add placehorder ops for tick inputs
-        }
-      }
-    }
-    auto out_types = llvm::SmallVector<Type, 8>();
-    std::vector<StringRef> lbns{};
-    for (auto kv : op.user_conf().output()) {
-      for (const std::string &lbn : kv.second.s()) {
-        out_types.append({RankedTensorType::get({}, b.getF32Type())});
-        lbns.push_back(lbn);
-      }
-    }
-    auto created = b.create<oneflow::UserOp>(
-        unknownLoc, out_types, operands, b.getStringAttr(op_name), b.getStringAttr(device_tag),
-        placement, b.getStringAttr(op_type_name), b.getDictionaryAttr(named_attributes),
-        b.getStrArrayAttr(ArrayRef<StringRef>(ibn_vec)),
-        b.getI32ArrayAttr(ArrayRef<int>(ibn_idx_vec)),
-        b.getStrArrayAttr(ArrayRef<StringRef>(lbns)));
-    for (auto kv : op.user_conf().output()) {
-      int i = 0;
-      for (const std::string &lbn : kv.second.s()) {
-        lbn2result.insert({lbn, created.getResult(i)});
-        i++;
-      }
-    }
-
     return success();
   }
 }  // namespace
@@ -287,42 +251,10 @@ LogicalResult Importer::processJob() {
   return success();
 }
 
-int getOperandIndex(Value operand, oneflow::UserOp op) {
-  for (int i = 0; i < op->getNumOperands(); i++) {
-    if (op->getOperand(i) == operand) { return i; }
-  }
-  return -1;
-}
-
-int getResultIndex(Value operand, oneflow::UserOp op) {
-  for (int i = 0; i < op.getNumResults(); i++) {
-    if (op.getResult(i) == operand) { return i; }
-  }
-  return -1;
-}
-
-void dumpUse(oneflow::UserOp src, oneflow::UserOp dst, int operand_idx, int result_idx) {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") == nullptr) { return; }
-  std::cout << "use: " << src.output_lbns()[result_idx].dyn_cast<StringAttr>().getValue().str()
-            << " -> " << dst.op_nameAttr().getValue().str()
-            << "::" << dst.input_bns()[operand_idx].dyn_cast<StringAttr>().getValue().str() << "_"
-            << dst.input_bn_idxAttr()[operand_idx].dyn_cast<IntegerAttr>().getInt() << "\n";
-}
-
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
-  auto dumpOps = [](Operation *op) {
-    oneflow::UserOp dst = llvm::dyn_cast<oneflow::UserOp>(op);
-    if (!dst) { return; }
-    for (int operand_idx = 0; operand_idx < dst.getNumOperands(); operand_idx++) {
-      auto o = dst->getOperand(operand_idx);
-      oneflow::UserOp src = llvm::dyn_cast<oneflow::UserOp>(o.getDefiningOp());
-      if (!src) { return; }
-      const int result_idx = getResultIndex(o, src);
-      dumpUse(src, dst, operand_idx, result_idx);
-    }
-  };
+  auto dumpOps = [](Operation *op) {};
   module.getBodyRegion().walk(dumpOps);
   return success();
 }

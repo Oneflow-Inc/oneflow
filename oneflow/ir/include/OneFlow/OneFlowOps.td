@@ -75,18 +75,6 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsA
     }];
 }
 
-def OneFlow_UserOp : OneFlow_Op<"user", []> {
-    let data_in = (ins Variadic<AnyType>:$operands);
-    let attrs = (ins
-        StrAttr:$op_type_name,
-        DictionaryAttr:$attr,
-        StrArrayAttr:$input_bns,
-        ArrayAttr:$input_bn_idx,
-        StrArrayAttr:$output_lbns
-    );
-    let results = (outs Variadic<AnyType>:$outputs);
-}
-
 def OneFlow_PlaceholderOp : OneFlow_Op<"NoOp", [NoSideEffect]> {
   let summary = "Placeholder for ops with control edge or foreign input, etc";
   let data_in = (ins Variadic<AnyType>:$operands);
