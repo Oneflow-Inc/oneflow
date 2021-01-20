@@ -1595,7 +1595,7 @@ def MaxPool1d(
          Different from nn.max_pool1d, nn.MaxPool2d supports more params e.g. dilation,return_indices.
 
     Args:
-        input (remote_blob_util.BlobDesc): A 4-D `Blob` of the format specified by data_format.
+        input (remote_blob_util.BlobDesc): A 3-D `Blob` of the format specified by data_format.
         kernel_size (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
         stride (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
         padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm.
@@ -1607,6 +1607,71 @@ def MaxPool1d(
 
     Returns:
         remote_blob_util.BlobDesc:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+        import numpy as np
+
+        input_shape = (2, 2, 4)
+        @flow.global_function(type="train", function_config=func_config)
+        def maxpool1d_job_with_grad(
+            input_x: tp.Numpy.Placeholder(input_shape),
+        ) -> Tuple[tp.Numpy, tp.Numpy]:
+            x_var = flow.get_variable(
+                name="input_x",
+                shape=input_shape,
+                dtype=flow.float32,
+                initializer=flow.constant_initializer(0),
+                trainable=True,
+            )
+            x_var = flow.cast_to_current_logical_view(x_var)
+            flow.watch_diff(x_var, Setter("x_diff"))
+            x = x_var + input_x
+            # x = flow.cast(x, dtype=flow.int32)
+            with flow.scope.placement("cpu", "0:0"):
+                (y, indice) = flow.nn.MaxPool1d(
+                    x,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    dilation=1,
+                    return_indices=True,
+                    ceil_mode=False,
+                    data_format="NCHW",
+                )
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+                ).minimize(y)
+            return (y, indice)
+
+        x = np.arange(16).reshape(input_shape).astype(np.float32)
+        y, indice = maxpool1d_job(x)
+        print("in:\n", x, "\ny:\n", y, "\nindice:\n", indice)
+
+        # x:
+        # [[[ 0.  1.  2.  3.]
+        # [ 4.  5.  6.  7.]]
+
+        # [[ 8.  9. 10. 11.]
+        # [12. 13. 14. 15.]]] 
+        # y:
+        # [[[ 1.  3.]
+        # [ 5.  7.]]
+
+        # [[ 9. 11.]
+        # [13. 15.]]] 
+        # indice:
+        # [[[1 3]
+        # [1 3]]
+
+        # [[1 3]
+        # [1 3]]]
+
     """
     assert data_format in ["NCHW"]
     channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
@@ -1735,11 +1800,11 @@ def MaxPool2d(
         #[29. 31.]]]] 
 
         #indice:
-        #[[[[ 5.  7.]
-        #[13. 15.]]
+        #[[[[5  7]
+        #[13 15]]
 
-        #[[ 5.  7.]
-        #[13. 15.]]]]
+        #[[5  7]
+        #[13 15]]]]
 
     """
     assert data_format in ["NCHW"]
