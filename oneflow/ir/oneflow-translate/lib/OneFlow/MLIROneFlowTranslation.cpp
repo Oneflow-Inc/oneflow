@@ -150,6 +150,10 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     outputs.push_back(b.getNamedAttr(output.first, b.getStrArrayAttr(lbns)));
   }
   attr_vec.push_back(b.getNamedAttr("output", b.getDictionaryAttr(outputs)));
+
+  attr_vec.push_back(
+      b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
+
   return success();
 }
 
