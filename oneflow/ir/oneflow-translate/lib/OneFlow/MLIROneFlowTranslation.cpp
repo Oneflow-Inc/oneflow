@@ -2,6 +2,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
@@ -154,6 +155,8 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
   attr_vec.push_back(
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
 
+  attr_vec.push_back(b.getNamedAttr("name", b.getStringAttr(op.name())));
+
   return success();
 }
 
@@ -258,8 +261,14 @@ LogicalResult Importer::processJob() {
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
-  auto dumpOps = [](Operation *op) {};
-  module.getBodyRegion().walk(dumpOps);
+  auto convertOps = [](Operation *op) {
+    if (op->hasAttr("op_type_name")
+        && op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")) {
+      auto defined = llvm::dyn_cast<oneflow::ReluOp>(op);
+      if (defined) { defined->dump(); }
+    }
+  };
+  module.getBodyRegion().walk(convertOps);
   return success();
 }
 
