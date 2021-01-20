@@ -1,9 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/user/image/image_util.h"
-#include <opencv2/opencv.hpp>
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 namespace {
@@ -14,13 +23,13 @@ class DiagKernel final : public user_op::OpKernel {
         ~DiagKernel() = default;
     private:
         void Compute(user_op::KernelComputeContext *ctx) const override {
-            std::cout << "*****************diag_kernel****************" << std::endl;
             const int32_t dimension = ctx->Attr<int32_t>("dimension");
             const user_op::Tensor *in_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
             user_op::Tensor *out_tensor = ctx->Tensor4ArgNameAndIndex("diag_out", 0);
             const ShapeView& out_shape = out_tensor->shape();
             const ShapeView& in_shape = in_tensor->shape();
             int32_t in_dim = in_shape.NumAxes();
+
             Memset<device_type>(ctx->device_ctx(), out_tensor->mut_dptr(), 0,
                         out_shape.elem_cnt() * sizeof(T));
 
@@ -31,9 +40,9 @@ class DiagKernel final : public user_op::OpKernel {
             if (in_dim == 1) {
                 int32_t stride_0 = out_shape.At(1);
                 int32_t stride_1 = 1;
-                
+                int32_t input_cnt = in_shape.elem_cnt();
                 out_buf += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
-                for (int32_t i = 0; i < in_dim; i++) {
+                for (int32_t i = 0; i < input_cnt; i++) {
                     out_buf[i * (stride_0 + stride_1)] = in_buf[i];
                 }
             } else {
@@ -81,6 +90,7 @@ class DiagGradKernel final : public user_op::OpKernel {
         if (in_dim == 1) {
             int32_t stride_1 = 1;
             int32_t stride_0 = dy_shape.At(1);
+            
             dy_buf += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
             for (int32_t i = 0; i < dx_num_cnt; i++) {
                     dx_buf[i] = dy_buf[i *  (stride_0 + stride_1)];
@@ -88,10 +98,7 @@ class DiagGradKernel final : public user_op::OpKernel {
         } else {
                 int32_t stride_0 = dx_shape.At(1);
                 int32_t stride_1 = 1;
-                for (int32_t i = 0; i < dx_num_cnt; i++) {
-                    dx_buf[i] = 0;
-                }
-
+                dx_buf += (dimension >= 0 ? dimension*stride_1 : -dimension*stride_0);
                 for (int32_t i = 0; i < dy_num_cnt; i++) {
                     dx_buf[i * (stride_0 + stride_1)] = dy_buf[i];
                 }   
