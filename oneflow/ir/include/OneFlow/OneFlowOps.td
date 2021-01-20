@@ -15,9 +15,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // TODO: Define SBP attribute type
 // TODO: OneFlow_Op should has a placement attribute
 
-// Replace i64 arr with shape arr in op
-class OneFlow_ShapeAttr: TypedArrayAttrBase<I64Attr, "">;
-
 class OneFlow_Blob<list<Type> allowedTypes> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], "">;
 

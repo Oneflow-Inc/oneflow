@@ -191,9 +191,10 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &op_name = op.name();
   const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op_name);
   const std::string &device_tag = pc.device_tag();
-  std::vector<llvm::StringRef> dv = {pc.device_name().begin(), pc.device_name().end()};
-  mlir::ArrayAttr placement = b.getStrArrayAttr(dv);
+  std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   std::vector<NamedAttribute> attr_vec;
+  attr_vec.push_back(b.getNamedAttr("device_tag", b.getStringAttr(device_tag)));
+  attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   ArrayRef<NamedAttribute> named_attributes(attr_vec);
@@ -205,7 +206,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       mlir::Value created =
           b.create<oneflow::ConstantOp>(unknownLoc, RankedTensorType::get({}, b.getF32Type()),
                                         b.getStringAttr(op_name), b.getStringAttr(device_tag),
-                                        placement, fv)
+                                        b.getStrArrayAttr(device_vec), fv)
               .getResult();
       const std::string &lbn = user_conf.output().at("out").s(0);
       lbn2result.insert({lbn, created});
