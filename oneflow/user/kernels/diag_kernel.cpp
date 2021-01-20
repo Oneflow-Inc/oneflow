@@ -1,10 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/user/image/image_util.h"
-#include <opencv2/opencv.hpp>
-
+#include "oneflow/core/kernel/kernel_util.h"
 namespace oneflow {
 namespace {
 template <DeviceType device_type, typename T>   
@@ -14,7 +22,6 @@ class DiagKernel final : public user_op::OpKernel {
         ~DiagKernel() = default;
     private:
         void Compute(user_op::KernelComputeContext *ctx) const override {
-            std::cout << "*****************diag_kernel****************" << std::endl;
             const int32_t dimension = ctx->Attr<int32_t>("dimension");
             const user_op::Tensor *in_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
             user_op::Tensor *out_tensor = ctx->Tensor4ArgNameAndIndex("diag_out", 0);
@@ -75,7 +82,6 @@ class DiagGradKernel final : public user_op::OpKernel {
         int32_t dx_num_cnt = dx_shape.Count(0);
         T* dx_buf =  dx->mut_dptr<T>();
         const T* dy_buf = dy->dptr<T>();
-        std::cout << "*****************diag_op_grad_kernel****************" << std::endl;
 
         Memset<DeviceType::kCPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
                              dx_shape.elem_cnt() * sizeof(T));
