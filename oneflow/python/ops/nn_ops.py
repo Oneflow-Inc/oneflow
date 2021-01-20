@@ -1427,7 +1427,6 @@ def tf_conv2d(
         input, filters, strides, padding, data_format, dilations, groups, name
     )
 
-
 @oneflow_export("nn.bias_add")
 def bias_add(
     value: oneflow_api.BlobDesc,
@@ -1578,6 +1577,86 @@ def calc_pool_padding(padding, dhw_offset, ndims):
     return padding_type, ndim_pads_list
 
 
+
+
+@oneflow_export("nn.MaxPool1d")
+def MaxPool1d(
+    input: oneflow_api.BlobDesc,
+    kernel_size: Union[int, IntPair],
+    stride: Union[int, IntPair],
+    padding: Union[str, IntPair],
+    dilation: Union[int, IntPair] = 1,
+    return_indices: bool = False,
+    ceil_mode: bool = False,
+    data_format: str = "NCHW",
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r""" Performs the 1d-max pooling on the input `Blob`.
+         Different from nn.max_pool1d, nn.MaxPool2d supports more params e.g. dilation,return_indices.
+
+    Args:
+        input (remote_blob_util.BlobDesc): A 4-D `Blob` of the format specified by data_format.
+        kernel_size (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
+        stride (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or Tuple[IntPair, IntPair, IntPair, IntPair]`. The padding algorithm.
+        dilation (Union[int, IntPair]): a parameter that controls the stride of elements in the window.
+        return_indices (bool): if True, will return the max indices along with the outputs.
+        ceil_mode (bool): when True, will use ceil instead of floor to compute the output shape.
+        data_format (str, optional): '`NHWC'`, '`NCHW'` or '`NCHW_VECT_C'`. Defaults to "NCHW", for now only supporr 'NCHW'.
+        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDesc:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    """
+    assert data_format in ["NCHW"]
+    channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+    kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
+    dilation = _GetSequence(dilation, 2, "dilation")
+    stride = _GetSequence(stride, 2, "stride")
+    assert padding>=0 or padding in ["SAME", "VALID"]
+    if padding>=0:
+        if data_format == "NCHW":
+            padding = (0, 0, padding, padding)
+        elif data_format == "NHWC":
+            padding = (0, padding, padding, 0)
+        else:
+            raise ValueError('data_format must be "NHWC" or "NCHW".')
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+    padding_before = [pad[0] for pad in pads_list]
+    padding_after = [pad[1] for pad in pads_list]
+
+    expand_input = flow.expand_dims(input=input, axis=2)
+    assert len(pads_list) == len(expand_input.shape) - 2
+    y, indice = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("MaxPool1d_")
+        )
+        .Op("maxpool_2d")
+        .Input("x", [expand_input])
+        .Output("y")
+        .Output("indice")
+        .Attr("data_format", channel_pos)
+        .Attr("stride", stride)
+        .Attr("kernel_size", kernel_size)
+        .Attr("padding", padding_type)
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("dilation", dilation)
+        .Attr("return_indices", return_indices)
+        .Attr("ceil_mode", ceil_mode)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    y = flow.squeeze(y, axis=(2,))
+    indice = flow.squeeze(indice, axis=(2,))
+    if return_indices == True:
+        return y, indice
+    else:
+        return y
+
+
+
 @oneflow_export("nn.MaxPool2d")
 def MaxPool2d(
     input: oneflow_api.BlobDesc,
@@ -1679,6 +1758,7 @@ def MaxPool2d(
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
+    print("MaxPool2d >>>>>>>>>>>>>>>>>>>>>len(pads_list), len(input.shape) >>>>>>>>>>>>>>>>>>>>>>>>>", len(pads_list), len(input.shape))
     assert len(pads_list) == len(input.shape) - 2
     y, indice = (
         flow.user_op_builder(
