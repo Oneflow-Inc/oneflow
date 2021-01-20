@@ -54,9 +54,11 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     *y_desc = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
 
-    Shape* indice_shape = ctx->Shape4ArgNameAndIndex("indice", 0);
-    Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-    *indice_shape = *y_shape;
+    user_op::TensorDesc* indice_desc = ctx->TensorDesc4ArgNameAndIndex("indice", 0);
+    *indice_desc = *ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    *indice_desc->mut_shape() = *y_desc->mut_shape();
+    DataType* dtype = indice_desc->mut_data_type();
+    *dtype = kInt64;
     return Maybe<void>::Ok();
   };
 }

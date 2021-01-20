@@ -85,7 +85,7 @@ struct PoolKernelState final : public user_op::OpKernelState {
 template<DeviceType device_type, typename T>
 struct PoolingKernelUtil {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                               const int64_t elem_num, const T* src, T* dest, T* indice_ptr,
+                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const std::vector<int32_t> padding_before, const int64_t n_batch,
                                const int64_t n_channel, const int64_t x_height,
                                const int64_t x_width, const int64_t y_height, const int64_t y_width,
@@ -95,21 +95,23 @@ struct PoolingKernelUtil {
                                const bool ceil_mode);
 
   static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                                const int64_t elem_num, const T* src, T* dest, const T* indice_ptr,
-                                const int64_t n_batch, const int64_t n_channel,
-                                const int64_t src_height, const int64_t src_width,
-                                const int64_t dst_height, const int64_t dst_width,
-                                const bool return_indices, const bool ceil_mode);
+                                const int64_t elem_num, const T* src, T* dest,
+                                const int64_t* indice_ptr, const int64_t n_batch,
+                                const int64_t n_channel, const int64_t src_height,
+                                const int64_t src_width, const int64_t dst_height,
+                                const int64_t dst_width, const bool return_indices,
+                                const bool ceil_mode);
 };
 
 template<typename T>
 OF_DEVICE_FUNC void FarwardCompute(
     const NdIndexOffsetHelper<int64_t, 4> index_helper, int64_t elem_num, T maxval, const T* src,
-    T* dest, T* indice_ptr, const int32_t padding_h, const int32_t padding_w, const int64_t n_batch,
-    const int64_t n_channel, const int64_t x_height, const int64_t x_width, const int64_t y_height,
-    const int64_t y_width, const int32_t kernel_size_h, const int32_t kernel_size_w,
-    const int32_t stride_h, const int32_t stride_w, const int32_t dilation_h,
-    const int32_t dilation_w, const bool return_indices, const bool ceil_mode) {
+    T* dest, int64_t* indice_ptr, const int32_t padding_h, const int32_t padding_w,
+    const int64_t n_batch, const int64_t n_channel, const int64_t x_height, const int64_t x_width,
+    const int64_t y_height, const int64_t y_width, const int32_t kernel_size_h,
+    const int32_t kernel_size_w, const int32_t stride_h, const int32_t stride_w,
+    const int32_t dilation_h, const int32_t dilation_w, const bool return_indices,
+    const bool ceil_mode) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     int64_t n, c, h, w, coords[4] = {0};
     index_helper.OffsetToNdIndex(num, coords);
@@ -123,8 +125,6 @@ OF_DEVICE_FUNC void FarwardCompute(
     int64_t ip = xstart + c * x_width * x_height;
     int64_t hstart = h * stride_h - padding_h;
     int64_t wstart = w * stride_w - padding_w;
-    /* int64_t hend = std::min(hstart + (kernel_size_h-1)*dilation_h + 1, x_height); */
-    /* int64_t wend = std::min(wstart + (kernel_size_w-1)*dilation_w + 1, x_width); */
     int64_t hend, wend;
     if ((hstart + (kernel_size_h - 1) * dilation_h + 1) <= x_height) {
       hend = (hstart + (kernel_size_h - 1) * dilation_h + 1);
@@ -170,7 +170,7 @@ OF_DEVICE_FUNC void FarwardCompute(
 template<typename T>
 OF_DEVICE_FUNC void BackwardCompute(const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                     const int64_t elem_num, const T* src, T* dest,
-                                    const T* indice_ptr, const int64_t n_batch,
+                                    const int64_t* indice_ptr, const int64_t n_batch,
                                     const int64_t n_channel, const int64_t src_height,
                                     const int64_t src_width, const int64_t dst_height,
                                     const int64_t dst_width, const bool return_indices,

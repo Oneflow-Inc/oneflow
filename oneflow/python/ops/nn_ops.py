@@ -1431,6 +1431,7 @@ def tf_conv2d(
         input, filters, strides, padding, data_format, dilations, groups, name
     )
 
+
 @oneflow_export("nn.bias_add")
 def bias_add(
     value: oneflow_api.BlobDesc,
@@ -1581,8 +1582,6 @@ def calc_pool_padding(padding, dhw_offset, ndims):
     return padding_type, ndim_pads_list
 
 
-
-
 @oneflow_export("nn.MaxPool1d")
 def MaxPool1d(
     input: oneflow_api.BlobDesc,
@@ -1682,8 +1681,8 @@ def MaxPool1d(
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
     dilation = _GetSequence(dilation, 2, "dilation")
     stride = _GetSequence(stride, 2, "stride")
-    assert padding>=0 or padding in ["SAME", "VALID"]
-    if padding>=0:
+    assert padding >= 0 or padding in ["SAME", "VALID"]
+    if padding >= 0:
         if data_format == "NCHW":
             padding = (0, 0, padding, padding)
         elif data_format == "NHWC":
@@ -1723,7 +1722,6 @@ def MaxPool1d(
         return y, indice
     else:
         return y
-
 
 
 @oneflow_export("nn.MaxPool2d")
@@ -1827,7 +1825,11 @@ def MaxPool2d(
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-    print("MaxPool2d >>>>>>>>>>>>>>>>>>>>>len(pads_list), len(input.shape) >>>>>>>>>>>>>>>>>>>>>>>>>", len(pads_list), len(input.shape))
+    print(
+        "MaxPool2d >>>>>>>>>>>>>>>>>>>>>len(pads_list), len(input.shape) >>>>>>>>>>>>>>>>>>>>>>>>>",
+        len(pads_list),
+        len(input.shape),
+    )
     assert len(pads_list) == len(input.shape) - 2
     y, indice = (
         flow.user_op_builder(

@@ -34,7 +34,7 @@ DimVector ShapeViewToDimVector(const ShapeView& tensor_shape) {
 template<typename T>
 struct PoolingKernelUtil<DeviceType::kCPU, T> {
   static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                               const int64_t elem_num, const T* src, T* dest, T* indice_ptr,
+                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const std::vector<int32_t> padding_before, const int64_t n_batch,
                                const int64_t n_channel, const int64_t x_height,
                                const int64_t x_width, const int64_t y_height, const int64_t y_width,
@@ -50,17 +50,16 @@ struct PoolingKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                                const int64_t elem_num, const T* src, T* dest, const T* indice_ptr,
-                                const int64_t n_batch, const int64_t n_channel,
-                                const int64_t src_height, const int64_t src_width,
-                                const int64_t dst_height, const int64_t dst_width,
-                                const bool return_indices, const bool ceil_mode) {
+                                const int64_t elem_num, const T* src, T* dest,
+                                const int64_t* indice_ptr, const int64_t n_batch,
+                                const int64_t n_channel, const int64_t src_height,
+                                const int64_t src_width, const int64_t dst_height,
+                                const int64_t dst_width, const bool return_indices,
+                                const bool ceil_mode) {
     BackwardCompute<T>(index_helper, elem_num, src, dest, indice_ptr, n_batch, n_channel,
                        src_height, src_width, dst_height, dst_width, return_indices, ceil_mode);
   }
 };
-
-// namespace user_op{
 
 template<DeviceType device_type, typename T>
 class MaxPool2dKernel final : public user_op::OpKernel {
@@ -106,7 +105,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
 
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
-    T* indice_ptr = indice->mut_dptr<T>();
+    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
     DimVector y_vector = ShapeViewToDimVector(y->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
@@ -160,7 +159,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     const int64_t elem_num = dy->shape().elem_cnt();
 
     const T* src = dy->dptr<T>();
-    const T* indice_ptr = indice->dptr<T>();
+    const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
     DimVector dy_vector = ShapeViewToDimVector(dy->shape());
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
@@ -195,8 +194,6 @@ REGISTER_POOLING_WITH_DEVICE(DeviceType::kCPU)
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kGPU)
 // REGISTER_POOLING_KERNELS(DeviceType::kGPU, float16)
 #endif
-
-//}  // namespace user_op
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kCPU),
                                  POOLING_DATA_TYPE_CPU_SEQ);
