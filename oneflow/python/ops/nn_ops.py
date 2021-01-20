@@ -734,6 +734,10 @@ def conv3d(
     if need_transpose:
         input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
         filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+        # padding for `NDHWC` is [0, 0, 1, 1, 1] to `NCDHW` format [0, 1, 1, 1, 0]
+        if isinstance(padding, (list, tuple)):
+            padding = list(padding)
+            padding[1], padding[4] = padding[4], padding[1]
 
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
@@ -3366,7 +3370,7 @@ def hard_sigmoid(
 
         @flow.global_function()
         def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            out = flow.math.hardsigmoid(x)
+            out = flow.nn.hardsigmoid(x)
 
             return out
 
@@ -3462,6 +3466,8 @@ def swish(
         @flow.global_function()
         def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
             return flow.nn.swish(x)
+
+
         x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
 
 

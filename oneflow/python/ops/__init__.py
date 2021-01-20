@@ -81,8 +81,8 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     op_attribute = add_and_infer(op_conf, scope)
 
     def BuildInstruction(builder):
-        get_blob_scope = blob_register.BnInOp2BlobObjectScope
-        with get_blob_scope(op_attribute) as bn_in_op2blob_object:
+        get_blob_scope = blob_register_util.BnInOp2BlobObjectScope
+        with get_blob_scope(blob_register, op_attribute) as bn_in_op2blob_object:
             builder.StatelessCall(
                 op_attribute,
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
