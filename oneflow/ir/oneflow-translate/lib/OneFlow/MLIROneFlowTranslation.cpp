@@ -330,6 +330,7 @@ LogicalResult Importer::processJob() {
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
+  std::string err_str = "";
   auto convertOps = [&](Operation *op) {
     if (/* user op */ op->hasAttr("op_type_name")) {
       oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
@@ -343,13 +344,25 @@ LogicalResult Importer::tryToUpdateJob() {
         std::string key = id.str();
         auto attr = id_attr.second;
         auto user_attr = ::oneflow::AttrValue();
-        if (auto str_ref = attr.dyn_cast<StringAttr>()) {
-          user_attr.set_at_string(str_ref.getValue().str());
-        } else if (auto i_ref = attr.dyn_cast<IntegerAttr>()) {
-          if (i_ref.getType() == b.getIntegerType(64)) {
-            user_attr.set_at_int64(i_ref.getInt());
-          } else if (i_ref.getType() == b.getIntegerType(32)) {
-            user_attr.set_at_int32(i_ref.getInt());
+        if (auto ref = attr.dyn_cast<IntegerAttr>()) {
+          if (ref.getType() == b.getIntegerType(32)) {
+            user_attr.set_at_int32(ref.getInt());
+          } else if (ref.getType() == b.getIntegerType(64)) {
+            user_attr.set_at_int64(ref.getInt());
+          } else {
+            err_str = "fail to convert op attr, key: " + key;
+          }
+        } else if (auto ref = attr.dyn_cast<BoolAttr>()) {
+          user_attr.set_at_bool(ref.getValue());
+        } else if (auto ref = attr.dyn_cast<StringAttr>()) {
+          user_attr.set_at_string(ref.getValue().str());
+        } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
+          if (ref.getType() == b.getF32Type()) {
+            user_attr.set_at_float(ref.getValue().convertToFloat());
+          } else if (ref.getType() == b.getF64Type()) {
+            user_attr.set_at_double(ref.getValue().convertToDouble());
+          } else {
+            err_str = "fail to convert op attr, key: " + key;
           }
         }
         (*user_conf->mutable_attr())[key] = user_attr;
@@ -357,7 +370,12 @@ LogicalResult Importer::tryToUpdateJob() {
     }
   };
   module.getBodyRegion().walk(convertOps);
-  return success();
+  if (err_str.empty()) {
+    return success();
+  } else {
+    module->emitError(err_str);
+    return failure();
+  }
 }
 
 void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
