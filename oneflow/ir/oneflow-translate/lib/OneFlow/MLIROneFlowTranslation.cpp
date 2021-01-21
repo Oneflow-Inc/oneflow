@@ -77,7 +77,7 @@ class Importer {
   ModuleOp module;
   /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
   Location unknownLoc;
-  std::unordered_map<std::string, mlir::Value> lbn2result;
+  std::unordered_map<std::string, mlir::Value> lbn2result_;
   const ::oneflow::Job *job;
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
@@ -192,8 +192,8 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
     // TODO: declare tensor containing field lbi
     for (int i = 0; i < kv.second.s_size(); i++) {
       const std::string &lbn = kv.second.s(i);
-      if (lbn2result.find(lbn) != lbn2result.end()) {
-        auto v = lbn2result.at(lbn);
+      if (lbn2result_.find(lbn) != lbn2result_.end()) {
+        auto v = lbn2result_.at(lbn);
         operand_vec.push_back(v);
       } else {
         // TODO: add placehorder ops for tick inputs
@@ -253,7 +253,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   for (auto kv : op.user_conf().output()) {
     int i = 0;
     for (const std::string &lbn : kv.second.s()) {
-      lbn2result.insert({lbn, created_op->getResult(i)});
+      lbn2result_.insert({lbn, created_op->getResult(i)});
       i++;
     }
   }
@@ -281,8 +281,8 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
-    if (lbn2result.find(input_lbn) != lbn2result.end()) {
-      auto v = lbn2result.at(input_lbn);
+    if (lbn2result_.find(input_lbn) != lbn2result_.end()) {
+      auto v = lbn2result_.at(input_lbn);
       operand_vec.push_back(v);
     }
   }
@@ -295,7 +295,7 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   auto created_op = b.createOperation(state);
   for (auto output_lbn : output_lbns) {
     int i = 0;
-    lbn2result.insert({output_lbn, created_op->getResult(i)});
+    lbn2result_.insert({output_lbn, created_op->getResult(i)});
     i++;
   }
   if (!created_op) {
@@ -329,99 +329,99 @@ LogicalResult Importer::processJob() {
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
-  auto convertOps =
-      [](Operation *op) {
-        if (/* user op */ op->hasAttr("op_type_name")) {
-          oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
-          if (defined_relu) { defined_relu->dump(); }
-          oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
-          if (defined_const) { defined_const->dump(); }
-          ::oneflow::OperatorConf op_conf;
-          auto user_conf = op_conf.mutable_user_conf();
-          for (auto id_attr : op->getAttrDictionary()) {
-            auto id = id_attr.first;
-            std::string key = id.str();
-            auto attr = id_attr.second;
-            if (auto str_ref = attr.dyn_cast<StringAttr>()) {
-              auto attr = ::oneflow::AttrValue();
-              attr.set_at_string(str_ref.getValue().str());
-              (*user_conf->mutable_attr())[key] = attr;
+  auto convertOps = [](Operation *op) {
+    if (/* user op */ op->hasAttr("op_type_name")) {
+      oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
+      if (defined_relu) { defined_relu->dump(); }
+      oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
+      if (defined_const) { defined_const->dump(); }
+      ::oneflow::OperatorConf op_conf;
+      auto user_conf = op_conf.mutable_user_conf();
+      for (auto id_attr : op->getAttrDictionary()) {
+        auto id = id_attr.first;
+        std::string key = id.str();
+        auto attr = id_attr.second;
+        if (auto str_ref = attr.dyn_cast<StringAttr>()) {
+          auto attr = ::oneflow::AttrValue();
+          attr.set_at_string(str_ref.getValue().str());
+          (*user_conf->mutable_attr())[key] = attr;
 
-            } else /* system op */
-            {
-            }
-          };
-          module.getBodyRegion().walk(convertOps);
-          return success();
+        } else /* system op */
+        {
         }
-
-        void applyRoundTripPatterns(MLIRContext * context, OwningModuleRef & module, bool debug) {
-          if (debug) {
-            std::cout << "import:\n";
-            module->dump();
-          }
-
-          OwningRewritePatternList import_patterns;
-          auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(import_patterns));
-          if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
-          if (debug) {
-            std::cout << "optimized:\n";
-            module->dump();
-          }
-
-          OwningRewritePatternList export_patterns;
-          if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
-            module->emitError("Failed to export user ops");
-          }
-
-          if (debug) {
-            std::cout << "to export:\n";
-            module->dump();
-          }
-        }
-
-        // Move this into another cpp which will be another target
-        OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext * context) {
-          std::string cpp_str = str.str();
-          ::oneflow::Job job;
-          google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
-          context->loadDialect<oneflow::OneFlowDialect>();
-          context->loadDialect<StandardOpsDialect>();
-          // Reimplement the logic after this function is moved to a independent target
-          OwningModuleRef module(
-              ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
-          return module;
-        }
-      }  // namespace
-
-  void
-  RoundTripOneFlowJob(
-      RoundTripOneFlowJobWrapperInterface & job_wrapper,
-      std::function<bool(::oneflow::Job * job, std::string & reason)> is_legit_job) {
-    const ::oneflow::Job *job = job_wrapper.job();
-    mlir::MLIRContext context;
-    // Load our Dialect in this MLIR Context.
-    context.getOrLoadDialect<oneflow::OneFlowDialect>();
-    context.loadDialect<StandardOpsDialect>();
-    OwningModuleRef module(
-        ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
-    Importer imp(job_wrapper, &context, module.get());
-    if (succeeded(imp.processJob())) {
-      applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
-      if (failed(imp.tryToUpdateJob())) {
-        std::cerr << "fail to update job with IR, job will stay intact, job_name: "
-                  << job->job_conf().job_name() << "\n";
       }
-    } else {
-      std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
     }
+  };
+  module.getBodyRegion().walk(convertOps);
+  return success();
+}
+
+void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
+  if (debug) {
+    std::cout << "import:\n";
+    module->dump();
   }
 
-  void registerFromOneFlowJobTranslation() {
-    TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",
-                                               [](llvm::StringRef str, MLIRContext *context) {
-                                                 return translateOneFlowJobToModule(str, context);
-                                               });
+  OwningRewritePatternList import_patterns;
+  auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(import_patterns));
+  if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
+  if (debug) {
+    std::cout << "optimized:\n";
+    module->dump();
   }
 
+  OwningRewritePatternList export_patterns;
+  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
+    module->emitError("Failed to export user ops");
+  }
+
+  if (debug) {
+    std::cout << "to export:\n";
+    module->dump();
+  }
+}
+
+// Move this into another cpp which will be another target
+OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext *context) {
+  std::string cpp_str = str.str();
+  ::oneflow::Job job;
+  google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
+  context->loadDialect<oneflow::OneFlowDialect>();
+  context->loadDialect<StandardOpsDialect>();
+  // Reimplement the logic after this function is moved to a independent target
+  OwningModuleRef module(
+      ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+  return module;
+}
 }  // namespace
+
+void RoundTripOneFlowJob(
+    RoundTripOneFlowJobWrapperInterface &job_wrapper,
+    std::function<bool(::oneflow::Job *job, std::string &reason)> is_legit_job) {
+  const ::oneflow::Job *job = job_wrapper.job();
+  mlir::MLIRContext context;
+  // Load our Dialect in this MLIR Context.
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<StandardOpsDialect>();
+  OwningModuleRef module(
+      ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
+  Importer imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.processJob())) {
+    applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
+    if (failed(imp.tryToUpdateJob())) {
+      std::cerr << "fail to update job with IR, job will stay intact, job_name: "
+                << job->job_conf().job_name() << "\n";
+    }
+  } else {
+    std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
+  }
+}
+
+void registerFromOneFlowJobTranslation() {
+  TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",
+                                             [](llvm::StringRef str, MLIRContext *context) {
+                                               return translateOneFlowJobToModule(str, context);
+                                             });
+}
+
+}  // namespace mlir
