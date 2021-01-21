@@ -166,9 +166,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("numpy_list_size", &EagerBlobTrait::numpy_list_size)
       .def("get_dtype",
            [](const std::shared_ptr<EagerBlobTrait>& x) { return static_cast<int>(x->dtype()); })
-      // .def_property_readonly("sub_consistent_blob_list",
-      // &EagerBlobTrait::sub_consistent_blob_list)
-      .def_property_readonly("shape", &EagerBlobTrait::shape)
+      .def_property_readonly("shape",
+                             [](const std::shared_ptr<EagerBlobTrait>& x) {
+                               const auto& x_shape = x->shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
       .def_property_readonly("batch_axis", &EagerBlobTrait::batch_axis)
       .def_property_readonly("split_axis", &EagerBlobTrait::split_axis)
       .def_property_readonly("is_dynamic", &EagerBlobTrait::is_dynamic)
