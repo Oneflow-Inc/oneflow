@@ -370,7 +370,22 @@ LogicalResult Importer::tryToUpdateJob() {
       oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
       if (defined_const) { defined_const->dump(); }
       ::oneflow::OperatorConf op_conf;
+      const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
+      if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
+        auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
+        if (keys == sizes) {
+          for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
+            int size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
+          }
+        } else {
+          err_str =
+              "fail to convert op inputs, input_lbn_segment_keys != input_lbn_segment_sizes, name: "
+              + op_name;
+        }
+      } else {
+        err_str = "fail to convert op inputs, name: " + op_name;
+      }
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
@@ -382,7 +397,7 @@ LogicalResult Importer::tryToUpdateJob() {
               op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
         }
         if (id.strref().equals("trainable")) {
-          op_conf.set_trainable(op->getAttrOfType<BoolAttr>("op_name").getValue());
+          op_conf.set_trainable(op->getAttrOfType<BoolAttr>("trainable").getValue());
         }
         if (id.strref().equals("device")) {
           op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
