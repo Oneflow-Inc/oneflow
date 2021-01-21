@@ -92,6 +92,7 @@ LogicalResult Importer::AddInputOutputSegments(const ::oneflow::OperatorConf &op
   for (auto input : op.user_conf().input()) {
     input_lbn_segment_keys.push_back(input.first);
     input_lbn_segment_sizes.push_back(input.second.s_size());
+    std::cerr << input.first << "\n";
   }
   attr_vec.push_back(
       b.getNamedAttr("input_lbn_segment_keys", b.getStrArrayAttr(input_lbn_segment_keys)));
@@ -374,7 +375,7 @@ LogicalResult Importer::tryToUpdateJob() {
       auto user_conf = op_conf.mutable_user_conf();
       if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
         auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
-        if (keys == sizes) {
+        if (keys.size() == sizes.size()) {
           for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
             int size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
           }
