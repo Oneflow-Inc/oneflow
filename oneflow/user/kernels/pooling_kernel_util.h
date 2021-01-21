@@ -175,16 +175,15 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     /* compute local max: */
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx;
+    int64_t max_value = maxval;
     /* T maxval = -std::numeric_limits<T>::infinity(); */
     for (int64_t i = hstart; i < hend; i += dilation_h) {
       for (int64_t j = wstart; j < wend; j += dilation_w) {
         int64_t tcntr = i * x_width + j;
         int64_t search_idx = ip + tcntr;
         T val = src[search_idx];
-        if ((val > maxval) || std::isnan(val))
-        // if (val > maxval)
-        {
-          maxval = val;
+        if ((val > max_value) || std::isnan(val) || val == maxval) {
+          max_value = val;
           maxindex = tcntr;
           src_idx = search_idx;
         }
@@ -239,7 +238,7 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     const int32_t stride_w, const int32_t dilation_t, const int32_t dilation_h,
     const int32_t dilation_w, const bool return_indices, const bool ceil_mode) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
-    int64_t n, t, c, h, w, coords[5] = {0};
+    int64_t n, c, t, h, w, coords[5] = {0};
     index_helper.OffsetToNdIndex(num, coords);
     n = coords[0];
     c = coords[1];
@@ -281,14 +280,15 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     /* compute local max: */
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx;
-    for (int64_t z = tstart; z < tend; z += dilation_t) {
+    int64_t max_value = maxval;
+    for (int64_t zi = tstart; zi < tend; zi += dilation_t) {
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
-          int64_t tcntr = z * x_height * x_width + i * x_width + j;
+          int64_t tcntr = zi * x_height * x_width + i * x_width + j;
           int64_t search_idx = ip + tcntr;
           T val = src[search_idx];
-          if ((val > maxval) || std::isnan(val)) {
-            maxval = val;
+          if ((val > max_value) || std::isnan(val) || val == maxval) {
+            max_value = val;
             maxindex = tcntr;
             src_idx = search_idx;
           }

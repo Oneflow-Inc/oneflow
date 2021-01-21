@@ -133,6 +133,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
       const std::vector<int32_t> kernel_size, const std::vector<int32_t> stride,
       const std::vector<int32_t> dilation, const bool return_indices, const bool ceil_mode) {
     T maxval = -std::numeric_limits<T>::infinity();
+
     DoCUDAMaxPool3dForward<T>
         <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             index_helper, elem_num, maxval, src, dest, indice_ptr, padding_before[0],
