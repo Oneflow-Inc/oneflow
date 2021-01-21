@@ -365,33 +365,34 @@ LogicalResult Importer::tryToUpdateJob() {
       oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
       if (defined_const) { defined_const->dump(); }
       ::oneflow::OperatorConf op_conf;
+      op_conf.set_name(op->getAttrOfType<StringAttr>("name").getValue().str());
       auto user_conf = op_conf.mutable_user_conf();
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
-        if (id.strref().equals("placement") || id.strref().equals("device")
-            || id.strref().contains("lbn")) {
+        if (id.strref().equals("name") || id.strref().equals("placement")
+            || id.strref().equals("device") || id.strref().contains("lbn")) {
           continue;
         }
         auto attr = id_attr.second;
         auto user_attr = ::oneflow::AttrValue();
-        if (auto ref = attr.dyn_cast<IntegerAttr>()) {
+        if (attr.isa<BoolAttr>()) /* handle bool before int because it is i1*/ {
+          user_attr.set_at_bool(attr.dyn_cast<BoolAttr>().getValue());
+        } else if (auto ref = attr.dyn_cast<IntegerAttr>()) {
           if (ref.getType() == b.getIntegerType(32)) {
             user_attr.set_at_int32(ref.getInt());
           } else if (ref.getType() == b.getIntegerType(64)) {
             user_attr.set_at_int64(ref.getInt());
           } else {
-            err_str = "fail to convert op attr, key: " + key;
+            err_str = "fail to convert op attr to int32 or int64, key: " + key;
           }
-        } else if (auto ref = attr.dyn_cast<BoolAttr>()) {
-          user_attr.set_at_bool(ref.getValue());
         } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
           if (ref.getType() == b.getF32Type()) {
             user_attr.set_at_float(ref.getValue().convertToFloat());
           } else if (ref.getType() == b.getF64Type()) {
             user_attr.set_at_double(ref.getValue().convertToDouble());
           } else {
-            err_str = "fail to convert op attr, key: " + key;
+            err_str = "fail to convert op attr float or double, key: " + key;
           }
         } else if (auto ref = attr.dyn_cast<StringAttr>()) {
           if (ref.getValue().startswith("dt::")) {
@@ -416,7 +417,7 @@ LogicalResult Importer::tryToUpdateJob() {
                   DEFINE_ONE_ELIF(Float16)
                   DEFINE_ONE_ELIF(TensorBuffer)
 #undef DEFINE_ONE_ELIF
-                default: err_str = "fail to convert op attr, key: " + key; break;
+                default: err_str = "fail to convert op attr to data type, key: " + key; break;
               }
             }
           } else {
@@ -426,10 +427,31 @@ LogicalResult Importer::tryToUpdateJob() {
           for (auto int_v : ref.getIntValues()) {
             user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
           }
+        } else if (auto ref = attr.dyn_cast<ArrayAttr>()) {
+          for (auto v : ref.getValue()) {
+            if (auto elem = v.dyn_cast<IntegerAttr>()) {
+              if (elem.getType() == b.getIntegerType(32)) {
+                user_attr.mutable_at_list_int32()->add_val(elem.getInt());
+              } else if (ref.getType() == b.getIntegerType(64)) {
+                user_attr.mutable_at_list_int64()->add_val(elem.getInt());
+              } else {
+                err_str = "fail to convert op attr to int list, key: " + key;
+              }
+            } else if (auto elem = v.dyn_cast<FloatAttr>()) {
+              if (elem.getType() == b.getF32Type()) {
+                user_attr.mutable_at_list_float()->add_val(elem.getValue().convertToFloat());
+              } else {
+                err_str = "fail to convert op attr to float list, key: " + key;
+              }
+            } else {
+              err_str = "fail to convert op attr, key: " + key;
+            }
+          }
         } else {
           err_str = "fail to convert op attr, key: " + key;
         }
         (*user_conf->mutable_attr())[key] = user_attr;
+        // std::cout << op_conf.DebugString() << "\n";
       }
     }
   };
