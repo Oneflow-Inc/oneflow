@@ -59,6 +59,8 @@ class Importer {
                                           std::vector<NamedAttribute> &attr_vec);
   LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
                                    std::vector<::mlir::Value> &operand_vec);
+  LogicalResult AddInputOutputAndSegmentSizes(const ::oneflow::OperatorConf &op,
+                                              std::vector<NamedAttribute> &attr_vec);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processSystemOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
@@ -78,6 +80,36 @@ class Importer {
   const ::oneflow::Job *job;
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
+
+// TODO: add trait for this
+LogicalResult Importer::AddInputOutputAndSegmentSizes(const ::oneflow::OperatorConf &op,
+                                                      std::vector<NamedAttribute> &attr_vec) {
+  std::vector<llvm::StringRef> input_lbn_segment_keys;
+  std::vector<int> input_lbn_segment_sizes;
+  for (auto input : op.user_conf().input()) {
+    input_lbn_segment_keys.push_back(input.first);
+    input_lbn_segment_sizes.push_back(input.second.s_size());
+  }
+  attr_vec.push_back(
+      b.getNamedAttr("input_lbn_segment_keys", b.getStrArrayAttr(input_lbn_segment_keys)));
+  attr_vec.push_back(
+      b.getNamedAttr("input_lbn_segment_sizes", b.getI32ArrayAttr(input_lbn_segment_sizes)));
+
+  std::vector<llvm::StringRef> output_lbns;
+  std::vector<llvm::StringRef> output_lbn_segment_keys;
+  std::vector<int> output_lbn_segment_sizes;
+  for (auto output : op.user_conf().output()) {
+    output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
+    output_lbn_segment_keys.push_back(output.first);
+    output_lbn_segment_sizes.push_back(output.second.s_size());
+  }
+  attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(output_lbns)));
+  attr_vec.push_back(
+      b.getNamedAttr("output_lbn_segment_keys", b.getStrArrayAttr(output_lbn_segment_keys)));
+  attr_vec.push_back(
+      b.getNamedAttr("output_lbn_segment_sizes", b.getI32ArrayAttr(output_lbn_segment_sizes)));
+  return success();
+}
 
 LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf &op,
                                                   std::vector<NamedAttribute> &attr_vec) {
@@ -139,19 +171,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     }
   }
 
-  std::vector<NamedAttribute> inputs;
-  for (auto input : op.user_conf().input()) {
-    std::vector<llvm::StringRef> lbns = {input.second.s().begin(), input.second.s().end()};
-    inputs.push_back(b.getNamedAttr(input.first, b.getStrArrayAttr(lbns)));
-  }
-  attr_vec.push_back(b.getNamedAttr("input", b.getDictionaryAttr(inputs)));
-
-  std::vector<NamedAttribute> outputs;
-  for (auto output : op.user_conf().output()) {
-    std::vector<llvm::StringRef> lbns = {output.second.s().begin(), output.second.s().end()};
-    outputs.push_back(b.getNamedAttr(output.first, b.getStrArrayAttr(lbns)));
-  }
-  attr_vec.push_back(b.getNamedAttr("output", b.getDictionaryAttr(outputs)));
+  AddInputOutputAndSegmentSizes(op, attr_vec);
 
   attr_vec.push_back(
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
