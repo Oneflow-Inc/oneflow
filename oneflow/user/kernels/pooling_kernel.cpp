@@ -101,7 +101,6 @@ class MaxPool2dKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    printf("Enter MaxPool2dKernel >>>>>>>>>>>>>>>>>>>>>>> Compute()\n");
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
@@ -134,7 +133,6 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const int64_t y_height = y->shape().At(h_idx);
     const int64_t y_width = y->shape().At(w_idx);
     const int64_t elem_num = y->shape().elem_cnt();
-    printf("elem_num:>>>>>>>>>>>>>>>>>>>>>>> %ld \n", elem_num);
 
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
@@ -274,7 +272,6 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    printf("Enter MaxPool3dGradKernel >>>>>>>>>>>>>>>>>>>>>>> Compute()\n");
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -311,7 +308,6 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     const int64_t dst_height = dx->shape().At(h_idx);
     const int64_t dst_width = dx->shape().At(w_idx);
     const int64_t elem_num = dy->shape().elem_cnt();
-    printf("elem_num:>>>>>>>>>>>>>>>>>>>>>>> %ld \n", elem_num);
 
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();
@@ -350,9 +346,7 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
 #define REGISTER_POOLING_WITH_DEVICE(device) \
   REGISTER_POOLING_KERNELS(device, float)    \
   REGISTER_POOLING_KERNELS(device, double)   \
-  REGISTER_POOLING_KERNELS(device, int32_t)  \
-  REGISTER_POOLING_KERNELS(device, int64_t)
-
+  REGISTER_POOLING_KERNELS(device, int32_t)
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_POOLING_WITH_DEVICE(DeviceType::kGPU)

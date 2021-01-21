@@ -20,18 +20,31 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/operator/operator_util.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
-#define POOLING_DATA_TYPE_CPU_SEQ                 \
-  FLOATING_DATA_TYPE_SEQ                          \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+#define POOLING_DATA_TYPE_CPU_SEQ \
+  FLOATING_DATA_TYPE_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
 #define POOLING_DATA_TYPE_GPU_SEQ POOLING_DATA_TYPE_CPU_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
+
+template<typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
+#if defined(__CUDA_ARCH__)
+    cuda::atomic::Add(y, *x);
+#else
+    *y += *x;
+#endif
+  };
+};
 
 class PoolingParams3D {
  public:
@@ -209,8 +222,8 @@ OF_DEVICE_FUNC void Maxpool2dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     int64_t indice_idx = c * src_height * src_width + h * src_width + w;
     int64_t dest_idx = ip + indice_ptr[indice_idx];
     if (dest_idx != -1) {
-      /* update gradient */
-      dest[dest_idx] += src[src_idx];
+      /* update gradient equals to dest[dest_idx] += src[src_idx]; */
+      DeviceAdd<T>::Invoke(src + src_idx, dest + dest_idx);
     }
   }
 }
@@ -312,12 +325,13 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     int64_t dst_start = n * n_channel * dst_time * dst_height * dst_width;
 
     int64_t ip = dst_start + c * dst_time * dst_width * dst_height;
-    int64_t src_idx = src_start + c * src_time * src_height * src_width + h * src_width + w;
-    int64_t indice_idx = c * src_height * src_width + h * src_width + w;
+    int64_t src_idx = src_start + c * src_time * src_height * src_width + t * src_height * src_width
+                      + h * src_width + w;
+    int64_t indice_idx = c * src_time * src_height * src_width + h * src_width + w;
     int64_t dest_idx = ip + indice_ptr[indice_idx];
     if (dest_idx != -1) {
       /* update gradient */
-      dest[dest_idx] += src[src_idx];
+      DeviceAdd<T>::Invoke(src + src_idx, dest + dest_idx);
     }
   }
 }
