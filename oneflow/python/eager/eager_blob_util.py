@@ -50,7 +50,9 @@ class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait
 
     @property
     def dtype(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).dtype
+        return convert_proto_dtype_to_oneflow_dtype(
+            _GetPhysicalBlobHeaderCache(self.blob_object_).get_dtype()
+        )
 
     @property
     def is_dynamic(self):
@@ -126,10 +128,10 @@ def _FetchPhysicalBlobBody(blob_object):
 def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
         Yield(
-            EagerPhysicalBlobHeader(
+            oneflow_api.EagerPhysicalBlobHeader(
                 ofblob.static_shape,
                 ofblob.shape_list,
-                ofblob.dtype,
+                int(ofblob.dtype.oneflow_proto_dtype),
                 ofblob.is_tensor_list,
             )
         )
@@ -145,18 +147,3 @@ def _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
             Yield(ofblob.CopyToNdarray())
 
     return FetchFromOfBlob
-
-
-class EagerPhysicalBlobHeader(oneflow_api.EagerPhysicalBlobHeader):
-    def __init__(self, static_shape, shape_list, dtype, is_tensor_list):
-        oneflow_api.EagerPhysicalBlobHeader.__init__(
-            self,
-            static_shape,
-            shape_list,
-            int(dtype.oneflow_proto_dtype),
-            is_tensor_list,
-        )
-        
-    @property
-    def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
