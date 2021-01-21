@@ -444,7 +444,7 @@ LogicalResult Importer::tryToUpdateJob() {
                 err_str = "fail to convert op attr to float list, key: " + key;
               }
             } else {
-              err_str = "fail to convert op attr, key: " + key;
+              err_str = "fail to convert op attr to list, key: " + key;
             }
           }
         } else {
