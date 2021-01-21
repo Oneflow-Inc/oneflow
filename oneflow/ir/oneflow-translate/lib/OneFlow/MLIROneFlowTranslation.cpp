@@ -467,7 +467,7 @@ LogicalResult Importer::tryToUpdateJob() {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
     } else {
-      // check if is module_terminator
+      // TODO: check if is module_terminator
     }
   };
   module.getBodyRegion().walk(convertOps);
