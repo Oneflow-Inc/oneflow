@@ -166,15 +166,14 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_data_type()) {
-      auto dt = ::mlir::oneflow::symbolizeDataType(value.at_data_type());
       std::string stringified = "";
       switch (value.at_data_type()) {
         case ::oneflow::DataType::kInvalidDataType:
-          stringified = stringifyEnum(oneflow::DataType::InvalidDataType).str();
+          stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
           break;
-#define DEFINE_ONE_ELIF(datatype)                                   \
-  case ::oneflow::DataType::k##datatype:                            \
-    stringified = stringifyEnum(oneflow::DataType::datatype).str(); \
+#define DEFINE_ONE_ELIF(datatype)                                        \
+  case ::oneflow::DataType::k##datatype:                                 \
+    stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str(); \
     break;
           DEFINE_ONE_ELIF(Char)
           DEFINE_ONE_ELIF(Float)
@@ -189,9 +188,8 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
 #undef DEFINE_ONE_ELIF
         default: module.emitError("fail to convert op attr, key: " + name); break;
       }
-      auto dt_str = "dt::" + stringifyEnum(dt.getValueOr(oneflow::DataType::InvalidDataType)).str();
       std::pair<mlir::Identifier, mlir::Attribute> kv =
-          b.getNamedAttr(name, b.getStringAttr(dt_str));
+          b.getNamedAttr(name, b.getStringAttr(stringified));
       attr_vec.emplace_back(kv);
     }
     else {
@@ -376,8 +374,8 @@ LogicalResult Importer::tryToUpdateJob() {
         }
         auto attr = id_attr.second;
         auto user_attr = ::oneflow::AttrValue();
-        if (attr.isa<BoolAttr>()) /* handle bool before int because it is i1*/ {
-          user_attr.set_at_bool(attr.dyn_cast<BoolAttr>().getValue());
+        if (auto ref = attr.dyn_cast<BoolAttr>()) /* handle bool before int because it is i1*/ {
+          user_attr.set_at_bool(ref.getValue());
         } else if (auto ref = attr.dyn_cast<IntegerAttr>()) {
           if (ref.getType() == b.getIntegerType(32)) {
             user_attr.set_at_int32(ref.getInt());
@@ -395,15 +393,15 @@ LogicalResult Importer::tryToUpdateJob() {
             err_str = "fail to convert op attr float or double, key: " + key;
           }
         } else if (auto ref = attr.dyn_cast<StringAttr>()) {
-          if (ref.getValue().startswith("dt::")) {
-            auto dt = oneflow::symbolizeEnum<oneflow::DataType>(ref.getValue().split("::").second);
+          if (ref.getValue().startswith("DT_")) {
+            auto dt = oneflow::symbolizeEnum<oneflow::DataType>(ref.getValue());
             if (dt.hasValue()) {
               switch (dt.getValue()) {
-                case oneflow::DataType::InvalidDataType:
+                case oneflow::DataType::DT_InvalidDataType:
                   user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
                   break;
 #define DEFINE_ONE_ELIF(datatype)                                 \
-  case oneflow::DataType::datatype:                               \
+  case oneflow::DataType::DT_##datatype:                          \
     user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
     break;
                   DEFINE_ONE_ELIF(Char)
@@ -451,7 +449,6 @@ LogicalResult Importer::tryToUpdateJob() {
           err_str = "fail to convert op attr, key: " + key;
         }
         (*user_conf->mutable_attr())[key] = user_attr;
-        // std::cout << op_conf.DebugString() << "\n";
       }
     }
   };
