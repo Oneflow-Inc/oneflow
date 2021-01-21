@@ -26,6 +26,7 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
     StrAttr:$op_name,
+    BoolAttr:$trainable,
     StrAttr:$device,
     // TODO: change placement to dict and parse the literal fmt like "0:0-0"
     StrArrayAttr:$placement

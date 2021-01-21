@@ -200,11 +200,6 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
 
   AddInputOutputAndSegmentSizes(op, attr_vec);
 
-  attr_vec.push_back(
-      b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
-
-  attr_vec.push_back(b.getNamedAttr("name", b.getStringAttr(op.name())));
-
   return success();
 }
 
@@ -241,8 +236,12 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &device_tag = pc.device_tag();
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   std::vector<NamedAttribute> attr_vec;
+  attr_vec.push_back(b.getNamedAttr("name", b.getStringAttr(op.name())));
+  attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
   attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(device_tag)));
   attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
+  attr_vec.push_back(
+      b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   ArrayRef<NamedAttribute> named_attributes(attr_vec);
@@ -368,13 +367,14 @@ LogicalResult Importer::tryToUpdateJob() {
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
-        if (id.strref().equals("name") || id.strref().equals("placement")
-            || id.strref().equals("device") || id.strref().contains("input_lbn_segment_keys")
+        if (id.strref().equals("name") || id.strref().equals("trainable")
+            || id.strref().equals("device") || id.strref().equals("placement")
+            || id.strref().contains("input_lbn_segment_keys")
             || id.strref().contains("input_lbn_segment_sizes")
             || id.strref().contains("output_lbns")
             || id.strref().contains("output_lbn_segment_keys")
             || id.strref().contains("output_lbn_segment_sizes")
-            || id.strref().equals("scope_symbol_id") || id.strref().equals("trainable")) {
+            || id.strref().equals("scope_symbol_id")) {
           continue;
         }
         auto attr = id_attr.second;
