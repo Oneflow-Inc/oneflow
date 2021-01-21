@@ -364,6 +364,8 @@ LogicalResult Importer::tryToUpdateJob() {
       if (defined_const) { defined_const->dump(); }
       ::oneflow::OperatorConf op_conf;
       op_conf.set_name(op->getAttrOfType<StringAttr>("name").getValue().str());
+      op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
+      op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
       auto user_conf = op_conf.mutable_user_conf();
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
