@@ -82,7 +82,7 @@ RequestStore::RequestStore(const CollectiveBoxingPlan& collective_boxing_plan) {
   }
   std::sort(request_entry_vec_.begin(), request_entry_vec_.end(),
             [](const std::unique_ptr<RequestEntry>& a, const std::unique_ptr<RequestEntry>& b) {
-              return a->NodeCount() == a->NodeCount()
+              return a->NodeCount() == b->NodeCount()
                          ? a->desc().op_desc().name() < b->desc().op_desc().name()
                          : a->NodeCount() > a->NodeCount();
             });
