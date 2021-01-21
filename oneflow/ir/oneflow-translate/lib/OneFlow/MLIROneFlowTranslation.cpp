@@ -17,6 +17,7 @@
 #include "OneFlow/OneFlowDialect.h"
 
 #include <google/protobuf/text_format.h>
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
@@ -166,8 +167,29 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     }
     else if (value.has_at_data_type()) {
       auto dt = ::mlir::oneflow::symbolizeDataType(value.at_data_type());
-      auto dt_str =
-          ::mlir::oneflow::stringifyEnum(dt.getValueOr(::mlir::oneflow::DataType::InvalidDataType));
+      std::string stringified = "";
+      switch (value.at_data_type()) {
+        case ::oneflow::DataType::kInvalidDataType:
+          stringified = stringifyEnum(oneflow::DataType::InvalidDataType).str();
+          break;
+#define DEFINE_ONE_ELIF(datatype)                                   \
+  case ::oneflow::DataType::k##datatype:                            \
+    stringified = stringifyEnum(oneflow::DataType::datatype).str(); \
+    break;
+          DEFINE_ONE_ELIF(Char)
+          DEFINE_ONE_ELIF(Float)
+          DEFINE_ONE_ELIF(Double)
+          DEFINE_ONE_ELIF(Int8)
+          DEFINE_ONE_ELIF(Int32)
+          DEFINE_ONE_ELIF(Int64)
+          DEFINE_ONE_ELIF(UInt8)
+          DEFINE_ONE_ELIF(OFRecord)
+          DEFINE_ONE_ELIF(Float16)
+          DEFINE_ONE_ELIF(TensorBuffer)
+#undef DEFINE_ONE_ELIF
+        default: module.emitError("fail to convert op attr, key: " + name); break;
+      }
+      auto dt_str = "dt::" + stringifyEnum(dt.getValueOr(oneflow::DataType::InvalidDataType)).str();
       std::pair<mlir::Identifier, mlir::Attribute> kv =
           b.getNamedAttr(name, b.getStringAttr(dt_str));
       attr_vec.emplace_back(kv);
@@ -372,7 +394,34 @@ LogicalResult Importer::tryToUpdateJob() {
             err_str = "fail to convert op attr, key: " + key;
           }
         } else if (auto ref = attr.dyn_cast<StringAttr>()) {
-          user_attr.set_at_string(ref.getValue().str());
+          if (ref.getValue().startswith("dt::")) {
+            auto dt = oneflow::symbolizeEnum<oneflow::DataType>(ref.getValue().split("::").second);
+            if (dt.hasValue()) {
+              switch (dt.getValue()) {
+                case oneflow::DataType::InvalidDataType:
+                  user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
+                  break;
+#define DEFINE_ONE_ELIF(datatype)                                 \
+  case oneflow::DataType::datatype:                               \
+    user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
+    break;
+                  DEFINE_ONE_ELIF(Char)
+                  DEFINE_ONE_ELIF(Float)
+                  DEFINE_ONE_ELIF(Double)
+                  DEFINE_ONE_ELIF(Int8)
+                  DEFINE_ONE_ELIF(Int32)
+                  DEFINE_ONE_ELIF(Int64)
+                  DEFINE_ONE_ELIF(UInt8)
+                  DEFINE_ONE_ELIF(OFRecord)
+                  DEFINE_ONE_ELIF(Float16)
+                  DEFINE_ONE_ELIF(TensorBuffer)
+#undef DEFINE_ONE_ELIF
+                default: err_str = "fail to convert op attr, key: " + key; break;
+              }
+            }
+          } else {
+            user_attr.set_at_string(ref.getValue().str());
+          }
         } else if (auto ref = attr.dyn_cast<DenseIntElementsAttr>()) {
           for (auto int_v : ref.getIntValues()) {
             user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
@@ -391,7 +440,7 @@ LogicalResult Importer::tryToUpdateJob() {
     module->emitError(err_str);
     return failure();
   }
-}
+}  // namespace
 
 void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
   if (debug) {
