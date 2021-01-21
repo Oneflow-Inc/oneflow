@@ -15,7 +15,6 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -54,14 +53,16 @@ def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
     def GetOpArgParallelAttr(
         builder, produced_blob_object, consumer_op_arg_parallel_attr
     ):
-        return op_arg_util.OpArgParallelAttribute(
+        return oneflow_api.OpArgParallelAttribute(
             get_parallel_desc_symbol(
                 builder, produced_blob_object, consumer_op_arg_parallel_attr
             ),
-            get_sbp_parallel(
-                builder, produced_blob_object, consumer_op_arg_parallel_attr
+            str(
+                get_sbp_parallel(
+                    builder, produced_blob_object, consumer_op_arg_parallel_attr
+                )
             ),
-            produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+            str(produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
         )
 
     return GetOpArgParallelAttr

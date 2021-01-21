@@ -80,6 +80,10 @@ template<>
 Maybe<Scope> NewSymbol<Scope>(int64_t symbol_id,
                               const typename ConstructArgType4Symbol<Scope>::type& data);
 
+template<>
+Maybe<OpNodeSignatureDesc> NewSymbol<OpNodeSignatureDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<OpNodeSignatureDesc>::type& data);
+
 }  // namespace detail
 
 template<typename T>

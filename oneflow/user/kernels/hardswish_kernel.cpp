@@ -47,11 +47,11 @@ class CpuHardSwishKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_HARDSWISH_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("hardswish")                  \
-      .SetCreateFn<CpuHardSwishKernel<device, dtype>>() \ 
-        .SetIsMatchedHob((HobDeviceTag() == device)  \
-                         & (HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_CPU_HARDSWISH_KERNEL(device, dtype)    \
+  REGISTER_USER_KERNEL("hardswish")                     \
+      .SetCreateFn<CpuHardSwishKernel<device, dtype>>() \
+      .SetIsMatchedHob((HobDeviceTag() == device)       \
+                       & (HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, float)
 REGISTER_CPU_HARDSWISH_KERNEL(DeviceType::kCPU, double)
@@ -87,9 +87,9 @@ class CpuHardSwishGradKernel final : public OpKernel {
 
 #define REGISTER_CPU_HARDSWISH_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("hardswish_grad")                      \
-      .SetCreateFn<CpuHardSwishGradKernel<device, dtype>>() \ 
-        .SetIsMatchedHob((HobDeviceTag() == device)           \
-                         & (HobDataType("dx", 0) == GetDataType<dtype>::value));
+      .SetCreateFn<CpuHardSwishGradKernel<device, dtype>>()   \
+      .SetIsMatchedHob((HobDeviceTag() == device)             \
+                       & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_HARDSWISH_BACKWARD_KERNEL(DeviceType::kCPU, float)
 REGISTER_CPU_HARDSWISH_BACKWARD_KERNEL(DeviceType::kCPU, double)

@@ -30,7 +30,7 @@ for gpu in gpus:
 
 
 def compare_with_tensorflow(
-    device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5
+    device_type, data_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -40,13 +40,25 @@ def compare_with_tensorflow(
     @flow.global_function(function_config=func_config)
     def ReduceSumJob(x: oft.Numpy.Placeholder(input_shape)):
         with flow.scope.placement(device_type, "0:0"):
-            return flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+            if data_type == "float16":
+                y = flow.cast(
+                    flow.math.reduce_sum(
+                        flow.cast(x, dtype=flow.float16), axis=axis, keepdims=keepdims
+                    ),
+                    dtype=flow.float32,
+                )
+            else:
+                y = flow.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+            return y
 
-    x = np.random.rand(*input_shape).astype(np.float32)
+    x = np.random.rand(*input_shape).astype(np.float16).astype(np.float32)
     # OneFlow
     of_out = ReduceSumJob(x).get()
     # TensorFlow
     tf_out = tf.math.reduce_sum(x, axis=axis, keepdims=keepdims)
+    if data_type == "float16":
+        tf_out = tf.cast(tf_out, dtype=tf.float16)
+        tf_out = tf.cast(tf_out, dtype=tf.float32)
     #    print("tf: ")
     #    print(tf_out.numpy())
     #    print("of: ")
@@ -64,6 +76,7 @@ class TestReduceSum(flow.unittest.TestCase):
     def test_reduce_sum(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = ["float32", "float16"]
         arg_dict["input_shape"] = [(64, 64, 64)]
         arg_dict["axis"] = [None, [1], [0, 2]]
         arg_dict["keepdims"] = [True, False]
@@ -73,6 +86,7 @@ class TestReduceSum(flow.unittest.TestCase):
     def test_col_reduce(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = ["float32", "float16"]
         arg_dict["input_shape"] = [(1024 * 64, 25)]
         arg_dict["axis"] = [[0]]
         arg_dict["keepdims"] = [True, False]
@@ -82,6 +96,7 @@ class TestReduceSum(flow.unittest.TestCase):
     def test_row_reduce(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = ["float32", "float16"]
         arg_dict["input_shape"] = [(25, 1024 * 1024)]
         arg_dict["axis"] = [[1]]
         arg_dict["keepdims"] = [True, False]
@@ -91,6 +106,7 @@ class TestReduceSum(flow.unittest.TestCase):
     def test_scalar(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = ["float32", "float16"]
         arg_dict["input_shape"] = [(1024 * 64, 25)]
         arg_dict["axis"] = [[0, 1]]
         arg_dict["keepdims"] = [True, False]
