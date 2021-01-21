@@ -24,8 +24,8 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.operator.inter_face_blob_conf_pb2 as inter_face_blob_conf_util
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb
+import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_pb
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -317,9 +317,9 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     assert isinstance(job_name, str)
     assert isinstance(lbn, str)
     if blob_conf is None:
-        blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
+        blob_conf = interface_blob_conf_pb.InterfaceBlobConf()
     else:
-        assert isinstance(blob_conf, inter_face_blob_conf_util.InterfaceBlobConf)
+        assert isinstance(blob_conf, interface_blob_conf_pb.InterfaceBlobConf)
 
     shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, lbn)
     dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
@@ -347,7 +347,7 @@ def Lbn2Lbi(lbn, lbi=None):
 
     [op_name, blob_name] = lbn.split("/")
     if lbi is None:
-        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi = logical_blob_id_pb.LogicalBlobId()
 
     lbi.op_name = op_name
     lbi.blob_name = blob_name
@@ -355,5 +355,5 @@ def Lbn2Lbi(lbn, lbi=None):
 
 
 def Lbi2Lbn(lbi):
-    assert isinstance(lbi, logical_blob_id_util.LogicalBlobId)
+    assert isinstance(lbi, logical_blob_id_pb.LogicalBlobId)
     return "{}/{}".format(lbi.op_name, lbi.blob_name)

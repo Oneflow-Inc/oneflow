@@ -25,11 +25,11 @@ import oneflow as flow
 import oneflow_api
 import oneflow_api.oneflow.core.job.job_conf as job_conf_proto_cfg
 
-import oneflow_api.oneflow.core.operator.inter_face_blob_conf as inter_face_blob_conf_proto_cfg
+import oneflow_api.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
 import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api.oneflow.core.common.data_type as dtype_proto_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
-import oneflow.core.operator.inter_face_blob_conf_pb2 as inter_face_blob_conf_proto
+import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_ctx
@@ -96,10 +96,10 @@ def _inferface_blob_conf_proto_to_cfg(
     inferface_blob_conf_proto, mut_inferface_blob_conf_cfg
 ):
     assert isinstance(
-        inferface_blob_conf_proto, inter_face_blob_conf_proto.InterfaceBlobConf
+        inferface_blob_conf_proto, interface_blob_conf_proto.InterfaceBlobConf
     )
     assert isinstance(
-        mut_inferface_blob_conf_cfg, inter_face_blob_conf_proto_cfg.InterfaceBlobConf
+        mut_inferface_blob_conf_cfg, interface_blob_conf_proto_cfg.InterfaceBlobConf
     )
 
     shape = shape_proto_cfg.ShapeProto()
