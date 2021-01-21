@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <vector>
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
@@ -22,10 +23,30 @@ namespace {
 
 class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
  public:
-  const Job* job() const { return job_; }
   RoundTripOneFlowJobWrapper(::oneflow::Job* job) : job_(job), op_graph_(*job), job_builder_(job) {}
+
+  const Job* job() const { return job_; }
+
   const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
+  }
+
+  std::vector<std::string> InputLbns4OpName(const std::string& op_name) const {
+    std::vector<std::string> ret{};
+    auto node = op_graph_.OpNode4OpName(op_name);
+    for (auto e : node->in_edges()) {
+      for (auto lbi : e->lbis()) { ret.push_back(GenLogicalBlobName(lbi)); }
+    }
+    return ret;
+  }
+
+  std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const {
+    std::vector<std::string> ret{};
+    auto node = op_graph_.OpNode4OpName(op_name);
+    for (auto e : node->out_edges()) {
+      for (auto lbi : e->lbis()) { ret.push_back(GenLogicalBlobName(lbi)); }
+    }
+    return ret;
   }
 
  private:

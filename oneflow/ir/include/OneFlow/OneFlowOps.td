@@ -18,8 +18,10 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class OneFlow_Blob<list<Type> allowedTypes> :
   AnyTypeOf<[TensorOf<allowedTypes>, NoneType], "">;
 
-// TODO: add control in operand, which should be optional
-// TODO: add control out result, could be optional
+// TODO: Use traits AttrSizedOperandSegments and AttrSizedResultSegments to split ctrl and data
+// I32ElementsAttr:$result_segment_sizes,
+// I32ElementsAttr:$operand_segment_sizes
+
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
@@ -40,7 +42,7 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
-  let summary = "constant";
+  let summary = "";
   let attrs = (ins
     OptionalAttr<F64Attr>:$floating_value,
     OptionalAttr<I64Attr>:$integer_value
@@ -64,7 +66,7 @@ def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndRe
 }
 
 def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
-    let summary = "ReLU op";
+    let summary = "";
 
     let arguments = (
       ins AnyType:$input,
@@ -76,8 +78,8 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsA
     }];
 }
 
-def OneFlow_PlaceholderOp : OneFlow_Op<"NoOp", [NoSideEffect]> {
-  let summary = "Placeholder for ops with control edge or foreign input, etc";
+def OneFlow_SystemOp : OneFlow_Op<"system", []> {
+  let summary = "";
   let data_in = (ins Variadic<AnyType>:$operands);
   let results = (outs Variadic<AnyType>:$outputs);
 }

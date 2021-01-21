@@ -60,6 +60,7 @@ class Importer {
   LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
+  LogicalResult processSystemOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
   LogicalResult tryToUpdateJob();
 
@@ -239,6 +240,46 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   return success();
 }  // namespace
 
+LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
+  if (op.has_user_conf()) {
+    module.emitError("Not a sys op. op name: " + op.name());
+    return failure();
+  }
+  auto ilbis = job_wrapper.InputLbns4OpName(op.name());
+  auto olbis = job_wrapper.InputLbns4OpName(op.name());
+  job_wrapper.OutputLbns4OpName(op.name());
+  std::vector<NamedAttribute> attr_vec;
+  attr_vec.push_back(b.getNamedAttr(
+      "input", b.getStrArrayAttr(std::vector<llvm::StringRef>({ilbis.begin(), ilbis.end()}))));
+  attr_vec.push_back(b.getNamedAttr(
+      "output", b.getStrArrayAttr(std::vector<llvm::StringRef>({olbis.begin(), olbis.end()}))));
+  OperationState state(unknownLoc, "oneflow.system");
+  attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
+  state.addAttributes(attr_vec);
+  std::vector<::mlir::Value> operand_vec;
+  for (auto ilbi : ilbis) {
+    if (lbn2result.find(ilbi) != lbn2result.end()) {
+      auto v = lbn2result.at(ilbi);
+      operand_vec.push_back(v);
+    }
+  }
+  auto out_types = llvm::SmallVector<Type, 8>();
+  for (auto olbi : olbis) { out_types.append({RankedTensorType::get({}, b.getF32Type())}); }
+  state.addOperands(operand_vec);
+  state.addTypes(out_types);
+  auto created_op = b.createOperation(state);
+  for (auto olbi : olbis) {
+    int i = 0;
+    lbn2result.insert({olbi, created_op->getResult(i)});
+    i++;
+  }
+  if (!created_op) {
+    module->emitError("fail to create op, name: " + op.name());
+    return failure();
+  }
+  return success();
+}
+
 LogicalResult Importer::processJob() {
   auto func_type = b.getFunctionType(llvm::None, llvm::None);
   auto function = mlir::FuncOp::create(unknownLoc, job->job_conf().job_name(), func_type);
@@ -249,6 +290,8 @@ LogicalResult Importer::processJob() {
     const auto op = job->net().op(i);
     if (op.has_user_conf()) {
       if (failed(processUserOp(op))) { return failure(); }
+    } else {
+      if (failed(processSystemOp(op))) { return failure(); }
     }
   }
   ReturnOp returnOp;
