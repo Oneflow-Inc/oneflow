@@ -369,7 +369,12 @@ LogicalResult Importer::tryToUpdateJob() {
         auto id = id_attr.first;
         std::string key = id.str();
         if (id.strref().equals("name") || id.strref().equals("placement")
-            || id.strref().equals("device") || id.strref().contains("lbn")) {
+            || id.strref().equals("device") || id.strref().contains("input_lbn_segment_keys")
+            || id.strref().contains("input_lbn_segment_sizes")
+            || id.strref().contains("output_lbns")
+            || id.strref().contains("output_lbn_segment_keys")
+            || id.strref().contains("output_lbn_segment_sizes")
+            || id.strref().equals("scope_symbol_id") || id.strref().equals("trainable")) {
           continue;
         }
         auto attr = id_attr.second;
