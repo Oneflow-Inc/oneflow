@@ -140,14 +140,19 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     DEFINE_ONE_ELIF(at_double, getF64FloatAttr)
     DEFINE_ONE_ELIF(at_string, getStringAttr)
 #undef DEFINE_ONE_ELIF
+    else if (value.has_at_shape()) {
+      ArrayRef<int64_t> values = {value.at_shape().dim().begin(), value.at_shape().dim().end()};
+      RankedTensorType tt =
+          RankedTensorType::get({static_cast<int64_t>(values.size())}, b.getIntegerType(64));
+      ;
+      attr_vec.emplace_back(b.getNamedAttr(name, DenseIntElementsAttr::get(tt, values)));
+    }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                           \
   else if (value.has_##at_key()) {                                                         \
     std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                      \
         name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
     attr_vec.emplace_back(kv);                                                             \
   }
-    // TODO: Define a shape attribute type backed by i64 array storage
-    DEFINE_ONE_ELIF(at_shape, getI64ArrayAttr, dim)
     DEFINE_ONE_ELIF(at_list_int32, getI32ArrayAttr, val)
     DEFINE_ONE_ELIF(at_list_int64, getI64ArrayAttr, val)
     DEFINE_ONE_ELIF(at_list_float, getF32ArrayAttr, val)
@@ -342,6 +347,10 @@ LogicalResult Importer::tryToUpdateJob() {
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
+        if (id.strref().equals("placement") || id.strref().equals("device")
+            || id.strref().contains("lbn")) {
+          continue;
+        }
         auto attr = id_attr.second;
         auto user_attr = ::oneflow::AttrValue();
         if (auto ref = attr.dyn_cast<IntegerAttr>()) {
@@ -364,6 +373,10 @@ LogicalResult Importer::tryToUpdateJob() {
           }
         } else if (auto ref = attr.dyn_cast<StringAttr>()) {
           user_attr.set_at_string(ref.getValue().str());
+        } else if (auto ref = attr.dyn_cast<DenseIntElementsAttr>()) {
+          for (auto int_v : ref.getIntValues()) {
+            user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
+          }
         } else {
           err_str = "fail to convert op attr, key: " + key;
         }
