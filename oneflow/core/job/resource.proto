@@ -3,10 +3,21 @@ package oneflow;
 
 import public "oneflow/core/common/device_type.proto";
 
+
 message CollectiveBoxingConf {
   // global
   optional bool enable_fusion = 1 [default = true];
   optional int64 num_callback_threads = 2 [default = 4];
+  message StaticGroupCoordinatorConf {
+
+  }
+  message DynamicCoordinatorConf {
+    optional float cycle_time_ms = 1 [default = 1];
+  }
+  oneof coordinator_conf {
+    StaticGroupCoordinatorConf static_group_coordinator_conf = 3;
+    DynamicCoordinatorConf dynamic_coordinator_conf = 4;
+  }
 
   // nccl
   optional int64 nccl_num_streams = 101 [default = 1];

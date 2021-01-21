@@ -86,6 +86,13 @@ bool IsSourceTimeShape(const Shape& shape) {
   return shape.elem_cnt() == GlobalJobDesc().TotalBatchNum() * GlobalJobDesc().NumOfPiecesInBatch();
 }
 
+bool IsTimeShapeSupported(const Shape& shape) {
+  return Global<ResourceDesc, ForSession>::Get()
+             ->collective_boxing_conf()
+             .has_dynamic_coordinator_conf()
+         || IsSourceTimeShape(shape);
+}
+
 class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingAllReduceSubTskGphBuilder);
@@ -472,7 +479,8 @@ Maybe<SubTskGphBuilderStatus> CollectiveBoxingSubTskGphBuilder::Build(
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
-  if (!IsSourceTimeShape(*sorted_src_comp_tasks.front()->logical_node()->out_blob_time_shape())) {
+  if (!IsTimeShapeSupported(
+          *sorted_src_comp_tasks.front()->logical_node()->out_blob_time_shape())) {
     return Error::BoxingNotSupportedError();
   }
   return chain_builder_->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc,

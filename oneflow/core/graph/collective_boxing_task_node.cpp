@@ -58,8 +58,12 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
 void CollectiveBoxingGenericTaskNode::InferProducedDataRegstTimeShape() {
   auto out_regst = GetProducedRegst("out");
   if (out_regst != nullptr) {
-    out_regst->mut_data_regst_time_shape()->reset(
-        new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
+    if (in_data_edges_size() != 0) {
+      NaiveInferProducedDataRegstTimeShape();
+    } else {
+      out_regst->mut_data_regst_time_shape()->reset(
+          new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
+    }
   }
 }
 

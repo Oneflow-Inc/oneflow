@@ -74,7 +74,8 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 #define OF_NCCL_CHECK(condition)                                                                \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
   LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
-             << " (" << _of_nccl_check_status << ") "
+             << " (" << _of_nccl_check_status << "). "                                          \
+             << "To see more detail, please run OneFlow with system variable NCCL_DEBUG=INFO"
 
 #if CUDA_VERSION >= 10020
 

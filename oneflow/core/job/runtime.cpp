@@ -20,16 +20,13 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/graph/task_node.h"
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
@@ -123,7 +120,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     }
 #endif
   }
-  Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
+  Global<boxing::collective::Scheduler>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
@@ -140,7 +137,7 @@ void Runtime::DeleteAllGlobal() {
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
-  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
+  Global<boxing::collective::Scheduler>::Delete();
 
   // should be called after Global<Transport>::Delete()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
@@ -165,7 +162,6 @@ void Runtime::DeleteAllGlobal() {
     Global<EpollCommNet>::Delete();
 #endif
   }
-
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
   Global<summary::EventsWriter>::Delete();
