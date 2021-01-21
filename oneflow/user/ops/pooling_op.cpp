@@ -41,9 +41,8 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
     CHECK_EQ_OR_RETURN(stride.size(), dim);
     for (int32_t stride_dim : stride) { CHECK_GT_OR_RETURN(stride_dim, 0); }
-
     for (int32_t i = 0; i < padding_after.size(); i++) {
-      CHECK_GT_OR_RETURN(kernel_size[i], 2 * padding_after[i])
+      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding_after[i])
           << "pad should be smaller than half of kernel size";
     }
 

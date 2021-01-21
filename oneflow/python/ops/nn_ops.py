@@ -1867,26 +1867,25 @@ def MaxPool3d(
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     assert data_format in ["NCDHW"]
-    channel_pos = "channels_last" if data_format == "NCDHW" else "channels_first"
+    channel_pos = "channels_first" if data_format == "NCDHW" else "channels_last"
     kernel_size = _GetSequence(kernel_size, 3, "kernel_size")
     dilation = _GetSequence(dilation, 3, "dilation")
     stride = _GetSequence(stride, 3, "stride")
     assert len(padding) == 3 or padding in ["SAME", "VALID"]
     if len(padding) == 3:
         if data_format == "NCDHW":
-            padding = (0, 0, padding[0], padding[1], padding[2])
+            padding = ((0,0), (0,0), (padding[0],padding[0]), (padding[1],padding[1]), (padding[2],padding[2]))
         elif data_format == "NDHWC":
-            padding = (0, padding[0], padding[1], padding[2], 0)
+            padding = ((0,0), (padding[0],padding[0]), (padding[1],padding[1]), (padding[2],padding[2]), (0,0))
         else:
-            raise ValueError('data_format must be "NHWTC" or "NCTHW".')
-    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
+            raise ValueError('data_format must be "NHWDC" or "NCDHW".')
+    padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-
     assert len(pads_list) == len(input.shape) - 2
     y, indice = (
         flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("MaxPool2d_")
+            name if name is not None else id_util.UniqueStr("MaxPool3d_")
         )
         .Op("maxpool_3d")
         .Input("x", [input])
