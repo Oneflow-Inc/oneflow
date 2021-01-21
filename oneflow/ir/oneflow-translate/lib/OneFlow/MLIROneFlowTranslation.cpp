@@ -265,32 +265,36 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
     module.emitError("Not a sys op. op name: " + op.name());
     return failure();
   }
-  auto ilbis = job_wrapper.InputLbns4OpName(op.name());
-  auto olbis = job_wrapper.InputLbns4OpName(op.name());
+  auto input_bns_lbns = job_wrapper.InputBns4OpName(op.name());
+  auto input_bns = input_bns_lbns.first;
+  auto input_lbns = input_bns_lbns.second;
+  auto output_lbns = job_wrapper.OutputLbns4OpName(op.name());
   job_wrapper.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
-  attr_vec.push_back(b.getNamedAttr(
-      "input", b.getStrArrayAttr(std::vector<llvm::StringRef>({ilbis.begin(), ilbis.end()}))));
-  attr_vec.push_back(b.getNamedAttr(
-      "output", b.getStrArrayAttr(std::vector<llvm::StringRef>({olbis.begin(), olbis.end()}))));
+  attr_vec.push_back(b.getNamedAttr("input_bns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
+                                                     {input_bns.begin(), input_bns.end()}))));
+  attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
+                                                       {output_lbns.begin(), output_lbns.end()}))));
   OperationState state(unknownLoc, "oneflow.system");
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
-  for (auto ilbi : ilbis) {
-    if (lbn2result.find(ilbi) != lbn2result.end()) {
-      auto v = lbn2result.at(ilbi);
+  for (auto input_lbn : input_lbns) {
+    if (lbn2result.find(input_lbn) != lbn2result.end()) {
+      auto v = lbn2result.at(input_lbn);
       operand_vec.push_back(v);
     }
   }
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (auto olbi : olbis) { out_types.append({RankedTensorType::get({}, b.getF32Type())}); }
+  for (auto output_lbn : output_lbns) {
+    out_types.append({RankedTensorType::get({}, b.getF32Type())});
+  }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = b.createOperation(state);
-  for (auto olbi : olbis) {
+  for (auto output_lbn : output_lbns) {
     int i = 0;
-    lbn2result.insert({olbi, created_op->getResult(i)});
+    lbn2result.insert({output_lbn, created_op->getResult(i)});
     i++;
   }
   if (!created_op) {

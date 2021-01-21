@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <utility>
 #include <vector>
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
@@ -31,13 +32,20 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     return job_builder_.ParallelConf4OpName(op_name);
   }
 
-  std::vector<std::string> InputLbns4OpName(const std::string& op_name) const {
-    std::vector<std::string> ret{};
+  std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(
+      const std::string& op_name) const {
     auto node = op_graph_.OpNode4OpName(op_name);
+    std::vector<std::string> input_bns{};
+    std::vector<std::string> input_lbns{};
     for (auto e : node->in_edges()) {
-      for (auto lbi : e->lbis()) { ret.push_back(GenLogicalBlobName(lbi)); }
+      for (auto lbi_ibn_pair : e->lbi2ibns()) {
+        for (auto ibn : lbi_ibn_pair.second) {
+          input_bns.push_back(ibn);
+          input_lbns.push_back(GenLogicalBlobName(lbi_ibn_pair.first));
+        }
+      }
     }
-    return ret;
+    return std::make_pair(input_bns, input_lbns);
   }
 
   std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const {

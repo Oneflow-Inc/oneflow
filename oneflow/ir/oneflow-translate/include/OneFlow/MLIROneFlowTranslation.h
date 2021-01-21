@@ -9,7 +9,8 @@ class RoundTripOneFlowJobWrapperInterface {
  public:
   virtual const ::oneflow::Job* job() const = 0;
   virtual const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const = 0;
-  virtual std::vector<std::string> InputLbns4OpName(const std::string& op_name) const = 0;
+  virtual std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(
+      const std::string& op_name) const = 0;
   virtual std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const = 0;
 };
 
