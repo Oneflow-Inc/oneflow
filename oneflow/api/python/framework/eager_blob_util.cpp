@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/eager_blob_util.h"
@@ -78,6 +79,41 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("get_dtype", [](const std::shared_ptr<EagerPhysicalBlobHeader>& x) {
         return static_cast<int>(x->dtype());
       });
+
+  py::class_<EagerPhysicalBlob, std::shared_ptr<EagerPhysicalBlob>>(m, "EagerPhysicalBlob")
+      .def(py::init([](const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object,
+                       const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(
+                           std::shared_ptr<BlobObject>)>& get_pysical_blob_header_cache) {
+        return std::make_shared<EagerPhysicalBlob>(blob_name, blob_object,
+                                                   get_pysical_blob_header_cache);
+      }))
+      .def_property_readonly("logical_blob_name", &EagerPhysicalBlob::logical_blob_name)
+      .def_property_readonly("unique_name", &EagerPhysicalBlob::logical_blob_name)
+      .def_property_readonly("static_shape",
+                             [](const std::shared_ptr<EagerPhysicalBlob>& x) {
+                               const auto& x_shape = x->static_shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
+      .def_property_readonly("shape",
+                             [](const std::shared_ptr<EagerPhysicalBlob>& x) {
+                               const auto& x_shape = x->shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
+      .def_property_readonly("is_dynamic", &EagerPhysicalBlob::is_dynamic)
+      .def_property_readonly("is_tensor_list", &EagerPhysicalBlob::is_tensor_list)
+      .def_property_readonly("blob_object", &EagerPhysicalBlob::blob_object)
+      .def("get_dtype",
+           [](const std::shared_ptr<EagerPhysicalBlob>& x) { return static_cast<int>(x->dtype()); })
+      .def("__str__", &EagerPhysicalBlob::ToString)
+      .def("__repr__", &EagerPhysicalBlob::ToString);
 }
 
 }  // namespace compatible_py

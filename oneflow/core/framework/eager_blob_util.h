@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/object.h"
 
 namespace oneflow {
 
@@ -28,6 +29,7 @@ class EagerPhysicalBlobHeader final {
   EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
                           const std::vector<std::shared_ptr<Shape>>& shape_list, DataType dtype,
                           bool is_tensor_list);
+  EagerPhysicalBlobHeader(const EagerPhysicalBlobHeader& other) = default;
   ~EagerPhysicalBlobHeader() = default;
 
   std::shared_ptr<Shape> static_shape() const;
@@ -41,6 +43,32 @@ class EagerPhysicalBlobHeader final {
   std::vector<std::shared_ptr<Shape>> shape_list_;
   DataType dtype_;
   bool is_tensor_list_;
+};
+
+class EagerPhysicalBlob {
+ public:
+  EagerPhysicalBlob(
+      const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object,
+      const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>&
+          get_pysical_blob_header_cache);
+  EagerPhysicalBlob(const EagerPhysicalBlob& other) = default;
+  ~EagerPhysicalBlob() = default;
+
+  std::string logical_blob_name() const;
+  std::string unique_name() const;
+  std::shared_ptr<Shape> static_shape() const;
+  std::shared_ptr<Shape> shape() const;
+  DataType dtype() const;
+  bool is_dynamic() const;
+  bool is_tensor_list() const;
+  std::shared_ptr<BlobObject> blob_object() const;
+  std::string ToString() const;
+
+ private:
+  std::string blob_name_;
+  std::shared_ptr<BlobObject> blob_object_;
+  std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>
+      get_pysical_blob_header_cache_;
 };
 
 }  // namespace compatible_py

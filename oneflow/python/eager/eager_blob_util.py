@@ -27,55 +27,30 @@ import oneflow_api
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
-class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
+class EagerPhysicalBlob(
+    oneflow_api.EagerPhysicalBlob,
+    blob_trait.BlobOperatorTrait,
+    blob_trait.BlobHeaderTrait,
+):
     def __init__(self, blob_name):
-        self.blob_name_ = blob_name
-        self.blob_object_ = blob_register.GetObject4BlobName(blob_name)
-
-    @property
-    def logical_blob_name(self):
-        return self.blob_name_
-
-    @property
-    def unique_name(self):
-        return self.blob_name_
-
-    @property
-    def static_shape(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).static_shape
-
-    @property
-    def shape(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).shape
+        oneflow_api.EagerPhysicalBlob.__init__(
+            self,
+            blob_name,
+            blob_register.GetObject4BlobName(blob_name),
+            _GetPhysicalBlobHeaderCache,
+        )
 
     @property
     def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(
-            _GetPhysicalBlobHeaderCache(self.blob_object_).get_dtype()
-        )
-
-    @property
-    def is_dynamic(self):
-        return True
-
-    @property
-    def is_tensor_list(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).is_tensor_list
+        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
     def numpy(self):
         assert not self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object_)
+        return _GetPhysicalBlobBodyCache(self.blob_object)
 
     def numpy_list(self):
         assert self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object_)
-
-    def __str__(self):
-        return "EagerPhysicalBlob(shape=%s, dtype=%s, is_tensor_list=%s)" % (
-            self.shape,
-            self.dtype,
-            self.is_tensor_list,
-        )
+        return _GetPhysicalBlobBodyCache(self.blob_object)
 
     def __del__(self):
         blob_register.ClearObject4BlobName(self.unique_name)

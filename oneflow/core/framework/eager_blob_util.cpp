@@ -27,17 +27,58 @@ EagerPhysicalBlobHeader::EagerPhysicalBlobHeader(
       dtype_(dtype),
       is_tensor_list_(is_tensor_list) {}
 std::shared_ptr<Shape> EagerPhysicalBlobHeader::static_shape() const { return static_shape_; }
+
 std::shared_ptr<Shape> EagerPhysicalBlobHeader::shape() const {
   CHECK_EQ(shape_list_.size(), 1);
   CHECK_EQ(is_tensor_list_, false);
   return shape_list_.at(0);
 }
+
 std::vector<std::shared_ptr<Shape>> EagerPhysicalBlobHeader::shape_list() const {
   CHECK_EQ(is_tensor_list_, true);
   return shape_list_;
 }
+
 DataType EagerPhysicalBlobHeader::dtype() const { return dtype_; }
+
 bool EagerPhysicalBlobHeader::is_tensor_list() const { return is_tensor_list_; }
+
+EagerPhysicalBlob::EagerPhysicalBlob(
+    const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object,
+    const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>&
+        get_pysical_blob_header_cache)
+    : blob_name_(blob_name),
+      blob_object_(blob_object),
+      get_pysical_blob_header_cache_(get_pysical_blob_header_cache) {}
+
+std::string EagerPhysicalBlob::logical_blob_name() const { return blob_name_; }
+
+std::string EagerPhysicalBlob::unique_name() const { return blob_name_; }
+
+std::shared_ptr<Shape> EagerPhysicalBlob::static_shape() const {
+  return get_pysical_blob_header_cache_(blob_object_)->static_shape();
+}
+
+std::shared_ptr<Shape> EagerPhysicalBlob::shape() const {
+  return get_pysical_blob_header_cache_(blob_object_)->shape();
+}
+
+DataType EagerPhysicalBlob::dtype() const {
+  return get_pysical_blob_header_cache_(blob_object_)->dtype();
+}
+
+bool EagerPhysicalBlob::is_dynamic() const { return true; }
+
+bool EagerPhysicalBlob::is_tensor_list() const {
+  return get_pysical_blob_header_cache_(blob_object_)->is_tensor_list();
+}
+
+std::shared_ptr<BlobObject> EagerPhysicalBlob::blob_object() const { return blob_object_; }
+
+std::string EagerPhysicalBlob::ToString() const {
+  return std::string("EagerPhysicalBlob(shape=") + shape()->ToString() + ", dtype="
+         + DataType_Name(dtype()) + "is_tensor_list=" + (is_tensor_list() ? "True" : "False");
+}
 
 }  // namespace compatible_py
 
