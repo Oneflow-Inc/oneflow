@@ -171,7 +171,6 @@ REGISTER_USER_OP("maxpool_2d_grad")
 
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 2));
 
-
 REGISTER_USER_OP("maxpool_3d")
     .Input("x")
     .Output("y")

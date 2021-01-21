@@ -1874,9 +1874,21 @@ def MaxPool3d(
     assert len(padding) == 3 or padding in ["SAME", "VALID"]
     if len(padding) == 3:
         if data_format == "NCDHW":
-            padding = ((0,0), (0,0), (padding[0],padding[0]), (padding[1],padding[1]), (padding[2],padding[2]))
+            padding = (
+                (0, 0),
+                (0, 0),
+                (padding[0], padding[0]),
+                (padding[1], padding[1]),
+                (padding[2], padding[2]),
+            )
         elif data_format == "NDHWC":
-            padding = ((0,0), (padding[0],padding[0]), (padding[1],padding[1]), (padding[2],padding[2]), (0,0))
+            padding = (
+                (0, 0),
+                (padding[0], padding[0]),
+                (padding[1], padding[1]),
+                (padding[2], padding[2]),
+                (0, 0),
+            )
         else:
             raise ValueError('data_format must be "NHWDC" or "NCDHW".')
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
@@ -1908,7 +1920,6 @@ def MaxPool3d(
         return y, indice
     else:
         return y
-
 
 
 @oneflow_export("nn.max_pool2d")
