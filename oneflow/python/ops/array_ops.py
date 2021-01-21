@@ -2468,3 +2468,62 @@ def ones(
         dtype = flow.float32
 
     return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
+
+
+@oneflow_export("masked_fork")
+def masked_fill(
+    x: oneflow_api.BlobDesc, mask: oneflow_api.BlobDesc, name: Optional[str] = None,
+) -> List[oneflow_api.BlobDesc]:
+    """This operator takes a Tensor as input and outpus two tensors according to mask. 
+    
+    Args:
+        x (oneflow_api.BlobDesc):  
+        mask (Optional[dtype_util.dtype], optional):
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+    
+    Returns:
+        List[oneflow_api.BlobDesc]: 
+    
+    For example: 
+    
+    .. code-block:: python 
+    
+        import oneflow as flow
+        import numpy as np
+        from typing import Tuple
+
+
+        @flow.global_function()
+        def MaskedForkJob(
+            x: flow.typing.Numpy.Placeholder(shape=(2,3)),
+            mask: flow.typing.Numpy.Placeholder(shape=(2,3), dtype=flow.int8)
+        )-> Tuple[flow.typing.Numpy, flow.typing.Numpy]:
+            return flow.masked_fork(x, mask)
+
+        x = np.array([[10, 20, 30], [40, 50, 60]])
+        mask = np.array([[1, 0, 0],[0, 1, 0]])
+        out_ture, out_false = MaskedForkJob(x, mask)
+        print(out_ture)
+        print(out_false)
+
+        # out
+        # [[10.  0.  0.]
+        # [ 0. 50.  0.]]
+        # [[ 0. 20. 30.]
+        # [40.  0. 60.]]
+
+    """
+
+    if name is None:
+        name = id_util.UniqueStr("MaskedFork_")
+    op = (
+        flow.user_op_builder(name)
+        .Op("masked_fork")
+        .Input("in", [x])
+        .Input("mask", [mask])
+        .Output("out_true")
+        .Output("out_false")
+        .Build()
+    )
+    (out_ture, out_false) = op.InferAndTryRun().RemoteBlobList()
+    return out_ture, out_false
