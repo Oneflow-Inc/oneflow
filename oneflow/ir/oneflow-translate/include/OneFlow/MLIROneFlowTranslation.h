@@ -8,6 +8,7 @@ namespace mlir {
 class RoundTripOneFlowJobWrapperInterface {
  public:
   virtual const ::oneflow::Job* job() const = 0;
+  virtual void UpdateJob(const ::oneflow::Job* new_job) = 0;
   virtual const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const = 0;
   virtual const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const = 0;
   virtual std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(

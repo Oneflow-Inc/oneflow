@@ -24,9 +24,15 @@ namespace {
 
 class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterface {
  public:
-  RoundTripOneFlowJobWrapper(::oneflow::Job* job) : job_(job), op_graph_(*job), job_builder_(job) {}
+  RoundTripOneFlowJobWrapper(::oneflow::Job* job)
+      : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
 
   const Job* job() const { return job_; }
+  void UpdateJob(const ::oneflow::Job* new_job) {
+    CHECK(is_updated_ == false);
+    job_->CopyFrom(*new_job);
+    is_updated_ = true;
+  }
 
   const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
@@ -63,6 +69,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   Job* job_;
   const OpGraph op_graph_;
   JobBuilder job_builder_;
+  bool is_updated_;
 };
 
 class IRRoundTrip final : public JobPass {

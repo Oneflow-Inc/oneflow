@@ -213,11 +213,12 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
     // TODO: declare tensor containing field lbi
     for (int i = 0; i < kv.second.s_size(); i++) {
       const std::string &lbn = kv.second.s(i);
-      if (lbn2result_.find(lbn) != lbn2result_.end()) {
+      if (lbn2result_.find(lbn) == lbn2result_.end()) {
+        module.emitError("IR result not found for: " + lbn);
+        return failure();
+      } else {
         auto v = lbn2result_.at(lbn);
         operand_vec.push_back(v);
-      } else {
-        // TODO: add placehorder ops for tick inputs
       }
     }
   }
@@ -307,7 +308,10 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
-    if (lbn2result_.find(input_lbn) != lbn2result_.end()) {
+    if (lbn2result_.find(input_lbn) == lbn2result_.end()) {
+      module.emitError("IR result not found for: " + input_lbn);
+      return failure();
+    } else {
       auto v = lbn2result_.at(input_lbn);
       operand_vec.push_back(v);
     }
@@ -461,8 +465,8 @@ LogicalResult Importer::tryToUpdateJob() {
           err_str = "fail to convert op attr, key: " + key;
         }
         (*user_conf->mutable_attr())[key] = user_attr;
-        *(new_job.mutable_net()->add_op()) = op_conf;
       }
+      *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
@@ -472,6 +476,7 @@ LogicalResult Importer::tryToUpdateJob() {
   };
   module.getBodyRegion().walk(convertOps);
   if (err_str.empty()) {
+    job_wrapper.UpdateJob(&new_job);
     return success();
   } else {
     module->emitError(err_str);
