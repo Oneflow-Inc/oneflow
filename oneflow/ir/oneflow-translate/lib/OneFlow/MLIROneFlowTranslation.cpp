@@ -370,22 +370,31 @@ LogicalResult Importer::tryToUpdateJob() {
       oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
       if (defined_const) { defined_const->dump(); }
       ::oneflow::OperatorConf op_conf;
-      op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
-      op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
-      op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
       auto user_conf = op_conf.mutable_user_conf();
-      user_conf->set_op_type_name(op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
-        if (id.strref().equals("op_name") || id.strref().equals("trainable")
-            || id.strref().equals("device") || id.strref().equals("placement")
-            || id.strref().contains("input_lbn_segment_keys")
+        if (id.strref().equals("op_name")) {
+          op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
+        }
+        if (id.strref().equals("op_type_name")) {
+          user_conf->set_op_type_name(
+              op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
+        }
+        if (id.strref().equals("trainable")) {
+          op_conf.set_trainable(op->getAttrOfType<BoolAttr>("op_name").getValue());
+        }
+        if (id.strref().equals("device")) {
+          op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
+        }
+        if (id.strref().equals("scope_symbol_id")) {
+          op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
+        }
+        if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
             || id.strref().contains("input_lbn_segment_sizes")
             || id.strref().contains("output_lbns")
             || id.strref().contains("output_lbn_segment_keys")
-            || id.strref().contains("output_lbn_segment_sizes")
-            || id.strref().equals("scope_symbol_id")) {
+            || id.strref().contains("output_lbn_segment_sizes")) {
           continue;
         }
         auto attr = id_attr.second;
