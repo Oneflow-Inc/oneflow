@@ -7,6 +7,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -329,7 +330,7 @@ LogicalResult Importer::processJob() {
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
-  auto convertOps = [](Operation *op) {
+  auto convertOps = [&](Operation *op) {
     if (/* user op */ op->hasAttr("op_type_name")) {
       oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
       if (defined_relu) { defined_relu->dump(); }
@@ -341,14 +342,17 @@ LogicalResult Importer::tryToUpdateJob() {
         auto id = id_attr.first;
         std::string key = id.str();
         auto attr = id_attr.second;
+        auto user_attr = ::oneflow::AttrValue();
         if (auto str_ref = attr.dyn_cast<StringAttr>()) {
-          auto attr = ::oneflow::AttrValue();
-          attr.set_at_string(str_ref.getValue().str());
-          (*user_conf->mutable_attr())[key] = attr;
-
-        } else /* system op */
-        {
+          user_attr.set_at_string(str_ref.getValue().str());
+        } else if (auto i_ref = attr.dyn_cast<IntegerAttr>()) {
+          if (i_ref.getType() == b.getIntegerType(64)) {
+            user_attr.set_at_int64(i_ref.getInt());
+          } else if (i_ref.getType() == b.getIntegerType(32)) {
+            user_attr.set_at_int32(i_ref.getInt());
+          }
         }
+        (*user_conf->mutable_attr())[key] = user_attr;
       }
     }
   };
