@@ -62,8 +62,8 @@ class Importer {
                                           std::vector<NamedAttribute> &attr_vec);
   LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
                                    std::vector<::mlir::Value> &operand_vec);
-  LogicalResult AddInputOutputAndSegmentSizes(const ::oneflow::OperatorConf &op,
-                                              std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddInputOutputSegments(const ::oneflow::OperatorConf &op,
+                                       std::vector<NamedAttribute> &attr_vec);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processSystemOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
@@ -85,8 +85,8 @@ class Importer {
 };
 
 // TODO: add trait for this
-LogicalResult Importer::AddInputOutputAndSegmentSizes(const ::oneflow::OperatorConf &op,
-                                                      std::vector<NamedAttribute> &attr_vec) {
+LogicalResult Importer::AddInputOutputSegments(const ::oneflow::OperatorConf &op,
+                                               std::vector<NamedAttribute> &attr_vec) {
   std::vector<llvm::StringRef> input_lbn_segment_keys;
   std::vector<int> input_lbn_segment_sizes;
   for (auto input : op.user_conf().input()) {
@@ -198,7 +198,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     }
   }
 
-  AddInputOutputAndSegmentSizes(op, attr_vec);
+  AddInputOutputSegments(op, attr_vec);
 
   return success();
 }
