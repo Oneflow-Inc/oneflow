@@ -31,11 +31,12 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
     StrArrayAttr:$placement
   );
   dag attrs = (ins);
-  dag data_in = (ins);
-  dag ctrl_in = (ins);
+  dag input = (ins);
+  dag ctrl_input = (ins);
+  dag ctrl_output = (outs);
   let arguments = !con(
-      data_in,
-      ctrl_in,
+      input,
+      ctrl_input,
       sys_attrs,
       attrs
   );
@@ -80,7 +81,7 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsA
 
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let summary = "";
-  let data_in = (ins Variadic<AnyType>:$operands);
+  let input = (ins Variadic<AnyType>:$operands);
   let results = (outs Variadic<AnyType>:$outputs);
 }
 
