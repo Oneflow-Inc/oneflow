@@ -236,7 +236,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &device_tag = pc.device_tag();
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   std::vector<NamedAttribute> attr_vec;
-  attr_vec.push_back(b.getNamedAttr("name", b.getStringAttr(op.name())));
+  attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
   attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
   attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(device_tag)));
   attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
@@ -356,6 +356,9 @@ LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
   std::string err_str = "";
+  auto new_job = ::oneflow::Job();
+  new_job.CopyFrom(*job);
+  new_job.clear_net();
   auto convertOps = [&](Operation *op) {
     if (/* user op */ op->hasAttr("op_type_name")) {
       oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
@@ -363,14 +366,15 @@ LogicalResult Importer::tryToUpdateJob() {
       oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
       if (defined_const) { defined_const->dump(); }
       ::oneflow::OperatorConf op_conf;
-      op_conf.set_name(op->getAttrOfType<StringAttr>("name").getValue().str());
+      op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
       op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
       op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
       auto user_conf = op_conf.mutable_user_conf();
+      user_conf->set_op_type_name(op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
-        if (id.strref().equals("name") || id.strref().equals("trainable")
+        if (id.strref().equals("op_name") || id.strref().equals("trainable")
             || id.strref().equals("device") || id.strref().equals("placement")
             || id.strref().contains("input_lbn_segment_keys")
             || id.strref().contains("input_lbn_segment_sizes")
@@ -457,7 +461,13 @@ LogicalResult Importer::tryToUpdateJob() {
           err_str = "fail to convert op attr, key: " + key;
         }
         (*user_conf->mutable_attr())[key] = user_attr;
+        *(new_job.mutable_net()->add_op()) = op_conf;
       }
+    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+      auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+      *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
+    } else {
+      // check if is module_terminator
     }
   };
   module.getBodyRegion().walk(convertOps);

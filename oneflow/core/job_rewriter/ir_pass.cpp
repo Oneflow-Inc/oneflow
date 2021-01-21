@@ -31,7 +31,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
   }
-
+  const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const {
+    job_builder_.OpConf4OpName(op_name);
+  }
   std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(
       const std::string& op_name) const {
     auto node = op_graph_.OpNode4OpName(op_name);
