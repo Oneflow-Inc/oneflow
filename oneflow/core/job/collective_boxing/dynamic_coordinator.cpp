@@ -147,9 +147,9 @@ void DynamicCoordinator::Impl::CoordinatingLoop() {
   const auto cycle_time_us =
       static_cast<int64_t>(conf.dynamic_coordinator_conf().cycle_time_ms() * 1000);
   const std::chrono::microseconds cycle_time(cycle_time_us);
-  auto last_loop_time = std::chrono::system_clock::now();
+  auto last_loop_time = std::chrono::steady_clock::now();
   while (true) {
-    const auto now = std::chrono::system_clock::now();
+    const auto now = std::chrono::steady_clock::now();
     const auto duration_to_last_loop = now - last_loop_time;
     last_loop_time = now;
     const auto duration_to_sleep = cycle_time - duration_to_last_loop;
