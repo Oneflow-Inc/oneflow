@@ -53,6 +53,10 @@ inline void CurJobBuildAndInferCtx_Complete() {
   return oneflow::CurJobBuildAndInferCtx_Complete().GetOrThrow();
 }
 
+inline void CurJobBuildAndInferCtx_Rebuild() {
+  return oneflow::CurJobBuildAndInferCtx_Rebuild().GetOrThrow();
+}
+
 inline bool CurJobBuildAndInferCtx_HasJobConf() {
   return oneflow::CurJobBuildAndInferCtx_HasJobConf().GetOrThrow();
 }

@@ -31,6 +31,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("CurJobBuildAndInferCtx_Complete", &CurJobBuildAndInferCtx_Complete,
         py::call_guard<py::gil_scoped_release>());
+  m.def("CurJobBuildAndInferCtx_Rebuild", &CurJobBuildAndInferCtx_Rebuild,
+        py::call_guard<py::gil_scoped_release>());
   m.def("CurJobBuildAndInferCtx_HasJobConf", &CurJobBuildAndInferCtx_HasJobConf);
   m.def("CurJobBuildAndInferCtx_AddAndInferMirroredOp",
         &CurJobBuildAndInferCtx_AddAndInferMirroredOp, py::call_guard<py::gil_scoped_release>());

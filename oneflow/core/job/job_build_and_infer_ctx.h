@@ -67,6 +67,7 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckJob() const;
   std::string GetJobStructureGraphJson(const std::string& job_name) const;
   Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
+  Maybe<void> Rebuild();
 
   virtual Maybe<void> Complete() = 0;
 

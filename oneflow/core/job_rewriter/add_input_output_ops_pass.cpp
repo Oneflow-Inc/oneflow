@@ -28,18 +28,20 @@ namespace oneflow {
 
 namespace {
 
-std::string MakeInputOpConf(const std::string& input_op_name, const InterfaceBlobConf& blob_conf,
-                            OperatorConf* input_op_conf) {
+std::string MakeInputOpConf(const std::string& input_op_name, const int64_t scope_sym_id,
+                            const InterfaceBlobConf& blob_conf, OperatorConf* input_op_conf) {
   input_op_conf->set_name(input_op_name);
+  input_op_conf->set_scope_symbol_id(scope_sym_id);
   auto* input_conf = input_op_conf->mutable_input_conf();
   input_conf->set_out("out");
   input_conf->mutable_blob_conf()->CopyFrom(blob_conf);
   return GenLogicalBlobName(input_op_name, "out");
 }
 
-std::string MakeOutputOpConf(const std::string& output_op_name, const LogicalBlobId& lbi,
-                             OperatorConf* output_op_conf) {
+std::string MakeOutputOpConf(const std::string& output_op_name, const int64_t scope_sym_id,
+                             const LogicalBlobId& lbi, OperatorConf* output_op_conf) {
   output_op_conf->set_name(output_op_name);
+  output_op_conf->set_scope_symbol_id(scope_sym_id);
   auto* return_conf = output_op_conf->mutable_return_conf();
   return_conf->set_in(GenLogicalBlobName(lbi));
   return_conf->set_out("out");
@@ -71,6 +73,12 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     return false;
   };
 
+  HashMap<LogicalBlobId, int64_t> inferface_lbi2scope_sym_id;
+  auto RecordScopeSymbolId = [&](const LogicalBlobId& lbi) -> void {
+    const auto* op_node = op_graph.OpNode4OpName(lbi.op_name());
+    inferface_lbi2scope_sym_id.emplace(lbi, op_node->op().op_conf().scope_symbol_id());
+  };
+
   HashSet<std::string> keep_op_names;
   // TODO: This search way only support stateless subgraph.
   // Control edge and mutable input need to be considered when supporting side-effect subgraph.
@@ -82,11 +90,19 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     for (const auto& ibn : op_node->op().input_bns()) {
       CHECK_OR_RETURN(!op_node->op().InputBlobModifier4Ibn(ibn).is_mutable());
       const auto& src_lbi = op_node->op().BnInOp2Lbi(ibn);
-      if (!IsInputLbi(src_lbi)) { SearchConstSrcAndTrace(src_lbi); }
+      if (IsInputLbi(src_lbi)) {
+        RecordScopeSymbolId(src_lbi);
+      } else {
+        SearchConstSrcAndTrace(src_lbi);
+      }
     }
     return Maybe<void>::Ok();
   };
-  for (const auto& pair : job_sig.outputs()) { SearchConstSrcAndTrace(pair.second.lbi()); }
+  for (const auto& pair : job_sig.outputs()) {
+    const auto& lbi = pair.second.lbi();
+    RecordScopeSymbolId(lbi);
+    SearchConstSrcAndTrace(lbi);
+  }
 
   std::vector<std::string> drop_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -112,8 +128,9 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     const auto* op_node = op_graph.OpNode4OpName(input_def.lbi().op_name());
 
     CHECK_OR_RETURN(io_op_name2op_conf.emplace(input_name, OperatorConf()).second);
-    std::string input_lbn =
-        MakeInputOpConf(input_name, input_def.blob_conf(), &io_op_name2op_conf[input_name]);
+    int64_t scope_sym_id = inferface_lbi2scope_sym_id.at(input_def.lbi());
+    std::string input_lbn = MakeInputOpConf(input_name, scope_sym_id, input_def.blob_conf(),
+                                            &io_op_name2op_conf[input_name]);
     CHECK_OR_RETURN(
         io_op_name2parallel_conf.emplace(input_name, &op_node->parallel_desc().parallel_conf())
             .second);
@@ -137,7 +154,8 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     const auto& output_def = pair.second;
     const auto* op_node = op_graph.OpNode4OpName(output_def.lbi().op_name());
     CHECK_OR_RETURN(io_op_name2op_conf.emplace(output_name, OperatorConf()).second);
-    MakeOutputOpConf(output_name, output_def.lbi(), &io_op_name2op_conf[output_name]);
+    int64_t scope_sym_id = inferface_lbi2scope_sym_id.at(output_def.lbi());
+    MakeOutputOpConf(output_name, scope_sym_id, output_def.lbi(), &io_op_name2op_conf[output_name]);
     CHECK_OR_RETURN(
         io_op_name2parallel_conf.emplace(output_name, &op_node->parallel_desc().parallel_conf())
             .second);

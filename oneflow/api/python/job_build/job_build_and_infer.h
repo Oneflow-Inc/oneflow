@@ -79,6 +79,7 @@ inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_
 }
 
 inline Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }
+inline Maybe<void> CurJobBuildAndInferCtx_Rebuild() { return JUST(GetCurInferCtx())->Rebuild(); }
 
 inline Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() {
   return JUST(GetCurInferCtx())->HasJobConf();

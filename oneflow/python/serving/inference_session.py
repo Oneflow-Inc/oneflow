@@ -158,11 +158,9 @@ class InferenceSession(object):
         self.config_proto_ = None
         self.job_name2job_conf_ = {}
         self.inter_user_job_info_ = None
-        self.job_name2input_name2lbn_ = {}
-        self.job_name2output_name2lbn_ = {}
-        self.job_name2batch_size_ = {}
-        self.input_name2input_info_ = {}
-        self.output_name2output_info_ = {}
+        self.inferface_name2job_name_ = {}
+        self.inferface_name2lbn_ = {}
+        self.inferface_name2info_ = {}
         self.output_name2future_ = {}
         self.job_futures_ = []
         self.status_ = None
@@ -241,17 +239,20 @@ class InferenceSession(object):
         job_conf = self._get_job_conf(job_name)
         _signature_proto_to_cfg(signature, job_conf.mutable_signature())
 
-        self.job_name2input_name2lbn_[job_name] = {}
         for input_name, input_def in signature.inputs.items():
-            lbn = "{}/{}".format(input_def.lbi.op_name, input_def.lbi.blob_name)
-            self.job_name2input_name2lbn_[job_name][input_name] = lbn
+            self.inferface_name2job_name_[input_name] = job_name
+            self.inferface_name2lbn_[input_name] = "{}/{}".format(
+                input_def.lbi.op_name, input_def.lbi.blob_name
+            )
 
-        self.job_name2output_name2lbn_[job_name] = {}
         for output_name, output_def in signature.outputs.items():
-            lbn = "{}/{}".format(output_def.lbi.op_name, output_def.lbi.blob_name)
-            self.job_name2output_name2lbn_[job_name][output_name] = lbn
+            self.inferface_name2job_name_[output_name] = job_name
+            self.inferface_name2lbn_[output_name] = "{}/{}".format(
+                output_def.lbi.op_name, output_def.lbi.blob_name
+            )
 
     def set_job_batch_size(self, job_name, batch_size):
+        self._check_status(self.SessionStatus.OPEN)
         job_conf = self._get_job_conf(job_name)
         for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
             if not mut_input_def.has_batch_axis():
@@ -259,10 +260,6 @@ class InferenceSession(object):
             batch_axis = mut_input_def.batch_axis()
             mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
             mut_shape.mutable_dim()[batch_axis] = batch_size
-
-        self.job_name2batch_size_[job_name] = batch_size
-        self.input_name2input_info_ = {}
-        self.output_name2output_info_ = {}
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
@@ -314,6 +311,7 @@ class InferenceSession(object):
             compile_ctx.CurJobAddOp(op_conf)
 
         oneflow_api.CurJobBuildAndInferCtx_Complete()
+        oneflow_api.CurJobBuildAndInferCtx_Rebuild()
 
     def launch(self):
         self._check_status(self.SessionStatus.OPEN)
@@ -418,101 +416,44 @@ class InferenceSession(object):
             output_names.append(output_name)
         return tuple(output_names)
 
-    def _query_input_lbn(self, input_name):
-        input_job_name = None
-        input_lbn = None
-        for job_name, input_name2lbn in self.job_name2input_name2lbn_.items():
-            if input_name in input_name2lbn:
-                input_lbn = input_name2lbn[input_name]
-                input_job_name = job_name
-
-        return input_lbn, input_job_name
-
-    def _query_output_lbn(self, output_name):
-        output_job_name = None
-        output_lbn = None
-        for job_name, output_name2lbn in self.job_name2output_name2lbn_.items():
-            if output_name in output_name2lbn:
-                output_lbn = output_name2lbn[output_name]
-                output_job_name = job_name
-
-        return output_lbn, output_job_name
-
-    def _fix_input_shape(self, job_name, input_name, origin_input_shape):
-        """
-            Fix batch size of intput tensor shape
-        """
-        job_conf = self._get_job_conf(job_name)
-        input_def = job_conf.signature().inputs()[input_name]
-        input_shape = tuple(input_def.blob_conf().shape().dim())
-        for axis, (dim_size, origin_dim_size) in enumerate(
-            zip(input_shape, origin_input_shape)
-        ):
-            if dim_size != origin_dim_size and (
-                (input_def.has_batch_axis() and axis != input_def.batch_axis())
-                or (not input_def.has_batch_axis())
-            ):
-                raise ValueError(
-                    "input shape not match: {} vs {}".format(
-                        input_shape, origin_input_shape
-                    )
-                )
-
-        return input_shape
-
-    def _fix_output_shape(self, job_name, output_name, origin_output_shape):
-        if job_name not in self.job_name2batch_size_:
-            return origin_output_shape
-
-        job_conf = self._get_job_conf(job_name)
-        output_def = job_conf.signature().outputs()[output_name]
-        output_shape = list(origin_output_shape)
-        if output_def.has_batch_axis():
-            output_shape[output_def.batch_axis()] = self.job_name2batch_size_[job_name]
-        return tuple(output_shape)
-
     def input_info(self, input_name):
-        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
-        if input_name in self.input_name2input_info_:
-            return self.input_name2input_info_[input_name]
+        self._check_status(self.SessionStatus.RUNNING)
+        if input_name in self.inferface_name2info_:
+            return self.inferface_name2info_[input_name]
 
-        input_lbn, input_job_name = self._query_input_lbn(input_name)
-        if input_job_name is None or input_lbn is None:
-            raise ValueError('can not find input "{}"'.format(input_name))
+        input_lbn = "{}/out".format(input_name)
+        if input_name not in self.inferface_name2job_name_:
+            raise ValueError('can not find input with name "{}"'.format(input_name))
 
-        input_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
-            input_job_name, input_lbn
-        )
-        input_shape = self._fix_input_shape(input_job_name, input_name, input_shape)
-        input_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(
-            input_job_name, input_lbn
-        )
+        job_name = self.inferface_name2job_name_[input_name]
+        input_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, input_lbn)
+        input_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, input_lbn)
         input_dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(input_dtype)
-        input_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(input_dtype)
+        # input_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(input_dtype)
         # TODO: other info
         input_info = dict(shape=input_shape, dtype=input_dtype)
-        self.input_name2input_info_[input_name] = input_info
+        self.inferface_name2info_[input_name] = input_info
         return input_info
 
     def output_info(self, output_name):
-        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
-        if output_name in self.output_name2output_info_:
-            return self.output_name2output_info_[output_name]
+        self._check_status(self.SessionStatus.RUNNING)
+        if output_name in self.inferface_name2info_:
+            return self.inferface_name2info_[output_name]
 
-        output_lbn, job_name = self._query_output_lbn(output_name)
-        if job_name is None or output_lbn is None:
-            raise ValueError('can not find input "{}"'.format(output_name))
+        output_lbn = "{}/out".format(output_name)
+        if output_name not in self.inferface_name2job_name_:
+            raise ValueError('can not find output with name "{}"'.format(output_name))
 
+        job_name = self.inferface_name2job_name_[output_name]
         output_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
             job_name, output_lbn
         )
-        output_shape = self._fix_output_shape(job_name, output_name, output_shape)
         output_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, output_lbn)
         output_dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(output_dtype)
-        output_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(output_dtype)
+        # output_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(output_dtype)
         # TODO: other info
         output_info = dict(shape=output_shape, dtype=output_dtype)
-        self.output_name2output_info_[output_name] = output_info
+        self.inferface_name2info_[output_name] = output_info
         return output_info
 
     def run(self, job_name, **kwargs):
@@ -575,9 +516,10 @@ class InferenceSession(object):
         return output_futures
 
     def _make_pull_job_cb(self, output_name, future):
-        output_lbn, output_job_name = self._query_output_lbn(output_name)
+        output_lbn = self.inferface_name2lbn_[output_name]
+        job_name = self.inferface_name2job_name_[output_name]
         split_axis = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-            output_job_name, output_lbn
+            job_name, output_lbn
         )
         loop = asyncio.get_event_loop()
 
