@@ -240,6 +240,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
   attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(device_tag)));
   attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
+  attr_vec.push_back(b.getNamedAttr("scope_symbol_id", b.getI64IntegerAttr(op.scope_symbol_id())));
   attr_vec.push_back(
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
