@@ -354,8 +354,6 @@ LogicalResult Importer::tryToUpdateJob() {
           }
         } else if (auto ref = attr.dyn_cast<BoolAttr>()) {
           user_attr.set_at_bool(ref.getValue());
-        } else if (auto ref = attr.dyn_cast<StringAttr>()) {
-          user_attr.set_at_string(ref.getValue().str());
         } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
           if (ref.getType() == b.getF32Type()) {
             user_attr.set_at_float(ref.getValue().convertToFloat());
@@ -364,6 +362,10 @@ LogicalResult Importer::tryToUpdateJob() {
           } else {
             err_str = "fail to convert op attr, key: " + key;
           }
+        } else if (auto ref = attr.dyn_cast<StringAttr>()) {
+          user_attr.set_at_string(ref.getValue().str());
+        } else {
+          err_str = "fail to convert op attr, key: " + key;
         }
         (*user_conf->mutable_attr())[key] = user_attr;
       }
