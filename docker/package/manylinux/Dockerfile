@@ -38,10 +38,10 @@ RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake && ln -s /opt/_int
 RUN mkdir -p /tmp && curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archive/0.11.zip && unzip 0.11.zip && cd patchelf-0.11 && sed -i 's/32/64/g' src/patchelf.cc && ./bootstrap.sh && ./configure && make -j`nproc` && make install && cd .. && rm -rf patchelf-0.11 0.11.zip
 
 COPY dev-requirements.txt /tmp/dev-requirements.txt
-RUN /opt/python/cp35-cp35m/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.txt --user \
-    && /opt/python/cp36-cp36m/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.txt --user \
-    && /opt/python/cp37-cp37m/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.txt --user \
-    && /opt/python/cp38-cp38/bin/pip install $TUNA_INDEX -r /tmp/dev-requirements.txt --user \
+RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+    && /opt/python/cp36-cp36m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+    && /opt/python/cp37-cp37m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+    && /opt/python/cp38-cp38/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && rm /tmp/dev-requirements.txt
 
 RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
