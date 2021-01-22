@@ -368,13 +368,11 @@ LogicalResult Importer::tryToUpdateJob() {
   new_job.clear_net();
   auto convertOps = [&](Operation *op) {
     if (/* user op */ op->hasAttr("op_type_name")) {
-      oneflow::ReluOp defined_relu = llvm::dyn_cast<oneflow::ReluOp>(op);
-      if (defined_relu) { defined_relu->dump(); }
-      oneflow::ConstantOp defined_const = llvm::dyn_cast<oneflow::ConstantOp>(op);
-      if (defined_const) { defined_const->dump(); }
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
+
+      // convert inputs
       int input_idx = 0;
       if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
         auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
@@ -420,8 +418,9 @@ LogicalResult Importer::tryToUpdateJob() {
       } else {
         err_str = "fail to convert op inputs, name: " + op_name;
         return;
-      }
+      }  // convert inputs
 
+      // convert outputs
       int output_key_idx = -1;
       int segment_offset = 0;
       for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
@@ -443,10 +442,11 @@ LogicalResult Importer::tryToUpdateJob() {
                                      .getValue()
                                      .str();
         *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
-      }
+      }  // convert outputs
+
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
-        // handle op conf attributes
+        // convert op conf attributes
         if (id.strref().equals("op_name")) {
           op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
           continue;
@@ -474,7 +474,9 @@ LogicalResult Importer::tryToUpdateJob() {
             || id.strref().contains("output_lbn_segment_keys")
             || id.strref().contains("output_lbn_segment_sizes")) {
           continue;
-        }
+        }  // convert op conf attributes
+
+        // convert user conf attributes
         auto attr = id_attr.second;
         auto user_attr = ::oneflow::AttrValue();
         if (auto ref = attr.dyn_cast<BoolAttr>()) /* handle bool before int because it is i1*/ {
@@ -556,16 +558,17 @@ LogicalResult Importer::tryToUpdateJob() {
         } else {
           err_str = "fail to convert op attr, key: " + id.str();
           return;
-        }
+        }  // convert user conf attributes
+
         (*user_conf->mutable_attr())[id.str()] = user_attr;
       }
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    } /* user op */ else if (/* system op */ llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
     } else {
       // TODO: check if is module_terminator
-    }
+    } /* convert op conf */
   };
   module.getBodyRegion().walk(convertOps);
   if (err_str.empty()) {
