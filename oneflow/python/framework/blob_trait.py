@@ -82,7 +82,7 @@ def __ge__(self, rhs):
     return oneflow.math.greater_equal(self, rhs)
 
 
-def CompleteBlobOperatorTrait(blob_type):
+def RegisterBlobOperatorTraitMethod(blob_type):
     blob_type.__add__ = __add__
     blob_type.__radd__ = __radd__
     blob_type.__sub__ = __sub__

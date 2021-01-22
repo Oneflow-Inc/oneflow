@@ -39,7 +39,7 @@ def numpy_list(self):
     return _GetPhysicalBlobBodyCache(self.blob_object)
 
 
-def CompleteEagerPhysicalBlob():
+def RegisterMethod4EagerPhysicalBlob():
     oneflow_api.EagerPhysicalBlob.dtype = dtype
     oneflow_api.EagerPhysicalBlob.numpy = numpy
     oneflow_api.EagerPhysicalBlob.numpy_list = numpy_list

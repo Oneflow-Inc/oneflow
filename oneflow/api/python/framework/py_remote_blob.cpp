@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/framework/py_remote_blob.h"
 
 namespace py = pybind11;
@@ -43,6 +44,19 @@ class TrampLazyMirroredBlob : public LazyMirroredBlob {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("INVALID_BATCH_AXIS") = INVALID_BATCH_AXIS;
   m.attr("INVALID_SPLIT_AXIS") = INVALID_SPLIT_AXIS;
+
+  py::module_ distribute = m.def_submodule("distribute");
+  py::class_<Distribute, std::shared_ptr<Distribute>>(distribute, "Distribute");
+  py::class_<AutoDistribute, Distribute, std::shared_ptr<AutoDistribute>>(distribute,
+                                                                          "AutoDistribute");
+  py::class_<BroadcastDistribute, Distribute, std::shared_ptr<BroadcastDistribute>>(
+      distribute, "BroadcastDistribute");
+  py::class_<SplitDistribute, Distribute, std::shared_ptr<SplitDistribute>>(distribute,
+                                                                            "SplitDistribute")
+      .def_property_readonly("axis", &SplitDistribute::axis);
+  distribute.def("auto", &GlobalAutoDistribute);
+  distribute.def("broadcast", &GlobalBroadcastDistribute);
+  distribute.def("split", [](int axis) { return GlobalSplitDistribute(axis).GetPtrOrThrow(); });
 
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(
@@ -187,24 +201,28 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<EagerConsistentBlob, EagerBlobTrait, ConsistentBlob,
              std::shared_ptr<EagerConsistentBlob>>(m, "EagerConsistentBlob")
       .def(py::init([](const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                       const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
-                       const std::shared_ptr<Distribute>& distribute,
-                       const std::shared_ptr<BlobRegister>& blob_register) {
-        return std::make_shared<EagerConsistentBlob>(lbi, blob_object, job_name, distribute,
-                                                     blob_register);
-      }))
+                       const std::shared_ptr<BlobObject>& blob_object,
+                       const std::shared_ptr<BlobRegister>& blob_register,
+                       const std::string& job_name, const std::shared_ptr<Distribute>& distribute) {
+             return std::make_shared<EagerConsistentBlob>(lbi, blob_object, job_name, distribute,
+                                                          blob_register);
+           }),
+           py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
+           py::arg("job_name") = "", py::arg("distribute") = GlobalAutoDistribute())
       .def("get_parallel_size", &EagerConsistentBlob::get_parallel_size)
       .def("set_parallel_size", &EagerConsistentBlob::set_parallel_size);
 
   py::class_<EagerMirroredBlob, EagerBlobTrait, MirroredBlob, std::shared_ptr<EagerMirroredBlob>>(
       m, "EagerMirroredBlob")
       .def(py::init([](const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                       const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
-                       const std::shared_ptr<Distribute>& distribute,
-                       const std::shared_ptr<BlobRegister>& blob_register) {
-        return std::make_shared<EagerMirroredBlob>(lbi, blob_object, job_name, distribute,
-                                                   blob_register);
-      }));
+                       const std::shared_ptr<BlobObject>& blob_object,
+                       const std::shared_ptr<BlobRegister>& blob_register,
+                       const std::string& job_name, const std::shared_ptr<Distribute>& distribute) {
+             return std::make_shared<EagerMirroredBlob>(lbi, blob_object, job_name, distribute,
+                                                        blob_register);
+           }),
+           py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
+           py::arg("job_name") = "", py::arg("distribute") = GlobalAutoDistribute());
 }
 
 }  // namespace compatible_py
