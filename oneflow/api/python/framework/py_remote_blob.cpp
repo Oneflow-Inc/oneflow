@@ -194,6 +194,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_dynamic", &EagerBlobTrait::is_dynamic)
       .def_property_readonly("is_tensor_list", &EagerBlobTrait::is_tensor_list)
       .def_property_readonly("parallel_conf", &EagerBlobTrait::parallel_conf)
+      .def_property_readonly("parallel_size", &EagerBlobTrait::parallel_size)
       .def("_Init", &EagerBlobTrait::_Init)
       .def_property_readonly("blob_object", &EagerBlobTrait::blob_object)
       .def("IdenticalTo", &EagerBlobTrait::IdenticalTo);
@@ -208,9 +209,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                                           blob_register);
            }),
            py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
-           py::arg("job_name") = "", py::arg("distribute") = GlobalAutoDistribute())
-      .def("get_parallel_size", &EagerConsistentBlob::get_parallel_size)
-      .def("set_parallel_size", &EagerConsistentBlob::set_parallel_size);
+           py::arg("job_name") = "", py::arg("distribute") = GlobalAutoDistribute());
 
   py::class_<EagerMirroredBlob, EagerBlobTrait, MirroredBlob, std::shared_ptr<EagerMirroredBlob>>(
       m, "EagerMirroredBlob")

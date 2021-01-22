@@ -207,6 +207,8 @@ std::shared_ptr<cfg::ParallelConf> LazyMirroredBlob::parallel_conf() const {
       ->cfg_parallel_conf();
 }
 
+EagerBlobTrait::EagerBlobTrait() : parallel_size_(0) {}
+
 EagerBlobTrait::~EagerBlobTrait() {
   registered_blob_access_->blob_register()->CloseRegisteredBlobAccess(logical_blob_name_);
 }
@@ -259,6 +261,17 @@ std::shared_ptr<cfg::ParallelConf> EagerBlobTrait::parallel_conf() const {
   return blob_object()->parallel_desc_symbol()->cfg_parallel_conf();
 }
 
+int64_t EagerBlobTrait::parallel_size() {
+  if (parallel_size_ == 0) {
+    std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf = parallel_conf();
+    ParallelConf proto_parallel_conf;
+    cfg_parallel_conf->ToProto(&proto_parallel_conf);
+    ParallelDesc parallel_desc(proto_parallel_conf);
+    parallel_size_ = parallel_desc.parallel_num();
+  }
+  return parallel_size_;
+}
+
 std::shared_ptr<BlobObject> EagerBlobTrait::blob_object() const {
   return registered_blob_access_->blob_object();
 }
@@ -282,15 +295,9 @@ EagerConsistentBlob::EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobI
                                          const std::string& job_name,
                                          const std::shared_ptr<Distribute>& distribute,
                                          const std::shared_ptr<BlobRegister>& blob_register)
-    : EagerBlobTrait(), ConsistentBlob(lbi, job_name, distribute), parallel_size_(0) {
+    : EagerBlobTrait(), ConsistentBlob(lbi, job_name, distribute) {
   std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
   _Init(logical_blob_name, blob_object, blob_register);
-}
-
-int64_t EagerConsistentBlob::get_parallel_size() const { return parallel_size_; }
-
-void EagerConsistentBlob::set_parallel_size(int64_t parallel_size) {
-  parallel_size_ = parallel_size;
 }
 
 EagerMirroredBlob::EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,

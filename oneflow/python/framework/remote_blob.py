@@ -275,21 +275,11 @@ def RegisterMethod4EagerBlobTrait():
     oneflow_api.EagerBlobTrait.numpy = numpy
 
 
-@property
-def parallel_size(self):
-    if self.get_parallel_size() == 0:
-        self.set_parallel_size(
-            placement_ctx.GetParallelSize(
-                placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
-            )
-        )
-    return self.get_parallel_size()
-
-
 def eager_with_distribute(self, distribute):
     new = type(self)(
         self.lbi,
         blob_object=self.blob_object,
+        blob_register=blob_register,
         job_name=self.job_name,
         distribute=self.distribute,
     )
@@ -299,6 +289,5 @@ def eager_with_distribute(self, distribute):
 
 def RegisterMethod4EagerConsistentBlob():
     oneflow_api.EagerConsistentBlob.dtype = dtype
-    oneflow_api.EagerConsistentBlob.parallel_size = parallel_size
     oneflow_api.EagerConsistentBlob.with_distribute = eager_with_distribute
     oneflow_api.EagerConsistentBlob.with_gradient_distribute = with_gradient_distribute

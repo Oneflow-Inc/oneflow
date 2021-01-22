@@ -120,7 +120,7 @@ class LazyMirroredBlob : public MirroredBlob {
 
 class EagerBlobTrait {
  public:
-  EagerBlobTrait() = default;
+  EagerBlobTrait();
   virtual ~EagerBlobTrait();
 
   int64_t numpy_size() const;
@@ -132,12 +132,14 @@ class EagerBlobTrait {
   bool is_dynamic() const;
   bool is_tensor_list() const;
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
+  int64_t parallel_size();
   std::shared_ptr<BlobObject> blob_object() const;
   void _Init(const std::string logical_blob_name, const std::shared_ptr<BlobObject>& blob_object,
              const std::shared_ptr<BlobRegister>& blob_register);
   bool IdenticalTo(const std::shared_ptr<EagerBlobTrait>& rhs) const;
 
  private:
+  int64_t parallel_size_;
   std::string logical_blob_name_;
   std::shared_ptr<RegisteredBlobAccess> registered_blob_access_;
 };
@@ -149,12 +151,6 @@ class EagerConsistentBlob : public EagerBlobTrait, public ConsistentBlob {
                       const std::shared_ptr<Distribute>& distribute,
                       const std::shared_ptr<BlobRegister>& blob_register);
   ~EagerConsistentBlob() override = default;
-
-  int64_t get_parallel_size() const;
-  void set_parallel_size(int64_t parallel_size);
-
- private:
-  int64_t parallel_size_;
 };
 
 class EagerMirroredBlob : public EagerBlobTrait, public MirroredBlob {
