@@ -258,12 +258,15 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &op_type_name = user_conf.op_type_name();
   const std::string &op_name = op.name();
   const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op_name);
-  const std::string &device_tag = pc.device_tag();
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   std::vector<NamedAttribute> attr_vec;
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
-  attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
-  attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(device_tag)));
+  if (op.has_trainable()) {
+    attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
+  }
+  if (op.has_device_tag()) {
+    attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(op.device_tag())));
+  }
   attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
   attr_vec.push_back(b.getNamedAttr("scope_symbol_id", b.getI64IntegerAttr(op.scope_symbol_id())));
   attr_vec.push_back(
