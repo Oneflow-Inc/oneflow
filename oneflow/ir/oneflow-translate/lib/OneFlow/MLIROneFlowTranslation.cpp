@@ -97,7 +97,6 @@ LogicalResult Importer::AddInputOutputSegments(const ::oneflow::OperatorConf &op
   for (auto input : op.user_conf().input()) {
     input_lbn_segment_keys.push_back(input.first);
     input_lbn_segment_sizes.push_back(input.second.s_size());
-    std::cerr << input.first << "\n";
   }
   attr_vec.push_back(
       b.getNamedAttr("input_lbn_segment_keys", b.getStrArrayAttr(input_lbn_segment_keys)));
@@ -524,6 +523,7 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
             user_attr.mutable_at_list_int64()->add_val(elem.getInt());
           } else {
             err_str = "fail to convert op attr to int list, key: " + id.str();
+            op->dump();
             return;
           }
         } else if (auto elem = v.dyn_cast<FloatAttr>()) {
