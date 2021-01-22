@@ -559,7 +559,6 @@ LogicalResult Importer::tryToUpdateJob() {
         }
         (*user_conf->mutable_attr())[key] = user_attr;
       }
-      std::cerr << op_conf.DebugString() << "\n";
       *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
