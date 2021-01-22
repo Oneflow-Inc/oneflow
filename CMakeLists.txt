@@ -17,6 +17,7 @@ option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
+option(WITH_MPI "Option to build with MPI" OFF)
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
