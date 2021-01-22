@@ -662,6 +662,10 @@ void RoundTripOneFlowJob(
       std::cerr << "fail to update job with IR, job will stay intact, job_name: "
                 << job->job_conf().job_name() << "\n";
     }
+    std::string mlir;
+    llvm::raw_string_ostream os(mlir);
+    module->print(os);
+    job_wrapper.DumpMLIR("RoundTripOneFlowJob.mlir", mlir);
   } else {
     std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
   }

@@ -33,6 +33,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     job_->CopyFrom(*new_job);
     is_updated_ = true;
   }
+  void DumpMLIR(const std::string& filename, const std::string& content) {
+    TeePersistentLogStream::Create(filename)->Write(content);
+  }
 
   const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
     return job_builder_.ParallelConf4OpName(op_name);
