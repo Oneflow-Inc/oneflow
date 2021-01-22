@@ -321,12 +321,12 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     h = coord_dx[3];
     w = coord_dx[4];
 
-    int64_t src_start = n * n_channel * src_time * src_height * src_width;
+    int64_t src_start = n * n_channel * src_time * src_height * src_width + c * src_time * src_height * src_width;
     int64_t dst_start = n * n_channel * dst_time * dst_height * dst_width;
 
-    int64_t ip = dst_start + c * dst_width * dst_height;
-    int64_t src_idx = src_start + c * t * src_height * src_width + t * src_height * src_width + h * src_width + w;
-    int64_t indice_idx = c * t * src_height * src_width + t * src_height * src_width + h * src_width + w;
+    int64_t ip = dst_start + c * dst_time * dst_width * dst_height;
+    int64_t src_idx = src_start + t * src_height * src_width + h * src_width + w;
+    int64_t indice_idx = t * src_height * src_width + h * src_width + w;
     int64_t dest_idx = ip + indice_ptr[indice_idx];
     if (dest_idx != -1) {
       /* update gradient */
