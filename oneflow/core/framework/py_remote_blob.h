@@ -53,7 +53,7 @@ class LazyConsistentBlob : public ConsistentBlob {
   LazyConsistentBlob(const LazyConsistentBlob& lazy_consistent_blob) = default;
   ~LazyConsistentBlob() = default;
 
-  virtual std::string get_shape_log_warning() const;
+  virtual std::string get_lazy_shape_log_warning() const;
   std::shared_ptr<Shape> shape() const override;
 
   DataType dtype() const override;
@@ -98,7 +98,7 @@ class LazyMirroredBlob : public MirroredBlob {
 
   std::vector<std::shared_ptr<LazyConsistentBlob>> sub_consistent_blob_list();
 
-  virtual std::string get_shape_log_warning() const;
+  virtual std::string get_mirror_shape_log_warning() const;
 
   std::shared_ptr<Shape> shape() const override;
 

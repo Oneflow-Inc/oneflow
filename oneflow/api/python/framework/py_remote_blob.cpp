@@ -27,16 +27,16 @@ namespace compatible_py {
 class TrampLazyConsistentBlob : public LazyConsistentBlob {
  public:
   using LazyConsistentBlob::LazyConsistentBlob;
-  std::string get_shape_log_warning() const override {
-    PYBIND11_OVERRIDE(std::string, LazyConsistentBlob, get_shape_log_warning, );
+  std::string get_lazy_shape_log_warning() const override {
+    PYBIND11_OVERRIDE(std::string, LazyConsistentBlob, get_lazy_shape_log_warning, );
   }
 };
 
 class TrampLazyMirroredBlob : public LazyMirroredBlob {
  public:
   using LazyMirroredBlob::LazyMirroredBlob;
-  std::string get_shape_log_warning() const override {
-    PYBIND11_OVERRIDE(std::string, LazyMirroredBlob, get_shape_log_warning, );
+  std::string get_mirror_shape_log_warning() const override {
+    PYBIND11_OVERRIDE(std::string, LazyMirroredBlob, get_mirror_shape_log_warning, );
   }
 };
 
@@ -108,7 +108,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_tensor_list", &LazyConsistentBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &LazyConsistentBlob::parallel_conf)
       .def("IdenticalTo", &LazyConsistentBlob::IdenticalTo)
-      .def("get_shape_log_warning", &LazyConsistentBlob::get_shape_log_warning);
+      .def("get_lazy_shape_log_warning", &LazyConsistentBlob::get_lazy_shape_log_warning);
 
   py::class_<MirroredBlob, BlobDesc, std::shared_ptr<MirroredBlob>>(m, "MirroredBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
@@ -158,7 +158,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // semantics and performance.
       .def_property_readonly("sub_consistent_blob_list",
                              &LazyMirroredBlob::sub_consistent_blob_list)
-      .def("get_shape_log_warning", &LazyMirroredBlob::get_shape_log_warning);
+      .def("get_mirror_shape_log_warning", &LazyMirroredBlob::get_mirror_shape_log_warning);
 
   py::class_<EagerBlobTrait, std::shared_ptr<EagerBlobTrait>>(m, "EagerBlobTrait")
       .def(py::init<>())

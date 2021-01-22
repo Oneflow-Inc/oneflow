@@ -68,10 +68,10 @@ LazyConsistentBlob::LazyConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>
                                        const std::shared_ptr<Distribute>& distribute)
     : ConsistentBlob(lbi, job_name, distribute) {}
 
-std::string LazyConsistentBlob::get_shape_log_warning() const { return std::string(""); }
+std::string LazyConsistentBlob::get_lazy_shape_log_warning() const { return std::string(""); }
 
 std::shared_ptr<Shape> LazyConsistentBlob::shape() const {
-  const std::string& log_warning = get_shape_log_warning();
+  const std::string& log_warning = get_lazy_shape_log_warning();
   if (!log_warning.empty()) { LOG(ERROR) << log_warning; }
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->GetStaticShape(logical_blob_name()));
@@ -162,10 +162,10 @@ std::vector<std::shared_ptr<LazyConsistentBlob>> LazyMirroredBlob::sub_consisten
   return sub_consistent_blob_list_;
 }
 
-std::string LazyMirroredBlob::get_shape_log_warning() const { return std::string(""); }
+std::string LazyMirroredBlob::get_mirror_shape_log_warning() const { return std::string(""); }
 
 std::shared_ptr<Shape> LazyMirroredBlob::shape() const {
-  const std::string& log_warning = get_shape_log_warning();
+  const std::string& log_warning = get_mirror_shape_log_warning();
   if (!log_warning.empty()) { LOG(ERROR) << log_warning; }
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   auto shape = CHECK_JUST(ctx->MirroredBlobGetStaticShape(logical_blob_name()));

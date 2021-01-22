@@ -58,69 +58,80 @@ def EagerLogicalBlob(lbi, **kw):
 def LazyRemoteBlob(lbi, **kw):
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
-    blob_type = LazyConsistentBlob
+    blob_type = oneflow_api.LazyConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        blob_type = LazyMirroredBlob
-    return blob_type(lbi, **kw)
+        blob_type = oneflow_api.LazyMirroredBlob
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
+    job_name = ""
+    if "job_name" in kw:
+        job_name = kw[job_name]
+    distribute = oneflow_api.distribute.auto()
+    if "distribute" in kw:
+        distribute = kw["distribute"]
+    return blob_type(lbi, job_name, distribute)
 
 
-class LazyConsistentBlob(oneflow_api.LazyConsistentBlob):
-    def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
-        if not isinstance(lbi, lbi_util.LogicalBlobId):
-            cfg_lbi = lbi_util.LogicalBlobId()
-            cfg_lbi.set_op_name(lbi.op_name)
-            cfg_lbi.set_blob_name(lbi.blob_name)
-            lbi = cfg_lbi
-        oneflow_api.LazyConsistentBlob.__init__(self, lbi, job_name, distribute)
-
-    @property
-    def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
-
-    def get_shape_log_warning(self):
-        if oneflow.scope.mirrored_view_enabled():
-            return ("%s\n%s\n%s") % (
-                "WARNING:",
-                "You access a consistent blob shape in mirrored view, there may be problems,",
-                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
-            )
-        else:
-            return ""
-
-    def with_distribute(self, distribute):
-        new = type(self)(self.lbi, self.job_name)
-        new.set_distribute(distribute)
-        return new
-
-    def with_gradient_distribute(self, distribute):
-        return oneflow.parallel_cast(self, gradient_distribute=distribute)
+@property
+def dtype(self):
+    ret = convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
+    assert issubclass(ret, dtype_util.dtype)
+    return ret
 
 
-class LazyMirroredBlob(oneflow_api.LazyMirroredBlob):
-    def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
-        if not isinstance(lbi, lbi_util.LogicalBlobId):
-            cfg_lbi = lbi_util.LogicalBlobId()
-            cfg_lbi.set_op_name(lbi.op_name)
-            cfg_lbi.set_blob_name(lbi.blob_name)
-            lbi = cfg_lbi
-        oneflow_api.LazyMirroredBlob.__init__(self, lbi, job_name, distribute)
+def with_distribute(self, distribute):
+    new = type(self)(self.lbi, self.job_name, oneflow_api.distribute.auto())
+    new.set_distribute(distribute)
+    return new
 
-    @property
-    def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
-    def get_shape_log_warning(self):
-        if oneflow.scope.consistent_view_enabled():
-            return ("%s\n%s\n%s") % (
-                "WARNING:",
-                "You access a mirrored blob shape in consistent view, there may be problems,",
-                "you should add 'x = flow.cast_to_current_logical_view(x)'.",
-            )
-        else:
-            return ""
+def with_gradient_distribute(self, distribute):
+    return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
-    def with_gradient_distribute(self, distribute):
-        return oneflow.parallel_cast(self, gradient_distribute=distribute)
+
+def get_lazy_shape_log_warning(self):
+    if oneflow.scope.mirrored_view_enabled():
+        return ("%s\n%s\n%s") % (
+            "WARNING:",
+            "You access a consistent blob shape in mirrored view, there may be problems,",
+            "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+        )
+    else:
+        return ""
+
+
+def get_mirror_shape_log_warning(self):
+    if oneflow.scope.consistent_view_enabled():
+        return ("%s\n%s\n%s") % (
+            "WARNING:",
+            "You access a mirrored blob shape in consistent view, there may be problems,",
+            "you should add 'x = flow.cast_to_current_logical_view(x)'.",
+        )
+    else:
+        return ""
+
+
+def CompleteBlobDef(blob_type):
+    blob_type.dtype = dtype
+    blob_type.with_distribute = with_distribute
+    blob_type.with_gradient_distribute = with_gradient_distribute
+
+
+def CompleteLazyConsistentBlob():
+    CompleteBlobDef(oneflow_api.LazyConsistentBlob)
+    oneflow_api.LazyConsistentBlob.get_lazy_shape_log_warning = (
+        get_lazy_shape_log_warning
+    )
+
+
+def CompleteLazyMirroredBlob():
+    CompleteBlobDef(oneflow_api.LazyMirroredBlob)
+    oneflow_api.LazyMirroredBlob.get_mirror_shape_log_warning = (
+        get_mirror_shape_log_warning
+    )
 
 
 class EagerBlobTrait(oneflow_api.EagerBlobTrait):
