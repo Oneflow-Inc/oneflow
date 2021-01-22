@@ -83,6 +83,10 @@ def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsA
 
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let summary = "";
+  let attrs = (ins
+    StrArrayAttr:$input_bns,
+    StrArrayAttr:$output_lbns
+  );
   let input = (ins Variadic<AnyType>:$operands);
   let results = (outs Variadic<AnyType>:$outputs);
 }

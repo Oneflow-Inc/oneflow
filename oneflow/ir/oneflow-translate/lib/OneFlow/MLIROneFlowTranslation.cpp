@@ -1,6 +1,7 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,6 +23,7 @@
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <iterator>
@@ -373,38 +375,75 @@ LogicalResult Importer::tryToUpdateJob() {
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
+      int input_idx = 0;
       if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
         auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
         if (keys.size() == sizes.size()) {
+          // every key
           for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
-            int size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
+            auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
+            auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
+            // every input for one key
+            for (int i = 0; i < input_size; i++) {
+              if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
+                std::string output_lbn_in_source_op = "";
+                if (auto defining_system_op =
+                        llvm::dyn_cast<oneflow::SystemOp>(result.getDefiningOp())) {
+                  output_lbn_in_source_op =
+                      defining_system_op.output_lbns()[result.getResultNumber()]
+                          .dyn_cast<StringAttr>()
+                          .getValue()
+                          .str();
+                } else {
+                  output_lbn_in_source_op =
+                      result.getDefiningOp()
+                          ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
+                          .dyn_cast<StringAttr>()
+                          .getValue()
+                          .str();
+                }
+                *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) =
+                    output_lbn_in_source_op;
+                input_idx += 1;
+              } else {
+                err_str = "fail to cast result, name: " + op_name;
+                return;
+              }
+            }
           }
         } else {
           err_str =
               "fail to convert op inputs, input_lbn_segment_keys != input_lbn_segment_sizes, name: "
               + op_name;
+          return;
         }
       } else {
         err_str = "fail to convert op inputs, name: " + op_name;
+        return;
       }
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         std::string key = id.str();
         if (id.strref().equals("op_name")) {
           op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
+          continue;
         }
         if (id.strref().equals("op_type_name")) {
           user_conf->set_op_type_name(
               op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
+          continue;
         }
         if (id.strref().equals("trainable")) {
           op_conf.set_trainable(op->getAttrOfType<BoolAttr>("trainable").getValue());
+          continue;
         }
         if (id.strref().equals("device")) {
           op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
+          continue;
         }
         if (id.strref().equals("scope_symbol_id")) {
           op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
+          continue;
         }
         if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
             || id.strref().contains("input_lbn_segment_sizes")
@@ -424,6 +463,7 @@ LogicalResult Importer::tryToUpdateJob() {
             user_attr.set_at_int64(ref.getInt());
           } else {
             err_str = "fail to convert op attr to int32 or int64, key: " + key;
+            return;
           }
         } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
           if (ref.getType() == b.getF32Type()) {
@@ -432,6 +472,7 @@ LogicalResult Importer::tryToUpdateJob() {
             user_attr.set_at_double(ref.getValue().convertToDouble());
           } else {
             err_str = "fail to convert op attr float or double, key: " + key;
+            return;
           }
         } else if (auto ref = attr.dyn_cast<StringAttr>()) {
           if (ref.getValue().startswith("DT_")) {
@@ -456,7 +497,7 @@ LogicalResult Importer::tryToUpdateJob() {
                   DEFINE_ONE_ELIF(Float16)
                   DEFINE_ONE_ELIF(TensorBuffer)
 #undef DEFINE_ONE_ELIF
-                default: err_str = "fail to convert op attr to data type, key: " + key; break;
+                default: err_str = "fail to convert op attr to data type, key: " + key; return;
               }
             }
           } else {
@@ -475,22 +516,27 @@ LogicalResult Importer::tryToUpdateJob() {
                 user_attr.mutable_at_list_int64()->add_val(elem.getInt());
               } else {
                 err_str = "fail to convert op attr to int list, key: " + key;
+                return;
               }
             } else if (auto elem = v.dyn_cast<FloatAttr>()) {
               if (elem.getType() == b.getF32Type()) {
                 user_attr.mutable_at_list_float()->add_val(elem.getValue().convertToFloat());
               } else {
                 err_str = "fail to convert op attr to float list, key: " + key;
+                return;
               }
             } else {
               err_str = "fail to convert op attr to list, key: " + key;
+              return;
             }
           }
         } else {
           err_str = "fail to convert op attr, key: " + key;
+          return;
         }
         (*user_conf->mutable_attr())[key] = user_attr;
       }
+      std::cerr << op_conf.DebugString() << "\n";
       *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
