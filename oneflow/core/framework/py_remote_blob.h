@@ -147,18 +147,18 @@ class EagerBlobTrait {
 class EagerConsistentBlob : public EagerBlobTrait, public ConsistentBlob {
  public:
   EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                      const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
-                      const std::shared_ptr<Distribute>& distribute,
-                      const std::shared_ptr<BlobRegister>& blob_register);
+                      const std::shared_ptr<BlobObject>& blob_object,
+                      const std::shared_ptr<BlobRegister>& blob_register,
+                      const std::string& job_name, const std::shared_ptr<Distribute>& distribute);
   ~EagerConsistentBlob() override = default;
 };
 
 class EagerMirroredBlob : public EagerBlobTrait, public MirroredBlob {
  public:
   EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                    const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
-                    const std::shared_ptr<Distribute>& distribute,
-                    const std::shared_ptr<BlobRegister>& blob_register);
+                    const std::shared_ptr<BlobObject>& blob_object,
+                    const std::shared_ptr<BlobRegister>& blob_register, const std::string& job_name,
+                    const std::shared_ptr<Distribute>& distribute);
   ~EagerMirroredBlob() override = default;
 };
 

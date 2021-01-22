@@ -205,8 +205,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                        const std::shared_ptr<BlobObject>& blob_object,
                        const std::shared_ptr<BlobRegister>& blob_register,
                        const std::string& job_name, const std::shared_ptr<Distribute>& distribute) {
-             return std::make_shared<EagerConsistentBlob>(lbi, blob_object, job_name, distribute,
-                                                          blob_register);
+             return std::make_shared<EagerConsistentBlob>(lbi, blob_object, blob_register, job_name,
+                                                          distribute);
            }),
            py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
            py::arg("job_name") = "", py::arg("distribute") = GlobalAutoDistribute());
@@ -217,8 +217,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                        const std::shared_ptr<BlobObject>& blob_object,
                        const std::shared_ptr<BlobRegister>& blob_register,
                        const std::string& job_name, const std::shared_ptr<Distribute>& distribute) {
-             return std::make_shared<EagerMirroredBlob>(lbi, blob_object, job_name, distribute,
-                                                        blob_register);
+             return std::make_shared<EagerMirroredBlob>(lbi, blob_object, blob_register, job_name,
+                                                        distribute);
            }),
            py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
            py::arg("job_name") = "", py::arg("distribute") = GlobalAutoDistribute());

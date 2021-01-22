@@ -292,9 +292,9 @@ bool EagerBlobTrait::IdenticalTo(const std::shared_ptr<EagerBlobTrait>& rhs) con
 
 EagerConsistentBlob::EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                          const std::shared_ptr<BlobObject>& blob_object,
+                                         const std::shared_ptr<BlobRegister>& blob_register,
                                          const std::string& job_name,
-                                         const std::shared_ptr<Distribute>& distribute,
-                                         const std::shared_ptr<BlobRegister>& blob_register)
+                                         const std::shared_ptr<Distribute>& distribute)
     : EagerBlobTrait(), ConsistentBlob(lbi, job_name, distribute) {
   std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
   _Init(logical_blob_name, blob_object, blob_register);
@@ -302,9 +302,9 @@ EagerConsistentBlob::EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobI
 
 EagerMirroredBlob::EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                      const std::shared_ptr<BlobObject>& blob_object,
+                                     const std::shared_ptr<BlobRegister>& blob_register,
                                      const std::string& job_name,
-                                     const std::shared_ptr<Distribute>& distribute,
-                                     const std::shared_ptr<BlobRegister>& blob_register)
+                                     const std::shared_ptr<Distribute>& distribute)
     : EagerBlobTrait(), MirroredBlob(lbi, job_name, distribute) {
   std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
   _Init(logical_blob_name, blob_object, blob_register);
