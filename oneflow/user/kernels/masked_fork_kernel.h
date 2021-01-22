@@ -28,10 +28,11 @@ struct ForkLoopFunctor {
     XPU_1D_KERNEL_LOOP(i, elem_cnt) {
       T out_true_val = 0;
       T out_false_val = 0;
+      const T in_value = in[i];
       if (mask[i]) {
-        out_true_val = in[i];
+        out_true_val = in_value;
       } else {
-        out_false_val = in[i];
+        out_false_val = in_value;
       }
       if (out_true) { out_true[i] = out_true_val; }
       if (out_false) { out_false[i] = out_false_val; }
