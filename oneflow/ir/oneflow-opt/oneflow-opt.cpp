@@ -1,11 +1,3 @@
-//===- oneflow-opt.cpp ---------------------------------------*- C++ -*-===//
-//
-// This file is licensed under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -33,6 +25,5 @@ int main(int argc, char **argv) {
   // will be *parsed* by the tool, not the one generated
   // registerAllDialects(registry);
 
-  return failed(
-      mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
+  return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }
