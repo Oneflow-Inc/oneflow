@@ -446,7 +446,7 @@ LogicalResult Importer::tryToUpdateJob() {
       }
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
-        std::string key = id.str();
+        // handle op conf attributes
         if (id.strref().equals("op_name")) {
           op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
           continue;
@@ -485,7 +485,7 @@ LogicalResult Importer::tryToUpdateJob() {
           } else if (ref.getType() == b.getIntegerType(64)) {
             user_attr.set_at_int64(ref.getInt());
           } else {
-            err_str = "fail to convert op attr to int32 or int64, key: " + key;
+            err_str = "fail to convert op attr to int32 or int64, key: " + id.str();
             return;
           }
         } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
@@ -494,7 +494,7 @@ LogicalResult Importer::tryToUpdateJob() {
           } else if (ref.getType() == b.getF64Type()) {
             user_attr.set_at_double(ref.getValue().convertToDouble());
           } else {
-            err_str = "fail to convert op attr float or double, key: " + key;
+            err_str = "fail to convert op attr float or double, key: " + id.str();
             return;
           }
         } else if (auto ref = attr.dyn_cast<StringAttr>()) {
@@ -520,7 +520,7 @@ LogicalResult Importer::tryToUpdateJob() {
                   DEFINE_ONE_ELIF(Float16)
                   DEFINE_ONE_ELIF(TensorBuffer)
 #undef DEFINE_ONE_ELIF
-                default: err_str = "fail to convert op attr to data type, key: " + key; return;
+                default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
               }
             }
           } else {
@@ -538,26 +538,26 @@ LogicalResult Importer::tryToUpdateJob() {
               } else if (ref.getType() == b.getIntegerType(64)) {
                 user_attr.mutable_at_list_int64()->add_val(elem.getInt());
               } else {
-                err_str = "fail to convert op attr to int list, key: " + key;
+                err_str = "fail to convert op attr to int list, key: " + id.str();
                 return;
               }
             } else if (auto elem = v.dyn_cast<FloatAttr>()) {
               if (elem.getType() == b.getF32Type()) {
                 user_attr.mutable_at_list_float()->add_val(elem.getValue().convertToFloat());
               } else {
-                err_str = "fail to convert op attr to float list, key: " + key;
+                err_str = "fail to convert op attr to float list, key: " + id.str();
                 return;
               }
             } else {
-              err_str = "fail to convert op attr to list, key: " + key;
+              err_str = "fail to convert op attr to list, key: " + id.str();
               return;
             }
           }
         } else {
-          err_str = "fail to convert op attr, key: " + key;
+          err_str = "fail to convert op attr, key: " + id.str();
           return;
         }
-        (*user_conf->mutable_attr())[key] = user_attr;
+        (*user_conf->mutable_attr())[id.str()] = user_attr;
       }
       *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
