@@ -60,10 +60,15 @@ import oneflow.python_gen.__export_symbols__
 import atexit
 import oneflow.python.framework.c_api_util
 import oneflow.python.framework.python_interpreter_util
+import oneflow.python.eager.eager_blob_util as eager_blob_util
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
 
 INVALID_BATCH_AXIS = oneflow_api.INVALID_BATCH_AXIS
 INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
+
+eager_blob_util.CompleteEagerPhysicalBlob()
+remote_blob_util.CompleteEagerBlobTrait()
 
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)

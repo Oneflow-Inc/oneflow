@@ -40,20 +40,29 @@ class EagerPhysicalBlob(
             _GetPhysicalBlobHeaderCache,
         )
 
-    @property
-    def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
-
-    def numpy(self):
-        assert not self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object)
-
-    def numpy_list(self):
-        assert self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object)
-
     def __del__(self):
         blob_register.ClearObject4BlobName(self.unique_name)
+
+
+@property
+def dtype(self):
+    return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
+
+
+def numpy(self):
+    assert not self.is_tensor_list
+    return _GetPhysicalBlobBodyCache(self.blob_object)
+
+
+def numpy_list(self):
+    assert self.is_tensor_list
+    return _GetPhysicalBlobBodyCache(self.blob_object)
+
+
+def CompleteEagerPhysicalBlob():
+    oneflow_api.EagerPhysicalBlob.dtype = dtype
+    oneflow_api.EagerPhysicalBlob.numpy = numpy
+    oneflow_api.EagerPhysicalBlob.numpy_list = numpy_list
 
 
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
