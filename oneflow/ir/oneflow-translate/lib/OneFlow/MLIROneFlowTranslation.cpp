@@ -563,7 +563,7 @@ LogicalResult Importer::tryToUpdateJob() {
       ConvertUseropOutputs(op, user_conf, err_str);
       ConvertUseropAttributes(op, op_conf, err_str);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } /* user op */ else if (/* system op */ llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    } else if (/* system op */ llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
     } else {
