@@ -399,6 +399,29 @@ void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::s
   }
 }
 
+void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
+  int output_key_idx = -1;
+  int segment_offset = 0;
+  for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
+    const size_t result_idx = result_and_idx.index();
+    if (result_idx == segment_offset) {
+      output_key_idx += 1;
+      int size = op->getAttrOfType<ArrayAttr>("output_lbn_segment_sizes")[output_key_idx]
+                     .dyn_cast<IntegerAttr>()
+                     .getInt();
+      segment_offset += size;
+    }
+    std::string output_key = op->getAttrOfType<ArrayAttr>("output_lbn_segment_keys")[output_key_idx]
+                                 .dyn_cast<StringAttr>()
+                                 .getValue()
+                                 .str();
+    std::string output_lbn = op->getAttrOfType<ArrayAttr>("output_lbns")[result_idx]
+                                 .dyn_cast<StringAttr>()
+                                 .getValue()
+                                 .str();
+    *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
+  }
+}
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
@@ -412,30 +435,7 @@ LogicalResult Importer::tryToUpdateJob() {
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
       ConvertUseropInputs(op, user_conf, err_str);
-      // convert outputs
-      int output_key_idx = -1;
-      int segment_offset = 0;
-      for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
-        const size_t result_idx = result_and_idx.index();
-        if (result_idx == segment_offset) {
-          output_key_idx += 1;
-          int size = op->getAttrOfType<ArrayAttr>("output_lbn_segment_sizes")[output_key_idx]
-                         .dyn_cast<IntegerAttr>()
-                         .getInt();
-          segment_offset += size;
-        }
-        std::string output_key =
-            op->getAttrOfType<ArrayAttr>("output_lbn_segment_keys")[output_key_idx]
-                .dyn_cast<StringAttr>()
-                .getValue()
-                .str();
-        std::string output_lbn = op->getAttrOfType<ArrayAttr>("output_lbns")[result_idx]
-                                     .dyn_cast<StringAttr>()
-                                     .getValue()
-                                     .str();
-        *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
-      }  // convert outputs
-
+      ConvertUseropOutputs(op, user_conf, err_str);
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
         // convert op conf attributes
