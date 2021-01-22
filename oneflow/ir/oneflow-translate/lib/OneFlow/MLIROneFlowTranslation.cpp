@@ -75,8 +75,18 @@ class Importer {
                                std::string &err_str);
 
   IntegerAttr getSI64IntegerAttr(int64_t value) {
-    return IntegerAttr::get(IntegerType::get(context, 64, IntegerType::Signed),
+    return IntegerAttr::get(b.getIntegerType(64, /*isSigned=*/true),
                             APInt(64, value, /*isSigned=*/true));
+  }
+  ArrayAttr getSI32ArrayAttr(ArrayRef<int32_t> values) {
+    auto attrs = llvm::to_vector<8>(llvm::map_range(
+        values, [this](int32_t v) -> Attribute { return b.getSI32IntegerAttr(v); }));
+    return b.getArrayAttr(attrs);
+  }
+  ArrayAttr getSI64ArrayAttr(ArrayRef<int64_t> values) {
+    auto attrs = llvm::to_vector<8>(
+        llvm::map_range(values, [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); }));
+    return b.getArrayAttr(attrs);
   }
 
  private:
@@ -157,19 +167,19 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     else if (value.has_at_shape()) {
       ArrayRef<int64_t> values = {value.at_shape().dim().begin(), value.at_shape().dim().end()};
       RankedTensorType tt =
-          RankedTensorType::get({static_cast<int64_t>(values.size())}, b.getIntegerType(64));
+          RankedTensorType::get({static_cast<int64_t>(values.size())}, b.getIntegerType(64, true));
       ;
       attr_vec.emplace_back(b.getNamedAttr(name, DenseIntElementsAttr::get(tt, values)));
     }
-#define DEFINE_ONE_ELIF(at_key, get_attr, field)                                           \
-  else if (value.has_##at_key()) {                                                         \
-    std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                      \
-        name, b.get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
-    attr_vec.emplace_back(kv);                                                             \
+#define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
+  else if (value.has_##at_key()) {                                                       \
+    std::pair<mlir::Identifier, mlir::Attribute> kv = b.getNamedAttr(                    \
+        name, get_attr({value.at_key().field().begin(), value.at_key().field().end()})); \
+    attr_vec.emplace_back(kv);                                                           \
   }
-    DEFINE_ONE_ELIF(at_list_int32, getI32ArrayAttr, val)
-    DEFINE_ONE_ELIF(at_list_int64, getI64ArrayAttr, val)
-    DEFINE_ONE_ELIF(at_list_float, getF32ArrayAttr, val)
+    DEFINE_ONE_ELIF(at_list_int32, getSI32ArrayAttr, val)
+    DEFINE_ONE_ELIF(at_list_int64, getSI64ArrayAttr, val)
+    DEFINE_ONE_ELIF(at_list_float, b.getF32ArrayAttr, val)
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_list_string()) {
       std::vector<llvm::StringRef> r_vec = {value.at_list_string().val().begin(),
@@ -531,7 +541,7 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
         if (auto elem = v.dyn_cast<IntegerAttr>()) {
           if (elem.getType().isSignedInteger(32)) {
             user_attr.mutable_at_list_int32()->add_val(elem.getSInt());
-          } else if (ref.getType().isSignedInteger(64)) {
+          } else if (elem.getType().isSignedInteger(64)) {
             user_attr.mutable_at_list_int64()->add_val(elem.getSInt());
           } else {
             err_str =
