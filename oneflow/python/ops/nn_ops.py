@@ -1729,7 +1729,7 @@ def MaxPool2d(
     input: oneflow_api.BlobDesc,
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
-    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    padding: Union[str, int, Tuple[int, int]],
     dilation: Union[int, IntPair] = 1,
     return_indices: bool = False,
     ceil_mode: bool = False,
@@ -1772,7 +1772,7 @@ def MaxPool2d(
                     x,
                     kernel_size=3,
                     stride=2,
-                    padding=(1, 1),
+                    padding=1,
                     dilation=1,
                     return_indices=True,
                     ceil_mode=False,
@@ -1814,7 +1814,10 @@ def MaxPool2d(
     kernel_size = _GetSequence(kernel_size, 2, "kernel_size")
     dilation = _GetSequence(dilation, 2, "dilation")
     stride = _GetSequence(stride, 2, "stride")
-    assert len(padding) == 2 or padding in ["SAME", "VALID"]
+    assert isinstance(padding, int) or len(padding) == 2 or padding in ["SAME", "VALID"]
+
+    if isinstance(padding, int):
+        padding = [padding, padding]
     if len(padding) == 2:
         if data_format == "NCHW":
             padding = (0, 0, padding[0], padding[1])
@@ -1822,10 +1825,10 @@ def MaxPool2d(
             padding = (0, padding[0], padding[1], 0)
         else:
             raise ValueError('data_format must be "NHWC" or "NCHW".')
+
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 2)
     padding_before = [pad[0] for pad in pads_list]
     padding_after = [pad[1] for pad in pads_list]
-
     assert len(pads_list) == len(input.shape) - 2
     y, indice = (
         flow.user_op_builder(
@@ -1859,7 +1862,7 @@ def MaxPool3d(
     input: oneflow_api.BlobDesc,
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
-    padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    padding: Union[str, int, Tuple[int, int, int]],
     dilation: Union[int, IntPair] = 1,
     return_indices: bool = False,
     ceil_mode: bool = False,
@@ -1871,24 +1874,18 @@ def MaxPool3d(
     kernel_size = _GetSequence(kernel_size, 3, "kernel_size")
     dilation = _GetSequence(dilation, 3, "dilation")
     stride = _GetSequence(stride, 3, "stride")
-    assert len(padding) == 3 or padding in ["SAME", "VALID"]
+    assert (
+        isinstance(padding, int)
+        or isinstance(padding, Tuple)
+        or padding in ["SAME", "VALID"]
+    )
+    if isinstance(padding, int):
+        padding = (padding, padding, padding)
     if len(padding) == 3:
         if data_format == "NCDHW":
-            padding = (
-                (0, 0),
-                (0, 0),
-                (padding[0], padding[0]),
-                (padding[1], padding[1]),
-                (padding[2], padding[2]),
-            )
+            padding = (0, 0, padding[0], padding[1], padding[2])
         elif data_format == "NDHWC":
-            padding = (
-                (0, 0),
-                (padding[0], padding[0]),
-                (padding[1], padding[1]),
-                (padding[2], padding[2]),
-                (0, 0),
-            )
+            padding = (0, padding[0], padding[1], padding[2], 0)
         else:
             raise ValueError('data_format must be "NHWDC" or "NCDHW".')
     padding_type, pads_list = calc_pool_padding(padding, get_dhw_offset(channel_pos), 3)
