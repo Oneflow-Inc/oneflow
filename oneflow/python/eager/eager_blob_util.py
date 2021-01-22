@@ -18,60 +18,39 @@ from __future__ import absolute_import
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.vm_util as vm_util
+from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.lib.core.async_util as async_util
+import oneflow_api
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
-class EagerPhysicalBlob(blob_trait.BlobOperatorTrait, blob_trait.BlobHeaderTrait):
+class EagerPhysicalBlob(
+    oneflow_api.EagerPhysicalBlob,
+    blob_trait.BlobOperatorTrait,
+    blob_trait.BlobHeaderTrait,
+):
     def __init__(self, blob_name):
-        self.blob_name_ = blob_name
-        self.blob_object_ = blob_register.GetObject4BlobName(blob_name)
-
-    @property
-    def logical_blob_name(self):
-        return self.blob_name_
-
-    @property
-    def unique_name(self):
-        return self.blob_name_
-
-    @property
-    def static_shape(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).static_shape
-
-    @property
-    def shape(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).shape
+        oneflow_api.EagerPhysicalBlob.__init__(
+            self,
+            blob_name,
+            blob_register.GetObject4BlobName(blob_name),
+            _GetPhysicalBlobHeaderCache,
+        )
 
     @property
     def dtype(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).dtype
-
-    @property
-    def is_dynamic(self):
-        return True
-
-    @property
-    def is_tensor_list(self):
-        return _GetPhysicalBlobHeaderCache(self.blob_object_).is_tensor_list
+        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
     def numpy(self):
         assert not self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object_)
+        return _GetPhysicalBlobBodyCache(self.blob_object)
 
     def numpy_list(self):
         assert self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object_)
-
-    def __str__(self):
-        return "EagerPhysicalBlob(shape=%s, dtype=%s, is_tensor_list=%s)" % (
-            self.shape,
-            self.dtype,
-            self.is_tensor_list,
-        )
+        return _GetPhysicalBlobBodyCache(self.blob_object)
 
     def __del__(self):
         blob_register.ClearObject4BlobName(self.unique_name)
@@ -124,10 +103,10 @@ def _FetchPhysicalBlobBody(blob_object):
 def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
     def Callback(ofblob):
         Yield(
-            EagerPhysicalBlobHeader(
+            oneflow_api.EagerPhysicalBlobHeader(
                 ofblob.static_shape,
                 ofblob.shape_list,
-                ofblob.dtype,
+                int(ofblob.dtype.oneflow_proto_dtype),
                 ofblob.is_tensor_list,
             )
         )
@@ -143,34 +122,3 @@ def _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
             Yield(ofblob.CopyToNdarray())
 
     return FetchFromOfBlob
-
-
-class EagerPhysicalBlobHeader(object):
-    def __init__(self, static_shape, shape_list, dtype, is_tensor_list):
-        self.static_shape_ = static_shape
-        self.shape_list_ = shape_list
-        self.dtype_ = dtype
-        self.is_tensor_list_ = is_tensor_list
-
-    @property
-    def static_shape(self):
-        return self.static_shape_
-
-    @property
-    def shape(self):
-        assert len(self.shape_list_) == 1
-        assert not self.is_tensor_list_
-        return self.shape_list_[0]
-
-    @property
-    def shape_list(self):
-        assert self.is_tensor_list_
-        return self.shape_list_
-
-    @property
-    def dtype(self):
-        return self.dtype_
-
-    @property
-    def is_tensor_list(self):
-        return self.is_tensor_list_

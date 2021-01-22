@@ -674,6 +674,10 @@ def conv3d(
     if need_transpose:
         input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
         filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+        # padding for `NDHWC` is [0, 0, 1, 1, 1] to `NCDHW` format [0, 1, 1, 1, 0]
+        if isinstance(padding, (list, tuple)):
+            padding = list(padding)
+            padding[1], padding[4] = padding[4], padding[1]
 
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
@@ -3032,7 +3036,7 @@ def hard_sigmoid(
 
         @flow.global_function()
         def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            out = flow.math.hardsigmoid(x)
+            out = flow.nn.hardsigmoid(x)
 
             return out
 
@@ -3060,6 +3064,94 @@ def hard_sigmoid(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.mish")
+def mish(x: oneflow_api.BlobDesc, name: Optional[str] = None,) -> oneflow_api.BlobDesc:
+    """The Mish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x*tanh(ln(1+e^x))
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def mish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.nn.mish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1.0, 1.5]).astype(np.float32)
+        out = mish_job(x)
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Mish_")
+
+    return x * flow.math.tanh(
+        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
+    )
+
+
+@oneflow_export("nn.swish")
+def swish(
+    x: oneflow_api.BlobDesc, beta: float = 1.0, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""The Swish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x * sigmoid(\beta*x)
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.nn.swish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
+
+
+        out = swish_job(x)
+        # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
+    
+    Args:
+        x (oneflow_api.BlobDesc): The input Blob. 
+        beta (float, optional): The smooth factor. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Swish_")
+
+    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
 
 
 @oneflow_export("nn.hardswish")

@@ -159,6 +159,30 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("sub_consistent_blob_list",
                              &LazyMirroredBlob::sub_consistent_blob_list)
       .def("get_shape_log_warning", &LazyMirroredBlob::get_shape_log_warning);
+
+  py::class_<EagerBlobTrait, std::shared_ptr<EagerBlobTrait>>(m, "EagerBlobTrait")
+      .def(py::init<>())
+      .def("numpy_size", &EagerBlobTrait::numpy_size)
+      .def("numpy_list_size", &EagerBlobTrait::numpy_list_size)
+      .def("get_dtype",
+           [](const std::shared_ptr<EagerBlobTrait>& x) { return static_cast<int>(x->dtype()); })
+      .def_property_readonly("shape",
+                             [](const std::shared_ptr<EagerBlobTrait>& x) {
+                               const auto& x_shape = x->shape();
+                               py::tuple ret(x_shape->NumAxes());
+                               for (int i = 0; i < x_shape->NumAxes(); ++i) {
+                                 ret[i] = x_shape->At(i);
+                               }
+                               return ret;
+                             })
+      .def_property_readonly("batch_axis", &EagerBlobTrait::batch_axis)
+      .def_property_readonly("split_axis", &EagerBlobTrait::split_axis)
+      .def_property_readonly("is_dynamic", &EagerBlobTrait::is_dynamic)
+      .def_property_readonly("is_tensor_list", &EagerBlobTrait::is_tensor_list)
+      .def_property_readonly("parallel_conf", &EagerBlobTrait::parallel_conf)
+      .def("_Init", &EagerBlobTrait::_Init)
+      .def_property_readonly("blob_object", &EagerBlobTrait::blob_object)
+      .def("IdenticalTo", &EagerBlobTrait::IdenticalTo);
 }
 
 }  // namespace compatible_py
