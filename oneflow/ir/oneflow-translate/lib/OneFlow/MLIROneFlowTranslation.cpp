@@ -71,6 +71,9 @@ class Importer {
   LogicalResult processJob();
   LogicalResult tryToUpdateJob();
 
+  void ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &op_conf,
+                               std::string &err_str);
+
  private:
   /// The current builder, pointing at where the next Instruction should be
   /// generated.
@@ -422,6 +425,128 @@ void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::
     *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
   }
 }
+
+void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &op_conf,
+                                       std::string &err_str) {
+  auto user_conf = op_conf.mutable_user_conf();
+  for (auto id_attr : op->getAttrDictionary()) {
+    auto id = id_attr.first;
+    // convert op conf attributes
+    if (id.strref().equals("op_name")) {
+      op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
+      continue;
+    }
+    if (id.strref().equals("op_type_name")) {
+      user_conf->set_op_type_name(op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
+      continue;
+    }
+    if (id.strref().equals("trainable")) {
+      op_conf.set_trainable(op->getAttrOfType<BoolAttr>("trainable").getValue());
+      continue;
+    }
+    if (id.strref().equals("device")) {
+      op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
+      continue;
+    }
+    if (id.strref().equals("scope_symbol_id")) {
+      op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
+      continue;
+    }
+    if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
+        || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
+        || id.strref().contains("output_lbn_segment_keys")
+        || id.strref().contains("output_lbn_segment_sizes")) {
+      continue;
+    }  // convert op conf attributes
+
+    // convert user conf attributes
+    auto attr = id_attr.second;
+    auto user_attr = ::oneflow::AttrValue();
+    if (auto ref = attr.dyn_cast<BoolAttr>()) /* handle bool before int because it is i1*/ {
+      user_attr.set_at_bool(ref.getValue());
+    } else if (auto ref = attr.dyn_cast<IntegerAttr>()) {
+      if (ref.getType() == b.getIntegerType(32)) {
+        user_attr.set_at_int32(ref.getInt());
+      } else if (ref.getType() == b.getIntegerType(64)) {
+        user_attr.set_at_int64(ref.getInt());
+      } else {
+        err_str = "fail to convert op attr to int32 or int64, key: " + id.str();
+        return;
+      }
+    } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
+      if (ref.getType() == b.getF32Type()) {
+        user_attr.set_at_float(ref.getValue().convertToFloat());
+      } else if (ref.getType() == b.getF64Type()) {
+        user_attr.set_at_double(ref.getValue().convertToDouble());
+      } else {
+        err_str = "fail to convert op attr float or double, key: " + id.str();
+        return;
+      }
+    } else if (auto ref = attr.dyn_cast<StringAttr>()) {
+      if (ref.getValue().startswith("DT_")) {
+        auto dt = oneflow::symbolizeEnum<oneflow::DataType>(ref.getValue());
+        if (dt.hasValue()) {
+          switch (dt.getValue()) {
+            case oneflow::DataType::DT_InvalidDataType:
+              user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
+              break;
+#define DEFINE_ONE_ELIF(datatype)                                 \
+  case oneflow::DataType::DT_##datatype:                          \
+    user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
+    break;
+              DEFINE_ONE_ELIF(Char)
+              DEFINE_ONE_ELIF(Float)
+              DEFINE_ONE_ELIF(Double)
+              DEFINE_ONE_ELIF(Int8)
+              DEFINE_ONE_ELIF(Int32)
+              DEFINE_ONE_ELIF(Int64)
+              DEFINE_ONE_ELIF(UInt8)
+              DEFINE_ONE_ELIF(OFRecord)
+              DEFINE_ONE_ELIF(Float16)
+              DEFINE_ONE_ELIF(TensorBuffer)
+#undef DEFINE_ONE_ELIF
+            default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
+          }
+        }
+      } else {
+        user_attr.set_at_string(ref.getValue().str());
+      }
+    } else if (auto ref = attr.dyn_cast<DenseIntElementsAttr>()) {
+      for (auto int_v : ref.getIntValues()) {
+        user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
+      }
+    } else if (auto ref = attr.dyn_cast<ArrayAttr>()) {
+      for (auto v : ref.getValue()) {
+        if (auto elem = v.dyn_cast<IntegerAttr>()) {
+          if (elem.getType() == b.getIntegerType(32)) {
+            user_attr.mutable_at_list_int32()->add_val(elem.getInt());
+          } else if (ref.getType() == b.getIntegerType(64)) {
+            user_attr.mutable_at_list_int64()->add_val(elem.getInt());
+          } else {
+            err_str = "fail to convert op attr to int list, key: " + id.str();
+            return;
+          }
+        } else if (auto elem = v.dyn_cast<FloatAttr>()) {
+          if (elem.getType() == b.getF32Type()) {
+            user_attr.mutable_at_list_float()->add_val(elem.getValue().convertToFloat());
+          } else {
+            err_str = "fail to convert op attr to float list, key: " + id.str();
+            return;
+          }
+        } else {
+          err_str = "fail to convert op attr to list, key: " + id.str();
+          return;
+        }
+      }
+    } else {
+      err_str = "fail to convert op attr, key: " + id.str();
+      return;
+    }  // convert user conf attributes
+
+    (*user_conf->mutable_attr())[id.str()] = user_attr;
+  }
+}
+
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
@@ -436,124 +561,7 @@ LogicalResult Importer::tryToUpdateJob() {
       auto user_conf = op_conf.mutable_user_conf();
       ConvertUseropInputs(op, user_conf, err_str);
       ConvertUseropOutputs(op, user_conf, err_str);
-      for (auto id_attr : op->getAttrDictionary()) {
-        auto id = id_attr.first;
-        // convert op conf attributes
-        if (id.strref().equals("op_name")) {
-          op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
-          continue;
-        }
-        if (id.strref().equals("op_type_name")) {
-          user_conf->set_op_type_name(
-              op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
-          continue;
-        }
-        if (id.strref().equals("trainable")) {
-          op_conf.set_trainable(op->getAttrOfType<BoolAttr>("trainable").getValue());
-          continue;
-        }
-        if (id.strref().equals("device")) {
-          op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
-          continue;
-        }
-        if (id.strref().equals("scope_symbol_id")) {
-          op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
-          continue;
-        }
-        if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
-            || id.strref().contains("input_lbn_segment_sizes")
-            || id.strref().contains("output_lbns")
-            || id.strref().contains("output_lbn_segment_keys")
-            || id.strref().contains("output_lbn_segment_sizes")) {
-          continue;
-        }  // convert op conf attributes
-
-        // convert user conf attributes
-        auto attr = id_attr.second;
-        auto user_attr = ::oneflow::AttrValue();
-        if (auto ref = attr.dyn_cast<BoolAttr>()) /* handle bool before int because it is i1*/ {
-          user_attr.set_at_bool(ref.getValue());
-        } else if (auto ref = attr.dyn_cast<IntegerAttr>()) {
-          if (ref.getType() == b.getIntegerType(32)) {
-            user_attr.set_at_int32(ref.getInt());
-          } else if (ref.getType() == b.getIntegerType(64)) {
-            user_attr.set_at_int64(ref.getInt());
-          } else {
-            err_str = "fail to convert op attr to int32 or int64, key: " + id.str();
-            return;
-          }
-        } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
-          if (ref.getType() == b.getF32Type()) {
-            user_attr.set_at_float(ref.getValue().convertToFloat());
-          } else if (ref.getType() == b.getF64Type()) {
-            user_attr.set_at_double(ref.getValue().convertToDouble());
-          } else {
-            err_str = "fail to convert op attr float or double, key: " + id.str();
-            return;
-          }
-        } else if (auto ref = attr.dyn_cast<StringAttr>()) {
-          if (ref.getValue().startswith("DT_")) {
-            auto dt = oneflow::symbolizeEnum<oneflow::DataType>(ref.getValue());
-            if (dt.hasValue()) {
-              switch (dt.getValue()) {
-                case oneflow::DataType::DT_InvalidDataType:
-                  user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
-                  break;
-#define DEFINE_ONE_ELIF(datatype)                                 \
-  case oneflow::DataType::DT_##datatype:                          \
-    user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
-    break;
-                  DEFINE_ONE_ELIF(Char)
-                  DEFINE_ONE_ELIF(Float)
-                  DEFINE_ONE_ELIF(Double)
-                  DEFINE_ONE_ELIF(Int8)
-                  DEFINE_ONE_ELIF(Int32)
-                  DEFINE_ONE_ELIF(Int64)
-                  DEFINE_ONE_ELIF(UInt8)
-                  DEFINE_ONE_ELIF(OFRecord)
-                  DEFINE_ONE_ELIF(Float16)
-                  DEFINE_ONE_ELIF(TensorBuffer)
-#undef DEFINE_ONE_ELIF
-                default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
-              }
-            }
-          } else {
-            user_attr.set_at_string(ref.getValue().str());
-          }
-        } else if (auto ref = attr.dyn_cast<DenseIntElementsAttr>()) {
-          for (auto int_v : ref.getIntValues()) {
-            user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
-          }
-        } else if (auto ref = attr.dyn_cast<ArrayAttr>()) {
-          for (auto v : ref.getValue()) {
-            if (auto elem = v.dyn_cast<IntegerAttr>()) {
-              if (elem.getType() == b.getIntegerType(32)) {
-                user_attr.mutable_at_list_int32()->add_val(elem.getInt());
-              } else if (ref.getType() == b.getIntegerType(64)) {
-                user_attr.mutable_at_list_int64()->add_val(elem.getInt());
-              } else {
-                err_str = "fail to convert op attr to int list, key: " + id.str();
-                return;
-              }
-            } else if (auto elem = v.dyn_cast<FloatAttr>()) {
-              if (elem.getType() == b.getF32Type()) {
-                user_attr.mutable_at_list_float()->add_val(elem.getValue().convertToFloat());
-              } else {
-                err_str = "fail to convert op attr to float list, key: " + id.str();
-                return;
-              }
-            } else {
-              err_str = "fail to convert op attr to list, key: " + id.str();
-              return;
-            }
-          }
-        } else {
-          err_str = "fail to convert op attr, key: " + id.str();
-          return;
-        }  // convert user conf attributes
-
-        (*user_conf->mutable_attr())[id.str()] = user_attr;
-      }
+      ConvertUseropAttributes(op, op_conf, err_str);
       *(new_job.mutable_net()->add_op()) = op_conf;
     } /* user op */ else if (/* system op */ llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
