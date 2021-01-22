@@ -37,14 +37,10 @@ def _compare_ones_with_np(n, m, device_type, machine_ids, device_counts):
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     @flow.global_function(
-        type="train", function_config=func_config,
+        type="predict", function_config=func_config,
     )
     def oneflow_eye() -> tp.Numpy:
         of_eye = flow.eye(n, m)
-        with flow.scope.placement(device_type, "0:0"):
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(of_eye)
         return of_eye
 
     np_out_eye = np.eye(n, m, dtype=np.float32)
