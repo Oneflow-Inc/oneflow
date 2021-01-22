@@ -37,17 +37,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       }))
       .def_property_readonly("parallel_conf", &Tensor::parallel_conf)
       .def_property_readonly("shape", &Tensor::shape)
-      .def("get_dtype", [](std::shared_ptr<Tensor>& x) { 
-        return static_cast<int>(x->dtype());
-      })
-      .def_property_readonly("storage", &Tensor::storage)
-      .def_property_readonly("defined", &Tensor::defined)
-      .def_property_readonly("has_storage", &Tensor::has_storage)
-      .def_property_readonly("required_grad", &Tensor::requires_grad)
+      .def("get_dtype", [](std::shared_ptr<Tensor>& x) { return static_cast<int>(x->dtype()); })
+      .def("storage", &Tensor::storage)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
-      .def_property_readonly("dim", &Tensor::dim)
+      .def_property_readonly("ndim", &Tensor::dim)
       .def_property_readonly("grad", &Tensor::grad)
-      .def("Backward", &Tensor::Backward);
+      .def("size", &Tensor::shape)
+      .def("backward", &Tensor::Backward);
 }
 
 }  // namespace one

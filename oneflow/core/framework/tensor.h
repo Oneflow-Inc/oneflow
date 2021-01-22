@@ -45,6 +45,15 @@ class Tensor {
   virtual std::shared_ptr<Shape> shape() const = 0;
   virtual DataType dtype() const = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+
+  // virtual method add by one::Tensor
+  virtual std::shared_ptr<Blob> storage() const { UNIMPLEMENTED(); }
+  virtual bool defined() const { UNIMPLEMENTED(); }
+  virtual bool has_storage() const { UNIMPLEMENTED(); }
+  virtual bool requires_grad() const { UNIMPLEMENTED(); }
+  virtual bool is_leaf() const { UNIMPLEMENTED(); }
+  virtual int32_t dim() const { UNIMPLEMENTED(); }
+  virtual std::shared_ptr<Tensor> grad() const { UNIMPLEMENTED(); }
 };
 
 namespace one {
@@ -103,13 +112,13 @@ class Tensor : public oneflow::Tensor {
   }
   std::shared_ptr<Shape> shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  std::shared_ptr<Blob> storage() const { return impl_->storage(); }
-  bool defined() const { return static_cast<bool>(impl_); }
-  bool has_storage() const { return defined() && impl_->has_storage(); }
-  bool requires_grad() const { return is_requires_grad_; }
-  bool is_leaf() const { return is_leaf_; }
-  int32_t dim() const { return impl_->dim(); }
-  std::shared_ptr<Tensor> grad() const { return grad_; }
+  std::shared_ptr<Blob> storage() const override { return impl_->storage(); }
+  bool defined() const override { return static_cast<bool>(impl_); }
+  bool has_storage() const override { return defined() && impl_->has_storage(); }
+  bool requires_grad() const override { return is_requires_grad_; }
+  bool is_leaf() const override { return is_leaf_; }
+  int32_t dim() const override { return impl_->dim(); }
+  std::shared_ptr<oneflow::Tensor> grad() const override { return grad_; }
 
   // Inherit some virtual unimplement interface
   std::shared_ptr<cfg::LogicalBlobId> lbi() const override { UNIMPLEMENTED(); }
