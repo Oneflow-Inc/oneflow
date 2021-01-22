@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/py_blob_desc.h"
+#include "oneflow/core/framework/blob_register.h"
 
 namespace oneflow {
 
@@ -67,7 +68,7 @@ class LazyConsistentBlob : public ConsistentBlob {
 
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
-  bool IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs);
+  bool IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const;
 };
 
 class MirroredBlob : public BlobDesc {
@@ -115,6 +116,29 @@ class LazyMirroredBlob : public MirroredBlob {
 
  private:
   std::vector<std::shared_ptr<LazyConsistentBlob>> sub_consistent_blob_list_;
+};
+
+class EagerBlobTrait {
+ public:
+  EagerBlobTrait() = default;
+  ~EagerBlobTrait() = default;
+
+  int64_t numpy_size() const;
+  int64_t numpy_list_size() const;
+  std::shared_ptr<Shape> shape() const;
+  cfg::DataType dtype() const;
+  int64_t batch_axis() const;
+  int64_t split_axis() const;
+  bool is_dynamic() const;
+  bool is_tensor_list() const;
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
+  std::shared_ptr<BlobObject> blob_object() const;
+  void _Init(const std::string logical_blob_name, const std::shared_ptr<BlobObject>& blob_object,
+             const std::shared_ptr<BlobRegister>& blob_register);
+  bool IdenticalTo(const std::shared_ptr<EagerBlobTrait>& rhs) const;
+
+ private:
+  std::shared_ptr<RegisteredBlobAccess> registered_blob_access_;
 };
 
 }  // namespace compatible_py

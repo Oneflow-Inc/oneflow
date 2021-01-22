@@ -111,7 +111,7 @@ std::shared_ptr<cfg::ParallelConf> LazyConsistentBlob::parallel_conf() const {
   return CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))->cfg_parallel_conf();
 }
 
-bool LazyConsistentBlob::IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) {
+bool LazyConsistentBlob::IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const {
   return true && unique_name() == rhs->unique_name() && *shape() == *rhs->shape()
          && batch_axis() == rhs->batch_axis() && split_axis() == rhs->split_axis()
          && is_dynamic() == rhs->is_dynamic() && is_tensor_list() == rhs->is_tensor_list();
@@ -205,6 +205,71 @@ std::shared_ptr<cfg::ParallelConf> LazyMirroredBlob::parallel_conf() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->MirroredBlobGetParallelDescFromProducerView(logical_blob_name()))
       ->cfg_parallel_conf();
+}
+
+int64_t EagerBlobTrait::numpy_size() const {
+  return blob_object()->parallel_desc_symbol()->parallel_num();
+}
+
+int64_t EagerBlobTrait::numpy_list_size() const {
+  return blob_object()->parallel_desc_symbol()->parallel_num();
+}
+
+std::shared_ptr<Shape> EagerBlobTrait::shape() const {
+  return blob_object()->op_arg_blob_attr()->shape();
+}
+
+cfg::DataType EagerBlobTrait::dtype() const {
+  return blob_object()->op_arg_blob_attr()->get_dtype();
+}
+
+int64_t EagerBlobTrait::batch_axis() const {
+  auto opt_batch_axis = blob_object()->op_arg_blob_attr()->batch_axis();
+  if (opt_batch_axis->has_value()) {
+    return opt_batch_axis->value();
+  } else {
+    return INVALID_BATCH_AXIS;
+  }
+}
+
+int64_t EagerBlobTrait::split_axis() const {
+  auto sbp_parallel = blob_object()->op_arg_parallel_attr()->sbp_parallel();
+  if (sbp_parallel->has_split_parallel()) {
+    return sbp_parallel->split_parallel().axis();
+  } else if (sbp_parallel->has_broadcast_parallel()) {
+    return INVALID_SPLIT_AXIS;
+  } else if (sbp_parallel->has_partial_sum_parallel()) {
+    return INVALID_SPLIT_AXIS;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+bool EagerBlobTrait::is_dynamic() const { return blob_object()->op_arg_blob_attr()->is_dynamic(); }
+
+bool EagerBlobTrait::is_tensor_list() const {
+  return blob_object()->op_arg_blob_attr()->is_tensor_list();
+}
+
+std::shared_ptr<cfg::ParallelConf> EagerBlobTrait::parallel_conf() const {
+  return blob_object()->parallel_desc_symbol()->cfg_parallel_conf();
+}
+
+std::shared_ptr<BlobObject> EagerBlobTrait::blob_object() const {
+  return registered_blob_access_->blob_object();
+}
+
+void EagerBlobTrait::_Init(const std::string logical_blob_name,
+                           const std::shared_ptr<BlobObject>& blob_object,
+                           const std::shared_ptr<BlobRegister>& blob_register) {
+  std::shared_ptr<RegisteredBlobAccess> access =
+      blob_register->OpenRegisteredBlobAccess(logical_blob_name, blob_object);
+  registered_blob_access_ = access;
+}
+
+bool EagerBlobTrait::IdenticalTo(const std::shared_ptr<EagerBlobTrait>& rhs) const {
+  return (blob_object()->op_arg_blob_attr() == rhs->blob_object()->op_arg_blob_attr())
+         && (blob_object()->op_arg_parallel_attr() == rhs->blob_object()->op_arg_parallel_attr());
 }
 
 }  // namespace compatible_py
