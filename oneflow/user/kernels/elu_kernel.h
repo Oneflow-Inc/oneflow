@@ -115,7 +115,6 @@ limitations under the License.
 
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_ELU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_ELU_KERNEL_H_
-#include "oneflow/user/kernels/elementwise_kernel.h"
 namespace oneflow {
 
 template<typename T>
@@ -127,16 +126,18 @@ struct EluFunctor {
   const T alpha;
 };
 
-#define REGISTER_ELU_KERNELS(device, dtype)                                             \
-  REGISTER_USER_KERNEL("elu")                                                           \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
-        return new UnaryElemwiseKernel<device, EluFunctor<dtype>, dtype>(               \
-            "in", "out", [](user_op::KernelComputeContext* ctx) {                       \
-              return EluFunctor<dtype>(static_cast<dtype>(ctx->Attr<double>("alpha"))); \
-            });                                                                         \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+// #define REGISTER_ELU_CPU_KERNEL(device, dtype)                                             \
+//   REGISTER_USER_KERNEL("elu")                                                           \
+//       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
+//         return new UnaryElemwiseCpuKernel<device, EluFunctor<dtype>, dtype>(               \
+//             "in", "out", [](user_op::KernelComputeContext* ctx) {                       \
+//               return EluFunctor<dtype>(static_cast<dtype>(ctx->Attr<double>("alpha"))); \
+//             });                                                                         \
+//       })                                                                                \
+//       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+//                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+
+
 
 // #define REGISTER_ELU_KERNELS(device, dtype)    \
 //   REGISTER_USER_KERNEL("elu")                                                           \

@@ -13,18 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_KERNEL_H_
-#define _ONEFLOW_USER_KERNELS_ELEMENTWISE_KERNEL_H_
+#ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_GPU_KERNEL_H_
+#define _ONEFLOW_USER_KERNELS_ELEMENTWISE_GPU_KERNEL_H_
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename FunctorT, typename T>
-class UnaryElemwiseKernel final : public user_op::OpKernel {
+class UnaryElemwiseGpuKernel final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseKernel);
-  UnaryElemwiseKernel(const std::string& input_name, const std::string& output_name,
+  OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseGpuKernel);
+  UnaryElemwiseGpuKernel(const std::string& input_name, const std::string& output_name,
                       std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn)
       : input_name(input_name), output_name(output_name), FunctorCreateFn(FunctorCreateFn) {}
 
@@ -40,16 +41,14 @@ class UnaryElemwiseKernel final : public user_op::OpKernel {
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
-    std::cout << "Elem count is: " << elem_cnt << std::endl;
 
     FunctorT functor = FunctorCreateFn(ctx);
-    FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      out_ptr[i] = functor(in_ptr[i]);
-      std::cout << "Out is: " << out_ptr[i] << std::endl;
-    }
+    OF_CUDA_CHECK(oneflow::cuda::elementwise::Unary(functor, elem_cnt, out_ptr, in_ptr, ctx->device_ctx()->cuda_stream()));
+  
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
 
 }  // namespace oneflow
 #endif
