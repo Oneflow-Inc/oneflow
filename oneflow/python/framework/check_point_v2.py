@@ -34,11 +34,11 @@ import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 from oneflow.python.experimental import interface_op_read_and_write
-from oneflow.python.framework.remote_blob import EagerBlobTrait
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.ops.get_variable as get_variable
 
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow_api import EagerBlobTrait
 from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple
 
 

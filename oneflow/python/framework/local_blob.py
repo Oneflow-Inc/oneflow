@@ -134,7 +134,7 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
 
 
 def MakeLocalBlob4EagerBlob(eager_blob):
-    assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
+    assert isinstance(eager_blob, oneflow_api.EagerBlobTrait)
     if eager_blob.is_tensor_list:
         return LocalMirroredTensorList(eager_blob.numpy_list())
     elif isinstance(eager_blob, remote_blob_util.EagerMirroredBlob):

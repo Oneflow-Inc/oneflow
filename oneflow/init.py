@@ -77,6 +77,7 @@ remote_blob_util.CompleteEagerBlobTrait()
 
 remote_blob_util.CompleteLazyConsistentBlob()
 remote_blob_util.CompleteLazyMirroredBlob()
+remote_blob_util.CompleteEagerConsistentBlob()
 
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)

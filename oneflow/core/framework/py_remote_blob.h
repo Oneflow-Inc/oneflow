@@ -121,7 +121,7 @@ class LazyMirroredBlob : public MirroredBlob {
 class EagerBlobTrait {
  public:
   EagerBlobTrait() = default;
-  ~EagerBlobTrait() = default;
+  virtual ~EagerBlobTrait();
 
   int64_t numpy_size() const;
   int64_t numpy_list_size() const;
@@ -138,7 +138,32 @@ class EagerBlobTrait {
   bool IdenticalTo(const std::shared_ptr<EagerBlobTrait>& rhs) const;
 
  private:
+  std::string logical_blob_name_;
   std::shared_ptr<RegisteredBlobAccess> registered_blob_access_;
+};
+
+class EagerConsistentBlob : public EagerBlobTrait, public ConsistentBlob {
+ public:
+  EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                      const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
+                      const std::shared_ptr<Distribute>& distribute,
+                      const std::shared_ptr<BlobRegister>& blob_register);
+  ~EagerConsistentBlob() override = default;
+
+  int64_t get_parallel_size() const;
+  void set_parallel_size(int64_t parallel_size);
+
+ private:
+  int64_t parallel_size_;
+};
+
+class EagerMirroredBlob : public EagerBlobTrait, public MirroredBlob {
+ public:
+  EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                    const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
+                    const std::shared_ptr<Distribute>& distribute,
+                    const std::shared_ptr<BlobRegister>& blob_register);
+  ~EagerMirroredBlob() override = default;
 };
 
 }  // namespace compatible_py

@@ -183,6 +183,28 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_Init", &EagerBlobTrait::_Init)
       .def_property_readonly("blob_object", &EagerBlobTrait::blob_object)
       .def("IdenticalTo", &EagerBlobTrait::IdenticalTo);
+
+  py::class_<EagerConsistentBlob, EagerBlobTrait, ConsistentBlob,
+             std::shared_ptr<EagerConsistentBlob>>(m, "EagerConsistentBlob")
+      .def(py::init([](const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                       const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
+                       const std::shared_ptr<Distribute>& distribute,
+                       const std::shared_ptr<BlobRegister>& blob_register) {
+        return std::make_shared<EagerConsistentBlob>(lbi, blob_object, job_name, distribute,
+                                                     blob_register);
+      }))
+      .def("get_parallel_size", &EagerConsistentBlob::get_parallel_size)
+      .def("set_parallel_size", &EagerConsistentBlob::set_parallel_size);
+
+  py::class_<EagerMirroredBlob, EagerBlobTrait, MirroredBlob, std::shared_ptr<EagerMirroredBlob>>(
+      m, "EagerMirroredBlob")
+      .def(py::init([](const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                       const std::shared_ptr<BlobObject>& blob_object, const std::string& job_name,
+                       const std::shared_ptr<Distribute>& distribute,
+                       const std::shared_ptr<BlobRegister>& blob_register) {
+        return std::make_shared<EagerMirroredBlob>(lbi, blob_object, job_name, distribute,
+                                                   blob_register);
+      }));
 }
 
 }  // namespace compatible_py

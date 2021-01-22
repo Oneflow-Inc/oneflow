@@ -207,6 +207,10 @@ std::shared_ptr<cfg::ParallelConf> LazyMirroredBlob::parallel_conf() const {
       ->cfg_parallel_conf();
 }
 
+EagerBlobTrait::~EagerBlobTrait() {
+  registered_blob_access_->blob_register()->CloseRegisteredBlobAccess(logical_blob_name_);
+}
+
 int64_t EagerBlobTrait::numpy_size() const {
   return blob_object()->parallel_desc_symbol()->parallel_num();
 }
@@ -262,6 +266,7 @@ std::shared_ptr<BlobObject> EagerBlobTrait::blob_object() const {
 void EagerBlobTrait::_Init(const std::string logical_blob_name,
                            const std::shared_ptr<BlobObject>& blob_object,
                            const std::shared_ptr<BlobRegister>& blob_register) {
+  logical_blob_name_ = logical_blob_name;
   std::shared_ptr<RegisteredBlobAccess> access =
       blob_register->OpenRegisteredBlobAccess(logical_blob_name, blob_object);
   registered_blob_access_ = access;
@@ -270,6 +275,32 @@ void EagerBlobTrait::_Init(const std::string logical_blob_name,
 bool EagerBlobTrait::IdenticalTo(const std::shared_ptr<EagerBlobTrait>& rhs) const {
   return (blob_object()->op_arg_blob_attr() == rhs->blob_object()->op_arg_blob_attr())
          && (blob_object()->op_arg_parallel_attr() == rhs->blob_object()->op_arg_parallel_attr());
+}
+
+EagerConsistentBlob::EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                                         const std::shared_ptr<BlobObject>& blob_object,
+                                         const std::string& job_name,
+                                         const std::shared_ptr<Distribute>& distribute,
+                                         const std::shared_ptr<BlobRegister>& blob_register)
+    : EagerBlobTrait(), ConsistentBlob(lbi, job_name, distribute), parallel_size_(0) {
+  std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
+  _Init(logical_blob_name, blob_object, blob_register);
+}
+
+int64_t EagerConsistentBlob::get_parallel_size() const { return parallel_size_; }
+
+void EagerConsistentBlob::set_parallel_size(int64_t parallel_size) {
+  parallel_size_ = parallel_size;
+}
+
+EagerMirroredBlob::EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                                     const std::shared_ptr<BlobObject>& blob_object,
+                                     const std::string& job_name,
+                                     const std::shared_ptr<Distribute>& distribute,
+                                     const std::shared_ptr<BlobRegister>& blob_register)
+    : EagerBlobTrait(), MirroredBlob(lbi, job_name, distribute) {
+  std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
+  _Init(logical_blob_name, blob_object, blob_register);
 }
 
 }  // namespace compatible_py

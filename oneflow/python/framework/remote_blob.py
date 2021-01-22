@@ -48,10 +48,24 @@ def RemoteBlob(lbi, **kw):
 def EagerLogicalBlob(lbi, **kw):
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
+    blob_type = EagerConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        return EagerMirroredBlob(lbi, **kw)
-    else:
-        return EagerConsistentBlob(lbi, **kw)
+        blob_type = EagerMirroredBlob
+    job_name = ""
+    if "job_name" in kw:
+        job_name = kw["job_name"]
+    blob_object = None
+    if "blob_object" in kw:
+        blob_object = kw["blob_object"]
+    distribute = oneflow_api.distribute.auto()
+    if "distribute" in kw:
+        distribute = kw["distribute"]
+    return blob_type(lbi, blob_object, job_name, distribute, blob_register)
 
 
 @enable_if.condition(~hob.eager_execution_enabled)
@@ -132,15 +146,6 @@ def CompleteLazyMirroredBlob():
     oneflow_api.LazyMirroredBlob.get_mirror_shape_log_warning = (
         get_mirror_shape_log_warning
     )
-
-
-class EagerBlobTrait(oneflow_api.EagerBlobTrait):
-    def __init__(self):
-        self.sub_consistent_blob_list_ = []
-        oneflow_api.EagerBlobTrait.__init__(self)
-
-    def __del__(self):
-        blob_register.CloseRegisteredBlobAccess(self.logical_blob_name)
 
 
 @property
@@ -270,13 +275,14 @@ def CompleteEagerBlobTrait():
     oneflow_api.EagerBlobTrait.numpy = numpy
 
 
-class EagerConsistentBlob(EagerBlobTrait, oneflow_api.ConsistentBlob):
+class EagerConsistentBlob(oneflow_api.EagerConsistentBlob):
     def __init__(
         self,
         lbi,
         blob_object=None,
         job_name="",
         distribute=oneflow_api.distribute.auto(),
+        blob_register=blob_register,
     ):
         if not isinstance(lbi, lbi_util.LogicalBlobId):
             cfg_lbi = lbi_util.LogicalBlobId()
@@ -285,49 +291,48 @@ class EagerConsistentBlob(EagerBlobTrait, oneflow_api.ConsistentBlob):
             lbi = cfg_lbi
         if job_name is None:
             job_name = ""
-        logical_blob_name = lbi.op_name() + "/" + lbi.blob_name()
-        EagerBlobTrait.__init__(self)
-        oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
-        self._Init(logical_blob_name, blob_object, blob_register)
-        self.parallel_size_ = 0
+        oneflow_api.EagerConsistentBlob.__init__(
+            self, lbi, blob_object, job_name, distribute, blob_register
+        )
 
-    @property
-    def parallel_size(self):
-        if self.parallel_size_ == 0:
-            self.parallel_size_ = placement_ctx.GetParallelSize(
+
+@property
+def parallel_size(self):
+    if self.get_parallel_size() == 0:
+        self.set_parallel_size(
+            placement_ctx.GetParallelSize(
                 placement_ctx.MakeMachineId2DeviceIdList(self.parallel_conf)
             )
-        return self.parallel_size_
-
-    def Clone(self):
-        return type(self)(
-            self.lbi,
-            blob_object=self.blob_object,
-            job_name=self.job_name,
-            distribute=self.distribute,
         )
-
-    def with_distribute(self, distribute):
-        new = type(self)(
-            self.lbi,
-            blob_object=self.blob_object,
-            job_name=self.job_name,
-            distribute=self.distribute,
-        )
-        new.set_distribute(distribute)
-        return new
-
-    def with_gradient_distribute(self, distribute):
-        return oneflow.parallel_cast(self, gradient_distribute=distribute)
+    return self.get_parallel_size()
 
 
-class EagerMirroredBlob(EagerBlobTrait, oneflow_api.MirroredBlob):
+def eager_with_distribute(self, distribute):
+    new = type(self)(
+        self.lbi,
+        blob_object=self.blob_object,
+        job_name=self.job_name,
+        distribute=self.distribute,
+    )
+    new.set_distribute(distribute)
+    return new
+
+
+def CompleteEagerConsistentBlob():
+    oneflow_api.EagerConsistentBlob.dtype = dtype
+    oneflow_api.EagerConsistentBlob.parallel_size = parallel_size
+    oneflow_api.EagerConsistentBlob.with_distribute = eager_with_distribute
+    oneflow_api.EagerConsistentBlob.with_gradient_distribute = with_gradient_distribute
+
+
+class EagerMirroredBlob(oneflow_api.EagerMirroredBlob):
     def __init__(
         self,
         lbi,
         blob_object=None,
         job_name="",
         distribute=oneflow_api.distribute.auto(),
+        blob_register=blob_register,
     ):
         if not isinstance(lbi, lbi_util.LogicalBlobId):
             cfg_lbi = lbi_util.LogicalBlobId()
@@ -336,7 +341,6 @@ class EagerMirroredBlob(EagerBlobTrait, oneflow_api.MirroredBlob):
             lbi = cfg_lbi
         if job_name is None:
             job_name = ""
-        logical_blob_name = lbi.op_name() + "/" + lbi.blob_name()
-        EagerBlobTrait.__init__(self)
-        oneflow_api.MirroredBlob.__init__(self, lbi, job_name, distribute)
-        self._Init(logical_blob_name, blob_object, blob_register)
+        oneflow_api.EagerMirroredBlob.__init__(
+            self, lbi, blob_object, job_name, distribute, blob_register
+        )
