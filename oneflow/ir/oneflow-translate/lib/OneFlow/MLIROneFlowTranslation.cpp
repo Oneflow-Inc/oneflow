@@ -66,6 +66,7 @@ class Importer {
                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult AddInputOutputSegments(const ::oneflow::OperatorConf &op,
                                        std::vector<NamedAttribute> &attr_vec);
+  LogicalResult InsertOpResults(Operation *);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processSystemOp(const ::oneflow::OperatorConf &op);
   LogicalResult processJob();
@@ -249,6 +250,14 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
   return success();
 }
 
+LogicalResult Importer::InsertOpResults(Operation *created_op) {
+  for (auto output_lbn : llvm::enumerate(created_op->getAttrOfType<ArrayAttr>("output_lbns"))) {
+    lbn2result_.insert({output_lbn.value().dyn_cast<StringAttr>().getValue().str(),
+                        created_op->getResult(output_lbn.index())});
+  }
+  return success();
+}
+
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) {
     module.emitError("Not a user op. op name: " + op.name());
@@ -303,14 +312,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
                       + " op, name: " + op.name());
     return failure();
   }
-
-  for (auto kv : op.user_conf().output()) {
-    int i = 0;
-    for (const std::string &lbn : kv.second.s()) {
-      lbn2result_.insert({lbn, created_op->getResult(i)});
-      i++;
-    }
-  }
+  InsertOpResults(created_op);
 
   return success();
 }  // namespace
@@ -350,11 +352,8 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = b.createOperation(state);
-  for (auto output_lbn : output_lbns) {
-    int i = 0;
-    lbn2result_.insert({output_lbn, created_op->getResult(i)});
-    i++;
-  }
+  InsertOpResults(created_op);
+
   if (!created_op) {
     module->emitError("fail to create op, name: " + op.name());
     return failure();
