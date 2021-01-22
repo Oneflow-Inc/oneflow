@@ -68,7 +68,7 @@ def LazyRemoteBlob(lbi, **kw):
         lbi = cfg_lbi
     job_name = ""
     if "job_name" in kw:
-        job_name = kw[job_name]
+        job_name = kw["job_name"]
     distribute = oneflow_api.distribute.auto()
     if "distribute" in kw:
         distribute = kw["distribute"]
