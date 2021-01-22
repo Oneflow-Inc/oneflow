@@ -1,7 +1,6 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,7 +22,6 @@
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <iterator>
