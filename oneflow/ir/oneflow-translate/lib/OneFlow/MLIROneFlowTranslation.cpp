@@ -1,6 +1,7 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,6 +23,7 @@
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <iterator>
@@ -418,6 +420,29 @@ LogicalResult Importer::tryToUpdateJob() {
       } else {
         err_str = "fail to convert op inputs, name: " + op_name;
         return;
+      }
+
+      int output_key_idx = -1;
+      int segment_offset = 0;
+      for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
+        const size_t result_idx = result_and_idx.index();
+        if (result_idx == segment_offset) {
+          output_key_idx += 1;
+          int size = op->getAttrOfType<ArrayAttr>("output_lbn_segment_sizes")[output_key_idx]
+                         .dyn_cast<IntegerAttr>()
+                         .getInt();
+          segment_offset += size;
+        }
+        std::string output_key =
+            op->getAttrOfType<ArrayAttr>("output_lbn_segment_keys")[output_key_idx]
+                .dyn_cast<StringAttr>()
+                .getValue()
+                .str();
+        std::string output_lbn = op->getAttrOfType<ArrayAttr>("output_lbns")[result_idx]
+                                     .dyn_cast<StringAttr>()
+                                     .getValue()
+                                     .str();
+        *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
       }
       for (auto id_attr : op->getAttrDictionary()) {
         auto id = id_attr.first;
