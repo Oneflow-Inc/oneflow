@@ -206,7 +206,11 @@ def _Numpy(self):
                 blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
 
         vm_util.LogicalRun(BoxingToSingleDevice)
-        return eager_blob_util.EagerPhysicalBlob(consistent_blob_name).numpy()
+        return oneflow_api.EagerPhysicalBlob(
+            consistent_blob_name,
+            blob_register,
+            eager_blob_util._GetPhysicalBlobHeaderCache,
+        ).numpy()
 
     blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
     return blob_cache.GetCachedNumpy(FetchBlobNumpy)
@@ -225,9 +229,13 @@ def _NumpyMirroredList(self):
         name = "{}/{}".format(self.logical_blob_name, i)
         blob_register.SetObject4BlobName(name, phy_blob_object)
         return (
-            eager_blob_util.EagerPhysicalBlob(name).numpy_list()
+            oneflow_api.EagerPhysicalBlob(
+                name, blob_register, eager_blob_util._GetPhysicalBlobHeaderCache
+            ).numpy_list()
             if self.is_tensor_list
-            else eager_blob_util.EagerPhysicalBlob(name).numpy()
+            else oneflow_api.EagerPhysicalBlob(
+                name, blob_register, eager_blob_util._GetPhysicalBlobHeaderCache
+            ).numpy()
         )
 
     def FetchBlobNumpyMirroredList(blob_object):

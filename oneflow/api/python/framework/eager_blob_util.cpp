@@ -82,10 +82,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       });
 
   py::class_<EagerPhysicalBlob, std::shared_ptr<EagerPhysicalBlob>>(m, "EagerPhysicalBlob")
-      .def(py::init([](const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object,
+      .def(py::init([](const std::string& blob_name,
+                       const std::shared_ptr<BlobRegister>& blob_register,
                        const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(
                            std::shared_ptr<BlobObject>)>& get_pysical_blob_header_cache) {
-        return std::make_shared<EagerPhysicalBlob>(blob_name, blob_object,
+        return std::make_shared<EagerPhysicalBlob>(blob_name, blob_register,
                                                    get_pysical_blob_header_cache);
       }))
       .def_property_readonly("logical_blob_name", &EagerPhysicalBlob::logical_blob_name)

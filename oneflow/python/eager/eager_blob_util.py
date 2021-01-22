@@ -16,28 +16,12 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.vm_util as vm_util
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.lib.core.async_util as async_util
 import oneflow_api
-
-blob_register = blob_register_util.GetDefaultBlobRegister()
-
-
-class EagerPhysicalBlob(oneflow_api.EagerPhysicalBlob):
-    def __init__(self, blob_name):
-        oneflow_api.EagerPhysicalBlob.__init__(
-            self,
-            blob_name,
-            blob_register.GetObject4BlobName(blob_name),
-            _GetPhysicalBlobHeaderCache,
-        )
-
-    def __del__(self):
-        blob_register.ClearObject4BlobName(self.unique_name)
 
 
 @property

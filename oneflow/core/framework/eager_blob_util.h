@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/blob_register.h"
 #include "oneflow/core/framework/blob_trait.h"
 
 namespace oneflow {
@@ -49,11 +50,11 @@ class EagerPhysicalBlobHeader : public BlobHeaderTrait {
 class EagerPhysicalBlob {
  public:
   EagerPhysicalBlob(
-      const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object,
+      const std::string& blob_name, const std::shared_ptr<BlobRegister>& blob_register,
       const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>&
           get_pysical_blob_header_cache);
   EagerPhysicalBlob(const EagerPhysicalBlob& other) = default;
-  ~EagerPhysicalBlob() = default;
+  ~EagerPhysicalBlob();
 
   std::string logical_blob_name() const;
   std::string unique_name() const;
@@ -68,6 +69,7 @@ class EagerPhysicalBlob {
  private:
   std::string blob_name_;
   std::shared_ptr<BlobObject> blob_object_;
+  std::shared_ptr<BlobRegister> blob_register_;
   std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>
       get_pysical_blob_header_cache_;
 };
