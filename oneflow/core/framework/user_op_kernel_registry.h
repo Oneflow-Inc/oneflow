@@ -98,7 +98,7 @@ class OpKernelRegistry final {
   OpKernelRegistry& Finish();
   OpKernelRegistryResult GetResult() { return result_; }
 
- private:
+//  private:
   OpKernelRegistry& SetCreateFn(OpKernelCreateFn fn);
 
  private:
