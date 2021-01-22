@@ -428,11 +428,12 @@ void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::
 void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &op_conf,
                                        std::string &err_str) {
   auto user_conf = op_conf.mutable_user_conf();
+  const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
     // convert op conf attributes
     if (id.strref().equals("op_name")) {
-      op_conf.set_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
+      op_conf.set_name(op_name);
       continue;
     }
     if (id.strref().equals("op_type_name")) {
@@ -469,7 +470,8 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
       } else if (ref.getType() == b.getIntegerType(64)) {
         user_attr.set_at_int64(ref.getInt());
       } else {
-        err_str = "fail to convert op attr to int32 or int64, key: " + id.str();
+        err_str =
+            "fail to convert op attr to int32 or int64, key: " + id.str() + ", op name: " + op_name;
         return;
       }
     } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
@@ -478,7 +480,8 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
       } else if (ref.getType() == b.getF64Type()) {
         user_attr.set_at_double(ref.getValue().convertToDouble());
       } else {
-        err_str = "fail to convert op attr float or double, key: " + id.str();
+        err_str =
+            "fail to convert op attr float or double, key: " + id.str() + ", op name: " + op_name;
         return;
       }
     } else if (auto ref = attr.dyn_cast<StringAttr>()) {
@@ -522,7 +525,8 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
           } else if (ref.getType() == b.getIntegerType(64)) {
             user_attr.mutable_at_list_int64()->add_val(elem.getInt());
           } else {
-            err_str = "fail to convert op attr to int list, key: " + id.str();
+            err_str =
+                "fail to convert op attr to int list, key: " + id.str() + ", op name: " + op_name;
             op->dump();
             return;
           }
