@@ -55,14 +55,13 @@ def tensor_list_to_tensor_buffer(
         def diag_Job(x: tp.ListListNumpy.Placeholder(shape=(2, 5), dtype=flow.float32),
         ) -> tp.ListListNumpy:
             x = flow.tensor_list_to_tensor_buffer(input=x)
-            return flow.diag(x, 
-                            dtype=flow.float32)
+            return flow.diag(x, dim)
 
-        x = np.random.rand(1, 3, 2).astype(np.float32)
-        y = np.random.rand(1, 2, 2).astype(np.float32)
-        out = tensorList_to_tensorBuffer_Job([[x, y]])
+        x = np.random.rand(3, 3).astype(np.float32)
+        dim = 0
+        out = diag_Job(x, dim)
 
-        # out[0][0].shape (1, 3, 2)
+        # out[0][0].shape (3)
 
     """
     return (
