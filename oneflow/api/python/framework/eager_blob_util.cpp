@@ -37,6 +37,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         CHECK(py::isinstance<py::list>(py_shape_list));
         std::vector<std::shared_ptr<Shape>> shape_list;
         for (const auto& py_shape : py_shape_list) {
+          CHECK(py::isinstance<py::tuple>(py_shape));
           DimVector sub_shape_dims;
           for (auto dim : py_shape) { sub_shape_dims.emplace_back(dim.cast<int64_t>()); }
           shape_list.emplace_back(std::make_shared<Shape>(sub_shape_dims));
