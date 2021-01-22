@@ -62,12 +62,17 @@ import oneflow.python.framework.c_api_util
 import oneflow.python.framework.python_interpreter_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.blob_trait as blob_trait
 import oneflow_api
 
 INVALID_BATCH_AXIS = oneflow_api.INVALID_BATCH_AXIS
 INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
 
+blob_trait.CompleteBlobOperatorTrait(oneflow_api.EagerPhysicalBlob)
 eager_blob_util.CompleteEagerPhysicalBlob()
+
+blob_trait.CompleteBlobOperatorTrait(oneflow_api.ConsistentBlob)
+blob_trait.CompleteBlobOperatorTrait(oneflow_api.MirroredBlob)
 remote_blob_util.CompleteEagerBlobTrait()
 
 atexit.register(oneflow_api.DestroyEnv)

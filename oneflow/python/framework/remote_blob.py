@@ -64,11 +64,7 @@ def LazyRemoteBlob(lbi, **kw):
     return blob_type(lbi, **kw)
 
 
-class LazyConsistentBlob(
-    oneflow_api.LazyConsistentBlob,
-    blob_trait.BlobOperatorTrait,
-    blob_trait.BlobHeaderTrait,
-):
+class LazyConsistentBlob(oneflow_api.LazyConsistentBlob):
     def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
         if not isinstance(lbi, lbi_util.LogicalBlobId):
             cfg_lbi = lbi_util.LogicalBlobId()
@@ -100,11 +96,7 @@ class LazyConsistentBlob(
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class LazyMirroredBlob(
-    oneflow_api.LazyMirroredBlob,
-    blob_trait.BlobOperatorTrait,
-    blob_trait.BlobHeaderTrait,
-):
+class LazyMirroredBlob(oneflow_api.LazyMirroredBlob):
     def __init__(self, lbi, job_name="", distribute=oneflow_api.distribute.auto()):
         if not isinstance(lbi, lbi_util.LogicalBlobId):
             cfg_lbi = lbi_util.LogicalBlobId()
@@ -259,12 +251,7 @@ def CompleteEagerBlobTrait():
     oneflow_api.EagerBlobTrait.numpy = numpy
 
 
-class EagerConsistentBlob(
-    EagerBlobTrait,
-    oneflow_api.ConsistentBlob,
-    blob_trait.BlobOperatorTrait,
-    blob_trait.BlobHeaderTrait,
-):
+class EagerConsistentBlob(EagerBlobTrait, oneflow_api.ConsistentBlob):
     def __init__(
         self,
         lbi,
@@ -315,12 +302,7 @@ class EagerConsistentBlob(
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class EagerMirroredBlob(
-    EagerBlobTrait,
-    oneflow_api.MirroredBlob,
-    blob_trait.BlobOperatorTrait,
-    blob_trait.BlobHeaderTrait,
-):
+class EagerMirroredBlob(EagerBlobTrait, oneflow_api.MirroredBlob):
     def __init__(
         self,
         lbi,

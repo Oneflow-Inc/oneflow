@@ -19,12 +19,13 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/blob_trait.h"
 
 namespace oneflow {
 
 namespace compatible_py {
 
-class EagerPhysicalBlobHeader final {
+class EagerPhysicalBlobHeader : public BlobHeaderTrait {
  public:
   EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
                           const std::vector<std::shared_ptr<Shape>>& shape_list, DataType dtype,
@@ -32,11 +33,11 @@ class EagerPhysicalBlobHeader final {
   EagerPhysicalBlobHeader(const EagerPhysicalBlobHeader& other) = default;
   ~EagerPhysicalBlobHeader() = default;
 
-  std::shared_ptr<Shape> static_shape() const;
-  std::shared_ptr<Shape> shape() const;
-  std::vector<std::shared_ptr<Shape>> shape_list() const;
-  DataType dtype() const;
-  bool is_tensor_list() const;
+  std::shared_ptr<Shape> static_shape() const override;
+  std::shared_ptr<Shape> shape() const override;
+  std::vector<std::shared_ptr<Shape>> shape_list() const override;
+  DataType dtype() const override;
+  bool is_tensor_list() const override;
 
  private:
   std::shared_ptr<Shape> static_shape_;

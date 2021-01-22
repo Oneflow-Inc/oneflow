@@ -27,11 +27,7 @@ import oneflow_api
 blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
-class EagerPhysicalBlob(
-    oneflow_api.EagerPhysicalBlob,
-    blob_trait.BlobOperatorTrait,
-    blob_trait.BlobHeaderTrait,
-):
+class EagerPhysicalBlob(oneflow_api.EagerPhysicalBlob):
     def __init__(self, blob_name):
         oneflow_api.EagerPhysicalBlob.__init__(
             self,
