@@ -359,6 +359,46 @@ LogicalResult Importer::processJob() {
   return success();
 }
 
+void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
+  const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+  int input_idx = 0;
+  if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
+    auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
+    if (keys.size() == sizes.size()) {
+      // every key
+      for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
+        auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
+        auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
+        // every input for one key
+        for (int i = 0; i < input_size; i++) {
+          if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
+            const std::string output_lbn_in_source_op =
+                result.getDefiningOp()
+                    ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
+                    .dyn_cast<StringAttr>()
+                    .getValue()
+                    .str();
+            *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) =
+                output_lbn_in_source_op;
+            input_idx += 1;
+          } else {
+            err_str = "fail to cast result, name: " + op_name;
+            return;
+          }
+        }
+      }
+    } else {
+      err_str =
+          "fail to convert op inputs, input_lbn_segment_keys != input_lbn_segment_sizes, name: "
+          + op_name;
+      return;
+    }
+  } else {
+    err_str = "fail to convert op inputs, name: " + op_name;
+    return;
+  }
+}
+
 LogicalResult Importer::tryToUpdateJob() {
   std::cout << "try updating job\n";
   // TODO: add error handling
@@ -371,55 +411,7 @@ LogicalResult Importer::tryToUpdateJob() {
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
-
-      // convert inputs
-      int input_idx = 0;
-      if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
-        auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
-        if (keys.size() == sizes.size()) {
-          // every key
-          for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
-            auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
-            auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
-            // every input for one key
-            for (int i = 0; i < input_size; i++) {
-              if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
-                std::string output_lbn_in_source_op = "";
-                if (auto defining_system_op =
-                        llvm::dyn_cast<oneflow::SystemOp>(result.getDefiningOp())) {
-                  output_lbn_in_source_op =
-                      defining_system_op.output_lbns()[result.getResultNumber()]
-                          .dyn_cast<StringAttr>()
-                          .getValue()
-                          .str();
-                } else {
-                  output_lbn_in_source_op =
-                      result.getDefiningOp()
-                          ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
-                          .dyn_cast<StringAttr>()
-                          .getValue()
-                          .str();
-                }
-                *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) =
-                    output_lbn_in_source_op;
-                input_idx += 1;
-              } else {
-                err_str = "fail to cast result, name: " + op_name;
-                return;
-              }
-            }
-          }
-        } else {
-          err_str =
-              "fail to convert op inputs, input_lbn_segment_keys != input_lbn_segment_sizes, name: "
-              + op_name;
-          return;
-        }
-      } else {
-        err_str = "fail to convert op inputs, name: " + op_name;
-        return;
-      }  // convert inputs
-
+      ConvertUseropInputs(op, user_conf, err_str);
       // convert outputs
       int output_key_idx = -1;
       int segment_offset = 0;
