@@ -74,6 +74,11 @@ class Importer {
   void ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &op_conf,
                                std::string &err_str);
 
+  IntegerAttr getSI64IntegerAttr(int64_t value) {
+    return IntegerAttr::get(IntegerType::get(context, 64, IntegerType::Signed),
+                            APInt(64, value, /*isSigned=*/true));
+  }
+
  private:
   /// The current builder, pointing at where the next Instruction should be
   /// generated.
@@ -131,7 +136,11 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     const ::oneflow::AttrValue &value = attr.second;
     if (value.has_at_int32()) {
       std::pair<mlir::Identifier, mlir::Attribute> kv =
-          b.getNamedAttr(name, b.getI32IntegerAttr(value.at_int32()));
+          b.getNamedAttr(name, b.getSI32IntegerAttr(value.at_int32()));
+      attr_vec.emplace_back(kv);
+    } else if (value.has_at_int64()) {
+      std::pair<mlir::Identifier, mlir::Attribute> kv =
+          b.getNamedAttr(name, getSI64IntegerAttr(value.at_int64()));
       attr_vec.emplace_back(kv);
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr)                 \
@@ -140,7 +149,6 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
         b.getNamedAttr(name, b.get_attr(value.at_key())); \
     attr_vec.emplace_back(kv);                            \
   }
-    DEFINE_ONE_ELIF(at_int64, getI64IntegerAttr)
     DEFINE_ONE_ELIF(at_bool, getBoolAttr)
     DEFINE_ONE_ELIF(at_float, getF32FloatAttr)
     DEFINE_ONE_ELIF(at_double, getF64FloatAttr)
@@ -198,7 +206,8 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
       attr_vec.emplace_back(kv);
     }
     else {
-      module.emitError("can't handle user op attr: " + name);
+      module.emitError("can't handle user op attr: " + name + ", op name: " + op.name()
+                       + ", op type name: " + op.user_conf().op_type_name());
       return failure();
     }
   }
@@ -465,10 +474,10 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
     if (auto ref = attr.dyn_cast<BoolAttr>()) /* handle bool before int because it is i1*/ {
       user_attr.set_at_bool(ref.getValue());
     } else if (auto ref = attr.dyn_cast<IntegerAttr>()) {
-      if (ref.getType() == b.getIntegerType(32)) {
-        user_attr.set_at_int32(ref.getInt());
-      } else if (ref.getType() == b.getIntegerType(64)) {
-        user_attr.set_at_int64(ref.getInt());
+      if (ref.getType().isSignedInteger(32)) {
+        user_attr.set_at_int32(ref.getSInt());
+      } else if (ref.getType().isSignedInteger(64)) {
+        user_attr.set_at_int64(ref.getSInt());
       } else {
         err_str =
             "fail to convert op attr to int32 or int64, key: " + id.str() + ", op name: " + op_name;
@@ -520,10 +529,10 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
     } else if (auto ref = attr.dyn_cast<ArrayAttr>()) {
       for (auto v : ref.getValue()) {
         if (auto elem = v.dyn_cast<IntegerAttr>()) {
-          if (elem.getType() == b.getIntegerType(32)) {
-            user_attr.mutable_at_list_int32()->add_val(elem.getInt());
-          } else if (ref.getType() == b.getIntegerType(64)) {
-            user_attr.mutable_at_list_int64()->add_val(elem.getInt());
+          if (elem.getType().isSignedInteger(32)) {
+            user_attr.mutable_at_list_int32()->add_val(elem.getSInt());
+          } else if (ref.getType().isSignedInteger(64)) {
+            user_attr.mutable_at_list_int64()->add_val(elem.getSInt());
           } else {
             err_str =
                 "fail to convert op attr to int list, key: " + id.str() + ", op name: " + op_name;
