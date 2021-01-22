@@ -27,14 +27,19 @@ namespace one {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
-      .def(py::init([](std::shared_ptr<Shape>& shape, DataType dtype,
-                       std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-        return std::make_shared<Tensor>(shape, dtype, parallel_conf);
+      .def(py::init([](const py::tuple& py_shape, int dtype) {
+        DimVector shape_dims;
+        CHECK(py::isinstance<py::tuple>(py_shape));
+        for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+        std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+        std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+        return std::make_shared<Tensor>(shape, static_cast<DataType>(dtype), parallel_conf);
       }))
-      .def(py::init([]() { return std::make_shared<Tensor>(); }))
       .def_property_readonly("parallel_conf", &Tensor::parallel_conf)
       .def_property_readonly("shape", &Tensor::shape)
-      .def_property_readonly("dtype", &Tensor::dtype)
+      .def("get_dtype", [](std::shared_ptr<Tensor>& x) { 
+        return static_cast<int>(x->dtype());
+      })
       .def_property_readonly("storage", &Tensor::storage)
       .def_property_readonly("defined", &Tensor::defined)
       .def_property_readonly("has_storage", &Tensor::has_storage)

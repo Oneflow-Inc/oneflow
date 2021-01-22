@@ -122,6 +122,23 @@ def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
         raise NotImplementedError("proto_dtype %s not found in dict" % proto_dtype)
     return _PROTO_DTYPE2ONEFLOW_DTYPE[proto_dtype]
 
+_ONEFLOW_DTYPE2PROTO_DTYPE = {
+    int8: data_type_pb2.kInt8,
+    int32: data_type_pb2.kInt32,
+    int64: data_type_pb2.kInt64,
+    uint8: data_type_pb2.kUInt8,
+    float32: data_type_pb2.kFloat,
+    double: data_type_pb2.kDouble,
+    float16: data_type_pb2.kFloat16,
+    char: data_type_pb2.kChar,
+    record: data_type_pb2.kOFRecord,
+    tensor_buffer: data_type_pb2.kTensorBuffer,
+}
+
+def convert_oneflow_dtype_to_proto_dtype(oneflow_dtype: dtype):
+    if oneflow_dtype not in _ONEFLOW_DTYPE_TO_NUMPY_DTYPE:
+        raise NotImplementedError
+    return _ONEFLOW_DTYPE2PROTO_DTYPE[oneflow_dtype]
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     # could be np.ubyte on some platform

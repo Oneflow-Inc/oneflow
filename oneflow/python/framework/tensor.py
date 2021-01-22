@@ -14,17 +14,22 @@ from __future__ import absolute_import
 from typing import Sequence
 
 import oneflow
-import oneflow.python.framework.dtype as dtype_util
 import oneflow_api
+import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("tensor")
 class Tensor(oneflow_api.Tensor):
     def __init__(
         self,
-        shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
-        parallel_conf=None,
+        shape: tuple=(),
+        dtype: dtype_util.dtype=dtype_util.float,
+        sbp=None,
     ) -> None:
-        oneflow_api.Tensor.__init__(self, shape, dtype, parallel_conf)
+        of_dtype = dtype_util.convert_oneflow_dtype_to_proto_dtype(dtype)
+        oneflow_api.Tensor.__init__(self, shape, of_dtype)
+
+    @property
+    def dtype(self):
+        return dtype_util.convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
