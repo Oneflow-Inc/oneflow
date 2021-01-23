@@ -36,7 +36,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
-  let ctrl_output = (outs Variadic<AnyType>:$ctrl_output);
+  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes,
     I32ElementsAttr:$result_segment_sizes

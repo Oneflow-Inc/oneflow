@@ -66,6 +66,9 @@ class Importer {
                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                              std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
+                                       std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddResultSegmentSizes(int output_lbns_size, std::vector<NamedAttribute> &attr_vec);
   LogicalResult InsertOpResults(Operation *);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processSystemOp(const ::oneflow::OperatorConf &op);
@@ -137,10 +140,8 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
       b.getNamedAttr("output_lbn_segment_keys", b.getStrArrayAttr(output_lbn_segment_keys)));
   attr_vec.push_back(
       b.getNamedAttr("output_lbn_segment_sizes", b.getI32ArrayAttr(output_lbn_segment_sizes)));
-  attr_vec.push_back(b.getNamedAttr(
-      "operand_segment_sizes", b.getI32VectorAttr({data_input_size, op.ctrl_in_op_name_size()})));
-  attr_vec.push_back(
-      b.getNamedAttr("result_segment_sizes", b.getI32VectorAttr({data_output_size, 1})));
+  AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec);
+  AddResultSegmentSizes(data_output_size, attr_vec);
   return success();
 }
 
@@ -259,6 +260,20 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
   return success();
 }
 
+LogicalResult Importer::AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
+                                               std::vector<NamedAttribute> &attr_vec) {
+  attr_vec.push_back(
+      b.getNamedAttr("operand_segment_sizes", b.getI32VectorAttr({input_lbns_size, ctrl_in_size})));
+  return success();
+}
+
+LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
+                                              std::vector<NamedAttribute> &attr_vec) {
+  attr_vec.push_back(
+      b.getNamedAttr("result_segment_sizes", b.getI32VectorAttr({output_lbns_size, 1})));
+  return success();
+}
+
 LogicalResult Importer::InsertOpResults(Operation *created_op) {
   for (auto output_lbn : llvm::enumerate(created_op->getAttrOfType<ArrayAttr>("output_lbns"))) {
     lbn2result_.insert({output_lbn.value().dyn_cast<StringAttr>().getValue().str(),
@@ -349,11 +364,8 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   if (op.ctrl_in_op_name_size() > 0) {
     // TODO: get ctrl result from a {op_name => ctrl_result} map
   }
-  attr_vec.push_back(b.getNamedAttr(
-      "operand_segment_sizes",
-      b.getI32VectorAttr({static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size()})));
-  attr_vec.push_back(b.getNamedAttr("result_segment_sizes",
-                                    b.getI32VectorAttr({static_cast<int>(output_lbns.size()), 1})));
+  AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
+  AddResultSegmentSizes(output_lbns.size(), attr_vec);
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
