@@ -4,34 +4,30 @@
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// TODO: Define SBP attribute type
-// TODO: OneFlow_Op should has a placement attribute
-
-class OneFlow_Blob<list<Type> allowedTypes> :
-  AnyTypeOf<[TensorOf<allowedTypes>, NoneType], "">;
-
 // TODO: Use traits AttrSizedOperandSegments and AttrSizedResultSegments to split ctrl and data
 // I32ElementsAttr:$result_segment_sizes,
 // I32ElementsAttr:$operand_segment_sizes
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, traits> {
+        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
   dag sys_attrs = (ins
     StrAttr:$op_name,
-    BoolAttr:$trainable,
-    StrAttr:$device,
+    OptionalAttr<BoolAttr>:$trainable,
+    OptionalAttr<StrAttr>:$device,
     // TODO: change placement to dict and parse the literal fmt like "0:0-0"
     StrArrayAttr:$placement,
     OptionalAttr<I64Attr>:$scope_symbol_id
   );
   dag attrs = (ins);
-  dag input = (ins);
-  dag ctrl_input = (ins);
+  dag trait_attrs = (ins I32ElementsAttr:$operand_segment_sizes);
+  dag input = (ins Variadic<AnyType>:$operands);
+  dag ctrl_input = (ins Variadic<AnyType>:$ctrls);
   dag ctrl_output = (outs);
   let arguments = !con(
       input,
       ctrl_input,
       sys_attrs,
+      trait_attrs,
       attrs
   );
 }
@@ -47,30 +43,19 @@ def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
 
 def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndResultType]> {
     let summary = "Sharding op for SBP";
-
-    let arguments = (
-      ins AnyType:$input,
+    let attrs = (ins
       StrArrayAttr:$input_signature,
       StrArrayAttr:$output_signature,
       I64ArrayAttr:$shape
     );
     let results = (outs AnyType:$res);
-    let assemblyFormat = [{
-        $input attr-dict `:` type($input)
-    }];
 }
 
-def OneFlow_ReluOp : OneFlow_Op<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
+// TODO: MLIR Idempotent requires op to have only one operand,
+// so we need to implement a special Idempotent trait aware of control edges in oneflow
+def OneFlow_ReluOp : OneFlow_Op<"relu", [NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
-
-    let arguments = (
-      ins AnyType:$input,
-      StrAttr:$op_name
-    );
     let results = (outs AnyType:$res);
-    let assemblyFormat = [{
-        $input attr-dict `:` type($input)
-    }];
 }
 
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
