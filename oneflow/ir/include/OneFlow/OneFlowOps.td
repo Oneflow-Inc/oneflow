@@ -4,10 +4,6 @@
 include "OneFlowDialect.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// TODO: Use traits AttrSizedOperandSegments and AttrSizedResultSegments to split ctrl and data
-// I32ElementsAttr:$result_segment_sizes,
-// I32ElementsAttr:$operand_segment_sizes
-
 class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
@@ -66,10 +62,6 @@ def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsA
     let output = (outs AnyType:$res);
 }
 
-// TODO: MLIR Idempotent requires op to have only one operand,
-// Approach 1: we need to implement a special Idempotent trait aware of control edges in oneflow
-// Approach 2: a base class without control edges and another without
-// Approach 3: a trait to disable control edges declaration in base class
 def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
     let input = (ins AnyType:$x);
