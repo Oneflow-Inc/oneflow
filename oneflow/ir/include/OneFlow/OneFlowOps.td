@@ -8,8 +8,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // I32ElementsAttr:$result_segment_sizes,
 // I32ElementsAttr:$operand_segment_sizes
 
-class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
+class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, traits> {
   dag sys_attrs = (ins
     StrAttr:$op_name,
     OptionalAttr<BoolAttr>:$trainable,
@@ -19,9 +19,9 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
     OptionalAttr<I64Attr>:$scope_symbol_id
   );
   dag attrs = (ins);
-  dag trait_attrs = (ins I32ElementsAttr:$operand_segment_sizes);
+  dag trait_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$operands);
-  dag ctrl_input = (ins Variadic<AnyType>:$ctrls);
+  dag ctrl_input = (ins);
   dag ctrl_output = (outs);
   let arguments = !con(
       input,
@@ -30,6 +30,12 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
       trait_attrs,
       attrs
   );
+}
+
+class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
+  let ctrl_input = (ins Variadic<AnyType>:$ctrls);
+  let trait_attrs = (ins I32ElementsAttr:$operand_segment_sizes);
 }
 
 def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
@@ -55,8 +61,9 @@ def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndRe
 // Approach 1: we need to implement a special Idempotent trait aware of control edges in oneflow
 // Approach 2: a base class without control edges and another without
 // Approach 3: a trait to disable control edges declaration in base class
-def OneFlow_ReluOp : OneFlow_Op<"relu", [NoSideEffect, SameOperandsAndResultType]> {
+def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
+    let input = (ins AnyType:$x);
     let results = (outs AnyType:$res);
 }
 
