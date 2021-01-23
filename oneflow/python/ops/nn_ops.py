@@ -1869,6 +1869,86 @@ def MaxPool3d(
     data_format: str = "NCDHW",
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
+    r""" Performs the 3d-max pooling on the input `Blob`.
+         Different from nn.max_pool3d, nn.MaxPool3d supports more params e.g. dilation,return_indices.
+
+    Args:
+        input (remote_blob_util.BlobDesc): A 5-D `Blob` of the format specified by data_format.
+        kernel_size (Union[int, IntPair]): An int or list of ints that has length 1, 2. The size of the window for each dimension of the input `Blob`.
+        stride (Union[int, IntPair]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input `Blob`.
+        padding (str): '`VALID'` or '`SAME'` or '`SAME_LOWER'` or '`SAME_UPPER'` or int value or Tuple[int, int, int]`. The padding algorithm.
+        dilation (Union[int, IntPair]): a parameter that controls the stride of elements in the window.
+        return_indices (bool): if True, will return the max indices along with the outputs.
+        ceil_mode (bool): when True, will use ceil instead of floor to compute the output shape.
+        data_format (str, optional): '`NCDHW'`, '`NCHWD'`. Defaults to "NCDHW", for now only supporr 'NCDHW'.
+        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+
+    Returns:
+        remote_blob_util.BlobDesc:  A `Blob` of format specified by data_format. The max pooled output `Blob`.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        from typing import Tuple
+        import numpy as np
+
+        input_shape = (1, 1, 2, 4, 4)
+        @flow.global_function(type="predict")
+        def maxpool3d_job(
+            x: tp.Numpy.Placeholder(input_shape),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                (y, indice) = flow.nn.MaxPool3d(
+                    input=x,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    dilation=1,
+                    return_indices=True,
+                    ceil_mode=False,
+                    data_format="NCDHW",
+                )
+            return (y, indice)
+
+        x = np.arange(32).reshape(input_shape).astype(np.float32)
+        y, indice = maxpool3d_job(x)
+        print("in:\n", x, "\ny:\n", y, "\nindice:\n", indice)
+
+        # in:
+        # [[[[[ 0.  1.  2.  3.]
+        #     [ 4.  5.  6.  7.]
+        #     [ 8.  9. 10. 11.]
+        #     [12. 13. 14. 15.]]
+
+        # [[16. 17. 18. 19.]
+        #     [20. 21. 22. 23.]
+        #     [24. 25. 26. 27.]
+        #     [28. 29. 30. 31.]]]]] 
+        # y:
+        # [[[[[21. 22. 23. 23.]
+        #     [25. 26. 27. 27.]
+        #     [29. 30. 31. 31.]
+        #     [29. 30. 31. 31.]]
+
+        # [[21. 22. 23. 23.]
+        #     [25. 26. 27. 27.]
+        #     [29. 30. 31. 31.]
+        #     [29. 30. 31. 31.]]]]] 
+        # indice:
+        # [[[[[21 22 23 23]
+        #     [25 26 27 27]
+        #     [29 30 31 31]
+        #     [29 30 31 31]]
+
+        # [[21 22 23 23]
+        #     [25 26 27 27]
+        #     [29 30 31 31]
+        #     [29 30 31 31]]]]] 
+
+    """
     assert data_format in ["NCDHW"]
     channel_pos = "channels_first" if data_format == "NCDHW" else "channels_last"
     kernel_size = _GetSequence(kernel_size, 3, "kernel_size")
