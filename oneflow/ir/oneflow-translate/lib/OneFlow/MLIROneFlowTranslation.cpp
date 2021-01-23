@@ -235,7 +235,6 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
     return failure();
   }
   for (auto kv : op.user_conf().input()) {
-    // TODO: declare tensor containing field lbi
     for (int i = 0; i < kv.second.s_size(); i++) {
       const std::string &lbn = kv.second.s(i);
       if (lbn2result_.find(lbn) == lbn2result_.end()) {
