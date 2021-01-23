@@ -328,12 +328,12 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   auto output_lbns = job_wrapper.OutputLbns4OpName(op.name());
   job_wrapper.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
-  attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
   attr_vec.push_back(b.getNamedAttr("input_bns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
                                                      {input_bns.begin(), input_bns.end()}))));
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
                                                        {output_lbns.begin(), output_lbns.end()}))));
   OperationState state(unknownLoc, "oneflow.system");
+  attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
@@ -588,7 +588,7 @@ LogicalResult Importer::tryToUpdateJob() {
       ConvertUseropOutputs(op, user_conf, err_str);
       ConvertUseropAttributes(op, op_conf, err_str);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (/* system op */ llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    } else if (/* system op */ auto sys_op = llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
     } else {
