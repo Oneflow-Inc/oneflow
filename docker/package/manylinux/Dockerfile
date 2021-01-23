@@ -1,6 +1,7 @@
 ARG from
 ARG use_tuna_yum=0
 ARG pip_args=""
+ARG bazel_url="https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64"
 FROM ${from}
 LABEL maintainer="OneFlow Maintainers"
 
@@ -44,6 +45,6 @@ RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -r /tmp/dev-requirements.tx
     && /opt/python/cp38-cp38/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && rm /tmp/dev-requirements.txt
 
-RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
+RUN curl -L ${bazel_url} -o /usr/local/bin/bazel \
     && chmod +x /usr/local/bin/bazel \
     && bazel

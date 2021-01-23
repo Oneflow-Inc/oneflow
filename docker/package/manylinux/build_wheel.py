@@ -10,7 +10,14 @@ def build_arg_env(env_var_name):
     return f"--build-arg {env_var_name}={val}"
 
 
-def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, img_tag):
+def build_img(
+    cuda_version,
+    oneflow_src_dir,
+    use_aliyun_mirror,
+    use_tuna,
+    use_system_proxy,
+    img_tag,
+):
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
         cudnn_version = 8
@@ -18,6 +25,8 @@ def build_img(cuda_version, oneflow_src_dir, use_tuna, use_system_proxy, img_tag
     tuna_build_arg = ""
     if use_tuna:
         tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
+    if use_aliyun_mirror:
+        tuna_build_arg += ' --build-arg bazel_url="https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/bazel-3.4.1-linux-x86_64"'
     proxy_build_args = []
     if use_system_proxy:
         for v in ["HTTP_PROXY", "HTTPS_PROXY"]:
@@ -254,6 +263,7 @@ if __name__ == "__main__":
                 build_img(
                     cuda_version,
                     args.oneflow_src_dir,
+                    args.use_aliyun_mirror,
                     args.use_tuna,
                     args.use_system_proxy,
                     img_tag,
