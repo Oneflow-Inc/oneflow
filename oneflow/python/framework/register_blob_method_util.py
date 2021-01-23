@@ -27,6 +27,6 @@ def RegisterMethod4Blob():
     blob_trait.RegisterBlobOperatorTraitMethod(oneflow_api.MirroredBlob)
 
     remote_blob_util.RegisterMethod4EagerBlobTrait()
-    remote_blob_util.RegisterMethodLazyConsistentBlob()
+    remote_blob_util.RegisterMethod4LazyConsistentBlob()
     remote_blob_util.RegisterMethod4LazyMirroredBlob()
     remote_blob_util.RegisterMethod4EagerConsistentBlob()

@@ -128,21 +128,21 @@ def get_mirror_shape_log_warning(self):
         return ""
 
 
-def CompleteBlobDef(blob_type):
+def RegisterMethod4BlobDef(blob_type):
     blob_type.dtype = dtype
     blob_type.with_distribute = with_distribute
     blob_type.with_gradient_distribute = with_gradient_distribute
 
 
-def RegisterMethodLazyConsistentBlob():
-    CompleteBlobDef(oneflow_api.LazyConsistentBlob)
+def RegisterMethod4LazyConsistentBlob():
+    RegisterMethod4BlobDef(oneflow_api.LazyConsistentBlob)
     oneflow_api.LazyConsistentBlob.get_lazy_shape_log_warning = (
         get_lazy_shape_log_warning
     )
 
 
 def RegisterMethod4LazyMirroredBlob():
-    CompleteBlobDef(oneflow_api.LazyMirroredBlob)
+    RegisterMethod4BlobDef(oneflow_api.LazyMirroredBlob)
     oneflow_api.LazyMirroredBlob.get_mirror_shape_log_warning = (
         get_mirror_shape_log_warning
     )
