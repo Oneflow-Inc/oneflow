@@ -335,6 +335,9 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   OperationState state(unknownLoc, "oneflow.system");
   attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
+  if (op.ctrl_in_op_name_size() > 0) {
+    // TODO: get ctrl result from a {op_name => ctrl_result} map
+  }
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
