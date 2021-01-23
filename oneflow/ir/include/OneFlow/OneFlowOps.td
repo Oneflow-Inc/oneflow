@@ -16,6 +16,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
   dag attrs = (ins);
   dag trait_attrs = (ins);
+  dag user_op_lbn_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$operands);
   dag output = (outs Variadic<AnyType>:$results);
   dag ctrl_input = (ins);
@@ -25,6 +26,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
       ctrl_input,
       sys_attrs,
       trait_attrs,
+      user_op_lbn_attrs,
       attrs
   );
   let results = !con(
@@ -43,7 +45,29 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect]> {
+class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, traits> {
+    let summary = "";
+    let user_op_lbn_attrs = (ins
+      StrArrayAttr:$input_lbn_segment_keys,
+      I32ArrayAttr:$input_lbn_segment_sizes,
+      StrArrayAttr:$output_lbn_segment_keys,
+      I32ArrayAttr:$output_lbn_segment_sizes,
+      StrArrayAttr:$output_lbns
+    );
+}
+
+def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+    let summary = "";
+    let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+    let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
+    let trait_attrs = (ins
+      I32ElementsAttr:$operand_segment_sizes,
+      I32ElementsAttr:$result_segment_sizes
+    );
+}
+
+def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [NoSideEffect]> {
   let summary = "";
   let attrs = (ins
     OptionalAttr<F64Attr>:$floating_value,
@@ -60,17 +84,6 @@ def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsA
       I64ArrayAttr:$shape
     );
     let output = (outs AnyType:$res);
-}
-
-def OneFlow_UserOp : OneFlow_BaseOp<"user", []> {
-    let summary = "";
-    let attrs = (ins
-      StrArrayAttr:$input_lbn_segment_keys,
-      I32ArrayAttr:$input_lbn_segment_sizes,
-      StrArrayAttr:$output_lbn_segment_keys,
-      I32ArrayAttr:$output_lbn_segment_sizes,
-      StrArrayAttr:$output_lbns
-    );
 }
 
 def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
