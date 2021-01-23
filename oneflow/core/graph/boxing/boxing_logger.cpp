@@ -71,10 +71,12 @@ std::string ShapeToString(const Shape& shape) {
   return shape_ss.str();
 }
 
-std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status) {
+std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status,
+                                            const std::string src_op_name,
+                                            const std::string dst_op_name) {
   std::string serialized_status;
-  serialized_status += status.src_op_name() + ",";
-  serialized_status += status.dst_op_name() + ",";
+  serialized_status += src_op_name + ",";
+  serialized_status += dst_op_name + ",";
   serialized_status += ParallelDescToString(status.src_parallel_desc()) + ",";
   serialized_status += ParallelDescToString(status.dst_parallel_desc()) + ",";
   serialized_status += SbpParallelToString(status.src_sbp_parallel()) + ",";
@@ -101,8 +103,9 @@ CsvBoxingLogger::CsvBoxingLogger(std::string path) {
 
 CsvBoxingLogger::~CsvBoxingLogger() { log_stream_->Flush(); }
 
-void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) {
-  log_stream_ << SubTskGphBuilderStatusToCsvLine(status);
+void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
+                          const std::string dst_op_name) {
+  log_stream_ << SubTskGphBuilderStatusToCsvLine(status, src_op_name, dst_op_name);
 }
 
 }  // namespace oneflow

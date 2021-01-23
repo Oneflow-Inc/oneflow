@@ -27,7 +27,8 @@ class BoxingLogger {
   BoxingLogger() = default;
   virtual ~BoxingLogger() = default;
 
-  virtual void Log(const SubTskGphBuilderStatus& status) = 0;
+  virtual void Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
+                   const std::string dst_op_name) = 0;
 };
 
 class NullBoxingLogger final : public BoxingLogger {
@@ -36,7 +37,8 @@ class NullBoxingLogger final : public BoxingLogger {
   NullBoxingLogger() = default;
   ~NullBoxingLogger() override = default;
 
-  void Log(const SubTskGphBuilderStatus& status) override{};
+  void Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
+           const std::string dst_op_name) override{};
 };
 
 class CsvBoxingLogger final : public BoxingLogger {
@@ -46,7 +48,8 @@ class CsvBoxingLogger final : public BoxingLogger {
   CsvBoxingLogger(std::string path);
   ~CsvBoxingLogger() override;
 
-  void Log(const SubTskGphBuilderStatus& status) override;
+  void Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
+           const std::string dst_op_name) override;
 
  private:
   std::unique_ptr<TeePersistentLogStream> log_stream_;
