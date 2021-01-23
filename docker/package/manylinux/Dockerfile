@@ -17,10 +17,13 @@ ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 
 # use tuna mirror
 COPY docker/package/manylinux/CentOS-Base.repo /tmp/CentOS-Base.repo
-RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
+# to speed up docker img building disable cuda repo
 # in 10.1, cuda yum repo will update cublas to 10.2 and breaks build
 RUN yum-config-manager --disable cuda nvidia-ml
+
+RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
+
 ARG MANYLINUX_SHA=f5da004
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
 
