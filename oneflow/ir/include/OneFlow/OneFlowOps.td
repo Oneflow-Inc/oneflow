@@ -21,6 +21,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$operands);
+  dag output = (outs Variadic<AnyType>:$results);
   dag ctrl_input = (ins);
   dag ctrl_output = (outs);
   let arguments = !con(
@@ -30,31 +31,39 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
       trait_attrs,
       attrs
   );
+  let results = !con(
+    output,
+    ctrl_output
+  );
 }
 
 class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
-  let ctrl_input = (ins Variadic<AnyType>:$ctrls);
-  let trait_attrs = (ins I32ElementsAttr:$operand_segment_sizes);
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
+  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+  let ctrl_output = (outs Variadic<AnyType>:$ctrl_output);
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
 }
 
-def OneFlow_ConstantOp : OneFlow_Op<"constant", [NoSideEffect]> {
+def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect]> {
   let summary = "";
   let attrs = (ins
     OptionalAttr<F64Attr>:$floating_value,
     OptionalAttr<I64Attr>:$integer_value
   );
-  let results = (outs F32Tensor);
+  let output = (outs F32Tensor);
 }
 
-def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndResultType]> {
+def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsAndResultType]> {
     let summary = "Sharding op for SBP";
     let attrs = (ins
       StrArrayAttr:$input_signature,
       StrArrayAttr:$output_signature,
       I64ArrayAttr:$shape
     );
-    let results = (outs AnyType:$res);
+    let output = (outs AnyType:$res);
 }
 
 // TODO: MLIR Idempotent requires op to have only one operand,
@@ -64,7 +73,7 @@ def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndRe
 def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
     let input = (ins AnyType:$x);
-    let results = (outs AnyType:$res);
+    let output = (outs AnyType:$res);
 }
 
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
@@ -74,7 +83,7 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
     StrArrayAttr:$output_lbns
   );
   let input = (ins Variadic<AnyType>:$operands);
-  let results = (outs Variadic<AnyType>:$outputs);
+  let output = (outs Variadic<AnyType>:$outputs);
 }
 
 #endif // ONEFLOW_OPS
