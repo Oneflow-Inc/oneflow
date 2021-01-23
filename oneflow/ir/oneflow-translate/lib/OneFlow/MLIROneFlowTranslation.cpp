@@ -345,6 +345,11 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   if (op.ctrl_in_op_name_size() > 0) {
     // TODO: get ctrl result from a {op_name => ctrl_result} map
   }
+  attr_vec.push_back(b.getNamedAttr(
+      "operand_segment_sizes",
+      b.getI32VectorAttr({static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size()})));
+  attr_vec.push_back(b.getNamedAttr("result_segment_sizes",
+                                    b.getI32VectorAttr({static_cast<int>(output_lbns.size()), 1})));
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
