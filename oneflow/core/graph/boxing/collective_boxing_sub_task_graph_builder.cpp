@@ -93,8 +93,8 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
   ~NcclCollectiveBoxingAllReduceSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -105,18 +105,18 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
         && SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllReduce-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        TaskNode* src_node = sorted_src_comp_tasks.at(i);
-        TaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+        TaskNode* src_node_proxy = sorted_src_tasks.at(i);
+        TaskNode* dst_node = sorted_dst_tasks.at(i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllReduce, -1);
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
+        Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                             dst_sbp_parallel, lbi, logical_blob_desc,
+                                             "NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -130,8 +130,8 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
   ~NcclCollectiveBoxingReduceScatterSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -145,17 +145,17 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
       const std::string op_name =
           "System-Boxing-NcclCollectiveBoxingReduceScatter-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        TaskNode* src_node = sorted_src_comp_tasks.at(i);
-        TaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+        TaskNode* src_node_proxy = sorted_src_tasks.at(i);
+        TaskNode* dst_node = sorted_dst_tasks.at(i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduceScatter, -1);
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
+        Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+          sorted_src_tasks.front(), sorted_dst_tasks.front(), src_parallel_desc, dst_parallel_desc,
+          src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
@@ -170,8 +170,8 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
   ~NcclCollectiveBoxingAllGatherSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -185,20 +185,20 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         && src_sbp_parallel.split_parallel().axis() == 0) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        TaskNode* src_comp_task = sorted_src_comp_tasks.at(i);
-        TaskNode* dst_node = sorted_dst_comp_tasks.at(i);
-        TaskNode* src_node = ctx->GetProxyNode(src_comp_task, src_comp_task->MemZoneId121(),
-                                               dst_node->machine_id(), dst_node->MemZoneId121());
+        TaskNode* src_node = sorted_src_tasks.at(i);
+        TaskNode* dst_node = sorted_dst_tasks.at(i);
+        TaskNode* src_node_proxy = ctx->GetProxyNode(
+            src_node, src_node->MemZoneId121(), dst_node->machine_id(), dst_node->MemZoneId121());
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
+        Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                             dst_sbp_parallel, lbi, logical_blob_desc,
+                                             "NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -212,8 +212,8 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
   ~NcclCollectiveBoxingReduceSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -227,12 +227,12 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingReduce-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        TaskNode* src_node = sorted_src_comp_tasks.at(i);
+        TaskNode* src_node_proxy = sorted_src_tasks.at(i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduce, root_parallel_id);
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
-        TaskNode* dst_node = sorted_dst_comp_tasks.front();
+        Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
+        TaskNode* dst_node = sorted_dst_tasks.front();
         if (i == root_parallel_id) {
           Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
         } else {
@@ -240,10 +240,10 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
           Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
         }
       }
-      return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingReduceSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                             dst_sbp_parallel, lbi, logical_blob_desc,
+                                             "NcclCollectiveBoxingReduceSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -257,8 +257,8 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
   ~CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -279,14 +279,16 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
-        TaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
-        TaskNode* src_node = SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
+        TaskNode* dst_node = sorted_dst_tasks.at(out_id);
+        TaskNode* src_node_proxy =
+            SubTskGphBuilderUtil::FindNearestNode(sorted_src_tasks, dst_node);
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
         const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
         slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, src_machine_id,
                          Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_machine_id));
-        slice_node->ConnectToSrcNodeWithSlice(src_node, ctx->task_graph()->NewEdge(), in_slice);
+        slice_node->ConnectToSrcNodeWithSlice(src_node_proxy, ctx->task_graph()->NewEdge(),
+                                              in_slice);
         // copy to dst gpu
         TaskNode* slice_node_proxy =
             ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), dst_node->machine_id(),
@@ -299,8 +301,8 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
+          sorted_src_tasks.front(), sorted_dst_tasks.front(), src_parallel_desc, dst_parallel_desc,
+          src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
@@ -315,8 +317,8 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
   ~NcclCollectiveBoxingBroadcastSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -327,19 +329,19 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         && dst_parallel_desc.device_type() == DeviceType::kGPU
         && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
         && dst_sbp_parallel.has_broadcast_parallel()) {
-      TaskNode* gpu_src_node = nullptr;
+      TaskNode* gpu_src_node_proxy = nullptr;
       int64_t root_parallel_id = -1;
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
-        auto* cpu_src_node = sorted_src_comp_tasks.front();
+        auto* cpu_src_node_proxy = sorted_src_tasks.front();
         root_parallel_id =
-            SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_dst_comp_tasks, cpu_src_node);
-        auto* nearest_dst_node = sorted_dst_comp_tasks.at(root_parallel_id);
-        gpu_src_node =
-            ctx->GetProxyNode(cpu_src_node, cpu_src_node->MemZoneId121(),
+            SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_dst_tasks, cpu_src_node_proxy);
+        auto* nearest_dst_node = sorted_dst_tasks.at(root_parallel_id);
+        gpu_src_node_proxy =
+            ctx->GetProxyNode(cpu_src_node_proxy, cpu_src_node_proxy->MemZoneId121(),
                               nearest_dst_node->machine_id(), nearest_dst_node->MemZoneId121());
       } else if (src_parallel_desc.device_type() == DeviceType::kGPU) {
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
-        gpu_src_node = sorted_src_comp_tasks.front();
+        gpu_src_node_proxy = sorted_src_tasks.front();
       } else {
         return Error::BoxingNotSupportedError();
       }
@@ -347,22 +349,22 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingBroadcast-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc.parallel_num()) {
-        TaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+        TaskNode* dst_node = sorted_dst_tasks.at(i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeBroadcast, root_parallel_id);
         if (i == root_parallel_id) {
-          Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
+          Connect<TaskNode>(gpu_src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         } else {
-          gpu_src_node->BuildCtrlRegstDesc(collective_node);
-          Connect<TaskNode>(gpu_src_node, ctx->task_graph()->NewEdge(), collective_node);
+          gpu_src_node_proxy->BuildCtrlRegstDesc(collective_node);
+          Connect<TaskNode>(gpu_src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         }
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                             dst_sbp_parallel, lbi, logical_blob_desc,
+                                             "NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -376,8 +378,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
   ~NcclCollectiveBoxingAll2AllSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override {
@@ -396,14 +398,15 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         && SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        TaskNode* src_node = sorted_src_comp_tasks.at(i);
-        TaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+        TaskNode* src_node_proxy = sorted_src_tasks.at(i);
+        TaskNode* dst_node = sorted_dst_tasks.at(i);
 
         BoxingPackTransposeTaskNode* pack_node =
             ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
-        pack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
-                        dst_sbp_parallel.split_parallel().axis(), src_parallel_desc.parallel_num());
-        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), pack_node);
+        pack_node->Init(src_node_proxy->machine_id(), src_node_proxy->thrd_id(),
+                        src_node_proxy->area_id(), lbi, dst_sbp_parallel.split_parallel().axis(),
+                        src_parallel_desc.parallel_num());
+        Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
@@ -412,18 +415,18 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
         BoxingUnpackTransposeTaskNode* unpack_node =
             ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
-        unpack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
-                          logical_blob_desc.shape(), src_sbp_parallel.split_parallel().axis(),
-                          dst_sbp_parallel.split_parallel().axis(),
-                          src_parallel_desc.parallel_num());
+        unpack_node->Init(
+            src_node_proxy->machine_id(), src_node_proxy->thrd_id(), src_node_proxy->area_id(), lbi,
+            logical_blob_desc.shape(), src_sbp_parallel.split_parallel().axis(),
+            dst_sbp_parallel.split_parallel().axis(), src_parallel_desc.parallel_num());
 
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
         Connect<TaskNode>(unpack_node, ctx->task_graph()->NewEdge(), dst_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-          dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                             dst_sbp_parallel, lbi, logical_blob_desc,
+                                             "NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -453,14 +456,14 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
 }
 
 Maybe<SubTskGphBuilderStatus> CollectiveBoxingSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-    const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
   if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
   if (!IsSourceTimeShape(time_shape)) { return Error::BoxingNotSupportedError(); }
-  return chain_builder_->Build(ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc,
+  return chain_builder_->Build(ctx, sorted_src_tasks, sorted_dst_tasks, src_parallel_desc,
                                dst_parallel_desc, lbi, logical_blob_desc, src_sbp_parallel,
                                dst_sbp_parallel, time_shape);
 }

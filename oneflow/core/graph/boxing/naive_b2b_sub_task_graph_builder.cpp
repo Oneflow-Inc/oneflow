@@ -19,26 +19,26 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-    const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
     std::vector<TaskNode*> nearest_src_comp_tasks;
-    for (TaskNode* dst_node : sorted_dst_comp_tasks) {
+    for (TaskNode* dst_node : sorted_dst_tasks) {
       TaskNode* nearest_src_node =
-          SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
+          SubTskGphBuilderUtil::FindNearestNode(sorted_src_tasks, dst_node);
       CHECK_NOTNULL(nearest_src_node);
       TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
                                           dst_node->machine_id(), dst_node->MemZoneId121());
       Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
-                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
-                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                                           lbi, logical_blob_desc, "NaiveB2BSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                           src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                           dst_sbp_parallel, lbi, logical_blob_desc,
+                                           "NaiveB2BSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }

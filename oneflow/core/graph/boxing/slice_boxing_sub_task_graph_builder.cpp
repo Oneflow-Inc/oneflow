@@ -54,8 +54,8 @@ bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
 }  // namespace
 
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-    const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
@@ -414,7 +414,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
 
   const auto BuildSubTaskGphB2S =
       [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge,
-       &sorted_src_comp_tasks, &sorted_dst_comp_tasks](
+       &sorted_src_tasks, &sorted_dst_tasks](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
@@ -426,10 +426,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         CHECK(!ContainsEmptySlice(out_slices));
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
           const TensorSliceView& out_slice = out_slices.at(out_id);
-          TaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
+          TaskNode* dst_node = sorted_dst_tasks.at(out_id);
           const int64_t nearest_idx =
-              SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
-          TaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
+              SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_tasks, dst_node);
+          TaskNode* src_node = sorted_src_tasks.at(nearest_idx);
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
           slice_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), in_slice);
@@ -440,7 +440,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       };
 
   std::vector<TaskNode*> in_nodes;
-  in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
+  in_nodes.assign(sorted_src_tasks.begin(), sorted_src_tasks.end());
   std::vector<TaskNode*> out_nodes;
   std::string comment;
   if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)) {
@@ -485,11 +485,11 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   } else {
     UNIMPLEMENTED();
   }
-  ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
-  return TRY(BuildSubTskGphBuilderStatus(
-      sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-      dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-      "SliceBoxingSubTskGphBuilder", comment));
+  ctx->ConnectAll121(out_nodes, sorted_dst_tasks);
+  return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                         src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                         dst_sbp_parallel, lbi, logical_blob_desc,
+                                         "SliceBoxingSubTskGphBuilder", comment));
 }
 
 }  // namespace oneflow

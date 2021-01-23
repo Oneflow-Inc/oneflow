@@ -27,8 +27,8 @@ class NaiveB2PSubTskGphBuilder final : public SubTskGphBuilder {
   ~NaiveB2PSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-      const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+      const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
       const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
       const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
       const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override;

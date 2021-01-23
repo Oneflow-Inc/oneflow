@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
-    const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
@@ -31,12 +31,12 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     int64_t nearest_dst_node_idx = -1;
     int64_t nearest_dst_node_distance = -1;
     std::vector<TaskNode*> nearest_src_comp_tasks;
-    for (int64_t dst_node_idx = 0; dst_node_idx < sorted_dst_comp_tasks.size(); ++dst_node_idx) {
-      TaskNode* dst_node = sorted_dst_comp_tasks.at(dst_node_idx);
+    for (int64_t dst_node_idx = 0; dst_node_idx < sorted_dst_tasks.size(); ++dst_node_idx) {
+      TaskNode* dst_node = sorted_dst_tasks.at(dst_node_idx);
       const int64_t nearest_src_node_idx =
-          SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
+          SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_tasks, dst_node);
       CHECK_NE_OR_RETURN(nearest_src_node_idx, -1);
-      TaskNode* nearest_src_node = sorted_src_comp_tasks.at(nearest_src_node_idx);
+      TaskNode* nearest_src_node = sorted_src_tasks.at(nearest_src_node_idx);
       CHECK_OR_RETURN(dst_node2nearest_src_node.emplace(dst_node, nearest_src_node).second);
       const int64_t distance = SubTskGphBuilderUtil::GetDistance(nearest_src_node, dst_node);
       if (nearest_dst_node_idx == -1 || distance < nearest_dst_node_distance) {
@@ -44,8 +44,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         nearest_dst_node_distance = distance;
       }
     }
-    for (int64_t dst_node_idx = 0; dst_node_idx < sorted_dst_comp_tasks.size(); ++dst_node_idx) {
-      TaskNode* dst_node = sorted_dst_comp_tasks.at(dst_node_idx);
+    for (int64_t dst_node_idx = 0; dst_node_idx < sorted_dst_tasks.size(); ++dst_node_idx) {
+      TaskNode* dst_node = sorted_dst_tasks.at(dst_node_idx);
       TaskNode* nearest_src_node = dst_node2nearest_src_node.at(dst_node);
       if (dst_node_idx == nearest_dst_node_idx) {
         TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
@@ -60,10 +60,10 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         Connect<TaskNode>(zeros_node, ctx->task_graph()->NewEdge(), dst_node);
       }
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
-                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
-                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                                           lbi, logical_blob_desc, "NaiveB2PSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+                                           src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
+                                           dst_sbp_parallel, lbi, logical_blob_desc,
+                                           "NaiveB2PSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }
