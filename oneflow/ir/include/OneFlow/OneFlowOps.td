@@ -52,7 +52,9 @@ def OneFlow_ShardingOp : OneFlow_Op<"sharding", [NoSideEffect, SameOperandsAndRe
 }
 
 // TODO: MLIR Idempotent requires op to have only one operand,
-// so we need to implement a special Idempotent trait aware of control edges in oneflow
+// Approach 1: we need to implement a special Idempotent trait aware of control edges in oneflow
+// Approach 2: a base class without control edges and another without
+// Approach 3: a trait to disable control edges declaration in base class
 def OneFlow_ReluOp : OneFlow_Op<"relu", [NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
     let results = (outs AnyType:$res);
