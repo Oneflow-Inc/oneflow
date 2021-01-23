@@ -573,8 +573,6 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
 }
 
 LogicalResult Importer::tryToUpdateJob() {
-  std::cout << "try updating job\n";
-  // TODO: add error handling
   std::string err_str = "";
   auto new_job = ::oneflow::Job();
   new_job.CopyFrom(*job);
