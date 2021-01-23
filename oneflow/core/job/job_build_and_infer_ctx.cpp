@@ -962,7 +962,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
-    if (HasJobPass("IRRoundTrip")) { JUST(DoPass("IRRoundTrip")); }
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     JUST(DoPass("FuseAddToOutputPass"));
@@ -973,6 +972,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
+    if (HasJobPass("IRRoundTrip")) { JUST(DoPass("IRRoundTrip")); }
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));

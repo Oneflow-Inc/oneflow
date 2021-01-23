@@ -62,6 +62,17 @@ def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsA
     let output = (outs AnyType:$res);
 }
 
+def OneFlow_UserOp : OneFlow_BaseOp<"user", []> {
+    let summary = "";
+    let attrs = (ins
+      StrArrayAttr:$input_lbn_segment_keys,
+      I32ArrayAttr:$input_lbn_segment_sizes,
+      StrArrayAttr:$output_lbn_segment_keys,
+      I32ArrayAttr:$output_lbn_segment_sizes,
+      StrArrayAttr:$output_lbns
+    );
+}
+
 def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
     let input = (ins AnyType:$x);

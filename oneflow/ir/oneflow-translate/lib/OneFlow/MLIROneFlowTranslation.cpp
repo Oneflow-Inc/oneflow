@@ -8,6 +8,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
@@ -326,7 +327,8 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     }
     // add one result for ctrl out
     out_types.append({RankedTensorType::get({}, b.getI1Type())});
-    OperationState state(unknownLoc, "oneflow." + op_type_name);
+    // OperationState state(unknownLoc, "oneflow." + op_type_name);
+    OperationState state(unknownLoc, "oneflow.user");
     state.addAttributes(named_attributes);
     state.addOperands(operands);
     state.addTypes(out_types);
@@ -614,7 +616,7 @@ LogicalResult Importer::tryToUpdateJob() {
   new_job.CopyFrom(*job);
   new_job.clear_net();
   auto convertOps = [&](Operation *op) {
-    if (/* user op */ op->hasAttr("op_type_name")) {
+    if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
@@ -622,11 +624,19 @@ LogicalResult Importer::tryToUpdateJob() {
       ConvertUseropOutputs(op, user_conf, err_str);
       ConvertUseropAttributes(op, op_conf, err_str);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (/* system op */ auto sys_op = llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
+    } else if (llvm::dyn_cast<ModuleTerminatorOp>(op)) {
+      // Do nothing
+    } else if (llvm::dyn_cast<ReturnOp>(op)) {
+      // Do nothing
+    } else if (llvm::dyn_cast<FuncOp>(op)) {
+      // Do nothing
     } else {
-      // TODO: check if is module_terminator
+      err_str = "failed to convert MLIR op: " + op->getName().getStringRef().str();
+      op->dump();
+      return;
     } /* convert op conf */
   };
   module.getBodyRegion().walk(convertOps);
