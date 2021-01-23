@@ -10,8 +10,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     StrAttr:$op_name,
     OptionalAttr<BoolAttr>:$trainable,
     OptionalAttr<StrAttr>:$device,
-    // TODO: change placement to dict and parse the literal fmt like "0:0-0"
-    StrArrayAttr:$placement,
+    StrArrayAttr:$placement, // TODO: change placement to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id
   );
   dag attrs = (ins);
