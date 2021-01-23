@@ -328,6 +328,7 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   auto output_lbns = job_wrapper.OutputLbns4OpName(op.name());
   job_wrapper.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
+  attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
   attr_vec.push_back(b.getNamedAttr("input_bns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
                                                      {input_bns.begin(), input_bns.end()}))));
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
