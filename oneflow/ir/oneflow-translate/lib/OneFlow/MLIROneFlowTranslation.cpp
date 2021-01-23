@@ -122,16 +122,21 @@ LogicalResult Importer::AddInputOutputSegments(const ::oneflow::OperatorConf &op
   std::vector<llvm::StringRef> output_lbns;
   std::vector<llvm::StringRef> output_lbn_segment_keys;
   std::vector<int> output_lbn_segment_sizes;
+  int data_output_size = 0;
   for (auto output : op.user_conf().output()) {
     output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
     output_lbn_segment_keys.push_back(output.first);
     output_lbn_segment_sizes.push_back(output.second.s_size());
+    data_output_size += output.second.s_size();
+    // TODO: merge this method with output types create
   }
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(output_lbns)));
   attr_vec.push_back(
       b.getNamedAttr("output_lbn_segment_keys", b.getStrArrayAttr(output_lbn_segment_keys)));
   attr_vec.push_back(
       b.getNamedAttr("output_lbn_segment_sizes", b.getI32ArrayAttr(output_lbn_segment_sizes)));
+  attr_vec.push_back(
+      b.getNamedAttr("result_segment_sizes", b.getI32VectorAttr({data_output_size, 1})));
   return success();
 }
 
@@ -300,6 +305,8 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         out_types.append({RankedTensorType::get({}, b.getF32Type())});
       }
     }
+    // add one result for ctrl out
+    out_types.append({RankedTensorType::get({}, b.getI1Type())});
     OperationState state(unknownLoc, "oneflow." + op_type_name);
     state.addAttributes(named_attributes);
     state.addOperands(operands);
@@ -429,7 +436,10 @@ void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::s
 void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
   int output_key_idx = -1;
   int segment_offset = 0;
-  for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
+  auto result_segment_sizes = op->getAttrOfType<ElementsAttr>("result_segment_sizes");
+  const int64_t output_size = result_segment_sizes.getValue(0).dyn_cast<IntegerAttr>().getInt();
+  auto data_out_results = op->getOpResults().take_front(output_size);
+  for (auto result_and_idx : llvm::enumerate(data_out_results)) {
     // TODO: reject if it is a ctrl edge
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {
