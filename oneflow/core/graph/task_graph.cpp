@@ -35,7 +35,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/to_interface_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
-#include "oneflow/core/graph/boxing_identity_compute_task_node.h"
+#include "oneflow/core/graph/boxing_identity_task_node.h"
 
 namespace oneflow {
 
@@ -533,17 +533,19 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
   for (const LogicalBlobId& lbi : lbis) {
-    std::vector<CompTaskNode*> src_nodes;
+    std::vector<TaskNode*> src_nodes;
     if (lbis.size() == 1) {
-      src_nodes = sorted_src_comp_tasks;
+      for (CompTaskNode* src_node : sorted_src_comp_tasks) { src_nodes.push_back(src_node); }
     } else {
       for (CompTaskNode* src_node : sorted_src_comp_tasks) {
-        auto* identity_node = NewNode<BoxingIdentityCompTaskNode>();
-        identity_node->Init(src_node, lbi);
+        auto* identity_node = NewNode<BoxingIdentityTaskNode>();
+        identity_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi);
         Connect<TaskNode>(src_node, NewEdge(), identity_node);
         src_nodes.push_back(identity_node);
       }
     }
+    std::vector<TaskNode*> dst_nodes;
+    for (CompTaskNode* dst_node : sorted_dst_comp_tasks) { dst_nodes.push_back(dst_node); }
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -552,9 +554,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
+        sub_tsk_gph_builder_ctx_.get(), src_nodes, dst_nodes, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    boxing_logger_->Log(*status);
+    boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(),
+                        dst_logical->SoleOp()->op_name());
   }
 }
 
