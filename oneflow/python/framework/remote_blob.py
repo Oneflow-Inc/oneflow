@@ -153,13 +153,6 @@ def sub_consistent_blob_list(self):
     raise NotImplementedError
 
 
-@property
-def dtype(self):
-    ret = convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
-    assert issubclass(ret, dtype_util.dtype)
-    return ret
-
-
 def numpy(self, rank=None):
     if rank is None:
         if self.numpy_size() == 1:
