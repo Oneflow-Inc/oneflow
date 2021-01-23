@@ -427,6 +427,7 @@ void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::
   int output_key_idx = -1;
   int segment_offset = 0;
   for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
+    // TODO: reject if it is a ctrl edge
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {
       output_key_idx += 1;
