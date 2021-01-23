@@ -246,6 +246,7 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
       }
     }
   }
+  // TODO: add result lookup for ctrl in
   return success();
 }
 
