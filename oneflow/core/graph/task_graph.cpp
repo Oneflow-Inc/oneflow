@@ -555,7 +555,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), src_nodes, dst_nodes, *src_parallel_desc,
-        *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
+        *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel,
+        *src_logical->out_blob_time_shape()));
     boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(),
                         dst_logical->SoleOp()->op_name());
   }

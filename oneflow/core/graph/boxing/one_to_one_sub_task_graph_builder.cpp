@@ -23,7 +23,7 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
     const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
+    const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
   if ((src_parallel_desc.parallel_num() == 1 && dst_parallel_desc.parallel_num() == 1)
       || (src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num()
           && src_sbp_parallel == dst_sbp_parallel)) {

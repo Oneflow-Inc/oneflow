@@ -24,7 +24,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
+    const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && dst_parallel_desc.parallel_num() != 1 && dst_sbp_parallel.has_partial_sum_parallel()) {
     HashMap<TaskNode*, TaskNode*> dst_node2nearest_src_node;
@@ -52,11 +52,9 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
                                             dst_node->machine_id(), dst_node->MemZoneId121());
         Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
       } else {
-        const auto* nearest_src_node1 = dynamic_cast<const CompTaskNode*>(nearest_src_node);
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
         zeros_node->Init(dst_node->machine_id(), dst_node->thrd_id(), dst_node->area_id(), lbi,
-                         logical_blob_desc.shape(), logical_blob_desc.data_type(),
-                         *nearest_src_node1->logical_node()->out_blob_time_shape());
+                         logical_blob_desc.shape(), logical_blob_desc.data_type(), time_shape);
         nearest_src_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_src_node, ctx->task_graph()->NewEdge(), zeros_node);
         Connect<TaskNode>(zeros_node, ctx->task_graph()->NewEdge(), dst_node);
