@@ -57,7 +57,7 @@ def EagerLogicalBlob(lbi, **kw):
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
         blob_type = oneflow_api.EagerMirroredBlob
     job_name = ""
-    if "job_name" in kw:
+    if ("job_name" in kw) and (kw["job_name"] is not None):
         job_name = kw["job_name"]
     blob_object = None
     if "blob_object" in kw:
@@ -81,7 +81,7 @@ def LazyRemoteBlob(lbi, **kw):
         cfg_lbi.set_blob_name(lbi.blob_name)
         lbi = cfg_lbi
     job_name = ""
-    if "job_name" in kw:
+    if ("job_name" in kw) and (kw["job_name"] is not None):
         job_name = kw["job_name"]
     distribute = oneflow_api.distribute.auto()
     if "distribute" in kw:
