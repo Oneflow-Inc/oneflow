@@ -20,22 +20,22 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_comp_tasks,
+    const std::vector<TaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
-  const LogicalNode* dst_logical_node = sorted_dst_comp_tasks.front()->logical_node();
-  if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
-  if (!IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(
-          dst_logical_node->SoleOp()->op_conf().op_type_case())) {
-    return Error::BoxingNotSupportedError();
-  }
+  // const LogicalNode* dst_logical_node = sorted_dst_comp_tasks.front()->logical_node();
+  // if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
+  // if (!IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(
+  //        dst_logical_node->SoleOp()->op_conf().op_type_case())) {
+  //  return Error::BoxingNotSupportedError();
+  //}
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
-    std::vector<CompTaskNode*> nearest_src_comp_tasks;
-    for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-      CompTaskNode* nearest_src_node =
+    std::vector<TaskNode*> nearest_src_comp_tasks;
+    for (TaskNode* dst_node : sorted_dst_comp_tasks) {
+      TaskNode* nearest_src_node =
           SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
       CHECK_NOTNULL(nearest_src_node);
       if (SubTskGphBuilderUtil::IsOnSameGPU(nearest_src_node, dst_node)) {
@@ -59,10 +59,10 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
         dst_parallel_desc.parallel_num(), dst_sbp_parallel, logical_blob_desc);
     FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
       const TensorSliceView& out_slice = out_slices.at(out_id);
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
+      TaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
       const int64_t nearest_idx =
           SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
-      CompTaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
+      TaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
       SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
       const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
