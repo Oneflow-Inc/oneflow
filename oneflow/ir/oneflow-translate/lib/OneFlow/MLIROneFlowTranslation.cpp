@@ -515,21 +515,21 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
             case oneflow::DataType::DT_InvalidDataType:
               user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
               break;
-#define DEFINE_ONE_ELIF(datatype)                                 \
+#define DEFINE_ONE_CASE(datatype)                                 \
   case oneflow::DataType::DT_##datatype:                          \
     user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
     break;
-              DEFINE_ONE_ELIF(Char)
-              DEFINE_ONE_ELIF(Float)
-              DEFINE_ONE_ELIF(Double)
-              DEFINE_ONE_ELIF(Int8)
-              DEFINE_ONE_ELIF(Int32)
-              DEFINE_ONE_ELIF(Int64)
-              DEFINE_ONE_ELIF(UInt8)
-              DEFINE_ONE_ELIF(OFRecord)
-              DEFINE_ONE_ELIF(Float16)
-              DEFINE_ONE_ELIF(TensorBuffer)
-#undef DEFINE_ONE_ELIF
+              DEFINE_ONE_CASE(Char)
+              DEFINE_ONE_CASE(Float)
+              DEFINE_ONE_CASE(Double)
+              DEFINE_ONE_CASE(Int8)
+              DEFINE_ONE_CASE(Int32)
+              DEFINE_ONE_CASE(Int64)
+              DEFINE_ONE_CASE(UInt8)
+              DEFINE_ONE_CASE(OFRecord)
+              DEFINE_ONE_CASE(Float16)
+              DEFINE_ONE_CASE(TensorBuffer)
+#undef DEFINE_ONE_CASE
             default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
           }
         }
