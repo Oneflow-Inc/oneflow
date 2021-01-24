@@ -372,14 +372,14 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   ::mlir::ValueRange operands(operand_vec);
 
   Operation *created_op = nullptr;
-
   if (op_type_name == "constant") {
-    // TODO: handle tick ctrl in for constant
-    assert(op.ctrl_in_op_name_size() == 0);
     auto t = user_conf.attr().at("is_floating_value").at_bool()
                  ? RankedTensorType::get({}, b.getF32Type())
                  : RankedTensorType::get({}, b.getI32Type());
-    created_op = b.create<oneflow::ConstantOp>(unknownLoc, t, operands, named_attributes);
+    auto out_types = llvm::SmallVector<Type, 8>();
+    out_types.append({t});
+    AppendCtrlOutType(out_types);
+    created_op = b.create<oneflow::ConstantOp>(unknownLoc, out_types, operands, named_attributes);
   } else {
     auto out_types = llvm::SmallVector<Type, 8>();
     for (auto kv : op.user_conf().output()) {

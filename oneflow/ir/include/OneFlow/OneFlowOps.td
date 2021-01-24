@@ -56,6 +56,17 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
     );
 }
 
+class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_UserBaseOp<mnemonic, traits> {
+    let summary = "";
+    let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+    let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
+    let trait_attrs = (ins
+      I32ElementsAttr:$operand_segment_sizes,
+      I32ElementsAttr:$result_segment_sizes
+    );
+}
+
 def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrSizedResultSegments]> {
     let summary = "";
     let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
@@ -66,7 +77,7 @@ def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrS
     );
 }
 
-def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [NoSideEffect]> {
+def OneFlow_ConstantOp : OneFlow_UserBaseWithCtrlOp<"constant", [NoSideEffect]> {
   let summary = "";
   let attrs = (ins
     OptionalAttr<F64Attr>:$floating_value,
