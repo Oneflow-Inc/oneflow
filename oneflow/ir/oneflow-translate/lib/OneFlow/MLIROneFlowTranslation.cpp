@@ -307,10 +307,6 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation *op) {
 }
 
 LogicalResult Importer::InsertOpResults(Operation *created_op) {
-  for (auto output_lbn : llvm::enumerate(created_op->getAttrOfType<ArrayAttr>("output_lbns"))) {
-    lbn2result_.insert({output_lbn.value().dyn_cast<StringAttr>().getValue().str(),
-                        created_op->getResult(output_lbn.index())});
-  }
   for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
     auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
     lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
