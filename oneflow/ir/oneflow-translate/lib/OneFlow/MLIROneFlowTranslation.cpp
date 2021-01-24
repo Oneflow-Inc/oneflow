@@ -1,6 +1,7 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -12,6 +13,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -294,6 +296,37 @@ LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
   return success();
 }
 
+std::pair<unsigned, unsigned> getODSOperandIndexAndLength(Operation *op, unsigned index) {
+  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes");
+
+  unsigned start = 0;
+  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
+  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+  return {start, size};
+}
+
+::mlir::Operation::operand_range getODSOperands(Operation *op, unsigned index) {
+  auto valueRange = getODSOperandIndexAndLength(op, index);
+  return {std::next(op->operand_begin(), valueRange.first),
+          std::next(op->operand_begin(), valueRange.first + valueRange.second)};
+}
+
+OperandRange GetDataInputOperands(Operation *op) {
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) {
+    return getODSOperands(op, 0);
+  } else {
+    return op->getOperands();
+  }
+}
+
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation *op) {
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) {
+    return getODSOperands(op, 1);
+  } else {
+    return llvm::None;
+  }
+}
+
 std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation *op, unsigned index) {
   auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes");
 
@@ -310,17 +343,24 @@ std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation *op, unsigned
 }
 
 ResultRange GetDataOutputResults(Operation *op) {
-  auto data_out_results = getODSResults(op, 0);
-  return data_out_results;
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes")) {
+    return getODSResults(op, 0);
+  } else {
+    return op->getOpResults();
+  }
 }
 
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation *op) {
-  auto ctrl_output_result = getODSResults(op, 1);
-  if (ctrl_output_result.empty()) {
-    return llvm::None;
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes")) {
+    auto ctrl_output_result = getODSResults(op, 1);
+    if (ctrl_output_result.empty()) {
+      return llvm::None;
+    } else {
+      assert(ctrl_output_result.size() == 1);
+      return ctrl_output_result.back();
+    }
   } else {
-    assert(ctrl_output_result.size() == 1);
-    return ctrl_output_result.back();
+    return llvm::None;
   }
 }
 
@@ -474,6 +514,15 @@ LogicalResult Importer::processJob() {
   if (!returnOp) { b.create<ReturnOp>(unknownLoc); }
   module.push_back(function);
   return success();
+}
+
+void ConvertCtrlInputs(Operation *op, ::oneflow::OperatorConf &op_conf) {
+  if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
+    for (auto ctrl_in : ctrl_ins.getValue()) {
+      op_conf.add_ctrl_in_op_name(
+          ctrl_in.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+    }
+  }
 }
 
 void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
@@ -679,10 +728,13 @@ LogicalResult Importer::tryToUpdateJob() {
       ConvertUseropInputs(op, user_conf, err_str);
       ConvertUseropOutputs(op, user_conf, err_str);
       ConvertUseropAttributes(op, op_conf, err_str);
+      ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
-      *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
+      ::oneflow::OperatorConf op_conf = job_wrapper.OpConf4OpName(op_name);
+      ConvertCtrlInputs(op, op_conf);
+      *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<ModuleTerminatorOp>(op)) {
       // Do nothing
     } else if (llvm::dyn_cast<ReturnOp>(op)) {

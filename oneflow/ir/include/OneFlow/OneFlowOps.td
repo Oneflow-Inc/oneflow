@@ -57,7 +57,7 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UserBaseOp<mnemonic, traits> {
+        OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
     let summary = "";
     let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
     let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
@@ -77,8 +77,10 @@ def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrS
     );
 }
 
-def OneFlow_ConstantOp : OneFlow_UserBaseWithCtrlOp<"constant", [NoSideEffect]> {
+def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegments, NoSideEffect]> {
   let summary = "";
+  let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
+  let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
   let attrs = (ins
     OptionalAttr<F64Attr>:$floating_value,
     OptionalAttr<I64Attr>:$integer_value
