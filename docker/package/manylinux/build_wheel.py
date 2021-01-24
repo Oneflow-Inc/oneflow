@@ -4,10 +4,10 @@ import tempfile
 from pathlib import Path
 
 
-def build_arg_env(env_var_name):
+def build_arg_env(env_var_name: str):
     val = os.getenv(env_var_name)
     assert val, f"system environment variable {env_var_name} found empty"
-    return f"--build-arg {env_var_name}={val}"
+    return f"--build-arg {env_var_name}={val} --build-arg {env_var_name.lower}={val}"
 
 
 def build_img(
@@ -29,8 +29,12 @@ def build_img(
         tuna_build_arg += ' --build-arg bazel_url="https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/bazel-3.4.1-linux-x86_64"'
     proxy_build_args = []
     if use_system_proxy:
-        for v in ["HTTP_PROXY", "HTTPS_PROXY"]:
-            proxy_build_args.append(build_arg_env(v))
+        if os.getenv("HTTP_PROXY"):
+            for v in ["HTTP_PROXY", "HTTPS_PROXY"]:
+                proxy_build_args.append(build_arg_env(v))
+        elif os.getenv("http_proxy"):
+            for v in ["http_proxy", "https_proxy"]:
+                proxy_build_args.append(build_arg_env(v))
     proxy_build_arg = " ".join(proxy_build_args)
     cmd = f"docker build -f docker/package/manylinux/Dockerfile {proxy_build_arg} {tuna_build_arg} --build-arg from={from_img} -t {img_tag} ."
     print(cmd)
