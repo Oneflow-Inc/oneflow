@@ -149,8 +149,6 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
       b.getNamedAttr("output_lbn_segment_keys", b.getStrArrayAttr(output_lbn_segment_keys)));
   attr_vec.push_back(
       b.getNamedAttr("output_lbn_segment_sizes", b.getI32ArrayAttr(output_lbn_segment_sizes)));
-  AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec);
-  AddResultSegmentSizes(data_output_size, attr_vec);
   return success();
 }
 
@@ -406,7 +404,6 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  ArrayRef<NamedAttribute> named_attributes(attr_vec);
   if (failed(operandsFromUserOp(op, operand_vec))) { return failure(); }
   AppendCtrlInOperand(op, operand_vec);
   ::mlir::ValueRange operands(operand_vec);
@@ -418,7 +415,8 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
                  : RankedTensorType::get({}, b.getI32Type());
     auto out_types = llvm::SmallVector<Type, 8>();
     out_types.append({t});
-    AppendCtrlOutType(out_types);
+    AddOperandSegmentSizes(1, op.ctrl_in_op_name_size(), attr_vec);
+    ArrayRef<NamedAttribute> named_attributes(attr_vec);
     created_op = b.create<oneflow::ConstantOp>(unknownLoc, out_types, operands, named_attributes);
   } else {
     auto out_types = llvm::SmallVector<Type, 8>();
@@ -430,6 +428,19 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
     AppendCtrlOutType(out_types);
     // OperationState state(unknownLoc, "oneflow." + op_type_name);
     OperationState state(unknownLoc, "oneflow.user");
+    for (auto na : attr_vec) {
+      if (na.first.str() == "input_lbn_segment_sizes") {
+        int data_input_size = 0;
+        for (auto segment_size : na.second.dyn_cast<ArrayAttr>()) {
+          data_input_size += segment_size.dyn_cast<IntegerAttr>().getInt();
+        }
+        AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec);
+      }
+      if (na.first.str() == "output_lbns") {
+        AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec);
+      }
+    }
+    ArrayRef<NamedAttribute> named_attributes(attr_vec);
     state.addAttributes(named_attributes);
     state.addOperands(operands);
     state.addTypes(out_types);
