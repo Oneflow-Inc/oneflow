@@ -295,23 +295,33 @@ LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
   return success();
 }
 
+std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation *op, unsigned index) {
+  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes");
+
+  unsigned start = 0;
+  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
+  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+  return {start, size};
+}
+
+::mlir::Operation::result_range getODSResults(Operation *op, unsigned index) {
+  auto valueRange = getODSResultIndexAndLength(op, index);
+  return {std::next(op->result_begin(), valueRange.first),
+          std::next(op->result_begin(), valueRange.first + valueRange.second)};
+}
+
 ResultRange GetDataOutputResults(Operation *op) {
-  auto result_segment_sizes = op->getAttrOfType<ElementsAttr>("result_segment_sizes");
-  const int64_t data_output_size =
-      result_segment_sizes.getValue(0).dyn_cast<IntegerAttr>().getInt();
-  auto data_out_results = op->getOpResults().take_front(data_output_size);
+  auto data_out_results = getODSResults(op, 0);
   return data_out_results;
 }
 
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation *op) {
-  auto result_segment_sizes = op->getAttrOfType<ElementsAttr>("result_segment_sizes");
-  const int64_t data_output_size =
-      result_segment_sizes.getValue(0).dyn_cast<IntegerAttr>().getInt();
-  if (data_output_size == op->getNumResults()) {
+  auto ctrl_output_result = getODSResults(op, 1);
+  if (ctrl_output_result.empty()) {
     return llvm::None;
   } else {
-    assert(data_output_size + 1 == op->getNumResults());
-    return op->getResult(data_output_size);
+    assert(ctrl_output_result.size() == 1);
+    return ctrl_output_result[0];
   }
 }
 
@@ -363,7 +373,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
 
   Operation *created_op = nullptr;
 
-  if (op_type_name == "constant") {
+  if (op_type_name == "constant1") {
     auto t = user_conf.attr().at("is_floating_value").at_bool()
                  ? RankedTensorType::get({}, b.getF32Type())
                  : RankedTensorType::get({}, b.getI32Type());
