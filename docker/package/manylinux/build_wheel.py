@@ -339,5 +339,3 @@ gcc --version
                 print("start retrying...")
                 force_rm_dir(cache_dir)
                 build()
-            else:
-                raise ValueError("something went wrong, please look at error above")
