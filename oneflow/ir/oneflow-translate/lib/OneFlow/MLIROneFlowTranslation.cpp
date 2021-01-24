@@ -277,7 +277,6 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
       }
     }
   }
-  AppendCtrlInOperand(op, operand_vec);
   return success();
 }
 
@@ -369,11 +368,14 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   ArrayRef<NamedAttribute> named_attributes(attr_vec);
   if (failed(operandsFromUserOp(op, operand_vec))) { return failure(); }
+  AppendCtrlInOperand(op, operand_vec);
   ::mlir::ValueRange operands(operand_vec);
 
   Operation *created_op = nullptr;
 
-  if (op_type_name == "constant1") {
+  if (op_type_name == "constant") {
+    // TODO: handle tick ctrl in for constant
+    assert(op.ctrl_in_op_name_size() == 0);
     auto t = user_conf.attr().at("is_floating_value").at_bool()
                  ? RankedTensorType::get({}, b.getF32Type())
                  : RankedTensorType::get({}, b.getI32Type());
