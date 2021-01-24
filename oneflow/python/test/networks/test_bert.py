@@ -19,7 +19,6 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import tensorflow as tf
 from absl import flags
 from pretrain import PreTrain
 
