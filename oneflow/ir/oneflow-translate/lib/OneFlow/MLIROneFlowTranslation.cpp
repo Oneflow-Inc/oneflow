@@ -69,7 +69,7 @@ class Importer {
                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
                                     std::vector<::mlir::Value> &operand_vec);
-  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> out_types);
+  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                              std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
@@ -321,7 +321,7 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation *op) {
     return llvm::None;
   } else {
     assert(ctrl_output_result.size() == 1);
-    return ctrl_output_result[0];
+    return ctrl_output_result.back();
   }
 }
 
@@ -338,7 +338,7 @@ LogicalResult Importer::InsertOpResults(Operation *created_op) {
   return success();
 }
 
-LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8> out_types) {
+LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types) {
   out_types.append({RankedTensorType::get({}, b.getI1Type())});
   return success();
 }
