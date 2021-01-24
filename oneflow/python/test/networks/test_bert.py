@@ -22,7 +22,6 @@ import oneflow as flow
 import tensorflow as tf
 from absl import flags
 from pretrain import PreTrain
-from test_util import GenArgList, type_name_to_flow_type
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("data_dir", "/dataset/bert/bert_seq_len_128_repeat1024", "")
