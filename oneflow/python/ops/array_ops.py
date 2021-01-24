@@ -2473,16 +2473,19 @@ def ones(
 @oneflow_export("masked_fork")
 def masked_fill(
     x: oneflow_api.BlobDesc, mask: oneflow_api.BlobDesc, name: Optional[str] = None,
-) -> List[oneflow_api.BlobDesc]:
-    """This operator takes a Tensor as input and outpus two tensors according to mask. 
+) -> Tuple[oneflow_api.BlobDesc]:
+    """This operator takes a Tensor as input and outputs two tensors(`out_ture` and `out_false`)
+    according to mask. 
     
     Args:
-        x (oneflow_api.BlobDesc):  
-        mask (Optional[dtype_util.dtype], optional):
+        x (oneflow_api.BlobDesc):  The input tensor.
+        mask (Optional[dtype_util.dtype], optional):  The boolean mask tensor.
         name (Optional[str], optional): The name for the operator. Defaults to None.
     
     Returns:
-        List[oneflow_api.BlobDesc]: 
+        Tuple[oneflow_api.BlobDesc]: The return value is a tuple: (`out_true`, `out_false`).
+    `out_true` contains the values of input `x` whose positions specified by "True elements" in `mask`,
+    and `out_false` contains the values of input `x` whose poitions specified by "False elements" in `mask`.
     
     For example: 
     
@@ -2509,10 +2512,18 @@ def masked_fill(
         # out
         # [[10.  0.  0.]
         # [ 0. 50.  0.]]
+        #
         # [[ 0. 20. 30.]
         # [40.  0. 60.]]
 
     """
+    assert x.shape == mask.shape, ValueError("Shape of x and mask should be equal")
+    assert mask.dtype in (flow.int8, flow.int32, flow.int64), ValueError(
+        "mask should be a boolean tensor"
+    )
+
+    if mask.dtype is not flow.int8:
+        mask = flow.cast(mask, dtype=flow.int8)
 
     if name is None:
         name = id_util.UniqueStr("MaskedFork_")
