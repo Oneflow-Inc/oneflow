@@ -949,7 +949,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     }
     auto parallel_cast_op =
         user_op::UserOpConfWrapperBuilder("System-AutoGrad-ParallelCast-" + NewUniqueId())
-            .Op("parallel")
+            .Op("parallel_cast")
             .Input("in", GenLogicalBlobName(diff_lbi))
             .Output("out")
             .Attr("identity", false)
@@ -957,7 +957,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
             .Attr("split_axis", split_axis)
             .Attr("grad_identity", true)
             .Attr("grad_broadcast", false)
-            .Attr("grad_split_axis", 0)
+            .Attr("grad_split_axis", static_cast<int64_t>(0))
             .ScopeSymbolId(scope_symbol_id)
             .Build();
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
