@@ -260,7 +260,15 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
       }
     }
   }
-  // TODO: add result lookup for ctrl in
+  for (auto ctrl_in_op_name : op.ctrl_in_op_name()) {
+    if (op_name2ctrl_result_.find(ctrl_in_op_name) == op_name2ctrl_result_.end()) {
+      module.emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
+      return failure();
+    } else {
+      auto v = op_name2ctrl_result_.at(ctrl_in_op_name);
+      operand_vec.push_back(v);
+    }
+  }
   return success();
 }
 
