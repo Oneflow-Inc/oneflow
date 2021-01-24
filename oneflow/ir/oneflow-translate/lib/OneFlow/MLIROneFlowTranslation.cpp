@@ -1,6 +1,7 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -10,6 +11,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -104,7 +106,8 @@ class Importer {
   ModuleOp module;
   /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
   Location unknownLoc;
-  std::unordered_map<std::string, mlir::Value> lbn2result_;
+  std::unordered_map<std::string, mlir::OpResult> lbn2result_;
+  std::unordered_map<std::string, mlir::OpResult> op_name2ctrl_result_;
   const ::oneflow::Job *job;
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
@@ -275,10 +278,39 @@ LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
   return success();
 }
 
+ResultRange GetDataOutputResults(Operation *op) {
+  auto result_segment_sizes = op->getAttrOfType<ElementsAttr>("result_segment_sizes");
+  const int64_t data_output_size =
+      result_segment_sizes.getValue(0).dyn_cast<IntegerAttr>().getInt();
+  auto data_out_results = op->getOpResults().take_front(data_output_size);
+  return data_out_results;
+}
+
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation *op) {
+  auto result_segment_sizes = op->getAttrOfType<ElementsAttr>("result_segment_sizes");
+  const int64_t data_output_size =
+      result_segment_sizes.getValue(0).dyn_cast<IntegerAttr>().getInt();
+  if (data_output_size == op->getNumResults()) {
+    return llvm::None;
+  } else {
+    assert(data_output_size + 1 == op->getNumResults());
+    return op->getResult(data_output_size);
+  }
+}
+
 LogicalResult Importer::InsertOpResults(Operation *created_op) {
   for (auto output_lbn : llvm::enumerate(created_op->getAttrOfType<ArrayAttr>("output_lbns"))) {
     lbn2result_.insert({output_lbn.value().dyn_cast<StringAttr>().getValue().str(),
                         created_op->getResult(output_lbn.index())});
+  }
+  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+    auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+    lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
+                        data_out.value().dyn_cast<OpResult>()});
+  }
+  if (auto ctrl_out = GetCtrlOutputResult(created_op)) {
+    op_name2ctrl_result_.insert({created_op->getAttrOfType<StringAttr>("op_name").getValue().str(),
+                                 ctrl_out->dyn_cast<OpResult>()});
   }
   return success();
 }
@@ -459,10 +491,7 @@ void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::s
 void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
   int output_key_idx = -1;
   int segment_offset = 0;
-  auto result_segment_sizes = op->getAttrOfType<ElementsAttr>("result_segment_sizes");
-  const int64_t output_size = result_segment_sizes.getValue(0).dyn_cast<IntegerAttr>().getInt();
-  auto data_out_results = op->getOpResults().take_front(output_size);
-  for (auto result_and_idx : llvm::enumerate(data_out_results)) {
+  for (auto result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
     // TODO: reject if it is a ctrl edge
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {

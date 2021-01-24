@@ -16,8 +16,8 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag user_op_lbn_attrs = (ins);
-  dag input = (ins Variadic<AnyType>:$operands);
-  dag output = (outs Variadic<AnyType>:$results);
+  dag input = (ins Variadic<AnyType>:$data_input);
+  dag output = (outs Variadic<AnyType>:$data_output);
   dag ctrl_input = (ins);
   dag ctrl_output = (outs);
   let arguments = !con(
@@ -97,8 +97,6 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
     StrArrayAttr:$input_bns,
     StrArrayAttr:$output_lbns
   );
-  let input = (ins Variadic<AnyType>:$operands);
-  let output = (outs Variadic<AnyType>:$outputs);
 }
 
 #endif // ONEFLOW_OPS
