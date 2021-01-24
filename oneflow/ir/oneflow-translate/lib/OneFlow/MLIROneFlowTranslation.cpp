@@ -67,6 +67,8 @@ class Importer {
                                           std::vector<NamedAttribute> &attr_vec);
   LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
                                    std::vector<::mlir::Value> &operand_vec);
+  LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
+                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                              std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
@@ -242,6 +244,20 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
   return success();
 }
 
+LogicalResult Importer::AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
+                                            std::vector<::mlir::Value> &operand_vec) {
+  for (auto ctrl_in_op_name : op.ctrl_in_op_name()) {
+    if (op_name2ctrl_result_.find(ctrl_in_op_name) == op_name2ctrl_result_.end()) {
+      module.emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
+      return failure();
+    } else {
+      auto v = op_name2ctrl_result_.at(ctrl_in_op_name);
+      operand_vec.push_back(v);
+    }
+  }
+  return success();
+}
+
 LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
                                            std::vector<Value> &operand_vec) {
   if (op.has_user_conf() == false) {
@@ -260,15 +276,7 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
       }
     }
   }
-  for (auto ctrl_in_op_name : op.ctrl_in_op_name()) {
-    if (op_name2ctrl_result_.find(ctrl_in_op_name) == op_name2ctrl_result_.end()) {
-      module.emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
-      return failure();
-    } else {
-      auto v = op_name2ctrl_result_.at(ctrl_in_op_name);
-      operand_vec.push_back(v);
-    }
-  }
+  AppendCtrlInOperand(op, operand_vec);
   return success();
 }
 
@@ -399,9 +407,6 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   OperationState state(unknownLoc, "oneflow.system");
   attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
-  if (op.ctrl_in_op_name_size() > 0) {
-    // TODO: get ctrl result from a {op_name => ctrl_result} map
-  }
   AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
   AddResultSegmentSizes(output_lbns.size(), attr_vec);
   state.addAttributes(attr_vec);
@@ -415,6 +420,7 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
       operand_vec.push_back(v);
     }
   }
+  AppendCtrlInOperand(op, operand_vec);
   auto out_types = llvm::SmallVector<Type, 8>();
   for (auto output_lbn : output_lbns) {
     out_types.append({RankedTensorType::get({}, b.getF32Type())});
