@@ -131,12 +131,10 @@ class LazyMirroredBlob(
         return oneflow.parallel_cast(self, gradient_distribute=distribute)
 
 
-class EagerBlobTrait(object):
-    def numpy_size(self):
-        return self.blob_object.parallel_desc_symbol.parallel_num
-
-    def numpy_list_size(self):
-        return self.blob_object.parallel_desc_symbol.parallel_num
+class EagerBlobTrait(oneflow_api.EagerBlobTrait):
+    def __init__(self):
+        self.sub_consistent_blob_list_ = []
+        oneflow_api.EagerBlobTrait.__init__(self)
 
     def numpy(self, rank=None):
         if rank is None:
@@ -167,62 +165,13 @@ class EagerBlobTrait(object):
         raise NotImplementedError
 
     @property
-    def shape(self):
-        return self.blob_object.op_arg_blob_attr.shape
-
-    @property
     def dtype(self):
-        ret = convert_proto_dtype_to_oneflow_dtype(
-            self.blob_object.op_arg_blob_attr.get_dtype()
-        )
+        ret = convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
         assert issubclass(ret, dtype_util.dtype)
         return ret
 
-    @property
-    def batch_axis(self):
-        opt_batch_axis = self.blob_object.op_arg_blob_attr.batch_axis
-        if opt_batch_axis.has_value():
-            return opt_batch_axis.value()
-        else:
-            return oneflow_api.INVALID_BATCH_AXIS
-
-    @property
-    def split_axis(self):
-        sbp_parallel = self.blob_object.op_arg_parallel_attr.sbp_parallel
-        if sbp_parallel.has_split_parallel():
-            return sbp_parallel.split_parallel().axis()
-        elif sbp_parallel.has_broadcast_parallel():
-            return oneflow_api.INVALID_SPLIT_AXIS
-        elif sbp_parallel.has_partial_sum_parallel():
-            return oneflow_api.INVALID_SPLIT_AXIS
-        else:
-            raise NotImplementedError
-
-    @property
-    def is_dynamic(self):
-        return self.blob_object.op_arg_blob_attr.is_dynamic
-
-    @property
-    def is_tensor_list(self):
-        return self.blob_object.op_arg_blob_attr.is_tensor_list
-
-    @property
-    def parallel_conf(self):
-        return self.blob_object.parallel_desc_symbol.parallel_conf
-
     def __del__(self):
         blob_register.CloseRegisteredBlobAccess(self.logical_blob_name)
-
-    def _Init(self, blob_object):
-        access = blob_register.OpenRegisteredBlobAccess(
-            self.logical_blob_name, blob_object
-        )
-        self.registered_blob_access_ = access
-        self.sub_consistent_blob_list_ = []
-
-    @property
-    def blob_object(self):
-        return self.registered_blob_access_.blob_object
 
     def _NumpyAt(self, rank):
         assert self.is_tensor_list is not True
@@ -297,13 +246,6 @@ class EagerBlobTrait(object):
         blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
         return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
 
-    def IdenticalTo(self, rhs):
-        return (
-            self.blob_object.op_arg_blob_attr == rhs.blob_object.op_arg_blob_attr
-            and self.blob_object.op_arg_parallel_attr
-            == rhs.blob_object.op_arg_parallel_attr
-        )
-
 
 class EagerConsistentBlob(
     EagerBlobTrait,
@@ -325,8 +267,10 @@ class EagerConsistentBlob(
             lbi = cfg_lbi
         if job_name is None:
             job_name = ""
+        logical_blob_name = lbi.op_name() + "/" + lbi.blob_name()
+        EagerBlobTrait.__init__(self)
         oneflow_api.ConsistentBlob.__init__(self, lbi, job_name, distribute)
-        self._Init(blob_object)
+        self._Init(logical_blob_name, blob_object, blob_register)
         self.parallel_size_ = 0
 
     @property
@@ -379,5 +323,7 @@ class EagerMirroredBlob(
             lbi = cfg_lbi
         if job_name is None:
             job_name = ""
+        logical_blob_name = lbi.op_name() + "/" + lbi.blob_name()
+        EagerBlobTrait.__init__(self)
         oneflow_api.MirroredBlob.__init__(self, lbi, job_name, distribute)
-        self._Init(blob_object)
+        self._Init(logical_blob_name, blob_object, blob_register)
