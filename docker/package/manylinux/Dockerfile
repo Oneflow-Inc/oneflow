@@ -20,7 +20,7 @@ COPY docker/package/manylinux/CentOS-Base.repo /tmp/CentOS-Base.repo
 
 # to speed up docker img building disable cuda repo
 # in 10.1, cuda yum repo will update cublas to 10.2 and breaks build
-RUN yum-config-manager --disable cuda nvidia-ml
+RUN yum-config-manager --disable cuda nvidia-ml centos-sclo-rh
 
 RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
