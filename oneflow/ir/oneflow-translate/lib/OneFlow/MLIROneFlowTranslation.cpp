@@ -391,6 +391,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op_name);
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   std::vector<NamedAttribute> attr_vec;
+  // TODO: exract function and handle these common attributes in system op
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
   if (op.has_trainable()) {
     attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
