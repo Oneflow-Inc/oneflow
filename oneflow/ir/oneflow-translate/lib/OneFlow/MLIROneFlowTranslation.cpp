@@ -733,6 +733,17 @@ LogicalResult Importer::tryToUpdateJob() {
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       ::oneflow::OperatorConf op_conf = job_wrapper.OpConf4OpName(op_name);
+      for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
+        auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
+        std::string new_val =
+            result.getDefiningOp()
+                ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
+                .dyn_cast<StringAttr>()
+                .getValue()
+                .str();
+        job_wrapper.ReplaceInputLbnInOpCustomizedConf(
+            &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
+      }
       ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (llvm::dyn_cast<ModuleTerminatorOp>(op)) {
