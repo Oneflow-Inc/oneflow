@@ -69,6 +69,7 @@ class Importer {
                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
                                     std::vector<::mlir::Value> &operand_vec);
+  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> out_types);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                              std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
@@ -327,6 +328,11 @@ LogicalResult Importer::InsertOpResults(Operation *created_op) {
   return success();
 }
 
+LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8> out_types) {
+  out_types.append({RankedTensorType::get({}, b.getI1Type())});
+  return success();
+}
+
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) {
     module.emitError("Not a user op. op name: " + op.name());
@@ -369,8 +375,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         out_types.append({RankedTensorType::get({}, b.getF32Type())});
       }
     }
-    // add one result for ctrl out
-    out_types.append({RankedTensorType::get({}, b.getI1Type())});
+    AppendCtrlOutType(out_types);
     // OperationState state(unknownLoc, "oneflow." + op_type_name);
     OperationState state(unknownLoc, "oneflow.user");
     state.addAttributes(named_attributes);
@@ -425,6 +430,7 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   for (auto output_lbn : output_lbns) {
     out_types.append({RankedTensorType::get({}, b.getF32Type())});
   }
+  AppendCtrlOutType(out_types);
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = b.createOperation(state);
