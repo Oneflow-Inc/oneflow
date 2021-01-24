@@ -48,9 +48,10 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
   });
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_parallel_cast_conf()) { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
+    if (!op_conf.has_user_conf()) { return; }
+    if (op_conf.user_conf().op_type_name() != "parallel_cast") { return; }
     if (op_node->in_edges().size() != 1) { return; }
     const OpNode* producer = op_node->SoleInEdge()->src_node();
     const LogicalBlobId& parallel_cast_in_lbi = op_node->op().BnInOp2Lbi("in");
@@ -63,7 +64,10 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
-      if (consumer->op().op_conf().has_parallel_cast_conf()) { return; }
+      if (consumer->op().op_conf().has_user_conf()
+          && consumer->op().op_conf().user_conf().op_type_name() == "parallel_cast") {
+        return;
+      }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
       if (consumer->SbpParallel4Lbi(parallel_cast_out_lbi) != parallel_cast_sbp_parallel) {
         return;
