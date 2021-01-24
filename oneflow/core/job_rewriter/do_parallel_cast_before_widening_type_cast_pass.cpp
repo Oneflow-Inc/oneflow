@@ -47,7 +47,10 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
     const OperatorConf& parallel_cast_op_conf =
         op_conf_cache.GetLatest(parallel_cast_node->op().op_conf());
-    if (!parallel_cast_op_conf.has_parallel_cast_conf()) { return; }
+    if (!(parallel_cast_op_conf.has_user_conf()
+          && parallel_cast_op_conf.user_conf().op_type_name() == "parallel_cast")) {
+      return;
+    }
     auto* cast_node = parallel_cast_node->SoleInEdge()->src_node();
     if (cast_node->out_edges().size() != 1) { return; }
     auto cast_op_conf = op_conf_cache.GetLatest(cast_node->op().op_conf());
@@ -63,13 +66,14 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       return;
     }
 
+    const auto parallel_cast_conf_wrapper = user_op::UserOpConfWrapper(parallel_cast_op_conf);
     // replace parallel_cast op input with cast op input
     {
-      auto new_parallel_cast_op_conf = parallel_cast_op_conf;
-      const std::string cast_input = cast_conf_wrapper.input("in", 0);
-      const std::string parallel_cast_input = parallel_cast_op_conf.parallel_cast_conf().in();
+      OperatorConf new_parallel_cast_op_conf = parallel_cast_op_conf;
+      const auto& cast_input = cast_conf_wrapper.input("in", 0);
+      const auto& parallel_cast_input = parallel_cast_conf_wrapper.input("in", 0);
       const auto& old_val =
-          ReplaceInputLbnInOpCustomizedConf(&new_parallel_cast_op_conf, "in", cast_input);
+          ReplaceInputLbnInOpCustomizedConf(&new_parallel_cast_op_conf, "in_0", cast_input);
       CHECK_EQ(parallel_cast_input, old_val);
 
       op_conf_cache.Put(new_parallel_cast_op_conf);
@@ -77,11 +81,11 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     // replace cast op input with parallel_cast op output
     {
       auto new_cast_op_conf = cast_op_conf;
-      const std::string parallel_cast_output =
-          parallel_cast_op_conf.name() + "/" + parallel_cast_op_conf.parallel_cast_conf().out();
-      const std::string cast_input = cast_conf_wrapper.input("in", 0);
+      const std::string parallel_cast_output_lbn =
+          parallel_cast_conf_wrapper.op_name() + "/" + parallel_cast_conf_wrapper.output("out", 0);
+      const auto& cast_input = cast_conf_wrapper.input("in", 0);
       const auto& old_val =
-          ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output);
+          ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output_lbn);
       CHECK_EQ(cast_input, old_val);
       op_conf_cache.Put(new_cast_op_conf);
     }
