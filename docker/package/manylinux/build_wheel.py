@@ -334,8 +334,8 @@ gcc --version
             build()
         except subprocess.CalledProcessError as e:
             print("failed: ", e.cmd, e.args)
-            print("clean: ", cache_dir)
             if cache_dir:
+                print("clean: ", cache_dir)
                 print("start retrying...")
                 force_rm_dir(cache_dir)
                 build()
