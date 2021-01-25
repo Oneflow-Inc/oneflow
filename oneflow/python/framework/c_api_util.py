@@ -170,13 +170,11 @@ def GetScopeConfigDef():
 
 
 def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
-    symbols = str(text_format.MessageToString(eager_symbol_list))
-    oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, symbols)
+    oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, eager_symbol_list)
 
 
 def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
-    symbols = str(text_format.MessageToString(eager_symbol_list))
-    oneflow_api.vm.RunPhysicalInstruction(vm_instruction_list, symbols)
+    oneflow_api.vm.RunPhysicalInstruction(vm_instruction_list, eager_symbol_list)
 
 
 def GetOpAttributes():

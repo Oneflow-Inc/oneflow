@@ -52,6 +52,7 @@ import inspect
 import oneflow
 import oneflow_api
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
+import oneflow_api.oneflow.core.eager.eager_symbol as eager_symbol_cfg
 import traceback
 
 
@@ -85,7 +86,7 @@ class Session(object):
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
         self.instruction_list_ = instr_cfg.InstructionListProto()
-        self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
+        self.eager_symbol_list_ = eager_symbol_cfg.EagerSymbolList()
         self.backward_blob_register_ = oneflow_api.BlobRegister(
             blob_cache_util.TryDisableBlobCache
         )
