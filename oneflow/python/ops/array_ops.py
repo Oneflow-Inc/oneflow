@@ -2471,7 +2471,7 @@ def ones(
 
 
 @oneflow_export("masked_fork")
-def masked_fill(
+def masked_fork(
     x: oneflow_api.BlobDesc, mask: oneflow_api.BlobDesc, name: Optional[str] = None,
 ) -> Tuple[oneflow_api.BlobDesc]:
     """This operator takes a Tensor as input and outputs two tensors(`out_ture` and `out_false`)
