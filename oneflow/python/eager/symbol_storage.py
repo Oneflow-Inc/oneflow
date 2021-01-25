@@ -34,6 +34,7 @@ def SetSymbol4Id(symbol_id, symbol):
 
 id2symbol = {}
 
+
 def HasSymbol4SerializedOpConf(serialized_op_conf):
     global serialized_op_conf2symbol
     return serialized_op_conf in serialized_op_conf2symbol
