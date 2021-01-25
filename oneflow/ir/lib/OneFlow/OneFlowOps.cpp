@@ -25,17 +25,17 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter &rewriter) const override {
-    if (op->getAttrOfType<StringAttr>("op_name").getValue().equals("relu")) {
-      if (op.getODSResults(1).size() != 1) { return failure(); }
-      if (op.getODSResults(1).front().use_empty() && op->getNumOperands() == 1) {
+    if (op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")) {
+      if (op.ctrl_inputs().empty() && op.ctrl_output().use_empty()) {
         if (auto relu = rewriter.create<oneflow::ReluOp>(
-                op->getLoc(), op->getOperands().take_front(), op.getAttrs()))
-          rewriter.replaceOp(op, relu.getResult());
-      } else {
-        return failure();
+                op->getLoc(), op->getOperands().take_front(), op.getAttrs())) {
+          op.data_output().front().replaceAllUsesWith(relu.y());
+          op->erase();
+          return success();
+        }
       }
     }
-    return success();
+    return failure();
   }
 };
 

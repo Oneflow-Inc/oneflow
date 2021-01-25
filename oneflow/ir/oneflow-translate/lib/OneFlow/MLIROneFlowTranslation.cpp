@@ -791,25 +791,12 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
     module->dump();
   }
 
-  OwningRewritePatternList import_patterns;
-  auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(import_patterns));
-  if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
-  if (debug) {
-    std::cout << "optimized:\n";
-    module->dump();
-  }
-
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
   if (mlir::failed(pm.run(*module))) { module->emitError("Failed to run canonicalizer pass"); }
 
-  OwningRewritePatternList export_patterns;
-  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
-    module->emitError("Failed to export user ops");
-  }
-
   if (debug) {
-    std::cout << "to export:\n";
+    std::cout << "optimized:\n";
     module->dump();
   }
 }

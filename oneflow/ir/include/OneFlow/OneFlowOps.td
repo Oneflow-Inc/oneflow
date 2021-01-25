@@ -102,7 +102,7 @@ def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsA
 def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
     let input = (ins AnyType:$x);
-    let output = (outs AnyType:$res);
+    let output = (outs AnyType:$y);
 }
 
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
