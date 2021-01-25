@@ -128,10 +128,10 @@ def get_mirror_shape_log_warning(self):
         return ""
 
 
-def RegisterMethod4BlobDef(blob_type):
-    blob_type.dtype = dtype
-    blob_type.with_distribute = with_distribute
-    blob_type.with_gradient_distribute = with_gradient_distribute
+def RegisterMethod4BlobDef(blob_class):
+    blob_class.dtype = dtype
+    blob_class.with_distribute = with_distribute
+    blob_class.with_gradient_distribute = with_gradient_distribute
 
 
 def RegisterMethod4LazyConsistentBlob():

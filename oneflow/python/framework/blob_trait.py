@@ -82,20 +82,20 @@ def __ge__(self, rhs):
     return oneflow.math.greater_equal(self, rhs)
 
 
-def RegisterBlobOperatorTraitMethod(blob_type):
-    blob_type.__add__ = __add__
-    blob_type.__radd__ = __radd__
-    blob_type.__sub__ = __sub__
-    blob_type.__rsub__ = __rsub__
-    blob_type.__mul__ = __mul__
-    blob_type.__rmul__ = __rmul__
-    blob_type.__truediv__ = __truediv__
-    blob_type.__rtruediv__ = __rtruediv__
-    blob_type.__div__ = __div__
-    blob_type.__mod__ = __mod__
-    blob_type.__eq__ = __eq__
-    blob_type.__ne__ = __ne__
-    blob_type.__lt__ = __lt__
-    blob_type.__le__ = __le__
-    blob_type.__gt__ = __gt__
-    blob_type.__ge__ = __ge__
+def RegisterBlobOperatorTraitMethod(blob_class):
+    blob_class.__add__ = __add__
+    blob_class.__radd__ = __radd__
+    blob_class.__sub__ = __sub__
+    blob_class.__rsub__ = __rsub__
+    blob_class.__mul__ = __mul__
+    blob_class.__rmul__ = __rmul__
+    blob_class.__truediv__ = __truediv__
+    blob_class.__rtruediv__ = __rtruediv__
+    blob_class.__div__ = __div__
+    blob_class.__mod__ = __mod__
+    blob_class.__eq__ = __eq__
+    blob_class.__ne__ = __ne__
+    blob_class.__lt__ = __lt__
+    blob_class.__le__ = __le__
+    blob_class.__gt__ = __gt__
+    blob_class.__ge__ = __ge__
