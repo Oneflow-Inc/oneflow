@@ -20,20 +20,23 @@ namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
-    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<TaskNode*>* sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && dst_parallel_desc.parallel_num() == 1) {
-    TaskNode* dst_node = sorted_dst_tasks.front();
-    TaskNode* nearest_src_node = SubTskGphBuilderUtil::FindNearestNode(sorted_src_tasks, dst_node);
+    const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(0));
+    const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(0));
+    const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());  
+    const int64_t nearest_src_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(src_parallel_desc, dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());    
+    TaskNode* nearest_src_node = sorted_src_tasks.at(nearest_src_parallel_id);
     CHECK_NOTNULL(nearest_src_node);
     TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
-                                        dst_node->machine_id(), dst_node->MemZoneId121());
-    Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
+                                        dst_machine_id, dst_mem_zone_id);
+    sorted_dst_tasks->push_back(proxy);
     return TRY(BuildSubTskGphBuilderStatus(
-        sorted_src_tasks.front(), sorted_dst_tasks.front(), src_parallel_desc, dst_parallel_desc,
+        sorted_src_tasks.front(), sorted_dst_tasks->front(), src_parallel_desc, dst_parallel_desc,
         src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc, "B21SubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();

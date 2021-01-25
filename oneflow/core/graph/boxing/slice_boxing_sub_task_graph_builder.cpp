@@ -55,7 +55,7 @@ bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
 
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
-    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<TaskNode*>* sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
@@ -425,40 +425,40 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
         CHECK(!ContainsEmptySlice(out_slices));
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
+          const int64_t dst_machine_id = CHECK_JUST(out_pd.MachineId4ParallelId(out_id));
+          const int64_t dst_dev_phy_id = CHECK_JUST(out_pd.DeviceId4ParallelId(out_id));
+          const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(dst_machine_id, dst_dev_phy_id, out_pd.device_type());  
           const TensorSliceView& out_slice = out_slices.at(out_id);
-          TaskNode* dst_node = sorted_dst_tasks.at(out_id);
-          const int64_t nearest_idx =
-              SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_tasks, dst_node);
+          const int64_t nearest_idx = SubTskGphBuilderUtil::FindNearestParallelId(in_pd, dst_machine_id, dst_dev_phy_id, out_pd.device_type());    
           TaskNode* src_node = sorted_src_tasks.at(nearest_idx);
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
           slice_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), in_slice);
           TaskNode* out_node = ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(),
-                                                 dst_node->machine_id(), dst_node->MemZoneId121());
+                                                 dst_machine_id, dst_mem_zone_id);
           out_nodes->push_back(out_node);
         }
       };
 
   std::vector<TaskNode*> in_nodes;
   in_nodes.assign(sorted_src_tasks.begin(), sorted_src_tasks.end());
-  std::vector<TaskNode*> out_nodes;
   std::string comment;
   if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphS2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+                       logical_blob_desc, in_nodes, sorted_dst_tasks);
     comment = "BuildSubTaskGphS2B";
   } else if (SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphS2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+                       logical_blob_desc, in_nodes, sorted_dst_tasks);
     comment = "BuildSubTaskGphS2S";
   } else if (SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphP2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+                       logical_blob_desc, in_nodes, sorted_dst_tasks);
     comment = "BuildSubTaskGphP2S";
   } else if (SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
     if (logical_blob_desc.shape().elem_cnt() < dst_parallel_desc.parallel_num()) {
       BuildSubTaskGphP2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                         logical_blob_desc, in_nodes, &out_nodes);
+                         logical_blob_desc, in_nodes, sorted_dst_tasks);
       comment = "BuildSubTaskGphP2B";
     } else {
       BlobDesc flat_blob_desc(logical_blob_desc.data_type());
@@ -469,9 +469,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       BuildSubTaskGphP2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, middle_sbp,
                          flat_blob_desc, in_nodes, &middle_nodes);
       BuildSubTaskGphS2B(dst_parallel_desc, dst_parallel_desc, middle_sbp, dst_sbp_parallel,
-                         flat_blob_desc, middle_nodes, &out_nodes);
+                         flat_blob_desc, middle_nodes, sorted_dst_tasks);
       comment = "BuildSubTaskGphP2S->BuildSubTaskGphS2B";
-      for (TaskNode* out_node : out_nodes) {
+      for (TaskNode* out_node : *sorted_dst_tasks) {
         auto* slice_boxing_node = dynamic_cast<SliceBoxingTaskNode*>(out_node);
         CHECK_NOTNULL(slice_boxing_node);
         slice_boxing_node->SetOutShape(logical_blob_desc.shape());
@@ -480,13 +480,12 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
 
   } else if (SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphB2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+                       logical_blob_desc, in_nodes, sorted_dst_tasks);
     comment = "BuildSubTaskGphB2S";
   } else {
     UNIMPLEMENTED();
   }
-  ctx->ConnectAll121(out_nodes, sorted_dst_tasks);
-  return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+  return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
                                          src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
                                          dst_sbp_parallel, lbi, logical_blob_desc,
                                          "SliceBoxingSubTskGphBuilder", comment));

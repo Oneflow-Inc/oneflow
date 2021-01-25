@@ -21,11 +21,11 @@ namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
-    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<TaskNode*>* sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
-  // const LogicalNode* dst_logical_node = sorted_dst_tasks.front()->logical_node();
+  // const LogicalNode* dst_logical_node = sorted_dst_tasks->front()->logical_node();
   // if (dst_logical_node->op_vec().size() != 1) { return Error::BoxingNotSupportedError(); }
   // if (!IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(
   //        dst_logical_node->SoleOp()->op_conf().op_type_case())) {
@@ -34,20 +34,19 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
     std::vector<TaskNode*> nearest_src_comp_tasks;
-    for (TaskNode* dst_node : sorted_dst_tasks) {
-      TaskNode* nearest_src_node =
-          SubTskGphBuilderUtil::FindNearestNode(sorted_src_tasks, dst_node);
-      CHECK_NOTNULL(nearest_src_node);
-      if (SubTskGphBuilderUtil::IsOnSameGPU(nearest_src_node, dst_node)) {
-        Connect<TaskNode>(nearest_src_node, ctx->task_graph()->NewEdge(), dst_node);
-      } else {
+    
+    FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
+      const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(out_id));
+      const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(out_id));
+      const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());  
+      const int64_t nearest_src_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(src_parallel_desc, dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type()); 
+      TaskNode* nearest_src_node = sorted_src_tasks.at(nearest_src_parallel_id);
         TaskNode* proxy =
             ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
-                              dst_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
-        Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
-      }
+                              dst_machine_id, Global<IDMgr>::Get()->CpuMemZoneId());
+        sorted_dst_tasks->push_back(proxy);
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
                                            src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
                                            dst_sbp_parallel, lbi, logical_blob_desc,
                                            "ToInterfaceSubTskGphBuilder", "BuildSubTaskGphB2B"));
@@ -58,10 +57,10 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
     const std::vector<TensorSliceView> out_slices = SubTskGphBuilderUtil::GetTensorSliceView(
         dst_parallel_desc.parallel_num(), dst_sbp_parallel, logical_blob_desc);
     FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
+      const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(out_id));
+      const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(out_id)); 
       const TensorSliceView& out_slice = out_slices.at(out_id);
-      TaskNode* dst_node = sorted_dst_tasks.at(out_id);
-      const int64_t nearest_idx =
-          SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_tasks, dst_node);
+      const int64_t nearest_idx = SubTskGphBuilderUtil::FindNearestParallelId(src_parallel_desc, dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type()); 
       TaskNode* src_node = sorted_src_tasks.at(nearest_idx);
       SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
       const auto src_machine_id = CHECK_JUST(src_parallel_desc.MachineId4ParallelId(0));
@@ -77,11 +76,11 @@ Maybe<SubTskGphBuilderStatus> ToInterfaceSubTskGphBuilder::Build(
       }
       slice_node->ConnectToSrcNodeWithSlice(src_node, ctx->task_graph()->NewEdge(), in_slice);
       TaskNode* proxy =
-          ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), dst_node->machine_id(),
+          ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), dst_machine_id,
                             Global<IDMgr>::Get()->CpuMemZoneId());
-      Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
+      sorted_dst_tasks->push_back(proxy);
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks.front(),
+    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
                                            src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
                                            dst_sbp_parallel, lbi, logical_blob_desc,
                                            "ToInterfaceSubTskGphBuilder", "BuildSubTaskGphB2S"));

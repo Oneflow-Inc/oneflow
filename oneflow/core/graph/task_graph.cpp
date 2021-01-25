@@ -219,7 +219,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-  builders.emplace_back(new ToInterfaceSubTskGphBuilder());
+  //builders.emplace_back(new ToInterfaceSubTskGphBuilder());
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
@@ -545,7 +545,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
       }
     }
     std::vector<TaskNode*> dst_nodes;
-    for (CompTaskNode* dst_node : sorted_dst_comp_tasks) { dst_nodes.push_back(dst_node); }
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -554,11 +553,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), src_nodes, dst_nodes, *src_parallel_desc,
+        sub_tsk_gph_builder_ctx_.get(), src_nodes, &dst_nodes, *src_parallel_desc,
         *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel,
         *src_logical->out_blob_time_shape()));
     boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(),
                         dst_logical->SoleOp()->op_name());
+    sub_tsk_gph_builder_ctx_->ConnectAll121(dst_nodes, sorted_dst_comp_tasks);
   }
 }
 

@@ -20,7 +20,7 @@ namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> ChainSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
-    const std::vector<TaskNode*>& sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<TaskNode*>* sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {

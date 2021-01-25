@@ -69,6 +69,12 @@ bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs)
          && rhs->device_type() == DeviceType::kGPU && lhs->GpuPhyId() == rhs->GpuPhyId();
 }
 
+bool SubTskGphBuilderUtil::IsOnSameGPU(const int64_t src_machine_id, const int64_t src_dev_phy_id, const DeviceType& src_device_type, const int64_t dst_machine_id,
+                             const int64_t dst_dev_phy_id, const DeviceType& dst_device_type) {
+  return src_machine_id == dst_machine_id && src_device_type == DeviceType::kGPU
+         && dst_device_type == DeviceType::kGPU && src_dev_phy_id == dst_dev_phy_id;
+}
+
 bool SubTskGphBuilderUtil::IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_split_parallel();
 }
@@ -101,6 +107,16 @@ bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const cfg::ErrorProto& erro
   return error.has_boxing_not_supported_error();
 }
 
+int64_t SubTskGphBuilderUtil::GetMemZoneId(const int64_t machine_id,
+                             const int64_t dev_phy_id, const DeviceType& device_type) {
+  const IDMgr* id_mgr = Global<IDMgr>::Get();
+  if (device_type == DeviceType::kCPU) {
+    return id_mgr->CpuMemZoneId();
+  } else {
+    return id_mgr->GpuMemZoneId(dev_phy_id);
+  }         
+}
+
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
   if (src->machine_id() != dst->machine_id()) {
     return kDistanceDiffMachine;
@@ -116,6 +132,23 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
       return kDistanceSameMachine;
     }
   }
+}
+
+int64_t SubTskGphBuilderUtil::GetDistance(const int64_t src_machine_id, const int64_t src_dev_phy_id, const DeviceType& src_device_type, const int64_t dst_machine_id,
+                             const int64_t dst_dev_phy_id, const DeviceType& dst_device_type) {
+  if (src_machine_id != dst_machine_id) {
+    return kDistanceDiffMachine;
+  } else if (src_device_type != dst_device_type) {
+    return kDistanceSameMachine;
+  } else if (src_device_type == DeviceType::kCPU) {
+    return kDistanceSameDevice;
+  } else {
+    if (src_dev_phy_id == dst_dev_phy_id) {
+      return kDistanceSameDevice;
+    } else {
+      return kDistanceSameMachine;
+    }
+  }                               
 }
 
 }  // namespace oneflow
