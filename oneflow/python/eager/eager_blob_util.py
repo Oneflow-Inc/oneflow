@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.vm_util as vm_util
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.framework.blob_trait as blob_trait
@@ -24,36 +23,26 @@ import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.lib.core.async_util as async_util
 import oneflow_api
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+
+@property
+def dtype(self):
+    return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
 
-class EagerPhysicalBlob(
-    oneflow_api.EagerPhysicalBlob,
-    blob_trait.BlobOperatorTrait,
-    blob_trait.BlobHeaderTrait,
-):
-    def __init__(self, blob_name):
-        oneflow_api.EagerPhysicalBlob.__init__(
-            self,
-            blob_name,
-            blob_register.GetObject4BlobName(blob_name),
-            _GetPhysicalBlobHeaderCache,
-        )
+def numpy(self):
+    assert not self.is_tensor_list
+    return _GetPhysicalBlobBodyCache(self.blob_object)
 
-    @property
-    def dtype(self):
-        return convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
 
-    def numpy(self):
-        assert not self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object)
+def numpy_list(self):
+    assert self.is_tensor_list
+    return _GetPhysicalBlobBodyCache(self.blob_object)
 
-    def numpy_list(self):
-        assert self.is_tensor_list
-        return _GetPhysicalBlobBodyCache(self.blob_object)
 
-    def __del__(self):
-        blob_register.ClearObject4BlobName(self.unique_name)
+def RegisterMethod4EagerPhysicalBlob():
+    oneflow_api.EagerPhysicalBlob.dtype = dtype
+    oneflow_api.EagerPhysicalBlob.numpy = numpy
+    oneflow_api.EagerPhysicalBlob.numpy_list = numpy_list
 
 
 def FetchTensorBlobAsNumpyList(parallel_size, blob_object):

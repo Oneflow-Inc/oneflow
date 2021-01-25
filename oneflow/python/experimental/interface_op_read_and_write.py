@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
@@ -25,7 +26,10 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def _GetInterfaceBlobObject(builder, op_name):
@@ -45,18 +49,18 @@ def GetEagerInterfaceBlob(op_name):
 
         def Build(builder, Yield):
             blob_object = _GetInterfaceBlobObject(builder, op_name)
-            lbi = logical_blob_id_util.LogicalBlobId()
-            lbi.op_name = op_name
+            lbi = lbi_util.LogicalBlobId()
+            lbi.set_op_name(op_name)
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
             assert len(op_attribute.output_bns) == 1
-            lbi.blob_name = op_attribute.output_bns[0]
+            lbi.set_blob_name(op_attribute.output_bns[0])
             if blob_object.op_arg_parallel_attr.is_mirrored():
-                remote_blob = remote_blob_util.EagerMirroredBlob(
-                    lbi, blob_object, job_name
+                remote_blob = oneflow_api.EagerMirroredBlob(
+                    lbi, blob_object, blob_register, job_name
                 )
             else:
-                remote_blob = remote_blob_util.EagerConsistentBlob(
-                    lbi, blob_object, job_name
+                remote_blob = oneflow_api.EagerConsistentBlob(
+                    lbi, blob_object, blob_register, job_name
                 )
 
             Yield(remote_blob)
@@ -80,18 +84,23 @@ def GetInterfaceBlobValue(op_name):
     def AsyncGetInterfaceBlobValue(Yield):
         def build(builder):
             blob_object = GetEagerInterfaceBlob(op_name).blob_object
-            lbi = logical_blob_id_util.LogicalBlobId()
-            lbi.op_name = op_name
+            lbi = lbi_util.LogicalBlobId()
+            lbi.set_op_name(op_name)
             op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
             assert len(op_attribute.output_bns) == 1
-            lbi.blob_name = op_attribute.output_bns[0]
+            lbi.set_blob_name(op_attribute.output_bns[0])
+            if not isinstance(lbi, lbi_util.LogicalBlobId):
+                cfg_lbi = lbi_util.LogicalBlobId()
+                cfg_lbi.set_op_name(lbi.op_name)
+                cfg_lbi.set_blob_name(lbi.blob_name)
+                lbi = cfg_lbi
             if blob_object.op_arg_parallel_attr.is_mirrored():
-                remote_blob = remote_blob_util.EagerMirroredBlob(
-                    lbi, blob_object, job_name
+                remote_blob = oneflow_api.EagerMirroredBlob(
+                    lbi, blob_object, blob_register, job_name
                 )
             else:
-                remote_blob = remote_blob_util.EagerConsistentBlob(
-                    lbi, blob_object, job_name
+                remote_blob = oneflow_api.EagerConsistentBlob(
+                    lbi, blob_object, blob_register, job_name
                 )
             if blob_object.op_arg_blob_attr.is_tensor_list:
                 value = remote_blob.numpy_list()
