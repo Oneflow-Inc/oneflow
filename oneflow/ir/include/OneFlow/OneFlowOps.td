@@ -75,6 +75,7 @@ def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrS
       I32ElementsAttr:$operand_segment_sizes,
       I32ElementsAttr:$result_segment_sizes
     );
+    let hasCanonicalizer = 1;
 }
 
 // TODO: support canonicalization
@@ -83,7 +84,7 @@ def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegment
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
   let attrs = (ins
     OptionalAttr<F64Attr>:$floating_value,
-    OptionalAttr<I64Attr>:$integer_value
+    OptionalAttr<SI64Attr>:$integer_value
   );
   let output = (outs F32Tensor);
 }

@@ -15,6 +15,8 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
@@ -47,12 +49,6 @@ namespace mlir {
 
 namespace {
 
-Attribute createEmptyDictionaryAttr(Builder &builder) { return builder.getDictionaryAttr({}); }
-::mlir::ValueRange putInVariadic(Builder &builder, Value v) {
-  ::mlir::ValueRange operands({v});
-  return operands;
-}
-
 using PbMessage = google::protobuf::Message;
 
 class Importer {
@@ -74,6 +70,8 @@ class Importer {
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                              std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddPlacement(const ::oneflow::OperatorConf &op,
+                             std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
                                        std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddResultSegmentSizes(int output_lbns_size, std::vector<NamedAttribute> &attr_vec);
@@ -380,6 +378,14 @@ LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types)
   return success();
 }
 
+LogicalResult Importer::AddPlacement(const ::oneflow::OperatorConf &op,
+                                     std::vector<NamedAttribute> &attr_vec) {
+  const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op.name());
+  std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
+  attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
+  return success();
+}
+
 LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) {
     module.emitError("Not a user op. op name: " + op.name());
@@ -387,9 +393,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   }
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
   const std::string &op_type_name = user_conf.op_type_name();
-  const std::string &op_name = op.name();
-  const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op_name);
-  std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
+
   std::vector<NamedAttribute> attr_vec;
   // TODO: exract function and handle these common attributes in system op
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
@@ -399,7 +403,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_device_tag()) {
     attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(op.device_tag())));
   }
-  attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
+  AddPlacement(op, attr_vec);
   attr_vec.push_back(b.getNamedAttr("scope_symbol_id", b.getI64IntegerAttr(op.scope_symbol_id())));
   attr_vec.push_back(
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
@@ -416,7 +420,7 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
                  : RankedTensorType::get({}, b.getI32Type());
     auto out_types = llvm::SmallVector<Type, 8>();
     out_types.append({t});
-    AddOperandSegmentSizes(1, op.ctrl_in_op_name_size(), attr_vec);
+    AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec);
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
     created_op = b.create<oneflow::ConstantOp>(unknownLoc, out_types, operands, named_attributes);
   } else {
@@ -469,6 +473,7 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   auto output_lbns = job_wrapper.OutputLbns4OpName(op.name());
   job_wrapper.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
+  AddPlacement(op, attr_vec);
   attr_vec.push_back(b.getNamedAttr("input_bns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
                                                      {input_bns.begin(), input_bns.end()}))));
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
@@ -793,6 +798,10 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
     std::cout << "optimized:\n";
     module->dump();
   }
+
+  mlir::PassManager pm(context);
+  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  if (mlir::failed(pm.run(*module))) { module->emitError("Failed to run canonicalizer pass"); }
 
   OwningRewritePatternList export_patterns;
   if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
