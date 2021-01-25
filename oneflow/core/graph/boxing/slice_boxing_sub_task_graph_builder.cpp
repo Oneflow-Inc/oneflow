@@ -412,33 +412,36 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     }
   };
 
-  const auto BuildSubTaskGphB2S =
-      [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge,
-       &sorted_src_tasks, &sorted_dst_tasks](
-          const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
-          const SbpParallel& out_sbp, const BlobDesc& blob_desc,
-          const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
-        CHECK(SubTskGphBuilderUtil::IsBoxingB2S(in_sbp, out_sbp));
-        const TensorSliceView in_slice =
-            SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
-        const std::vector<TensorSliceView> out_slices =
-            SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
-        CHECK(!ContainsEmptySlice(out_slices));
-        FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
-          const int64_t dst_machine_id = CHECK_JUST(out_pd.MachineId4ParallelId(out_id));
-          const int64_t dst_dev_phy_id = CHECK_JUST(out_pd.DeviceId4ParallelId(out_id));
-          const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(dst_machine_id, dst_dev_phy_id, out_pd.device_type());  
-          const TensorSliceView& out_slice = out_slices.at(out_id);
-          const int64_t nearest_idx = SubTskGphBuilderUtil::FindNearestParallelId(in_pd, dst_machine_id, dst_dev_phy_id, out_pd.device_type());    
-          TaskNode* src_node = sorted_src_tasks.at(nearest_idx);
-          SliceBoxingTaskNode* slice_node =
-              CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
-          slice_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), in_slice);
-          TaskNode* out_node = ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(),
-                                                 dst_machine_id, dst_mem_zone_id);
-          out_nodes->push_back(out_node);
-        }
-      };
+  const auto BuildSubTaskGphB2S = [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost,
+                                   &GetBoxingGpuThrdId, &NewEdge, &sorted_src_tasks,
+                                   &sorted_dst_tasks](
+                                      const ParallelDesc& in_pd, const ParallelDesc& out_pd,
+                                      const SbpParallel& in_sbp, const SbpParallel& out_sbp,
+                                      const BlobDesc& blob_desc,
+                                      const std::vector<TaskNode*>& in_nodes,
+                                      std::vector<TaskNode*>* out_nodes) {
+    CHECK(SubTskGphBuilderUtil::IsBoxingB2S(in_sbp, out_sbp));
+    const TensorSliceView in_slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
+    const std::vector<TensorSliceView> out_slices =
+        SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+    CHECK(!ContainsEmptySlice(out_slices));
+    FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
+      const int64_t dst_machine_id = CHECK_JUST(out_pd.MachineId4ParallelId(out_id));
+      const int64_t dst_dev_phy_id = CHECK_JUST(out_pd.DeviceId4ParallelId(out_id));
+      const int64_t dst_mem_zone_id =
+          SubTskGphBuilderUtil::GetMemZoneId(dst_machine_id, dst_dev_phy_id, out_pd.device_type());
+      const TensorSliceView& out_slice = out_slices.at(out_id);
+      const int64_t nearest_idx = SubTskGphBuilderUtil::FindNearestParallelId(
+          in_pd, dst_machine_id, dst_dev_phy_id, out_pd.device_type());
+      TaskNode* src_node = sorted_src_tasks.at(nearest_idx);
+      SliceBoxingTaskNode* slice_node =
+          CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
+      slice_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), in_slice);
+      TaskNode* out_node = ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), dst_machine_id,
+                                             dst_mem_zone_id);
+      out_nodes->push_back(out_node);
+    }
+  };
 
   std::vector<TaskNode*> in_nodes;
   in_nodes.assign(sorted_src_tasks.begin(), sorted_src_tasks.end());

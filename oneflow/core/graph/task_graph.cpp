@@ -33,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/b21_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
-#include "oneflow/core/graph/boxing/to_interface_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 
@@ -219,7 +218,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-  //builders.emplace_back(new ToInterfaceSubTskGphBuilder());
+  // builders.emplace_back(new ToInterfaceSubTskGphBuilder());
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
