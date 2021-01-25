@@ -89,23 +89,11 @@ limitations under the License.
 
 // }  // namespace oneflow
 
-#include "oneflow/user/kernels/elementwise_cpu_kernel.h"
 #include "oneflow/user/kernels/elu_kernel.h"
 
 namespace oneflow {
 
-#define REGISTER_ELU_CPU_KERNEL(device, dtype)                                             \
-  REGISTER_USER_KERNEL("elu")                                                           \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
-        return new UnaryElemwiseCpuKernel<device, EluFunctor<dtype>, dtype>(               \
-            "in", "out", [](user_op::KernelComputeContext* ctx) {                       \
-              return EluFunctor<dtype>(static_cast<dtype>(ctx->Attr<double>("alpha"))); \
-            });                                                                         \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
-
-REGISTER_ELU_CPU_KERNEL(DeviceType::kCPU, float);
-REGISTER_ELU_CPU_KERNEL(DeviceType::kCPU, double);
+REGISTER_ELU_KERNEL(DeviceType::kCPU, float);
+REGISTER_ELU_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

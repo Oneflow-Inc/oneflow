@@ -19,24 +19,28 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename FunctorT, typename T>
 struct UnaryElemwiseXpuFunctor final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in,
-                  std::function<T(T)> functor);
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in, FunctorT functor);
 };
 
-template<typename T>
-struct UnaryElemwiseXpuFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in,
-                  std::function<T(T)> functor) {
+template<typename FunctorT, typename T>
+struct UnaryElemwiseXpuFunctor<DeviceType::kCPU, FunctorT, T> final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in, FunctorT functor) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(in[i]); }
   }
 };
+
+#define INSTANTIATE_XPU_FUNCTOR(device, functor, T) \
+  template struct UnaryElemwiseXpuFunctor<device, functor<T>, T>;
 
 template<DeviceType device_type, typename FunctorT, typename T>
 class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseXpuKernel);
+  UnaryElemwiseXpuKernel() = default;
+  ~UnaryElemwiseXpuKernel() = default;
+
   UnaryElemwiseXpuKernel(
       const std::string& input_name, const std::string& output_name,
       std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn)
@@ -52,8 +56,8 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
     T* out_ptr = out_tensor->mut_dptr<T>();
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
 
-    UnaryElemwiseXpuFunctor<device_type, T>()(ctx->device_ctx(), elem_cnt, out_ptr, in_ptr,
-                                              FunctorCreateFn(ctx));
+    UnaryElemwiseXpuFunctor<device_type, FunctorT, T>()(ctx->device_ctx(), elem_cnt, out_ptr,
+                                                        in_ptr, FunctorCreateFn(ctx));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

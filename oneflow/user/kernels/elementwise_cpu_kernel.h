@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_CPU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_CPU_KERNEL_H_
 #include "oneflow/core/framework/framework.h"
@@ -9,8 +24,9 @@ template<DeviceType device_type, typename FunctorT, typename T>
 class UnaryElemwiseCpuKernel final : public user_op::OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseCpuKernel);
-  UnaryElemwiseCpuKernel(const std::string& input_name, const std::string& output_name,
-                      std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn)
+  UnaryElemwiseCpuKernel(
+      const std::string& input_name, const std::string& output_name,
+      std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn)
       : input_name(input_name), output_name(output_name), FunctorCreateFn(FunctorCreateFn) {}
 
   std::string input_name = "in";    // The name for the input tensor
@@ -27,14 +43,10 @@ class UnaryElemwiseCpuKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
 
     FunctorT functor = FunctorCreateFn(ctx);
-    FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      out_ptr[i] = functor(in_ptr[i]);
-    }
-  
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = functor(in_ptr[i]); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-
 }  // namespace oneflow
-#endif // _ONEFLOW_USER_KERNELS_ELEMENTWISE_CPU_KERNEL_H_
+#endif  // _ONEFLOW_USER_KERNELS_ELEMENTWISE_CPU_KERNEL_H_
