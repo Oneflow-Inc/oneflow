@@ -146,7 +146,7 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
     if name is None:
         name = id_util.UniqueStr("ParallelCast_")
 
-    def parse_distribute(dist):
+    def distribute_to_str(dist):
         dist_str = ""
         if dist is None:
             pass
@@ -158,8 +158,8 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
             raise ValueError("unsupported distribute")
         return dist_str
 
-    sbp_parallel = parse_distribute(distribute)
-    grad_sbp_parallel = parse_distribute(gradient_distribute)
+    sbp_parallel = distribute_to_str(distribute)
+    grad_sbp_parallel = distribute_to_str(gradient_distribute)
     op = (
         oneflow.user_op_builder(name)
         .Op("parallel_cast")

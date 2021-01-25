@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
-#include <re2/re2.h>
 
 namespace oneflow {
 
@@ -34,12 +33,14 @@ REGISTER_USER_OP("parallel_cast")
       const std::string& ibn = GenRepeatedBn("in", 0);
       const std::string& obn = GenRepeatedBn("out", 0);
       const auto& sbp_parallel_str = ctx->Attr<std::string>("sbp_parallel");
-      if (sbp_parallel_str == "") {
+      if (sbp_parallel_str.empty()) {
         const auto& sbp_parallel = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       } else {
-        SbpParallel sbp_parallel = ParseSbpParallelFromStr(sbp_parallel_str);
+        SbpParallel sbp_parallel;
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
+            << "invalid sbp_parallel: " << sbp_parallel_str;
         if (sbp_parallel.has_split_parallel()) {
           int64_t split_axis = sbp_parallel.split_parallel().axis();
           const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -57,11 +58,11 @@ REGISTER_USER_OP_GRAD("parallel_cast")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
       if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
         const auto& grad_sbp_parallel_str = ctx->FwOp().attr<std::string>("grad_sbp_parallel");
-        if (grad_sbp_parallel_str == "") {
+        if (grad_sbp_parallel_str.empty()) {
           ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
                                                 "in", 0);
         } else {
-          CHECK(IsSbpParallelStr(grad_sbp_parallel_str));
+          CHECK(IsValidSbpParallelString(grad_sbp_parallel_str));
           const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
           ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
             return builder.OpTypeName("parallel_cast")

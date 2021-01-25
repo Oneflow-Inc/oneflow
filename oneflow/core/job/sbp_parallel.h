@@ -39,8 +39,8 @@ void SortSbpSignatureListByCopyCost(
     const std::function<int32_t(const SbpSignature&)>& OrderValue4SbpSig,
     std::vector<const SbpSignature*>* sorted_sbp_signatures);
 
-bool IsSbpParallelStr(const std::string& sbp_str);
-SbpParallel ParseSbpParallelFromStr(const std::string& sbp_str);
+bool IsValidSbpParallelString(const std::string& sbp_str);
+bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel);
 std::string SbpParallelToString(const SbpParallel& sbp_parallel);
 
 }  // namespace oneflow

@@ -132,50 +132,40 @@ void SortSbpSignatureListByCopyCost(
             });
 }
 
-bool IsSbpParallelStr(const std::string& sbp_str) {
+bool IsValidSbpParallelString(const std::string& sbp_str) {
+  SbpParallel sbp_parallel;
+  return ParseSbpParallelFromString(sbp_str, &sbp_parallel);
+}
+
+bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel) {
+  bool success = false;
   if (sbp_str.length() >= 1) {
-    if (sbp_str == "B" || sbp_str == "P") { return true; }
-    if (sbp_str[0] == 'S' && sbp_str.length() == 4 && sbp_str[1] == '(' && sbp_str[3] == ')'
-        && std::isdigit(sbp_str[2])) {
-      return true;
-    }
-    if (sbp_str[0] == 'S' && sbp_str.length() > 4 && sbp_str[1] == '('
-        && sbp_str[sbp_str.length() - 1] == ')') {
-      std::string split_axis_str = sbp_str.substr(2, sbp_str.length() - 3);
-      if (std::all_of(split_axis_str.begin(), split_axis_str.end(),
-                      [](char ch) { return std::isdigit(ch); })) {
-        return true;
+    if (sbp_str == "B") {
+      sbp_parallel->mutable_broadcast_parallel();
+      success = true;
+    } else if (sbp_str == "P") {
+      sbp_parallel->mutable_partial_sum_parallel();
+      success = true;
+    } else if (sbp_str[0] == 'S') {
+      if (sbp_str.length() >= 4 && sbp_str[1] == '(' && sbp_str[sbp_str.length() - 1] == ')') {
+        int split_axis = 0;
+        if (sbp_str.length() == 4) {
+          split_axis = sbp_str[2] - '0';
+          if (split_axis >= 0 && split_axis <= 9) { success = true; }
+        } else {
+          std::string split_axis_str = sbp_str.substr(2, sbp_str.length() - 3);
+          if (std::all_of(split_axis_str.cbegin(), split_axis_str.cend(),
+                          [](char ch) { return std::isdigit(ch); })) {
+            size_t pos = 0;
+            split_axis = std::stoi(split_axis_str, &pos);
+            if (pos == split_axis_str.length()) { success = true; }
+          }
+        }
+        if (success) { sbp_parallel->mutable_split_parallel()->set_axis(split_axis); }
       }
     }
   }
-  return false;
-}
-
-SbpParallel ParseSbpParallelFromStr(const std::string& sbp_str) {
-  CHECK_GE(sbp_str.length(), 1);
-  SbpParallel sbp_parallel;
-  if (sbp_str == "B") {
-    sbp_parallel.mutable_broadcast_parallel();
-  } else if (sbp_str == "P") {
-    sbp_parallel.mutable_partial_sum_parallel();
-  } else if (sbp_str[0] == 'S') {
-    int split_axis = 0;
-    CHECK_EQ(sbp_str[1], '(');
-    CHECK_EQ(sbp_str[sbp_str.length() - 1], ')');
-    if (sbp_str.length() == 4) {
-      split_axis = sbp_str[2] - '0';
-      CHECK_GE(split_axis, 0);
-      CHECK_LE(split_axis, 9);
-    } else if (sbp_str.length() > 4) {
-      split_axis = std::stoi(sbp_str.substr(2, sbp_str.length() - 3));
-    } else {
-      UNIMPLEMENTED();
-    }
-    sbp_parallel.mutable_split_parallel()->set_axis(split_axis);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return sbp_parallel;
+  return success;
 }
 
 std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
