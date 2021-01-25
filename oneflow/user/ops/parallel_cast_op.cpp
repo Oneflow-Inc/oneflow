@@ -39,18 +39,13 @@ REGISTER_USER_OP("parallel_cast")
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       } else {
-        SbpParallel sbp_parallel;
-        int split_axis = 0;
-        if (sbp_parallel_str == "B") {
-          sbp_parallel.mutable_broadcast_parallel();
-        } else if (RE2::FullMatch(sbp_parallel_str, "S\\((\\d)\\)", &split_axis)) {
+        SbpParallel sbp_parallel = ParseSbpParallelFromStr(sbp_parallel_str);
+        if (sbp_parallel.has_split_parallel()) {
+          int64_t split_axis = sbp_parallel.split_parallel().axis();
           const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
           int64_t num_axes = in_desc.shape().NumAxes();
           CHECK_GE_OR_RETURN(split_axis, 0);
           CHECK_LT_OR_RETURN(split_axis, num_axes);
-          sbp_parallel.mutable_split_parallel()->set_axis(split_axis);
-        } else {
-          UNIMPLEMENTED();
         }
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
@@ -66,8 +61,7 @@ REGISTER_USER_OP_GRAD("parallel_cast")
           ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
                                                 "in", 0);
         } else {
-          CHECK(grad_sbp_parallel_str == "B"
-                || RE2::FullMatch(grad_sbp_parallel_str, "S\\(\\d\\)"));
+          CHECK(IsSbpParallelStr(grad_sbp_parallel_str));
           const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
           ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
             return builder.OpTypeName("parallel_cast")

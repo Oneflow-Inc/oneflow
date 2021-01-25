@@ -132,4 +132,64 @@ void SortSbpSignatureListByCopyCost(
             });
 }
 
+bool IsSbpParallelStr(const std::string& sbp_str) {
+  if (sbp_str.length() >= 1) {
+    if (sbp_str == "B" || sbp_str == "P") { return true; }
+    if (sbp_str[0] == 'S' && sbp_str.length() == 4 && sbp_str[1] == '(' && sbp_str[3] == ')'
+        && std::isdigit(sbp_str[2])) {
+      return true;
+    }
+    if (sbp_str[0] == 'S' && sbp_str.length() > 4 && sbp_str[1] == '('
+        && sbp_str[sbp_str.length() - 1] == ')') {
+      std::string split_axis_str = sbp_str.substr(2, sbp_str.length() - 3);
+      if (std::all_of(split_axis_str.begin(), split_axis_str.end(),
+                      [](char ch) { return std::isdigit(ch); })) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+SbpParallel ParseSbpParallelFromStr(const std::string& sbp_str) {
+  CHECK_GE(sbp_str.length(), 1);
+  SbpParallel sbp_parallel;
+  if (sbp_str == "B") {
+    sbp_parallel.mutable_broadcast_parallel();
+  } else if (sbp_str == "P") {
+    sbp_parallel.mutable_partial_sum_parallel();
+  } else if (sbp_str[0] == 'S') {
+    int split_axis = 0;
+    CHECK_EQ(sbp_str[1], '(');
+    CHECK_EQ(sbp_str[sbp_str.length() - 1], ')');
+    if (sbp_str.length() == 4) {
+      split_axis = sbp_str[2] - '0';
+      CHECK_GE(split_axis, 0);
+      CHECK_LE(split_axis, 9);
+    } else if (sbp_str.length() > 4) {
+      split_axis = std::stoi(sbp_str.substr(2, sbp_str.length() - 3));
+    } else {
+      UNIMPLEMENTED();
+    }
+    sbp_parallel.mutable_split_parallel()->set_axis(split_axis);
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sbp_parallel;
+}
+
+std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
+  std::string sbp_str = "";
+  if (sbp_parallel.has_broadcast_parallel()) {
+    sbp_str = "B";
+  } else if (sbp_parallel.has_partial_sum_parallel()) {
+    sbp_str = "P";
+  } else if (sbp_parallel.has_split_parallel()) {
+    sbp_str = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sbp_str;
+}
+
 }  // namespace oneflow
