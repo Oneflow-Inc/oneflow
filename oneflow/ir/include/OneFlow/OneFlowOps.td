@@ -77,6 +77,7 @@ def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrS
     );
 }
 
+// TODO: support canonicalization
 def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegments, NoSideEffect]> {
   let summary = "";
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
