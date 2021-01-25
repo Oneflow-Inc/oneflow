@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#define AUTO_PARALLEL_
-#define PLOT_SBP_
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/operator/normal_model_update_op.h"
+#include "oneflow/core/auto_parallel/sbp_constructor.h"
 
 namespace oneflow {
 
@@ -134,7 +133,7 @@ std::string OpNode::VisualStr() const {
     str += "Pre Op:" + producer_node->op().op_name() + ": " + ibn;
     const SbpParallel& this_sbp_parallel = SbpParallel4BnInOp(ibn);
     if (this_sbp_parallel.has_split_parallel())
-      str += " [S]" + std::to_string(this_sbp_parallel.split_parallel().axis())+" ";
+      str += " [S]" + std::to_string(this_sbp_parallel.split_parallel().axis()) + " ";
     if (this_sbp_parallel.has_broadcast_parallel()) str += " [B] ";
     if (this_sbp_parallel.has_partial_sum_parallel()) str += " [P] ";
   }
@@ -143,7 +142,7 @@ std::string OpNode::VisualStr() const {
     str += "Out Op:" + ibn;
     const SbpParallel& this_sbp_parallel = SbpParallel4BnInOp(ibn);
     if (this_sbp_parallel.has_split_parallel())
-      str += " [S]" + std::to_string(this_sbp_parallel.split_parallel().axis())+" ";
+      str += " [S]" + std::to_string(this_sbp_parallel.split_parallel().axis()) + " ";
     if (this_sbp_parallel.has_broadcast_parallel()) str += " [B] ";
     if (this_sbp_parallel.has_partial_sum_parallel()) str += " [P] ";
   }
@@ -639,7 +638,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     }
     InferOpNodeSbpSignature(op_node, sbp_sig_conf);
     op_node->InferBlobParallelDesc();
-#ifndef AUTO_PARALLEL_
+#ifndef ENABLE_AUTO_PARALLEL
     // SbpConstructor: Do not update to job because it will limit sbp_node to choose condidate
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
 #endif

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/auto_parallel/sbp_constructor.h"
 
 namespace oneflow {
 
@@ -92,12 +93,13 @@ Maybe<double> VariableOp::GetComputeComplexity(
     ifs >> CostRatio;
   } else
     CostRatio = 1;
-  std::cout << "variable Cost Ratio: " << CostRatio << std::endl;
+  /* std::cout << "variable Cost Ratio: " << CostRatio << std::endl; */
   return CostRatio
          * JUST(Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc));
 }
 
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+#ifdef ENABLE_AUTO_PARALLEL
   // TODO: re-code this
   // NOTE: It can build all split axis, and delete impossible case in `GetComputeComplexity`
   // build all avaible sbp signature
@@ -107,6 +109,16 @@ Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
         .Broadcast(input_bns())
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
+#else
+  const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
+  SbpSignatureBuilder sbp_sig_builder;
+  if (opt_split_axis->has_value()) {
+    sbp_sig_builder.Split(output_bns(), opt_split_axis->value());
+  } else {
+    sbp_sig_builder.Broadcast(output_bns());
+  }
+  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+#endif
   return Maybe<void>::Ok();
 }
 

@@ -44,8 +44,6 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 
-#define AUTO_PARALLEL_
-
 namespace std {
 
 template<>
@@ -70,7 +68,7 @@ namespace {
 
 void DoJobComplete(Job* job) {
   JobCompleter().Complete(job);
-#ifdef AUTO_PARALLEL_
+#ifdef ENABLE_AUTO_PARALLEL
   // auto-parallel
   // TODO: recode this
   if (job->job_conf().job_name() == "TrainNet")
