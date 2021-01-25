@@ -41,9 +41,6 @@ class Kernel {
 
   void Init(const JobDesc* job_desc, const KernelConf&, DeviceCtx*);
 
-  void InitModelAndConstBuf(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -80,9 +77,6 @@ class Kernel {
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
-
-  virtual void InitConstBufBlobs(DeviceCtx* ctx,
-                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
   template<typename HandlerT>
   void ForEachObnAndIsHeaderInferedBeforeCompute(
