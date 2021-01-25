@@ -19,6 +19,7 @@ limitations under the License.
 #include <typeinfo>
 #include "oneflow/core/object_msg/object_msg_core.h"
 #include "oneflow/core/object_msg/embedded_list.h"
+#include "oneflow/core/object_msg/embedded_list_iterator.h"
 
 namespace oneflow {
 
@@ -189,6 +190,11 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   using value_type = typename ValueLinkField::struct_type;
   using value_link_struct_field = ValueLinkField;
 
+  using iterator = embedded_list_iterator<ValueLinkField, false>;
+  using const_iterator = embedded_list_iterator<ValueLinkField, true>;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+
   template<typename Enabled = void>
   static constexpr int ContainerLinkOffset() {
     return offsetof(TrivialObjectMsgList, list_head_)
@@ -209,6 +215,74 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
     if (list_head_.empty()) { return nullptr; }
     return list_head_.Begin();
   }
+
+  /************************************hsj iterator****************************/
+  iterator begin() { return iterator(ValueLinkField::FieldPtr4StructPtr(list_head_.Begin())); }
+
+  const_iterator begin() const { return this->cbegin(); }
+
+  const_iterator cbegin() const {
+    return const_iterator(ValueLinkField::FieldPtr4StructPtr(&(list_head_.Begin())));
+  }
+
+  iterator end() { return iterator(ValueLinkField::FieldPtr4StructPtr(list_head_.End())); }
+
+  const_iterator end() const { return this->cend(); }
+
+  const_iterator cend() const {
+    return const_iterator(ValueLinkField::FieldPtr4StructPtr(&(list_head_.End())));
+  }
+
+  iterator erase(const_iterator i) {
+    list_head_.Erase(&(*(i.unconst())));
+    ++i;
+    return i.unconst();
+  }
+
+  iterator erase(const_iterator l, const_iterator r) {
+    while (l != r) {
+      list_head_.Erase(&(*(l.unconst())));
+      ++l;
+    }
+    return r.unconst();
+  }
+
+  reference front() { return list_head_.Begin(); }
+
+  const_reference front() const { return list_head_.Begin(); }
+
+  reference back() { return list_head_.Last(); }
+
+  const_reference back() const { return list_head_.Last(); }
+
+  iterator insert(const_iterator i, reference value) {
+    iterator tmp = i.unconst();
+    list_head_.InsertAfter(&(*(--tmp)), &value);
+    ObjectMsgPtrUtil::Ref(&value);
+    return iterator(ValueLinkField::FieldPtr4StructPtr(&value));
+  }
+
+  template<class Iter>
+  void insert(const_iterator i, Iter l, Iter r) {
+    for(; l!=r; ++l){
+      this->insert(i, *l);
+    }
+  }
+
+  iterator iterator_to(reference value) {
+    return iterator(ValueLinkField::FieldPtr4StructPtr(&value));
+  }
+
+  const_iterator iterator_to(const_reference value) {
+    return const_iterator(ValueLinkField::FieldPtr4StructPtr(&value));
+  }
+
+  void push_back(reference value) {
+    list_head_.PushBack(&value);
+    ObjectMsgPtrUtil::Ref(&value);
+  }
+  /************************************hsj iterator****************************/
+
   value_type* Next(value_type* ptr) {
     if (ptr == nullptr) { return nullptr; }
     value_type* next = list_head_.Next(ptr);
