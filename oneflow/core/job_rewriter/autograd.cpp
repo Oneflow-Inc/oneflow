@@ -938,12 +938,11 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     const SbpParallel& model_sbp = model_op_node->SbpParallel4Lbi(lbi);
-    bool broadcast = false;
-    int64_t split_axis = 0;
+    std::string sbp_str = "";
     if (model_sbp.has_broadcast_parallel()) {
-      broadcast = true;
+      sbp_str = "B";
     } else if (model_sbp.has_split_parallel()) {
-      split_axis = model_sbp.split_parallel().axis();
+      sbp_str = "S(" + std::to_string(model_sbp.split_parallel().axis()) + ")";
     } else {
       UNIMPLEMENTED();
     }
@@ -952,12 +951,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
             .Op("parallel_cast")
             .Input("in", GenLogicalBlobName(diff_lbi))
             .Output("out")
-            .Attr("identity", false)
-            .Attr("broadcast", broadcast)
-            .Attr("split_axis", split_axis)
-            .Attr("grad_identity", true)
-            .Attr("grad_broadcast", false)
-            .Attr("grad_split_axis", static_cast<int64_t>(0))
+            .Attr("sbp_parallel", sbp_str)
             .ScopeSymbolId(scope_symbol_id)
             .Build();
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),

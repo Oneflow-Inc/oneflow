@@ -147,36 +147,26 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
         name = id_util.UniqueStr("ParallelCast_")
 
     def parse_distribute(dist):
-        identity = True
-        broadcast = False
-        split_axis = 0
+        dist_str = ""
         if dist is None:
             pass
         elif type(dist) is oneflow_api.distribute.SplitDistribute:
-            identity = False
-            split_axis = dist.axis
+            dist_str = "S({})".format(dist.axis)
         elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
-            identity = False
-            broadcast = True
+            dist_str = "B"
         else:
             raise ValueError("unsupported distribute")
-        return identity, broadcast, split_axis
+        return dist_str
 
-    identity, broadcast, split_axis = parse_distribute(distribute)
-    grad_identity, grad_broadcast, grad_split_axis = parse_distribute(
-        gradient_distribute
-    )
+    sbp_parallel = parse_distribute(distribute)
+    grad_sbp_parallel = parse_distribute(gradient_distribute)
     op = (
         oneflow.user_op_builder(name)
         .Op("parallel_cast")
         .Input("in", [input])
         .Output("out")
-        .Attr("identity", identity)
-        .Attr("broadcast", broadcast)
-        .Attr("split_axis", split_axis)
-        .Attr("grad_identity", grad_identity)
-        .Attr("grad_broadcast", grad_broadcast)
-        .Attr("grad_split_axis", grad_split_axis)
+        .Attr("sbp_parallel", sbp_parallel)
+        .Attr("grad_sbp_parallel", grad_sbp_parallel)
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()

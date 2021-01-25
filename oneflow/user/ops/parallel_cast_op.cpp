@@ -15,18 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include <re2/re2.h>
 
 namespace oneflow {
 
 REGISTER_USER_OP("parallel_cast")
     .Input("in")
     .Output("out")
-    .Attr<bool>("identity")
-    .Attr<bool>("broadcast")
-    .Attr<int64_t>("split_axis")
-    .Attr<bool>("grad_identity")
-    .Attr<bool>("grad_broadcast")
-    .Attr<int64_t>("grad_split_axis")
+    .Attr<std::string>("sbp_parallel", "")
+    .Attr<std::string>("grad_sbp_parallel", "")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
@@ -36,23 +33,24 @@ REGISTER_USER_OP("parallel_cast")
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
       const std::string& ibn = GenRepeatedBn("in", 0);
       const std::string& obn = GenRepeatedBn("out", 0);
-      bool identity = ctx->Attr<bool>("identity");
-      bool broadcast = ctx->Attr<bool>("broadcast");
-      int64_t split_axis = ctx->Attr<int64_t>("split_axis");
-      if (identity) {
+      const auto& sbp_parallel_str = ctx->Attr<std::string>("sbp_parallel");
+      if (sbp_parallel_str == "") {
         const auto& sbp_parallel = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       } else {
         SbpParallel sbp_parallel;
-        if (broadcast) {
+        int split_axis = 0;
+        if (sbp_parallel_str == "B") {
           sbp_parallel.mutable_broadcast_parallel();
-        } else {
+        } else if (RE2::FullMatch(sbp_parallel_str, "S\\((\\d)\\)", &split_axis)) {
           const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
           int64_t num_axes = in_desc.shape().NumAxes();
           CHECK_GE_OR_RETURN(split_axis, 0);
           CHECK_LT_OR_RETURN(split_axis, num_axes);
           sbp_parallel.mutable_split_parallel()->set_axis(split_axis);
+        } else {
+          UNIMPLEMENTED();
         }
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
@@ -63,24 +61,19 @@ REGISTER_USER_OP("parallel_cast")
 REGISTER_USER_OP_GRAD("parallel_cast")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
       if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
-        bool identity = ctx->FwOp().attr<bool>("grad_identity");
-        bool broadcast = ctx->FwOp().attr<bool>("grad_broadcast");
-        int64_t split_axis = ctx->FwOp().attr<int64_t>("grad_split_axis");
-        if (identity) {
+        const auto& grad_sbp_parallel_str = ctx->FwOp().attr<std::string>("grad_sbp_parallel");
+        if (grad_sbp_parallel_str == "") {
           ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
                                                 "in", 0);
         } else {
+          CHECK(grad_sbp_parallel_str == "B"
+                || RE2::FullMatch(grad_sbp_parallel_str, "S\\(\\d\\)"));
           const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
           ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
             return builder.OpTypeName("parallel_cast")
                 .InputBind("in", ctx->FwOp().output_grad("out", 0))
                 .Output("out")
-                .Attr("identity", identity)
-                .Attr("broadcast", broadcast)
-                .Attr("split_axis", split_axis)
-                .Attr("grad_identity", identity)
-                .Attr("grad_broadcast", broadcast)
-                .Attr("grad_split_axis", split_axis)
+                .Attr("sbp_parallel", grad_sbp_parallel_str)
                 .Build();
           });
           ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
