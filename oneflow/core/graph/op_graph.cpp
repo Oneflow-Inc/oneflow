@@ -308,7 +308,6 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
   for (const std::string& bn : op().input_bns()) { Check(bn); }
   for (const std::string& bn : op().output_bns()) { Check(bn); }
   for (const std::string& bn : op().tmp_bns()) { Check(bn); }
-  for (const std::string& bn : op().const_buf_bns()) { Check(bn); }
 }
 
 const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
