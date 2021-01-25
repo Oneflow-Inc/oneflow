@@ -350,7 +350,6 @@ Maybe<double> BwGetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
     return cost / ctx->parallel_desc().parallel_num();
   }
   return cost;
-
 }
 
 REGISTER_USER_OP("normalization_grad")

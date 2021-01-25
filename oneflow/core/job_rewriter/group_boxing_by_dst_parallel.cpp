@@ -39,7 +39,7 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       const SbpParallel& consumer_sbp = node->SbpParallel4BnInOp(ibn);
 #ifdef COVER_BY_B_
       // We actually don't have any copy cost for an upstream opeartor with Broadcast SBPParallel.
-      if(producer_sbp.has_broadcast_parallel()) continue;
+      if (producer_sbp.has_broadcast_parallel()) continue;
 #endif  // COVER_BY_B_
       // if we have downstream placement different from upstream placement
       if (producer.parallel_desc() != node->parallel_desc() || producer_sbp != consumer_sbp) {

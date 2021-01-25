@@ -717,9 +717,14 @@ Maybe<double> Operator::GetComputeComplexity(
       const SbpParallel& sbp = (*sbp_bn_in_op2sbp_parallel)[bn];
 
       double total_cost = logical_blob_desc.shape().elem_cnt();
-      if (sbp.has_split_parallel())
-        complexity_ += total_cost / parallel_desc.parallel_num();
-      else
+      if (sbp.has_split_parallel()) {
+        const int32_t axis = sbp.split_parallel().axis();
+        if (axis >= logical_blob_desc.shape().NumAxes()
+            || logical_blob_desc.shape().At(axis) < parallel_desc.parallel_num())
+          complexity_ += GetMaxVal<float>();
+        else
+          complexity_ += total_cost / parallel_desc.parallel_num();
+      } else
         complexity_ += total_cost;
     }
   };
