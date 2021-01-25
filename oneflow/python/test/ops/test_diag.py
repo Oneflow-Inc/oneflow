@@ -114,8 +114,8 @@ def forward_compare_with_np(device_type, input_tensor, dim, dtype):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
+    func_config.default_data_type(type_name_to_flow_type[dtype])
+    func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
     input_shape = input_tensor.shape
     input_dtype = input_tensor.dtype
@@ -131,9 +131,9 @@ def forward_compare_with_np(device_type, input_tensor, dim, dtype):
     check_point = flow.train.CheckPoint()
     check_point.init()
     forward_of_out = diag_forward(input_tensor)
-    print(forward_of_out)
 
     forward_np_out = diag_forward_np(input_tensor, dim)
+
     assert np.allclose(forward_of_out, forward_np_out)
 
 
@@ -142,8 +142,8 @@ def backward_compare_with_np(device_type, input_tensor, dim, dtype):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.default_data_type(flow.float)
-    func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
+    func_config.default_data_type(type_name_to_flow_type[dtype])
+    func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
     output_np = diag_forward_np(input_tensor, dim)
     output_shape = output_np.shape
@@ -195,7 +195,7 @@ def backward_compare_with_np(device_type, input_tensor, dim, dtype):
 
 def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(np.float32)
-    input_tensor = input_tensor * 10
+    # input_tensor = input_tensor * 10
     input_tensor = input_tensor.reshape(input_shape).astype(dtype)
     forward_compare_with_np(device_type, input_tensor, dim, dtype)
     if dtype == "float32" or dtype == "double":
@@ -206,16 +206,16 @@ def test_fun(device_type, input_shape, dim, dtype):
 class TestCast(flow.unittest.TestCase):
     def test_cast1(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["input_shape"] = [(3, 3)]
-        arg_dict["dim"] = [2]
+        arg_dict["dim"] = [1]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
 
     def test_cast2(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["input_shape"] = [(3, 3)]
         arg_dict["dim"] = [-1]
         arg_dict["dtype"] = ["float32", "double"]
@@ -224,7 +224,7 @@ class TestCast(flow.unittest.TestCase):
 
     def test_cast3(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["input_shape"] = [(3, 3)]
         arg_dict["dim"] = [0]
         arg_dict["dtype"] = ["float32", "double"]
@@ -233,7 +233,7 @@ class TestCast(flow.unittest.TestCase):
 
     def test_cast4(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["input_shape"] = [(3)]
         arg_dict["dim"] = [0]
         arg_dict["dtype"] = ["float32", "double"]
@@ -242,7 +242,7 @@ class TestCast(flow.unittest.TestCase):
 
     def test_cast5(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["input_shape"] = [(3)]
         arg_dict["dim"] = [2]
         arg_dict["dtype"] = ["float32", "double"]
@@ -251,7 +251,7 @@ class TestCast(flow.unittest.TestCase):
 
     def test_cast6(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["input_shape"] = [(3)]
         arg_dict["dim"] = [-3]
         arg_dict["dtype"] = ["float32", "double"]
