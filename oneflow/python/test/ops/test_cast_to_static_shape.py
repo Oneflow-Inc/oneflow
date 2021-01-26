@@ -49,9 +49,12 @@ def _make_cast_to_static_shape_fn(
         x: flow.typing.ListNumpy.Placeholder(shape=shape, dtype=dtype)
     ) -> flow.typing.ListNumpy:
         x_var = flow.get_variable(
-            name="x_var", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer(),
+            name="x_var",
+            shape=(1,),
+            dtype=flow.float32,
+            initializer=flow.zeros_initializer(),
         )
-        x = x + x_var
+        x = x + flow.cast(x_var, dtype=dtype)
         y = flow.cast_to_static_shape(x)
         test_case.assertFalse(y.is_dynamic)
         if require_grad:
