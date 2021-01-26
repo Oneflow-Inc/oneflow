@@ -27,7 +27,7 @@ import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
 import oneflow_api
-from typing import Union, Optional
+from typing import Union, Optional, Sequence
 
 
 @oneflow_export("repeat")
@@ -167,6 +167,75 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
         .Output("out")
         .Attr("sbp_parallel", sbp_parallel)
         .Attr("grad_sbp_parallel", grad_sbp_parallel)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("hierarchical_parallel_cast")
+def api_hierarchical_parallel_cast(
+    input: oneflow_api.BlobDesc,
+    parallel_hierarchy: Sequence[int],
+    parallel_distribution: Sequence[str],
+    grad_mode: Optional[str] = None,
+    grad_parallel_hierarchy: Sequence[int] = None,
+    grad_parallel_distribution: Sequence[str] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    func = enable_if.unique([parallel_cast])
+    return func(
+        input,
+        parallel_hierarchy=parallel_hierarchy,
+        parallel_distribution=parallel_distribution,
+        grad_mode=grad_mode,
+        grad_parallel_hierarchy=grad_parallel_hierarchy,
+        grad_parallel_distribution=grad_parallel_distribution,
+        name=name,
+    )
+
+
+@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
+def hierarchical_parallel_cast(
+    input,
+    parallel_hierarchy,
+    parallel_distribution,
+    grad_mode,
+    grad_parallel_hierarchy,
+    grad_parallel_distribution,
+    name,
+):
+    if name is None:
+        name = id_util.UniqueStr("HierarchicalParallelCast_")
+
+    def distribute_to_str(dist):
+        dist_str = ""
+        if dist is None:
+            pass
+        elif type(dist) is oneflow_api.distribute.SplitDistribute:
+            dist_str = "S({})".format(dist.axis)
+        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
+            dist_str = "B"
+        else:
+            raise ValueError("unsupported distribute")
+        return dist_str
+
+    op = (
+        oneflow.user_op_builder(name)
+        .Op("hierarchical_parallel_cast")
+        .Input("in", [input])
+        .Output("out")
+        .Attr("parallel_hierarchy", parallel_hierarchy)
+        .Attr(
+            "parallel_distribution", list(map(distribute_to_str, parallel_distribution))
+        )
+        .Attr("grad_mode", grad_mode or "restore")
+        .Attr("grad_parallel_hierarchy", grad_parallel_hierarchy or [])
+        .Attr(
+            "grad_parallel_distribution",
+            list(map(distribute_to_str, grad_parallel_distribution))
+            if grad_parallel_distribution
+            else [],
+        )
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()

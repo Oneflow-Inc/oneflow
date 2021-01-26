@@ -52,9 +52,13 @@ class IdentityKernel final : public user_op::OpKernel {
 
 REGISTER_IDENTITY_KERNEL("identity", DeviceType::kCPU)
 REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kCPU)
+REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast", DeviceType::kCPU)
+REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast_like", DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_IDENTITY_KERNEL("identity", DeviceType::kGPU)
 REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kGPU)
+REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast", DeviceType::kGPU)
+REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast_like", DeviceType::kGPU)
 #endif
 
 }  // namespace
