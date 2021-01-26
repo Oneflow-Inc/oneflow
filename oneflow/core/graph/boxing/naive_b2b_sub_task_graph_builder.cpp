@@ -28,18 +28,12 @@ Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
       && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
     std::vector<TaskNode*> nearest_src_comp_tasks;
     FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
-      const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(out_id));
-      const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(out_id));
-      const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(
-          dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
-      const int64_t nearest_src_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
-          src_parallel_desc, dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
-
+      const int64_t nearest_src_parallel_id =
+          SubTskGphBuilderUtil::FindNearestParallelId(src_parallel_desc, dst_parallel_desc, out_id);
       TaskNode* nearest_src_node = sorted_src_tasks.at(nearest_src_parallel_id);
-
       CHECK_NOTNULL(nearest_src_node);
       TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
-                                          dst_machine_id, dst_mem_zone_id);
+                                          dst_parallel_desc, out_id);
       sorted_dst_tasks->push_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),

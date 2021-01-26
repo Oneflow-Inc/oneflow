@@ -101,16 +101,6 @@ bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const cfg::ErrorProto& erro
   return error.has_boxing_not_supported_error();
 }
 
-int64_t SubTskGphBuilderUtil::GetMemZoneId(const int64_t machine_id, const int64_t dev_phy_id,
-                                           const DeviceType& device_type) {
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
-  if (device_type == DeviceType::kCPU) {
-    return id_mgr->CpuMemZoneId();
-  } else {
-    return id_mgr->GpuMemZoneId(dev_phy_id);
-  }
-}
-
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
   if (src->machine_id() != dst->machine_id()) {
     return kDistanceDiffMachine;
@@ -144,6 +134,20 @@ int64_t SubTskGphBuilderUtil::GetDistance(
       return kDistanceSameMachine;
     }
   }
+}
+
+int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
+                                          const int64_t src_parallel_id,
+                                          const ParallelDesc& dst_parallel_desc,
+                                          const int64_t dst_parallel_id) {
+  const int64_t src_machine_id =
+      CHECK_JUST(src_parallel_desc.MachineId4ParallelId(src_parallel_id));
+  const int64_t src_dev_phy_id = CHECK_JUST(src_parallel_desc.DeviceId4ParallelId(src_parallel_id));
+  const int64_t dst_machine_id =
+      CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
+  const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
+  return GetDistance(src_machine_id, src_dev_phy_id, src_parallel_desc.device_type(),
+                     dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
 }
 
 }  // namespace oneflow

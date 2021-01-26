@@ -34,6 +34,8 @@ class SubTskGphBuilderCtx final {
   virtual TaskGraph* task_graph();
   TaskNode* GetProxyNode(TaskNode* src_node, int64_t src_mem_zone_id, int64_t dst_machine_id,
                          int64_t dst_mem_zone_id);
+  TaskNode* GetProxyNode(TaskNode* src_node, int64_t src_mem_zone_id,
+                         const ParallelDesc& dst_parallel_desc, const int64_t dst_parallel_id);
   template<typename T1, typename T2>
   void ConnectAll121(const std::vector<T1*>& src_nodes, const std::vector<T2*>& dst_nodes) {
     CHECK_EQ(src_nodes.size(), dst_nodes.size());

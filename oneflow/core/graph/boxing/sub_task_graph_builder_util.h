@@ -46,13 +46,11 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
-  static int64_t GetDistance(const TaskNode* src, const int64_t machine_id,
-                             const int64_t dev_phy_id, const DeviceType& device_type);
   static int64_t GetDistance(const int64_t src_machine_id, const int64_t src_dev_phy_id,
                              const DeviceType& src_device_type, const int64_t dst_machine_id,
                              const int64_t dst_dev_phy_id, const DeviceType& dst_device_type);
-  static int64_t GetMemZoneId(const int64_t machine_id, const int64_t dev_phy_id,
-                              const DeviceType& device_type);
+  static int64_t GetDistance(const ParallelDesc& src_parallel_desc, const int64_t src_parallel_id,
+                             const ParallelDesc& dst_parallel_desc, const int64_t dst_parallel_id);
 
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
@@ -78,18 +76,14 @@ struct SubTskGphBuilderUtil {
     return from_nodes.at(idx);
   }
 
-  static int64_t FindNearestParallelId(const ParallelDesc& from_pd, const int64_t to_machine_id,
-                                       const int64_t to_dev_phy_id,
-                                       const DeviceType& to_device_type) {
+  static int64_t FindNearestParallelId(const ParallelDesc& from_parallel_desc,
+                                       const ParallelDesc& to_parallel_desc,
+                                       const int64_t to_parallel_id) {
     int64_t nearest_from_parallel_idx = -1;
     int64_t nearest_distance = SubTskGphBuilderUtil::kDistanceMax;
-    const DeviceType& from_device_type = from_pd.device_type();
-    for (int64_t i = 0; i < from_pd.parallel_num(); ++i) {
-      const int64_t from_machine_id = CHECK_JUST(from_pd.MachineId4ParallelId(i));
-      const int64_t from_dev_phy_id = CHECK_JUST(from_pd.DeviceId4ParallelId(i));
-      int64_t distance =
-          SubTskGphBuilderUtil::GetDistance(from_machine_id, from_dev_phy_id, from_device_type,
-                                            to_machine_id, to_dev_phy_id, to_device_type);
+    for (int64_t i = 0; i < from_parallel_desc.parallel_num(); ++i) {
+      int64_t distance = SubTskGphBuilderUtil::GetDistance(from_parallel_desc, i, to_parallel_desc,
+                                                           to_parallel_id);
       if (distance < nearest_distance) {
         nearest_from_parallel_idx = i;
         nearest_distance = distance;

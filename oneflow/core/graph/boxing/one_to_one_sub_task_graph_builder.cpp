@@ -28,14 +28,9 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
       || (src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num()
           && src_sbp_parallel == dst_sbp_parallel)) {
     for (int64_t i = 0; i < src_parallel_desc.parallel_num(); ++i) {
-      const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(i));
-      const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(i));
-      const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(
-          dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
       TaskNode* src_node = sorted_src_tasks.at(i);
       // TODO(liujuncheng): use lbi
-      TaskNode* proxy =
-          ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_machine_id, dst_mem_zone_id);
+      TaskNode* proxy = ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_parallel_desc, i);
       sorted_dst_tasks->push_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),

@@ -183,13 +183,9 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         && src_sbp_parallel.split_parallel().axis() == 0) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
-        const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(i));
-        const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(i));
-        const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(
-            dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
         TaskNode* src_node = sorted_src_tasks.at(i);
         TaskNode* src_node_proxy =
-            ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_machine_id, dst_mem_zone_id);
+            ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_parallel_desc, i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
@@ -279,12 +275,9 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
-        const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(out_id));
-        const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(out_id));
-        const int64_t dst_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(
-            dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
         const int64_t nearest_src_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
-            src_parallel_desc, dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
+            src_parallel_desc, dst_parallel_desc, out_id);
+
         TaskNode* src_node = sorted_src_tasks.at(nearest_src_parallel_id);
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
@@ -293,8 +286,8 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
                          Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_machine_id));
         slice_node->ConnectToSrcNodeWithSlice(src_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
-        TaskNode* slice_node_proxy = ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(),
-                                                       dst_machine_id, dst_mem_zone_id);
+        TaskNode* slice_node_proxy =
+            ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), dst_parallel_desc, out_id);
         // allgather
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, out_id, op_name, lbi,
@@ -335,17 +328,11 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       int64_t root_parallel_id = -1;
       if (src_parallel_desc.device_type() == DeviceType::kCPU) {
         auto* cpu_src_node = sorted_src_tasks.front();
-        root_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
-            dst_parallel_desc, cpu_src_node->machine_id(), cpu_src_node->GpuPhyId(),
-            cpu_src_node->device_type());
-        const int64_t root_machine_id =
-            CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(root_parallel_id));
-        const int64_t root_dev_phy_id =
-            CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(root_parallel_id));
-        const int64_t root_mem_zone_id = SubTskGphBuilderUtil::GetMemZoneId(
-            root_machine_id, root_dev_phy_id, dst_parallel_desc.device_type());
+        root_parallel_id =
+            SubTskGphBuilderUtil::FindNearestParallelId(dst_parallel_desc, src_parallel_desc, 0);
         gpu_src_node = ctx->GetProxyNode(cpu_src_node, cpu_src_node->MemZoneId121(),
-                                         root_machine_id, root_mem_zone_id);
+                                         dst_parallel_desc, root_parallel_id);
+
       } else if (src_parallel_desc.device_type() == DeviceType::kGPU) {
         root_parallel_id = FindRootParallelId(dst_parallel_desc, src_parallel_desc);
         gpu_src_node = sorted_src_tasks.front();
