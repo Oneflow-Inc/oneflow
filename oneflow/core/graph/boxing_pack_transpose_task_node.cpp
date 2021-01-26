@@ -19,14 +19,18 @@ limitations under the License.
 namespace oneflow {
 
 void BoxingPackTransposeTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
-                                       const LogicalBlobId& lbi, const int64_t dst_split_axis,
+                                       const LogicalBlobId& lbi, const Shape& logical_shape,
+                                       const SbpParallel& src_sbp_parallel,
+                                       const SbpParallel& dst_sbp_parallel,
                                        const int64_t parallel_num) {
   lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   set_area_id(area_id);
-  dst_split_axis_ = dst_split_axis;
+  logical_shape_ = logical_shape;
   parallel_num_ = parallel_num;
+  src_sbp_parallel_ = src_sbp_parallel;
+  dst_sbp_parallel_ = dst_sbp_parallel;
 }
 
 void BoxingPackTransposeTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -42,11 +46,13 @@ void BoxingPackTransposeTaskNode::ConsumeAllRegsts() {
 void BoxingPackTransposeTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
-  op_conf.set_name("System-Boxing-S2S-All2All-Pack-" + NewUniqueId());
+  op_conf.set_name("System-Boxing-Pack-Transpose-" + NewUniqueId());
   op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
-  *op_conf.mutable_boxing_s2s_all2all_pack_conf()->mutable_lbi() = lbi_;
-  op_conf.mutable_boxing_s2s_all2all_pack_conf()->set_dst_split_axis(dst_split_axis_);
-  op_conf.mutable_boxing_s2s_all2all_pack_conf()->set_num_ranks(parallel_num_);
+  *op_conf.mutable_boxing_pack_transpose_conf()->mutable_lbi() = lbi_;
+  logical_shape_.ToProto(op_conf.mutable_boxing_pack_transpose_conf()->mutable_logical_shape());
+  *op_conf.mutable_boxing_pack_transpose_conf()->mutable_src_sbp_parallel() = src_sbp_parallel_;
+  *op_conf.mutable_boxing_pack_transpose_conf()->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
+  op_conf.mutable_boxing_pack_transpose_conf()->set_num_ranks(parallel_num_);
   std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));

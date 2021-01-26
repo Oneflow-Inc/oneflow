@@ -27,10 +27,10 @@ class BoxingUnpackTransposeTaskNode : public TaskNode {
   ~BoxingUnpackTransposeTaskNode() override = default;
 
   void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi,
-            const Shape& logical_shape, const int64_t src_split_axis, const int64_t dst_split_axis,
-            const int64_t parallel_num);
+            const Shape& logical_shape, const SbpParallel& src_sbp_parallel,
+            const SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
 
-  TaskType GetTaskType() const override { return TaskType::kBoxingS2SAll2AllUnpack; }
+  TaskType GetTaskType() const override { return TaskType::kBoxingUnpackTranspose; }
 
  private:
   void BuildExecGphAndRegst() override;
@@ -40,8 +40,8 @@ class BoxingUnpackTransposeTaskNode : public TaskNode {
 
   LogicalBlobId lbi_;
   Shape logical_shape_;
-  int64_t src_split_axis_;
-  int64_t dst_split_axis_;
+  SbpParallel src_sbp_parallel_;
+  SbpParallel dst_sbp_parallel_;
   int64_t parallel_num_;
 };
 

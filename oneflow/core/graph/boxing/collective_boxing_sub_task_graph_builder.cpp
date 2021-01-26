@@ -164,6 +164,65 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
   }
 };
 
+class NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder final : public SubTskGphBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder);
+  NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder() = default;
+  ~NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder() override = default;
+
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_src_tasks,
+                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
+                                      const ParallelDesc& src_parallel_desc,
+                                      const ParallelDesc& dst_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const SbpParallel& src_sbp_parallel,
+                                      const SbpParallel& dst_sbp_parallel,
+                                      const Shape& time_shape) const override {
+    if (dst_parallel_desc.Equals(src_parallel_desc)
+        && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
+        && dst_parallel_desc.device_type() == DeviceType::kGPU
+        && dst_parallel_desc.parallel_num() > 1
+        && SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
+        && logical_blob_desc.shape().At(dst_sbp_parallel.split_parallel().axis())
+                   % dst_parallel_desc.parallel_num()
+               == 0
+        && dst_sbp_parallel.split_parallel().axis() != 0) {
+      const std::string op_name =
+          "System-Boxing-NcclCollectiveBoxingReduceScatterTranspose-" + NewUniqueId();
+      FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
+        TaskNode* src_node = sorted_src_tasks.at(i);
+        BoxingPackTransposeTaskNode* pack_node =
+            ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
+        pack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
+                        logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
+                        src_parallel_desc.parallel_num());
+        Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), pack_node);
+
+        auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
+        NcclInitCollectiveNode(
+            collective_node, src_parallel_desc, i, op_name, lbi,
+            BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type()),
+            OpType::kOpTypeReduceScatter, -1);
+        Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
+
+        BoxingUnpackTransposeTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
+        unpack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
+                          logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
+                          src_parallel_desc.parallel_num());
+        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
+        sorted_dst_tasks->push_back(unpack_node);
+      }
+      return TRY(BuildSubTskGphBuilderStatus(
+          "NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder", ""));
+    } else {
+      return Error::BoxingNotSupportedError();
+    }
+  }
+};
+
 class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingAllGatherSubTskGphBuilder);
@@ -200,6 +259,65 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         sorted_dst_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
+    } else {
+      return Error::BoxingNotSupportedError();
+    }
+  }
+};
+
+class NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder final : public SubTskGphBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder);
+  NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder() = default;
+  ~NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder() override = default;
+
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_src_tasks,
+                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
+                                      const ParallelDesc& src_parallel_desc,
+                                      const ParallelDesc& dst_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const SbpParallel& src_sbp_parallel,
+                                      const SbpParallel& dst_sbp_parallel,
+                                      const Shape& time_shape) const override {
+    if (dst_parallel_desc.EqualsIgnoringDeviceType(src_parallel_desc)
+        && !SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)
+        && SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)
+        && dst_parallel_desc.device_type() == DeviceType::kGPU
+        && dst_parallel_desc.parallel_num() > 1
+        && logical_blob_desc.shape().At(0) % dst_parallel_desc.parallel_num() == 0
+        && SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
+        && src_sbp_parallel.split_parallel().axis() != 0) {
+      const std::string op_name =
+          "System-Boxing-NcclCollectiveBoxingTransposeAllGather-" + NewUniqueId();
+      FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
+        TaskNode* src_node = sorted_src_tasks.at(i);
+        TaskNode* src_node_proxy =
+            ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_parallel_desc, i);
+        BoxingPackTransposeTaskNode* pack_node =
+            ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
+        pack_node->Init(src_node_proxy->machine_id(), src_node_proxy->thrd_id(),
+                        src_node_proxy->area_id(), lbi, logical_blob_desc.shape(), src_sbp_parallel,
+                        dst_sbp_parallel, src_parallel_desc.parallel_num());
+        Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), pack_node);
+
+        auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
+        NcclInitCollectiveNode(
+            collective_node, dst_parallel_desc, i, op_name, lbi,
+            BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type()),
+            OpType::kOpTypeAllGather, -1);
+        Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
+        BoxingUnpackTransposeTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
+        unpack_node->Init(src_node_proxy->machine_id(), src_node_proxy->thrd_id(),
+                          src_node_proxy->area_id(), lbi, logical_blob_desc.shape(),
+                          src_sbp_parallel, dst_sbp_parallel, src_parallel_desc.parallel_num());
+        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
+        sorted_dst_tasks->push_back(unpack_node);
+      }
+      return TRY(BuildSubTskGphBuilderStatus(
+          "NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -408,7 +526,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         BoxingPackTransposeTaskNode* pack_node =
             ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
         pack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
-                        dst_sbp_parallel.split_parallel().axis(), src_parallel_desc.parallel_num());
+                        logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
+                        src_parallel_desc.parallel_num());
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
@@ -419,8 +538,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         BoxingUnpackTransposeTaskNode* unpack_node =
             ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
         unpack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
-                          logical_blob_desc.shape(), src_sbp_parallel.split_parallel().axis(),
-                          dst_sbp_parallel.split_parallel().axis(),
+                          logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                           src_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
         sorted_dst_tasks->push_back(unpack_node);
@@ -440,7 +558,9 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new NcclCollectiveBoxingAllReduceSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());
+  builders.emplace_back(new NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingAllGatherSubTskGphBuilder());
+  builders.emplace_back(new NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceSubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());

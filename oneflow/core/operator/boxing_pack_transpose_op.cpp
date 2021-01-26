@@ -19,11 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingS2SAll2AllPackOp : public Operator {
+class BoxingPackTransposeOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingS2SAll2AllPackOp);
-  BoxingS2SAll2AllPackOp() = default;
-  ~BoxingS2SAll2AllPackOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingPackTransposeOp);
+  BoxingPackTransposeOp() = default;
+  ~BoxingPackTransposeOp() override = default;
 
   void InitFromOpConf() override;
 
@@ -40,20 +40,20 @@ class BoxingS2SAll2AllPackOp : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void BoxingS2SAll2AllPackOp::InitFromOpConf() {
+void BoxingPackTransposeOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
-LogicalBlobId BoxingS2SAll2AllPackOp::lbi4ibn(const std::string& input_bn) const {
-  return this->op_conf().boxing_s2s_all2all_pack_conf().lbi();
+LogicalBlobId BoxingPackTransposeOp::lbi4ibn(const std::string& input_bn) const {
+  return this->op_conf().boxing_pack_transpose_conf().lbi();
 }
 
-LogicalBlobId BoxingS2SAll2AllPackOp::lbi4obn(const std::string& output_bn) const {
-  return this->op_conf().boxing_s2s_all2all_pack_conf().lbi();
+LogicalBlobId BoxingPackTransposeOp::lbi4obn(const std::string& output_bn) const {
+  return this->op_conf().boxing_pack_transpose_conf().lbi();
 }
 
-Maybe<void> BoxingS2SAll2AllPackOp::InferBlobDescs(
+Maybe<void> BoxingPackTransposeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -63,6 +63,6 @@ Maybe<void> BoxingS2SAll2AllPackOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kBoxingS2SAll2AllPackConf, BoxingS2SAll2AllPackOp);
+REGISTER_OP(OperatorConf::kBoxingPackTransposeConf, BoxingPackTransposeOp);
 
 }  // namespace oneflow

@@ -26,17 +26,21 @@ class BoxingPackTransposeTaskNode : public TaskNode {
   ~BoxingPackTransposeTaskNode() override = default;
 
   void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi,
-            const int64_t dst_split_axis, const int64_t parallel_num);
-  TaskType GetTaskType() const override { return TaskType::kBoxingS2SAll2AllPack; }
+            const Shape& logical_shape, const SbpParallel& src_sbp_parallel,
+            const SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
+  TaskType GetTaskType() const override { return TaskType::kBoxingPackTranspose; }
 
  private:
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
-  int64_t dst_split_axis_;
-  int64_t parallel_num_;
+
   LogicalBlobId lbi_;
+  Shape logical_shape_;
+  SbpParallel src_sbp_parallel_;
+  SbpParallel dst_sbp_parallel_;
+  int64_t parallel_num_;
 };
 
 }  // namespace oneflow
