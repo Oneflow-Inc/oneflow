@@ -41,6 +41,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* GetInputBlobFastestTimeShape() const;
   const Shape* GetInputOutputFastestTimeShape() const;
   const Shape* out_blob_time_shape() const;
+  const Shape* parallel_hierarchy() const;
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
@@ -66,6 +67,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   Shape* mut_out_blob_time_shape();
+  Shape* mut_parallel_hierarchy();
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }

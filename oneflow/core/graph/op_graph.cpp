@@ -151,6 +151,13 @@ Shape* OpNode::mut_out_blob_time_shape() {
   return out_blob_time_shape_.get();
 }
 
+const Shape* OpNode::parallel_hierarchy() const { return parallel_hierarchy_.get(); }
+
+Shape* OpNode::mut_parallel_hierarchy() {
+  if (!parallel_hierarchy_) { parallel_hierarchy_.reset(new Shape()); }
+  return parallel_hierarchy_.get();
+}
+
 const Shape* OpNode::GetInputBlobTimeShape(const std::string& bn_in_op) const {
   return MutSrcNode4Ibn(bn_in_op)->out_blob_time_shape();
 }
@@ -570,6 +577,14 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
+    const auto& ParallelHierarchy4Ibn = [&](const std::string& ibn) -> Maybe<const Shape*> {
+      const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
+      const auto* producer = op_node->MutSrcNode4InputLbi(lbi);
+      CHECK_NOTNULL_OR_RETURN(producer);
+      return producer->parallel_hierarchy();
+    };
+    JUST(op_node->mut_op()->InferParallelHierarchyIf(
+        ParallelHierarchy4Ibn, op_node->parallel_desc(), op_node->mut_parallel_hierarchy()));
     // Infer batch_axis
     const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
