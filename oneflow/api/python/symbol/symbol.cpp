@@ -52,7 +52,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         &ApiAddSymbol<cfg::OpNodeSignature, OpNodeSignature, OpNodeSignatureDesc>);
   m.def("GetOpNodeSignatureSymbol", &ApiGetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>);
   m.def("GetOpNodeSignatureSymbol", &ApiGetSymbolById<cfg::OpNodeSignature, OpNodeSignatureDesc>);
-
 }
 
 }  // namespace oneflow
