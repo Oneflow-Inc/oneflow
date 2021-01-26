@@ -30,6 +30,7 @@ message OpAttribute {
   optional BlobDescSignature logical_blob_desc_signature = 106;
   optional BatchAxisSignature batch_axis_signature = 107;
   optional ParallelSignature parallel_signature = 108;
+  optional ParallelDistributionSignature parallel_distribution_signature = 109;
 }
 
 message OpAttributeList {

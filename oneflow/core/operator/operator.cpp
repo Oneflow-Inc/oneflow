@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/job/parallel_distribution_infer_hint.h"
 
 namespace oneflow {
 
@@ -240,7 +241,7 @@ void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) co
 }
 
 Maybe<void> Operator::InferSbpSignatureIf(
-    const SbpSignature& sbp_sig_conf,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) {
@@ -249,8 +250,8 @@ Maybe<void> Operator::InferSbpSignatureIf(
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    return InferSbpSignature(mut_sbp_signature(), sbp_sig_conf, CalcOrderValue4SbpSig,
-                             SbpInferHint4Ibn, parallel_desc);
+    return InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                             parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
@@ -377,6 +378,12 @@ Maybe<void> Operator::InferParallelHierarchy(
 Maybe<const SbpSignature*> Operator::sbp_signature() const {
   CHECK_OR_RETURN(op_attribute_.has_sbp_signature()) << "sbp signature not infered";
   return &op_attribute_.sbp_signature();
+}
+
+Maybe<const ParallelDistributionSignature*> Operator::parallel_distribution_signature() const {
+  CHECK_OR_RETURN(op_attribute_.has_parallel_distribution_signature())
+      << "parallel distribution signature not infered";
+  return &op_attribute_.parallel_distribution_signature();
 }
 
 Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_op) const {
@@ -807,9 +814,32 @@ Maybe<void> InferOpSbpSignature(
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
-  JUST(op->InferSbpSignatureIf(sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                               parallel_desc));
+  JUST(op->InferSbpSignatureIf(op->mut_sbp_signature(), sbp_sig_conf, CalcOrderValue4SbpSig,
+                               SbpInferHint4Ibn, parallel_desc));
   return Maybe<void>::Ok();
+}
+
+Maybe<void> InferOpParallelDistributionSignature(
+    Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const Shape& parallel_hierarchy,
+    const HashMap<std::string, ParallelDistributionInferHint>& ibn2parallel_distribution_infer_hint,
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
+  CHECK_GT(parallel_hierarchy.NumAxes(), 0);
+  if (parallel_hierarchy.NumAxes() == 1) {
+    HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+    for (const auto& pair : ibn2parallel_distribution_infer_hint) {
+      CHECK_EQ(pair.second.parallel_distribution().sbp_parallel_size(), 1);
+      ibn2sbp_infer_hint.emplace(
+          pair.first, SbpInferHint(&pair.second.parallel_desc(), &pair.second.logical_blob_desc(),
+                                   &pair.second.parallel_distribution().sbp_parallel(0),
+                                   &pair.second.batch_axis()));
+    }
+    return InferOpSbpSignature(op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
+                               BatchAxis4BnInOp);
+  } else {
+    CHECK(sbp_sig_conf.bn_in_op2sbp_parallel().empty());
+    return Maybe<void>::Ok();
+  }
 }
 
 std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,

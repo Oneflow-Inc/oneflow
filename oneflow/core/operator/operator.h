@@ -153,7 +153,7 @@ class Operator {
       Shape* time_shape) const;
   // Infer blob's SbpSignature
   Maybe<void> InferSbpSignatureIf(
-      const SbpSignature& sbp_sig_conf,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
@@ -190,6 +190,10 @@ class Operator {
 
   Maybe<const SbpSignature*> sbp_signature() const;
   SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
+  Maybe<const ParallelDistributionSignature*> parallel_distribution_signature() const;
+  ParallelDistributionSignature* mut_parallel_distribution_signature() {
+    return op_attribute_.mutable_parallel_distribution_signature();
+  }
   BlobLastUsedSignature* mut_blob_last_used_signature() {
     return op_attribute_.mutable_blob_last_used_signature();
   }
