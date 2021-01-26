@@ -73,7 +73,22 @@ class InstructionsBuilder {
     return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
 
+  int64_t NewSymbolId();
+
+  int64_t NewObjectId(const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
+
+  int64_t NewSymbolId4OpNodeSignature(std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym);
+
+  void DeleteObject(compatible_py::BlobObject* blob_object);
+
  private:
+  void InitOpNodeSignatureDescSymbol(int64_t symbol_id,
+                                     std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym);
+
+  void _TryClearObject(compatible_py::BlobObject* blob_object);
+
+  void _DeleteObject(compatible_py::BlobObject* blob_object);
+
   template<typename T>
   Maybe<int64_t> CreateSymbolId(const T& conf) {
     return detail::CreateSymbolIdHelper<T>::Call(mut_id_generator(), mut_instruction_list(),
