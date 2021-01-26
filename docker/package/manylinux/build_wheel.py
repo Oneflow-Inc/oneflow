@@ -128,7 +128,7 @@ make -j`nproc` prepare_oneflow_third_party
 
 
 def get_python_bin(version):
-    assert version in ["3.5", "3.6", "3.7", "3.8"]
+    assert version in ["3.6", "3.7", "3.8"]
     py_ver = "".join(version.split("."))
     py_abi = f"cp{py_ver}-cp{py_ver}"
     if py_ver != "38":
@@ -172,6 +172,7 @@ def build_oneflow(
     docker_cmd = f"docker run --rm {common_docker_args}"
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 {cmake_cmd}
 cmake --build . -j `nproc`
 """

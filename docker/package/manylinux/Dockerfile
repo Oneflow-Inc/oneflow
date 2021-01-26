@@ -19,8 +19,11 @@ RUN mkdir -p /tmp && curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archi
 
 COPY dev-requirements.txt /tmp/dev-requirements.txt
 RUN /opt/python/cp36-cp36m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+    && /opt/python/cp36-cp36m/bin/pip cache purge \
     && /opt/python/cp37-cp37m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+    && /opt/python/cp37-cp37m/bin/pip cache purge \
     && /opt/python/cp38-cp38/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+    && /opt/python/cp38-cp38/bin/pip cache purge \
     && rm /tmp/dev-requirements.txt
 
 RUN curl -L $bazel_url -o /usr/local/bin/bazel \
