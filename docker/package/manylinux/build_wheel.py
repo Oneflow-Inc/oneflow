@@ -283,7 +283,6 @@ if __name__ == "__main__":
             bash_wrap = ""
             if args.xla:
                 bash_wrap = """
-source scl_source enable devtoolset-7
 gcc --version
 """
             else:
