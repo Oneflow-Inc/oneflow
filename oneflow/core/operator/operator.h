@@ -162,6 +162,9 @@ class Operator {
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
+  Maybe<void> InferParallelHierarchyIf(
+      std::function<Maybe<Shape>(const std::string&)> GetParallelHierarchy4Ibn,
+      const ParallelDesc& parallel_desc, Shape* shape);
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      const ParallelContext*, KernelConf*, const OpContext*,
                      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
@@ -221,7 +224,9 @@ class Operator {
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
-
+  virtual Maybe<void> InferParallelHierarchy(
+      std::function<Maybe<Shape>(const std::string&)> GetParallelHierarchy4Ibn,
+      const ParallelDesc& parallel_desc, Shape* shape);
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
     UNIMPLEMENTED();
     return nullptr;

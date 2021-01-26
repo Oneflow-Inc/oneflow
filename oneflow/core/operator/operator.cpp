@@ -296,6 +296,12 @@ Maybe<void> Operator::InferMirroredSignatureIf(
                                 parallel_desc);
 }
 
+Maybe<void> Operator::InferParallelHierarchyIf(
+    std::function<Maybe<Shape>(const std::string&)> GetParallelHierarchy4Ibn,
+    const ParallelDesc& parallel_desc, Shape* shape) {
+  return InferParallelHierarchy(GetParallelHierarchy4Ibn, parallel_desc, shape);
+}
+
 std::string DebugString4MirroredHint(
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
     const Operator& op) {
@@ -340,6 +346,31 @@ Maybe<void> Operator::InferMirroredSignature(
   };
   for (const auto& ibn : input_bns()) { SetIsMirroredParallel(ibn); }
   for (const auto& obn : output_bns()) { SetIsMirroredParallel(obn); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::InferParallelHierarchy(
+    std::function<Maybe<Shape>(const std::string&)> GetParallelHierarchy4Ibn,
+    const ParallelDesc& parallel_desc, Shape* shape) {
+  bool is_all_parallel_hierarchy_1d = true;
+  for (const auto& ibn : input_bns()) {
+    const auto parallel_hierarchy = JUST(GetParallelHierarchy4Ibn(ibn));
+    if (parallel_hierarchy->NumAxes() > 1) { is_all_parallel_hierarchy_1d = false; }
+  }
+  if (is_all_parallel_hierarchy_1d) {
+    *shape = Shape({parallel_desc.parallel_num()});
+  } else {
+    std::shared_ptr<Shape> op_parallel_hierarchy;
+    for (const auto& ibn : input_bns()) {
+      const auto parallel_hierarchy = JUST(GetParallelHierarchy4Ibn(ibn));
+      if (!op_parallel_hierarchy) {
+        op_parallel_hierarchy = parallel_hierarchy;
+      } else {
+        CHECK_EQ_OR_RETURN(*parallel_hierarchy, *op_parallel_hierarchy);
+      }
+    }
+    *shape = *op_parallel_hierarchy;
+  }
   return Maybe<void>::Ok();
 }
 

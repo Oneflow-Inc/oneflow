@@ -1,7 +1,10 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/common/shape.proto";
+
 message ParallelSignature {
   optional int64 op_parallel_desc_symbol_id = 1;
   map<string, int64> bn_in_op2parallel_desc_symbol_id = 2;
+  optional ShapeProto op_parallel_hierarchy = 3;
 }
