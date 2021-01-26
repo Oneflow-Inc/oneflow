@@ -71,6 +71,36 @@ vm::cfg::InstructionOperandProto InitSymbolOperand(int64_t val) {
   return operand;
 }
 
+vm::cfg::InstructionOperandProto SymbolOperand(int64_t val) {
+  vm::cfg::InstructionOperandProto operand;
+  SetSoleMirroredOperand(operand.mutable_symbol_operand(), val);
+  return operand;
+}
+
+vm::cfg::InstructionOperandProto ConstOperand(int64_t val) {
+  vm::cfg::InstructionOperandProto operand;
+  SetMirroredOperand(operand.mutable_const_operand(), val);
+  return operand;
+}
+
+vm::cfg::InstructionOperandProto OperandSeparator() {
+  vm::cfg::InstructionOperandProto operand;
+  operand.mutable_separator();
+  return operand;
+}
+
+vm::cfg::InstructionOperandProto Uint64Operand(int64_t val) {
+  vm::cfg::InstructionOperandProto operand;
+  operand.set_uint64_operand(val);
+  return operand;
+}
+
+vm::cfg::InstructionOperandProto Mut2Operand(int64_t val) {
+  vm::cfg::InstructionOperandProto operand;
+  SetMirroredOperand(operand.mutable_mut2_operand(), val);
+  return operand;
+}
+
 Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
                            vm::cfg::InstructionListProto* instruction_list) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
@@ -252,6 +282,181 @@ std::shared_ptr<Scope> InstructionsBuilder::GetScopeSymbol(
   return ApiGetSymbol<cfg::ScopeProto, Scope>(*scope_proto);
 }
 
+std::shared_ptr<compatible_py::BlobObject> InstructionsBuilder::BroadcastBlobReference(
+    const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_blob_object,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>> device_ids =
+      sole_mirrored_blob_object->parallel_desc_symbol()->machine_id2sorted_dev_phy_ids();
+  for (const auto& pair : *device_ids) { CHECK_EQ(pair.second->size(), 1); }
+  int64_t object_id = BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym);
+  std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+      CHECK_JUST(compatible_py::MakeBroadcastOpArgParallelAttribute(parallel_desc_sym));
+  std::shared_ptr<compatible_py::BlobObject> obj = std::make_shared<compatible_py::BlobObject>(
+      object_id, op_arg_parallel_attr, sole_mirrored_blob_object->op_arg_blob_attr());
+  obj->add_releaser(release_object_);
+  return obj;
+}
+
+std::vector<std::shared_ptr<ParallelDesc>> InstructionsBuilder::GetPhysicalParallelDescSymbols(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+  const auto& machine_id2device_ids = parallel_desc_symbol->machine_id2sorted_dev_phy_ids();
+  std::string device_tag = parallel_desc_symbol->parallel_conf().device_tag();
+  std::vector<std::shared_ptr<ParallelDesc>> phy_parallel_desc_symbols;
+  const auto AppendPhyParallelDescSymbol = [this, &phy_parallel_desc_symbols, &device_tag](
+                                               int64_t machine_id, int64_t device_id) {
+    std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+    parallel_conf->set_device_tag(device_tag);
+    parallel_conf->add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
+    phy_parallel_desc_symbols.emplace_back(GetParallelDescSymbol(parallel_conf));
+  };
+
+  for (const auto& pair : *machine_id2device_ids) {
+    for (int64_t device_id : *pair.second) { AppendPhyParallelDescSymbol(pair.first, device_id); }
+  }
+  return phy_parallel_desc_symbols;
+}
+
+std::shared_ptr<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(
+    const std::shared_ptr<Scope>& scope, bool is_mirrored) {
+  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+    if (is_mirrored) {
+      scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+    } else {
+      scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+    }
+  };
+
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
+}
+
+std::shared_ptr<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(
+    const std::shared_ptr<Scope>& scope, std::string scope_name) {
+  const auto SetScopeProto = [&scope_name](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+    scope_proto->add_scope_op_name_prefixes(scope_name);
+  };
+
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
+}
+
+std::shared_ptr<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
+    const std::shared_ptr<Scope>& scope,
+    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& setter) {
+  std::shared_ptr<cfg::ScopeProto> scope_proto = CHECK_JUST(scope->MakeChildScopeProto());
+  setter(scope_proto);
+  return GetScopeSymbol(scope_proto);
+}
+
+void InstructionsBuilder::BuildSendInstruction(
+    const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
+    const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
+    std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("SendBlob");
+  instruction.set_parallel_desc_symbol_id(
+      CHECK_JUST(src_blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(
+      SymbolOperand(CHECK_JUST(dst_parallel_desc_symbol->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(ConstOperand(src_blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(OperandSeparator());
+  for (uint64_t token_id : std::get<0>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(Uint64Operand(token_id));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(OperandSeparator());
+  for (uint64_t token_id : std::get<1>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(Uint64Operand(token_id));
+  }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+}
+
+void InstructionsBuilder::BuildRecvInstruction(
+    const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
+    const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
+    std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("ReceiveBlob");
+  instruction.set_parallel_desc_symbol_id(
+      CHECK_JUST(dst_blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(
+      SymbolOperand(CHECK_JUST(src_parallel_desc_symbol->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(Mut2Operand(dst_blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(OperandSeparator());
+  for (uint64_t token_id : std::get<0>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(Uint64Operand(token_id));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(OperandSeparator());
+  for (uint64_t token_id : std::get<1>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(Uint64Operand(token_id));
+  }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+}
+
+void InstructionsBuilder::CudaHostRegisterBlob(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("CudaHostRegisterBlob");
+  instruction.set_parallel_desc_symbol_id(
+      CHECK_JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(MutOperand(blob_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+}
+
+void InstructionsBuilder::CudaHostUnregisterBlob(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("CudaHostUnregisterBlob");
+  instruction.set_parallel_desc_symbol_id(
+      CHECK_JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(MutOperand(blob_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+}
+
+std::shared_ptr<compatible_py::BlobObject> InstructionsBuilder::NewBlobObject(
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
+  int64_t object_id = NewObjectId(op_arg_parallel_attr->parallel_desc_symbol());
+  std::shared_ptr<compatible_py::BlobObject> obj = std::make_shared<compatible_py::BlobObject>(
+      object_id, op_arg_parallel_attr, op_arg_blob_attr);
+  obj->add_releaser(release_object_);
+  return obj;
+}
+
+int64_t InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbolId(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  return NewObjectId(parallel_desc_sym);
+}
+
+void InstructionsBuilder::LazyReference(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, std::string interface_op_name) {
+  vm::cfg::InstructionProto instruction;
+  std::string device_tag = blob_object->parallel_desc_symbol()->device_tag();
+  instruction.set_instr_type_name(device_tag + ".LazyReference");
+  instruction.set_parallel_desc_symbol_id(
+      CHECK_JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(MutOperand(blob_object->object_id()));
+  std::shared_ptr<StringSymbol> interface_op_name_sym =
+      GetSymbol4String(blob_object->op_arg_blob_attr()->logical_blob_name());
+  instruction.mutable_operand()->Add()->CopyFrom(
+      SymbolOperand(CHECK_JUST(interface_op_name_sym->symbol_id())));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+}
+
+void InstructionsBuilder::ReplaceMirrored(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+    std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
+    std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("ReplaceMirrored");
+  instruction.set_parallel_desc_symbol_id(CHECK_JUST(parallel_desc_sym->symbol_id()));
+  for (const auto& lhs_object : lhs_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(Int64Operand(lhs_object->object_id()));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(OperandSeparator());
+  for (const auto& rhs_object : rhs_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(Int64Operand(rhs_object->object_id()));
+  }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+}
+
 void InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("InitStringSymbol");
@@ -316,6 +521,19 @@ void InstructionsBuilder::InitOpNodeSignatureDescSymbol(
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+}
+
+int64_t InstructionsBuilder::BroadcastObjectReference(
+    const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  int64_t object_id = CHECK_JUST(id_generator_->NewObjectId());
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("BroadcastObjectReference");
+  instruction.set_parallel_desc_symbol_id(CHECK_JUST(parallel_desc_sym->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(Int64Operand(object_id));
+  instruction.mutable_operand()->Add()->CopyFrom(Int64Operand(sole_mirrored_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return object_id;
 }
 
 void InstructionsBuilder::DeleteObject(compatible_py::BlobObject* blob_object) {

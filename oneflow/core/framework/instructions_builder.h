@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
+#include <tuple>
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/string_symbol.h"
@@ -100,6 +101,49 @@ class InstructionsBuilder {
 
   std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
 
+  std::shared_ptr<compatible_py::BlobObject> BroadcastBlobReference(
+      const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_blob_object,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
+
+  std::vector<std::shared_ptr<ParallelDesc>> GetPhysicalParallelDescSymbols(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
+
+  std::shared_ptr<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
+                                                     bool is_mirrored);
+
+  std::shared_ptr<Scope> BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
+                                                    std::string scope_name);
+
+  std::shared_ptr<Scope> BuildScopeByProtoSetter(
+      const std::shared_ptr<Scope>& scope,
+      const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& setter);
+
+  void BuildSendInstruction(const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
+                            const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
+                            std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids);
+
+  void BuildRecvInstruction(const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
+                            const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
+                            std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids);
+
+  void CudaHostRegisterBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+
+  void CudaHostUnregisterBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+
+  std::shared_ptr<compatible_py::BlobObject> NewBlobObject(
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr);
+
+  int64_t NewSharedOpKernelObjectId4ParallelConfSymbolId(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
+
+  void LazyReference(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                     std::string interface_op_name);
+
+  void ReplaceMirrored(const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+                       std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
+                       std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects);
+
   void DeleteObject(compatible_py::BlobObject* blob_object);
 
  private:
@@ -116,6 +160,10 @@ class InstructionsBuilder {
 
   void InitOpNodeSignatureDescSymbol(int64_t symbol_id,
                                      std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym);
+
+  int64_t BroadcastObjectReference(
+      const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
   void _TryClearObject(compatible_py::BlobObject* blob_object);
 

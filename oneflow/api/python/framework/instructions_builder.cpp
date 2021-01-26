@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
 
@@ -43,6 +44,20 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("GetParallelDescSymbol", &InstructionsBuilder::GetParallelDescSymbol)
       .def("GetScopeSymbol", &InstructionsBuilder::GetScopeSymbol)
       .def("NewSymbolId4OpNodeSignature", &InstructionsBuilder::NewSymbolId4OpNodeSignature)
+      .def("BroadcastBlobReference", &InstructionsBuilder::BroadcastBlobReference)
+      .def("GetPhysicalParallelDescSymbols", &InstructionsBuilder::GetPhysicalParallelDescSymbols)
+      .def("BuildScopeByProtoSetter", &InstructionsBuilder::BuildScopeByProtoSetter)
+      .def("BuildScopeWithNewIsMirrored", &InstructionsBuilder::BuildScopeWithNewIsMirrored)
+      .def("BuildScopeWithNewScopeName", &InstructionsBuilder::BuildScopeWithNewScopeName)
+      .def("BuildSendInstruction", &InstructionsBuilder::BuildSendInstruction)
+      .def("BuildRecvInstruction", &InstructionsBuilder::BuildRecvInstruction)
+      .def("CudaHostRegisterBlob", &InstructionsBuilder::CudaHostRegisterBlob)
+      .def("CudaHostUnregisterBlob", &InstructionsBuilder::CudaHostUnregisterBlob)
+      .def("_NewBlobObject", &InstructionsBuilder::NewBlobObject)
+      .def("NewSharedOpKernelObjectId4ParallelConfSymbolId",
+           &InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbolId)
+      .def("LazyReference", &InstructionsBuilder::LazyReference)
+      .def("ReplaceMirrored", &InstructionsBuilder::ReplaceMirrored)
       .def("DeleteObject", &InstructionsBuilder::DeleteObject);
 }
 
