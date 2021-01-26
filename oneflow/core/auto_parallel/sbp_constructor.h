@@ -16,6 +16,10 @@ limitations under the License.
 #ifndef SBP_CONSTRUCTOR_
 #define SBP_CONSTRUCTOR_
 
+#ifndef ENABLE_AUTO_PARALLEL
+#define ENABLE_AUTO_PARALLEL
+#endif
+
 #include "sbp_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
