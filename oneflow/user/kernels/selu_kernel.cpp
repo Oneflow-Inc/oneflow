@@ -21,19 +21,19 @@ namespace {
 
 template<template<typename> class Opt, typename T>
 struct ElemwiseSeluFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T lambda, T alpha, T* out, const T* in) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = Opt<T>(lambda, alpha)(in[i]); }
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T lambda_, T alpha_, T* out,
+                  const T* in) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = Opt<T>(lambda_, alpha_)(in[i]); }
   }
 };
 
 template<template<typename> class Opt, typename T>
 struct ElemwiseSeluGradFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T lambda, T alpha, T* dx, const T* y,
-                  const T* dy){
-      FOR_RANGE(int64_t, i, 0, elem_cnt) { dx[i] = Opt<T>(lambda, alpha)(x[i], dy[i]); }
-}
-};  // namespace
-};  // namespace oneflow
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T lambda_, T alpha_, T* dx, const T* y,
+                  const T* dy) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { dx[i] = Opt<T>(lambda_, alpha_)(y[i], dy[i]); }
+  }
+};
 
 }  // namespace
 

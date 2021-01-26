@@ -152,7 +152,9 @@ def _compare_selu_with_np(
         assert np.allclose(of_out_selu, np_out_selu, atol=1e-5)
 
 
-def _gen_arg_dict(shape, lambda_, alpha_, device_type, value_type, machine_ids, device_counts):
+def _gen_arg_dict(
+    shape, lambda_, alpha_, device_type, value_type, machine_ids, device_counts
+):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]
@@ -211,7 +213,7 @@ class Testselu1n2d(flow.unittest.TestCase):
     def test_selu_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 8, 4),
-            lambda_=2.0, 
+            lambda_=2.0,
             alpha_=1.0,
             device_type="gpu",
             value_type="float",

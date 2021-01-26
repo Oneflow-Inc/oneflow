@@ -3011,8 +3011,10 @@ def elu(
 
 @oneflow_export("nn.selu")
 def selu(
-    x: oneflow_api.BlobDesc, lambda_: float = 1.0507009873554804934193349852946, alpha_: float = 1.6732632423543772848170429916717, name: Optional[str] = None
-
+    x: oneflow_api.BlobDesc,
+    lambda_: float = 1.0507009873554804934193349852946,
+    alpha_: float = 1.6732632423543772848170429916717,
+    name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     r"""The SELU activation. 
 
