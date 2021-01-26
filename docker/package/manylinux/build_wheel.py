@@ -4,6 +4,12 @@ import tempfile
 from pathlib import Path
 
 
+def cuda_version_literal(cuda_version):
+    ret = "".join(cuda_version.split("."))
+    assert len(ret) == 3
+    return ret
+
+
 def build_arg_env(env_var_name: str):
     val = os.getenv(env_var_name)
     assert val, f"system environment variable {env_var_name} found empty"
@@ -19,9 +25,7 @@ def build_img(
     img_tag,
 ):
     cudnn_version = 7
-    if str(cuda_version).startswith("11"):
-        cudnn_version = 8
-    from_img = f"nvidia/cuda:{cuda_version}-cudnn{cudnn_version}-devel-centos7"
+    from_img = f"pytorch/manylinux-cuda{cuda_version_literal(cuda_version)}"
     tuna_build_arg = ""
     if use_tuna:
         tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
@@ -262,7 +266,7 @@ if __name__ == "__main__":
                 img_tag = args.custom_img_tag
                 skip_img = True
             else:
-                img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
+                img_tag = f"oneflow-wheel-builder:manylinux-cuda{cuda_version}"
             if skip_img == False:
                 build_img(
                     cuda_version,
@@ -305,15 +309,13 @@ gcc --version
                     bash_args,
                     bash_wrap,
                 )
-            cuda_version_literal = "".join(cuda_version.split("."))
-            assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
             package_name = None
             if args.cpu:
                 package_name = "oneflow_cpu"
             else:
-                package_name = f"oneflow_cu{cuda_version_literal}"
+                package_name = f"oneflow_cu{cuda_version_literal(cuda_version)}"
                 if args.xla:
                     package_name += "_xla"
             for python_version in python_versions:
