@@ -342,15 +342,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         return physical_blob_objects
 
-    def MakeReferenceBlobObject(self, blob_object, op_arg_parallel_attr):
-        parallel_desc_symbol = blob_object.parallel_desc_symbol
-        assert parallel_desc_symbol == op_arg_parallel_attr.parallel_desc_symbol
-        ref_blob_object = self._NewBlobObject(
-            op_arg_parallel_attr, blob_object.op_arg_blob_attr
-        )
-        self.ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
-        return ref_blob_object
-
     def MakeLazyRefBlobObject(self, interface_op_name):
         sess = session_ctx.GetDefaultSession()
         op_attribute = sess.OpAttribute4InterfaceOpName(interface_op_name)

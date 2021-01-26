@@ -457,6 +457,17 @@ void InstructionsBuilder::ReplaceMirrored(
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
 }
 
+std::shared_ptr<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
+    std::shared_ptr<compatible_py::BlobObject> blob_object,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {
+  std::shared_ptr<ParallelDesc> parallel_desc_symbol = blob_object->parallel_desc_symbol();
+  CHECK((*parallel_desc_symbol) == (*op_arg_parallel_attr->parallel_desc_symbol()));
+  std::shared_ptr<compatible_py::BlobObject> ref_blob_object =
+      NewBlobObject(op_arg_parallel_attr, blob_object->op_arg_blob_attr());
+  ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object});
+  return ref_blob_object;
+}
+
 void InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("InitStringSymbol");

@@ -58,6 +58,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            &InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbolId)
       .def("LazyReference", &InstructionsBuilder::LazyReference)
       .def("ReplaceMirrored", &InstructionsBuilder::ReplaceMirrored)
+      .def("MakeReferenceBlobObject", &InstructionsBuilder::MakeReferenceBlobObject)
       .def("DeleteObject", &InstructionsBuilder::DeleteObject);
 }
 

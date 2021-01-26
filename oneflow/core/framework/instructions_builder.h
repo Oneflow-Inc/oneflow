@@ -144,6 +144,10 @@ class InstructionsBuilder {
                        std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
                        std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects);
 
+  std::shared_ptr<compatible_py::BlobObject> MakeReferenceBlobObject(
+      std::shared_ptr<compatible_py::BlobObject> blob_object,
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
+
   void DeleteObject(compatible_py::BlobObject* blob_object);
 
  private:
