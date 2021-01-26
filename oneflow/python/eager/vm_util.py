@@ -391,13 +391,12 @@ class InstructionsBuilder(object):
         return blob_object
 
     def GetSymbol4String(self, string):
-        if symbol_storage.HasSymbol4String(string):
-            return symbol_storage.GetSymbol4String(string)
+        if oneflow_api.HasStringSymbol(string):
+            return oneflow_api.GetStringSymbol(string)
+
         symbol_id = self._NewSymbolId4String(string)
-        symbol = symbol_util.Symbol(symbol_id, string)
-        symbol_storage.SetSymbol4Id(symbol_id, symbol)
-        symbol_storage.SetSymbol4String(string, symbol)
-        return symbol
+        oneflow_api.AddStringSymbol(symbol_id, string)
+        return oneflow_api.GetStringSymbol(string)
 
     def GetJobConfSymbol(self, job_conf):
         if oneflow_api.HasJobConfSymbol(job_conf):
