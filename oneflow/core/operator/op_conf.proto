@@ -554,7 +554,7 @@ message BoxingIdentityOpConf {
   required LogicalBlobId lbi = 1;
 }
 
-message BoxingPackTransposeOpConf {
+message CollectiveBoxingPackOpConf {
   required LogicalBlobId lbi = 1;
   required SbpParallel src_sbp_parallel = 2;
   required SbpParallel dst_sbp_parallel = 3;
@@ -562,7 +562,7 @@ message BoxingPackTransposeOpConf {
   required ShapeProto logical_shape = 5;
 }
 
-message BoxingUnpackTransposeOpConf {
+message CollectiveBoxingUnpackOpConf {
   required LogicalBlobId lbi = 1;
   required SbpParallel src_sbp_parallel = 2;
   required SbpParallel dst_sbp_parallel = 3;
@@ -639,8 +639,8 @@ message OperatorConf {
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
-    BoxingPackTransposeOpConf boxing_pack_transpose_conf = 174;
-    BoxingUnpackTransposeOpConf boxing_unpack_transpose_conf = 175;
+    CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
+    CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;
     UserOpConf user_conf = 199;
 

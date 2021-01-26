@@ -19,11 +19,11 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BoxingUnpackTransposeKernel final : public KernelIf<device_type> {
+class CollectiveBoxingUnpackKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingUnpackTransposeKernel);
-  BoxingUnpackTransposeKernel() = default;
-  ~BoxingUnpackTransposeKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingUnpackKernel);
+  CollectiveBoxingUnpackKernel() = default;
+  ~CollectiveBoxingUnpackKernel() override = default;
 
  private:
   bool IsStateless() const override { return false; }
@@ -32,11 +32,11 @@ class BoxingUnpackTransposeKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-void BoxingUnpackTransposeKernel<device_type, T>::ForwardDataContent(
+void CollectiveBoxingUnpackKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
-  const BoxingUnpackTransposeOpConf& unpack_conf = this->op_conf().boxing_unpack_transpose_conf();
+  const CollectiveBoxingUnpackOpConf& unpack_conf = this->op_conf().collective_boxing_unpack_conf();
   const int64_t num_ranks = unpack_conf.num_ranks();
   const Shape logical_shape(unpack_conf.logical_shape());
 
@@ -78,16 +78,16 @@ void BoxingUnpackTransposeKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-#define REGISTER_BOXING_UNPACK_TRANSPOSE_KERNEL(device_type_v, dtype_pair)                   \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                                     \
-      OperatorConf::kBoxingUnpackTransposeConf, device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
-      BoxingUnpackTransposeKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>)
+#define REGISTER_COLLECTIVE_BOXING_UNPACK_KERNEL(device_type_v, dtype_pair)                   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                                      \
+      OperatorConf::kCollectiveBoxingUnpackConf, device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+      CollectiveBoxingUnpackKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BOXING_UNPACK_TRANSPOSE_KERNEL, DEVICE_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COLLECTIVE_BOXING_UNPACK_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 
 #if defined(WITH_CUDA)
-REGISTER_BOXING_UNPACK_TRANSPOSE_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
+REGISTER_COLLECTIVE_BOXING_UNPACK_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
 #endif
 
 }  // namespace oneflow

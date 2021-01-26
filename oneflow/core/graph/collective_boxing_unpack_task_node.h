@@ -13,22 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_BOXING_PACK_TRANSPOSE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_BOXING_PACK_TRANSPOSE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_COLLECTIVE_BOXING_UNPACK_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_COLLECTIVE_BOXING_UNPACK_TASK_NODE_H_
+
 #include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
-class BoxingPackTransposeTaskNode : public TaskNode {
+class CollectiveBoxingUnpackTaskNode : public TaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingPackTransposeTaskNode);
-  BoxingPackTransposeTaskNode() = default;
-  ~BoxingPackTransposeTaskNode() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingUnpackTaskNode);
+  CollectiveBoxingUnpackTaskNode() = default;
+  ~CollectiveBoxingUnpackTaskNode() override = default;
 
   void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi,
             const Shape& logical_shape, const SbpParallel& src_sbp_parallel,
             const SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
-  TaskType GetTaskType() const override { return TaskType::kBoxingPackTranspose; }
+
+  TaskType GetTaskType() const override { return TaskType::kCollectiveBoxingUnpack; }
 
  private:
   void BuildExecGphAndRegst() override;
@@ -45,4 +47,4 @@ class BoxingPackTransposeTaskNode : public TaskNode {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_PACK_TRANSPOSE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_COLLECTIVE_BOXING_UNPACK_TASK_NODE_H_

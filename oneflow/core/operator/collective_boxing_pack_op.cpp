@@ -19,11 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingUnpackTransposeOp : public Operator {
+class CollectiveBoxingPackOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingUnpackTransposeOp);
-  BoxingUnpackTransposeOp() = default;
-  ~BoxingUnpackTransposeOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingPackOp);
+  CollectiveBoxingPackOp() = default;
+  ~CollectiveBoxingPackOp() override = default;
 
   void InitFromOpConf() override;
 
@@ -40,35 +40,29 @@ class BoxingUnpackTransposeOp : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void BoxingUnpackTransposeOp::InitFromOpConf() {
+void CollectiveBoxingPackOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
-LogicalBlobId BoxingUnpackTransposeOp::lbi4ibn(const std::string& input_bn) const {
-  return this->op_conf().boxing_unpack_transpose_conf().lbi();
+LogicalBlobId CollectiveBoxingPackOp::lbi4ibn(const std::string& input_bn) const {
+  return this->op_conf().collective_boxing_pack_conf().lbi();
 }
 
-LogicalBlobId BoxingUnpackTransposeOp::lbi4obn(const std::string& output_bn) const {
-  return this->op_conf().boxing_unpack_transpose_conf().lbi();
+LogicalBlobId CollectiveBoxingPackOp::lbi4obn(const std::string& output_bn) const {
+  return this->op_conf().collective_boxing_pack_conf().lbi();
 }
 
-Maybe<void> BoxingUnpackTransposeOp::InferBlobDescs(
+Maybe<void> CollectiveBoxingPackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BoxingUnpackTransposeOpConf& unpack_conf = this->op_conf().boxing_unpack_transpose_conf();
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *GetBlobDesc4BnInOp("in");
-
-  Shape out_shape(unpack_conf.logical_shape());
-  if (unpack_conf.dst_sbp_parallel().has_split_parallel()) {
-    const int64_t dst_split_axis = unpack_conf.dst_sbp_parallel().split_parallel().axis();
-    out_shape.Set(dst_split_axis, out_shape.At(dst_split_axis) / unpack_conf.num_ranks());
-  }
-  out_blob_desc->mut_shape() = out_shape;
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().elem_cnt()});
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kBoxingUnpackTransposeConf, BoxingUnpackTransposeOp);
+REGISTER_OP(OperatorConf::kCollectiveBoxingPackConf, CollectiveBoxingPackOp);
 
 }  // namespace oneflow

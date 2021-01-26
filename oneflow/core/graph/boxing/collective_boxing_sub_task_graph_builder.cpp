@@ -19,8 +19,8 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
-#include "oneflow/core/graph/boxing_pack_transpose_task_node.h"
-#include "oneflow/core/graph/boxing_unpack_transpose_task_node.h"
+#include "oneflow/core/graph/collective_boxing_pack_task_node.h"
+#include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
@@ -193,8 +193,8 @@ class NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder final : public 
           "System-Boxing-NcclCollectiveBoxingReduceScatterTranspose-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
         TaskNode* src_node = sorted_src_tasks.at(i);
-        BoxingPackTransposeTaskNode* pack_node =
-            ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
+        CollectiveBoxingPackTaskNode* pack_node =
+            ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
         pack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
                         logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                         src_parallel_desc.parallel_num());
@@ -207,8 +207,8 @@ class NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder final : public 
             OpType::kOpTypeReduceScatter, -1);
         Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
 
-        BoxingUnpackTransposeTaskNode* unpack_node =
-            ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
+        CollectiveBoxingUnpackTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
         unpack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
                           logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                           src_parallel_desc.parallel_num());
@@ -295,8 +295,8 @@ class NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder final : public SubT
         TaskNode* src_node = sorted_src_tasks.at(i);
         TaskNode* src_node_proxy =
             ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_parallel_desc, i);
-        BoxingPackTransposeTaskNode* pack_node =
-            ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
+        CollectiveBoxingPackTaskNode* pack_node =
+            ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
         pack_node->Init(src_node_proxy->machine_id(), src_node_proxy->thrd_id(),
                         src_node_proxy->area_id(), lbi, logical_blob_desc.shape(), src_sbp_parallel,
                         dst_sbp_parallel, src_parallel_desc.parallel_num());
@@ -308,8 +308,8 @@ class NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder final : public SubT
             BlobDesc({logical_blob_desc.shape().elem_cnt()}, logical_blob_desc.data_type()),
             OpType::kOpTypeAllGather, -1);
         Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
-        BoxingUnpackTransposeTaskNode* unpack_node =
-            ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
+        CollectiveBoxingUnpackTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
         unpack_node->Init(src_node_proxy->machine_id(), src_node_proxy->thrd_id(),
                           src_node_proxy->area_id(), lbi, logical_blob_desc.shape(),
                           src_sbp_parallel, dst_sbp_parallel, src_parallel_desc.parallel_num());
@@ -523,8 +523,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       FOR_RANGE(int64_t, i, 0, src_parallel_desc.parallel_num()) {
         TaskNode* src_node = sorted_src_tasks.at(i);
 
-        BoxingPackTransposeTaskNode* pack_node =
-            ctx->task_graph()->NewNode<BoxingPackTransposeTaskNode>();
+        CollectiveBoxingPackTaskNode* pack_node =
+            ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
         pack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
                         logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                         src_parallel_desc.parallel_num());
@@ -535,8 +535,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
                                logical_blob_desc, OpType::kOpTypeAll2All, -1);
         Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
 
-        BoxingUnpackTransposeTaskNode* unpack_node =
-            ctx->task_graph()->NewNode<BoxingUnpackTransposeTaskNode>();
+        CollectiveBoxingUnpackTaskNode* unpack_node =
+            ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
         unpack_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi,
                           logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                           src_parallel_desc.parallel_num());

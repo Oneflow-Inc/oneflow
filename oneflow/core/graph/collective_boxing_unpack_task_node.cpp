@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/graph/boxing_pack_transpose_task_node.h"
+#include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
 
 namespace oneflow {
 
-void BoxingPackTransposeTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
-                                       const LogicalBlobId& lbi, const Shape& logical_shape,
-                                       const SbpParallel& src_sbp_parallel,
-                                       const SbpParallel& dst_sbp_parallel,
-                                       const int64_t parallel_num) {
+void CollectiveBoxingUnpackTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
+                                          const LogicalBlobId& lbi, const Shape& logical_shape,
+                                          const SbpParallel& src_sbp_parallel,
+                                          const SbpParallel& dst_sbp_parallel,
+                                          const int64_t parallel_num) {
   lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
@@ -33,26 +33,26 @@ void BoxingPackTransposeTaskNode::Init(int64_t machine_id, int64_t thrd_id, int6
   dst_sbp_parallel_ = dst_sbp_parallel;
 }
 
-void BoxingPackTransposeTaskNode::ProduceAllRegstsAndBindEdges() {
+void CollectiveBoxingUnpackTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", true, 1, 1);
   this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
 }
 
-void BoxingPackTransposeTaskNode::ConsumeAllRegsts() {
+void CollectiveBoxingUnpackTaskNode::ConsumeAllRegsts() {
   this->ForEachInDataEdge(
       [&](TaskEdge* in_edge) { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); });
 }
 
-void BoxingPackTransposeTaskNode::BuildExecGphAndRegst() {
+void CollectiveBoxingUnpackTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
-  op_conf.set_name("System-Boxing-Pack-Transpose-" + NewUniqueId());
+  op_conf.set_name("System-Collective-Boxing-Unpack-" + NewUniqueId());
   op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
-  *op_conf.mutable_boxing_pack_transpose_conf()->mutable_lbi() = lbi_;
-  logical_shape_.ToProto(op_conf.mutable_boxing_pack_transpose_conf()->mutable_logical_shape());
-  *op_conf.mutable_boxing_pack_transpose_conf()->mutable_src_sbp_parallel() = src_sbp_parallel_;
-  *op_conf.mutable_boxing_pack_transpose_conf()->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
-  op_conf.mutable_boxing_pack_transpose_conf()->set_num_ranks(parallel_num_);
+  *op_conf.mutable_collective_boxing_unpack_conf()->mutable_lbi() = lbi_;
+  logical_shape_.ToProto(op_conf.mutable_collective_boxing_unpack_conf()->mutable_logical_shape());
+  *op_conf.mutable_collective_boxing_unpack_conf()->mutable_src_sbp_parallel() = src_sbp_parallel_;
+  *op_conf.mutable_collective_boxing_unpack_conf()->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
+  op_conf.mutable_collective_boxing_unpack_conf()->set_num_ranks(parallel_num_);
   std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
@@ -62,7 +62,7 @@ void BoxingPackTransposeTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(nullptr);
 }
 
-void BoxingPackTransposeTaskNode::InferProducedDataRegstTimeShape() {
+void CollectiveBoxingUnpackTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 
