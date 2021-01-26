@@ -182,7 +182,7 @@ def api_hierarchical_parallel_cast(
     grad_parallel_distribution: Sequence[str] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    func = enable_if.unique([parallel_cast])
+    func = enable_if.unique([hierarchical_parallel_cast])
     return func(
         input,
         parallel_hierarchy=parallel_hierarchy,

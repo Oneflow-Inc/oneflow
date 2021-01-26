@@ -24,7 +24,7 @@ def _test(test_case):
     func_config.default_data_type(flow.float32)
 
     @flow.global_function("predict", function_config=func_config)
-    def test_fn(x: flow.typing.Numpy.Placeholder([1024, 1024]),) -> flow.typing.Numpy:
+    def test_fn(x: flow.typing.Numpy.Placeholder((1024, 1024)),) -> flow.typing.Numpy:
         x = flow.hierarchical_parallel_cast(
             x, parallel_hierarchy=[2, 2], parallel_distribution=["S(0)", "S(0)"]
         )
