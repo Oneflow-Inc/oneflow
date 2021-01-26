@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
+#include "oneflow/core/framework/infer_parallel_hierarchy_fn_context.h"
 
 namespace oneflow {
 
@@ -331,7 +332,6 @@ class UserOpBatchAxisContext : public user_op::BatchAxisContext {
 
 class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobTimeShapeFnContext {
  public:
-  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
   UserOpInferOutputBlobTimeShapeFnContext(
       const OperatorConf& op_conf,
       const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
@@ -359,6 +359,39 @@ class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobT
   HashMap<std::pair<std::string, int32_t>, Shape> arg2time_shape_;
   user_op::UserOpConfWrapper user_op_conf_;
   Shape* output_blob_time_shape_;
+};
+
+class UserOpInferParallelHierarchyFnContext : public user_op::InferParallelHierarchyFnContext {
+ public:
+  UserOpInferParallelHierarchyFnContext(
+      const OperatorConf& op_conf,
+      const std::function<Maybe<const Shape*>(const std::string&)>& GetParallelHierarchy4Ibn,
+      Shape* parallel_hierarchy)
+      : user_op_conf_(op_conf), parallel_hierarchy_(parallel_hierarchy) {
+    for (const auto& it : op_conf.user_conf().input()) {
+      const std::string& arg_name = it.first;
+      for (int32_t i = 0; i < it.second.s_size(); ++i) {
+        std::string ibn = GenRepeatedBn(arg_name, i);
+        arg2parallel_hierarchy_.emplace(std::make_pair(arg_name, i),
+                                        *CHECK_JUST(GetParallelHierarchy4Ibn(ibn)));
+      }
+    }
+  }
+  ~UserOpInferParallelHierarchyFnContext() override = default;
+
+  const Shape& ParallelHierarchy4InputArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) override {
+    return arg2parallel_hierarchy_.at(std::make_pair(arg_name, index));
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  Shape* mut_parallel_hierarchy() override { return parallel_hierarchy_; };
+
+ private:
+  HashMap<std::pair<std::string, int32_t>, Shape> arg2parallel_hierarchy_;
+  user_op::UserOpConfWrapper user_op_conf_;
+  Shape* parallel_hierarchy_;
 };
 
 void UserOp::InitFromOpConf() {
@@ -579,6 +612,19 @@ Maybe<void> UserOp::InferOutputBlobTimeShape(
     return val_->infer_output_blob_time_shape_fn(&infer_output_blob_time_shape_fn_ctx);
   } else {
     return Operator::InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+  }
+}
+
+Maybe<void> UserOp::InferParallelHierarchy(
+    std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
+    const ParallelDesc& parallel_desc, Shape* parallel_hierarchy) const {
+  if (val_->infer_parallel_hierarchy_fn) {
+    UserOpInferParallelHierarchyFnContext infer_parallel_hierarchy_fn_ctx(
+        this->op_conf(), GetParallelHierarchy4Ibn, parallel_hierarchy);
+    return val_->infer_parallel_hierarchy_fn(&infer_parallel_hierarchy_fn_ctx);
+  } else {
+    return Operator::InferParallelHierarchy(GetParallelHierarchy4Ibn, parallel_desc,
+                                            parallel_hierarchy);
   }
 }
 

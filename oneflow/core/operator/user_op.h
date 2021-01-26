@@ -54,6 +54,9 @@ class UserOp final : public Operator {
   Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const override;
+  Maybe<void> InferParallelHierarchy(
+      std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
+      const ParallelDesc& parallel_desc, Shape* shape) const override;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,

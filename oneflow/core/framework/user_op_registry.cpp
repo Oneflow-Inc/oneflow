@@ -182,6 +182,12 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferParallelHierarchyFn(
+    InferParallelHierarchyFn infer_parallel_hierarchy_fn) {
+  result_.infer_parallel_hierarchy_fn = std::move(infer_parallel_hierarchy_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;

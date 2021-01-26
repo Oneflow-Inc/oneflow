@@ -351,7 +351,7 @@ Maybe<void> Operator::InferMirroredSignature(
 
 Maybe<void> Operator::InferParallelHierarchy(
     std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
-    const ParallelDesc& parallel_desc, Shape* shape) {
+    const ParallelDesc& parallel_desc, Shape* shape) const {
   bool is_all_parallel_hierarchy_1d = true;
   for (const auto& ibn : input_bns()) {
     const auto* parallel_hierarchy = JUST(GetParallelHierarchy4Ibn(ibn));
