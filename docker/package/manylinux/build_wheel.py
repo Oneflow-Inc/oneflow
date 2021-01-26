@@ -267,7 +267,7 @@ if __name__ == "__main__":
                 img_tag = args.custom_img_tag
                 skip_img = True
             else:
-                img_tag = f"oneflow-wheel-builder:manylinux-cuda{cuda_version}"
+                img_tag = f"oneflow-wheel-cuda{cuda_version}"
             if skip_img == False:
                 build_img(
                     cuda_version,
