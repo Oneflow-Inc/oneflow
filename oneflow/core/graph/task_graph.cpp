@@ -534,7 +534,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   for (const LogicalBlobId& lbi : lbis) {
     std::vector<TaskNode*> src_nodes;
     if (lbis.size() == 1) {
-      for (CompTaskNode* src_node : sorted_src_comp_tasks) { src_nodes.push_back(src_node); }
+      src_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
     } else {
       for (CompTaskNode* src_node : sorted_src_comp_tasks) {
         auto* identity_node = NewNode<BoxingIdentityTaskNode>();
@@ -557,7 +557,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
         *src_logical->out_blob_time_shape()));
     boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(),
                         dst_logical->SoleOp()->op_name());
-    sub_tsk_gph_builder_ctx_->ConnectAll121(dst_nodes, sorted_dst_comp_tasks);
+    if (dst_nodes.size() == sorted_dst_comp_tasks.size()) {
+      sub_tsk_gph_builder_ctx_->ConnectAll121(dst_nodes, sorted_dst_comp_tasks);
+    } else if (sorted_dst_comp_tasks.size() == 1) {
+      FOR_RANGE(int64_t, i, 0, dst_nodes.size()) {
+        Connect<TaskNode>(dst_nodes.at(i), NewEdge(), sorted_dst_comp_tasks.front());
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
   }
 }
 
