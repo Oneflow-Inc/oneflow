@@ -16,6 +16,9 @@ class RoundTripOneFlowJobWrapperInterface {
   virtual std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(
       const std::string& op_name) const = 0;
   virtual std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const = 0;
+  virtual std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
+                                                        const std::string& ibn,
+                                                        const std::string& new_val) const = 0;
 };
 
 void RoundTripOneFlowJob(

@@ -1,6 +1,8 @@
 #include "OneFlow/OneFlowOps.h"
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -8,8 +10,13 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
@@ -42,12 +49,6 @@ namespace mlir {
 
 namespace {
 
-Attribute createEmptyDictionaryAttr(Builder &builder) { return builder.getDictionaryAttr({}); }
-::mlir::ValueRange putInVariadic(Builder &builder, Value v) {
-  ::mlir::ValueRange operands({v});
-  return operands;
-}
-
 using PbMessage = google::protobuf::Message;
 
 class Importer {
@@ -64,8 +65,16 @@ class Importer {
                                           std::vector<NamedAttribute> &attr_vec);
   LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
                                    std::vector<::mlir::Value> &operand_vec);
-  LogicalResult AddInputOutputSegments(const ::oneflow::OperatorConf &op,
+  LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
+                                    std::vector<::mlir::Value> &operand_vec);
+  LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types);
+  LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
+                                             std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddPlacement(const ::oneflow::OperatorConf &op,
+                             std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
                                        std::vector<NamedAttribute> &attr_vec);
+  LogicalResult AddResultSegmentSizes(int output_lbns_size, std::vector<NamedAttribute> &attr_vec);
   LogicalResult InsertOpResults(Operation *);
   LogicalResult processUserOp(const ::oneflow::OperatorConf &op);
   LogicalResult processSystemOp(const ::oneflow::OperatorConf &op);
@@ -100,19 +109,22 @@ class Importer {
   ModuleOp module;
   /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
   Location unknownLoc;
-  std::unordered_map<std::string, mlir::Value> lbn2result_;
+  std::unordered_map<std::string, mlir::OpResult> lbn2result_;
+  std::unordered_map<std::string, mlir::OpResult> op_name2ctrl_result_;
   const ::oneflow::Job *job;
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
 
 // TODO: add trait for this
-LogicalResult Importer::AddInputOutputSegments(const ::oneflow::OperatorConf &op,
-                                               std::vector<NamedAttribute> &attr_vec) {
+LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
+                                                     std::vector<NamedAttribute> &attr_vec) {
   std::vector<llvm::StringRef> input_lbn_segment_keys;
   std::vector<int> input_lbn_segment_sizes;
+  int data_input_size = 0;
   for (auto input : op.user_conf().input()) {
     input_lbn_segment_keys.push_back(input.first);
     input_lbn_segment_sizes.push_back(input.second.s_size());
+    data_input_size += input.second.s_size();
   }
   attr_vec.push_back(
       b.getNamedAttr("input_lbn_segment_keys", b.getStrArrayAttr(input_lbn_segment_keys)));
@@ -122,10 +134,13 @@ LogicalResult Importer::AddInputOutputSegments(const ::oneflow::OperatorConf &op
   std::vector<llvm::StringRef> output_lbns;
   std::vector<llvm::StringRef> output_lbn_segment_keys;
   std::vector<int> output_lbn_segment_sizes;
+  int data_output_size = 0;
   for (auto output : op.user_conf().output()) {
     output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
     output_lbn_segment_keys.push_back(output.first);
     output_lbn_segment_sizes.push_back(output.second.s_size());
+    data_output_size += output.second.s_size();
+    // TODO: merge this method with output types create
   }
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(output_lbns)));
   attr_vec.push_back(
@@ -223,8 +238,22 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     }
   }
 
-  AddInputOutputSegments(op, attr_vec);
+  AddUserOpInputOutputSegments(op, attr_vec);
 
+  return success();
+}
+
+LogicalResult Importer::AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
+                                            std::vector<::mlir::Value> &operand_vec) {
+  for (auto ctrl_in_op_name : op.ctrl_in_op_name()) {
+    if (op_name2ctrl_result_.find(ctrl_in_op_name) == op_name2ctrl_result_.end()) {
+      module.emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
+      return failure();
+    } else {
+      auto v = op_name2ctrl_result_.at(ctrl_in_op_name);
+      operand_vec.push_back(v);
+    }
+  }
   return success();
 }
 
@@ -235,7 +264,6 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
     return failure();
   }
   for (auto kv : op.user_conf().input()) {
-    // TODO: declare tensor containing field lbi
     for (int i = 0; i < kv.second.s_size(); i++) {
       const std::string &lbn = kv.second.s(i);
       if (lbn2result_.find(lbn) == lbn2result_.end()) {
@@ -250,11 +278,111 @@ LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
   return success();
 }
 
-LogicalResult Importer::InsertOpResults(Operation *created_op) {
-  for (auto output_lbn : llvm::enumerate(created_op->getAttrOfType<ArrayAttr>("output_lbns"))) {
-    lbn2result_.insert({output_lbn.value().dyn_cast<StringAttr>().getValue().str(),
-                        created_op->getResult(output_lbn.index())});
+LogicalResult Importer::AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
+                                               std::vector<NamedAttribute> &attr_vec) {
+  attr_vec.push_back(
+      b.getNamedAttr("operand_segment_sizes", b.getI32VectorAttr({input_lbns_size, ctrl_in_size})));
+  return success();
+}
+
+LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
+                                              std::vector<NamedAttribute> &attr_vec) {
+  attr_vec.push_back(
+      b.getNamedAttr("result_segment_sizes", b.getI32VectorAttr({output_lbns_size, 1})));
+  return success();
+}
+
+std::pair<unsigned, unsigned> getODSOperandIndexAndLength(Operation *op, unsigned index) {
+  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes");
+
+  unsigned start = 0;
+  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
+  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+  return {start, size};
+}
+
+::mlir::Operation::operand_range getODSOperands(Operation *op, unsigned index) {
+  auto valueRange = getODSOperandIndexAndLength(op, index);
+  return {std::next(op->operand_begin(), valueRange.first),
+          std::next(op->operand_begin(), valueRange.first + valueRange.second)};
+}
+
+OperandRange GetDataInputOperands(Operation *op) {
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) {
+    return getODSOperands(op, 0);
+  } else {
+    return op->getOperands();
   }
+}
+
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation *op) {
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("operand_segment_sizes")) {
+    return getODSOperands(op, 1);
+  } else {
+    return llvm::None;
+  }
+}
+
+std::pair<unsigned, unsigned> getODSResultIndexAndLength(Operation *op, unsigned index) {
+  auto sizeAttr = op->getAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes");
+
+  unsigned start = 0;
+  for (unsigned i = 0; i < index; ++i) start += (*(sizeAttr.begin() + i)).getZExtValue();
+  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+  return {start, size};
+}
+
+::mlir::Operation::result_range getODSResults(Operation *op, unsigned index) {
+  auto valueRange = getODSResultIndexAndLength(op, index);
+  return {std::next(op->result_begin(), valueRange.first),
+          std::next(op->result_begin(), valueRange.first + valueRange.second)};
+}
+
+ResultRange GetDataOutputResults(Operation *op) {
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes")) {
+    return getODSResults(op, 0);
+  } else {
+    return op->getOpResults();
+  }
+}
+
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation *op) {
+  if (op->hasAttrOfType<::mlir::DenseIntElementsAttr>("result_segment_sizes")) {
+    auto ctrl_output_result = getODSResults(op, 1);
+    if (ctrl_output_result.empty()) {
+      return llvm::None;
+    } else {
+      assert(ctrl_output_result.size() == 1);
+      return ctrl_output_result.back();
+    }
+  } else {
+    return llvm::None;
+  }
+}
+
+LogicalResult Importer::InsertOpResults(Operation *created_op) {
+  for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
+    auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
+    lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
+                        data_out.value().dyn_cast<OpResult>()});
+  }
+  if (auto ctrl_out = GetCtrlOutputResult(created_op)) {
+    op_name2ctrl_result_.insert({created_op->getAttrOfType<StringAttr>("op_name").getValue().str(),
+                                 ctrl_out->dyn_cast<OpResult>()});
+  }
+  return success();
+}
+
+LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types) {
+  out_types.append({RankedTensorType::get({}, b.getI1Type())});
+  return success();
+}
+
+LogicalResult Importer::AddPlacement(const ::oneflow::OperatorConf &op,
+                                     std::vector<NamedAttribute> &attr_vec) {
+  const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op.name());
+  std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
+  attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
   return success();
 }
 
@@ -265,10 +393,9 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   }
   const ::oneflow::UserOpConf &user_conf = op.user_conf();
   const std::string &op_type_name = user_conf.op_type_name();
-  const std::string &op_name = op.name();
-  const ::oneflow::ParallelConf &pc = job_wrapper.ParallelConf4OpName(op_name);
-  std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
+
   std::vector<NamedAttribute> attr_vec;
+  // TODO: exract function and handle these common attributes in system op
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
   if (op.has_trainable()) {
     attr_vec.push_back(b.getNamedAttr("trainable", b.getBoolAttr(op.trainable())));
@@ -276,23 +403,26 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_device_tag()) {
     attr_vec.push_back(b.getNamedAttr("device", b.getStringAttr(op.device_tag())));
   }
-  attr_vec.push_back(b.getNamedAttr("placement", b.getStrArrayAttr(device_vec)));
+  AddPlacement(op, attr_vec);
   attr_vec.push_back(b.getNamedAttr("scope_symbol_id", b.getI64IntegerAttr(op.scope_symbol_id())));
   attr_vec.push_back(
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  ArrayRef<NamedAttribute> named_attributes(attr_vec);
   if (failed(operandsFromUserOp(op, operand_vec))) { return failure(); }
+  AppendCtrlInOperand(op, operand_vec);
   ::mlir::ValueRange operands(operand_vec);
 
   Operation *created_op = nullptr;
-
   if (op_type_name == "constant") {
     auto t = user_conf.attr().at("is_floating_value").at_bool()
                  ? RankedTensorType::get({}, b.getF32Type())
                  : RankedTensorType::get({}, b.getI32Type());
-    created_op = b.create<oneflow::ConstantOp>(unknownLoc, t, operands, named_attributes);
+    auto out_types = llvm::SmallVector<Type, 8>();
+    out_types.append({t});
+    AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec);
+    ArrayRef<NamedAttribute> named_attributes(attr_vec);
+    created_op = b.create<oneflow::ConstantOp>(unknownLoc, out_types, operands, named_attributes);
   } else {
     auto out_types = llvm::SmallVector<Type, 8>();
     for (auto kv : op.user_conf().output()) {
@@ -300,7 +430,22 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
         out_types.append({RankedTensorType::get({}, b.getF32Type())});
       }
     }
-    OperationState state(unknownLoc, "oneflow." + op_type_name);
+    AppendCtrlOutType(out_types);
+    // OperationState state(unknownLoc, "oneflow." + op_type_name);
+    OperationState state(unknownLoc, "oneflow.user");
+    for (auto na : attr_vec) {
+      if (na.first.str() == "input_lbn_segment_sizes") {
+        int data_input_size = 0;
+        for (auto segment_size : na.second.dyn_cast<ArrayAttr>()) {
+          data_input_size += segment_size.dyn_cast<IntegerAttr>().getInt();
+        }
+        AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec);
+      }
+      if (na.first.str() == "output_lbns") {
+        AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec);
+      }
+    }
+    ArrayRef<NamedAttribute> named_attributes(attr_vec);
     state.addAttributes(named_attributes);
     state.addOperands(operands);
     state.addTypes(out_types);
@@ -329,12 +474,16 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   job_wrapper.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
   attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
+  AddPlacement(op, attr_vec);
   attr_vec.push_back(b.getNamedAttr("input_bns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
                                                      {input_bns.begin(), input_bns.end()}))));
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(std::vector<llvm::StringRef>(
                                                        {output_lbns.begin(), output_lbns.end()}))));
   OperationState state(unknownLoc, "oneflow.system");
+  attr_vec.push_back(b.getNamedAttr("op_type_case", b.getI32IntegerAttr(op.op_type_case())));
   attr_vec.push_back(b.getNamedAttr("op_name", b.getStringAttr(op.name())));
+  AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
+  AddResultSegmentSizes(output_lbns.size(), attr_vec);
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
@@ -346,10 +495,12 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
       operand_vec.push_back(v);
     }
   }
+  AppendCtrlInOperand(op, operand_vec);
   auto out_types = llvm::SmallVector<Type, 8>();
   for (auto output_lbn : output_lbns) {
     out_types.append({RankedTensorType::get({}, b.getF32Type())});
   }
+  AppendCtrlOutType(out_types);
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = b.createOperation(state);
@@ -381,6 +532,15 @@ LogicalResult Importer::processJob() {
   if (!returnOp) { b.create<ReturnOp>(unknownLoc); }
   module.push_back(function);
   return success();
+}
+
+void ConvertCtrlInputs(Operation *op, ::oneflow::OperatorConf &op_conf) {
+  if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
+    for (auto ctrl_in : ctrl_ins.getValue()) {
+      op_conf.add_ctrl_in_op_name(
+          ctrl_in.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+    }
+  }
 }
 
 void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
@@ -426,7 +586,7 @@ void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::s
 void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::string &err_str) {
   int output_key_idx = -1;
   int segment_offset = 0;
-  for (auto result_and_idx : llvm::enumerate(op->getOpResults())) {
+  for (auto result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {
       output_key_idx += 1;
@@ -514,21 +674,21 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
             case oneflow::DataType::DT_InvalidDataType:
               user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
               break;
-#define DEFINE_ONE_ELIF(datatype)                                 \
+#define DEFINE_ONE_CASE(datatype)                                 \
   case oneflow::DataType::DT_##datatype:                          \
     user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
     break;
-              DEFINE_ONE_ELIF(Char)
-              DEFINE_ONE_ELIF(Float)
-              DEFINE_ONE_ELIF(Double)
-              DEFINE_ONE_ELIF(Int8)
-              DEFINE_ONE_ELIF(Int32)
-              DEFINE_ONE_ELIF(Int64)
-              DEFINE_ONE_ELIF(UInt8)
-              DEFINE_ONE_ELIF(OFRecord)
-              DEFINE_ONE_ELIF(Float16)
-              DEFINE_ONE_ELIF(TensorBuffer)
-#undef DEFINE_ONE_ELIF
+              DEFINE_ONE_CASE(Char)
+              DEFINE_ONE_CASE(Float)
+              DEFINE_ONE_CASE(Double)
+              DEFINE_ONE_CASE(Int8)
+              DEFINE_ONE_CASE(Int32)
+              DEFINE_ONE_CASE(Int64)
+              DEFINE_ONE_CASE(UInt8)
+              DEFINE_ONE_CASE(OFRecord)
+              DEFINE_ONE_CASE(Float16)
+              DEFINE_ONE_CASE(TensorBuffer)
+#undef DEFINE_ONE_CASE
             default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
           }
         }
@@ -579,19 +739,41 @@ LogicalResult Importer::tryToUpdateJob() {
   new_job.CopyFrom(*job);
   new_job.clear_net();
   auto convertOps = [&](Operation *op) {
-    if (/* user op */ op->hasAttr("op_type_name")) {
+    if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
       ConvertUseropInputs(op, user_conf, err_str);
       ConvertUseropOutputs(op, user_conf, err_str);
       ConvertUseropAttributes(op, op_conf, err_str);
+      ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (/* system op */ llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
-      *(new_job.mutable_net()->add_op()) = job_wrapper.OpConf4OpName(op_name);
+      ::oneflow::OperatorConf op_conf = job_wrapper.OpConf4OpName(op_name);
+      for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
+        auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
+        std::string new_val =
+            result.getDefiningOp()
+                ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
+                .dyn_cast<StringAttr>()
+                .getValue()
+                .str();
+        job_wrapper.ReplaceInputLbnInOpCustomizedConf(
+            &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
+      }
+      ConvertCtrlInputs(op, op_conf);
+      *(new_job.mutable_net()->add_op()) = op_conf;
+    } else if (llvm::dyn_cast<ModuleTerminatorOp>(op)) {
+      // Do nothing
+    } else if (llvm::dyn_cast<ReturnOp>(op)) {
+      // Do nothing
+    } else if (llvm::dyn_cast<FuncOp>(op)) {
+      // Do nothing
     } else {
-      // TODO: check if is module_terminator
+      err_str = "failed to convert MLIR op: " + op->getName().getStringRef().str();
+      op->dump();
+      return;
     } /* convert op conf */
   };
   module.getBodyRegion().walk(convertOps);
@@ -610,21 +792,12 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
     module->dump();
   }
 
-  OwningRewritePatternList import_patterns;
-  auto applied = applyPatternsAndFoldGreedily(module.get(), std::move(import_patterns));
-  if (failed(applied)) { module->emitError("Failed to rewrite user ops"); }
+  mlir::PassManager pm(context);
+  pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  if (mlir::failed(pm.run(*module))) { module->emitError("Failed to run canonicalizer pass"); }
+
   if (debug) {
     std::cout << "optimized:\n";
-    module->dump();
-  }
-
-  OwningRewritePatternList export_patterns;
-  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(export_patterns)))) {
-    module->emitError("Failed to export user ops");
-  }
-
-  if (debug) {
-    std::cout << "to export:\n";
     module->dump();
   }
 }

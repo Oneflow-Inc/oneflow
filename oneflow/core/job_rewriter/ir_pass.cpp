@@ -68,6 +68,12 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     return ret;
   }
 
+  std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
+                                                const std::string& ibn,
+                                                const std::string& new_val) const {
+    return ::oneflow::ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, new_val);
+  }
+
  private:
   Job* job_;
   const OpGraph op_graph_;
