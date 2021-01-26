@@ -486,10 +486,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   } else {
     UNIMPLEMENTED();
   }
-  return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                         src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                         dst_sbp_parallel, lbi, logical_blob_desc,
-                                         "SliceBoxingSubTskGphBuilder", comment));
+  return TRY(BuildSubTskGphBuilderStatus("SliceBoxingSubTskGphBuilder", comment));
 }
 
 }  // namespace oneflow

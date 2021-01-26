@@ -116,10 +116,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
         sorted_dst_tasks->push_back(collective_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                             dst_sbp_parallel, lbi, logical_blob_desc,
-                                             "NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -159,10 +156,8 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
         Connect<TaskNode>(src_node, ctx->task_graph()->NewEdge(), collective_node);
         sorted_dst_tasks->push_back(collective_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_tasks.front(), sorted_dst_tasks->front(), src_parallel_desc, dst_parallel_desc,
-          src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-          "NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
+      return TRY(
+          BuildSubTskGphBuilderStatus("NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -204,10 +199,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         Connect<TaskNode>(src_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
         sorted_dst_tasks->push_back(collective_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                             dst_sbp_parallel, lbi, logical_blob_desc,
-                                             "NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -252,10 +244,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
           sorted_dst_ctrl_in_tasks->at(0).push_back(collective_node);
         }
       }
-      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                             dst_sbp_parallel, lbi, logical_blob_desc,
-                                             "NcclCollectiveBoxingReduceSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingReduceSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -316,8 +305,6 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         sorted_dst_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
-          sorted_src_tasks.front(), sorted_dst_tasks->front(), src_parallel_desc, dst_parallel_desc,
-          src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
           "CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
@@ -378,10 +365,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         }
         sorted_dst_tasks->push_back(collective_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                             dst_sbp_parallel, lbi, logical_blob_desc,
-                                             "NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }
@@ -441,10 +425,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
         sorted_dst_tasks->push_back(unpack_node);
       }
-      return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                             src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                             dst_sbp_parallel, lbi, logical_blob_desc,
-                                             "NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
+      return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
     } else {
       return Error::BoxingNotSupportedError();
     }

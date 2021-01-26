@@ -76,10 +76,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         sorted_dst_tasks->push_back(zeros_node);
       }
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                           src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                           dst_sbp_parallel, lbi, logical_blob_desc,
-                                           "NaiveB2PSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus("NaiveB2PSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }

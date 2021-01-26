@@ -35,10 +35,7 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
       TaskNode* proxy = ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_parallel_desc, i);
       sorted_dst_tasks->push_back(proxy);
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_tasks.front(), sorted_dst_tasks->front(),
-                                           src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-                                           dst_sbp_parallel, lbi, logical_blob_desc,
-                                           "OneToOneSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus("OneToOneSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }

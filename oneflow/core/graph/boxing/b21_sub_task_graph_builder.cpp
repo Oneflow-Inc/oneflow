@@ -36,9 +36,7 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
                                         dst_parallel_desc, dst_parallel_id);
     sorted_dst_tasks->push_back(proxy);
-    return TRY(BuildSubTskGphBuilderStatus(
-        sorted_src_tasks.front(), sorted_dst_tasks->front(), src_parallel_desc, dst_parallel_desc,
-        src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc, "B21SubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus("B21SubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }
