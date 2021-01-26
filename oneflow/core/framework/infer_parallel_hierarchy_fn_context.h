@@ -31,6 +31,7 @@ class InferParallelHierarchyFnContext {
   virtual const Shape& ParallelHierarchy4InputArgNameAndIndex(const std::string& arg_name,
                                                               int32_t index) = 0;
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  virtual int64_t parallel_num() const = 0;
   virtual Shape* mut_parallel_hierarchy() = 0;
 };
 

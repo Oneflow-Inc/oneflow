@@ -366,8 +366,10 @@ class UserOpInferParallelHierarchyFnContext : public user_op::InferParallelHiera
   UserOpInferParallelHierarchyFnContext(
       const OperatorConf& op_conf,
       const std::function<Maybe<const Shape*>(const std::string&)>& GetParallelHierarchy4Ibn,
-      Shape* parallel_hierarchy)
-      : user_op_conf_(op_conf), parallel_hierarchy_(parallel_hierarchy) {
+      const ParallelDesc& parallel_desc, Shape* parallel_hierarchy)
+      : user_op_conf_(op_conf),
+        parallel_hierarchy_(parallel_hierarchy),
+        parallel_num_(parallel_desc.parallel_num()) {
     for (const auto& it : op_conf.user_conf().input()) {
       const std::string& arg_name = it.first;
       for (int32_t i = 0; i < it.second.s_size(); ++i) {
@@ -386,12 +388,15 @@ class UserOpInferParallelHierarchyFnContext : public user_op::InferParallelHiera
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
+  int64_t parallel_num() const override { return parallel_num_; };
+
   Shape* mut_parallel_hierarchy() override { return parallel_hierarchy_; };
 
  private:
   HashMap<std::pair<std::string, int32_t>, Shape> arg2parallel_hierarchy_;
   user_op::UserOpConfWrapper user_op_conf_;
   Shape* parallel_hierarchy_;
+  int64_t parallel_num_;
 };
 
 void UserOp::InitFromOpConf() {
@@ -620,7 +625,7 @@ Maybe<void> UserOp::InferParallelHierarchy(
     const ParallelDesc& parallel_desc, Shape* parallel_hierarchy) const {
   if (val_->infer_parallel_hierarchy_fn) {
     UserOpInferParallelHierarchyFnContext infer_parallel_hierarchy_fn_ctx(
-        this->op_conf(), GetParallelHierarchy4Ibn, parallel_hierarchy);
+        this->op_conf(), GetParallelHierarchy4Ibn, parallel_desc, parallel_hierarchy);
     return val_->infer_parallel_hierarchy_fn(&infer_parallel_hierarchy_fn_ctx);
   } else {
     return Operator::InferParallelHierarchy(GetParallelHierarchy4Ibn, parallel_desc,
