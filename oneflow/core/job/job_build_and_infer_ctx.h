@@ -148,6 +148,7 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, std::vector<LogicalBlobId>> mirrored_lbi2sub_lbis_;
   HashMap<LogicalBlobId, ParallelDesc> mirrored_lbi2parallel_desc_;
   HashMap<LogicalBlobId, SbpParallel> mirrored_lbi2sbp_parallel_;
+  HashMap<std::string, Shape> op_name2parallel_hierarchy_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
   HashMap<std::string, bool> op_name2ancestors_need_no_grad_;
