@@ -385,41 +385,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         self._LazyReference(blob_object, interface_op_name)
         return blob_object
 
-    def GetSymbol4String(self, string):
-        if oneflow_api.HasStringSymbol(string):
-            return oneflow_api.GetStringSymbol(string)
-
-        symbol_id = self._NewSymbolId4String(string)
-        oneflow_api.AddStringSymbol(symbol_id, string)
-        return oneflow_api.GetStringSymbol(string)
-
-    def GetJobConfSymbol(self, job_conf):
-        if oneflow_api.HasJobConfSymbol(job_conf):
-            return oneflow_api.GetJobConfSymbol(job_conf)
-
-        symbol_id = self._NewSymbolId4JobConf(job_conf)
-        oneflow_api.AddJobConfSymbol(symbol_id, job_conf)
-        return oneflow_api.GetJobConfSymbol(job_conf)
-
-    def GetParallelDescSymbol(self, parallel_conf):
-        # parallel_conf is cfg
-        if not isinstance(
-            parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
-        ):
-            parallel_conf_cfg = placement_cfg.ParallelConf()
-            parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-            for device_name in parallel_conf.device_name:
-                parallel_conf_cfg.add_device_name(device_name)
-            parallel_conf = parallel_conf_cfg
-
-        if oneflow_api.HasPlacementSymbol(parallel_conf):
-            return oneflow_api.GetPlacementSymbol(parallel_conf)
-
-        symbol_id = self._NewSymbolId4ParallelConf(parallel_conf)
-        oneflow_api.AddPlacementSymbol(symbol_id, parallel_conf)
-
-        return oneflow_api.GetPlacementSymbol(parallel_conf)
-
     def BuildInitialScope(
         self, session_id, job_conf, device_tag, machine_device_ids, is_mirrored,
     ):
@@ -890,24 +855,9 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         obj.add_releaser(self.release_object())
         return obj
 
-    def _NewSymbolId4String(self, string):
-        symbol_id = self._NewSymbolId()
-        self._InitStringSymbol(symbol_id, string)
-        return symbol_id
-
-    def _NewSymbolId4ParallelConf(self, parallel_conf):
-        symbol_id = self.id_generator().NewSymbolId()
-        self._NewParallelConfSymbol(symbol_id, parallel_conf)
-        return symbol_id
-
     def _NewSymbolId4Scope(self, scope_proto):
         symbol_id = self._NewSymbolId()
         self._NewScopeSymbol(symbol_id, scope_proto)
-        return symbol_id
-
-    def _NewSymbolId4JobConf(self, job_conf):
-        symbol_id = self._NewSymbolId()
-        self._InitJobConfSymbol(symbol_id, job_conf)
         return symbol_id
 
     def _NewSymbolId4OpConf(self, op_conf):
@@ -1046,7 +996,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
-
     def _LazyReference(self, blob_object, interface_op_name):
         instruction = instr_cfg.InstructionProto()
         device_tag = blob_object.parallel_desc_symbol.device_tag
@@ -1075,26 +1024,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         return object_id
 
-    def _InitStringSymbol(self, symbol_id, string):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("InitStringSymbol")
-        instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        eager_symbol = eager_symbol_cfg.EagerSymbol()
-        eager_symbol.set_symbol_id(symbol_id)
-        eager_symbol.set_string_symbol(string)
-        self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
-
-    def _NewParallelConfSymbol(self, symbol_id, parallel_conf):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("NewParallelDescSymbol")
-        instruction.mutable_operand().Add().CopyFrom(_Int64Operand(symbol_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        eager_symbol = eager_symbol_cfg.EagerSymbol()
-        eager_symbol.set_symbol_id(symbol_id)
-        eager_symbol.mutable_parallel_conf_symbol().CopyFrom(parallel_conf)
-        self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
-
     def _NewScopeSymbol(self, symbol_id, scope_proto):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitScopeSymbol")
@@ -1103,16 +1032,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         eager_symbol = eager_symbol_cfg.EagerSymbol()
         eager_symbol.set_symbol_id(symbol_id)
         eager_symbol.mutable_scope_symbol().CopyFrom(scope_proto)
-        self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
-
-    def _InitJobConfSymbol(self, symbol_id, job_conf):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("InitJobDescSymbol")
-        instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        eager_symbol = eager_symbol_cfg.EagerSymbol()
-        eager_symbol.set_symbol_id(symbol_id)
-        eager_symbol.mutable_job_conf_symbol().CopyFrom(job_conf)
         self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):

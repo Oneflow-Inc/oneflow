@@ -18,6 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/id_generator.h"
+#include "oneflow/core/vm/string_symbol.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
@@ -79,9 +82,29 @@ class InstructionsBuilder {
 
   int64_t NewSymbolId4OpNodeSignature(std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym);
 
+  int64_t NewSymbolId4String(std::string str);
+
+  int64_t NewSymbolId4JobConf(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
+  int64_t NewSymbolId4ParallelConf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
+  std::shared_ptr<JobDesc> GetJobConfSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
+  std::shared_ptr<StringSymbol> GetSymbol4String(std::string str);
+
+  std::shared_ptr<ParallelDesc> GetParallelDescSymbol(
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
   void DeleteObject(compatible_py::BlobObject* blob_object);
 
  private:
+  void InitStringSymbol(int64_t symbol_id, std::string str);
+
+  void NewParallelConfSymbol(int64_t symbol_id,
+                             const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
+  void InitJobConfSymbol(int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
   void InitOpNodeSignatureDescSymbol(int64_t symbol_id,
                                      std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym);
 

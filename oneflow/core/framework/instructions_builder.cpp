@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
@@ -114,6 +115,14 @@ cfg::ScopeProto* MutEagerSymbolConf<cfg::ScopeProto>(eager::cfg::EagerSymbol* ea
   return eager_symbol->mutable_scope_symbol();
 }
 
+Maybe<void> AddStringSymbol(int64_t symbol_id, const std::string& data) {
+  JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(symbol_id, data));
+  auto* id_cache = JUST(GlobalMaybe<symbol::IdCache<std::string>>());
+  CHECK_OR_RETURN(!id_cache->Has(data));
+  JUST(id_cache->FindOrCreate(data, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 namespace detail {
@@ -179,11 +188,93 @@ int64_t InstructionsBuilder::NewObjectId(const std::shared_ptr<ParallelDesc>& pa
   return object_id;
 }
 
+int64_t InstructionsBuilder::NewSymbolId4String(std::string str) {
+  int64_t symbol_id = NewSymbolId();
+  InitStringSymbol(symbol_id, str);
+  return symbol_id;
+}
+
+int64_t InstructionsBuilder::NewSymbolId4JobConf(
+    const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
+  int64_t symbol_id = NewSymbolId();
+  InitJobConfSymbol(symbol_id, job_conf);
+  return symbol_id;
+}
+
+int64_t InstructionsBuilder::NewSymbolId4ParallelConf(
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  int64_t symbol_id = CHECK_JUST(id_generator_->NewSymbolId());
+  NewParallelConfSymbol(symbol_id, parallel_conf);
+  return symbol_id;
+}
+
+std::shared_ptr<StringSymbol> InstructionsBuilder::GetSymbol4String(std::string str) {
+  if (ApiHasSymbol<std::string>(str)) { return ApiGetSymbol<std::string, StringSymbol>(str); }
+  int64_t symbol_id = NewSymbolId4String(str);
+  CHECK_JUST(AddStringSymbol(symbol_id, str));
+  return ApiGetSymbol<std::string, StringSymbol>(str);
+}
+
+std::shared_ptr<JobDesc> InstructionsBuilder::GetJobConfSymbol(
+    const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
+  if (ApiHasSymbol<cfg::JobConfigProto>(*job_conf)) {
+    return ApiGetSymbol<cfg::JobConfigProto, JobDesc>(*job_conf);
+  }
+  int64_t symbol_id = NewSymbolId4JobConf(job_conf);
+  ApiAddSymbol<cfg::JobConfigProto, JobConfigProto, JobDesc>(symbol_id, *job_conf);
+  return ApiGetSymbol<cfg::JobConfigProto, JobDesc>(*job_conf);
+}
+
+std::shared_ptr<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  if (ApiHasSymbol<cfg::ParallelConf>(*parallel_conf)) {
+    return ApiGetSymbol<cfg::ParallelConf, ParallelDesc>(*parallel_conf);
+  }
+  int64_t symbol_id = NewSymbolId4ParallelConf(parallel_conf);
+  ApiAddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>(symbol_id, *parallel_conf);
+  return ApiGetSymbol<cfg::ParallelConf, ParallelDesc>(*parallel_conf);
+}
+
+void InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitStringSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(InitSymbolOperand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.set_string_symbol(str);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+}
+
 int64_t InstructionsBuilder::NewSymbolId4OpNodeSignature(
     std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym) {
   int64_t symbol_id = this->NewSymbolId();
   InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature_sym);
   return symbol_id;
+}
+
+void InstructionsBuilder::NewParallelConfSymbol(
+    int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("NewParallelDescSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(Int64Operand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.mutable_parallel_conf_symbol()->CopyFrom(*parallel_conf);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+}
+
+void InstructionsBuilder::InitJobConfSymbol(int64_t symbol_id,
+                                            const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitJobDescSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(InitSymbolOperand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.mutable_job_conf_symbol()->CopyFrom(*job_conf);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
 }
 
 void InstructionsBuilder::InitOpNodeSignatureDescSymbol(
