@@ -544,6 +544,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
       }
     }
     std::vector<TaskNode*> dst_nodes;
+    std::vector<std::vector<TaskNode*>> sorted_dst_ctrl_in_tasks;
+    sorted_dst_ctrl_in_tasks.resize(sorted_dst_comp_tasks.size());
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -552,8 +554,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), src_nodes, &dst_nodes, *src_parallel_desc,
-        *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel,
+        sub_tsk_gph_builder_ctx_.get(), src_nodes, &dst_nodes, &sorted_dst_ctrl_in_tasks,
+        *src_parallel_desc, *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel,
         *src_logical->out_blob_time_shape()));
     boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(),
                         dst_logical->SoleOp()->op_name());
@@ -565,6 +567,11 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
       }
     } else {
       UNIMPLEMENTED();
+    }
+    FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
+      for (TaskNode* ctrl_in_node : sorted_dst_ctrl_in_tasks.at(i)) {
+        ctrl_in_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i));
+      }
     }
   }
 }

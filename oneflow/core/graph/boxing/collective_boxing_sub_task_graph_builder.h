@@ -26,12 +26,16 @@ class CollectiveBoxingSubTskGphBuilder final : public SubTskGphBuilder {
   CollectiveBoxingSubTskGphBuilder();
   ~CollectiveBoxingSubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
-      std::vector<TaskNode*>* sorted_dst_tasks, const ParallelDesc& src_parallel_desc,
-      const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-      const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const override;
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_src_tasks,
+                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
+                                      const ParallelDesc& src_parallel_desc,
+                                      const ParallelDesc& dst_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const SbpParallel& src_sbp_parallel,
+                                      const SbpParallel& dst_sbp_parallel,
+                                      const Shape& time_shape) const override;
 
  private:
   std::unique_ptr<SubTskGphBuilder> chain_builder_;
