@@ -254,10 +254,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             get_delegate_blob_object=GetDelegateBlobObject,
         )
 
-    def DeleteObject(self, obj):
-        self._TryClearObject(obj)
-        self._DeleteObject(obj)
-
     def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
         instruction = instr_cfg.InstructionProto()
@@ -782,7 +778,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         if oneflow_api.HasOpNodeSignatureSymbol(new_op_node_signature):
             return oneflow_api.GetOpNodeSignatureSymbol(new_op_node_signature)
-        symbol_id = self._NewSymbolId4OpNodeSignature(new_op_node_signature)
+        symbol_id = self.NewSymbolId4OpNodeSignature(new_op_node_signature)
         oneflow_api.AddOpNodeSignatureSymbol(symbol_id, new_op_node_signature)
         return oneflow_api.GetOpNodeSignatureSymbol(symbol_id)
 
@@ -919,11 +915,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         self._InitOpConfSymbol(symbol_id, op_conf)
         return symbol_id
 
-    def _NewSymbolId4OpNodeSignature(self, op_node_signature_sym):
-        symbol_id = self._NewSymbolId()
-        self._InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature_sym)
-        return symbol_id
-
     def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
         return self._NewObjectId(parallel_desc_sym)
 
@@ -1055,22 +1046,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
-    def _NewSymbolId(self):
-        symbol_id = self.id_generator().NewSymbolId()
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("NewSymbol")
-        instruction.mutable_operand().Add().CopyFrom(_Int64Operand(symbol_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        return symbol_id
-
-    def _NewObjectId(self, parallel_desc_sym):
-        object_id = self.id_generator().NewObjectId()
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("NewObject")
-        instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(_Int64Operand(object_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        return object_id
 
     def _LazyReference(self, blob_object, interface_op_name):
         instruction = instr_cfg.InstructionProto()
@@ -1151,16 +1126,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         eager_symbol = oneflow_api.deprecated.MakeEagerSymbolByString(str(eager_symbol))
         self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
 
-    def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature_sym):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("InitOpNodeSignatureDescSymbol")
-        instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        eager_symbol = eager_symbol_cfg.EagerSymbol()
-        eager_symbol.set_symbol_id(symbol_id)
-        eager_symbol.mutable_op_node_signature_symbol().CopyFrom(op_node_signature_sym)
-        self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
-
     def _FetchBlob(self, instruction_name, blob_object, fetcher):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
         instruction = instr_cfg.InstructionProto()
@@ -1187,24 +1152,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             _Mut2Operand(blob_object.object_id)
         )
         instruction.mutable_operand().Add().CopyFrom(_Int64Operand(unique_callback_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _TryClearObject(self, obj):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("TryClearObject")
-        instruction.set_parallel_desc_symbol_id(obj.parallel_desc_symbol.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(_MutOperand(obj.object_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _DeleteObject(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("DeleteObject")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            _DelObjectOperand(blob_object.object_id)
-        )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
     def _ReplaceMirrored(self, parallel_desc_sym, lhs_objects, rhs_objects):
