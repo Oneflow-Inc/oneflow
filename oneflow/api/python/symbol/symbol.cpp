@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/vm/string_symbol.h"
 
 namespace py = pybind11;
 
@@ -70,6 +71,14 @@ void ApiAddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
   return AddSymbol<SymbolConfT, SymbolPbT, SymbolT>(symbol_id, symbol_conf).GetOrThrow();
 }
 
+Maybe<void> AddStringSymbol(int64_t symbol_id, const std::string& data) {
+  JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(symbol_id, data));
+  auto* id_cache = JUST(GlobalMaybe<symbol::IdCache<std::string>>());
+  CHECK_OR_RETURN(!id_cache->Has(data));
+  JUST(id_cache->FindOrCreate(data, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
+  return Maybe<void>::Ok();
+}
+
 template<typename SymbolConfT, typename SymbolT>
 std::shared_ptr<SymbolT> ApiGetSymbol(const SymbolConfT& symbol_conf) {
   return GetSymbol<SymbolConfT, SymbolT>(symbol_conf).GetPtrOrThrow();
@@ -111,6 +120,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         &ApiAddSymbol<cfg::OpNodeSignature, OpNodeSignature, OpNodeSignatureDesc>);
   m.def("GetOpNodeSignatureSymbol", &ApiGetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>);
   m.def("GetOpNodeSignatureSymbol", &ApiGetSymbolById<cfg::OpNodeSignature, OpNodeSignatureDesc>);
+
+  m.def("HasStringSymbol", &ApiHasSymbol<std::string>);
+  m.def("AddStringSymbol", [](int64_t symbol_id, const std::string& data) {
+    return AddStringSymbol(symbol_id, data).GetOrThrow();
+  });
+  m.def("GetStringSymbol", &ApiGetSymbol<std::string, StringSymbol>);
+  m.def("GetStringSymbol", &ApiGetSymbolById<std::string, StringSymbol>);
 }
 
 }  // namespace oneflow

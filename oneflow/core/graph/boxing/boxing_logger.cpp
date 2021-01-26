@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/boxing_logger.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
@@ -22,20 +23,6 @@ namespace {
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_conf,dst_parallel_conf," \
   "src_sbp_conf,dst_sbp_conf,lbi,dtype,shape,builder,comment\n"
-
-std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
-  std::string serialized_sbp_parallel;
-  if (sbp_parallel.has_broadcast_parallel()) {
-    serialized_sbp_parallel = "B";
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    serialized_sbp_parallel = "P";
-  } else if (sbp_parallel.has_split_parallel()) {
-    serialized_sbp_parallel = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return serialized_sbp_parallel;
-}
 
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc;
