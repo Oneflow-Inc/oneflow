@@ -25,17 +25,12 @@ REGISTER_USER_OP("selu")
     .Attr<double>("lambda_")
     .Attr<double>("alpha_")
     .Output("out")
-    .SetCheckAttrFn(
-      [](const user_op::UserOpDefWrapper& def,
-        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
+                       const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       double lambda_ = conf.attr<double>("lambda_");
-      if (lambda_ > 1.0) {
-        return Maybe<void>::Ok();
-      }
+      if (lambda_ > 1.0) { return Maybe<void>::Ok(); }
       return oneflow::Error::CheckFailedError()
-            << "lambda_ value: "
-            << lambda_
-            << " for SELU op is illegal.";
+             << "lambda_ value: " << lambda_ << " for SELU op is illegal.";
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
@@ -63,17 +58,12 @@ REGISTER_USER_OP("selu_grad")
     .Attr<double>("lambda_")
     .Attr<double>("alpha_")
     .Output("dx")
-    .SetCheckAttrFn(
-      [](const user_op::UserOpDefWrapper& def,
-        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
+    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
+                       const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       double lambda_ = conf.attr<double>("lambda_");
-      if (lambda_ > 1.0) {
-        return Maybe<void>::Ok();
-      }
+      if (lambda_ > 1.0) { return Maybe<void>::Ok(); }
       return oneflow::Error::CheckFailedError()
-            << "lambda_ value: "
-            << lambda_
-            << " for SELU op is illegal.";
+             << "lambda_ value: " << lambda_ << " for SELU op is illegal.";
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
