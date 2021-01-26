@@ -374,6 +374,15 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         obn = op_attribute.output_bns[0]
 
         parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
+        # parallel_conf is cfg
+        if not isinstance(
+            parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
+        ):
+            parallel_conf_cfg = placement_cfg.ParallelConf()
+            parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+            for device_name in parallel_conf.device_name:
+                parallel_conf_cfg.add_device_name(device_name)
+            parallel_conf = parallel_conf_cfg
         blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
 
         op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
@@ -406,7 +415,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
         else:
             scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
-        return self.GetScopeSymbol(scope_proto, None)
+        return self.GetScopeSymbol(scope_proto)
 
     def BuildScopeWithNewParallelDesc(self, scope, device_tag, machine_device_ids):
         if isinstance(machine_device_ids, str):
@@ -454,14 +463,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
     def BuildScopeByProtoSetter(self, scope, setter):
         scope_proto = scope.MakeChildScopeProto()
         setter(scope_proto)
-        return self.GetScopeSymbol(scope_proto, scope)
-
-    def GetScopeSymbol(self, scope_proto, parent_scope_symbol=None):
-        if oneflow_api.HasScopeSymbol(scope_proto):
-            return oneflow_api.GetScopeSymbol(scope_proto)
-        symbol_id = self._NewSymbolId4Scope(scope_proto)
-        oneflow_api.AddScopeSymbol(symbol_id, scope_proto)
-        return oneflow_api.GetScopeSymbol(scope_proto)
+        return self.GetScopeSymbol(scope_proto)
 
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
         if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
@@ -855,11 +857,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         obj.add_releaser(self.release_object())
         return obj
 
-    def _NewSymbolId4Scope(self, scope_proto):
-        symbol_id = self._NewSymbolId()
-        self._NewScopeSymbol(symbol_id, scope_proto)
-        return symbol_id
-
     def _NewSymbolId4OpConf(self, op_conf):
         symbol_id = self._NewSymbolId()
         self._InitOpConfSymbol(symbol_id, op_conf)
@@ -1023,16 +1020,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         return object_id
-
-    def _NewScopeSymbol(self, symbol_id, scope_proto):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("InitScopeSymbol")
-        instruction.mutable_operand().Add().CopyFrom(_InitSymbolOperand(symbol_id))
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        eager_symbol = eager_symbol_cfg.EagerSymbol()
-        eager_symbol.set_symbol_id(symbol_id)
-        eager_symbol.mutable_scope_symbol().CopyFrom(scope_proto)
-        self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
         instruction = instr_cfg.InstructionProto()

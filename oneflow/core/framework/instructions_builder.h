@@ -21,6 +21,9 @@ limitations under the License.
 #include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
@@ -95,15 +98,21 @@ class InstructionsBuilder {
   std::shared_ptr<ParallelDesc> GetParallelDescSymbol(
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
+  std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
   void DeleteObject(compatible_py::BlobObject* blob_object);
 
  private:
+  int64_t NewSymbolId4Scope(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
   void InitStringSymbol(int64_t symbol_id, std::string str);
 
   void NewParallelConfSymbol(int64_t symbol_id,
                              const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
   void InitJobConfSymbol(int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
+  void NewScopeSymbol(int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& scope_proto);
 
   void InitOpNodeSignatureDescSymbol(int64_t symbol_id,
                                      std::shared_ptr<cfg::OpNodeSignature> op_node_signature_sym);

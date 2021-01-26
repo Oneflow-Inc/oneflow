@@ -41,6 +41,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("GetSymbol4String", &InstructionsBuilder::GetSymbol4String)
       .def("GetJobConfSymbol", &InstructionsBuilder::GetJobConfSymbol)
       .def("GetParallelDescSymbol", &InstructionsBuilder::GetParallelDescSymbol)
+      .def("GetScopeSymbol", &InstructionsBuilder::GetScopeSymbol)
       .def("NewSymbolId4OpNodeSignature", &InstructionsBuilder::NewSymbolId4OpNodeSignature)
       .def("DeleteObject", &InstructionsBuilder::DeleteObject);
 }

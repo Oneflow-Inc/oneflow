@@ -208,6 +208,13 @@ int64_t InstructionsBuilder::NewSymbolId4ParallelConf(
   return symbol_id;
 }
 
+int64_t InstructionsBuilder::NewSymbolId4Scope(
+    const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+  int64_t symbol_id = NewSymbolId();
+  NewScopeSymbol(symbol_id, scope_proto);
+  return symbol_id;
+}
+
 std::shared_ptr<StringSymbol> InstructionsBuilder::GetSymbol4String(std::string str) {
   if (ApiHasSymbol<std::string>(str)) { return ApiGetSymbol<std::string, StringSymbol>(str); }
   int64_t symbol_id = NewSymbolId4String(str);
@@ -233,6 +240,16 @@ std::shared_ptr<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(
   int64_t symbol_id = NewSymbolId4ParallelConf(parallel_conf);
   ApiAddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>(symbol_id, *parallel_conf);
   return ApiGetSymbol<cfg::ParallelConf, ParallelDesc>(*parallel_conf);
+}
+
+std::shared_ptr<Scope> InstructionsBuilder::GetScopeSymbol(
+    const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+  if (ApiHasSymbol<cfg::ScopeProto>(*scope_proto)) {
+    return ApiGetSymbol<cfg::ScopeProto, Scope>(*scope_proto);
+  }
+  int64_t symbol_id = NewSymbolId4Scope(scope_proto);
+  ApiAddSymbol<cfg::ScopeProto, ScopeProto, Scope>(symbol_id, *scope_proto);
+  return ApiGetSymbol<cfg::ScopeProto, Scope>(*scope_proto);
 }
 
 void InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
@@ -274,6 +291,18 @@ void InstructionsBuilder::InitJobConfSymbol(int64_t symbol_id,
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_job_conf_symbol()->CopyFrom(*job_conf);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+}
+
+void InstructionsBuilder::NewScopeSymbol(int64_t symbol_id,
+                                         const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitScopeSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(InitSymbolOperand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.mutable_scope_symbol()->CopyFrom(*scope_proto);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
 }
 
