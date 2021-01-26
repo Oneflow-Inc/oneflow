@@ -74,7 +74,7 @@ int64_t TestUtil::NewSymbol(InstructionMsgList* instr_msg_list) {
 
 int64_t TestUtil::NewStringSymbol(InstructionMsgList* instr_msg_list, const std::string& str) {
   int64_t str_id = NewSymbol(instr_msg_list);
-  CHECK_JUST(Global<symbol::Storage<std::string>>::Get()->Add(str_id, str));
+  CHECK_JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(str_id, str));
   instr_msg_list->EmplaceBack(NewInstruction("InitStringSymbol")->add_init_symbol_operand(str_id));
   return str_id;
 }

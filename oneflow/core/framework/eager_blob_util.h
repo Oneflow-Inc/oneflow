@@ -19,12 +19,14 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/blob_register.h"
+#include "oneflow/core/framework/blob_trait.h"
 
 namespace oneflow {
 
 namespace compatible_py {
 
-class EagerPhysicalBlobHeader final {
+class EagerPhysicalBlobHeader : public BlobHeaderTrait {
  public:
   EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
                           const std::vector<std::shared_ptr<Shape>>& shape_list, DataType dtype,
@@ -32,11 +34,11 @@ class EagerPhysicalBlobHeader final {
   EagerPhysicalBlobHeader(const EagerPhysicalBlobHeader& other) = default;
   ~EagerPhysicalBlobHeader() = default;
 
-  std::shared_ptr<Shape> static_shape() const;
-  std::shared_ptr<Shape> shape() const;
-  std::vector<std::shared_ptr<Shape>> shape_list() const;
-  DataType dtype() const;
-  bool is_tensor_list() const;
+  std::shared_ptr<Shape> static_shape() const override;
+  std::shared_ptr<Shape> shape() const override;
+  std::vector<std::shared_ptr<Shape>> shape_list() const override;
+  DataType dtype() const override;
+  bool is_tensor_list() const override;
 
  private:
   std::shared_ptr<Shape> static_shape_;
@@ -48,11 +50,11 @@ class EagerPhysicalBlobHeader final {
 class EagerPhysicalBlob {
  public:
   EagerPhysicalBlob(
-      const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object,
+      const std::string& blob_name, const std::shared_ptr<BlobRegister>& blob_register,
       const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>&
           get_pysical_blob_header_cache);
   EagerPhysicalBlob(const EagerPhysicalBlob& other) = default;
-  ~EagerPhysicalBlob() = default;
+  ~EagerPhysicalBlob();
 
   std::string logical_blob_name() const;
   std::string unique_name() const;
@@ -67,6 +69,7 @@ class EagerPhysicalBlob {
  private:
   std::string blob_name_;
   std::shared_ptr<BlobObject> blob_object_;
+  std::shared_ptr<BlobRegister> blob_register_;
   std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>
       get_pysical_blob_header_cache_;
 };
