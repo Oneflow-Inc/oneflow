@@ -28,6 +28,8 @@ def _compare_selu_with_np(
     if value_type[1] == flow.float16:
         input_1 = np.random.uniform(-1, 1, size=input_shape).astype(np.float16)
         input_1 = np.array(input_1, dtype=value_type[0])
+        lambda_ = np.array(lambda_).astype(np.float16)
+        alpha_ = np.array(alpha_).astype(np.float16)
     else:
         input_1 = np.random.uniform(-1, 1, size=input_shape).astype(value_type[0])
 

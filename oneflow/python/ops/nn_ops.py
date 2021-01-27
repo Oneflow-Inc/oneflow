@@ -3056,6 +3056,7 @@ def selu(
         oneflow_api.BlobDesc: The activated Tensor.
     """
     lambda_ = float(lambda_)
+    assert 1.0 < lambda_, "lambda_ value should be larger than 1.0"
     alpha_ = float(alpha_)
     if name is None:
         name = id_util.UniqueStr("SElu_")
