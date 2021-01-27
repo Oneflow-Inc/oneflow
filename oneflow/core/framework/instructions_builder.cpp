@@ -305,6 +305,126 @@ Maybe<void> InstructionsBuilder::ReplaceMirrored(
   return Maybe<void>::Ok();
 }
 
+Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
+                                                              bool is_mirrored) {
+  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+    if (is_mirrored) {
+      scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+    } else {
+      scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+    }
+  };
+
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
+                                                             std::string scope_name) {
+  const auto SetScopeProto = [&scope_name](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+    scope_proto->add_scope_op_name_prefixes(scope_name);
+  };
+
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
+    const std::shared_ptr<Scope>& scope,
+    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& setter) {
+  std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
+  setter(scope_proto);
+  return GetScopeSymbol(scope_proto);
+}
+
+Maybe<compatible_py::BlobObject> InstructionsBuilder::BroadcastBlobReference(
+    const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_blob_object,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>> device_ids =
+      sole_mirrored_blob_object->parallel_desc_symbol()->machine_id2sorted_dev_phy_ids();
+  for (const auto& pair : *device_ids) { CHECK_EQ(pair.second->size(), 1); }
+  int64_t object_id = JUST(BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym));
+  std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+      JUST(compatible_py::MakeBroadcastOpArgParallelAttribute(parallel_desc_sym));
+  std::shared_ptr<compatible_py::BlobObject> obj = std::make_shared<compatible_py::BlobObject>(
+      object_id, op_arg_parallel_attr, sole_mirrored_blob_object->op_arg_blob_attr());
+  obj->add_releaser(release_object_);
+  return obj;
+}
+
+Maybe<int64_t> InstructionsBuilder::BroadcastObjectReference(
+    const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  int64_t object_id = JUST(id_generator_->NewObjectId());
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("BroadcastObjectReference");
+  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(object_id));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(sole_mirrored_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return object_id;
+}
+
+Maybe<void> InstructionsBuilder::Build121AssignInstruction(
+    const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
+    const std::shared_ptr<compatible_py::BlobObject>& value_blob_object) {
+  int64_t parallel_num = ref_blob_object->parallel_desc_symbol()->parallel_num();
+  CHECK_EQ(parallel_num, value_blob_object->parallel_desc_symbol()->parallel_num());
+  std::vector<uint64_t> token_id_0;
+  std::vector<uint64_t> token_id_1;
+  for (int64_t i = 0; i < parallel_num; ++i) { token_id_0.emplace_back(NewTokenId()); }
+  for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
+  std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
+      std::make_tuple(token_id_0, token_id_1);
+  BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids);
+  BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::BuildSendInstruction(
+    const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
+    const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
+    const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("SendBlob");
+  instruction.set_parallel_desc_symbol_id(
+      JUST(src_blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(
+      *SymbolOperand(JUST(dst_parallel_desc_symbol->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(src_blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  for (uint64_t token_id : std::get<0>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  for (uint64_t token_id : std::get<1>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
+  }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::BuildRecvInstruction(
+    const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
+    const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
+    const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("ReceiveBlob");
+  instruction.set_parallel_desc_symbol_id(
+      JUST(dst_blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(
+      *SymbolOperand(JUST(src_parallel_desc_symbol->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(dst_blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  for (uint64_t token_id : std::get<0>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  for (uint64_t token_id : std::get<1>(token_ids)) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
+  }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("InitStringSymbol");

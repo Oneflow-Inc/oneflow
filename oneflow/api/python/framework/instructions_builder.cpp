@@ -99,6 +99,35 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
              return x->ReplaceMirrored(parallel_desc_sym, lhs_objects, rhs_objects).GetOrThrow();
            })
+      .def("BuildScopeWithNewIsMirrored",
+           [](const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+              bool is_mirrored) {
+             return x->BuildScopeWithNewIsMirrored(scope, is_mirrored).GetPtrOrThrow();
+           })
+      .def("BuildScopeWithNewScopeName",
+           [](const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+              std::string scope_name) {
+             return x->BuildScopeWithNewScopeName(scope, scope_name).GetPtrOrThrow();
+           })
+      .def("BuildScopeByProtoSetter",
+           [](const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+              const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& setter) {
+             return x->BuildScopeByProtoSetter(scope, setter).GetPtrOrThrow();
+           })
+      .def("BroadcastBlobReference",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_blob_object,
+              const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+             return x->BroadcastBlobReference(sole_mirrored_blob_object, parallel_desc_sym)
+                 .GetPtrOrThrow();
+           })
+      .def("Build121AssignInstruction",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
+              const std::shared_ptr<compatible_py::BlobObject>& value_blob_object) {
+             return x->Build121AssignInstruction(ref_blob_object, value_blob_object)
+                 .GetOrThrow();
+           })
       .def("DeleteObject", [](const std::shared_ptr<InstructionsBuilder>& x,
                               compatible_py::BlobObject* blob_object) {
         return x->DeleteObject(blob_object).GetOrThrow();

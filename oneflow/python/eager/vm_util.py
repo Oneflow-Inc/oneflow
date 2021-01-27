@@ -421,26 +421,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         return self.BuildScopeWithNewParallelDesc(scope, *tag_and_dev_ids)
 
-    def BuildScopeWithNewIsMirrored(self, scope, is_mirrored):
-        def SetScopeProto(scope_proto):
-            if is_mirrored:
-                scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
-            else:
-                scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
-
-        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
-
-    def BuildScopeWithNewScopeName(self, scope, scope_name):
-        def SetScopeProto(scope_proto):
-            scope_proto.add_scope_op_name_prefixes(scope_name)
-
-        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
-
-    def BuildScopeByProtoSetter(self, scope, setter):
-        scope_proto = scope.MakeChildScopeProto()
-        setter(scope_proto)
-        return self.GetScopeSymbol(scope_proto)
-
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
         if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
             return object_storage.GetSharedOpKernelObject4ParallelConfSymbol(
@@ -463,24 +443,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         finally:
             self._CudaHostUnregisterBlob(blob_object)
 
-    def BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
-        device_ids = dict(
-            sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
-        )
-        for _, dev_ids in device_ids.items():
-            assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
-        object_id = self._BroadcastObjectReference(
-            sole_mirrored_blob_object, parallel_desc_sym
-        )
-        op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
-            parallel_desc_sym
-        )
-        obj = oneflow_api.BlobObject(
-            object_id, op_arg_parallel_attr, sole_mirrored_blob_object.op_arg_blob_attr,
-        )
-        obj.add_releaser(self.release_object())
-        return obj
-
     def NewOpKernelObject(self, op_conf):
         assert op_conf.HasField("scope_symbol_id")
         scope_symbol = oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
@@ -498,72 +460,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         self.Build121AssignInstruction(ref_blob_object, blob_object)
         return ref_blob_object
-
-    def Build121AssignInstruction(self, ref_blob_object, value_blob_object):
-        parallel_num = ref_blob_object.parallel_desc_symbol.parallel_num
-        assert parallel_num == value_blob_object.parallel_desc_symbol.parallel_num
-        token_ids = (
-            [oneflow_api.vm.NewTokenId() for _ in range(parallel_num)],
-            [oneflow_api.vm.NewTokenId() for _ in range(parallel_num)],
-        )
-        self._BuildSendInstruction(
-            ref_blob_object.parallel_desc_symbol, value_blob_object, token_ids
-        )
-        self._BuildRecvInstruction(
-            value_blob_object.parallel_desc_symbol, ref_blob_object, token_ids
-        )
-
-    def _BuildSendInstruction(
-        self, dst_parallel_desc_symbol, src_blob_object, token_ids
-    ):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("SendBlob")
-        instruction.set_parallel_desc_symbol_id(
-            src_blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(dst_parallel_desc_symbol.symbol_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.ConstOperand(src_blob_object.object_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
-        for token_id in token_ids[0]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
-            )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
-        for token_id in token_ids[1]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
-            )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _BuildRecvInstruction(
-        self, src_parallel_desc_symbol, dst_blob_object, token_ids
-    ):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("ReceiveBlob")
-        instruction.set_parallel_desc_symbol_id(
-            dst_blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(src_parallel_desc_symbol.symbol_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Mut2Operand(dst_blob_object.object_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
-        for token_id in token_ids[0]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
-            )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
-        for token_id in token_ids[1]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
-            )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
     def _NewOpKernelObject(self, parallel_desc_symbol, job_desc_sym, op_conf_sym):
         object_id = self.NewObjectId(parallel_desc_symbol)
@@ -987,20 +883,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             oneflow_api.vm.SymbolOperand(interface_op_name_sym.symbol_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
-        object_id = self.id_generator().NewObjectId()
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("BroadcastObjectReference")
-        instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(object_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(sole_mirrored_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        return object_id
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
         instruction = instr_cfg.InstructionProto()
