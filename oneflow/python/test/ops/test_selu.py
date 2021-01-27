@@ -28,8 +28,8 @@ def _compare_selu_with_np(
     if value_type[1] == flow.float16:
         input_1 = np.random.uniform(-1, 1, size=input_shape).astype(np.float16)
         input_1 = np.array(input_1, dtype=value_type[0])
-        scale = np.array(scale).astype(np.float16)
-        alpha = np.array(alpha).astype(np.float16)
+        scale = np.array(scale).astype(np.float16).astype(value_type[0])
+        alpha = np.array(alpha).astype(np.float16).astype(value_type[0])
     else:
         input_1 = np.random.uniform(-1, 1, size=input_shape).astype(value_type[0])
 
@@ -62,7 +62,10 @@ def _compare_selu_with_np(
                 out[i] = scale * alpha * (np.exp(input[i]) - 1)
 
         out = np.reshape(out, init_shape)
-        return np.array(out).astype(value_type[0])
+        if value_type[1] == flow.float16:
+            return np.array(out).astype(np.float16).astype(value_type[0])
+        else:
+            return np.array(out).astype(value_type[0])
 
     np_out_selu = np_selu(input_1, scale, alpha)
 
@@ -77,7 +80,10 @@ def _compare_selu_with_np(
             else:
                 diff[i] = scale * alpha * np.exp(input[i])
         diff = np.reshape(diff, newshape=input_shape)
-        diff = np.array(diff, dtype=value_type[0])
+        if value_type[1] == flow.float16:
+            diff = np.array(diff, dtype=np.float16).astype(value_type[0])
+        else:
+            diff = np.array(diff, dtype=value_type[0])
         return diff
 
     _np_grad = np_diff(input_1, scale, alpha)
@@ -185,7 +191,7 @@ class Testselu1n1d(flow.unittest.TestCase):
         arg_dict = _gen_arg_dict(
             shape=(3, 3),
             scale=1.2,
-            alpha=1.0,
+            alpha=5.0,
             device_type="cpu",
             value_type="float",
             machine_ids="0:0",
@@ -199,7 +205,7 @@ class Testselu1n1d(flow.unittest.TestCase):
         arg_dict = _gen_arg_dict(
             shape=(4, 4),
             scale=1.2,
-            alpha=2.0,
+            alpha=5.2,
             device_type="gpu",
             value_type="float",
             machine_ids="0:0",
@@ -216,7 +222,7 @@ class Testselu1n2d(flow.unittest.TestCase):
         arg_dict = _gen_arg_dict(
             shape=(4, 8, 4),
             scale=2.0,
-            alpha=1.0,
+            alpha=5.2,
             device_type="gpu",
             value_type="float",
             machine_ids="0:0-1",

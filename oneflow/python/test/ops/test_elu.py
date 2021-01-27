@@ -195,7 +195,7 @@ class Testelu1n1d(flow.unittest.TestCase):
     def test_elu_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 4),
-            alpha=2.0,
+            alpha=5.2,
             device_type="gpu",
             value_type="float",
             machine_ids="0:0",
@@ -211,7 +211,7 @@ class Testelu1n2d(flow.unittest.TestCase):
     def test_elu_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 8, 4),
-            alpha=1.0,
+            alpha=5.2,
             device_type="gpu",
             value_type="float",
             machine_ids="0:0-1",
