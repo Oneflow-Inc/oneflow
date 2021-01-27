@@ -99,6 +99,12 @@ Maybe<void> AddStringSymbol(int64_t symbol_id, const std::string& data) {
   return Maybe<void>::Ok();
 }
 
+uint64_t NewTokenId() {
+  static std::atomic<uint64_t> token_id(0);
+  token_id++;
+  return token_id;
+}
+
 }  // namespace
 
 namespace detail {
@@ -421,6 +427,41 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
   for (uint64_t token_id : std::get<1>(token_ids)) {
     instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
   }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("CudaHostRegisterBlob");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::CudaHostUnregisterBlob(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("CudaHostUnregisterBlob");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::LazyReference(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, std::string interface_op_name) {
+  vm::cfg::InstructionProto instruction;
+  std::string device_tag = blob_object->parallel_desc_symbol()->device_tag();
+  instruction.set_instr_type_name(device_tag + ".LazyReference");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
+  std::shared_ptr<StringSymbol> interface_op_name_sym =
+      JUST(GetSymbol4String(blob_object->op_arg_blob_attr()->logical_blob_name()));
+  instruction.mutable_operand()->Add()->CopyFrom(
+      *SymbolOperand(JUST(interface_op_name_sym->symbol_id())));
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return Maybe<void>::Ok();
 }

@@ -126,10 +126,17 @@ class InstructionsBuilder {
   Maybe<int64_t> BroadcastObjectReference(
       const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
-  
+
   Maybe<void> Build121AssignInstruction(
-    const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
-    const std::shared_ptr<compatible_py::BlobObject>& value_blob_object);
+      const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
+      const std::shared_ptr<compatible_py::BlobObject>& value_blob_object);
+
+  Maybe<void> CudaHostRegisterBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+
+  Maybe<void> CudaHostUnregisterBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+
+  Maybe<void> LazyReference(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                            std::string interface_op_name);
 
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
@@ -159,16 +166,16 @@ class InstructionsBuilder {
 
   Maybe<void> InitOpNodeSignatureDescSymbol(
       int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym);
-  
+
   Maybe<void> BuildSendInstruction(
-    const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
-    const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
-    const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
-  
+      const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
+      const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
+      const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
+
   Maybe<void> BuildRecvInstruction(
-    const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
-    const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
-    const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
+      const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
+      const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
+      const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
 
   Maybe<void> _TryClearObject(compatible_py::BlobObject* blob_object);
 

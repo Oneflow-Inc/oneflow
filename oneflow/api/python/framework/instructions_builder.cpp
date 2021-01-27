@@ -125,8 +125,23 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<InstructionsBuilder>& x,
               const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
               const std::shared_ptr<compatible_py::BlobObject>& value_blob_object) {
-             return x->Build121AssignInstruction(ref_blob_object, value_blob_object)
-                 .GetOrThrow();
+             return x->Build121AssignInstruction(ref_blob_object, value_blob_object).GetOrThrow();
+           })
+      .def("CudaHostRegisterBlob",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+             return x->CudaHostRegisterBlob(blob_object).GetOrThrow();
+           })
+      .def("CudaHostUnregisterBlob",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+             return x->CudaHostUnregisterBlob(blob_object).GetOrThrow();
+           })
+      .def("LazyReference",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+              std::string interface_op_name) {
+             return x->LazyReference(blob_object, interface_op_name).GetOrThrow();
            })
       .def("DeleteObject", [](const std::shared_ptr<InstructionsBuilder>& x,
                               compatible_py::BlobObject* blob_object) {

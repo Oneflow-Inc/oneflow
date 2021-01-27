@@ -367,7 +367,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
 
         blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
-        self._LazyReference(blob_object, interface_op_name)
+        self.LazyReference(blob_object, interface_op_name)
         return blob_object
 
     def BuildInitialScope(
@@ -437,11 +437,11 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
 
     @contextmanager
     def CudaHostPinBlob(self, blob_object):
-        self._CudaHostRegisterBlob(blob_object)
+        self.CudaHostRegisterBlob(blob_object)
         try:
             yield
         finally:
-            self._CudaHostUnregisterBlob(blob_object)
+            self.CudaHostUnregisterBlob(blob_object)
 
     def NewOpKernelObject(self, op_conf):
         assert op_conf.HasField("scope_symbol_id")
@@ -592,28 +592,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             mut1_operand_blob_objects,
             mut2_operand_blob_objects,
         )
-
-    def _CudaHostRegisterBlob(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("CudaHostRegisterBlob")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(blob_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _CudaHostUnregisterBlob(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("CudaHostUnregisterBlob")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(blob_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
     def _GetOpConfSymbol(self, op_conf):
         serialized_op_conf = op_conf.SerializeToString()
@@ -864,24 +842,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             instruction.mutable_operand().Add().CopyFrom(
                 oneflow_api.vm.Mut2Operand(blob_object.object_id)
             )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _LazyReference(self, blob_object, interface_op_name):
-        instruction = instr_cfg.InstructionProto()
-        device_tag = blob_object.parallel_desc_symbol.device_tag
-        instruction.set_instr_type_name("{}.LazyReference".format(device_tag))
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(blob_object.object_id)
-        )
-        interface_op_name_sym = self.GetSymbol4String(
-            blob_object.op_arg_blob_attr.logical_blob_name
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(interface_op_name_sym.symbol_id)
-        )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
     def _InitOpConfSymbol(self, symbol_id, op_conf):
