@@ -93,8 +93,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   (const LogicalNode* src_logical, const LogicalNode* dst_logical,                        \
    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                               \
    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
    std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
        MutBufTask,                                                                        \
    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
