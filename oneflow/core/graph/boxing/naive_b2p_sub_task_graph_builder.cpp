@@ -22,22 +22,22 @@ namespace oneflow {
 Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
-    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
-  if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
+  if ((in_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && dst_parallel_desc.parallel_num() != 1 && dst_sbp_parallel.has_partial_sum_parallel()) {
     HashMap<int64_t, int64_t> dst_id2nearest_src_id;
     int64_t nearest_dst_node_idx = -1;
     int64_t nearest_dst_node_distance = -1;
 
     FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
-      const int64_t nearest_src_parallel_id =
-          SubTskGphBuilderUtil::FindNearestParallelId(src_parallel_desc, dst_parallel_desc, out_id);
-      dst_id2nearest_src_id.emplace(out_id, nearest_src_parallel_id);
+      const int64_t nearest_in_parallel_id =
+          SubTskGphBuilderUtil::FindNearestParallelId(in_parallel_desc, dst_parallel_desc, out_id);
+      dst_id2nearest_src_id.emplace(out_id, nearest_in_parallel_id);
       const int64_t distance = SubTskGphBuilderUtil::GetDistance(
-          src_parallel_desc, nearest_src_parallel_id, dst_parallel_desc, out_id);
+          in_parallel_desc, nearest_in_parallel_id, dst_parallel_desc, out_id);
       if (nearest_dst_node_idx == -1 || distance < nearest_dst_node_distance) {
         nearest_dst_node_idx = out_id;
         nearest_dst_node_distance = distance;

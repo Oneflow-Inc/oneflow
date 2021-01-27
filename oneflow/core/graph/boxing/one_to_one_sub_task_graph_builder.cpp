@@ -21,14 +21,14 @@ namespace oneflow {
 Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
-    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
-  if ((src_parallel_desc.parallel_num() == 1 && dst_parallel_desc.parallel_num() == 1)
-      || (src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num()
+  if ((in_parallel_desc.parallel_num() == 1 && dst_parallel_desc.parallel_num() == 1)
+      || (in_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num()
           && src_sbp_parallel == dst_sbp_parallel)) {
-    for (int64_t i = 0; i < src_parallel_desc.parallel_num(); ++i) {
+    for (int64_t i = 0; i < in_parallel_desc.parallel_num(); ++i) {
       TaskNode* in_node = sorted_in_tasks.at(i);
       // TODO(liujuncheng): use lbi
       TaskNode* proxy = ctx->GetProxyNode(in_node, in_node->MemZoneId121(), dst_parallel_desc, i);

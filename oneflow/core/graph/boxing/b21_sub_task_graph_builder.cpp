@@ -21,15 +21,15 @@ namespace oneflow {
 Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
-    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& src_parallel_desc,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
-  if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
+  if ((in_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && dst_parallel_desc.parallel_num() == 1) {
     const int64_t dst_parallel_id = 0;
     const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
-        src_parallel_desc, dst_parallel_desc, dst_parallel_id);
+        in_parallel_desc, dst_parallel_desc, dst_parallel_id);
     TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
     CHECK_NOTNULL(nearest_in_node);
     TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
