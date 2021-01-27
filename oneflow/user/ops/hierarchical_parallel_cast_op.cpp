@@ -37,6 +37,22 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       *ctx->mut_parallel_hierarchy() = parallel_hierarchy;
       return Maybe<void>::Ok();
     })
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      const auto& conf =
+          ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+      CHECK_EQ_OR_RETURN(conf.size(), parallel_hierarchy.NumAxes());
+      for (const std::string& sbp_str : conf) {
+        SbpParallel sbp_parallel;
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+        *in_distribution->add_sbp_parallel() = sbp_parallel;
+        *out_distribution->add_sbp_parallel() = sbp_parallel;
+      }
+      return Maybe<void>::Ok();
+    })
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
