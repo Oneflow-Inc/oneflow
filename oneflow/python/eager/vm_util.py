@@ -436,21 +436,6 @@ def Build121To(self, blob_object, parallel_desc_symbol):
     return ref_blob_object
 
 
-def Build121AssignInstruction(self, ref_blob_object, value_blob_object):
-    parallel_num = ref_blob_object.parallel_desc_symbol.parallel_num
-    assert parallel_num == value_blob_object.parallel_desc_symbol.parallel_num
-    token_ids = (
-        [oneflow_api.NewTokenId() for _ in range(parallel_num)],
-        [oneflow_api.NewTokenId() for _ in range(parallel_num)],
-    )
-    self.BuildSendInstruction(
-        ref_blob_object.parallel_desc_symbol, value_blob_object, token_ids
-    )
-    self.BuildRecvInstruction(
-        value_blob_object.parallel_desc_symbol, ref_blob_object, token_ids
-    )
-
-
 def _NewOpKernelObject(self, parallel_desc_symbol, job_desc_sym, op_conf_sym):
     object_id = self._NewObjectId(parallel_desc_symbol)
     instruction = instr_cfg.InstructionProto()
@@ -866,9 +851,6 @@ def RegisterMethod4InstructionsBuilder():
     oneflow_api.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
     oneflow_api.InstructionsBuilder.NewOpKernelObject = NewOpKernelObject
     oneflow_api.InstructionsBuilder.Build121To = Build121To
-    oneflow_api.InstructionsBuilder.Build121AssignInstruction = (
-        Build121AssignInstruction
-    )
     oneflow_api.InstructionsBuilder._NewOpKernelObject = _NewOpKernelObject
     oneflow_api.InstructionsBuilder._StatelessCall = _StatelessCall
     oneflow_api.InstructionsBuilder._StatefulCall = _StatefulCall

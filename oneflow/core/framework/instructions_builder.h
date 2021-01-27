@@ -118,13 +118,9 @@ class InstructionsBuilder {
       const std::shared_ptr<Scope>& scope,
       const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& setter);
 
-  void BuildSendInstruction(const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
-                            const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
-                            std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids);
-
-  void BuildRecvInstruction(const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
-                            const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
-                            std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids);
+  void Build121AssignInstruction(
+      const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
+      const std::shared_ptr<compatible_py::BlobObject>& value_blob_object);
 
   void CudaHostRegisterBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
@@ -151,6 +147,16 @@ class InstructionsBuilder {
   void DeleteObject(compatible_py::BlobObject* blob_object);
 
  private:
+  void BuildSendInstruction(
+      const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
+      const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
+      const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
+
+  void BuildRecvInstruction(
+      const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
+      const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
+      const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
+
   int64_t NewSymbolId4Scope(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
 
   void InitStringSymbol(int64_t symbol_id, std::string str);

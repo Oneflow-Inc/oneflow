@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <atomic>
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
@@ -99,6 +100,12 @@ vm::cfg::InstructionOperandProto Mut2Operand(int64_t val) {
   vm::cfg::InstructionOperandProto operand;
   SetMirroredOperand(operand.mutable_mut2_operand(), val);
   return operand;
+}
+
+uint64_t NewTokenId() {
+  static std::atomic<uint64_t> token_id(0);
+  token_id++;
+  return token_id;
 }
 
 Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
@@ -346,10 +353,25 @@ std::shared_ptr<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
   return GetScopeSymbol(scope_proto);
 }
 
+void InstructionsBuilder::Build121AssignInstruction(
+    const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
+    const std::shared_ptr<compatible_py::BlobObject>& value_blob_object) {
+  int64_t parallel_num = ref_blob_object->parallel_desc_symbol()->parallel_num();
+  CHECK_EQ(parallel_num, value_blob_object->parallel_desc_symbol()->parallel_num());
+  std::vector<uint64_t> token_id_0;
+  std::vector<uint64_t> token_id_1;
+  for (int64_t i = 0; i < parallel_num; ++i) { token_id_0.emplace_back(NewTokenId()); }
+  for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
+  std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
+      std::make_tuple(token_id_0, token_id_1);
+  BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids);
+  BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids);
+}
+
 void InstructionsBuilder::BuildSendInstruction(
     const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
     const std::shared_ptr<compatible_py::BlobObject>& src_blob_object,
-    std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids) {
+    const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("SendBlob");
   instruction.set_parallel_desc_symbol_id(
@@ -371,7 +393,7 @@ void InstructionsBuilder::BuildSendInstruction(
 void InstructionsBuilder::BuildRecvInstruction(
     const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
     const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
-    std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids) {
+    const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("ReceiveBlob");
   instruction.set_parallel_desc_symbol_id(
