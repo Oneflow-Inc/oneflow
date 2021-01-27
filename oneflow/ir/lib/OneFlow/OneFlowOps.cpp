@@ -37,6 +37,17 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           return success();
         }
       }
+    } else /* trim redundant control outputs */ {
+      if (op.ctrl_output().use_empty()) {
+        const int32_t num_data_inputs =
+            op.result_segment_sizes().getValue<IntegerAttr>({0}).getInt();
+        NamedAttrList attributes(op->getAttrDictionary());
+        attributes.erase("result_segment_sizes");
+        attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
+        rewriter.replaceOpWithNewOp<oneflow::SystemOp>(op, op.getResultTypes(), op->getOperands(),
+                                                       attributes);
+        return success();
+      }
     }
     return failure();
   }
