@@ -68,8 +68,8 @@ class ElemwiseSeluKernel final : public user_op::OpKernel {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
-    const double scale = static_cast<T>(ctx->Attr<double>("scale"));
-    const double alpha = static_cast<T>(ctx->Attr<double>("alpha"));
+    const double scale = ctx->Attr<double>("scale");
+    const double alpha = ctx->Attr<double>("alpha");
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
     ElemwiseSeluFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, scale, alpha, out_ptr,
                                                in_ptr);
@@ -88,8 +88,8 @@ class ElemwiseSeluGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const double scale = static_cast<T>(ctx->Attr<double>("scale"));
-    const double alpha = static_cast<T>(ctx->Attr<double>("alpha"));
+    const double scale = ctx->Attr<double>("scale");
+    const double alpha = ctx->Attr<double>("alpha");
     const T* x_ptr = x_tensor->dptr<T>();
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
