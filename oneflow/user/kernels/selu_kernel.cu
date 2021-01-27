@@ -21,25 +21,25 @@ namespace oneflow {
 
 template<>
 struct SeluFunctor<half> {
-  OF_DEVICE_FUNC explicit SeluFunctor(float scale, float alpha)
+  OF_DEVICE_FUNC explicit SeluFunctor(double scale, double alpha)
       : scale(scale), alpha(alpha), float_functor(SeluFunctor<float>(scale, alpha)) {}
   OF_DEVICE_FUNC half operator()(half x) const {
     return __float2half(float_functor(__half2float(x)));
   }
-  const float scale;
-  const float alpha;
+  const double scale;
+  const double alpha;
   SeluFunctor<float> float_functor;
 };
 
 template<>
 struct SeluGradFunctor<half> {
-  OF_DEVICE_FUNC explicit SeluGradFunctor(float scale, float alpha)
+  OF_DEVICE_FUNC explicit SeluGradFunctor(double scale, double alpha)
       : scale(scale), alpha(alpha), float_functor(SeluGradFunctor<float>(scale, alpha)) {}
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
-  const float scale;
-  const float alpha;
+  const double scale;
+  const double alpha;
   SeluGradFunctor<float> float_functor;
 };
 
@@ -47,10 +47,9 @@ namespace {
 
 template<template<typename> class Opt, typename T>
 struct ElemwiseSeluFunctor<DeviceType::kGPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* out,
-                  const T* in) {
-    OF_CUDA_CHECK(oneflow::cuda::elementwise::Unary(SeluFunctor<T>(scale, alpha), elem_cnt, out,
-                                                    in, ctx->cuda_stream()));
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* out, const T* in) {
+    OF_CUDA_CHECK(oneflow::cuda::elementwise::Unary(SeluFunctor<T>(scale, alpha), elem_cnt, out, in,
+                                                    ctx->cuda_stream()));
   }
 };
 
@@ -58,8 +57,8 @@ template<template<typename> class Opt, typename T>
 struct ElemwiseSeluGradFunctor<DeviceType::kGPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* dx, const T* y,
                   const T* dy) {
-    OF_CUDA_CHECK(oneflow::cuda::elementwise::Binary(SeluGradFunctor<T>(scale, alpha), elem_cnt,
-                                                     dx, y, dy, ctx->cuda_stream()));
+    OF_CUDA_CHECK(oneflow::cuda::elementwise::Binary(SeluGradFunctor<T>(scale, alpha), elem_cnt, dx,
+                                                     y, dy, ctx->cuda_stream()));
   };
 };
 
