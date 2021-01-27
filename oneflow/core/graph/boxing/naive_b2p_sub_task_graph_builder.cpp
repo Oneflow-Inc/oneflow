@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_dst_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
@@ -46,9 +46,9 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     }
     FOR_RANGE(int64_t, out_id, 0, dst_parallel_desc.parallel_num()) {
       const int64_t nearest_src_id = dst_id2nearest_src_id.at(out_id);
-      TaskNode* nearest_src_node = sorted_src_tasks.at(nearest_src_id);
+      TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_src_id);
       if (out_id == nearest_dst_node_idx) {
-        TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
+        TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
                                             dst_parallel_desc, out_id);
 
         sorted_dst_tasks->push_back(proxy);
@@ -71,8 +71,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
         zeros_node->Init(dst_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
-        nearest_src_node->BuildCtrlRegstDesc(zeros_node);
-        Connect<TaskNode>(nearest_src_node, ctx->task_graph()->NewEdge(), zeros_node);
+        nearest_in_node->BuildCtrlRegstDesc(zeros_node);
+        Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
         sorted_dst_tasks->push_back(zeros_node);
       }
     }

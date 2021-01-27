@@ -54,7 +54,7 @@ bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
 }  // namespace
 
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_dst_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
@@ -416,7 +416,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
 
   const auto BuildSubTaskGphB2S =
       [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge,
-       &sorted_src_tasks, &sorted_dst_tasks](
+       &sorted_in_tasks, &sorted_dst_tasks](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
@@ -430,10 +430,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           const TensorSliceView& out_slice = out_slices.at(out_id);
           const int64_t nearest_idx =
               SubTskGphBuilderUtil::FindNearestParallelId(in_pd, out_pd, out_id);
-          TaskNode* src_node = sorted_src_tasks.at(nearest_idx);
+          TaskNode* in_node = sorted_in_tasks.at(nearest_idx);
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
-          slice_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), in_slice);
+          slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
           TaskNode* out_node =
               ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), out_pd, out_id);
 
@@ -442,7 +442,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       };
 
   std::vector<TaskNode*> in_nodes;
-  in_nodes.assign(sorted_src_tasks.begin(), sorted_src_tasks.end());
+  in_nodes.assign(sorted_in_tasks.begin(), sorted_in_tasks.end());
   std::string comment;
   if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)) {
     BuildSubTaskGphS2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,

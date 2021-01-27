@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_dst_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
@@ -29,11 +29,11 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
   if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
       && dst_parallel_desc.parallel_num() == 1) {
     const int64_t dst_parallel_id = 0;
-    const int64_t nearest_src_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
+    const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
         src_parallel_desc, dst_parallel_desc, dst_parallel_id);
-    TaskNode* nearest_src_node = sorted_src_tasks.at(nearest_src_parallel_id);
-    CHECK_NOTNULL(nearest_src_node);
-    TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
+    TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
+    CHECK_NOTNULL(nearest_in_node);
+    TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
                                         dst_parallel_desc, dst_parallel_id);
     sorted_dst_tasks->push_back(proxy);
     return TRY(BuildSubTskGphBuilderStatus("B21SubTskGphBuilder", ""));

@@ -27,7 +27,7 @@ class B21SubTskGphBuilder final : public SubTskGphBuilder {
   ~B21SubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
-                                      const std::vector<TaskNode*>& sorted_src_tasks,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
                                       std::vector<TaskNode*>* sorted_dst_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,

@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> ChainSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_dst_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
@@ -28,7 +28,7 @@ Maybe<SubTskGphBuilderStatus> ChainSubTskGphBuilder::Build(
     const Shape& time_shape) const {
   for (const auto& builder : builders_) {
     Maybe<SubTskGphBuilderStatus> boxing_builder_status = TRY(builder->Build(
-        ctx, sorted_src_tasks, sorted_dst_tasks, sorted_dst_ctrl_in_tasks, src_parallel_desc,
+        ctx, sorted_in_tasks, sorted_dst_tasks, sorted_dst_ctrl_in_tasks, src_parallel_desc,
         dst_parallel_desc, lbi, logical_blob_desc, src_sbp_parallel, dst_sbp_parallel, time_shape));
     if (!boxing_builder_status.IsOk()
         && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxing_builder_status.error())) {

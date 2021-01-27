@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_src_tasks,
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_dst_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
@@ -30,9 +30,9 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
       || (src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num()
           && src_sbp_parallel == dst_sbp_parallel)) {
     for (int64_t i = 0; i < src_parallel_desc.parallel_num(); ++i) {
-      TaskNode* src_node = sorted_src_tasks.at(i);
+      TaskNode* in_node = sorted_in_tasks.at(i);
       // TODO(liujuncheng): use lbi
-      TaskNode* proxy = ctx->GetProxyNode(src_node, src_node->MemZoneId121(), dst_parallel_desc, i);
+      TaskNode* proxy = ctx->GetProxyNode(in_node, in_node->MemZoneId121(), dst_parallel_desc, i);
       sorted_dst_tasks->push_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus("OneToOneSubTskGphBuilder", ""));
