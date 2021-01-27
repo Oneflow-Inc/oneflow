@@ -452,7 +452,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         object_id = self._NewOpKernelObject(
             parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
         )
-        return OpKernelObject(object_id, op_conf, self.release_object())
+        return OpKernelObject(object_id, op_conf, self.object_releaser())
 
     def Build121To(self, blob_object, parallel_desc_symbol):
         ref_blob_object = _MakeNewBlobObjectLike(
