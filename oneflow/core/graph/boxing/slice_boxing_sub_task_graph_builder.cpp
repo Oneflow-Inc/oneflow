@@ -414,8 +414,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   };
 
   const auto BuildSubTaskGphB2S =
-      [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge,
-       &sorted_in_tasks, &sorted_out_tasks](
+      [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
@@ -429,7 +428,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           const TensorSliceView& out_slice = out_slices.at(out_id);
           const int64_t nearest_idx =
               SubTskGphBuilderUtil::FindNearestParallelId(in_pd, out_pd, out_id);
-          TaskNode* in_node = sorted_in_tasks.at(nearest_idx);
+          TaskNode* in_node = in_nodes.at(nearest_idx);
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
           slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
@@ -440,25 +439,23 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         }
       };
 
-  std::vector<TaskNode*> in_nodes;
-  in_nodes.assign(sorted_in_tasks.begin(), sorted_in_tasks.end());
   std::string comment;
   if (SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)) {
     BuildSubTaskGphS2B(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
-                       logical_blob_desc, in_nodes, sorted_out_tasks);
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphS2B";
   } else if (SubTskGphBuilderUtil::IsBoxingS2S(in_sbp_parallel, out_sbp_parallel)) {
     BuildSubTaskGphS2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
-                       logical_blob_desc, in_nodes, sorted_out_tasks);
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphS2S";
   } else if (SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)) {
     BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
-                       logical_blob_desc, in_nodes, sorted_out_tasks);
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphP2S";
   } else if (SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)) {
     if (logical_blob_desc.shape().elem_cnt() < out_parallel_desc.parallel_num()) {
       BuildSubTaskGphP2B(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
-                         logical_blob_desc, in_nodes, sorted_out_tasks);
+                         logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
       comment = "BuildSubTaskGphP2B";
     } else {
       BlobDesc flat_blob_desc(logical_blob_desc.data_type());
@@ -467,7 +464,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       SbpParallel middle_sbp;
       middle_sbp.mutable_split_parallel()->set_axis(0);
       BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, middle_sbp,
-                         flat_blob_desc, in_nodes, &middle_nodes);
+                         flat_blob_desc, sorted_in_tasks, &middle_nodes);
       BuildSubTaskGphS2B(out_parallel_desc, out_parallel_desc, middle_sbp, out_sbp_parallel,
                          flat_blob_desc, middle_nodes, sorted_out_tasks);
       comment = "BuildSubTaskGphP2S->BuildSubTaskGphS2B";
@@ -480,7 +477,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
 
   } else if (SubTskGphBuilderUtil::IsBoxingB2S(in_sbp_parallel, out_sbp_parallel)) {
     BuildSubTaskGphB2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
-                       logical_blob_desc, in_nodes, sorted_out_tasks);
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphB2S";
   } else {
     UNIMPLEMENTED();
