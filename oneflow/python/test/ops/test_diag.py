@@ -30,50 +30,6 @@ def _random_input(x_shape):
     return x
 
 
-def diag_forward_np(input_tensor, dim):
-    input_shape = input_tensor.shape
-    input_dtype = input_tensor.dtype
-    if len(input_shape) == 1:
-        output_size = input_shape[0] + abs(dim)
-        output_shape = [output_size, output_size]
-        output_arr = np.zeros(output_shape)
-        stride0 = output_size
-        stride1 = 1
-
-        beg = stride1 * dim if dim >= 0 else stride0 * abs(dim)
-        for i in range(input_shape[0]):
-            if i > 0:
-                beg += stride1 + stride0
-
-            if dim >= 0:
-                output_arr[i][int(beg % stride0)] = input_tensor[i]
-            if dim < 0:
-                output_arr[int((beg - i) / stride0)][i] = input_tensor[i]
-
-        return output_arr
-
-    else:
-        stride1 = 1
-        stride0 = input_shape[1]
-        beg = stride1 * abs(dim) if dim >= 0 else stride0 * abs(dim)
-
-        if dim >= 0:
-            output_size = min(input_shape[0], input_shape[1] - dim)
-        else:
-            output_size = min(input_shape[0] + dim, input_shape[1])
-
-        output_arr = np.zeros([output_size], dtype=input_dtype)
-        for i in range(output_size):
-            if i > 0:
-                beg += stride1 + stride0
-            if dim >= 0:
-                output_arr[i] = input_tensor[i][int(beg % stride0)]
-            if dim < 0:
-                output_arr[i] = input_tensor[int(beg / stride0)][i]
-
-        return output_arr
-
-
 def diag_grad_np(input_tensor, dim, output, grad):
     input_shape = input_tensor.shape
     output_shape = output.shape
@@ -132,12 +88,12 @@ def forward_compare_with_np(device_type, input_tensor, dim, dtype):
     check_point.init()
     forward_of_out = diag_forward(input_tensor)
 
-    forward_np_out = diag_forward_np(input_tensor, dim)
+    forward_np_out = np.diag(input_tensor, dim)
 
     assert np.allclose(forward_of_out, forward_np_out)
 
 
-def backward_compare_with_np(device_type, input_tensor, dim, dtype):
+def compare_with_np(device_type, input_tensor, dim, dtype):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -145,14 +101,14 @@ def backward_compare_with_np(device_type, input_tensor, dim, dtype):
     func_config.default_data_type(type_name_to_flow_type[dtype])
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
-    output_np = diag_forward_np(input_tensor, dim)
+    output_np = np.diag(input_tensor, dim)
     output_shape = output_np.shape
     input_shape = input_tensor.shape
     output_dtype = output_np.dtype
     grad = np.random.random(output_shape).astype(output_dtype)
 
     @flow.global_function(type="train", function_config=func_config)
-    def DiagForwardJob(
+    def DiagJob(
         input_tensor: tp.Numpy.Placeholder(
             shape=(input_shape), dtype=type_name_to_flow_type[dtype]
         ),
@@ -182,7 +138,7 @@ def backward_compare_with_np(device_type, input_tensor, dim, dtype):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    output_of = DiagForwardJob(input_tensor)
+    output_of = DiagJob(input_tensor)
     output_diff = test_global_storage.Get("output_diff").astype(dtype)
     x_diff_of = test_global_storage.Get("x_diff").astype(dtype)
 
@@ -195,70 +151,51 @@ def backward_compare_with_np(device_type, input_tensor, dim, dtype):
 
 def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(np.float32)
-    # input_tensor = input_tensor * 10
     input_tensor = input_tensor.reshape(input_shape).astype(dtype)
     forward_compare_with_np(device_type, input_tensor, dim, dtype)
     if dtype == "float32" or dtype == "double":
-        backward_compare_with_np(device_type, input_tensor, dim, dtype)
+        compare_with_np(device_type, input_tensor, dim, dtype)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestCast(flow.unittest.TestCase):
-    def test_cast1(test_case):
+    def test_diag_1D_cpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["input_shape"] = [(3, 3)]
-        arg_dict["dim"] = [1]
-        arg_dict["dtype"] = ["float32", "double"]
-        for arg in GenArgList(arg_dict):
-            test_fun(*arg)
-
-    def test_cast2(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["input_shape"] = [(3, 3)]
-        arg_dict["dim"] = [-1]
-        arg_dict["dtype"] = ["float32", "double"]
-        for arg in GenArgList(arg_dict):
-            test_fun(*arg)
-
-    def test_cast3(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["input_shape"] = [(3, 3)]
-        arg_dict["dim"] = [0]
-        arg_dict["dtype"] = ["float32", "double"]
-        for arg in GenArgList(arg_dict):
-            test_fun(*arg)
-
-    def test_cast4(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_type"] = ["cpu"]
         arg_dict["input_shape"] = [(3)]
-        arg_dict["dim"] = [0]
+        arg_dict["dim"] = [0, 2, -3]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
 
-    def test_cast5(test_case):
+    def test_diag_2D_cpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["input_shape"] = [(3)]
-        arg_dict["dim"] = [2]
+        arg_dict["device_type"] = ["cpu"]
+        arg_dict["input_shape"] = [(3, 3)]
+        arg_dict["dim"] = [1, -1, 0]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
 
-    def test_cast6(test_case):
+    def test_diag_1D_gpu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_type"] = ["gpu"]
         arg_dict["input_shape"] = [(3)]
-        arg_dict["dim"] = [-3]
+        arg_dict["dim"] = [0, 2, -3]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
 
-    def test_cast7(test_case):
+    def test_diag_2D_gpu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["input_shape"] = [(3, 3)]
+        arg_dict["dim"] = [1, -1, 0]
+        arg_dict["dtype"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            test_fun(*arg)
+    
+    def test_diag_int_cpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
         arg_dict["input_shape"] = [(3)]

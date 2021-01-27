@@ -53,17 +53,17 @@ class DiagKernelGPU final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const int32_t dimension = ctx->Attr<int32_t>("dimension");
-    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("diag_out", 0);
-    const ShapeView& out_shape = out_tensor->shape();
-    const ShapeView& in_shape = in_tensor->shape();
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const ShapeView& out_shape = out->shape();
+    const ShapeView& in_shape = in->shape();
     int32_t in_dim = in_shape.NumAxes();
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), out_tensor->mut_dptr(), 0,
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
                              out_shape.elem_cnt() * sizeof(T));
 
-    const T* in_buf = in_tensor->dptr<T>();
-    T* out_buf = out_tensor->mut_dptr<T>();
+    const T* in_buf = in->dptr<T>();
+    T* out_buf = out->mut_dptr<T>();
 
     if (in_dim == 1) {
       int32_t stride_0 = out_shape.At(1);
@@ -145,7 +145,7 @@ class DiagGradKernelGPU final : public user_op::OpKernel {
 #define REGISTER_DIAG_KERNEL_GPU(dtype)                                             \
   REGISTER_USER_KERNEL("diag").SetCreateFn<DiagKernelGPU<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == "gpu")                                            \
-      & (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value));
+      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_DIAG_KERNEL_GPU(half)
 REGISTER_DIAG_KERNEL_GPU(float)

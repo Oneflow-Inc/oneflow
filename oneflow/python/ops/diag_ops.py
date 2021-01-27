@@ -22,15 +22,16 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 from typing import Optional
 import oneflow_api
 
+
 @oneflow_export("diag")
-def tensor_list_to_tensor_buffer(
-    input_tensor: oneflow_api.BlobDesc, 
+def diag(
+    input: oneflow_api.BlobDesc,
     dimension: Optional[int] = 0,
-    name: Optional[str] = None
-)-> oneflow_api.BlobDesc:
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     """This operator compute diagonal. 
 
-    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    Refer to `Concept Explanation <https://pytorch.org/docs/stable/generated/torch.diag.html>`_ 
     for more about Diag. 
 
     Args:
@@ -65,17 +66,12 @@ def tensor_list_to_tensor_buffer(
 
     """
     return (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Diag_")
-        )
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Diag_"))
         .Op("diag")
-        .Input("input_tensor", [input_tensor])
+        .Input("in", [input])
         .Attr("dimension", int(dimension))
-        .Output("diag_out")
-        .Build() 
+        .Output("out")
+        .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-    
-    
-

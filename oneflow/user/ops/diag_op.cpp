@@ -18,11 +18,10 @@ limitations under the License.
 namespace oneflow {
 namespace {
 Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* input_tensor = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0);
+  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   const int32_t dimension = ctx->Attr<int32_t>("dimension");
-  const ShapeView& in_shape = input_tensor->shape();
+  const ShapeView& in_shape = in->shape();
   const int32_t in_dim = in_shape.NumAxes();
-  int32_t output_dim = (in_dim == 1 ? 2 : 1);
   DimVector out_dim_vec = {0};
 
   if (in_dim == 1) {
@@ -37,18 +36,18 @@ Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
     }
   }
 
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("diag_out", 0);
+  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   out_desc->set_is_dynamic(false);
   *out_desc->mut_shape() = Shape(out_dim_vec);
   *out_desc->mut_data_type() = oneflow::kFloat;
-  *out_desc->mut_data_type() = input_tensor->data_type();
+  *out_desc->mut_data_type() = in->data_type();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* input_tensor = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0);
+  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-  const Shape& in_shape = input_tensor->shape();
+  const Shape& in_shape = in->shape();
   user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
   *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
   *dx_desc->mut_data_type() = dy_desc->data_type();
@@ -58,14 +57,13 @@ Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
 }  // namespace
 
 REGISTER_USER_OP("diag")
-    .Input("input_tensor")
-    .Output("diag_out")
+    .Input("in")
+    .Output("out")
     .Attr<int32_t>("dimension", 0)
     .SetTensorDescInferFn(InferForwardTensorDesc)
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("input_tensor", 0);
+      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       int32_t axis = in_tensor.shape().NumAxes();
       FOR_RANGE(int32_t, i, 0, axis) {
         if (i == axis) { continue; }
@@ -77,7 +75,7 @@ REGISTER_USER_OP("diag")
 
 REGISTER_USER_OP("diag_grad")
     .Input("dy")
-    .Input("input_tensor")
+    .Input("in")
     .Attr<int32_t>("dimension", 0)
     .Output("dx")
     .SetTensorDescInferFn(InferBackwardTensorDesc)
@@ -97,16 +95,15 @@ REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("diag_grad")
-        .InputBind("input_tensor", ctx->FwOp().input("input_tensor", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("diag_out", 0))
+        .InputBind("in", ctx->FwOp().input("in", 0))
+        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
         .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
         .Output("dx")
         .Build();
   });
 
-  ctx->FwOp().InputGradBind(user_op::OpArg("input_tensor", 0),
-                            [&ctx, &grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(grad_op_name).output("dx", 0);
-                            });
+  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
+    return ctx->GetOp(grad_op_name).output("dx", 0);
+  });
 });
 }  // namespace oneflow
