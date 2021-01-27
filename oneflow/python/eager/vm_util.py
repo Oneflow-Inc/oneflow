@@ -539,7 +539,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         obj = oneflow_api.BlobObject(
             object_id, op_arg_parallel_attr, sole_mirrored_blob_object.op_arg_blob_attr,
         )
-        obj.add_releaser(self.release_object())
+        obj.add_releaser(self.object_releaser())
         return obj
 
     def NewOpKernelObject(self, op_conf):
@@ -551,7 +551,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         object_id = self._NewOpKernelObject(
             parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
         )
-        return OpKernelObject(object_id, op_conf, self.release_object())
+        return OpKernelObject(object_id, op_conf, self.object_releaser())
 
     def Build121To(self, blob_object, parallel_desc_symbol):
         ref_blob_object = _MakeNewBlobObjectLike(
@@ -891,7 +891,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
     def _NewBlobObject(self, op_arg_parallel_attr, op_arg_blob_attr):
         object_id = self._NewObjectId(op_arg_parallel_attr.parallel_desc_symbol)
         obj = oneflow_api.BlobObject(object_id, op_arg_parallel_attr, op_arg_blob_attr)
-        obj.add_releaser(self.release_object())
+        obj.add_releaser(self.object_releaser())
         return obj
 
     def _NewSymbolId4String(self, string):

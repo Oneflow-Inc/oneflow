@@ -64,7 +64,7 @@ class InstructionsBuilder {
     return eager_symbol_list_;
   }
 
-  const std::function<void(compatible_py::BlobObject*)>& release_object() const {
+  const std::function<void(compatible_py::BlobObject*)>& object_releaser() const {
     return release_object_;
   }
 

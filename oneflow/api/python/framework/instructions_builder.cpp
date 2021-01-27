@@ -34,7 +34,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("id_generator", &InstructionsBuilder::id_generator)
       .def("instruction_list", &InstructionsBuilder::instruction_list)
       .def("eager_symbol_list", &InstructionsBuilder::eager_symbol_list)
-      .def("release_object", &InstructionsBuilder::release_object);
+      .def("object_releaser", &InstructionsBuilder::object_releaser);
 }
 
 }  // namespace oneflow
