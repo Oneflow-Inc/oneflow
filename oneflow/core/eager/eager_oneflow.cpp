@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
@@ -28,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
@@ -41,7 +42,7 @@ namespace {
 Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   int64_t symbol_id = symbol.symbol_id();
   if (symbol.has_string_symbol()) {
-    JUST(Global<symbol::Storage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol()));
+    JUST(Global<symbol::Storage<StringSymbol>>::Get()->TryAdd(symbol_id, symbol.string_symbol()));
   } else if (symbol.has_scope_symbol()) {
     JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, symbol.scope_symbol()));
   } else if (symbol.has_job_conf_symbol()) {
@@ -52,7 +53,7 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   } else if (symbol.has_op_conf_symbol()) {
     JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol()));
   } else if (symbol.has_op_node_signature_symbol()) {
-    JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->Add(
+    JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->TryAdd(
         symbol_id, symbol.op_node_signature_symbol()));
   } else {
     OF_UNIMPLEMENTED();

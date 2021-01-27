@@ -228,8 +228,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   builders.emplace_back(new NaiveB2PSubTskGphBuilder());
   sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
-  HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
-  HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_out_box;
   HashMap<CompTaskNode*, HashMap<int64_t, std::vector<TaskNode*>>> buf_task;
   auto MutBufTask = [&](CompTaskNode* task_node, int64_t machine_id, int32_t mem_zone_id) {
     auto& buf_vec = buf_task[task_node][machine_id];
@@ -265,8 +263,8 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
     (this->*method)(logical_edge->src_node(), logical_edge->dst_node(),
                     logical2sorted_comp_tasks.at(logical_edge->src_node()),
-                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), &logical2sorted_in_box,
-                    &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
+                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask,
+                    AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   logical_gph_->ForEachNecessaryCtrlEdge(

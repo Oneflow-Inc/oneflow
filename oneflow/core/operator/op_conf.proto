@@ -15,7 +15,7 @@ import "oneflow/core/graph/boxing/collective_boxing.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
-import "oneflow/core/operator/inter_face_blob_conf.proto";
+import "oneflow/core/operator/interface_blob_conf.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -477,13 +477,6 @@ message ModelSaveV2OpConf {
   required string tick = 6;
 }
 
-message ParallelCastOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional OptInt64 split_axis = 3;
-  optional OptInt64 gradient_split_axis = 4;
-}
-
 message DynamicBinarySplitOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -668,7 +661,6 @@ message OperatorConf {
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
     SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
-    ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;

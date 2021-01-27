@@ -38,11 +38,6 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   VirtualKernelInit(device_ctx);
 }
 
-void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
-}
-
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Forward(ctx, BnInOp2Blob);

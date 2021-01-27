@@ -84,8 +84,7 @@ Maybe<void> Cluster::WorkerLoop() {
     }
   }
   ClusterInstruction::HaltBarrier();
-  Global<EnvGlobalObjectsScope>::Delete();
-  exit(0);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
