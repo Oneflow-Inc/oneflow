@@ -3038,13 +3038,13 @@ def selu(
 
         @flow.global_function()
         def selu_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            return flow.nn.selu(x, scale=1.2, alpha=1.0)
+            return flow.nn.selu(x)
 
 
         x = np.array([-3.5, 1, 3.5]).astype(np.float32)
         out = selu_job(x)
 
-        # output [-1.16376312  1.2         4.2      ]
+        # output [-1.7050093  1.050701   3.6774535]
 
     Args:
         x (oneflow_api.BlobDesc): The input Tensor. 
