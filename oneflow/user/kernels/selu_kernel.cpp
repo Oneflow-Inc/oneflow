@@ -21,8 +21,7 @@ namespace {
 
 template<template<typename> class Opt, typename T>
 struct ElemwiseSeluFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* out,
-                  const T* in) {
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* out, const T* in) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = Opt<T>(scale, alpha)(in[i]); }
   }
 };
