@@ -48,6 +48,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const ParallelDistribution& ParallelDistribution4Lbi(const LogicalBlobId& lbi) const;
+  const ParallelDistribution& ParallelDistribution4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   Maybe<const OptInt64*> BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
@@ -90,6 +92,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InitLbi2SourceNode();
   void InitInputBlobFastestTimeShape();
   void InitLbi2SbpParallel();
+  void InitLbi2ParallelDistribution();
   void InitLbi2MirroredParallel();
 
   ParallelDesc parallel_desc_;
@@ -102,6 +105,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   std::unique_ptr<Shape> input_blob_fastest_time_shape_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
+  HashMap<LogicalBlobId, ParallelDistribution> lbi2parallel_distribution_;
   std::unique_ptr<Shape> parallel_hierarchy_;
 };
 

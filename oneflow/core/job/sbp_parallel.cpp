@@ -28,6 +28,24 @@ bool operator==(const SbpSignature& lhs, const SbpSignature& rhs) {
 
 bool operator!=(const SbpSignature& lhs, const SbpSignature& rhs) { return !(lhs == rhs); }
 
+bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator==(const ParallelDistributionSignature& lhs,
+                const ParallelDistributionSignature& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+bool operator!=(const ParallelDistributionSignature& lhs,
+                const ParallelDistributionSignature& rhs) {
+  return !(lhs == rhs);
+}
+
 //  S -> S
 //  P -> B
 //  B -> P

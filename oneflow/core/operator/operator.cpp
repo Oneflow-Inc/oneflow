@@ -474,6 +474,18 @@ Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_
   return &iter->second;
 }
 
+Maybe<const ParallelDistribution*> Operator::ParallelDistribution4BnInOp(
+    const std::string& bn_in_op) const {
+  CHECK_OR_RETURN(op_attribute_.has_parallel_distribution_signature())
+      << "parallel distribution signature not infered";
+  const auto& map =
+      op_attribute_.parallel_distribution_signature().bn_in_op2parallel_distribution();
+  const auto& iter = map.find(bn_in_op);
+  CHECK_OR_RETURN(iter != map.end())
+      << "blob_name " << bn_in_op << " not found in parallel distribution";
+  return &iter->second;
+}
+
 Maybe<const OptInt64*> Operator::BatchAxis4BnInOp(const std::string& bn_in_op) const {
   CHECK_OR_RETURN(op_attribute_.has_batch_axis_signature()) << "batch axis signature not infered";
   const auto& map = op_attribute_.batch_axis_signature().bn_in_op2batch_axis();

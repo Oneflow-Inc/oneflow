@@ -26,6 +26,11 @@ bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs);
 bool operator==(const SbpSignature& lhs, const SbpSignature& rhs);
 bool operator!=(const SbpSignature& lhs, const SbpSignature& rhs);
 
+bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs);
+bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs);
+bool operator==(const ParallelDistributionSignature& lhs, const ParallelDistributionSignature& rhs);
+bool operator!=(const ParallelDistributionSignature& lhs, const ParallelDistributionSignature& rhs);
+
 SbpParallel GetDualSbpParallel(const SbpParallel&);
 
 bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& smaller);
