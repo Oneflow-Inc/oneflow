@@ -46,8 +46,8 @@ class DistributeCloneOp final : public Operator {
                              const ParallelContext*) const override;
   Maybe<void> InferOutParallelDesc(
       std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const override;
+      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
+      const ParallelDesc&) const override;
 };
 
 void DistributeCloneOp::InitFromOpConf() {
@@ -79,7 +79,7 @@ Maybe<void> DistributeCloneOp::InferBlobDescs(
 Maybe<void> DistributeCloneOp::InferOutParallelDesc(
     std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
     std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature*) const {
+    const ParallelDesc& op_parallel_desc) const {
   FOR_RANGE(int, i, 0, output_bns().size()) {
     const auto& obn = output_bns().Get(i);
     if (op_parallel_desc.parallel_num() > 1) {
