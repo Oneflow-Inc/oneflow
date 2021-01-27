@@ -360,7 +360,6 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
         if (i == root_parallel_id) {
           sorted_dst_tasks->push_back(collective_node);
         } else {
-          sorted_dst_tasks->push_back(collective_node);
           sorted_dst_ctrl_in_tasks->at(0).push_back(collective_node);
         }
       }

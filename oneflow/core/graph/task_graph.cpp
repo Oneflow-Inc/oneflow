@@ -557,17 +557,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(), dst_logical->SoleOp()->op_name(),
                         *src_parallel_desc, *dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                         lbi, blob_desc);
-    if (dst_nodes.size() == sorted_dst_comp_tasks.size()) {
-      sub_tsk_gph_builder_ctx_->ConnectAll121(dst_nodes, sorted_dst_comp_tasks);
-    } else if (sorted_dst_comp_tasks.size() == 1) {
-      FOR_RANGE(int64_t, i, 0, dst_nodes.size()) {
-        Connect<TaskNode>(dst_nodes.at(i), NewEdge(), sorted_dst_comp_tasks.front());
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
+    sub_tsk_gph_builder_ctx_->ConnectAll121(dst_nodes, sorted_dst_comp_tasks);
     FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
       for (TaskNode* ctrl_in_node : sorted_dst_ctrl_in_tasks.at(i)) {
+        Connect<TaskNode>(ctrl_in_node, NewEdge(), sorted_dst_comp_tasks.at(i));
         ctrl_in_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i));
       }
     }
