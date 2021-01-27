@@ -40,7 +40,6 @@ import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 from oneflow.python.eager.opkernel_object import OpKernelObject
-import oneflow.python.vm.id_util as vm_id_util
 import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -53,7 +52,7 @@ import oneflow_api
 def PhysicalRun(build):
     return _Run(
         build,
-        vm_id_util.PhysicalIdGenerator(),
+        oneflow_api.vm.PhysicalIdGenerator(),
         c_api_util.RunPhysicalInstruction,
         _ReleasePhysicalObject,
     )
@@ -62,7 +61,7 @@ def PhysicalRun(build):
 def LogicalRun(build):
     return _Run(
         build,
-        vm_id_util.LogicalIdGenerator(),
+        oneflow_api.vm.LogicalIdGenerator(),
         c_api_util.RunLogicalInstruction,
         _ReleaseLogicalObject,
     )
@@ -565,8 +564,8 @@ class InstructionsBuilder(object):
         parallel_num = ref_blob_object.parallel_desc_symbol.parallel_num
         assert parallel_num == value_blob_object.parallel_desc_symbol.parallel_num
         token_ids = (
-            [oneflow_api.NewTokenId() for _ in range(parallel_num)],
-            [oneflow_api.NewTokenId() for _ in range(parallel_num)],
+            [oneflow_api.vm.NewTokenId() for _ in range(parallel_num)],
+            [oneflow_api.vm.NewTokenId() for _ in range(parallel_num)],
         )
         self._BuildSendInstruction(
             ref_blob_object.parallel_desc_symbol, value_blob_object, token_ids
