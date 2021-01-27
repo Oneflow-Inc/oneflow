@@ -108,7 +108,7 @@ def compare_with_np(device_type, input_tensor, dim, dtype):
     grad = np.random.random(output_shape).astype(output_dtype)
 
     @flow.global_function(type="train", function_config=func_config)
-    def DiagJob(
+    def diag_job(
         input_tensor: tp.Numpy.Placeholder(
             shape=(input_shape), dtype=type_name_to_flow_type[dtype]
         ),
@@ -138,7 +138,7 @@ def compare_with_np(device_type, input_tensor, dim, dtype):
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    output_of = DiagJob(input_tensor)
+    output_of = diag_job(input_tensor)
     output_diff = test_global_storage.Get("output_diff").astype(dtype)
     x_diff_of = test_global_storage.Get("x_diff").astype(dtype)
 
