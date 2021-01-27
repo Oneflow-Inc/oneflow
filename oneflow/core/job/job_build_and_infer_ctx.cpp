@@ -372,10 +372,11 @@ bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
 }
 
 Maybe<const SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
-  const auto& iter = lbi2sbp_parallel_from_producer_view_.find(lbi);
-  CHECK_OR_RETURN(iter != lbi2sbp_parallel_from_producer_view_.end())
+  const auto& iter = lbi2parallel_distribution_from_producer_view_.find(lbi);
+  CHECK_OR_RETURN(iter != lbi2parallel_distribution_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
-  return &iter->second;
+  CHECK_EQ_OR_RETURN(iter->second.sbp_parallel_size(), 1);
+  return &iter->second.sbp_parallel(0);
 }
 
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::ParallelDesc4Lbi(const LogicalBlobId& lbi) const {
@@ -685,8 +686,12 @@ Maybe<Operator*> JobBuildAndInferCtx::Op4OpName(const std::string& op_name) cons
 Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   OptInt64 ret;
-  const auto& sbp = lbi2sbp_parallel_from_producer_view_.at(GenLogicalBlobId(lbn));
-  if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
+  const auto& distribution =
+      lbi2parallel_distribution_from_producer_view_.at(GenLogicalBlobId(lbn));
+  CHECK_EQ_OR_RETURN(distribution.sbp_parallel_size(), 1);
+  if (distribution.sbp_parallel(0).has_split_parallel()) {
+    ret.set_value(distribution.sbp_parallel(0).split_parallel().axis());
+  }
   return ret;
 }
 
@@ -769,8 +774,11 @@ Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetSplitAxisFromProducerView(
     const std::string& lbn_with_hint) const {
   const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
   OptInt64 ret;
-  const auto& sbp = lbi2sbp_parallel_from_producer_view_.at(lbi);
-  if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
+  const auto& distribution = lbi2parallel_distribution_from_producer_view_.at(lbi);
+  CHECK_EQ_OR_RETURN(distribution.sbp_parallel_size(), 1);
+  if (distribution.sbp_parallel(0).has_split_parallel()) {
+    ret.set_value(distribution.sbp_parallel(0).split_parallel().axis());
+  }
   return ret;
 }
 
@@ -829,7 +837,7 @@ Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) c
       << Error::LogicalBlobNameNotExistError() << "lbn:" << lbn;
 
   CHECK_HAS_LBI_KEY(lbi2logical_blob_desc_);
-  CHECK_HAS_LBI_KEY(lbi2sbp_parallel_from_producer_view_);
+  CHECK_HAS_LBI_KEY(lbi2parallel_distribution_from_producer_view_);
   CHECK_HAS_LBI_KEY(lbi2parallel_desc_from_producer_view_);
 #undef CHECK_HAS_LBI_KEY
 

@@ -138,7 +138,6 @@ class JobBuildAndInferCtx {
   Job* job_;
   int64_t job_id_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
-  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDistribution> lbi2parallel_distribution_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<LogicalBlobId, bool> lbi2disable_boxing_;
