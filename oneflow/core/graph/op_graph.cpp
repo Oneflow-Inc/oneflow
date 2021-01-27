@@ -332,8 +332,7 @@ void OpNode::InferBlobParallelDesc() {
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc* {
     return &LogicalBlobDesc4Lbi(op().BnInOp2Lbi(ibn));
   };
-  CHECK_JUST(op().InferOutParallelDescIf(ParallelDesc4Obn, LogicalBlobDesc4Ibn, parallel_desc(),
-                                         &sbp_signature()));
+  CHECK_JUST(op().InferOutParallelDescIf(ParallelDesc4Obn, LogicalBlobDesc4Ibn, parallel_desc()));
 }
 
 void OpNode::InitLbi2SourceNode() {
