@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/kernel/kernel.pb.h"
+#include "oneflow/core/job/parallel_distribution_infer_hint.h"
 
 namespace oneflow {
 
@@ -157,6 +158,12 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
+  Maybe<void> InferParallelDistributionSignatureIf(
+      const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+      const Shape& parallel_hierarchy,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn,
+      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
   // Infer blob's MirroredSignature
   Maybe<void> InferMirroredSignatureIf(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
@@ -220,6 +227,12 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
+  virtual Maybe<void> InferParallelDistributionSignature(
+      const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+      const Shape& parallel_hierarchy,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn,
+      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();

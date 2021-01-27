@@ -217,41 +217,53 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::InferOpOutSbpParallel(Operator* op,
-                                                       const SbpSignature& sbp_sig_conf,
-                                                       const ParallelDesc& parallel_desc) {
+Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(Operator* op,
+                                                                const SbpSignature& sbp_sig_conf,
+                                                                const ParallelDesc& parallel_desc) {
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
     return op->BatchAxis4BnInOp(bn_in_op);
   };
-  HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+  HashMap<std::string, ParallelDistributionInferHint> ibn2parallel_distribution_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-    CHECK_OR_RETURN(lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end())
+    auto logical_blob_desc_it = lbi2logical_blob_desc_.find(lbi);
+    CHECK_OR_RETURN(logical_blob_desc_it != lbi2logical_blob_desc_.end())
         << Error::LogicalBlobNameNotExistError()
         << "infer blob desc not found, when infer op_name: \"" << op->op_name()
         << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \"" << lbi.blob_name();
+    const BlobDesc* logical_blob_desc = logical_blob_desc_it->second.get();
     const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
-    const BlobDesc* logical_blob_desc = lbi2logical_blob_desc_.at(lbi).get();
-    CHECK_OR_RETURN(lbi2sbp_parallel_from_producer_view_.find(lbi)
-                    != lbi2sbp_parallel_from_producer_view_.end())
+    auto parallel_distribution_it = lbi2parallel_distribution_from_producer_view_.find(lbi);
+    CHECK_OR_RETURN(parallel_distribution_it != lbi2parallel_distribution_from_producer_view_.end())
         << Error::LogicalBlobNameNotExistError() << "when infer op_name: " << op->op_name()
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-        << " not infer split axis";
-    const SbpParallel* sbp_parallel = &lbi2sbp_parallel_from_producer_view_.at(lbi);
+        << " not infer parallel distribution";
+    const ParallelDistribution* parallel_distribution = &parallel_distribution_it->second;
     const OptInt64* batch_axis = JUST(BatchAxis4BnInOp(ibn));
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel, batch_axis));
+    ibn2parallel_distribution_infer_hint.emplace(
+        ibn,
+        ParallelDistributionInferHint(pd, logical_blob_desc, parallel_distribution, batch_axis));
   }
 
-  JUST(InferOpSbpSignature(op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint, BatchAxis4BnInOp));
+  const auto ParallelDistributionInferHint4Ibn =
+      [&](const std::string& bn) -> Maybe<const ParallelDistributionInferHint*> {
+    return &ibn2parallel_distribution_infer_hint.at(bn);
+  };
 
-  const auto& bn2sbp_parallel = JUST(op->sbp_signature())->bn_in_op2sbp_parallel();
+  JUST(op->InferParallelDistributionSignatureIf(
+      sbp_sig_conf, parallel_desc, op_name2parallel_hierarchy_.at(op->op_name()),
+      ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp));
+
+  const auto& bn2parallel_distribution =
+      JUST(op->parallel_distribution_signature())->bn_in_op2parallel_distribution();
   for (const auto& obn : op->output_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
-    CHECK_OR_RETURN(bn2sbp_parallel.find(obn) != bn2sbp_parallel.end())
+    CHECK_OR_RETURN(bn2parallel_distribution.find(obn) != bn2parallel_distribution.end())
         << Error::BlobSplitAxisInferError() << "op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " not infer split axis";
     CHECK_OR_RETURN(
-        lbi2sbp_parallel_from_producer_view_.emplace(lbi, bn2sbp_parallel.at(obn)).second)
+        lbi2parallel_distribution_from_producer_view_.emplace(lbi, bn2parallel_distribution.at(obn))
+            .second)
         << Error::BlobSplitAxisInferError() << "op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " infer split axis repeated";
     CHECK_OR_RETURN(lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).second)
@@ -566,7 +578,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
   // infer sbp signature
-  JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc));
+  JUST(InferOpOutParallelDistribution(op, sbp_sig_conf, parallel_desc));
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));

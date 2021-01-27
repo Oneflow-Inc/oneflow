@@ -117,7 +117,7 @@ class JobBuildAndInferCtx {
                                          bool is_mirrored_parallel_view) const;
   Maybe<void> InferMirroredSignature(Operator*, bool is_mirrored_parallel_view_conf,
                                      const ParallelDesc&);
-  Maybe<void> InferOpOutSbpParallel(Operator*, const SbpSignature&, const ParallelDesc&);
+  Maybe<void> InferOpOutParallelDistribution(Operator*, const SbpSignature&, const ParallelDesc&);
   Maybe<void> GenOpProducedEmptyLogicalBlobDesc(Operator* op);
   Maybe<void> CheckOpBlobSplitability(Operator*, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
@@ -139,6 +139,7 @@ class JobBuildAndInferCtx {
   int64_t job_id_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_from_producer_view_;
+  HashMap<LogicalBlobId, ParallelDistribution> lbi2parallel_distribution_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<LogicalBlobId, bool> lbi2disable_boxing_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;

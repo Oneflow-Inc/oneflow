@@ -290,6 +290,47 @@ Maybe<void> Operator::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::InferParallelDistributionSignatureIf(
+    const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const Shape& parallel_hierarchy,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn,
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
+  return InferParallelDistributionSignature(sbp_sig_conf, parallel_desc, parallel_hierarchy,
+                                            ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp);
+}
+
+Maybe<void> Operator::InferParallelDistributionSignature(
+    const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
+    const Shape& parallel_hierarchy,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn,
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
+  CHECK_GT(parallel_hierarchy.NumAxes(), 0);
+  if (parallel_hierarchy.NumAxes() == 1) {
+    HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+    for (const auto& ibn : input_bns()) {
+      const ParallelDistributionInferHint* hint = JUST(ParallelDistributionInferHint4Ibn(ibn));
+      CHECK_EQ(hint->parallel_distribution().sbp_parallel_size(), 1);
+      ibn2sbp_infer_hint.emplace(
+          ibn, SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
+                            &hint->parallel_distribution().sbp_parallel(0), &hint->batch_axis()));
+    }
+    CHECK_JUST(InferOpSbpSignature(this, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
+                                   BatchAxis4BnInOp));
+    for (const auto& pair : JUST(this->sbp_signature())->bn_in_op2sbp_parallel()) {
+      *((*mut_parallel_distribution_signature()
+              ->mutable_bn_in_op2parallel_distribution())[pair.first]
+            .add_sbp_parallel()) = pair.second;
+    }
+    return Maybe<void>::Ok();
+  } else {
+    CHECK(sbp_sig_conf.bn_in_op2sbp_parallel().empty());
+    UNIMPLEMENTED();
+    return Maybe<void>::Ok();
+  }
+}
+
 Maybe<void> Operator::InferMirroredSignatureIf(
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
     bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
@@ -817,29 +858,6 @@ Maybe<void> InferOpSbpSignature(
   JUST(op->InferSbpSignatureIf(op->mut_sbp_signature(), sbp_sig_conf, CalcOrderValue4SbpSig,
                                SbpInferHint4Ibn, parallel_desc));
   return Maybe<void>::Ok();
-}
-
-Maybe<void> InferOpParallelDistributionSignature(
-    Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
-    const Shape& parallel_hierarchy,
-    const HashMap<std::string, ParallelDistributionInferHint>& ibn2parallel_distribution_infer_hint,
-    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
-  CHECK_GT(parallel_hierarchy.NumAxes(), 0);
-  if (parallel_hierarchy.NumAxes() == 1) {
-    HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
-    for (const auto& pair : ibn2parallel_distribution_infer_hint) {
-      CHECK_EQ(pair.second.parallel_distribution().sbp_parallel_size(), 1);
-      ibn2sbp_infer_hint.emplace(
-          pair.first, SbpInferHint(&pair.second.parallel_desc(), &pair.second.logical_blob_desc(),
-                                   &pair.second.parallel_distribution().sbp_parallel(0),
-                                   &pair.second.batch_axis()));
-    }
-    return InferOpSbpSignature(op, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
-                               BatchAxis4BnInOp);
-  } else {
-    CHECK(sbp_sig_conf.bn_in_op2sbp_parallel().empty());
-    return Maybe<void>::Ok();
-  }
 }
 
 std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
