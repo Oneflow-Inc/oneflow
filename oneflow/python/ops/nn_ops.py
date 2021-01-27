@@ -3012,8 +3012,8 @@ def elu(
 @oneflow_export("nn.selu")
 def selu(
     x: oneflow_api.BlobDesc,
-    lambda_: float = 1.0507009873554804934193349852946,
-    alpha_: float = 1.6732632423543772848170429916717,
+    scale: float = 1.0507009873554804934193349852946,
+    alpha: float = 1.6732632423543772848170429916717,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     r"""The SELU activation. 
@@ -3023,11 +3023,11 @@ def selu(
     .. math::  
 
         \text{SELU}(x) = \begin{cases}
-				lambda_ * (x & \text{ if } x \gt 0  \\
-                \alpha_*(exp(x)-1) & \text{ if } x \le 0) \\
+				scale * (x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
     		    \end{cases}
 
-    For example: make 
+    For example:
 
     .. code-block:: python 
 
@@ -3038,7 +3038,7 @@ def selu(
 
         @flow.global_function()
         def selu_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            return flow.nn.selu(x, lambda_=1.2, alpha_=1.0)
+            return flow.nn.selu(x, scale=1.2, alpha=1.0)
 
 
         x = np.array([-3.5, 1, 3.5]).astype(np.float32)
@@ -3048,16 +3048,16 @@ def selu(
 
     Args:
         x (oneflow_api.BlobDesc): The input Tensor. 
-        lambda_ (float, optional): The `lambda` value for the SELU formula. Defaults to 1.0507009873554804934193349852946.
-        alpha_ (float, optional): The `alpha` value for the SELU formula. Defaults to 1.6732632423543772848170429916717.
+        scale (float, optional): The `scale` value for the SELU formula. Defaults to 1.0507009873554804934193349852946.
+        alpha (float, optional): The `alpha` value for the SELU formula. Defaults to 1.6732632423543772848170429916717.
         name (Optional[str], optional): The name for the operator. Defaults to None.
 
     Returns:
         oneflow_api.BlobDesc: The activated Tensor.
     """
-    lambda_ = float(lambda_)
-    assert 1.0 < lambda_, "lambda_ value should be larger than 1.0"
-    alpha_ = float(alpha_)
+    scale = float(scale)
+    assert 1.0 < scale, "scale value should be larger than 1.0"
+    alpha = float(alpha)
     if name is None:
         name = id_util.UniqueStr("SElu_")
     return (
@@ -3065,8 +3065,8 @@ def selu(
         .Op("selu")
         .Input("in", [x])
         .Output("out")
-        .Attr("lambda_", lambda_)
-        .Attr("alpha_", alpha_)
+        .Attr("scale", scale)
+        .Attr("alpha", alpha)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

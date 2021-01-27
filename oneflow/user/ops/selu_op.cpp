@@ -22,15 +22,15 @@ namespace {
 
 REGISTER_USER_OP("selu")
     .Input("in")
-    .Attr<double>("lambda_")
-    .Attr<double>("alpha_")
+    .Attr<double>("scale")
+    .Attr<double>("alpha")
     .Output("out")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
-      double lambda_ = conf.attr<double>("lambda_");
-      if (lambda_ > 1.0) { return Maybe<void>::Ok(); }
+      double scale = conf.attr<double>("scale");
+      if (scale > 1.0) { return Maybe<void>::Ok(); }
       return oneflow::Error::CheckFailedError()
-             << "lambda_ value: " << lambda_ << " for SELU op is illegal.";
+             << "scale value: " << scale << " for SELU op is illegal.";
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
@@ -55,15 +55,15 @@ REGISTER_USER_OP("selu")
 REGISTER_USER_OP("selu_grad")
     .Input("x")
     .Input("dy")
-    .Attr<double>("lambda_")
-    .Attr<double>("alpha_")
+    .Attr<double>("scale")
+    .Attr<double>("alpha")
     .Output("dx")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
-      double lambda_ = conf.attr<double>("lambda_");
-      if (lambda_ > 1.0) { return Maybe<void>::Ok(); }
+      double scale = conf.attr<double>("scale");
+      if (scale > 1.0) { return Maybe<void>::Ok(); }
       return oneflow::Error::CheckFailedError()
-             << "lambda_ value: " << lambda_ << " for SELU op is illegal.";
+             << "scale value: " << scale << " for SELU op is illegal.";
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
@@ -95,8 +95,8 @@ REGISTER_USER_OP_GRAD("selu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
     return builder.OpTypeName("selu_grad")
         .InputBind("x", ctx->FwOp().input("in", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("lambda_", ctx->FwOp().attr<double>("lambda_"))
-        .Attr("alpha_", ctx->FwOp().attr<double>("alpha_"))
+        .Attr("scale", ctx->FwOp().attr<double>("scale"))
+        .Attr("alpha", ctx->FwOp().attr<double>("alpha"))
         .Output("dx")
         .Build();
   });
