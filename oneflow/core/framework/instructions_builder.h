@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/object.h"
 
 namespace oneflow {
 
@@ -43,17 +44,29 @@ class InstructionsBuilder {
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator)
       : id_generator_(id_generator),
         instruction_list_(std::make_shared<vm::cfg::InstructionListProto>()),
-        eager_symbol_list_(std::make_shared<eager::cfg::EagerSymbolList>()) {}
+        eager_symbol_list_(std::make_shared<eager::cfg::EagerSymbolList>()),
+        release_object_([](compatible_py::BlobObject*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
                       const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
-                      const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list)
+                      const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
+                      const std::function<void(compatible_py::BlobObject*)>& release_object)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
-        eager_symbol_list_(symbol_list) {}
+        eager_symbol_list_(symbol_list),
+        release_object_(release_object) {}
   ~InstructionsBuilder() = default;
 
-  const vm::cfg::InstructionListProto& instruction_list() const { return *instruction_list_; }
-  const eager::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
+  std::shared_ptr<vm::IdGenerator> id_generator() const { return id_generator_; }
+  std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const {
+    return instruction_list_;
+  }
+  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const {
+    return eager_symbol_list_;
+  }
+
+  const std::function<void(compatible_py::BlobObject*)>& object_releaser() const {
+    return release_object_;
+  }
 
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
@@ -76,6 +89,7 @@ class InstructionsBuilder {
   std::shared_ptr<vm::IdGenerator> id_generator_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  std::function<void(compatible_py::BlobObject*)> release_object_;
 };
 
 }  // namespace oneflow
