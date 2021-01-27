@@ -521,10 +521,11 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-    const SbpParallel* sbp = &producer->SbpParallel4Lbi(lbi);
+    const ParallelDistribution* parallel_distribution = &producer->ParallelDistribution4Lbi(lbi);
     const OptInt64* batch_axis = CHECK_JUST(producer->BatchAxis4Lbi(lbi));
     ibn2parallel_distribution_infer_hint.emplace(
-        ibn, ParallelDistributionInferHint(parallel_desc, , sbp, batch_axis));
+        ibn, ParallelDistributionInferHint(parallel_desc, logical_blob_desc, parallel_distribution,
+                                           batch_axis));
   }
   const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
     return op_node->op().BatchAxis4BnInOp(bn_in_op);
