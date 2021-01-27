@@ -57,7 +57,8 @@ Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply
       const OperatorConf& dst_op_conf = dst_node->op().op_conf();
       if (IsSupportedUpdateOp(dst_op_conf)) {
         return dst_node;
-      } else if (dst_op_conf.has_parallel_cast_conf()
+      } else if ((dst_op_conf.has_user_conf()
+                  && dst_op_conf.user_conf().op_type_name() == "parallel_cast")
                  || (dst_op_conf.has_user_conf()
                      && dst_op_conf.user_conf().op_type_name() == "scalar_mul")) {
         if (dst_node->out_edges().size() != 1) { return nullptr; }
@@ -194,8 +195,16 @@ Maybe<void> IndexedSlicesOptimizerMirroredUnsortedSegmentSumPromotionPass::Apply
           CHECK_EQ(GenLogicalBlobName(old_lbi), old_val);
         }
       }
-      if (consumer_op_conf.has_parallel_cast_conf()) {
-        consumer_op_conf.mutable_parallel_cast_conf()->clear_split_axis();
+      if ((consumer_op_conf.has_user_conf()
+           && consumer_op_conf.user_conf().op_type_name() == "parallel_cast")) {
+        user_op::UserOpConfWrapper parallel_cast_op_conf(consumer_op_conf);
+        user_op::UserOpConfWrapperBuilder parallel_cast_builder(parallel_cast_op_conf.op_name());
+        parallel_cast_builder.OpTypeName(parallel_cast_op_conf.op_type_name())
+            .Input("in", parallel_cast_op_conf.input("in", 0))
+            .Output("out")
+            .Attr<std::string>("sbp_parallel", "B")
+            .Attr<std::string>("grad_sbp_parallel", "");
+        *consumer_op_conf.mutable_user_conf() = parallel_cast_builder.Build().op_conf().user_conf();
       }
     }
     job_builder.DelOps({src_node->op().op_conf()});
