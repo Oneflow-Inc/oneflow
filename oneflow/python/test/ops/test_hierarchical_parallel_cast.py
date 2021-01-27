@@ -30,7 +30,7 @@ def _test(test_case):
             parallel_hierarchy=[2, 2],
             parallel_distribution=[flow.distribute.split(0), flow.distribute.split(0)],
         )
-        x = flow.relu(x)
+        x = flow.math.relu(x)
         x = flow.hierarchical_parallel_cast(
             x, parallel_hierarchy=[4], parallel_distribution=[flow.distribute.split(0)]
         )
