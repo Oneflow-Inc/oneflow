@@ -326,7 +326,39 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     return Maybe<void>::Ok();
   } else {
     CHECK(sbp_sig_conf.bn_in_op2sbp_parallel().empty());
-    UNIMPLEMENTED();
+    SbpSignatureList list;
+    const auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
+      return JUST(ParallelDistributionInferHint4Ibn(ibn))->logical_blob_desc();
+    };
+    CHECK_JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &list));
+    for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+      const SbpSignature* matched_sbp_signature = nullptr;
+      for (const auto& sbp_signature : list.sbp_signature()) {
+        bool all_match = true;
+        for (const auto& ibn : input_bns()) {
+          if (sbp_signature.bn_in_op2sbp_parallel().at(ibn)
+              != JUST(ParallelDistributionInferHint4Ibn(ibn))
+                     ->parallel_distribution()
+                     .sbp_parallel(i)) {
+            all_match = false;
+            break;
+          }
+        }
+        if (all_match) {
+          matched_sbp_signature = &sbp_signature;
+          break;
+        }
+      }
+      CHECK_OR_RETURN(matched_sbp_signature != nullptr);
+      for (const auto& bn : input_bns()) {
+        *((*mut_parallel_distribution_signature()->mutable_bn_in_op2parallel_distribution())[bn]
+              .add_sbp_parallel()) = matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      }
+      for (const auto& bn : output_bns()) {
+        *((*mut_parallel_distribution_signature()->mutable_bn_in_op2parallel_distribution())[bn]
+              .add_sbp_parallel()) = matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      }
+    }
     return Maybe<void>::Ok();
   }
 }
