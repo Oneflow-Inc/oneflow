@@ -22,34 +22,34 @@ namespace oneflow {
 
 template<typename T>
 struct SeluFunctor {
-  OF_DEVICE_FUNC explicit SeluFunctor(T lambda_, T alpha_) : lambda_(lambda_), alpha_(alpha_) {}
+  OF_DEVICE_FUNC explicit SeluFunctor(T scale, T alpha) : scale(scale), alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? lambda_ * x : lambda_ * alpha_ * (exp(x) - static_cast<T>(1));
+    return (x > static_cast<T>(0)) ? scale * x : scale * alpha * (exp(x) - static_cast<T>(1));
   }
-  const T lambda_;
-  const T alpha_;
+  const T scale;
+  const T alpha;
 };
 
 template<typename T>
 struct SeluGradFunctor {
-  OF_DEVICE_FUNC explicit SeluGradFunctor(T lambda_, T alpha_) : lambda_(lambda_), alpha_(alpha_) {}
+  OF_DEVICE_FUNC explicit SeluGradFunctor(T scale, T alpha) : scale(scale), alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x > static_cast<T>(0)) ? lambda_ * dy : dy * lambda_ * alpha_ * (exp(x));
+    return (x > static_cast<T>(0)) ? scale * dy : dy * scale * alpha * (exp(x));
   }
-  const T lambda_;
-  const T alpha_;
+  const T scale;
+  const T alpha;
 };
 
 namespace {
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseSeluFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T lambda_, T alpha_, T* out, const T* in);
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* out, const T* in);
 };
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseSeluGradFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T lambda_, T alpha_, T* dx, const T* x,
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* dx, const T* x,
                   const T* dy);
 };
 
@@ -67,10 +67,10 @@ class ElemwiseSeluKernel final : public user_op::OpKernel {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
-    const T lambda_ = static_cast<T>(ctx->Attr<double>("lambda_"));
-    const T alpha_ = static_cast<T>(ctx->Attr<double>("alpha_"));
+    const T scale = static_cast<T>(ctx->Attr<double>("scale"));
+    const T alpha = static_cast<T>(ctx->Attr<double>("alpha"));
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
-    ElemwiseSeluFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, lambda_, alpha_,
+    ElemwiseSeluFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, scale, alpha,
                                                out_ptr, in_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -87,14 +87,14 @@ class ElemwiseSeluGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const T lambda_ = static_cast<T>(ctx->Attr<double>("lambda_"));
-    const T alpha_ = static_cast<T>(ctx->Attr<double>("alpha_"));
+    const T scale = static_cast<T>(ctx->Attr<double>("scale"));
+    const T alpha = static_cast<T>(ctx->Attr<double>("alpha"));
     const T* x_ptr = x_tensor->dptr<T>();
     const T* dy_ptr = dy_tensor->dptr<T>();
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int64_t elem_cnt = x_tensor->shape().elem_cnt();
 
-    ElemwiseSeluGradFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, lambda_, alpha_,
+    ElemwiseSeluGradFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, scale, alpha,
                                                    dx_ptr, x_ptr, dy_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

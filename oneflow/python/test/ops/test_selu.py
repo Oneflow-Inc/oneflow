@@ -23,13 +23,13 @@ import os
 
 
 def _compare_selu_with_np(
-    input_shape, lambda_, alpha_, device_type, value_type, machine_ids, device_counts
+    input_shape, scale, alpha, device_type, value_type, machine_ids, device_counts
 ):
     if value_type[1] == flow.float16:
         input_1 = np.random.uniform(-1, 1, size=input_shape).astype(np.float16)
         input_1 = np.array(input_1, dtype=value_type[0])
-        lambda_ = np.array(lambda_).astype(np.float16)
-        alpha_ = np.array(alpha_).astype(np.float16)
+        scale = np.array(scale).astype(np.float16)
+        alpha = np.array(alpha).astype(np.float16)
     else:
         input_1 = np.random.uniform(-1, 1, size=input_shape).astype(value_type[0])
 
@@ -49,7 +49,7 @@ def _compare_selu_with_np(
     else:
         func_config.default_data_type(value_type[1])
 
-    def np_selu(input, lambda_, alpha_):
+    def np_selu(input, scale, alpha):
         elem_cnt = input.size
         init_shape = input.shape
         input = input.flatten()
@@ -57,30 +57,30 @@ def _compare_selu_with_np(
 
         for i in range(elem_cnt):
             if input[i] > 0:
-                out[i] = lambda_ * input[i]
+                out[i] = scale * input[i]
             else:
-                out[i] = lambda_ * alpha_ * (np.exp(input[i]) - 1)
+                out[i] = scale * alpha * (np.exp(input[i]) - 1)
 
         out = np.reshape(out, init_shape)
         return np.array(out).astype(value_type[0])
 
-    np_out_selu = np_selu(input_1, lambda_, alpha_)
+    np_out_selu = np_selu(input_1, scale, alpha)
 
-    def np_diff(input, lambda_, alpha_):
+    def np_diff(input, scale, alpha):
         input_shape = input.shape
         input = input.flatten()
         elem_cnt = input.size
         diff = np.zeros(shape=(elem_cnt,))
         for i in range(elem_cnt):
             if input[i] > 0:
-                diff[i] = lambda_ * 1
+                diff[i] = scale * 1
             else:
-                diff[i] = lambda_ * alpha_ * np.exp(input[i])
+                diff[i] = scale * alpha * np.exp(input[i])
         diff = np.reshape(diff, newshape=input_shape)
         diff = np.array(diff, dtype=value_type[0])
         return diff
 
-    _np_grad = np_diff(input_1, lambda_, alpha_)
+    _np_grad = np_diff(input_1, scale, alpha)
 
     def assert_prediction_grad(blob: tp.Numpy):
         if value_type[1] == flow.float16:
@@ -106,7 +106,7 @@ def _compare_selu_with_np(
                 x_var = of_input_1 + v
                 x_f16 = flow.cast(x_var, flow.float16)
 
-            of_selu_out_f16 = flow.nn.selu(x_f16, lambda_, alpha_)
+            of_selu_out_f16 = flow.nn.selu(x_f16, scale, alpha)
             of_selu_out_f32 = flow.cast(of_selu_out_f16, flow.float32)
 
             with flow.scope.placement(device_type, "0:0"):
@@ -137,7 +137,7 @@ def _compare_selu_with_np(
 
             flow.watch_diff(x_var, assert_prediction_grad)
 
-            of_selu_out = flow.nn.selu(x_var, lambda_, alpha_)
+            of_selu_out = flow.nn.selu(x_var, scale, alpha)
 
             with flow.scope.placement(device_type, "0:0"):
                 flow.optimizer.SGD(
@@ -155,13 +155,13 @@ def _compare_selu_with_np(
 
 
 def _gen_arg_dict(
-    shape, lambda_, alpha_, device_type, value_type, machine_ids, device_counts
+    shape, scale, alpha, device_type, value_type, machine_ids, device_counts
 ):
     # Generate a dict to pass parameter to test case
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [shape]
-    arg_dict["lambda_"] = [lambda_]
-    arg_dict["alpha_"] = [alpha_]
+    arg_dict["scale"] = [scale]
+    arg_dict["alpha"] = [alpha]
     arg_dict["device_type"] = [device_type]
     if value_type == "float" and device_type == "cpu":
         arg_dict["value_type"] = [
@@ -184,8 +184,8 @@ class Testselu1n1d(flow.unittest.TestCase):
     def test_selu_cpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(3, 3),
-            lambda_=1.2,
-            alpha_=1.0,
+            scale=1.2,
+            alpha=1.0,
             device_type="cpu",
             value_type="float",
             machine_ids="0:0",
@@ -198,8 +198,8 @@ class Testselu1n1d(flow.unittest.TestCase):
     def test_selu_gpu(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 4),
-            lambda_=1.2,
-            alpha_=2.0,
+            scale=1.2,
+            alpha=2.0,
             device_type="gpu",
             value_type="float",
             machine_ids="0:0",
@@ -215,8 +215,8 @@ class Testselu1n2d(flow.unittest.TestCase):
     def test_selu_gpu_1n2d(test_case):
         arg_dict = _gen_arg_dict(
             shape=(4, 8, 4),
-            lambda_=2.0,
-            alpha_=1.0,
+            scale=2.0,
+            alpha=1.0,
             device_type="gpu",
             value_type="float",
             machine_ids="0:0-1",
