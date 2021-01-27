@@ -686,7 +686,7 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
   if (val_->infer_parallel_distribution_fn) {
     UserOpInferParallelDistributionFnContext ctx(op_conf(), ParallelDistributionInferHint4Ibn,
                                                  parallel_desc, parallel_hierarchy, signature);
-    val_->infer_parallel_distribution_fn(&ctx);
+    return val_->infer_parallel_distribution_fn(&ctx);
   } else {
     return Operator::InferParallelDistributionSignature(
         signature, sbp_sig_conf, parallel_desc, parallel_hierarchy,
