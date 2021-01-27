@@ -29,8 +29,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
   if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
       && out_parallel_desc.parallel_num() != 1 && out_sbp_parallel.has_partial_sum_parallel()) {
     HashMap<int64_t, int64_t> out_id2nearest_in_id;
-    int64_t nearest_dst_node_idx = -1;
-    int64_t nearest_dst_node_distance = -1;
+    int64_t nearest_out_node_idx = -1;
+    int64_t nearest_out_node_distance = -1;
 
     FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
       const int64_t nearest_in_parallel_id =
@@ -38,37 +38,37 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
       out_id2nearest_in_id.emplace(out_id, nearest_in_parallel_id);
       const int64_t distance = SubTskGphBuilderUtil::GetDistance(
           in_parallel_desc, nearest_in_parallel_id, out_parallel_desc, out_id);
-      if (nearest_dst_node_idx == -1 || distance < nearest_dst_node_distance) {
-        nearest_dst_node_idx = out_id;
-        nearest_dst_node_distance = distance;
+      if (nearest_out_node_idx == -1 || distance < nearest_out_node_distance) {
+        nearest_out_node_idx = out_id;
+        nearest_out_node_distance = distance;
       }
     }
     FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
       const int64_t nearest_in_id = out_id2nearest_in_id.at(out_id);
       TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_id);
-      if (out_id == nearest_dst_node_idx) {
+      if (out_id == nearest_out_node_idx) {
         TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
                                             out_parallel_desc, out_id);
 
         sorted_out_tasks->push_back(proxy);
       } else {
-        const int64_t dst_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
-        const int64_t dst_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
+        const int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
+        const int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
         int64_t thrd_id;
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-          thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(dst_dev_phy_id);
+          thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(out_dev_phy_id);
 #else
           UNIMPLEMENTED();
 #endif
         } else {
           std::vector<int64_t> cpu_device_offset(
               Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), 0);
-          int64_t& offset = cpu_device_offset.at(dst_machine_id);
+          int64_t& offset = cpu_device_offset.at(out_machine_id);
           thrd_id = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
         }
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
-        zeros_node->Init(dst_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
+        zeros_node->Init(out_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
