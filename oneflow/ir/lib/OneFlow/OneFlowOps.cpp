@@ -27,8 +27,11 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
                                       mlir::PatternRewriter &rewriter) const override {
     if (op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")) {
       if (op.ctrl_inputs().empty() && op.ctrl_output().use_empty()) {
+        NamedAttrList attributes(op->getAttrDictionary());
+        attributes.erase("operand_segment_sizes");
+        attributes.erase("result_segment_sizes");
         if (auto relu = rewriter.create<oneflow::ReluOp>(
-                op->getLoc(), op->getOperands().take_front(), op.getAttrs())) {
+                op->getLoc(), op->getOperands().take_front(), attributes)) {
           op.data_output().front().replaceAllUsesWith(relu.y());
           op->erase();
           return success();
