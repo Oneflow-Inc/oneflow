@@ -35,8 +35,8 @@ def diag(
     for more about Diag. 
 
     Args:
-        input (remote_blob_util.BlobDef): The input `input_tensor`. 
-        name (Optional[str], optional): The name for the operation. Defaults to None.
+        input (remote_blob_util.BlobDef): The input `in`. 
+        dimension (Optional[int], 0): dimension for compute. Defaults to 0.
 
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
@@ -52,6 +52,7 @@ def diag(
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
         func_config.default_logical_view(flow.scope.mirrored_view())
+        
         @flow.global_function(function_config=func_config)
         def diag_Job(x: tp.ListListNumpy.Placeholder(shape=(2, 5), dtype=flow.float32),
         ) -> tp.ListListNumpy:
