@@ -18,6 +18,12 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/id_generator.h"
+#include "oneflow/core/vm/string_symbol.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
@@ -68,6 +74,17 @@ class InstructionsBuilder {
     return release_object_;
   }
 
+  Maybe<int64_t> NewSymbolId();
+
+  Maybe<StringSymbol> GetSymbol4String(std::string str);
+
+  Maybe<JobDesc> GetJobConfSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
+  Maybe<ParallelDesc> GetParallelDescSymbol(
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
+  Maybe<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
     auto* id_cache = Global<symbol::IdCache<T>>::Get();
@@ -75,6 +92,25 @@ class InstructionsBuilder {
   }
 
  private:
+  Maybe<int64_t> NewSymbolId4String(std::string str);
+
+  Maybe<int64_t> NewSymbolId4JobConf(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
+  Maybe<int64_t> NewSymbolId4ParallelConf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
+  Maybe<int64_t> NewSymbolId4Scope(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
+  Maybe<void> InitStringSymbol(int64_t symbol_id, std::string str);
+
+  Maybe<void> InitJobConfSymbol(int64_t symbol_id,
+                                const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+
+  Maybe<void> NewParallelConfSymbol(int64_t symbol_id,
+                                    const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
+  Maybe<void> NewScopeSymbol(int64_t symbol_id,
+                             const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
   template<typename T>
   Maybe<int64_t> CreateSymbolId(const T& conf) {
     return detail::CreateSymbolIdHelper<T>::Call(mut_id_generator(), mut_instruction_list(),
@@ -91,6 +127,24 @@ class InstructionsBuilder {
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
   std::function<void(compatible_py::BlobObject*)> release_object_;
 };
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> MutOperand(int64_t object_id);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Int64Operand(int64_t val);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> InitSymbolOperand(int64_t val);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> SymbolOperand(int64_t val);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> ConstOperand(int64_t val);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> OperandSeparator();
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Uint64Operand(int64_t val);
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val);
 
 }  // namespace oneflow
 
