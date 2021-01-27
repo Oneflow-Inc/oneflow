@@ -21,7 +21,7 @@ namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-    std::vector<TaskNode*>* sorted_dst_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
     const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
@@ -51,7 +51,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
                                             dst_parallel_desc, out_id);
 
-        sorted_dst_tasks->push_back(proxy);
+        sorted_out_tasks->push_back(proxy);
       } else {
         const int64_t dst_machine_id = CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(out_id));
         const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(out_id));
@@ -73,7 +73,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
-        sorted_dst_tasks->push_back(zeros_node);
+        sorted_out_tasks->push_back(zeros_node);
       }
     }
     return TRY(BuildSubTskGphBuilderStatus("NaiveB2PSubTskGphBuilder", ""));

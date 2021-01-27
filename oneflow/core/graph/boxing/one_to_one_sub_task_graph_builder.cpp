@@ -20,7 +20,7 @@ namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-    std::vector<TaskNode*>* sorted_dst_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
     const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
@@ -33,7 +33,7 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
       TaskNode* in_node = sorted_in_tasks.at(i);
       // TODO(liujuncheng): use lbi
       TaskNode* proxy = ctx->GetProxyNode(in_node, in_node->MemZoneId121(), dst_parallel_desc, i);
-      sorted_dst_tasks->push_back(proxy);
+      sorted_out_tasks->push_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus("OneToOneSubTskGphBuilder", ""));
   } else {

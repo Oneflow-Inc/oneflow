@@ -94,7 +94,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -114,7 +114,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllReduce, -1);
         Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), collective_node);
-        sorted_dst_tasks->push_back(collective_node);
+        sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
     } else {
@@ -131,7 +131,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -154,7 +154,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
         NcclInitCollectiveNode(collective_node, src_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduceScatter, -1);
         Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), collective_node);
-        sorted_dst_tasks->push_back(collective_node);
+        sorted_out_tasks->push_back(collective_node);
       }
       return TRY(
           BuildSubTskGphBuilderStatus("NcclCollectiveBoxingReduceScatterSubTskGphBuilder", ""));
@@ -172,7 +172,7 @@ class NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder final : public 
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -213,7 +213,7 @@ class NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder final : public 
                           logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                           src_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
-        sorted_dst_tasks->push_back(unpack_node);
+        sorted_out_tasks->push_back(unpack_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
           "NcclCollectiveBoxingReduceScatterTransposeSubTskGphBuilder", ""));
@@ -231,7 +231,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -256,7 +256,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
         Connect<TaskNode>(in_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
-        sorted_dst_tasks->push_back(collective_node);
+        sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
     } else {
@@ -273,7 +273,7 @@ class NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder final : public SubT
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -316,7 +316,7 @@ class NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder final : public SubT
                           in_node_proxy->area_id(), lbi, logical_blob_desc.shape(),
                           src_sbp_parallel, dst_sbp_parallel, src_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
-        sorted_dst_tasks->push_back(unpack_node);
+        sorted_out_tasks->push_back(unpack_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
           "NcclCollectiveBoxingTransposeAllGatherSubTskGphBuilder", ""));
@@ -334,7 +334,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -358,7 +358,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
                                logical_blob_desc, OpType::kOpTypeReduce, root_parallel_id);
         Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), collective_node);
         if (i == root_parallel_id) {
-          sorted_dst_tasks->push_back(collective_node);
+          sorted_out_tasks->push_back(collective_node);
         } else {
           sorted_dst_ctrl_in_tasks->at(0).push_back(collective_node);
         }
@@ -378,7 +378,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -421,7 +421,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         NcclInitCollectiveNode(collective_node, dst_parallel_desc, out_id, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
         Connect<TaskNode>(slice_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
-        sorted_dst_tasks->push_back(collective_node);
+        sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
           "CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder", ""));
@@ -439,7 +439,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -482,7 +482,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
           gpu_in_node->BuildCtrlRegstDesc(collective_node);
           Connect<TaskNode>(gpu_in_node, ctx->task_graph()->NewEdge(), collective_node);
         }
-        sorted_dst_tasks->push_back(collective_node);
+        sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingBroadcastSubTskGphBuilder", ""));
     } else {
@@ -499,7 +499,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_dst_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
                                       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
@@ -542,7 +542,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
                           logical_blob_desc.shape(), src_sbp_parallel, dst_sbp_parallel,
                           src_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
-        sorted_dst_tasks->push_back(unpack_node);
+        sorted_out_tasks->push_back(unpack_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));
     } else {
@@ -577,7 +577,7 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
 
 Maybe<SubTskGphBuilderStatus> CollectiveBoxingSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-    std::vector<TaskNode*>* sorted_dst_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
     const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
@@ -585,7 +585,7 @@ Maybe<SubTskGphBuilderStatus> CollectiveBoxingSubTskGphBuilder::Build(
     const Shape& time_shape) const {
   if (!GlobalJobDesc().Bool("__is_user_function__")) { return Error::BoxingNotSupportedError(); }
   if (!IsSourceTimeShape(time_shape)) { return Error::BoxingNotSupportedError(); }
-  return chain_builder_->Build(ctx, sorted_in_tasks, sorted_dst_tasks, sorted_dst_ctrl_in_tasks,
+  return chain_builder_->Build(ctx, sorted_in_tasks, sorted_out_tasks, sorted_dst_ctrl_in_tasks,
                                src_parallel_desc, dst_parallel_desc, lbi, logical_blob_desc,
                                src_sbp_parallel, dst_sbp_parallel, time_shape);
 }

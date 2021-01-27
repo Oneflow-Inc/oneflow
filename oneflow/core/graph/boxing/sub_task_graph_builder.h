@@ -30,7 +30,7 @@ class SubTskGphBuilder {
 
   virtual Maybe<SubTskGphBuilderStatus> Build(
       SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_dst_tasks,
+      std::vector<TaskNode*>* sorted_out_tasks,
       std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
       const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,

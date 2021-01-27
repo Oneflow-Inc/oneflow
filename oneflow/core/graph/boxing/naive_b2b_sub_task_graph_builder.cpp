@@ -20,7 +20,7 @@ namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-    std::vector<TaskNode*>* sorted_dst_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_dst_ctrl_in_tasks,
     const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
     const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
@@ -36,7 +36,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
       CHECK_NOTNULL(nearest_in_node);
       TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
                                           dst_parallel_desc, out_id);
-      sorted_dst_tasks->push_back(proxy);
+      sorted_out_tasks->push_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus("NaiveB2BSubTskGphBuilder", ""));
   } else {
