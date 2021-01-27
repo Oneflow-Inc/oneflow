@@ -35,6 +35,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("instruction_list", &InstructionsBuilder::instruction_list)
       .def("eager_symbol_list", &InstructionsBuilder::eager_symbol_list)
       .def("release_object", &InstructionsBuilder::release_object)
+      .def("NewObjectId",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+             return x->NewObjectId(parallel_desc_sym).GetOrThrow();
+           })
       .def("NewSymbolId",
            [](const std::shared_ptr<InstructionsBuilder>& x) {
              return x->NewSymbolId().GetOrThrow();
@@ -53,10 +58,28 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
              return x->GetParallelDescSymbol(parallel_conf).GetPtrOrThrow();
            })
-      .def("GetScopeSymbol", [](const std::shared_ptr<InstructionsBuilder>& x,
-                                const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
-        return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
-      });
+      .def("GetScopeSymbol",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+             return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
+           })
+      .def("NewBlobObject",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+              const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
+             return x->NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr).GetPtrOrThrow();
+           })
+      .def("NewSymbolId4OpNodeSignature",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
+             return x->NewSymbolId4OpNodeSignature(op_node_signature_sym).GetOrThrow();
+           })
+      .def("NewSharedOpKernelObjectId4ParallelConfSymbolId",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+             return x->NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
+                 .GetOrThrow();
+           });
 
   py::module_ vm_sub_module = m.def_submodule("vm");
 

@@ -154,6 +154,17 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId() {
   return symbol_id;
 }
 
+Maybe<int64_t> InstructionsBuilder::NewObjectId(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  int64_t object_id = CHECK_JUST(id_generator_->NewObjectId());
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("NewObject");
+  instruction.set_parallel_desc_symbol_id(CHECK_JUST(parallel_desc_sym->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(object_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return object_id;
+}
+
 Maybe<StringSymbol> InstructionsBuilder::GetSymbol4String(std::string str) {
   if (JUST(HasSymbol<std::string>(str))) { return GetSymbol<std::string, StringSymbol>(str); }
   int64_t symbol_id = JUST(NewSymbolId4String(str));
@@ -218,6 +229,28 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId4Scope(
   return symbol_id;
 }
 
+Maybe<compatible_py::BlobObject> InstructionsBuilder::NewBlobObject(
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
+  int64_t object_id = JUST(NewObjectId(op_arg_parallel_attr->parallel_desc_symbol()));
+  std::shared_ptr<compatible_py::BlobObject> obj = std::make_shared<compatible_py::BlobObject>(
+      object_id, op_arg_parallel_attr, op_arg_blob_attr);
+  obj->add_releaser(release_object_);
+  return obj;
+}
+
+Maybe<int64_t> InstructionsBuilder::NewSymbolId4OpNodeSignature(
+    const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
+  int64_t symbol_id = JUST(NewSymbolId());
+  JUST(InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature_sym));
+  return symbol_id;
+}
+
+Maybe<int64_t> InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbolId(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  return NewObjectId(parallel_desc_sym);
+}
+
 Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("InitStringSymbol");
@@ -265,6 +298,19 @@ Maybe<void> InstructionsBuilder::NewScopeSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_scope_symbol()->CopyFrom(*scope_proto);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
+    int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitOpNodeSignatureDescSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }

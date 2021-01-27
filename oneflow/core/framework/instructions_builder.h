@@ -76,6 +76,8 @@ class InstructionsBuilder {
 
   Maybe<int64_t> NewSymbolId();
 
+  Maybe<int64_t> NewObjectId(const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
+
   Maybe<StringSymbol> GetSymbol4String(std::string str);
 
   Maybe<JobDesc> GetJobConfSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
@@ -84,6 +86,16 @@ class InstructionsBuilder {
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
   Maybe<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
+  Maybe<compatible_py::BlobObject> NewBlobObject(
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr);
+
+  Maybe<int64_t> NewSymbolId4OpNodeSignature(
+      const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym);
+
+  Maybe<int64_t> NewSharedOpKernelObjectId4ParallelConfSymbolId(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
@@ -110,6 +122,9 @@ class InstructionsBuilder {
 
   Maybe<void> NewScopeSymbol(int64_t symbol_id,
                              const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
+  Maybe<void> InitOpNodeSignatureDescSymbol(
+      int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym);
 
   template<typename T>
   Maybe<int64_t> CreateSymbolId(const T& conf) {
