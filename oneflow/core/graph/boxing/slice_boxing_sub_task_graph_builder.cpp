@@ -58,8 +58,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
@@ -69,19 +69,19 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(out_parallel_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(in_parallel_desc.parallel_num(), src_sbp_parallel,
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(in_parallel_desc.parallel_num(), in_sbp_parallel,
                                                  logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(out_parallel_desc.parallel_num(), dst_sbp_parallel,
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(out_parallel_desc.parallel_num(), out_sbp_parallel,
                                                  logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (!(SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel))) {
+  if (!(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingS2S(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingB2S(in_sbp_parallel, out_sbp_parallel))) {
     return Error::BoxingNotSupportedError();
   }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
@@ -443,21 +443,21 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   std::vector<TaskNode*> in_nodes;
   in_nodes.assign(sorted_in_tasks.begin(), sorted_in_tasks.end());
   std::string comment;
-  if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphS2B(in_parallel_desc, out_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+  if (SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphS2B(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
                        logical_blob_desc, in_nodes, sorted_out_tasks);
     comment = "BuildSubTaskGphS2B";
-  } else if (SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphS2S(in_parallel_desc, out_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+  } else if (SubTskGphBuilderUtil::IsBoxingS2S(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphS2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
                        logical_blob_desc, in_nodes, sorted_out_tasks);
     comment = "BuildSubTaskGphS2S";
-  } else if (SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+  } else if (SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
                        logical_blob_desc, in_nodes, sorted_out_tasks);
     comment = "BuildSubTaskGphP2S";
-  } else if (SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
+  } else if (SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)) {
     if (logical_blob_desc.shape().elem_cnt() < out_parallel_desc.parallel_num()) {
-      BuildSubTaskGphP2B(in_parallel_desc, out_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+      BuildSubTaskGphP2B(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
                          logical_blob_desc, in_nodes, sorted_out_tasks);
       comment = "BuildSubTaskGphP2B";
     } else {
@@ -466,9 +466,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       std::vector<TaskNode*> middle_nodes;
       SbpParallel middle_sbp;
       middle_sbp.mutable_split_parallel()->set_axis(0);
-      BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, src_sbp_parallel, middle_sbp,
+      BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, middle_sbp,
                          flat_blob_desc, in_nodes, &middle_nodes);
-      BuildSubTaskGphS2B(out_parallel_desc, out_parallel_desc, middle_sbp, dst_sbp_parallel,
+      BuildSubTaskGphS2B(out_parallel_desc, out_parallel_desc, middle_sbp, out_sbp_parallel,
                          flat_blob_desc, middle_nodes, sorted_out_tasks);
       comment = "BuildSubTaskGphP2S->BuildSubTaskGphS2B";
       for (TaskNode* out_node : *sorted_out_tasks) {
@@ -478,8 +478,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       }
     }
 
-  } else if (SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphB2S(in_parallel_desc, out_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+  } else if (SubTskGphBuilderUtil::IsBoxingB2S(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphB2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
                        logical_blob_desc, in_nodes, sorted_out_tasks);
     comment = "BuildSubTaskGphB2S";
   } else {

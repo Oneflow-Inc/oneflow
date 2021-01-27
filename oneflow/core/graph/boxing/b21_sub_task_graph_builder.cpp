@@ -23,9 +23,9 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
-  if ((in_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
       && out_parallel_desc.parallel_num() == 1) {
     const int64_t dst_parallel_id = 0;
     const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(

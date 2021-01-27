@@ -23,11 +23,11 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if ((in_parallel_desc.parallel_num() == 1 && out_parallel_desc.parallel_num() == 1)
       || (in_parallel_desc.parallel_num() == out_parallel_desc.parallel_num()
-          && src_sbp_parallel == dst_sbp_parallel)) {
+          && in_sbp_parallel == out_sbp_parallel)) {
     for (int64_t i = 0; i < in_parallel_desc.parallel_num(); ++i) {
       TaskNode* in_node = sorted_in_tasks.at(i);
       // TODO(liujuncheng): use lbi

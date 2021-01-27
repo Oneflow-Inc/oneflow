@@ -23,11 +23,10 @@ Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel, const Shape& time_shape) const {
-  if ((in_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
-      && (out_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
-    std::vector<TaskNode*> nearest_src_comp_tasks;
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
+      && (out_parallel_desc.parallel_num() == 1 || out_sbp_parallel.has_broadcast_parallel())) {
     FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
       const int64_t nearest_in_parallel_id =
           SubTskGphBuilderUtil::FindNearestParallelId(in_parallel_desc, out_parallel_desc, out_id);
