@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
 
@@ -79,7 +80,29 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
              return x->NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
                  .GetOrThrow();
-           });
+           })
+      .def("GetPhysicalParallelDescSymbols",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+             return x->GetPhysicalParallelDescSymbols(parallel_desc_symbol);
+           })
+      .def("MakeReferenceBlobObject",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+              const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {
+             return x->MakeReferenceBlobObject(blob_object, op_arg_parallel_attr).GetPtrOrThrow();
+           })
+      .def("ReplaceMirrored",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+              std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
+              std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
+             return x->ReplaceMirrored(parallel_desc_sym, lhs_objects, rhs_objects).GetOrThrow();
+           })
+      .def("DeleteObject", [](const std::shared_ptr<InstructionsBuilder>& x,
+                              compatible_py::BlobObject* blob_object) {
+        return x->DeleteObject(blob_object).GetOrThrow();
+      });
 
   py::module_ vm_sub_module = m.def_submodule("vm");
 

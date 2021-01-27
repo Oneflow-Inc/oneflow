@@ -97,6 +97,19 @@ class InstructionsBuilder {
   Maybe<int64_t> NewSharedOpKernelObjectId4ParallelConfSymbolId(
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
+  Maybe<void> DeleteObject(compatible_py::BlobObject* blob_object);
+
+  std::vector<std::shared_ptr<ParallelDesc>> GetPhysicalParallelDescSymbols(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
+
+  Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
+      const std::shared_ptr<compatible_py::BlobObject>&,
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
+
+  Maybe<void> ReplaceMirrored(const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+                              std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
+                              std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects);
+
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
     auto* id_cache = Global<symbol::IdCache<T>>::Get();
@@ -125,6 +138,10 @@ class InstructionsBuilder {
 
   Maybe<void> InitOpNodeSignatureDescSymbol(
       int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym);
+
+  Maybe<void> _TryClearObject(compatible_py::BlobObject* blob_object);
+
+  Maybe<void> _DeleteObject(compatible_py::BlobObject* blob_object);
 
   template<typename T>
   Maybe<int64_t> CreateSymbolId(const T& conf) {

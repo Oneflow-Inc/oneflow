@@ -254,10 +254,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             get_delegate_blob_object=GetDelegateBlobObject,
         )
 
-    def DeleteObject(self, obj):
-        self._TryClearObject(obj)
-        self._DeleteObject(obj)
-
     def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
         instruction = instr_cfg.InstructionProto()
@@ -306,28 +302,12 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
                     machine_device_ids,
                 )
         logical_blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
-        self._ReplaceMirrored(
+        self.ReplaceMirrored(
             op_arg_parallel_attr.parallel_desc_symbol,
             [logical_blob_object],
             physical_blob_objects,
         )
         return logical_blob_object
-
-    def GetPhysicalParallelDescSymbols(self, parallel_desc_symbol):
-        machine_id2device_ids = dict(parallel_desc_symbol.machine_id2device_id_list)
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
-        phy_parallel_desc_symbols = []
-
-        def AppendPhyParallelDescSymbol(machine_id, device_id):
-            parallel_conf = placement_cfg.ParallelConf()
-            parallel_conf.set_device_tag(device_tag)
-            parallel_conf.add_device_name("%d:%d" % (machine_id, device_id))
-            phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
-
-        for machine_id, device_ids in machine_id2device_ids.items():
-            for device_id in device_ids:
-                AppendPhyParallelDescSymbol(machine_id, device_id)
-        return phy_parallel_desc_symbols
 
     def _GetPhysicalOpArgBlobAttrs(self, logical_blob_object):
         parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
@@ -359,19 +339,10 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             GetPhysicalBlob(phy_parallel_desc_symbols[i], phy_op_arg_blob_attrs[i])
             for i in range(len(phy_parallel_desc_symbols))
         ]
-        self._ReplaceMirrored(
+        self.ReplaceMirrored(
             blob_object.parallel_desc_symbol, physical_blob_objects, [blob_object]
         )
         return physical_blob_objects
-
-    def MakeReferenceBlobObject(self, blob_object, op_arg_parallel_attr):
-        parallel_desc_symbol = blob_object.parallel_desc_symbol
-        assert parallel_desc_symbol == op_arg_parallel_attr.parallel_desc_symbol
-        ref_blob_object = self.NewBlobObject(
-            op_arg_parallel_attr, blob_object.op_arg_blob_attr
-        )
-        self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
-        return ref_blob_object
 
     def MakeLazyRefBlobObject(self, interface_op_name):
         sess = session_ctx.GetDefaultSession()
@@ -1074,41 +1045,6 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction.mutable_operand().Add().CopyFrom(
             oneflow_api.vm.Int64Operand(unique_callback_id)
         )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _TryClearObject(self, obj):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("TryClearObject")
-        instruction.set_parallel_desc_symbol_id(obj.parallel_desc_symbol.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(obj.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _DeleteObject(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("DeleteObject")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.DelObjectOperand(blob_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _ReplaceMirrored(self, parallel_desc_sym, lhs_objects, rhs_objects):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("ReplaceMirrored")
-        instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-        for lhs_object in lhs_objects:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Int64Operand(lhs_object.object_id)
-            )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
-        for rhs_object in rhs_objects:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Int64Operand(rhs_object.object_id)
-            )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
 

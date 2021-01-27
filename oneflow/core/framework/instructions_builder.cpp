@@ -156,10 +156,10 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId() {
 
 Maybe<int64_t> InstructionsBuilder::NewObjectId(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
-  int64_t object_id = CHECK_JUST(id_generator_->NewObjectId());
+  int64_t object_id = JUST(id_generator_->NewObjectId());
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("NewObject");
-  instruction.set_parallel_desc_symbol_id(CHECK_JUST(parallel_desc_sym->symbol_id()));
+  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(object_id));
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return object_id;
@@ -217,7 +217,7 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId4JobConf(
 
 Maybe<int64_t> InstructionsBuilder::NewSymbolId4ParallelConf(
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  int64_t symbol_id = CHECK_JUST(id_generator_->NewSymbolId());
+  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
   JUST(NewParallelConfSymbol(symbol_id, parallel_conf));
   return symbol_id;
 }
@@ -249,6 +249,60 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId4OpNodeSignature(
 Maybe<int64_t> InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbolId(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   return NewObjectId(parallel_desc_sym);
+}
+
+Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::BlobObject* blob_object) {
+  JUST(_TryClearObject(blob_object));
+  JUST(_DeleteObject(blob_object));
+  return Maybe<void>::Ok();
+}
+
+std::vector<std::shared_ptr<ParallelDesc>> InstructionsBuilder::GetPhysicalParallelDescSymbols(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+  const auto& machine_id2device_ids = parallel_desc_symbol->machine_id2sorted_dev_phy_ids();
+  std::string device_tag = parallel_desc_symbol->parallel_conf().device_tag();
+  std::vector<std::shared_ptr<ParallelDesc>> phy_parallel_desc_symbols;
+  const auto AppendPhyParallelDescSymbol = [this, &phy_parallel_desc_symbols, &device_tag](
+                                               int64_t machine_id, int64_t device_id) {
+    std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+    parallel_conf->set_device_tag(device_tag);
+    parallel_conf->add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
+    phy_parallel_desc_symbols.emplace_back(CHECK_JUST(GetParallelDescSymbol(parallel_conf)));
+  };
+
+  for (const auto& pair : *machine_id2device_ids) {
+    for (int64_t device_id : *pair.second) { AppendPhyParallelDescSymbol(pair.first, device_id); }
+  }
+  return phy_parallel_desc_symbols;
+}
+
+Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {
+  std::shared_ptr<ParallelDesc> parallel_desc_symbol = blob_object->parallel_desc_symbol();
+  CHECK((*parallel_desc_symbol) == (*op_arg_parallel_attr->parallel_desc_symbol()));
+  std::shared_ptr<compatible_py::BlobObject> ref_blob_object =
+      JUST(NewBlobObject(op_arg_parallel_attr, blob_object->op_arg_blob_attr()));
+  ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object});
+  return ref_blob_object;
+}
+
+Maybe<void> InstructionsBuilder::ReplaceMirrored(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+    std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
+    std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("ReplaceMirrored");
+  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  for (const auto& lhs_object : lhs_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(lhs_object->object_id()));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  for (const auto& rhs_object : rhs_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(rhs_object->object_id()));
+  }
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
@@ -312,6 +366,24 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::BlobObject* blob_object) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("TryClearObject");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::BlobObject* blob_object) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("DeleteObject");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*DelObjectOperand(blob_object->object_id()));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return Maybe<void>::Ok();
 }
 
