@@ -296,13 +296,22 @@ Maybe<void> Operator::InferParallelDistributionSignatureIf(
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn,
     std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
-  return InferParallelDistributionSignature(sbp_sig_conf, parallel_desc, parallel_hierarchy,
-                                            ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp);
+  CHECK_JUST(InferParallelDistributionSignature(
+      mut_parallel_distribution_signature(), sbp_sig_conf, parallel_desc, parallel_hierarchy,
+      ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp));
+  if (parallel_hierarchy.NumAxes() == 1 && !op_attribute_.has_sbp_signature()) {
+    for (const auto& pair :
+         JUST(parallel_distribution_signature())->bn_in_op2parallel_distribution()) {
+      (*op_attribute_.mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel())[pair.first] =
+          pair.second.sbp_parallel(0);
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferParallelDistributionSignature(
-    const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
-    const Shape& parallel_hierarchy,
+    ParallelDistributionSignature* signature, const SbpSignature& sbp_sig_conf,
+    const ParallelDesc& parallel_desc, const Shape& parallel_hierarchy,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn,
     std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
@@ -319,9 +328,8 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     CHECK_JUST(InferOpSbpSignature(this, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint,
                                    BatchAxis4BnInOp));
     for (const auto& pair : JUST(this->sbp_signature())->bn_in_op2sbp_parallel()) {
-      *((*mut_parallel_distribution_signature()
-              ->mutable_bn_in_op2parallel_distribution())[pair.first]
-            .add_sbp_parallel()) = pair.second;
+      *((*signature->mutable_bn_in_op2parallel_distribution())[pair.first].add_sbp_parallel()) =
+          pair.second;
     }
     return Maybe<void>::Ok();
   } else {
@@ -351,12 +359,12 @@ Maybe<void> Operator::InferParallelDistributionSignature(
       }
       CHECK_OR_RETURN(matched_sbp_signature != nullptr);
       for (const auto& bn : input_bns()) {
-        *((*mut_parallel_distribution_signature()->mutable_bn_in_op2parallel_distribution())[bn]
-              .add_sbp_parallel()) = matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
+        *((*signature->mutable_bn_in_op2parallel_distribution())[bn].add_sbp_parallel()) =
+            matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
       }
       for (const auto& bn : output_bns()) {
-        *((*mut_parallel_distribution_signature()->mutable_bn_in_op2parallel_distribution())[bn]
-              .add_sbp_parallel()) = matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
+        *((*signature->mutable_bn_in_op2parallel_distribution())[bn].add_sbp_parallel()) =
+            matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
       }
     }
     return Maybe<void>::Ok();

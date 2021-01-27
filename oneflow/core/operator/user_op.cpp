@@ -19,9 +19,12 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/user_op.h"
+
+#include <utility>
 #include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_parallel_hierarchy_fn_context.h"
+#include "oneflow/core/framework/infer_parallel_distribution_fn_context.h"
 
 namespace oneflow {
 
@@ -399,6 +402,47 @@ class UserOpInferParallelHierarchyFnContext : public user_op::InferParallelHiera
   int64_t parallel_num_;
 };
 
+class UserOpInferParallelDistributionFnContext
+    : public user_op::InferParallelDistributionFnContext {
+ public:
+  UserOpInferParallelDistributionFnContext(
+      const OperatorConf& op_conf,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn,
+      const ParallelDesc& parallel_desc, const Shape& parallel_hierarchy,
+      ParallelDistributionSignature* signature)
+      : user_op_conf_(op_conf),
+        infer_hint_fn_(std::move(ParallelDistributionInferHint4Ibn)),
+        parallel_hierarchy_(parallel_hierarchy),
+        parallel_num_(parallel_desc.parallel_num()),
+        signature_(signature) {}
+  ~UserOpInferParallelDistributionFnContext() override = default;
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                             int32_t index) override {
+    return &(*signature_->mutable_bn_in_op2parallel_distribution())[GenRepeatedBn(arg_name, index)];
+  }
+
+  const ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
+      const std::string& arg_name, int32_t index) override {
+    auto hint = CHECK_JUST(infer_hint_fn_(GenRepeatedBn(arg_name, index)));
+    return hint->parallel_distribution();
+  }
+
+  int64_t parallel_num() const override { return parallel_num_; }
+
+  const Shape& parallel_hierarchy() override { return parallel_hierarchy_; }
+
+ private:
+  user_op::UserOpConfWrapper user_op_conf_;
+  std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)> infer_hint_fn_;
+  Shape parallel_hierarchy_;
+  int64_t parallel_num_;
+  ParallelDistributionSignature* signature_;
+};
+
 void UserOp::InitFromOpConf() {
   CHECK(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -630,6 +674,22 @@ Maybe<void> UserOp::InferParallelHierarchy(
   } else {
     return Operator::InferParallelHierarchy(GetParallelHierarchy4Ibn, parallel_desc,
                                             parallel_hierarchy);
+  }
+}
+
+Maybe<void> UserOp::InferParallelDistributionSignature(
+    ParallelDistributionSignature* signature, const SbpSignature& sbp_sig_conf,
+    const ParallelDesc& parallel_desc, const Shape& parallel_hierarchy,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn,
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
+  if (val_->infer_parallel_distribution_fn) {
+    UserOpInferParallelDistributionFnContext ctx(op_conf(), ParallelDistributionInferHint4Ibn,
+                                                 parallel_desc, parallel_hierarchy, signature);
+    val_->infer_parallel_distribution_fn(&ctx);
+  } else {
+    return Operator::InferParallelDistributionSignature(
+        signature, sbp_sig_conf, ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp);
   }
 }
 

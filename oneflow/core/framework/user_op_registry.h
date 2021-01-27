@@ -35,6 +35,7 @@ class InferSbpSignatureFnContext;
 class BatchAxisContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferParallelHierarchyFnContext;
+class InferParallelDistributionFnContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -51,6 +52,7 @@ using GetOutputArgModifier =
 using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
 using InferOutputBlobTimeShapeFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using InferParallelHierarchyFn = std::function<Maybe<void>(InferParallelHierarchyFnContext*)>;
+using InferParallelDistributionFn = std::function<Maybe<void>(InferParallelDistributionFnContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
@@ -71,6 +73,7 @@ struct OpRegistryResult {
   OutputArgModifyFn output_arg_modify_fn;
   InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn;
   InferParallelHierarchyFn infer_parallel_hierarchy_fn;
+  InferParallelDistributionFn infer_parallel_distribution_fn;
 };
 
 class OpRegistry final {
@@ -111,6 +114,7 @@ class OpRegistry final {
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistry& SetInferOutputBlobTimeShapeFn(InferOutputBlobTimeShapeFn fn);
   OpRegistry& SetInferParallelHierarchyFn(InferParallelHierarchyFn fn);
+  OpRegistry& SetInferParallelDistributionFn(InferParallelDistributionFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistry& Finish();

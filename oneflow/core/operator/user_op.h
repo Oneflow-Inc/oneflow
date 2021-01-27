@@ -57,6 +57,12 @@ class UserOp final : public Operator {
   Maybe<void> InferParallelHierarchy(
       std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
       const ParallelDesc& parallel_desc, Shape* shape) const override;
+  Maybe<void> InferParallelDistributionSignature(
+      ParallelDistributionSignature* signature, const SbpSignature& sbp_sig_conf,
+      const ParallelDesc& parallel_desc, const Shape& parallel_hierarchy,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn,
+      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) override;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
