@@ -689,7 +689,8 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     val_->infer_parallel_distribution_fn(&ctx);
   } else {
     return Operator::InferParallelDistributionSignature(
-        signature, sbp_sig_conf, ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp);
+        signature, sbp_sig_conf, parallel_desc, parallel_hierarchy,
+        ParallelDistributionInferHint4Ibn, BatchAxis4BnInOp);
   }
 }
 
