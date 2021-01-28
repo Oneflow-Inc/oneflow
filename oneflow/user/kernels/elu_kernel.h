@@ -21,23 +21,44 @@ namespace oneflow {
 
 template<typename T>
 struct EluFunctor {
-  OF_DEVICE_FUNC explicit EluFunctor(T alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit EluFunctor(double alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? x : alpha * (exp(x) - static_cast<T>(1));
+    return (x > static_cast<T>(0)) ? x : static_cast<T>(alpha * (exp(x) - static_cast<T>(1)));
   }
-  const T alpha;
+  const double alpha;
+};
+
+template<typename T>
+struct EluGradFunctor {
+  OF_DEVICE_FUNC explicit EluGradFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    return (x > static_cast<T>(0)) ? dy : static_cast<T>(dy * alpha * (exp(x)));
+  }
+  const double alpha;
 };
 
 #define REGISTER_ELU_KERNEL(device, dtype)                                              \
   REGISTER_USER_KERNEL("elu")                                                           \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
         return new UnaryElemwiseXpuKernel<device, EluFunctor<dtype>, dtype>(            \
-            "in", "out", [](user_op::KernelComputeContext* ctx) {                       \
-              return EluFunctor<dtype>(static_cast<dtype>(ctx->Attr<double>("alpha"))); \
-            });                                                                         \
+            [](user_op::KernelComputeContext* ctx) {                                    \
+              return EluFunctor<dtype>(ctx->Attr<double>("alpha"));                     \
+            },                                                                          \
+            "in", "out");                                                               \
       })                                                                                \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("elu_grad")                                                      \
+      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
+        return new BinaryElemwiseXpuKernel<device, EluGradFunctor<dtype>, dtype>(       \
+            [](user_op::KernelComputeContext* ctx) {                                    \
+              return EluGradFunctor<dtype>(ctx->Attr<double>("alpha"));                 \
+            },                                                                          \
+            "x", "dy", "dx");                                                           \
+      })                                                                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
 }  // namespace oneflow
 
 #endif  // _ONEFLOW_USER_KERNELS_ELEMENTWISE_ELU_KERNEL_H_

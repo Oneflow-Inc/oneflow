@@ -18,9 +18,35 @@ limitations under the License.
 
 namespace oneflow {
 
-INSTANTIATE_XPU_FUNCTOR(DeviceType::kGPU, EluFunctor, double);
-INSTANTIATE_XPU_FUNCTOR(DeviceType::kGPU, EluFunctor, float);
+template<>
+struct EluFunctor<half> {
+  __host__ __device__ explicit EluFunctor(double alpha)
+      : alpha(alpha), float_functor(EluFunctor<float>(alpha)) {}
+  __device__ half operator()(half x) const { return __float2half(float_functor(__half2float(x))); }
+  const double alpha;
+  EluFunctor<float> float_functor;
+};
 
+template<>
+struct EluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit EluGradFunctor(double alpha)
+      : alpha(alpha), float_functor(EluGradFunctor<float>(alpha)) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  const double alpha;
+  EluGradFunctor<float> float_functor;
+};
+
+#define INSTANTIATE_ELU_XPU_FUNCTORS(device_type, dtype)         \
+  INSTANTIATE_UNARY_XPU_FUNCTOR(device_type, EluFunctor, dtype); \
+  INSTANTIATE_BINARY_XPU_FUNCTOR(device_type, EluGradFunctor, dtype);
+
+INSTANTIATE_ELU_XPU_FUNCTORS(DeviceType::kGPU, half);
+INSTANTIATE_ELU_XPU_FUNCTORS(DeviceType::kGPU, double);
+INSTANTIATE_ELU_XPU_FUNCTORS(DeviceType::kGPU, float);
+
+REGISTER_ELU_KERNEL(DeviceType::kGPU, half);
 REGISTER_ELU_KERNEL(DeviceType::kGPU, float);
 REGISTER_ELU_KERNEL(DeviceType::kGPU, double);
 

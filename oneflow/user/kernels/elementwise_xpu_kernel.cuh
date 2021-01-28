@@ -23,4 +23,14 @@ struct UnaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, T> final {
     OF_CUDA_CHECK(cuda::elementwise::Unary(functor, elem_cnt, out, in, ctx->cuda_stream()));
   }
 };
+
+template<typename FunctorT, typename T>
+struct BinaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, T> final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in_1, const T* in_2,
+                  FunctorT functor) {
+    OF_CUDA_CHECK(
+        cuda::elementwise::Binary(functor, elem_cnt, out, in_1, in_2, ctx->cuda_stream()));
+  }
+};
+
 }  // namespace oneflow
