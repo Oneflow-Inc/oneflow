@@ -46,6 +46,12 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
+  static int64_t GetDistance(const int64_t src_machine_id, const int64_t src_dev_phy_id,
+                             const DeviceType& src_device_type, const int64_t dst_machine_id,
+                             const int64_t dst_dev_phy_id, const DeviceType& dst_device_type);
+  static int64_t GetDistance(const ParallelDesc& src_parallel_desc, const int64_t src_parallel_id,
+                             const ParallelDesc& dst_parallel_desc, const int64_t dst_parallel_id);
+
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
                                       const NodeType* to_node) {
@@ -68,6 +74,22 @@ struct SubTskGphBuilderUtil {
                                    const NodeType* to_node) {
     const int64_t idx = FindNearestNodeIndex<NodeType>(from_nodes, to_node);
     return from_nodes.at(idx);
+  }
+
+  static int64_t FindNearestParallelId(const ParallelDesc& from_parallel_desc,
+                                       const ParallelDesc& to_parallel_desc,
+                                       const int64_t to_parallel_id) {
+    int64_t nearest_from_parallel_idx = -1;
+    int64_t nearest_distance = SubTskGphBuilderUtil::kDistanceMax;
+    for (int64_t i = 0; i < from_parallel_desc.parallel_num(); ++i) {
+      int64_t distance = SubTskGphBuilderUtil::GetDistance(from_parallel_desc, i, to_parallel_desc,
+                                                           to_parallel_id);
+      if (distance < nearest_distance) {
+        nearest_from_parallel_idx = i;
+        nearest_distance = distance;
+      }
+    }
+    return nearest_from_parallel_idx;
   }
 };
 

@@ -118,4 +118,36 @@ int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* d
   }
 }
 
+int64_t SubTskGphBuilderUtil::GetDistance(
+    const int64_t src_machine_id, const int64_t src_dev_phy_id, const DeviceType& src_device_type,
+    const int64_t dst_machine_id, const int64_t dst_dev_phy_id, const DeviceType& dst_device_type) {
+  if (src_machine_id != dst_machine_id) {
+    return kDistanceDiffMachine;
+  } else if (src_device_type != dst_device_type) {
+    return kDistanceSameMachine;
+  } else if (src_device_type == DeviceType::kCPU) {
+    return kDistanceSameDevice;
+  } else {
+    if (src_dev_phy_id == dst_dev_phy_id) {
+      return kDistanceSameDevice;
+    } else {
+      return kDistanceSameMachine;
+    }
+  }
+}
+
+int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
+                                          const int64_t src_parallel_id,
+                                          const ParallelDesc& dst_parallel_desc,
+                                          const int64_t dst_parallel_id) {
+  const int64_t src_machine_id =
+      CHECK_JUST(src_parallel_desc.MachineId4ParallelId(src_parallel_id));
+  const int64_t src_dev_phy_id = CHECK_JUST(src_parallel_desc.DeviceId4ParallelId(src_parallel_id));
+  const int64_t dst_machine_id =
+      CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
+  const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
+  return GetDistance(src_machine_id, src_dev_phy_id, src_parallel_desc.device_type(),
+                     dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
+}
+
 }  // namespace oneflow
