@@ -48,4 +48,16 @@ Maybe<void> PhysicalInterpreter::Run(
       instructions_builder.instruction_list(), instructions_builder.eager_symbol_list());
 }
 
+namespace one {
+std::vector<TensorRef> LazyOpInterpreter::Interpret(const Operation& op,
+                                                    const std::vector<TensorRef>& inputs) {
+  return std::vector<TensorRef>{};
+}
+
+std::vector<TensorRef> EagerOpInterpreter::Interpret(const Operation& op,
+                                                     const std::vector<TensorRef>& inputs) {
+  return std::vector<TensorRef>{};
+}
+
+}  // namespace one
 }  // namespace oneflow
