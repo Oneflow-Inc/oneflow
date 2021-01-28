@@ -24,7 +24,8 @@ template<typename T>
 struct SeluFunctor {
   OF_DEVICE_FUNC explicit SeluFunctor(double scale, double alpha) : scale(scale), alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? scale * x : scale * alpha * (exp(x) - static_cast<T>(1));
+    return static_cast<T>((x > static_cast<T>(0)) ? scale * x
+                                                  : scale * alpha * (exp(x) - static_cast<T>(1)));
   }
   const double scale;
   const double alpha;
@@ -35,7 +36,7 @@ struct SeluGradFunctor {
   OF_DEVICE_FUNC explicit SeluGradFunctor(double scale, double alpha)
       : scale(scale), alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x > static_cast<T>(0)) ? scale * dy : dy * scale * alpha * (exp(x));
+    return static_cast<T>((x > static_cast<T>(0)) ? scale * dy : dy * scale * alpha * (exp(x)));
   }
   const double scale;
   const double alpha;
@@ -45,13 +46,14 @@ namespace {
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseSeluFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* out, const T* in);
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* out,
+                  const T* in);
 };
 
 template<DeviceType device_type, template<typename> class Opt, typename T>
 struct ElemwiseSeluGradFunctor final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, T scale, T alpha, T* dx, const T* x,
-                  const T* dy);
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* dx,
+                  const T* x, const T* dy);
 };
 
 }  // namespace
