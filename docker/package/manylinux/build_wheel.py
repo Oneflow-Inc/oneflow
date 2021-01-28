@@ -184,7 +184,7 @@ def build_oneflow(
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 {cmake_cmd}
-cmake --build . -j `nproc`
+cmake --build . -j`nproc`
 """
     if skip_wheel:
         return 0
@@ -194,7 +194,7 @@ rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 cd {oneflow_src_dir}
 rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
-auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
+auditwheel repair -v /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
         return create_tmp_bash_and_run(
             docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
