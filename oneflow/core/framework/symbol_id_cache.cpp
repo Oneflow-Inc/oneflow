@@ -25,6 +25,7 @@ COMMAND(Global<IdCache<cfg::JobConfigProto>>::SetAllocated(new IdCache<cfg::JobC
 COMMAND(Global<IdCache<cfg::ParallelConf>>::SetAllocated(new IdCache<cfg::ParallelConf>()));
 COMMAND(Global<IdCache<cfg::ScopeProto>>::SetAllocated(new IdCache<cfg::ScopeProto>()));
 COMMAND(Global<IdCache<cfg::OpNodeSignature>>::SetAllocated(new IdCache<cfg::OpNodeSignature>()));
+COMMAND(Global<IdCache<std::string>>::SetAllocated(new IdCache<std::string>()));
 
 }  // namespace symbol
 
