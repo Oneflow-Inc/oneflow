@@ -9,7 +9,7 @@ on:
     inputs:
       python_version:
         description: 'python_version'
-        default: '3.5,3.6,3.7,3.8'
+        default: '3.6,3.7,3.8'
         required: false
 jobs:
   staging_release:
@@ -97,7 +97,7 @@ jobs:
         echo "matrix_release_version=${matrix_release_version}" >> $GITHUB_ENV
 
         python3 ci/build/ensure_img.py
-        python_version=${python_version:-"3.5,3.6,3.7,3.8"}
+        python_version=${python_version:-"3.6,3.7,3.8"}
         echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
         echo "python_version=${python_version}" >> $GITHUB_ENV
         echo "extra_flags=${extra_flags}" >> $GITHUB_ENV

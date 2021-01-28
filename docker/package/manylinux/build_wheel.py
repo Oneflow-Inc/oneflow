@@ -111,7 +111,7 @@ make -j`nproc` prepare_oneflow_third_party
 
 
 def get_python_bin(version):
-    assert version in ["3.5", "3.6", "3.7", "3.8"]
+    assert version in ["3.6", "3.7", "3.8"]
     py_ver = "".join(version.split("."))
     py_abi = f"cp{py_ver}-cp{py_ver}"
     if py_ver != "38":
