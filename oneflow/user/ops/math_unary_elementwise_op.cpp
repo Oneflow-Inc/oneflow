@@ -35,6 +35,11 @@ namespace oneflow {
       .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
 
 #define MATH_ELEMENTWISE_UNARY_SET_FUNC_BACKWARD_NORMAL()                       \
+  SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
+      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+
+#define MATH_ELEMENTWISE_UNARY_SET_FUNC_BACKWARD_LOGICAL()                       \
     SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                \
       CHECK_OR_RETURN(*ctx->Shape4ArgNameAndIndex("x",0) == *ctx->Shape4ArgNameAndIndex("y",0)); \
       CHECK_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0) == DataType::kInt8);             \
@@ -44,10 +49,7 @@ namespace oneflow {
       .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
       .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
 
-#define MATH_ELEMENTWISE_UNARY_SET_FUNC_BACKWARD_LOGICAL()                       \
-  SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+
 
 #define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix, tensor_suffix) \
   REGISTER_USER_OP(math_unary_elementwise_type)                                               \
