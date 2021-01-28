@@ -145,16 +145,18 @@ bool OpEdge::CalcIsStrict121Connected() const {
   OpNode* src = src_node();
   OpNode* dst = dst_node();
   if (!src->parallel_desc().Equals(dst->parallel_desc())) { return false; }
+  if (*src->parallel_hierarchy() != *dst->parallel_hierarchy()) { return false; }
   if (src->IsTimeShapeIdentity() == false) { return false; }
   if (dst->IsTimeShapeIdentity() == false) { return false; }
   if (*src->GetInputOutputFastestTimeShape() != *dst->GetInputOutputFastestTimeShape()) {
     return false;
   }
   for (const LogicalBlobId& lbi : lbis()) {
-    const SbpParallel& obn_sbp = src->SbpParallel4BnInOp(lbi2obn().at(lbi));
+    const ParallelDistribution& obn_distribution =
+        src->ParallelDistribution4BnInOp(lbi2obn().at(lbi));
     for (const std::string& ibn : lbi2ibns().at(lbi)) {
-      const SbpParallel& ibn_sbp = dst->SbpParallel4BnInOp(ibn);
-      if (obn_sbp != ibn_sbp) { return false; }
+      const ParallelDistribution& ibn_distribution = dst->ParallelDistribution4BnInOp(ibn);
+      if (obn_distribution != ibn_distribution) { return false; }
     }
   }
   return true;
