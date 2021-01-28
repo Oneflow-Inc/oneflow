@@ -1360,3 +1360,7 @@ def tanh_v2(
     )
     print(traceback.format_stack()[-2])
     return flow.math.tanh(x, name)
+
+@oneflow_export("math.logical_not")
+def logical_not(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
+    return build_unary_elemwise_math_op("logical_not", x, name)
