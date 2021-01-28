@@ -1,6 +1,8 @@
 #include "OneFlow/OneFlowOps.h"
 #include <iostream>
+#include <string>
 #include "OneFlow/OneFlowDialect.h"
+#include "llvm/ADT/STLExtras.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
@@ -38,15 +40,21 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         }
       }
     } else /* trim redundant control outputs */ {
-      if (op.ctrl_output().use_empty()) {
+      if (op.ctrl_output() && op.ctrl_output().use_empty()) {
         const int32_t num_data_inputs =
             op.result_segment_sizes().getValue<IntegerAttr>({0}).getInt();
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("result_segment_sizes");
         attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
-        rewriter.replaceOpWithNewOp<oneflow::SystemOp>(op, op.getResultTypes(), op->getOperands(),
-                                                       attributes);
-        return success();
+        if (auto sys = rewriter.create<oneflow::UserOp>(
+                op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
+                op->getOperands(), attributes)) {
+          for (auto out : op.data_output()) {
+            out.replaceAllUsesWith(sys->getResult(out.getResultNumber()));
+          }
+          op->erase();
+          return success();
+        }
       }
     }
     return failure();
