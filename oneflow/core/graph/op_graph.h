@@ -76,16 +76,18 @@ class OpNode final : public Node<OpNode, OpEdge> {
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
-                                       const std::function<void(const BlobDesc&)>& Handler) const;
+  //  void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const SbpParallel&
+  //  sbp_parallel,
+  //                                       const std::function<void(const BlobDesc&)>& Handler)
+  //                                       const;
 
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
   void ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
                       const std::vector<std::shared_ptr<BlobDesc>>& blob_descs,
                       const SbpParallel& sbp_parallel, BlobDesc* concatenated_blob_desc) const;
-  void SplitLogicalInputBlobDesc();
-  void ConcatLogicalOutputBlobDesc();
+  Maybe<void> SplitLogicalInputBlobDesc();
+  Maybe<void> ConcatLogicalOutputBlobDesc();
   void CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
   void InferBlobParallelDesc();
