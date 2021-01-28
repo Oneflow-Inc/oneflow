@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<template<typename> class UnaryFunctor, typename T>
+template<template<typename> class UnaryFunctor, typename T, typename K>
 class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
  public:
   MathUnaryElementwiseCpuKernel() = default;
@@ -29,7 +29,7 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
-    T* y = tensor_y->mut_dptr<T>();
+    K* y = tensor_y->mut_dptr<K>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
@@ -37,7 +37,7 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<template<typename> class UnaryFunctor, typename T>
+template<template<typename> class UnaryFunctor, typename T, typename K>
 class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
  public:
   MathUnaryElementwiseGradCpuKernel() = default;
@@ -50,7 +50,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     const T* x = tensor_x->dptr<T>();
-    const T* dy = tensor_dy->dptr<T>();
+    const K* dy = tensor_dy->dptr<K>();
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
@@ -59,23 +59,24 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair, output_type_pair)        \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
-                                        OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
+                                        OF_PP_PAIR_FIRST(data_type_pair),OF_PP_PAIR_FIRST(output_type_pair)>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                          \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));     \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(output_type_pair)));     \
                                                                                                    \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_grad"))             \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGradCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
-                                            OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
+                                            OF_PP_PAIR_FIRST(data_type_pair),OF_PP_PAIR_FIRST(output_type_pair)>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                          \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,            MATH_UNARY_ELEMENTWISE_LOGICAL_FUNC_SEQ, ARITHMETIC_DATA_TYPE_SEQ, LOGICAL_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

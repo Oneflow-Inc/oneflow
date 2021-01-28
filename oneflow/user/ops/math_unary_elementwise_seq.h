@@ -54,9 +54,11 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                           \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)                         
 
+#define MATH_UNARY_ELEMENTWISE_LOGICAL_FUNC_SEQ               \
+  OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
+  
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_MATH_UNARY_ELEMENTWISE_SEQ_H_

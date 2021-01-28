@@ -18,21 +18,48 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix) \
+
+
+#define MATH_ELEMENTWISE_UNARY_SET_FUNC_NORMAL()                       \
+  SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
+      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+
+#define MATH_ELEMENTWISE_UNARY_SET_FUNC_LOGICAL()                       \
+    SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                \
+      *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("x",0);    \
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = DataType::kInt8;                            \
+      return Maybe<void>::Ok();                                                          \
+    })                                                                                  \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
+      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+
+#define MATH_ELEMENTWISE_UNARY_SET_FUNC_BACKWARD_NORMAL()                       \
+    SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                \
+      CHECK_OR_RETURN(*ctx->Shape4ArgNameAndIndex("x",0) == *ctx->Shape4ArgNameAndIndex("y",0)); \
+      CHECK_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0) == DataType::kInt8);             \
+      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);  \
+      return Maybe<void>::Ok();                                                          \
+    })                                                                                  \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
+      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+
+#define MATH_ELEMENTWISE_UNARY_SET_FUNC_BACKWARD_LOGICAL()                       \
+  SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
+      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix, tensor_suffix) \
   REGISTER_USER_OP(math_unary_elementwise_type)                                               \
       .Input("x")                                                                             \
       .Output("y")                                                                            \
-      .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);               \
+      .MATH_ELEMENTWISE_UNARY_SET_FUNC_##tensor_suffix();                                                                   \
                                                                                               \
   REGISTER_USER_OP((std::string("") + math_unary_elementwise_type + "_grad"))                 \
       .Input("x")                                                                             \
       .Input("dy")                                                                            \
       .Output("dx")                                                                           \
-      .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);               \
+     .MATH_ELEMENTWISE_UNARY_SET_FUNC_BACKWARD_##tensor_suffix();                                                                   \
                                                                                               \
   REGISTER_USER_OP_GRAD(math_unary_elementwise_type)                                          \
       .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {  \
@@ -49,6 +76,13 @@ namespace oneflow {
         }                                                                                     \
       });
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_NORMAL(op_name, fun_prefix) \
+  REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(op_name, fun_prefix, NORMAL)
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_LOGICAL(op_name, fun_prefix) \
+  REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(op_name, fun_prefix, LOGICAL)
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_NORMAL, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_LOGICAL,
+MATH_UNARY_ELEMENTWISE_LOGICAL_FUNC_SEQ)
 
 }  // namespace oneflow
