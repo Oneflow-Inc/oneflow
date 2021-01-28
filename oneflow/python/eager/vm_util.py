@@ -272,43 +272,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
     def FetchBlobBody(self, blob_object, callback):
         return self._FetchBlob("FetchBlobBody", blob_object, callback)
 
-    def PackPhysicalBlobsToLogicalBlob(
-        self, physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
-    ):
-        parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
-        machine_id2device_ids = dict(parallel_desc_symbol.machine_id2device_id_list)
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
-        machine_device_ids = set()
-        for physical_blob_object in physical_blob_objects:
-            phy_paralle_desc_sym = physical_blob_object.parallel_desc_symbol
-            assert (
-                phy_paralle_desc_sym.parallel_num == 1
-            ), phy_paralle_desc_sym.parallel_num
-            assert phy_paralle_desc_sym.device_tag == device_tag, "%s v.s. %s" % (
-                phy_paralle_desc_sym.device_tag,
-                device_tag,
-            )
-            phy_machine_id2device_ids = dict(
-                phy_paralle_desc_sym.machine_id2device_id_list
-            )
-            machine_id = list(phy_machine_id2device_ids.keys())[0]
-            pair = (machine_id, phy_machine_id2device_ids[machine_id][0])
-            machine_device_ids.add(pair)
-
-        for machine_id, device_ids in machine_id2device_ids.items():
-            for device_id in device_ids:
-                assert (machine_id, device_id) in machine_device_ids, "%s not in %s" % (
-                    (machine_id, device_id),
-                    machine_device_ids,
-                )
-        logical_blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
-        self.ReplaceMirrored(
-            op_arg_parallel_attr.parallel_desc_symbol,
-            [logical_blob_object],
-            physical_blob_objects,
-        )
-        return logical_blob_object
-
     def _GetPhysicalOpArgBlobAttrs(self, logical_blob_object):
         parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
         logical_blob_attr = logical_blob_object.op_arg_blob_attr

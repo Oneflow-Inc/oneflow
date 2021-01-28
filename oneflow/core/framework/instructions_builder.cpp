@@ -171,6 +171,40 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
   return object_id;
 }
 
+Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogicalBlob(
+    std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
+  std::shared_ptr<ParallelDesc> parallel_desc_symbol = op_arg_parallel_attr->parallel_desc_symbol();
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>> machine_id2device_ids =
+      parallel_desc_symbol->machine_id2sorted_dev_phy_ids();
+  std::string device_tag = parallel_desc_symbol->parallel_conf().device_tag();
+  HashSet<std::pair<int64_t, int64_t>> machine_device_ids;
+  for (const auto& physical_blob_object : physical_blob_objects) {
+    std::shared_ptr<ParallelDesc> phy_paralle_desc_sym =
+        physical_blob_object->parallel_desc_symbol();
+    CHECK_EQ(phy_paralle_desc_sym->parallel_num(), 1);
+    CHECK_EQ(phy_paralle_desc_sym->device_tag(), device_tag);
+    std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
+        phy_machine_id2device_ids = phy_paralle_desc_sym->machine_id2sorted_dev_phy_ids();
+    int64_t machine_id = phy_machine_id2device_ids->begin()->first;
+    machine_device_ids.insert(
+        std::make_pair(machine_id, phy_machine_id2device_ids->at(machine_id)->at(0)));
+  }
+  for (const auto& pair : *machine_id2device_ids) {
+    int64_t machine_id = pair.first;
+    for (const auto& device_id : *(pair.second)) {
+      CHECK(machine_device_ids.find(std::make_pair(machine_id, device_id))
+            != machine_device_ids.end());
+    }
+  }
+  std::shared_ptr<compatible_py::BlobObject> logical_blob_object =
+      JUST(NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr));
+  JUST(ReplaceMirrored(op_arg_parallel_attr->parallel_desc_symbol(), {logical_blob_object},
+                       physical_blob_objects));
+  return logical_blob_object;
+}
+
 Maybe<StringSymbol> InstructionsBuilder::GetSymbol4String(std::string str) {
   if (JUST(HasSymbol<std::string>(str))) { return GetSymbol<std::string, StringSymbol>(str); }
   int64_t symbol_id = JUST(NewSymbolId4String(str));

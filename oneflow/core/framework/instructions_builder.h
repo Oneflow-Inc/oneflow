@@ -76,6 +76,11 @@ class InstructionsBuilder {
 
   Maybe<int64_t> NewSymbolId();
 
+  Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
+      std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr);
+
   Maybe<int64_t> NewObjectId(const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
   Maybe<StringSymbol> GetSymbol4String(std::string str);

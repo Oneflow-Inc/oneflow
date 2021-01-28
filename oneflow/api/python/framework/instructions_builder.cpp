@@ -45,6 +45,16 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
            [](const std::shared_ptr<InstructionsBuilder>& x) {
              return x->NewSymbolId().GetOrThrow();
            })
+      .def("PackPhysicalBlobsToLogicalBlob",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
+              const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
+              const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
+             return x
+                 ->PackPhysicalBlobsToLogicalBlob(physical_blob_objects, op_arg_parallel_attr,
+                                                  op_arg_blob_attr)
+                 .GetPtrOrThrow();
+           })
       .def("GetSymbol4String",
            [](const std::shared_ptr<InstructionsBuilder>& x, std::string str) {
              return x->GetSymbol4String(str).GetPtrOrThrow();
