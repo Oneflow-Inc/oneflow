@@ -66,6 +66,36 @@ void UserOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList &resul
   results.insert<ConcreteUserOps>(context);
 }
 
+struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
+  ConcreteSystemOps(mlir::MLIRContext *context)
+      : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(oneflow::SystemOp op,
+                                      mlir::PatternRewriter &rewriter) const override {
+    // TODO: turn it into a template function with user op function
+    if (op.ctrl_output() && op.ctrl_output().use_empty()) {
+      const int32_t num_data_inputs = op.result_segment_sizes().getValue<IntegerAttr>({0}).getInt();
+      NamedAttrList attributes(op->getAttrDictionary());
+      attributes.erase("result_segment_sizes");
+      attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
+      if (auto sys = rewriter.create<oneflow::SystemOp>(
+              op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
+              op->getOperands(), attributes)) {
+        for (auto out : op.data_output()) {
+          out.replaceAllUsesWith(sys->getResult(out.getResultNumber()));
+        }
+        op->erase();
+        return success();
+      }
+    }
+    return failure();
+  }
+};
+
+void SystemOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList &results,
+                                           ::mlir::MLIRContext *context) {
+  results.insert<ConcreteSystemOps>(context);
+}
+
 #include "OneFlow/OneFlowEnums.cpp.inc"
 
 #define GET_OP_CLASSES

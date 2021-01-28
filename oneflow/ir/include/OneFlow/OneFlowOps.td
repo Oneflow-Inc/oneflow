@@ -111,6 +111,7 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
     StrArrayAttr:$input_bns,
     StrArrayAttr:$output_lbns
   );
+  let hasCanonicalizer = 1;
 }
 
 #endif // ONEFLOW_OPS
