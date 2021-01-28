@@ -316,6 +316,54 @@ std::vector<std::shared_ptr<ParallelDesc>> InstructionsBuilder::GetPhysicalParal
   return phy_parallel_desc_symbols;
 }
 
+std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>
+InstructionsBuilder::GetPhysicalOpArgBlobAttrs(
+    const std::shared_ptr<compatible_py::BlobObject>& logical_blob_object) const {
+  int64_t parallel_num = logical_blob_object->parallel_desc_symbol()->parallel_num();
+  std::shared_ptr<compatible_py::OpArgBlobAttribute> logical_blob_attr =
+      logical_blob_object->op_arg_blob_attr();
+  std::shared_ptr<cfg::SbpParallel> sbp_parallel =
+      logical_blob_object->op_arg_parallel_attr()->sbp_parallel();
+  std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>> pyh_op_arg_blob_attrs;
+  if (sbp_parallel->has_split_parallel()) {
+    int64_t split_axis = sbp_parallel->split_parallel().axis();
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      pyh_op_arg_blob_attrs.emplace_back(
+          logical_blob_attr->GetPhysicalOpArgBlobAttr(split_axis, parallel_num, i));
+    }
+  } else {
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      pyh_op_arg_blob_attrs.emplace_back(logical_blob_attr);
+    }
+  }
+  return pyh_op_arg_blob_attrs;
+}
+
+std::vector<std::shared_ptr<compatible_py::BlobObject>>
+InstructionsBuilder::UnpackLogicalBlobToPhysicalBlobs(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  std::vector<std::shared_ptr<ParallelDesc>> phy_parallel_desc_symbols =
+      GetPhysicalParallelDescSymbols(blob_object->parallel_desc_symbol());
+  auto phy_op_arg_blob_attrs = GetPhysicalOpArgBlobAttrs(blob_object);
+  const auto GetPhysicalBlob =
+      [this](const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+             const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr) {
+        std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+            CHECK_JUST(compatible_py::MakeMirroredOpArgParallelAttribute(parallel_desc_sym));
+        std::shared_ptr<compatible_py::BlobObject> pyhsical_blob_object =
+            CHECK_JUST(NewBlobObject(op_arg_parallel_attr, blob_attr));
+        return pyhsical_blob_object;
+      };
+  std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects;
+  for (int64_t i = 0; i < phy_parallel_desc_symbols.size(); ++i) {
+    physical_blob_objects.emplace_back(
+        GetPhysicalBlob(phy_parallel_desc_symbols[i], phy_op_arg_blob_attrs[i]));
+  }
+  CHECK_JUST(
+      ReplaceMirrored(blob_object->parallel_desc_symbol(), physical_blob_objects, {blob_object}));
+  return physical_blob_objects;
+}
+
 Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {

@@ -272,41 +272,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
     def FetchBlobBody(self, blob_object, callback):
         return self._FetchBlob("FetchBlobBody", blob_object, callback)
 
-    def _GetPhysicalOpArgBlobAttrs(self, logical_blob_object):
-        parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
-        logical_blob_attr = logical_blob_object.op_arg_blob_attr
-        sbp_parallel = logical_blob_object.op_arg_parallel_attr.sbp_parallel
-        if sbp_parallel.has_split_parallel():
-            split_axis = sbp_parallel.split_parallel().axis()
-            return [
-                logical_blob_attr.GetPhysicalOpArgBlobAttr(split_axis, parallel_num, i)
-                for i in range(parallel_num)
-            ]
-        else:
-            return [logical_blob_attr] * parallel_num
-
-    def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
-        phy_parallel_desc_symbols = self.GetPhysicalParallelDescSymbols(
-            blob_object.parallel_desc_symbol
-        )
-        phy_op_arg_blob_attrs = self._GetPhysicalOpArgBlobAttrs(blob_object)
-
-        def GetPhysicalBlob(parallel_desc_sym, blob_attr):
-            op_arg_parallel_attr = oneflow_api.MakeMirroredOpArgParallelAttribute(
-                parallel_desc_sym
-            )
-            pyhsical_blob_object = self.NewBlobObject(op_arg_parallel_attr, blob_attr)
-            return pyhsical_blob_object
-
-        physical_blob_objects = [
-            GetPhysicalBlob(phy_parallel_desc_symbols[i], phy_op_arg_blob_attrs[i])
-            for i in range(len(phy_parallel_desc_symbols))
-        ]
-        self.ReplaceMirrored(
-            blob_object.parallel_desc_symbol, physical_blob_objects, [blob_object]
-        )
-        return physical_blob_objects
-
     def MakeLazyRefBlobObject(self, interface_op_name):
         sess = session_ctx.GetDefaultSession()
         op_attribute = sess.OpAttribute4InterfaceOpName(interface_op_name)

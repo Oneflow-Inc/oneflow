@@ -107,6 +107,9 @@ class InstructionsBuilder {
   std::vector<std::shared_ptr<ParallelDesc>> GetPhysicalParallelDescSymbols(
       const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
 
+  std::vector<std::shared_ptr<compatible_py::BlobObject>> UnpackLogicalBlobToPhysicalBlobs(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+
   Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
       const std::shared_ptr<compatible_py::BlobObject>&,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
@@ -150,6 +153,9 @@ class InstructionsBuilder {
   }
 
  private:
+  std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>> GetPhysicalOpArgBlobAttrs(
+      const std::shared_ptr<compatible_py::BlobObject>& logical_blob_object) const;
+
   Maybe<int64_t> NewSymbolId4String(std::string str);
 
   Maybe<int64_t> NewSymbolId4JobConf(const std::shared_ptr<cfg::JobConfigProto>& job_conf);

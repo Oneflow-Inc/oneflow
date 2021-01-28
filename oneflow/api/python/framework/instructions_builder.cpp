@@ -96,6 +96,11 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
               const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
              return x->GetPhysicalParallelDescSymbols(parallel_desc_symbol);
            })
+      .def("UnpackLogicalBlobToPhysicalBlobs",
+           [](const std::shared_ptr<InstructionsBuilder>& x,
+              const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+             return x->UnpackLogicalBlobToPhysicalBlobs(blob_object);
+           })
       .def("MakeReferenceBlobObject",
            [](const std::shared_ptr<InstructionsBuilder>& x,
               const std::shared_ptr<compatible_py::BlobObject>& blob_object,
