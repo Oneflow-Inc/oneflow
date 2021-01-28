@@ -194,7 +194,7 @@ rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 cd {oneflow_src_dir}
 rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
-auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir} --verbose
+auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
         return create_tmp_bash_and_run(
             docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
