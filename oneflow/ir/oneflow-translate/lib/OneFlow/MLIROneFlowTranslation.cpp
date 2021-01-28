@@ -443,6 +443,10 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       }
       if (na.first.str() == "output_lbns") {
         AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec);
+        if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
+          module->emitError("out_types - 1 != output_lbns, op: " + op.name());
+          return failure();
+        }
       }
     }
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
