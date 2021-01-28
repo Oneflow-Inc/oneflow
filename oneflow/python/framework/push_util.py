@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.python_callback as python_callback
@@ -25,11 +26,14 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
-import oneflow.python.eager.object as object_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow_api
 import numpy
 from functools import reduce
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def AsyncPush(session, job_func, *arg):
@@ -117,20 +121,25 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     arg_blob_object, lbi = _MakeInputBlobObject(arg_blob_def)
     FeedValueToEagerBlob(arg_blob_object, arg_blob_def, arg_ndarray)
     get_blob = None
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
 
-        def get_blob(lbi, blob_object):
-            blob = remote_blob_util.EagerConsistentBlob(lbi, blob_object)
+        def get_blob(lbi, blob_object, blob_register):
+            blob = oneflow_api.EagerConsistentBlob(lbi, blob_object, blob_register)
             with oneflow.scope.consistent_view():
                 return oneflow.identity(blob)
 
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
-        get_blob = remote_blob_util.EagerMirroredBlob
+        get_blob = oneflow_api.EagerMirroredBlob
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
-        get_blob = remote_blob_util.EagerMirroredBlob
+        get_blob = oneflow_api.EagerMirroredBlob
     else:
         raise NotImplementedError
-    return get_blob(lbi, blob_object=arg_blob_object)
+    return get_blob(lbi, blob_object=arg_blob_object, blob_register=blob_register)
 
 
 def _MakeInputBlobObject(arg_blob_def):
@@ -251,7 +260,7 @@ class FeedContext(object):
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
-    assert isinstance(blob_object, object_util.BlobObject)
+    assert isinstance(blob_object, oneflow_api.BlobObject)
 
     FeedBlob = _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object)
     assert callable(FeedBlob)

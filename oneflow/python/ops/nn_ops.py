@@ -674,6 +674,10 @@ def conv3d(
     if need_transpose:
         input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
         filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+        # padding for `NDHWC` is [0, 0, 1, 1, 1] to `NCDHW` format [0, 1, 1, 1, 0]
+        if isinstance(padding, (list, tuple)):
+            padding = list(padding)
+            padding[1], padding[4] = padding[4], padding[1]
 
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
@@ -801,6 +805,66 @@ def moments(
             flow.math.reduce_mean(x, axis=axes, keepdims=keepdims),
             flow.math.reduce_variance(x, axis=axes, keepdims=keepdims),
         )
+
+
+@oneflow_export("nn.GroupNorm")
+def group_normalization(
+    x: oneflow_api.BlobDesc,
+    num_groups: int = 32,
+    eps: float = 1e-05,
+    affine: bool = True,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""Applies Group Normalization over a ND(N>=3) input.
+
+    Args:
+        x (oneflow_api.BlobDesc): input tensor with shape (N,C,∗), where C means the number of channels.
+        eps (float): A value added to the denominator for numerical stability. Default: 1e-5.
+        affine (bool): A boolean value that when set to True, this module has learnable affine parameters, 
+                       initialized the same way as done for batch normalization. Default: True.
+        name (Optional[str], optional): Name of this op.
+
+    Returns:
+        oneflow_api.BlobDesc: The normalized input tensor.
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def group_norm_Job(x: tp.Numpy.Placeholder((4, 4, 32, 32))
+        ) -> tp.Numpy:
+            group_norm = flow.nn.GroupNorm(
+                x,
+                num_group=2,
+                eps=1e-5,
+                affine=True,
+            )
+            return group_norm
+
+        x = np.random.random(size=(4, 4, 32, 32)).astype(np.float32)
+        out = group_norm_Job(x)
+
+    """
+    assert len(x.shape) >= 3
+    assert (
+        x.shape[1] % num_groups == 0
+    ), "The channel should be divisible by num_groups."
+
+    if name is None:
+        name = id_util.UniqueStr("GroupNorm_")
+
+    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], num_groups, -1])
+    normalized_1d_out = flow.nn.InstanceNorm1d(
+        reshape_to_1d, eps=eps, affine=affine, name=name
+    )
+    reshape_back = flow.reshape(normalized_1d_out, shape=list(x.shape))
+
+    return reshape_back
 
 
 @oneflow_export("nn.InstanceNorm1d")
@@ -2972,7 +3036,7 @@ def hard_sigmoid(
 
         @flow.global_function()
         def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            out = flow.math.hardsigmoid(x)
+            out = flow.nn.hardsigmoid(x)
 
             return out
 
@@ -3000,6 +3064,94 @@ def hard_sigmoid(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.mish")
+def mish(x: oneflow_api.BlobDesc, name: Optional[str] = None,) -> oneflow_api.BlobDesc:
+    """The Mish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x*tanh(ln(1+e^x))
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def mish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.nn.mish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1.0, 1.5]).astype(np.float32)
+        out = mish_job(x)
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Blob. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Mish_")
+
+    return x * flow.math.tanh(
+        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
+    )
+
+
+@oneflow_export("nn.swish")
+def swish(
+    x: oneflow_api.BlobDesc, beta: float = 1.0, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""The Swish activation function. 
+
+    The equation is: 
+
+    .. math:: 
+
+        out = x * sigmoid(\beta*x)
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
+            return flow.nn.swish(x)
+
+
+        x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
+
+
+        out = swish_job(x)
+        # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
+    
+    Args:
+        x (oneflow_api.BlobDesc): The input Blob. 
+        beta (float, optional): The smooth factor. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Swish_")
+
+    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")
 
 
 @oneflow_export("nn.hardswish")
@@ -3122,6 +3274,53 @@ def hardtanh(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("nn.relu6")
+def relu6(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
+    r"""Relu6 activation, it clips the value around (0, 6). 
+
+    The equation is: 
+
+    .. math:: 
+
+        \text{Relu6}(x) = \begin{cases}
+            6 & \text{ if } x > 6 \\
+            0 & \text{ if } x < 0 \\
+            x & \text{ otherwise } \\
+        \end{cases}
+
+    For example: 
+
+    .. code-block:: 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
+
+        @flow.global_function()
+        def relu6_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy: 
+            return flow.nn.relu6(x)
+
+        x = np.array([[-1, -0.5, 0.0], 
+                      [0.5, 6.0, 7]]).astype(np.float32)
+
+        out = relu6_job(x)
+
+        # output [[0.  0.  0. ]
+        #         [0.5 6.  6. ]]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("Relu6_")
+    return flow.nn.hardtanh(x, min_val=0.0, max_val=6.0, name=name)
 
 
 @oneflow_export("nn.L1Loss")

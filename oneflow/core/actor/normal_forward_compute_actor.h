@@ -29,20 +29,10 @@ class NormalForwardCompActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
-      override {
-    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{"const_buf"});
-  }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendInplaceProducedRegstMsgToConsumer() override;
-  void AsyncInitModelAndConstBuf();
 
   int64_t cur_piece_id_;
-
-  // customized produced
-  int64_t const_buf_regst_desc_id_;
-  Regst* const_buf_regst_;
-  bool send_const_buf_regst_;
 };
 
 }  // namespace oneflow

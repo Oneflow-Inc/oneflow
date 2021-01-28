@@ -23,6 +23,7 @@ import numpy as np
 
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
@@ -134,7 +135,7 @@ class ArgBlobDef(object):
         raise NotImplementedError
 
     def ToInterfaceBlobConf(self):
-        interface_blob_conf = op_conf_util.InterfaceBlobConf()
+        interface_blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
         interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
         interface_blob_conf.is_dynamic = self.is_dynamic
@@ -200,7 +201,7 @@ class FixedTensorDef(ArgBlobDef):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
     def SetBatchAxisAndSplitAxis(
-        self, interface_blob_conf: op_conf_util.InterfaceBlobConf
+        self, interface_blob_conf: inter_face_blob_conf_util.InterfaceBlobConf
     ) -> None:
         if self.batch_axis == oneflow_api.INVALID_BATCH_AXIS:
             interface_blob_conf.batch_axis.ClearField("value")
@@ -253,7 +254,7 @@ class MirroredTensorDef(ArgBlobDef):
         return compile_context.CurJobAddMirroredOp(op_conf)
 
     def SetBatchAxisAndSplitAxis(
-        self, interface_blob_conf: op_conf_util.InterfaceBlobConf
+        self, interface_blob_conf: inter_face_blob_conf_util.InterfaceBlobConf
     ) -> None:
         assert type(self.batch_axis) is int
         interface_blob_conf.batch_axis.value = self.batch_axis
@@ -316,7 +317,7 @@ class MirroredTensorListDef(ArgBlobDef):
         return compile_context.CurJobAddMirroredOp(op_conf)
 
     def SetBatchAxisAndSplitAxis(
-        self, interface_blob_conf: op_conf_util.InterfaceBlobConf
+        self, interface_blob_conf: inter_face_blob_conf_util.InterfaceBlobConf
     ) -> None:
         assert type(self.batch_axis) is int
         interface_blob_conf.batch_axis.value = self.batch_axis

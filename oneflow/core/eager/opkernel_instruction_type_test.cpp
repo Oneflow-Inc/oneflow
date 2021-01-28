@@ -33,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 
 namespace oneflow {
 namespace eager {
