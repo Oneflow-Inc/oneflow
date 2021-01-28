@@ -115,7 +115,6 @@ class Importer {
   RoundTripOneFlowJobWrapperInterface &job_wrapper;
 };
 
-// TODO: add trait for this
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                                      std::vector<NamedAttribute> &attr_vec) {
   std::vector<llvm::StringRef> input_lbn_segment_keys;
@@ -140,7 +139,6 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
     output_lbn_segment_keys.push_back(output.first);
     output_lbn_segment_sizes.push_back(output.second.s_size());
     data_output_size += output.second.s_size();
-    // TODO: merge this method with output types create
   }
   attr_vec.push_back(b.getNamedAttr("output_lbns", b.getStrArrayAttr(output_lbns)));
   attr_vec.push_back(
