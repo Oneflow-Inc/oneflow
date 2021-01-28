@@ -39,6 +39,7 @@ struct OpContext {
 
 class LogicalNode;
 class MirroredSigInferHint;
+class OpNodeSignature;
 class Scope;
 
 class Operator {
@@ -87,7 +88,6 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(input_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
   DEFINE_BLOB_NAMES_GETTER(tmp_bns);
-  DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
@@ -274,7 +274,6 @@ class Operator {
   void EnrollRepeatedOutputBnWithSetter(
       const std::string& obn_prefix,
       const std::function<void(OutputBlobModifier*)>& ModifierSetter);
-  void EnrollConstBufBn(const std::string& cbbn);
 
   InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
   InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
@@ -298,7 +297,6 @@ class Operator {
   }
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
-  virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();

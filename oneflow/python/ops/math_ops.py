@@ -1222,7 +1222,7 @@ def logical_and(
 
 
 @oneflow_export("math.minimum")
-def broadcast_min(
+def minimum(
     x: oneflow_api.BlobDesc, y: oneflow_api.BlobDesc, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
     r"""Returns the min of x and y element-wise, this op supports broadcasting.
@@ -1256,11 +1256,23 @@ def broadcast_min(
         # out [2. 2. 1.]
 
     """
-    return build_broadcast_binary_op("broadcast_minimum", x, y, name)
+    if x.shape == y.shape:
+        return (
+            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMinimum_"))
+            .Op("elementwise_minimum")
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("z")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return build_broadcast_binary_op("broadcast_minimum", x, y, name)
 
 
 @oneflow_export("math.maximum")
-def broadcast_max(
+def maximum(
     x: oneflow_api.BlobDesc, y: oneflow_api.BlobDesc, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
     """Returns the max of x and y element-wise, this op supports broadcasting.
@@ -1294,7 +1306,19 @@ def broadcast_max(
         # out [4. 3. 4.]
 
     """
-    return build_broadcast_binary_op("broadcast_maximum", x, y, name)
+    if x.shape == y.shape:
+        return (
+            flow.user_op_builder(name or id_util.UniqueStr("ElementWiseMaximum_"))
+            .Op("elementwise_maximum")
+            .Input("x", [x])
+            .Input("y", [y])
+            .Output("z")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
+    else:
+        return build_broadcast_binary_op("broadcast_maximum", x, y, name)
 
 
 @oneflow_export("math.reduced_shape_elem_cnt")
@@ -2079,89 +2103,3 @@ def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.B
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
-
-@oneflow_export("math.mish")
-def mish(x: oneflow_api.BlobDesc, name: Optional[str] = None,) -> oneflow_api.BlobDesc:
-    """The Mish activation function. 
-
-    The equation is: 
-
-    .. math:: 
-
-        out = x*tanh(ln(1+e^x))
-
-    For example: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import oneflow.typing as tp 
-        import numpy as np 
-
-
-        @flow.global_function()
-        def mish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
-            return flow.math.mish(x)
-
-
-        x = np.array([-0.5, 0, 0.5, 1.0, 1.5]).astype(np.float32)
-        out = mish_job(x)
-
-    Args:
-        x (oneflow_api.BlobDesc): The input Blob. 
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        oneflow_api.BlobDesc: The result Blob. 
-    """
-    if name is None:
-        name = id_util.UniqueStr("Mish_")
-
-    return x * flow.math.tanh(
-        flow.math.softplus(x, name=name + "softplus"), name=name + "tanh"
-    )
-
-
-@oneflow_export("math.swish")
-def swish(
-    x: oneflow_api.BlobDesc, beta: float = 1.0, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""The Swish activation function. 
-
-    The equation is: 
-
-    .. math:: 
-
-        out = x * sigmoid(\beta*x)
-
-    For example: 
-
-    .. code-block:: python 
-
-        import oneflow as flow 
-        import oneflow.typing as tp 
-        import numpy as np 
-
-
-        @flow.global_function()
-        def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
-            return flow.math.swish(x)
-        x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
-
-
-        out = swish_job(x)
-        # output [-0.18877034  0.          0.31122968  0.7310586   1.2263618 ]
-    
-    Args:
-        x (oneflow_api.BlobDesc): The input Blob. 
-        beta (float, optional): The smooth factor. Defaults to 1.0.
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-    
-    Returns:
-        oneflow_api.BlobDesc: The result Blob. 
-    """
-    if name is None:
-        name = id_util.UniqueStr("Swish_")
-
-    return x * flow.math.sigmoid(beta * x, name=name + "_sigmoid")

@@ -21,7 +21,6 @@ import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool

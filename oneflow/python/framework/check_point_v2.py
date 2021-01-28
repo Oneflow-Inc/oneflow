@@ -20,6 +20,7 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow_api
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
@@ -27,7 +28,6 @@ import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
@@ -35,11 +35,12 @@ import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 from oneflow.python.experimental import interface_op_read_and_write
-from oneflow.python.framework.remote_blob import EagerBlobTrait
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.ops.get_variable as get_variable
 
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+from oneflow_api import EagerBlobTrait
 from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple
 
 
@@ -47,6 +48,9 @@ META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"
 FAKE_JOB_NAME = "system_checkpoint"
 OP_PREFIX = "system_checkpoint"
+
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 class FileBackendVariableBlob:
@@ -124,7 +128,7 @@ def _ElemCnt(shape):
 
 @oneflow_export("get_all_variables")
 @session_ctx.try_init_default_session
-def GetAllVariables() -> Dict[str, remote_blob_util.EagerConsistentBlob]:
+def GetAllVariables() -> Dict[str, oneflow_api.EagerConsistentBlob]:
     """
     Get all variables of all jobs as a dict.
     """
@@ -304,21 +308,24 @@ def _LogicalSlice(
 
         vm_util.LogicalRun(build)
 
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_name
-    lbi.blob_name = op_name
+    lbi = lbi_util.LogicalBlobId()
+    lbi.set_op_name(op_name)
+    lbi.set_blob_name(op_name)
 
     blob_object = async_util.Await(1, AsyncSlice)[0]
 
-    blob = remote_blob_util.EagerConsistentBlob(
-        lbi, blob_object=blob_object, job_name=FAKE_JOB_NAME
+    blob = oneflow_api.EagerConsistentBlob(
+        lbi,
+        blob_object=blob_object,
+        blob_register=blob_register,
+        job_name=FAKE_JOB_NAME,
     )
     return blob.numpy()
 
 
 def _GetCpu0VariableBlobFromNumpy(
     np_array: np.ndarray, dtype: dtype_util.dtype
-) -> remote_blob_util.EagerConsistentBlob:
+) -> oneflow_api.EagerConsistentBlob:
     """
     Add a variable on cpu 0, and feed the value of `np_array`
 
@@ -394,7 +401,7 @@ def _LogicalSliceAssign(
 
 
 def _FeedValueToVariable(
-    var_blob: remote_blob_util.EagerConsistentBlob, value: ValueContainer
+    var_blob: oneflow_api.EagerConsistentBlob, value: ValueContainer
 ) -> None:
     """
     Feed the value of `value` to the variable `var_blob`

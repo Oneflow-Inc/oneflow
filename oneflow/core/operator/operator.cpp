@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 
 namespace oneflow {
 
@@ -235,7 +236,6 @@ Maybe<void> Operator::GetSbpSignaturesIf(
 void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) const {
   for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
-  for (const std::string& bn_in_op : const_buf_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
 }
 
@@ -475,12 +475,6 @@ LogicalBlobId Operator::tbn2lbi(const std::string& tmp_bn) const {
   ret.set_blob_name(tmp_bn);
   return ret;
 }
-LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_buf_bn);
-  return ret;
-}
 
 void Operator::EnrollTmpBn(const std::string& tbn) {
   *(mut_tmp_bns()->Add()) = tbn;
@@ -591,11 +585,6 @@ void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num
 
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
   EnrollRepeatedOutputBn(obn_prefix, true);
-}
-
-void Operator::EnrollConstBufBn(const std::string& cbbn) {
-  *(mut_const_buf_bns()->Add()) = cbbn;
-  CHECK(mut_bn_in_op2lbi()->insert({cbbn, cbbn2lbi(cbbn)}).second);
 }
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {

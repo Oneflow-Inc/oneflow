@@ -937,23 +937,18 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
-    OperatorConf parallel_cast_op_conf{};
-    parallel_cast_op_conf.set_name("System-AutoGrad-ParallelCast-" + NewUniqueId());
-    ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
-    parallel_cast_conf->set_in(GenLogicalBlobName(diff_lbi));
-    parallel_cast_conf->set_out("out");
     const SbpParallel& model_sbp = model_op_node->SbpParallel4Lbi(lbi);
-    if (model_sbp.has_broadcast_parallel()) {
-      parallel_cast_conf->mutable_split_axis()->clear_value();
-    } else if (model_sbp.has_split_parallel()) {
-      parallel_cast_conf->mutable_split_axis()->set_value(model_sbp.split_parallel().axis());
-    } else {
-      UNIMPLEMENTED();
-    }
-    parallel_cast_op_conf.set_scope_symbol_id(scope_symbol_id);
-    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(), {parallel_cast_op_conf});
-    diff_lbi.set_op_name(parallel_cast_op_conf.name());
-    diff_lbi.set_blob_name(parallel_cast_conf->out());
+    auto parallel_cast_op =
+        user_op::UserOpConfWrapperBuilder("System-AutoGrad-ParallelCast-" + NewUniqueId())
+            .Op("parallel_cast")
+            .Input("in", GenLogicalBlobName(diff_lbi))
+            .Output("out")
+            .Attr("sbp_parallel", SbpParallelToString(model_sbp))
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
+                        {parallel_cast_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(parallel_cast_op.output("out", 0));
   }
 }
 
@@ -964,17 +959,16 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
     LogicalBlobId& diff_lbi = pair.second;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
-    OperatorConf cast_to_static_shape_op_conf{};
-    cast_to_static_shape_op_conf.set_name("System-AutoGrad-StaticShapeCast-" + NewUniqueId());
-    CastToStaticShapeOpConf* cast_to_static_shape_conf =
-        cast_to_static_shape_op_conf.mutable_cast_to_static_shape_conf();
-    cast_to_static_shape_conf->set_in(GenLogicalBlobName(diff_lbi));
-    cast_to_static_shape_conf->set_out("out");
-    cast_to_static_shape_op_conf.set_scope_symbol_id(scope_symbol_id);
+    const auto cast_to_static_shape_op =
+        user_op::UserOpConfWrapperBuilder("System-AutoGrad-StaticShapeCast-" + NewUniqueId())
+            .Op("cast_to_static_shape")
+            .Input("input", GenLogicalBlobName(diff_lbi))
+            .Output("output")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
-                        {cast_to_static_shape_op_conf});
-    diff_lbi.set_op_name(cast_to_static_shape_op_conf.name());
-    diff_lbi.set_blob_name(cast_to_static_shape_conf->out());
+                        {cast_to_static_shape_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(cast_to_static_shape_op.output("output", 0));
   }
 }
 

@@ -164,6 +164,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     {{ util.field_type_name_with_cfg_namespace(field) }}* add_{{ util.field_name(field) }}();
   {% else %}
     void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
+    void set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
   {% endif %}{# field message type #}
    protected:
     ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> {{ util.field_name(field) }}_;
@@ -370,6 +371,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
   // used by pybind11 only
   ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> shared_mutable_{{ util.field_name(field) }}();
+  void set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
   void clear_{{ util.field_name(field) }}();
