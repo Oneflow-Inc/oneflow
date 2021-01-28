@@ -59,7 +59,9 @@ namespace oneflow {
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
-         && lhs.parallel_conf() == rhs.parallel_conf() && lhs.sbp_conf() == rhs.sbp_conf();
+         && lhs.parallel_conf() == rhs.parallel_conf()
+         && Shape(lhs.parallel_hierarchy()) == Shape(rhs.parallel_hierarchy())
+         && lhs.parallel_distribution() == rhs.parallel_distribution();
 }
 
 namespace {
