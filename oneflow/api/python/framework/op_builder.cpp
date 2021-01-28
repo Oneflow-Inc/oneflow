@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/op_builder.h"
 
 namespace py = pybind11;
@@ -26,7 +28,8 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::Operation, std::shared_ptr<one::Operation>>(m, "Operation")
       .def(py::init<>())
       .def_readonly("name", &one::Operation::op_name)
-      .def_readonly("proto", &one::Operation::proto)
+      .def_property_readonly("proto",
+                             [](const one::Operation& op) { return PbMessage2TxtString(op.proto); })
       .def_readonly("indexed_input_names", &one::Operation::indexed_input_names);
 
   py::class_<one::OpBuilder, std::shared_ptr<one::OpBuilder>>(m, "OpBuilder")
@@ -37,7 +40,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def("Input", &one::OpBuilder::Input)
       .def("Output", py::overload_cast<const std::string&>(&one::OpBuilder::Output))
       .def("Output", py::overload_cast<const std::string&, const int>(&one::OpBuilder::Output))
-      .def("Attr", &one::OpBuilder::Attr)
+      .def("Attr", py::overload_cast<const std::string&, const std::string&>(&one::OpBuilder::Attr))
       .def("Build", &one::OpBuilder::Build);
 }
 

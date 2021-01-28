@@ -16,6 +16,7 @@ limitations under the License.
 #include <glog/logging.h>
 
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -83,12 +84,12 @@ OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_v
   return *this;
 }
 
-// template <typename T>
-// OpBuilder& OpBuilder::Attr(const std::string& attr_name, const T& attr_value) {
-//   // TODO(): Finish the template attr function.
-//   LOG(FATAL) << "The template attr function is not supported.";
-//   return *this;
-// }
+OpBuilder& OpBuilder::Attr(const std::string& attr_name, const std::string& serialized_attr_value) {
+  AttrValue attr_value;
+  TxtString2PbMessage(serialized_attr_value, &attr_value);
+  (*(operation_->proto.mutable_attr()))[attr_name] = attr_value;
+  return *this;
+}
 
 std::shared_ptr<Operation>&& OpBuilder::Build() {
   for (const auto& it : operation_->proto.input()) {

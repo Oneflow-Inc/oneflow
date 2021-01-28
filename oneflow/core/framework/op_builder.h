@@ -63,7 +63,9 @@ class OpBuilder {
   OpBuilder& Output(const std::string& output_name, const int count);
 
   OpBuilder& Attr(const std::string& attr_name, const AttrValue& attr_value);
+  OpBuilder& Attr(const std::string& attr_name, const std::string& serialized_attr_value);
 
+  // TODO(): Set attribute from primitive type.
   // template <typename T>
   // OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
 
