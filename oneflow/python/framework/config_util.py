@@ -15,11 +15,11 @@ limitations under the License.
 """
 from __future__ import absolute_import, print_function
 
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 import traceback
 
 
@@ -53,7 +53,7 @@ def api_load_library_now(val: str) -> None:
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def load_library_now(val):
     assert type(val) is str
-    c_api_util.LoadLibraryNow(val)
+    oneflow_api.LoadLibraryNow(val)
 
 
 @oneflow_export("config.machine_num")
@@ -430,6 +430,23 @@ def num_callback_threads(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
+
+
+@oneflow_export("config.enable_tensor_float_32_compute")
+def api_enable_tensor_float_32_compute(val: bool = True) -> None:
+    r"""Whether or not to enable Tensor-float-32 on supported GPUs
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_tensor_float_32_compute, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_tensor_float_32_compute(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_tensor_float_32_compute = val
 
 
 @oneflow_export("config.collective_boxing.nccl_num_streams")

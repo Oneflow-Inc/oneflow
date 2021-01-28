@@ -14,26 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
-#if defined(WITH_PROFILER)
+#include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/kernel.h"
-#endif
 
 namespace oneflow {
-
-namespace {
-
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && !blob->IsBodyEmpty()) { return false; }
-  }
-  return true;
-}
-
-}  // namespace
 
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
@@ -50,11 +36,6 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
   InitBase(job_desc, kernel_conf);
   VirtualKernelInit(device_ctx);
-}
-
-void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
 }
 
 void Kernel::Launch(const KernelCtx& ctx,
@@ -112,13 +93,9 @@ void Kernel::Forward(const KernelCtx& ctx,
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
-#if defined(WITH_PROFILER)
-  profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob);
-#endif
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);
-#if defined(WITH_PROFILER)
-  profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob);
-#endif
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
   SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
 }
 

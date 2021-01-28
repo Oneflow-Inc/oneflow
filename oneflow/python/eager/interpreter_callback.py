@@ -24,21 +24,8 @@ import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.framework.scope_symbol as scope_symbol
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.symbol_storage as symbol_storage
-
-
-def AddScopeToStorage(scope_symbol_id, scope_proto):
-    scope_proto_str = str(scope_proto)
-    if symbol_storage.HasSymbol4SerializedScopeProto(scope_proto_str):
-        return
-    parent_scope_symbol = symbol_storage.GetSymbol4Id(
-        scope_proto.parent_scope_symbol_id()
-    )
-    symbol = scope_symbol.ScopeSymbol(scope_symbol_id, scope_proto, parent_scope_symbol)
-    symbol_storage.SetSymbol4Id(scope_symbol_id, symbol)
-    symbol_storage.SetSymbol4SerializedScopeProto(scope_proto_str, symbol)
 
 
 def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
@@ -99,7 +86,7 @@ def _AddOutputBlobObjectReleaser4InputBlobObject(op_attribute, blob_register):
 
 
 def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):
-    def ReleaseMirroredBlobObject(*args):
+    def ReleaseMirroredBlobObject(obj):
         for obn in op_attribute.output_bns:
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)

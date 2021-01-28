@@ -20,12 +20,13 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/string_object.h"
+#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 namespace vm {
 
-COMMAND(Global<SymbolStorage<std::string>>::SetAllocated(new SymbolStorage<std::string>()));
+COMMAND(Global<symbol::Storage<StringSymbol>>::SetAllocated(new symbol::Storage<StringSymbol>()));
 
 namespace {
 
@@ -48,9 +49,9 @@ class InitStringSymbolInstructionType final : public InstructionType {
     FlatMsgView<StringObjectInstrOperand> args(instruction->instr_msg().operand());
     FOR_RANGE(int, i, 0, args->string_size()) {
       int64_t logical_object_id = args->string(i).logical_object_id();
-      const auto& str = Global<SymbolStorage<std::string>>::Get()->Get(logical_object_id);
+      const auto& str_sym = Global<symbol::Storage<StringSymbol>>::Get()->Get(logical_object_id);
       auto* rw_mutexed_object = instruction->mut_operand_type(args->string(i));
-      rw_mutexed_object->Init<StringObject>(str);
+      rw_mutexed_object->Init<StringObject>(str_sym.data());
     }
   }
   void Compute(Instruction* instruction) const override {

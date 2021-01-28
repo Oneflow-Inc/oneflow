@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 
 namespace oneflow {
 
@@ -501,7 +502,7 @@ void UserKernel::ForwardShape(const KernelCtx& ctx,
       const auto& out_arg_pair = infer_ctx_->outputs().at(i);
       MutShapeView* mut_shape_view =
           infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
+      if (mut_shape_view) { mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i)); }
     }
   }
 }
@@ -545,6 +546,12 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
+
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
+      && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
+    return new_opkernel_state;
+  }
+
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);

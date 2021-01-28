@@ -26,12 +26,27 @@ namespace oneflow {
 
 class OperatorConf;
 
+namespace cfg {
+class ScopeProto;
+}
+
 class Scope final {
  public:
   Scope(const Scope&) = delete;
   Scope(Scope&&) = delete;
   explicit Scope(const ScopeProto& scope_proto);
   ~Scope() = default;
+
+  static Maybe<Scope> New(int64_t symbol_id, const ScopeProto& scope_proto);
+  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  int64_t auto_increment_id() { return ++auto_increment_id_; }
+  int64_t session_id() const { return scope_proto().session_id(); }
+  const std::shared_ptr<JobDesc>& job_desc_symbol() const { return job_desc_; }
+  const std::shared_ptr<ParallelDesc>& device_parallel_desc_symbol() const {
+    return device_parallel_desc_;
+  }
+  const std::shared_ptr<Scope>& parent_scope_symbol() const { return parent_scope_symbol_; }
+  Maybe<cfg::ScopeProto> MakeChildScopeProto() const;
 
   Maybe<const JobDesc*> job_desc() const;
   Maybe<int64_t> GetParallelDescSymbolId(const OperatorConf& op_conf) const;
@@ -54,14 +69,18 @@ class Scope final {
   DEFINE_SCOPE_CONFIG_GETTER(const std::string&, String, at_string);
 
  private:
+  Scope(int64_t symbol_id, const ScopeProto& scope_proto);
   Maybe<void> Init();
 
   const AttrValue& GetAttrValue(const std::string& attr_name) const;
 
+  int64_t auto_increment_id_;
+  Maybe<int64_t> symbol_id_;
   const ScopeProto scope_proto_;
   std::shared_ptr<JobDesc> job_desc_;
   std::shared_ptr<ParallelDesc> device_parallel_desc_;
   std::shared_ptr<ParallelDesc> host_parallel_desc_;
+  std::shared_ptr<Scope> parent_scope_symbol_;
 };
 
 }  // namespace oneflow

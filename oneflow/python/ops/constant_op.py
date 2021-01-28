@@ -26,6 +26,7 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 @oneflow_export("constant")
@@ -34,7 +35,7 @@ def constant(
     dtype: Optional[dtype_util.dtype] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator creates a constant Blob. 
 
     Args:
@@ -47,7 +48,7 @@ def constant(
         NotImplementedError: The data type of value should be int or float. 
 
     Returns:
-        remote_blob_util.BlobDef: The result blob. 
+        oneflow_api.BlobDesc: The result blob. 
 
     For example: 
 
@@ -113,7 +114,7 @@ def constant_scalar(
     value: Union[int, float],
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator creates a constant scalar Blob. 
 
     Args:
@@ -122,7 +123,7 @@ def constant_scalar(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result blob. 
+        oneflow_api.BlobDesc: The result blob. 
 
     For example: 
 
@@ -150,15 +151,15 @@ def constant_scalar(
 
 @oneflow_export("constant_like")
 def constant_like(
-    like: remote_blob_util.BlobDef,
+    like: oneflow_api.BlobDesc,
     value: Union[int, float],
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator creates a constant Blob that has the same shape as `like`. 
 
     Args:
-        like (remote_blob_util.BlobDef): A Blob. 
+        like (oneflow_api.BlobDesc): A Blob. 
         value (Union[int, float]): The constant value of Blob.
         dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -167,7 +168,7 @@ def constant_like(
         NotImplementedError: The data type of value should be int or float. 
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -221,19 +222,19 @@ def constant_like(
 
 @oneflow_export("ones_like")
 def ones_like(
-    like: remote_blob_util.BlobDef,
+    like: oneflow_api.BlobDesc,
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator creates a Blob with all elements set to `1` that has the same shape as `like`.
 
     Args:
-        like (remote_blob_util.BlobDef): A Blob. 
+        like (oneflow_api.BlobDesc): A Blob. 
         dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -266,19 +267,19 @@ def ones_like(
 
 @oneflow_export("zeros_like")
 def zeros_like(
-    like: remote_blob_util.BlobDef,
+    like: oneflow_api.BlobDesc,
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator creates a Blob that has the same shape as `like` whose all elements are set to `0`. 
 
     Args:
-        like (remote_blob_util.BlobDef): A Blob. 
+        like (oneflow_api.BlobDesc): A Blob. 
         dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 

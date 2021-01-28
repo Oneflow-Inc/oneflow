@@ -21,7 +21,6 @@ import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
@@ -565,16 +564,16 @@ def ConstructNaiveBoxingOpConf(
     op_conf.boxing_conf.in_num = in_parallel_num
     op_conf.boxing_conf.out_num = out_parallel_num
     in_sbp_parallel = produced_blob_object.op_arg_parallel_attr.sbp_parallel
-    if in_sbp_parallel.HasField("split_parallel"):
-        op_conf.boxing_conf.concat_box.axis = in_sbp_parallel.split_parallel.axis
+    if in_sbp_parallel.has_split_parallel():
+        op_conf.boxing_conf.concat_box.axis = in_sbp_parallel.split_parallel().axis()
     elif in_parallel_num == 1:
         op_conf.boxing_conf.concat_box.axis = 0
     else:
-        assert in_sbp_parallel.HasField("partial_sum_parallel")
+        assert in_sbp_parallel.has_partial_sum_parallel()
         op_conf.boxing_conf.add_box.SetInParent()
     out_sbp_parallel = consumer_op_arg_parallel_attr.sbp_parallel
-    if out_sbp_parallel.HasField("split_parallel"):
-        out_axis = out_sbp_parallel.split_parallel.axis
+    if out_sbp_parallel.has_split_parallel():
+        out_axis = out_sbp_parallel.split_parallel().axis()
     else:
         assert out_parallel_num == 1
         out_axis = 0
@@ -657,8 +656,10 @@ def CpuOneToManyBroadcastBlobReference(
     builder, produced_blob_object, to_parallel_desc_symbol
 ):
     x_parallel_desc_symbol = produced_blob_object.parallel_desc_symbol
-    x_machine_ids = list(x_parallel_desc_symbol.machine_id2device_id_list.keys())
-    to_machine_ids = list(to_parallel_desc_symbol.machine_id2device_id_list.keys())
+    x_machine_ids = list(dict(x_parallel_desc_symbol.machine_id2device_id_list).keys())
+    to_machine_ids = list(
+        dict(to_parallel_desc_symbol.machine_id2device_id_list).keys()
+    )
     assert x_machine_ids == to_machine_ids, (x_machine_ids, to_machine_ids)
     x_first_device_ids = x_parallel_desc_symbol.machine_id2device_id_list[
         x_machine_ids[0]
