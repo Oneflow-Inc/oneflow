@@ -15,16 +15,24 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/id_util_api.h"
+#include "oneflow/core/vm/string_symbol.h"
 
 namespace py = pybind11;
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("NewLogicalObjectId", &NewLogicalObjectId);
-  m.def("NewLogicalSymbolId", &NewLogicalSymbolId);
+namespace oneflow {
 
-  m.def("NewPhysicalObjectId", &NewPhysicalObjectId);
-  m.def("NewPhysicalSymbolId", &NewPhysicalSymbolId);
-
-  m.def("NewTokenId", &NewTokenId);
+Maybe<StringSymbol> CreateStringSymbol(int64_t symbol_id, const std::string& data) {
+  return std::make_shared<StringSymbol>(symbol_id, data);
 }
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<StringSymbol, std::shared_ptr<StringSymbol>>(m, "StringSymbol")
+      .def(py::init([](int64_t symbol_id, const std::string& data) {
+        return CreateStringSymbol(symbol_id, data).GetPtrOrThrow();
+      }))
+      .def_property_readonly("symbol_id",
+                             [](const StringSymbol& x) { return x.symbol_id().GetOrThrow(); })
+      .def_property_readonly("data", &StringSymbol::data);
+}
+
+}  // namespace oneflow
