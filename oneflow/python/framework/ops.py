@@ -208,16 +208,16 @@ def hierarchical_parallel_cast(
         name = id_util.UniqueStr("HierarchicalParallelCast_")
 
     def distribute_to_str(dist):
-        dist_str = ""
         if dist is None:
-            pass
+            return ""
+        elif type(dist) is str:
+            return dist
         elif type(dist) is oneflow_api.distribute.SplitDistribute:
-            dist_str = "S({})".format(dist.axis)
+            return "S({})".format(dist.axis)
         elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
-            dist_str = "B"
+            return "B"
         else:
             raise ValueError("unsupported distribute")
-        return dist_str
 
     op = (
         oneflow.user_op_builder(name)

@@ -26,13 +26,11 @@ def _test(test_case):
     @flow.global_function("predict", function_config=func_config)
     def test_fn(x: flow.typing.Numpy.Placeholder((1024, 1024)),) -> flow.typing.Numpy:
         x = flow.hierarchical_parallel_cast(
-            x,
-            parallel_hierarchy=[2, 2],
-            parallel_distribution=[flow.distribute.split(0), flow.distribute.split(0)],
+            x, parallel_hierarchy=[2, 2], parallel_distribution=["S(0)", "S(0)"],
         )
         x = flow.math.relu(x)
         x = flow.hierarchical_parallel_cast(
-            x, parallel_hierarchy=[4], parallel_distribution=[flow.distribute.split(0)]
+            x, parallel_hierarchy=[4], parallel_distribution=["S(0)"]
         )
         return x
 
