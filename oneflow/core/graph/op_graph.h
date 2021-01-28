@@ -179,6 +179,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpSbpSignature(Job* job) const;
   void DumpOpTimeShape(Job* job) const;
   void DumpBatchAxisLbi(Job* job) const;
+  void DumpParallelHierarchy(Job* job) const;
 
   Maybe<void> Init(const Job& job);
 

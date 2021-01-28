@@ -17,6 +17,7 @@ message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
   map<string, bool> op_name2is_mirrored_parallel_view = 2;
   map<string, ParallelDistributionSignature> op_name2parallel_distribution_signature_conf = 3;
+  map<string, ShapeProto> op_name2parallel_hierarchy = 4;
 }
 
 message OpTimeShape {

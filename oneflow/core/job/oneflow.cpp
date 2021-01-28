@@ -510,11 +510,13 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
-  *blob_conf->mutable_sbp_conf() = job.job_parallel_view_conf()
-                                       .op_name2sbp_signature_conf()
-                                       .at(op_name)
-                                       .bn_in_op2sbp_parallel()
-                                       .at(obn);
+  *blob_conf->mutable_parallel_hierarchy() =
+      job.job_parallel_view_conf().op_name2parallel_hierarchy().at(op_name);
+  *blob_conf->mutable_parallel_distribution() = job.job_parallel_view_conf()
+                                                    .op_name2parallel_distribution_signature_conf()
+                                                    .at(op_name)
+                                                    .bn_in_op2parallel_distribution()
+                                                    .at(obn);
   *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 

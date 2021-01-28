@@ -982,6 +982,14 @@ void OpGraph::DumpBatchAxisLbi(Job* job) const {
   });
 }
 
+void OpGraph::DumpParallelHierarchy(Job* job) const {
+  ForEachNode([&](const OpNode* node) -> void {
+    node->parallel_hierarchy()->ToProto(
+        &(*job->mutable_job_parallel_view_conf()
+               ->mutable_op_name2parallel_hierarchy())[node->op().op_name()]);
+  });
+}
+
 Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const {
   HashMap<LogicalBlobId, bool> visited;
   for (const auto& op_name : op_names_) {

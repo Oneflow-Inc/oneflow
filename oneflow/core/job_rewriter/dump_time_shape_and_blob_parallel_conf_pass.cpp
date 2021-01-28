@@ -34,6 +34,7 @@ class DumpTimeShapeAndBlobParallelConfPass final : public JobPass {
     op_graph.DumpBatchAxisLbi(job);
     op_graph.DumpLogicalBlobDesc(job);
     op_graph.DumpSbpSignature(job);
+    op_graph.DumpParallelHierarchy(job);
     return Maybe<void>::Ok();
   }
 
