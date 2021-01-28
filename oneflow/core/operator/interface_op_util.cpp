@@ -96,10 +96,13 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   blob_conf->set_data_type(blob_desc.data_type());
   blob_conf->set_is_dynamic(blob_desc.is_dynamic());
   blob_conf->set_is_tensor_list(blob_desc.is_tensor_list());
-  if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
-    int64_t axis = parallel_blob_conf.sbp_conf().split_parallel().axis();
+  // TODO(liujuncheng): fully support
+  CHECK_EQ_OR_RETURN(parallel_blob_conf.parallel_distribution().sbp_parallel_size(), 1);
+  const SbpParallel& sbp_parallel = parallel_blob_conf.parallel_distribution().sbp_parallel(0);
+  if (sbp_parallel.has_split_parallel()) {
+    int64_t axis = sbp_parallel.split_parallel().axis();
     blob_conf->mutable_split_axis()->set_value(axis);
-  } else if (parallel_blob_conf.sbp_conf().has_broadcast_parallel()) {
+  } else if (sbp_parallel.has_broadcast_parallel()) {
     blob_conf->mutable_split_axis()->clear_value();
   } else {
     OF_UNIMPLEMENTED();
