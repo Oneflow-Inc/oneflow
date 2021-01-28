@@ -38,13 +38,13 @@ struct EluGradFunctor<half> {
   EluGradFunctor<float> float_functor;
 };
 
-#define INSTANTIATE_ELU_XPU_FUNCTORS(device_type, dtype)         \
-  INSTANTIATE_UNARY_XPU_FUNCTOR(device_type, EluFunctor, dtype); \
-  INSTANTIATE_BINARY_XPU_FUNCTOR(device_type, EluGradFunctor, dtype);
+#define INSTANTIATE_ELU_GPU_FUNCTORS(dtype)                           \
+  INSTANTIATE_UNARY_XPU_FUNCTOR(DeviceType::kGPU, EluFunctor, dtype); \
+  INSTANTIATE_BINARY_XPU_FUNCTOR(DeviceType::kGPU, EluGradFunctor, dtype);
 
-INSTANTIATE_ELU_XPU_FUNCTORS(DeviceType::kGPU, half);
-INSTANTIATE_ELU_XPU_FUNCTORS(DeviceType::kGPU, double);
-INSTANTIATE_ELU_XPU_FUNCTORS(DeviceType::kGPU, float);
+INSTANTIATE_ELU_GPU_FUNCTORS(half);
+INSTANTIATE_ELU_GPU_FUNCTORS(double);
+INSTANTIATE_ELU_GPU_FUNCTORS(float);
 
 REGISTER_ELU_KERNEL(DeviceType::kGPU, half);
 REGISTER_ELU_KERNEL(DeviceType::kGPU, float);
