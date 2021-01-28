@@ -66,39 +66,11 @@ def diag_grad_np(input_tensor, dim, output, grad):
         return grad_output
 
 
-def forward_compare_with_np(device_type, input_tensor, dim, dtype):
-    assert device_type in ["gpu", "cpu"]
-    flow.clear_default_session()
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(type_name_to_flow_type[dtype])
-    func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
-
-    input_shape = input_tensor.shape
-    input_dtype = input_tensor.dtype
-
-    @flow.global_function(type="predict", function_config=func_config)
-    def diag_forward(
-        x: tp.Numpy.Placeholder((input_shape), type_name_to_flow_type[dtype])
-    ) -> tp.Numpy:
-        y = flow.diag(x, dim)
-        return y
-
-    print(input)
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-    forward_of_out = diag_forward(input_tensor)
-
-    forward_np_out = np.diag(input_tensor, dim)
-
-    assert np.allclose(forward_of_out, forward_np_out)
-
-
 def compare_with_np(device_type, input_tensor, dim, dtype):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.default_data_type(type_name_to_flow_type[dtype])
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
     output_np = np.diag(input_tensor, dim)
@@ -109,21 +81,26 @@ def compare_with_np(device_type, input_tensor, dim, dtype):
 
     @flow.global_function(type="train", function_config=func_config)
     def diag_job(
-        input_tensor: tp.Numpy.Placeholder(
-            shape=(input_shape), dtype=type_name_to_flow_type[dtype]
-        ),
+        input_tensor: tp.Numpy.Placeholder(shape=(input_shape), dtype=flow.float),
     ) -> tp.Numpy:
         input_var = flow.get_variable(
             "input_tensor",
             shape=(input_shape),
-            dtype=type_name_to_flow_type[dtype],
+            dtype=flow.float,
             initializer=flow.zeros_initializer(),
             trainable=True,
         )
 
         input_tensor = input_tensor + input_var
         input_tensor = flow.cast_to_current_logical_view(input_tensor)
+        input_tensor = flow.cast(input_tensor, type_name_to_flow_type[dtype])
         output = flow.diag(input_tensor, dim)
+        if (
+            output.dtype == flow.int64
+            or output.dtype == flow.int8
+            or output.dtype == flow.int32
+        ):
+            output = flow.cast(output, flow.float)
         flow.optimizer.Adam(
             flow.optimizer.PiecewiseConstantScheduler([], [1e-4])
         ).minimize(output)
@@ -152,9 +129,7 @@ def compare_with_np(device_type, input_tensor, dim, dtype):
 def test_fun(device_type, input_shape, dim, dtype):
     input_tensor = np.random.random(input_shape).astype(np.float32)
     input_tensor = input_tensor.reshape(input_shape).astype(dtype)
-    forward_compare_with_np(device_type, input_tensor, dim, dtype)
-    if dtype == "float32" or dtype == "double":
-        compare_with_np(device_type, input_tensor, dim, dtype)
+    compare_with_np(device_type, input_tensor, dim, dtype)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -194,7 +169,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
-    
+
     def test_diag_int_cpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
