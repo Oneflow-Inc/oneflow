@@ -87,7 +87,7 @@ Maybe<void> ConcatBlobDesc(const ParallelDesc& blob_parallel_desc, const Shape& 
       for (const auto& blob_desc : blob_descs) {
         logical_blob_axis_dim += blob_desc->shape().At(axis);
       }
-      CHECK_GT_OR_RETURN(logical_blob_axis_dim, blob_parallel_desc.parallel_num());
+      CHECK_GE_OR_RETURN(logical_blob_axis_dim, blob_parallel_desc.parallel_num());
       BalancedSplitter bs(logical_blob_axis_dim, blob_parallel_desc.parallel_num());
       std::vector<std::unique_ptr<BlobDesc>> same_blob_descs(blob_descs.size());
       FOR_RANGE(int64_t, axis_parallel_id, 0, blob_parallel_desc.parallel_num()) {
