@@ -96,7 +96,7 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 void JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
-  WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
+  // WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   if (GlobalJobDesc().enable_keep_header_only()) {
     WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
   }
