@@ -948,9 +948,10 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
 }
 
 void OpGraph::DumpSbpSignature(Job* job) const {
-  ForEachNode([&](const OpNode* node) {
+  ForEachNode([&](const OpNode* node) -> void {
     (*job->mutable_job_parallel_view_conf()
-          ->mutable_op_name2sbp_signature_conf())[node->op().op_name()] = node->sbp_signature();
+          ->mutable_op_name2parallel_distribution_signature_conf())[node->op().op_name()] =
+        *CHECK_JUST(node->op().parallel_distribution_signature());
   });
 }
 
