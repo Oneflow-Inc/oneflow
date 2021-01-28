@@ -8,7 +8,7 @@ function install_all {
 export pip_args="-i https://mirrors.aliyun.com/pypi/simple"
 install_all
 if [ $? -eq 0 ]; then
-    export pip_args="-i https://mirrors.aliyun.com/pypi/simple"
+    export pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"
     install_all
 fi
 if [ $? -eq 0 ]; then

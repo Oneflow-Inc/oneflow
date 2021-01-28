@@ -41,6 +41,6 @@ COPY dev-requirements.txt /tmp/dev-requirements.txt
 COPY docker/package/manylinux/install_pip.sh /tmp/install_pip.sh
 RUN bash /tmp/install_pip.sh
 
-RUN curl -L https://github.com/bazelbuild/bazel/releases/download/3.4.1/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
+RUN curl -L https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/bazel-3.4.1-linux-x86_64 -o /usr/local/bin/bazel \
     && chmod +x /usr/local/bin/bazel \
     && bazel
