@@ -103,6 +103,7 @@ def matmul(
         )
     return op.InferAndTryRun().RemoteBlobList()[0]
 
+
 @oneflow_export("spmm_coo")
 def spmm_coo(
     a_cooRowInd: remote_blob_util.BlobDef,
