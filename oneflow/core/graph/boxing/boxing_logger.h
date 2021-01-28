@@ -27,8 +27,8 @@ class BoxingLogger {
   BoxingLogger() = default;
   virtual ~BoxingLogger() = default;
 
-  virtual void Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
-                   const std::string dst_op_name, const ParallelDesc& src_parallel_desc,
+  virtual void Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
+                   const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
                    const ParallelDesc& dst_parallel_desc, const SbpParallel& src_sbp_parallel,
                    const SbpParallel& dst_sbp_parallel, const LogicalBlobId& lbi,
                    const BlobDesc& logical_blob_desc) = 0;
@@ -40,8 +40,8 @@ class NullBoxingLogger final : public BoxingLogger {
   NullBoxingLogger() = default;
   ~NullBoxingLogger() override = default;
 
-  void Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
-           const std::string dst_op_name, const ParallelDesc& src_parallel_desc,
+  void Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
+           const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
            const ParallelDesc& dst_parallel_desc, const SbpParallel& src_sbp_parallel,
            const SbpParallel& dst_sbp_parallel, const LogicalBlobId& lbi,
            const BlobDesc& logical_blob_desc) override{};
@@ -54,8 +54,8 @@ class CsvBoxingLogger final : public BoxingLogger {
   CsvBoxingLogger(std::string path);
   ~CsvBoxingLogger() override;
 
-  void Log(const SubTskGphBuilderStatus& status, const std::string src_op_name,
-           const std::string dst_op_name, const ParallelDesc& src_parallel_desc,
+  void Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
+           const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
            const ParallelDesc& dst_parallel_desc, const SbpParallel& src_sbp_parallel,
            const SbpParallel& dst_sbp_parallel, const LogicalBlobId& lbi,
            const BlobDesc& logical_blob_desc) override;
