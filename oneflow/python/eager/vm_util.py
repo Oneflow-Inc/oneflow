@@ -85,13 +85,13 @@ def _DefaultBlobObject4Ibn(ibn):
     raise NotImplementedError
 
 
-class InstructionsBuilder(oneflow_api.InstructionsBuilder):
+class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
     def __init__(
         self, id_generator, release_object, instruction_list, eager_symbol_list
     ):
         assert isinstance(instruction_list, instr_cfg.InstructionListProto)
         assert isinstance(eager_symbol_list, eager_symbol_cfg.EagerSymbolList)
-        oneflow_api.InstructionsBuilder.__init__(
+        oneflow_api.deprecated.InstructionsBuilder.__init__(
             self, id_generator, instruction_list, eager_symbol_list, release_object
         )
 
@@ -263,10 +263,10 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("RemoveForeignCallback")
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.DelObjectOperand(object_id)
+            oneflow_api.deprecated.vm.DelObjectOperand(object_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(unique_callback_id)
+            oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -553,20 +553,24 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             src_blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(dst_parallel_desc_symbol.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(dst_parallel_desc_symbol.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.ConstOperand(src_blob_object.object_id)
+            oneflow_api.deprecated.vm.ConstOperand(src_blob_object.object_id)
         )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for token_id in token_ids[0]:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
+                oneflow_api.deprecated.vm.Uint64Operand(token_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for token_id in token_ids[1]:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
+                oneflow_api.deprecated.vm.Uint64Operand(token_id)
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -579,20 +583,24 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             dst_blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(src_parallel_desc_symbol.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(src_parallel_desc_symbol.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Mut2Operand(dst_blob_object.object_id)
+            oneflow_api.deprecated.vm.Mut2Operand(dst_blob_object.object_id)
         )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for token_id in token_ids[0]:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
+                oneflow_api.deprecated.vm.Uint64Operand(token_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for token_id in token_ids[1]:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Uint64Operand(token_id)
+                oneflow_api.deprecated.vm.Uint64Operand(token_id)
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -602,13 +610,13 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction.set_instr_type_name("InitOpKernelObject")
         instruction.set_parallel_desc_symbol_id(parallel_desc_symbol.symbol_id)
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(job_desc_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(job_desc_sym.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(op_conf_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(op_conf_sym.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(object_id)
+            oneflow_api.deprecated.vm.MutOperand(object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         return object_id
@@ -735,7 +743,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(blob_object.object_id)
+            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -746,7 +754,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(blob_object.object_id)
+            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -910,52 +918,60 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(job_desc_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(job_desc_sym.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(op_conf_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(op_conf_sym.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(op_node_signature_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(op_node_signature_sym.symbol_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(shared_opkernel_obj.object_id)
+            oneflow_api.deprecated.vm.MutOperand(shared_opkernel_obj.object_id)
         )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for ibn_sym, _ in const_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(ibn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
             )
         for _, blob_object in const_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.ConstOperand(blob_object.object_id)
+                oneflow_api.deprecated.vm.ConstOperand(blob_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for ibn_sym, _ in mutable_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(ibn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
             )
         for _, blob_object in mutable_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.MutOperand(blob_object.object_id)
+                oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for obn_sym, _ in mut1_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(obn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
             )
         for _, blob_object in mut1_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.MutOperand(blob_object.object_id)
+                oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for obn_sym, _ in mut2_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(obn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
             )
         for _, blob_object in mut2_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Mut2Operand(blob_object.object_id)
+                oneflow_api.deprecated.vm.Mut2Operand(blob_object.object_id)
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -976,46 +992,54 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         )
         instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(opkernel_object.object_id)
+            oneflow_api.deprecated.vm.MutOperand(opkernel_object.object_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(op_node_signature_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(op_node_signature_sym.symbol_id)
         )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for ibn_sym, _ in const_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(ibn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
             )
         for _, blob_object in const_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.ConstOperand(blob_object.object_id)
+                oneflow_api.deprecated.vm.ConstOperand(blob_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for ibn_sym, _ in mutable_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(ibn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
             )
         for _, blob_object in mutable_input_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.MutOperand(blob_object.object_id)
+                oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for obn_sym, _ in mut1_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(obn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
             )
         for _, blob_object in mut1_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.MutOperand(blob_object.object_id)
+                oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for obn_sym, _ in mut2_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.SymbolOperand(obn_sym.symbol_id)
+                oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
             )
         for _, blob_object in mut2_operand_blob_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Mut2Operand(blob_object.object_id)
+                oneflow_api.deprecated.vm.Mut2Operand(blob_object.object_id)
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -1025,7 +1049,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction.set_instr_type_name("NewObject")
         instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(object_id)
+            oneflow_api.deprecated.vm.Int64Operand(object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         return object_id
@@ -1038,13 +1062,13 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(blob_object.object_id)
+            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
         )
         interface_op_name_sym = self.GetSymbol4String(
             blob_object.op_arg_blob_attr.logical_blob_name
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.SymbolOperand(interface_op_name_sym.symbol_id)
+            oneflow_api.deprecated.vm.SymbolOperand(interface_op_name_sym.symbol_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -1054,10 +1078,10 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction.set_instr_type_name("BroadcastObjectReference")
         instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(object_id)
+            oneflow_api.deprecated.vm.Int64Operand(object_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(sole_mirrored_object.object_id)
+            oneflow_api.deprecated.vm.Int64Operand(sole_mirrored_object.object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         return object_id
@@ -1066,7 +1090,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitOperatorConfSymbol")
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.InitSymbolOperand(symbol_id)
+            oneflow_api.deprecated.vm.InitSymbolOperand(symbol_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_pb.EagerSymbol()
@@ -1079,7 +1103,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitOpNodeSignatureDescSymbol")
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.InitSymbolOperand(symbol_id)
+            oneflow_api.deprecated.vm.InitSymbolOperand(symbol_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
         eager_symbol = eager_symbol_cfg.EagerSymbol()
@@ -1096,10 +1120,10 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.ConstOperand(blob_object.object_id)
+            oneflow_api.deprecated.vm.ConstOperand(blob_object.object_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(unique_callback_id)
+            oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -1112,10 +1136,10 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Mut2Operand(blob_object.object_id)
+            oneflow_api.deprecated.vm.Mut2Operand(blob_object.object_id)
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.Int64Operand(unique_callback_id)
+            oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -1124,7 +1148,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction.set_instr_type_name("TryClearObject")
         instruction.set_parallel_desc_symbol_id(obj.parallel_desc_symbol.symbol_id)
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.MutOperand(obj.object_id)
+            oneflow_api.deprecated.vm.MutOperand(obj.object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -1135,7 +1159,7 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
             blob_object.parallel_desc_symbol.symbol_id
         )
         instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.vm.DelObjectOperand(blob_object.object_id)
+            oneflow_api.deprecated.vm.DelObjectOperand(blob_object.object_id)
         )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
@@ -1145,12 +1169,14 @@ class InstructionsBuilder(oneflow_api.InstructionsBuilder):
         instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
         for lhs_object in lhs_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Int64Operand(lhs_object.object_id)
+                oneflow_api.deprecated.vm.Int64Operand(lhs_object.object_id)
             )
-        instruction.mutable_operand().Add().CopyFrom(oneflow_api.vm.OperandSeparator())
+        instruction.mutable_operand().Add().CopyFrom(
+            oneflow_api.deprecated.vm.OperandSeparator()
+        )
         for rhs_object in rhs_objects:
             instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.vm.Int64Operand(rhs_object.object_id)
+                oneflow_api.deprecated.vm.Int64Operand(rhs_object.object_id)
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 

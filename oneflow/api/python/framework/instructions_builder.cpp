@@ -22,7 +22,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
                        const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
@@ -58,6 +58,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
       });
 
+  // these API will be removed when InstructionsBuilder is refactor competely
   py::module_ vm_sub_module = m.def_submodule("vm");
 
   vm_sub_module.def("DelObjectOperand", &DelObjectOperand);
