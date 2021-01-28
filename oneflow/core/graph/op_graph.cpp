@@ -81,7 +81,7 @@ Maybe<void> ConcatBlobDesc(const ParallelDesc& blob_parallel_desc, const Shape& 
     if (sbp_parallel.has_split_parallel()) {
       int32_t axis = sbp_parallel.split_parallel().axis();
       // concat BlobDesc
-      CHECK_GT_OR_RETURN(axis, 0);
+      CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LT_OR_RETURN(axis, blob_descs.at(0)->shape().NumAxes());
       int64_t logical_blob_axis_dim = 0;
       for (const auto& blob_desc : blob_descs) {
@@ -388,8 +388,8 @@ Maybe<void> OpNode::ConcatLogicalOutputBlobDesc() {
     for (const auto& blob_desc : bn2parallel_id2blob_desc_.at(obn)) {
       if (blob_desc) { paralleled_blob_descs.push_back(blob_desc); }
     }
-    ConcatBlobDesc(blob_parallel_desc, *parallel_hierarchy(), parallel_distribution,
-                   paralleled_blob_descs, MutLogicalBlobDesc4Lbi(lbi));
+    CHECK_JUST(ConcatBlobDesc(blob_parallel_desc, *parallel_hierarchy(), parallel_distribution,
+                              paralleled_blob_descs, MutLogicalBlobDesc4Lbi(lbi)));
   }
   return Maybe<void>::Ok();
 }
