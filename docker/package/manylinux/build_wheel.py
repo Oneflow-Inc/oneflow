@@ -62,7 +62,7 @@ def force_rm_dir(dir_to_clean):
     subprocess.check_call(clean_cmd, shell=True)
 
 
-def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap):
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap, dry):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as wrapper_f:
         with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
             w_name = "/host" + wrapper_f.name
@@ -80,7 +80,10 @@ bash {bash_args} {f_name}
             docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
             cmd = f"{docker_cmd} bash {bash_args} {w_name}"
             print(cmd)
-            subprocess.check_call(cmd, shell=True)
+            if dry:
+                print("dry run, skipping")
+            else:
+                subprocess.check_call(cmd, shell=True)
 
 
 def get_common_docker_args(
@@ -100,7 +103,13 @@ def get_common_docker_args(
 
 
 def build_third_party(
-    img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args, bash_args, bash_wrap,
+    img_tag,
+    oneflow_src_dir,
+    cache_dir,
+    extra_oneflow_cmake_args,
+    bash_args,
+    bash_wrap,
+    dry,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -124,7 +133,7 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
-    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap)
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry)
 
 
 def get_python_bin(version):
@@ -149,6 +158,7 @@ def build_oneflow(
     house_dir,
     bash_args,
     bash_wrap,
+    dry,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -184,10 +194,10 @@ rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
 cd {oneflow_src_dir}
 rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
-auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
+auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir} --verbose
 """
         return create_tmp_bash_and_run(
-            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap
+            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
         )
 
 
@@ -229,6 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_tuna", default=False, action="store_true", required=False
     )
+    parser.add_argument("--dry", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_system_proxy", default=False, action="store_true", required=False
     )
@@ -308,6 +319,7 @@ gcc --version
                     extra_oneflow_cmake_args,
                     bash_args,
                     bash_wrap,
+                    args.dry,
                 )
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
@@ -330,6 +342,7 @@ gcc --version
                     args.wheel_house_dir,
                     bash_args,
                     bash_wrap,
+                    args.dry,
                 )
 
         try:
