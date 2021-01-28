@@ -106,25 +106,25 @@ def matmul(
 
 @oneflow_export("spmm_coo")
 def spmm_coo(
-    a_cooRowInd: remote_blob_util.BlobDef,
-    a_cooColInd: remote_blob_util.BlobDef,
-    a_cooValues: remote_blob_util.BlobDef,
+    a_cooRowInd: oneflow_api.BlobDesc,
+    a_cooColInd: oneflow_api.BlobDesc,
+    a_cooValues: oneflow_api.BlobDesc,
     a_rows: int,
     a_cols: int,
-    b: remote_blob_util.BlobDef,
-) -> remote_blob_util.BlobDef:
+    b: oneflow_api.BlobDesc,
+) -> oneflow_api.BlobDesc:
     r"""This operator applies COO sparse matrix multiplication to two Blobs.
 
     Args:
-        a_cooRowInd (remote_blob_util.BlobDef): Row indices of the sparse matrix
-        a_cooColInd (remote_blob_util.BlobDef): Column indices of the sparse matrix.
-        a_cooValues (remote_blob_util.BlobDef): Values of the sparse martix
+        a_cooRowInd (oneflow_api.BlobDesc): Row indices of the sparse matrix
+        a_cooColInd (oneflow_api.BlobDesc): Column indices of the sparse matrix.
+        a_cooValues (oneflow_api.BlobDesc): Values of the sparse martix
         a_rows (int): Number of rows of the sparse matrix
         a_cols (int): Number of columns of the sparse matrix
-        b (remote_blob_util.BlobDef): A Blob
+        b (oneflow_api.BlobDesc): A Blob
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example:
 
