@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from __future__ import absolute_import
+
+from google.protobuf import text_format
+
 import oneflow
 import oneflow_api
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
@@ -66,12 +70,12 @@ class BuiltinOp(object):
 
         Args:
             input_name (str): input name of blob
-            input_blob_list : list of blobs
+            input_tensor_list : list of blobs
 
         Returns:
             self
         """
-        assert isinstance(input_blob_list, list)
+        assert isinstance(input_tensor_list, list)
         self._inputs.extend(input_tensor_list)
         self._builder.Input(input_name, input_tensor_list)
         return self
@@ -181,7 +185,8 @@ class BuiltinOp(object):
         else:
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 
-        self._builder.Attr(attr_name, attribute)
+        serialized_attr_value = str(text_format.MessageToString(attribute))
+        self._builder.Attr(attr_name, serialized_attr_value)
         return self
 
     def Name(self, op_name):
