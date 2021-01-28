@@ -60,7 +60,7 @@ Maybe<void> ForEachSplitOrBroadcastBlobDesc(const ParallelDesc& parallel_desc,
           sub_blob_desc.mut_shape().Set(axis,
                                         sub_blob_desc.shape().At(axis) / parallel_hierarchy.At(i));
         } else {
-          CHECK_GT_OR_RETURN(blob_desc.shape().At(axis), parallel_desc.parallel_num());
+          CHECK_GE_OR_RETURN(blob_desc.shape().At(axis), parallel_desc.parallel_num());
           BalancedSplitter bs(blob_desc.shape().At(axis), parallel_desc.parallel_num());
           sub_blob_desc.mut_shape().Set(axis, bs.At(parallel_id).size());
         }
