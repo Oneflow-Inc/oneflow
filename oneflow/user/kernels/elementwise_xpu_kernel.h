@@ -60,8 +60,8 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
 
   UnaryElemwiseXpuKernel(
       std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn,
-      const std::string& input_name, const std::string& output_name)
-      : FunctorCreateFn(FunctorCreateFn), input_name(input_name), output_name(output_name) {}
+      const std::string& output_name, const std::string& input_name)
+      : FunctorCreateFn(FunctorCreateFn), output_name(output_name), input_name(input_name) {}
 
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
@@ -78,8 +78,8 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::string input_name;
   std::string output_name;
+  std::string input_name;
 };
 
 template<DeviceType device_type, typename FunctorT, typename T>
@@ -91,12 +91,12 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
 
   BinaryElemwiseXpuKernel(
       std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn,
-      const std::string& input_name1, const std::string& input_name2,
-      const std::string& output_name)
+      const std::string& output_name, const std::string& input_name1,
+      const std::string& input_name2)
       : FunctorCreateFn(FunctorCreateFn),
+        output_name(output_name),
         input_name1(input_name1),
-        input_name2(input_name2),
-        output_name(output_name) {}
+        input_name2(input_name2) {}
 
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
@@ -115,9 +115,9 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
+  std::string output_name;
   std::string input_name1;
   std::string input_name2;
-  std::string output_name;
 };
 
 }  // namespace oneflow

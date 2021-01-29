@@ -44,7 +44,7 @@ struct EluGradFunctor {
             [](user_op::KernelComputeContext* ctx) {                                    \
               return EluFunctor<dtype>(ctx->Attr<double>("alpha"));                     \
             },                                                                          \
-            "in", "out");                                                               \
+            "out", "in");                                                               \
       })                                                                                \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
@@ -54,7 +54,7 @@ struct EluGradFunctor {
             [](user_op::KernelComputeContext* ctx) {                                    \
               return EluGradFunctor<dtype>(ctx->Attr<double>("alpha"));                 \
             },                                                                          \
-            "x", "dy", "dx");                                                           \
+            "dx", "x", "dy");                                                           \
       })                                                                                \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
