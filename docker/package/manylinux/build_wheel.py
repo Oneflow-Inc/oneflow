@@ -178,6 +178,7 @@ def build_oneflow(
     docker_cmd = f"docker run --rm {common_docker_args}"
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
@@ -348,7 +349,7 @@ gcc --version
             build()
         except subprocess.CalledProcessError as e:
             print("failed: ", e.cmd, e.args)
-            if cache_dir and args.retry > 1:
+            if cache_dir and args.retry > 0:
                 print("clean: ", cache_dir)
                 print("start retrying...")
                 force_rm_dir(cache_dir)
