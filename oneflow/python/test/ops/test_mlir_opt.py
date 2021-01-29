@@ -53,6 +53,16 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             r1 = x
             x = flow.math.negative(x)
             x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
+            x = flow.math.negative(x)
             r2 = x
             return r1, r2
 
