@@ -298,7 +298,8 @@ Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::BlobObject* blob_ob
   return Maybe<void>::Ok();
 }
 
-std::vector<std::shared_ptr<ParallelDesc>> InstructionsBuilder::GetPhysicalParallelDescSymbols(
+Maybe<std::vector<std::shared_ptr<ParallelDesc>>>
+InstructionsBuilder::GetPhysicalParallelDescSymbols(
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
   const auto& machine_id2device_ids = parallel_desc_symbol->machine_id2sorted_dev_phy_ids();
   std::string device_tag = parallel_desc_symbol->parallel_conf().device_tag();
@@ -317,7 +318,7 @@ std::vector<std::shared_ptr<ParallelDesc>> InstructionsBuilder::GetPhysicalParal
   return phy_parallel_desc_symbols;
 }
 
-std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>
+Maybe<std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>>
 InstructionsBuilder::GetPhysicalOpArgBlobAttrs(
     const std::shared_ptr<compatible_py::BlobObject>& logical_blob_object) const {
   int64_t parallel_num = logical_blob_object->parallel_desc_symbol()->parallel_num();
@@ -340,12 +341,12 @@ InstructionsBuilder::GetPhysicalOpArgBlobAttrs(
   return pyh_op_arg_blob_attrs;
 }
 
-std::vector<std::shared_ptr<compatible_py::BlobObject>>
+Maybe<std::vector<std::shared_ptr<compatible_py::BlobObject>>>
 InstructionsBuilder::UnpackLogicalBlobToPhysicalBlobs(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   std::vector<std::shared_ptr<ParallelDesc>> phy_parallel_desc_symbols =
-      GetPhysicalParallelDescSymbols(blob_object->parallel_desc_symbol());
-  auto phy_op_arg_blob_attrs = GetPhysicalOpArgBlobAttrs(blob_object);
+      *JUST(GetPhysicalParallelDescSymbols(blob_object->parallel_desc_symbol()));
+  auto phy_op_arg_blob_attrs = *JUST(GetPhysicalOpArgBlobAttrs(blob_object));
   const auto GetPhysicalBlob =
       [this](const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
              const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr) {
@@ -360,8 +361,7 @@ InstructionsBuilder::UnpackLogicalBlobToPhysicalBlobs(
     physical_blob_objects.emplace_back(
         GetPhysicalBlob(phy_parallel_desc_symbols[i], phy_op_arg_blob_attrs[i]));
   }
-  CHECK_JUST(
-      ReplaceMirrored(blob_object->parallel_desc_symbol(), physical_blob_objects, {blob_object}));
+  JUST(ReplaceMirrored(blob_object->parallel_desc_symbol(), physical_blob_objects, {blob_object}));
   return physical_blob_objects;
 }
 

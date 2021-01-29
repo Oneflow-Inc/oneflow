@@ -93,13 +93,15 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
            })
       .def("GetPhysicalParallelDescSymbols",
            [](const std::shared_ptr<InstructionsBuilder>& x,
-              const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
-             return x->GetPhysicalParallelDescSymbols(parallel_desc_symbol);
+              const std::shared_ptr<ParallelDesc>& parallel_desc_symbol)
+               -> std::vector<std::shared_ptr<ParallelDesc>> {
+             return *(x->GetPhysicalParallelDescSymbols(parallel_desc_symbol).GetPtrOrThrow());
            })
       .def("UnpackLogicalBlobToPhysicalBlobs",
            [](const std::shared_ptr<InstructionsBuilder>& x,
-              const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-             return x->UnpackLogicalBlobToPhysicalBlobs(blob_object);
+              const std::shared_ptr<compatible_py::BlobObject>& blob_object)
+               -> std::vector<std::shared_ptr<compatible_py::BlobObject>> {
+             return *(x->UnpackLogicalBlobToPhysicalBlobs(blob_object).GetPtrOrThrow());
            })
       .def("MakeReferenceBlobObject",
            [](const std::shared_ptr<InstructionsBuilder>& x,

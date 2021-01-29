@@ -104,10 +104,10 @@ class InstructionsBuilder {
 
   Maybe<void> DeleteObject(compatible_py::BlobObject* blob_object);
 
-  std::vector<std::shared_ptr<ParallelDesc>> GetPhysicalParallelDescSymbols(
+  Maybe<std::vector<std::shared_ptr<ParallelDesc>>> GetPhysicalParallelDescSymbols(
       const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
 
-  std::vector<std::shared_ptr<compatible_py::BlobObject>> UnpackLogicalBlobToPhysicalBlobs(
+  Maybe<std::vector<std::shared_ptr<compatible_py::BlobObject>>> UnpackLogicalBlobToPhysicalBlobs(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
@@ -153,7 +153,7 @@ class InstructionsBuilder {
   }
 
  private:
-  std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>> GetPhysicalOpArgBlobAttrs(
+  Maybe<std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>> GetPhysicalOpArgBlobAttrs(
       const std::shared_ptr<compatible_py::BlobObject>& logical_blob_object) const;
 
   Maybe<int64_t> NewSymbolId4String(std::string str);
