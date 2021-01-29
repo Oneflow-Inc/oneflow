@@ -24,7 +24,7 @@ RUN yum-config-manager --disable cuda nvidia-ml
 
 RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
-ARG MANYLINUX_SHA=f5da004
+ARG MANYLINUX_SHA=70d562f
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
 
 ENV SSL_CERT_FILE=/opt/_internal/certs.pem

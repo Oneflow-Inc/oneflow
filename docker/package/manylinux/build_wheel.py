@@ -96,7 +96,13 @@ def get_common_docker_args(
 
 
 def build_third_party(
-    img_tag, oneflow_src_dir, cache_dir, extra_oneflow_cmake_args, bash_args, bash_wrap,
+    img_tag,
+    oneflow_src_dir,
+    cache_dir,
+    extra_oneflow_cmake_args,
+    bash_args,
+    bash_wrap,
+    dry,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -120,7 +126,7 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
     )
     docker_cmd = f"docker run --rm {common_docker_args}"
-    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap)
+    create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry)
 
 
 def get_python_bin(version):
@@ -145,6 +151,7 @@ def build_oneflow(
     house_dir,
     bash_args,
     bash_wrap,
+    dry,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -182,7 +189,7 @@ rm -rf build/*
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
         return create_tmp_bash_and_run(
-            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap
+            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
         )
 
 
@@ -224,6 +231,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_tuna", default=False, action="store_true", required=False
     )
+    parser.add_argument("--dry", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_system_proxy", default=False, action="store_true", required=False
     )
@@ -232,6 +240,7 @@ if __name__ == "__main__":
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
+    parser.add_argument("--retry", default=1, type=int)
     args = parser.parse_args()
     extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
 
@@ -304,6 +313,7 @@ gcc --version
                     extra_oneflow_cmake_args,
                     bash_args,
                     bash_wrap,
+                    args.dry,
                 )
             cuda_version_literal = "".join(cuda_version.split("."))
             assert len(cuda_version_literal) == 3
@@ -328,13 +338,14 @@ gcc --version
                     args.wheel_house_dir,
                     bash_args,
                     bash_wrap,
+                    args.dry,
                 )
 
         try:
             build()
         except subprocess.CalledProcessError as e:
             print("failed: ", e.cmd, e.args)
-            if cache_dir:
+            if cache_dir and args.retry > 1:
                 print("clean: ", cache_dir)
                 print("start retrying...")
                 force_rm_dir(cache_dir)
