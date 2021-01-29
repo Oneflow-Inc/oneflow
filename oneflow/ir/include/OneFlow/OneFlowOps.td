@@ -108,11 +108,41 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
+class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType])> {
     let summary = "";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
 }
+
+// Idempotent ops
+
+class OneFlow_IdempotentBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [Idempotent])> {
+}
+
+def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {}
+
+def OneFlow_CeilOp : OneFlow_IdempotentBaseOp<"ceil", []> {}
+
+def OneFlow_floorOp : OneFlow_IdempotentBaseOp<"floor", []> {}
+
+// TODO: pattern match constant_like to create ones_like when constant_like is port to user op
+def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", []> {}
+
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", []> {}
+
+// TODO: pattern match hardtanh to create Relu6 op
+def OneFlow_Relu6Op : OneFlow_IdempotentBaseOp<"relu6", []> {}
+
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", []> {}
+
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", []> {}
+
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
+
+// TODO: pattern match constant_like to create zeros_like when constant_like is port to user op
+def OneFlow_ZerosLikeOp : OneFlow_IdempotentBaseOp<"zeros_like", []> {}
 
 // Involution ops
 // TODO: add invert, logical_not when they are implemented in OneFlow
