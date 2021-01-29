@@ -53,7 +53,8 @@ def get_build_dir_arg(cache_dir, oneflow_src_dir):
 
 
 def force_rm_dir(dir_to_clean):
-    print("cleaning:", dir)
+    print("cleaning:", dir_to_clean)
+    assert dir_to_clean
     clean_cmd = f"docker run --rm -v {dir_to_clean}:{dir_to_clean} -w {dir_to_clean} busybox rm -rf {dir_to_clean}/*"
     subprocess.check_call(clean_cmd, shell=True)
 
