@@ -24,7 +24,7 @@ def build_img(
     from_img = f"nvidia/cuda:{cuda_version}-cudnn{cudnn_version}-devel-centos7"
     tuna_build_arg = ""
     if use_tuna:
-        tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://pypi.tuna.tsinghua.edu.cn/simple"'
+        tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://mirrors.aliyun.com/pypi/simple"'
     if use_aliyun_mirror:
         tuna_build_arg += ' --build-arg bazel_url="https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/bazel-3.4.1-linux-x86_64"'
     proxy_build_args = []
