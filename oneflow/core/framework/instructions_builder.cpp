@@ -184,8 +184,8 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogical
   for (const auto& physical_blob_object : physical_blob_objects) {
     std::shared_ptr<ParallelDesc> phy_paralle_desc_sym =
         physical_blob_object->parallel_desc_symbol();
-    CHECK_EQ(phy_paralle_desc_sym->parallel_num(), 1);
-    CHECK_EQ(phy_paralle_desc_sym->device_tag(), device_tag);
+    CHECK_EQ_OR_RETURN(phy_paralle_desc_sym->parallel_num(), 1);
+    CHECK_EQ_OR_RETURN(phy_paralle_desc_sym->device_tag(), device_tag);
     std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
         phy_machine_id2device_ids = phy_paralle_desc_sym->machine_id2sorted_dev_phy_ids();
     int64_t machine_id = phy_machine_id2device_ids->begin()->first;
@@ -434,7 +434,7 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::BroadcastBlobReference(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>> device_ids =
       sole_mirrored_blob_object->parallel_desc_symbol()->machine_id2sorted_dev_phy_ids();
-  for (const auto& pair : *device_ids) { CHECK_EQ(pair.second->size(), 1); }
+  for (const auto& pair : *device_ids) { CHECK_EQ_OR_RETURN(pair.second->size(), 1); }
   int64_t object_id = JUST(BroadcastObjectReference(sole_mirrored_blob_object, parallel_desc_sym));
   std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
       JUST(compatible_py::MakeBroadcastOpArgParallelAttribute(parallel_desc_sym));
@@ -461,7 +461,7 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
     const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
     const std::shared_ptr<compatible_py::BlobObject>& value_blob_object) {
   int64_t parallel_num = ref_blob_object->parallel_desc_symbol()->parallel_num();
-  CHECK_EQ(parallel_num, value_blob_object->parallel_desc_symbol()->parallel_num());
+  CHECK_EQ_OR_RETURN(parallel_num, value_blob_object->parallel_desc_symbol()->parallel_num());
   std::vector<uint64_t> token_id_0;
   std::vector<uint64_t> token_id_1;
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_0.emplace_back(NewTokenId()); }
