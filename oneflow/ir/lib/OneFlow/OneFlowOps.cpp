@@ -28,9 +28,11 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter &rewriter) const override {
     auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
-    if /* convert opaque user op to a concrete op */ (op_type_name.equals("relu")
-                                                      || op_type_name.equals("negative")
-                                                      || op_type_name.equals("reciprocal")) {
+    if /* convert opaque user op to a concrete op */ (
+        op_type_name.equals("abs") || op_type_name.equals("ceil") || op_type_name.equals("floor")
+        || op_type_name.equals("relu") || op_type_name.equals("rint")
+        || op_type_name.equals("round") || op_type_name.equals("sign")
+        || op_type_name.equals("negative") || op_type_name.equals("reciprocal")) {
       if (op.ctrl_inputs().empty() && op.ctrl_output().use_empty()) {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
