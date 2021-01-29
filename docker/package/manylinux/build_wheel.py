@@ -7,7 +7,7 @@ from pathlib import Path
 def build_arg_env(env_var_name: str):
     val = os.getenv(env_var_name)
     assert val, f"system environment variable {env_var_name} found empty"
-    return f"--build-arg {env_var_name}={val} --build-arg {env_var_name.lower()}={val}"
+    return f"--build-arg {env_var_name}={val}"
 
 
 def build_img(
@@ -32,7 +32,7 @@ def build_img(
         if os.getenv("HTTP_PROXY"):
             for v in ["HTTP_PROXY", "HTTPS_PROXY"]:
                 proxy_build_args.append(build_arg_env(v))
-        elif os.getenv("http_proxy"):
+        if os.getenv("http_proxy"):
             for v in ["http_proxy", "https_proxy"]:
                 proxy_build_args.append(build_arg_env(v))
     proxy_build_arg = " ".join(proxy_build_args)
