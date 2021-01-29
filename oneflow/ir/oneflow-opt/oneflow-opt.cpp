@@ -15,15 +15,8 @@
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
-  // TODO: Register oneflow passes here.
-
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::StandardOpsDialect>();
-  // Add the following to include *all* MLIR Core dialects, or selectively
-  // include what you need like above. You only need to register dialects that
-  // will be *parsed* by the tool, not the one generated
-  // registerAllDialects(registry);
-
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }
