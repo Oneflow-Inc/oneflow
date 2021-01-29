@@ -549,34 +549,32 @@ void ConvertUseropInputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::s
   int input_idx = 0;
   if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
     auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
-    if (keys.size() == sizes.size()) {
-      // every key
-      for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
-        auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
-        auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
-        // every input for one key
-        for (int i = 0; i < input_size; i++) {
-          if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
-            const std::string output_lbn_in_source_op =
-                result.getDefiningOp()
-                    ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
-                    .dyn_cast<StringAttr>()
-                    .getValue()
-                    .str();
-            *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) =
-                output_lbn_in_source_op;
-            input_idx += 1;
-          } else {
-            err_str = "fail to cast result, name: " + op_name;
-            return;
-          }
-        }
-      }
-    } else {
+    if (keys.size() != sizes.size()) {
       err_str =
           "fail to convert op inputs, input_lbn_segment_keys != input_lbn_segment_sizes, name: "
           + op_name;
       return;
+    };
+    // every key
+    for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
+      auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
+      auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
+      // every input for one key
+      for (int i = 0; i < input_size; i++) {
+        if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
+          const std::string output_lbn_in_source_op =
+              result.getDefiningOp()
+                  ->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()]
+                  .dyn_cast<StringAttr>()
+                  .getValue()
+                  .str();
+          *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) = output_lbn_in_source_op;
+          input_idx += 1;
+        } else {
+          err_str = "fail to cast result, name: " + op_name;
+          return;
+        }
+      }
     }
   } else {
     err_str = "fail to convert op inputs, name: " + op_name;
