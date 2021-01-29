@@ -822,11 +822,13 @@ void RoundTripOneFlowJob(
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
   Importer imp(job_wrapper, &context, module.get());
+  const bool is_strict = std::getenv("ONEFLOW_MLIR_STRICT") != nullptr;
   if (succeeded(imp.processJob())) {
     applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
     if (failed(imp.tryToUpdateJob())) {
       std::cerr << "fail to update job with IR, job will stay intact, job_name: "
                 << job->job_conf().job_name() << "\n";
+      if (is_strict) { exit(EXIT_FAILURE); }
     }
     std::string mlir;
     llvm::raw_string_ostream os(mlir);
@@ -834,6 +836,7 @@ void RoundTripOneFlowJob(
     job_wrapper.DumpMLIR("RoundTripOneFlowJob." + job->job_conf().job_name() + ".mlir", mlir);
   } else {
     std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
+    if (is_strict) { exit(EXIT_FAILURE); }
   }
 }
 
