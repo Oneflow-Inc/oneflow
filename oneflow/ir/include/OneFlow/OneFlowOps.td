@@ -78,7 +78,7 @@ def OneFlow_UserOp : OneFlow_UserBaseOp<"user", [AttrSizedOperandSegments, AttrS
     let hasCanonicalizer = 1;
 }
 
-// TODO: support canonicalization on constant-ish op
+// TODO: support ConstantLike trait
 def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegments, NoSideEffect]> {
   let summary = "";
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
@@ -99,12 +99,6 @@ def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsA
     let output = (outs AnyType:$res);
 }
 
-def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
-    let summary = "";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-}
-
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let summary = "";
   let attrs = (ins
@@ -112,6 +106,18 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
     StrArrayAttr:$output_lbns
   );
   let hasCanonicalizer = 1;
+}
+
+def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOperandsAndResultType]> {
+    let summary = "";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+}
+
+def OneFlow_NegativeOp : OneFlow_BaseOp<"negative", [Involution, NoSideEffect, SameOperandsAndResultType]> {
+    let summary = "";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
 }
 
 #endif // ONEFLOW_OPS
