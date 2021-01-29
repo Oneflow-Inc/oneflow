@@ -20,6 +20,7 @@ limitations under the License.
 #define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/object_msg.h"
+#include "oneflow/core/object_msg/embedded_list_iterator.h"
 
 namespace oneflow {
 
@@ -54,6 +55,14 @@ TEST(ObjectMsgList, empty_Begin) {
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!obj_ptr);
+}
+
+TEST(ObjectMsgList, empty_use_itrator) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  ASSERT_EQ(foo_list.begin(), foo_list.end());
+  ASSERT_EQ(foo_list.begin(), foo_list.cend());
+  ASSERT_EQ(foo_list.cbegin(), foo_list.end());
+  ASSERT_EQ(foo_list.cbegin(), foo_list.cend());
 }
 
 TEST(ObjectMsgList, empty_Next) {
@@ -142,6 +151,102 @@ TEST(ObjectMsgList, Erase) {
   ASSERT_TRUE(!next);
 }
 
+TEST(ObjectMsgList, erase_use_iterator) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item0.Mutable());
+  foo_list.PushBack(item1.Mutable());
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  auto itr1 = foo_list.erase(foo_list.begin());
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  ASSERT_EQ(foo_list.size(), 1);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  ObjectMsgPtr<TestListItem> obj_ptr1(itr1.operator->());
+  ASSERT_TRUE(obj_ptr1 == item1);
+  foo_list.erase(foo_list.cbegin());
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  ASSERT_TRUE(foo_list.empty());
+  ASSERT_EQ(foo_list.begin(), foo_list.cend());
+
+  auto item2 = ObjectMsgPtr<TestListItem>::New();
+  auto item3 = ObjectMsgPtr<TestListItem>::New();
+  auto item4 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item2.Mutable());
+  foo_list.PushBack(item3.Mutable());
+  foo_list.PushBack(item4.Mutable());
+  auto itr3 = foo_list.erase(++foo_list.begin());
+  ASSERT_EQ(item2->ref_cnt(), 2);
+  ASSERT_EQ(item4->ref_cnt(), 2);
+  ASSERT_EQ(item3->ref_cnt(), 1);
+  ObjectMsgPtr<TestListItem> obj_ptr3(itr3.operator->());
+  ASSERT_EQ(obj_ptr3, item4);
+  ASSERT_EQ(foo_list.size(), 2);
+  foo_list.erase(++foo_list.cbegin());
+  ASSERT_EQ(item2->ref_cnt(), 2);
+  ASSERT_EQ(item4->ref_cnt(), 2);
+  ASSERT_EQ(item3->ref_cnt(), 1);
+  ASSERT_EQ(foo_list.size(), 1);
+
+  auto item5 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item5.Mutable());
+  auto itr2 = foo_list.erase(foo_list.begin(), ++foo_list.cbegin());
+  ObjectMsgPtr<TestListItem> obj_ptr2(itr2.operator->());
+  ASSERT_EQ(obj_ptr2, item5);
+  ASSERT_EQ(item5->ref_cnt(), 3);
+  ASSERT_EQ(foo_list.size(), 1);
+
+  auto item6 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item6.Mutable());
+  foo_list.erase(foo_list.begin(), foo_list.end());
+  ASSERT_EQ(item6->ref_cnt(), 1);
+  ASSERT_EQ(item5->ref_cnt(), 2);
+  ASSERT_TRUE(foo_list.empty());
+
+  auto item7 = ObjectMsgPtr<TestListItem>::New();
+  auto item8 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item7.Mutable());
+  foo_list.PushBack(item8.Mutable());
+  foo_list.erase(foo_list.cbegin(), foo_list.cend());
+  ASSERT_EQ(item7->ref_cnt(), 1);
+  ASSERT_EQ(item8->ref_cnt(), 1);
+  ASSERT_TRUE(foo_list.empty());
+
+  auto item9 = ObjectMsgPtr<TestListItem>::New();
+  auto item10 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item9.Mutable());
+  foo_list.PushBack(item10.Mutable());
+  foo_list.erase(foo_list.begin(), foo_list.cend());
+  ASSERT_EQ(item9->ref_cnt(), 1);
+  ASSERT_EQ(item10->ref_cnt(), 1);
+  ASSERT_TRUE(foo_list.empty());
+}
+
+TEST(ObjectMsgList, front_and_back) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item0.Mutable());
+  ObjectMsgPtr<TestListItem> front_ptr(&foo_list.front());
+  ObjectMsgPtr<TestListItem> back_ptr(&foo_list.back());
+  ASSERT_EQ(front_ptr, item0);
+  ASSERT_EQ(back_ptr, item0);
+  ASSERT_EQ(front_ptr, back_ptr);
+
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item1.Mutable());
+  ObjectMsgPtr<TestListItem> front_ptr1(&foo_list.front());
+  ObjectMsgPtr<TestListItem> back_ptr1(&foo_list.back());
+  ASSERT_EQ(front_ptr1, item0);
+  ASSERT_EQ(back_ptr1, item1);
+
+  foo_list.erase(foo_list.begin());
+  ObjectMsgPtr<TestListItem> front_ptr2(&foo_list.front());
+  ObjectMsgPtr<TestListItem> back_ptr2(&foo_list.back());
+  ASSERT_EQ(front_ptr2, item1);
+  ASSERT_EQ(back_ptr2, item1);
+  ASSERT_EQ(front_ptr2, back_ptr2);
+}
+
 TEST(ObjectMsgList, PopBack) {
   OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
   auto item0 = ObjectMsgPtr<TestListItem>::New();
@@ -173,6 +278,42 @@ TEST(ObjectMsgList, PopFront) {
   obj_ptr = foo_list.Begin();
   next = foo_list.Next(obj_ptr.Mutable());
   ASSERT_TRUE(!next);
+}
+
+TEST(ObjectMsgList, insert_use_iterator) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  auto item2 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item0.Mutable());
+  auto itr1 = foo_list.insert(foo_list.begin(), *item1.Mutable());
+  auto itr2 = foo_list.insert(foo_list.end(), *item2.Mutable());
+  ASSERT_TRUE(foo_list.begin() == itr1);
+  ASSERT_TRUE(--foo_list.end() == itr2);
+  ASSERT_EQ(foo_list.size(), 3);
+  {
+    ObjectMsgPtr<TestListItem> first_ptr(foo_list.begin().operator->());
+    ObjectMsgPtr<TestListItem> second_ptr((++foo_list.begin()).operator->());
+    ObjectMsgPtr<TestListItem> third_ptr((--foo_list.end()).operator->());
+    ASSERT_EQ(first_ptr, item1);
+    ASSERT_EQ(second_ptr, item0);
+    ASSERT_EQ(third_ptr, item2);
+  }
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  ASSERT_EQ(item2->ref_cnt(), 2);
+}
+
+TEST(ObjectMsgList, iterator_to) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item0.Mutable());
+  foo_list.PushBack(item1.Mutable());
+  auto itr1 = foo_list.iterator_to(*item0.Mutable());
+  ASSERT_TRUE(foo_list.begin() == itr1);
+  auto itr2 = foo_list.iterator_to(*item1.Mutable());
+  ASSERT_TRUE(++foo_list.begin() == itr2);
 }
 
 TEST(ObjectMsgList, Clear) {
@@ -228,6 +369,44 @@ TEST(ObjectMsgList, FOR_EACH) {
   ASSERT_TRUE(foo_list.empty());
   ASSERT_EQ(item0->ref_cnt(), 1);
   ASSERT_EQ(item1->ref_cnt(), 1);
+}
+
+TEST(ObjectMsgList, for_each_use_iterator) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item0.Mutable());
+  foo_list.PushBack(item1.Mutable());
+  auto itr = foo_list.begin();
+  while (itr != foo_list.end()) {
+    itr = foo_list.erase(itr);
+    if (itr == foo_list.end()) { break; }
+  }
+  ASSERT_EQ(item0->ref_cnt(), 1);
+  ASSERT_EQ(item1->ref_cnt(), 1);
+  ASSERT_TRUE(foo_list.empty());
+}
+
+TEST(ObjectMsgList, const_for_each_use_iterator) {
+  OBJECT_MSG_LIST(TestListItem, foo_list) foo_list;
+  auto item0 = ObjectMsgPtr<TestListItem>::New();
+  auto item1 = ObjectMsgPtr<TestListItem>::New();
+  foo_list.PushBack(item0.Mutable());
+  foo_list.PushBack(item1.Mutable());
+  int i = 0;
+  for (const auto& elem : foo_list) {
+    ObjectMsgPtr<TestListItem> item(const_cast<TestListItem*>(&elem));
+    if (0 == i) {
+      ASSERT_TRUE(item == item0);
+    } else if (1 == i) {
+      ASSERT_TRUE(item == item1);
+    }
+    ++i;
+  }
+  ASSERT_EQ(i, 2);
+  ASSERT_EQ(item0->ref_cnt(), 2);
+  ASSERT_EQ(item1->ref_cnt(), 2);
+  ASSERT_EQ(foo_list.size(), 2);
 }
 
 // clang-format off

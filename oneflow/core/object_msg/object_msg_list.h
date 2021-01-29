@@ -216,7 +216,6 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
     return list_head_.Begin();
   }
 
-  /************************************hsj iterator****************************/
   iterator begin() { return iterator(ValueLinkField::FieldPtr4StructPtr(list_head_.Begin())); }
 
   const_iterator begin() const { return this->cbegin(); }
@@ -234,40 +233,42 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   }
 
   iterator erase(const_iterator i) {
-    list_head_.Erase(&(*(i.unconst())));
+    value_type* tmp = i.unconst().operator->();
     ++i;
+    list_head_.Erase(tmp);
+    ObjectMsgPtr<value_type>::__UnsafeMove__(tmp);
     return i.unconst();
   }
 
   iterator erase(const_iterator l, const_iterator r) {
     while (l != r) {
-      list_head_.Erase(&(*(l.unconst())));
+      value_type* tmp = l.unconst().operator->();
       ++l;
+      list_head_.Erase(tmp);
+      ObjectMsgPtr<value_type>::__UnsafeMove__(tmp);
     }
     return r.unconst();
   }
 
-  reference front() { return list_head_.Begin(); }
+  reference front() { return *list_head_.Begin(); }
 
-  const_reference front() const { return list_head_.Begin(); }
+  const_reference front() const { return *list_head_.Begin(); }
 
-  reference back() { return list_head_.Last(); }
+  reference back() { return *list_head_.Last(); }
 
-  const_reference back() const { return list_head_.Last(); }
+  const_reference back() const { return *list_head_.Last(); }
 
   iterator insert(const_iterator i, reference value) {
     iterator tmp = i.unconst();
-    list_head_.InsertAfter(&(*(--tmp)), &value);
+    list_head_.InsertAfter((--tmp).operator->(), &value);
     ObjectMsgPtrUtil::Ref(&value);
     return iterator(ValueLinkField::FieldPtr4StructPtr(&value));
   }
 
-  template<class Iter>
-  void insert(const_iterator i, Iter l, Iter r) {
-    for(; l!=r; ++l){
-      this->insert(i, *l);
-    }
-  }
+  // template<class Iter>
+  // void insert(const_iterator i, Iter l, Iter r) {
+  //   for (; l != r; ++l) { this->insert(i, *l); }
+  // }
 
   iterator iterator_to(reference value) {
     return iterator(ValueLinkField::FieldPtr4StructPtr(&value));
@@ -276,12 +277,6 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
   const_iterator iterator_to(const_reference value) {
     return const_iterator(ValueLinkField::FieldPtr4StructPtr(&value));
   }
-
-  void push_back(reference value) {
-    list_head_.PushBack(&value);
-    ObjectMsgPtrUtil::Ref(&value);
-  }
-  /************************************hsj iterator****************************/
 
   value_type* Next(value_type* ptr) {
     if (ptr == nullptr) { return nullptr; }

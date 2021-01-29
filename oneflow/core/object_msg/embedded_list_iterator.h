@@ -40,6 +40,16 @@ struct if_const_ref<ValueType, true> {
   typedef const ValueType& type;
 };
 
+template<typename ValueType, bool IsConst>
+struct if_const_pointer {
+  typedef ValueType* type;
+};
+
+template<typename ValueType>
+struct if_const_pointer<ValueType, true> {
+  typedef const ValueType* type;
+};
+
 template<typename LinkField, bool IsConst>
 class embedded_list_iterator {
  public:
@@ -47,7 +57,7 @@ class embedded_list_iterator {
   using value_type = typename LinkField::struct_type;
   using field_type = typename LinkField::field_type;
 
-  // using pointer = if_c<value_type, IsConst>::type;
+  using pointer = typename if_const_pointer<value_type, IsConst>::type;
   using reference = typename if_const_ref<value_type, IsConst>::type;
   class nat;
   using unconst_iterator =
@@ -94,11 +104,19 @@ class embedded_list_iterator {
     return embedded_list_iterator<LinkField, false>(container_);
   }
 
-  reference operator*() const { return *LinkField::StructPtr4FieldPtr(container_); }
+  reference operator*() const { return *operator->(); }
+
+  pointer operator->() const { return LinkField::StructPtr4FieldPtr(container_); }
 
   bool operator==(const iterator& other) { return this->container_ == other.container_; }
 
+  friend bool operator==(const iterator& l, const iterator& r) {
+    return l.container_ == r.container_;
+  }
+
   bool operator!=(const iterator& other) { return !(*this == other); }
+
+  friend bool operator!=(const iterator& l, const iterator& r) { return !(l == r); }
 
  private:
   field_type* container_;
