@@ -645,90 +645,82 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
     }  // convert op conf attributes
 
     // convert user conf attributes
+    auto attr_name = id.str();
     auto attr = id_attr.second;
     auto user_attr = ::oneflow::AttrValue();
-    if (auto ref = attr.dyn_cast<BoolAttr>()) /* handle bool before int because it is i1*/ {
-      user_attr.set_at_bool(ref.getValue());
-    } else if (auto ref = attr.dyn_cast<IntegerAttr>()) {
-      if (ref.getType().isSignedInteger(32)) {
-        user_attr.set_at_int32(ref.getSInt());
-      } else if (ref.getType().isSignedInteger(64)) {
-        user_attr.set_at_int64(ref.getSInt());
-      } else {
-        err_str =
-            "fail to convert op attr to int32 or int64, key: " + id.str() + ", op name: " + op_name;
-        return;
+    auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
+    ::oneflow::AttrType attr_type = job_wrapper.QueryAttrType(op_type_name, attr_name);
+    if (attr_type == ::oneflow::kAtInt32) {
+      user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
+    } else if (attr_type == ::oneflow::kAtInt64) {
+      user_attr.set_at_int64(attr.dyn_cast<IntegerAttr>().getSInt());
+    } else if (attr_type == ::oneflow::kAtBool) {
+      user_attr.set_at_bool(attr.dyn_cast<BoolAttr>().getValue());
+    } else if (attr_type == ::oneflow::kAtFloat) {
+      user_attr.set_at_float(attr.dyn_cast<FloatAttr>().getValue().convertToFloat());
+    } else if (attr_type == ::oneflow::kAtDouble) {
+      user_attr.set_at_double(attr.dyn_cast<FloatAttr>().getValue().convertToDouble());
+    } else if (attr_type == ::oneflow::kAtString) {
+      user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
+    } else if (attr_type == ::oneflow::kAtShape) {
+      for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
+        user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
       }
-    } else if (auto ref = attr.dyn_cast<FloatAttr>()) {
-      if (ref.getType() == b.getF32Type()) {
-        user_attr.set_at_float(ref.getValue().convertToFloat());
-      } else if (ref.getType() == b.getF64Type()) {
-        user_attr.set_at_double(ref.getValue().convertToDouble());
-      } else {
-        err_str =
-            "fail to convert op attr float or double, key: " + id.str() + ", op name: " + op_name;
-        return;
-      }
-    } else if (auto ref = attr.dyn_cast<StringAttr>()) {
-      if (ref.getValue().startswith("DT_")) {
-        auto dt = oneflow::symbolizeEnum<oneflow::DataType>(ref.getValue());
-        if (dt.hasValue()) {
-          switch (dt.getValue()) {
-            case oneflow::DataType::DT_InvalidDataType:
-              user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
-              break;
+    } else if (attr_type == ::oneflow::kAtDataType) {
+      Optional<mlir::oneflow::DataType> dt =
+          oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue());
+      assert(dt.hasValue());
+      switch (dt.getValue()) {
+        case oneflow::DataType::DT_InvalidDataType:
+          user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
+          break;
 #define DEFINE_ONE_CASE(datatype)                                 \
   case oneflow::DataType::DT_##datatype:                          \
     user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
     break;
-              DEFINE_ONE_CASE(Char)
-              DEFINE_ONE_CASE(Float)
-              DEFINE_ONE_CASE(Double)
-              DEFINE_ONE_CASE(Int8)
-              DEFINE_ONE_CASE(Int32)
-              DEFINE_ONE_CASE(Int64)
-              DEFINE_ONE_CASE(UInt8)
-              DEFINE_ONE_CASE(OFRecord)
-              DEFINE_ONE_CASE(Float16)
-              DEFINE_ONE_CASE(TensorBuffer)
+          DEFINE_ONE_CASE(Char)
+          DEFINE_ONE_CASE(Float)
+          DEFINE_ONE_CASE(Double)
+          DEFINE_ONE_CASE(Int8)
+          DEFINE_ONE_CASE(Int32)
+          DEFINE_ONE_CASE(Int64)
+          DEFINE_ONE_CASE(UInt8)
+          DEFINE_ONE_CASE(OFRecord)
+          DEFINE_ONE_CASE(Float16)
+          DEFINE_ONE_CASE(TensorBuffer)
 #undef DEFINE_ONE_CASE
-            default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
-          }
-        }
-      } else {
-        user_attr.set_at_string(ref.getValue().str());
+        default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
       }
-    } else if (auto ref = attr.dyn_cast<DenseIntElementsAttr>()) {
-      for (auto int_v : ref.getIntValues()) {
-        user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
-      }
-    } else if (auto ref = attr.dyn_cast<ArrayAttr>()) {
+    } else if (attr_type == ::oneflow::kAtListInt32) {
+      user_attr.mutable_at_list_int32();
+      auto ref = attr.dyn_cast<ArrayAttr>();
       for (auto v : ref.getValue()) {
-        if (auto elem = v.dyn_cast<IntegerAttr>()) {
-          if (elem.getType().isSignedInteger(32)) {
-            user_attr.mutable_at_list_int32()->add_val(elem.getSInt());
-          } else if (elem.getType().isSignedInteger(64)) {
-            user_attr.mutable_at_list_int64()->add_val(elem.getSInt());
-          } else {
-            err_str =
-                "fail to convert op attr to int list, key: " + id.str() + ", op name: " + op_name;
-            op->dump();
-            return;
-          }
-        } else if (auto elem = v.dyn_cast<FloatAttr>()) {
-          if (elem.getType() == b.getF32Type()) {
-            user_attr.mutable_at_list_float()->add_val(elem.getValue().convertToFloat());
-          } else {
-            err_str = "fail to convert op attr to float list, key: " + id.str();
-            return;
-          }
-        } else {
-          err_str = "fail to convert op attr to list, key: " + id.str();
-          return;
-        }
+        user_attr.mutable_at_list_int32()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
       }
+    } else if (attr_type == ::oneflow::kAtListInt64) {
+      user_attr.mutable_at_list_int64();
+      auto ref = attr.dyn_cast<ArrayAttr>();
+      for (auto v : ref.getValue()) {
+        user_attr.mutable_at_list_int64()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
+      }
+    } else if (attr_type == ::oneflow::kAtListFloat) {
+      user_attr.mutable_at_list_float();
+      auto ref = attr.dyn_cast<ArrayAttr>();
+      for (auto v : ref.getValue()) {
+        user_attr.mutable_at_list_float()->add_val(
+            v.dyn_cast<FloatAttr>().getValue().convertToFloat());
+      }
+    } else if (attr_type == ::oneflow::kAtListDataType) {
+      err_str = "fail to convert op attr of name: " + attr_name;
+      return;
+    } else if (attr_type == ::oneflow::kAtListShape) {
+      err_str = "fail to convert op attr of name: " + attr_name;
+      return;
+    } else if (attr_type == ::oneflow::kAtListString) {
+      err_str = "fail to convert op attr of name: " + attr_name;
+      return;
     } else {
-      err_str = "fail to convert op attr, key: " + id.str();
+      err_str = "fail to convert op attr of name: " + attr_name;
       return;
     }  // convert user conf attributes
 
