@@ -109,7 +109,7 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
 }
 
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType])> {
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
@@ -147,16 +147,12 @@ def OneFlow_ZerosLikeOp : OneFlow_IdempotentBaseOp<"zeros_like", []> {}
 // Involution ops
 // TODO: add invert, logical_not when they are implemented in OneFlow
 
-def OneFlow_NegativeOp : OneFlow_BaseOp<"negative", [Involution, NoSideEffect, SameOperandsAndResultType]> {
-    let summary = "";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
+class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
+        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [Involution])> {
 }
 
-def OneFlow_ReciprocalOp : OneFlow_BaseOp<"reciprocal", [Involution, NoSideEffect, SameOperandsAndResultType]> {
-    let summary = "";
-    let input = (ins AnyType:$x);
-    let output = (outs AnyType:$y);
-}
+def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
+
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 #endif // ONEFLOW_OPS
