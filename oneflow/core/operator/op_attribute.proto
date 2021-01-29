@@ -15,7 +15,6 @@ message OpAttribute {
   repeated string input_bns = 1;
   repeated string output_bns = 2;
   repeated string tmp_bns = 3;
-  repeated string const_buf_bns = 4;
 
   required OperatorConf op_conf = 50;
 

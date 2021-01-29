@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_PY_DISTRIBUTE_H_
 #define ONEFLOW_CORE_FRAMEWORK_PY_DISTRIBUTE_H_
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {

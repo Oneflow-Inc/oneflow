@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
@@ -41,7 +42,7 @@ namespace {
 Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   int64_t symbol_id = symbol.symbol_id();
   if (symbol.has_string_symbol()) {
-    JUST(Global<symbol::Storage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol()));
+    JUST(Global<symbol::Storage<StringSymbol>>::Get()->TryAdd(symbol_id, symbol.string_symbol()));
   } else if (symbol.has_scope_symbol()) {
     JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, symbol.scope_symbol()));
   } else if (symbol.has_job_conf_symbol()) {
@@ -75,28 +76,13 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
 }
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
-    const vm::cfg::InstructionListProto& instruction_list_proto,
-    const eager::cfg::EagerSymbolList& eager_symbol_list) {
+    const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+    const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto.ToProto(
+  instruction_list_proto->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
-  eager_symbol_list.ToProto(
+  eager_symbol_list->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunPhysicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
-}
-
-Maybe<void> EagerOneflow::RunPhysicalInstruction(
-    const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
-    const std::string& eager_symbol_list_str) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  vm::InstructionListProto* instruction_list_proto =
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list();
-  cfg_instruction_list->ToProto(instruction_list_proto);
-  EagerSymbolList* eager_symbol_list =
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list();
-  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, eager_symbol_list))
-      << "EagerSymbolList parse failed";
   return RunPhysicalInstruction(
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
@@ -110,28 +96,13 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const vm::cfg::InstructionListProto& instruction_list_proto,
-    const eager::cfg::EagerSymbolList& eager_symbol_list) {
+    const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+    const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto.ToProto(
+  instruction_list_proto->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
-  eager_symbol_list.ToProto(
+  eager_symbol_list->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunLogicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
-}
-
-Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
-    const std::string& eager_symbol_list_str) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  vm::InstructionListProto* instruction_list_proto =
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list();
-  cfg_instruction_list->ToProto(instruction_list_proto);
-  EagerSymbolList* eager_symbol_list =
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list();
-  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, eager_symbol_list))
-      << "EagerSymbolList parse failed";
   return RunLogicalInstruction(
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
 }
