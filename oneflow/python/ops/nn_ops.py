@@ -4262,3 +4262,25 @@ def kldivloss(
         return flow.math.reduce_sum(_kl_div_loss, name=name + "_reduce_sum")
     else:
         return _kl_div_loss
+
+
+@oneflow_export("nn.test_ternary")
+def test_ternary(
+    x1: oneflow_api.BlobDesc,
+    x2: oneflow_api.BlobDesc,
+    x3: oneflow_api.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("test_ternary")
+    return (
+        flow.user_op_builder(name)
+        .Op("test_ternary")
+        .Input("in1", [x1])
+        .Input("in2", [x2])
+        .Input("in3", [x3])
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
