@@ -1363,4 +1363,42 @@ def tanh_v2(
 
 @oneflow_export("math.logical_not")
 def logical_not(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
+    r"""This operator computes the elementwise logical not value of Blob.
+
+    The equation is: 
+
+    .. math::
+    
+        y = logical_not(x)
+        For a boolean value, logical_not(True) = False, and logical_not(False) = True;
+        For an integer or a float number, logical_not(0) = True, logical(x) = False if x != 0.
+    
+    Args:
+        x (oneflow_api.BlobDesc): A Blob
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def logical_not_Job(x: tp.Numpy.Placeholder((3,))
+        ) -> tp.Numpy:
+            return flow.math.logical_not(x)
+
+
+        x = np.array([0, 3, -4]).astype(np.float32)
+        out = logical_not_Job(x)
+
+        # out [ 1 0 0 ]
+
+    """
     return build_unary_elemwise_math_op("logical_not", x, name)

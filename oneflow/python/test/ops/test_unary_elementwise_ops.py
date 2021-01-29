@@ -666,7 +666,25 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         x = np.random.uniform(low=-100.0, high=100.0, size=(8,)).astype(np.float32)
         y = TanhJob(x).get().numpy()
         test_case.assertTrue(np.allclose(y, np.tanh(x), equal_nan=True))
+    
+    def test_logical_not(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float)
+        func_config.default_logical_view(flow.scope.consistent_view())
 
+        @flow.global_function(function_config=func_config)
+        def LogicalNotJob(a: oft.Numpy.Placeholder((8,))):
+            return flow.math.logical_not(a)
+        x1 = np.array(
+            [-float("inf"), -5, 0, 1, 1.2, 2, 3, float("inf")], dtype=np.float32
+        )
+        y1 = LogicalNotJob(x1).get().numpy()
+        x2 = np.array(
+            [True, False, False, False, True, False, False, True], dtype=np.bool
+        )
+        y2 = LogicalNotJob(x2).get().numpy()
+        test_case.assertTrue(np.allclose(y1, np.logical_not(x1), equal_nan=True))
+        test_case.assertTrue(np.allclose(y2, np.logical_not(x2), equal_nan=True))
 
 if __name__ == "__main__":
     unittest.main()
