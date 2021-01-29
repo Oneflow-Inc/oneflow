@@ -612,6 +612,16 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
   const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
+
+    if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
+        || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
+        || id.strref().contains("output_lbn_segment_keys")
+        || id.strref().contains("output_lbn_segment_sizes")
+        || id.strref().contains("operand_segment_sizes")
+        || id.strref().contains("result_segment_sizes")) {
+      continue;
+    }
+
     // convert op conf attributes
     if (id.strref().equals("op_name")) {
       op_conf.set_name(op_name);
@@ -631,14 +641,6 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
     }
     if (id.strref().equals("scope_symbol_id")) {
       op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
-      continue;
-    }
-    if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
-        || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
-        || id.strref().contains("output_lbn_segment_keys")
-        || id.strref().contains("output_lbn_segment_sizes")
-        || id.strref().contains("operand_segment_sizes")
-        || id.strref().contains("result_segment_sizes")) {
       continue;
     }  // convert op conf attributes
 
