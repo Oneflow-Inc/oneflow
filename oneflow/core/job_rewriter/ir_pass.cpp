@@ -17,6 +17,9 @@ limitations under the License.
 #include <vector>
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/user_op_registry.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
@@ -72,6 +75,14 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
                                                 const std::string& ibn,
                                                 const std::string& new_val) const {
     return ::oneflow::ReplaceInputLbnInOpCustomizedConf(op_conf, ibn, new_val);
+  }
+
+  AttrType QueryAttrType(const std::string& op_type_name, const std::string& attr_name) const {
+    const user_op::OpRegistryResult* val =
+        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
+    CHECK(val) << " Cannot find op_type_name: " << op_type_name;
+    user_op::UserOpDefWrapper op_def(val->op_def);
+    return op_def.GetAttrType(attr_name);
   }
 
  private:
