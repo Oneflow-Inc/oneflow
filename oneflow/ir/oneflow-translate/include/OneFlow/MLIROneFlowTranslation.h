@@ -20,8 +20,8 @@ class RoundTripOneFlowJobWrapperInterface {
   virtual std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
                                                         const std::string& ibn,
                                                         const std::string& new_val) const = 0;
-  virtual oneflow::AttrType QueryAttrType(const std::string& op_type_name,
-                                          const std::string& attr_name) const = 0;
+  virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
+                                            const std::string& attr_name) const = 0;
 };
 
 void RoundTripOneFlowJob(
