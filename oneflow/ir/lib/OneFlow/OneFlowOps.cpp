@@ -27,16 +27,15 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter &rewriter) const override {
-    if /* convert opaque user op to a concrete op */ (
-        op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")
-        || op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("negative")) {
+    auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
+    if /* convert opaque user op to a concrete op */ (op_type_name.equals("relu")
+                                                      || op_type_name.equals("negative")) {
       if (op.ctrl_inputs().empty() && op.ctrl_output().use_empty()) {
-        auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
         auto unknownLoc = FileLineColLoc::get("imported-protobuf", 0, 0, rewriter.getContext());
-        OperationState state(unknownLoc, "oneflow." + op_type_name);
+        OperationState state(unknownLoc, "oneflow." + op_type_name.str());
         state.addAttributes(attributes);
         state.addOperands(op->getOperands());
         assert(op.data_input().size() == 1);
