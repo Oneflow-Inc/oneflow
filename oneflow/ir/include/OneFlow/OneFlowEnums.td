@@ -16,19 +16,19 @@ def OneFlow_Float16 : I32EnumAttrCase<"DT_Float16", 9>;
 def OneFlow_TensorBuffer: I32EnumAttrCase<"DT_TensorBuffer", 10>;
 
 def OneFlow_DataType: I32EnumAttr<"DataType", "OneFlow Data Type enum",
-[
-OneFlow_InvalidDataType,
-OneFlow_Char,
-OneFlow_Float,
-OneFlow_Double,
-OneFlow_Int8,
-OneFlow_Int32,
-OneFlow_Int64,
-OneFlow_UInt8,
-OneFlow_OFRecord,
-OneFlow_Float16,
-OneFlow_TensorBuffer,
-]
+  [
+    OneFlow_InvalidDataType,
+    OneFlow_Char,
+    OneFlow_Float,
+    OneFlow_Double,
+    OneFlow_Int8,
+    OneFlow_Int32,
+    OneFlow_Int64,
+    OneFlow_UInt8,
+    OneFlow_OFRecord,
+    OneFlow_Float16,
+    OneFlow_TensorBuffer,
+  ]
 > {
   let cppNamespace = "::mlir::oneflow";
   let stringToSymbolFnName = "ConvertToEnum";
