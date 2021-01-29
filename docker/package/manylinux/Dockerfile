@@ -25,7 +25,7 @@ RUN yum-config-manager --save --setopt=centos-sclo-rh.skip_if_unavailable=true
 
 RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
 
-ARG MANYLINUX_SHA=c8250d8228274b6fd0d9a96c4b972f01e5dcc8dc
+ARG MANYLINUX_SHA=f5da004
 RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/pypa/manylinux/archive/${MANYLINUX_SHA}.zip && unzip manylinux.zip -d tmp && cp -r tmp/*/docker/build_scripts /build_scripts && bash build_scripts/build.sh && rm -r build_scripts tmp manylinux.zip
 
 ENV SSL_CERT_FILE=/opt/_internal/certs.pem
