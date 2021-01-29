@@ -111,7 +111,7 @@ class InstructionsBuilder {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
-      const std::shared_ptr<compatible_py::BlobObject>&,
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
   Maybe<void> ReplaceMirrored(const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
@@ -129,10 +129,6 @@ class InstructionsBuilder {
 
   Maybe<compatible_py::BlobObject> BroadcastBlobReference(
       const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_blob_object,
-      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
-
-  Maybe<int64_t> BroadcastObjectReference(
-      const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
   Maybe<void> Build121AssignInstruction(
@@ -177,6 +173,10 @@ class InstructionsBuilder {
 
   Maybe<void> InitOpNodeSignatureDescSymbol(
       int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym);
+
+  Maybe<int64_t> BroadcastObjectReference(
+      const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
   Maybe<void> BuildSendInstruction(
       const std::shared_ptr<ParallelDesc>& dst_parallel_desc_symbol,
