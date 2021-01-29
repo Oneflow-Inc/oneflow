@@ -41,13 +41,13 @@ RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake && ln -s /opt/_int
 # overwrite patchelf to fix "maximum size exceed" problem
 RUN mkdir -p /tmp && curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archive/0.11.zip && unzip 0.11.zip && cd patchelf-0.11 && sed -i 's/32/64/g' src/patchelf.cc && ./bootstrap.sh && ./configure && make -j`nproc` && make install && cd .. && rm -rf patchelf-0.11 0.11.zip
 
+RUN curl -L $bazel_url -o /usr/local/bin/bazel \
+    && chmod +x /usr/local/bin/bazel \
+    && bazel
+
 COPY dev-requirements.txt /tmp/dev-requirements.txt
 RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && /opt/python/cp36-cp36m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && /opt/python/cp37-cp37m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && /opt/python/cp38-cp38/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && rm /tmp/dev-requirements.txt
-
-RUN curl -L $bazel_url -o /usr/local/bin/bazel \
-    && chmod +x /usr/local/bin/bazel \
-    && bazel
