@@ -27,7 +27,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
                                       mlir::PatternRewriter &rewriter) const override {
-    if (op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")
+    if /* convert opaque user op to a concrete op */ (
+        op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("relu")
         || op->getAttrOfType<StringAttr>("op_type_name").getValue().equals("negative")) {
       if (op.ctrl_inputs().empty() && op.ctrl_output().use_empty()) {
         auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
