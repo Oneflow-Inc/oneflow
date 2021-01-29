@@ -17,5 +17,5 @@ there are some rules must be enforced for all the optimizers, importers, exporte
     - there should be one `CMakeLists.txt` in every sub-directory
     - don't link anything from OneFlow unless it is necessary for the feature
 
-## Main components and interfaces
+## Major components and interfaces
 - TODO
