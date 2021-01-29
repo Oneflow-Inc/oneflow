@@ -5,7 +5,7 @@ OneFlow IR, a MLIR dialect
 ## Code style
 
 Inevitably, developers maintaining OneFlow IR would face these challenges:
-- Debugging components related to IR, compiler could be complicated and puzzling.
+- Debugging components related to IR, compiler could be complicated and peculiar.
 - IR subsystems should follow latest changes of OneFlow and MLIR closely.
 
 To address these problems,
