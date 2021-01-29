@@ -2067,6 +2067,97 @@ def squeeze(
     )
 
 
+@oneflow_export("expand")
+def expand(
+    x: oneflow_api.BlobDesc, expand_size: Sequence[int], name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    """This operator expand the input tensor to a larger size.
+    
+    Passing -1 as the size for a dimension means not changing the size of that dimension.
+
+    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front. 
+    
+    For the new dimensions, the size cannot be set to -1. 
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        expand_size (Sequence[int]): The desired expanded size.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        @flow.global_function()
+        def expandJob(x: tp.Numpy.Placeholder(shape=(1, 3, 1, 2), dtype=flow.int32),
+        ) -> tp.Numpy:
+            return flow.expand(input=x, 
+                                expand_size=[1, 3, 2, 2])
+
+        x = np.array([[[[0, 1]],
+                       [[2, 3]],
+                       [[4, 5]]]]).astype(np.int32)
+
+        out = expandJob(x)
+        # out shape: [1, 3, 2, 2]
+        # [[[[0, 1],
+        #    [0, 1]],
+        #   [[2, 3],
+        #    [2, 3]],
+        #   [[4, 5],
+        #    [4, 5]]]]
+    """
+    expand_size = list(expand_size)
+    assert len(expand_size) >= len(
+        x.shape
+    ), "The desired expanded dims should not be less than the input dims."
+    # calculate the original stride
+    original_stride = [1]
+    for i in range(len(x.shape) - 2, -1, -1):
+        original_stride.insert(0, original_stride[0] * x.shape[i + 1])
+
+    # calculate the output shape and stride
+    new_size = []
+    new_stride = []
+    diff = len(expand_size) - len(x.shape)
+    for i in range(len(expand_size) - 1, -1, -1):
+        if i >= diff:
+            if expand_size[i] == -1 or expand_size[i] == x.shape[i - diff]:
+                new_size.insert(0, x.shape[i - diff])
+                new_stride.insert(0, original_stride[i - diff])
+            else:
+                assert expand_size[i] >= 1 and x.shape[i - diff] == 1
+                new_size.insert(0, expand_size[i])
+                new_stride.insert(0, 0)
+        else:
+            assert expand_size[i] >= 1
+            new_size.insert(0, expand_size[i])
+            if expand_size[i] == 1:
+                new_stride.insert(0, new_stride[0])
+            else:
+                new_stride.insert(0, 0)
+
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Expand_"))
+        .Op("expand")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("in_shape", list(x.shape))
+        .Attr("out_shape", new_size)
+        .Attr("stride", new_stride)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("expand_dims")
 def expand_dims(
     input: oneflow_api.BlobDesc, axis: int, name: Optional[str] = None
