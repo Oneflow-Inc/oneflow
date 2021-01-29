@@ -114,6 +114,9 @@ def OneFlow_ReluOp : OneFlow_BaseOp<"relu", [Idempotent, NoSideEffect, SameOpera
     let output = (outs AnyType:$y);
 }
 
+// Involution ops
+// TODO: add invert, logical_not when they are implemented in OneFlow
+
 def OneFlow_NegativeOp : OneFlow_BaseOp<"negative", [Involution, NoSideEffect, SameOperandsAndResultType]> {
     let summary = "";
     let input = (ins AnyType:$x);
