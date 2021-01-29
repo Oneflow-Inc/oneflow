@@ -3,10 +3,6 @@
 
 include "mlir/IR/OpBase.td"
 
-//===----------------------------------------------------------------------===//
-// OneFlow dialect definition.
-//===----------------------------------------------------------------------===//
-
 def OneFlow_Dialect : Dialect {
     let name = "oneflow";
     let summary = "OneFlow MLIR dialect.";
@@ -15,9 +11,5 @@ def OneFlow_Dialect : Dialect {
     }];
     let cppNamespace = "::mlir::oneflow";
 }
-
-//===----------------------------------------------------------------------===//
-// Base oneflow operation definition.
-//===----------------------------------------------------------------------===//
 
 #endif // ONEFLOW_DIALECT

@@ -4,10 +4,6 @@
 using namespace mlir;
 using namespace mlir::oneflow;
 
-//===----------------------------------------------------------------------===//
-// OneFlow dialect.
-//===----------------------------------------------------------------------===//
-
 void OneFlowDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
