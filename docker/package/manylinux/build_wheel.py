@@ -58,7 +58,7 @@ def force_rm_dir(dir_to_clean):
     subprocess.check_call(clean_cmd, shell=True)
 
 
-def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap):
+def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap, dry):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as wrapper_f:
         with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
             w_name = "/host" + wrapper_f.name
@@ -76,7 +76,10 @@ bash {bash_args} {f_name}
             docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
             cmd = f"{docker_cmd} bash {bash_args} {w_name}"
             print(cmd)
-            subprocess.check_call(cmd, shell=True)
+            if dry:
+                print("dry run, skipping")
+            else:
+                subprocess.check_call(cmd, shell=True)
 
 
 def get_common_docker_args(
