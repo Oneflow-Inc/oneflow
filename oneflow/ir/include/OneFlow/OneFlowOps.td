@@ -120,4 +120,10 @@ def OneFlow_NegativeOp : OneFlow_BaseOp<"negative", [Involution, NoSideEffect, S
     let output = (outs AnyType:$y);
 }
 
+def OneFlow_ReciprocalOp : OneFlow_BaseOp<"reciprocal", [Involution, NoSideEffect, SameOperandsAndResultType]> {
+    let summary = "";
+    let input = (ins AnyType:$x);
+    let output = (outs AnyType:$y);
+}
+
 #endif // ONEFLOW_OPS
