@@ -254,10 +254,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
             get_delegate_blob_object=GetDelegateBlobObject,
         )
 
-    def DeleteObject(self, obj):
-        self._TryClearObject(obj)
-        self._DeleteObject(obj)
-
     def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
         unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
         instruction = instr_cfg.InstructionProto()
@@ -275,105 +271,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
 
     def FetchBlobBody(self, blob_object, callback):
         return self._FetchBlob("FetchBlobBody", blob_object, callback)
-
-    def PackPhysicalBlobsToLogicalBlob(
-        self, physical_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
-    ):
-        parallel_desc_symbol = op_arg_parallel_attr.parallel_desc_symbol
-        machine_id2device_ids = dict(parallel_desc_symbol.machine_id2device_id_list)
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
-        machine_device_ids = set()
-        for physical_blob_object in physical_blob_objects:
-            phy_paralle_desc_sym = physical_blob_object.parallel_desc_symbol
-            assert (
-                phy_paralle_desc_sym.parallel_num == 1
-            ), phy_paralle_desc_sym.parallel_num
-            assert phy_paralle_desc_sym.device_tag == device_tag, "%s v.s. %s" % (
-                phy_paralle_desc_sym.device_tag,
-                device_tag,
-            )
-            phy_machine_id2device_ids = dict(
-                phy_paralle_desc_sym.machine_id2device_id_list
-            )
-            machine_id = list(phy_machine_id2device_ids.keys())[0]
-            pair = (machine_id, phy_machine_id2device_ids[machine_id][0])
-            machine_device_ids.add(pair)
-
-        for machine_id, device_ids in machine_id2device_ids.items():
-            for device_id in device_ids:
-                assert (machine_id, device_id) in machine_device_ids, "%s not in %s" % (
-                    (machine_id, device_id),
-                    machine_device_ids,
-                )
-        logical_blob_object = self._NewBlobObject(
-            op_arg_parallel_attr, op_arg_blob_attr
-        )
-        self._ReplaceMirrored(
-            op_arg_parallel_attr.parallel_desc_symbol,
-            [logical_blob_object],
-            physical_blob_objects,
-        )
-        return logical_blob_object
-
-    def GetPhysicalParallelDescSymbols(self, parallel_desc_symbol):
-        machine_id2device_ids = dict(parallel_desc_symbol.machine_id2device_id_list)
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
-        phy_parallel_desc_symbols = []
-
-        def AppendPhyParallelDescSymbol(machine_id, device_id):
-            parallel_conf = placement_cfg.ParallelConf()
-            parallel_conf.set_device_tag(device_tag)
-            parallel_conf.add_device_name("%d:%d" % (machine_id, device_id))
-            phy_parallel_desc_symbols.append(self.GetParallelDescSymbol(parallel_conf))
-
-        for machine_id, device_ids in machine_id2device_ids.items():
-            for device_id in device_ids:
-                AppendPhyParallelDescSymbol(machine_id, device_id)
-        return phy_parallel_desc_symbols
-
-    def _GetPhysicalOpArgBlobAttrs(self, logical_blob_object):
-        parallel_num = logical_blob_object.parallel_desc_symbol.parallel_num
-        logical_blob_attr = logical_blob_object.op_arg_blob_attr
-        sbp_parallel = logical_blob_object.op_arg_parallel_attr.sbp_parallel
-        if sbp_parallel.has_split_parallel():
-            split_axis = sbp_parallel.split_parallel().axis()
-            return [
-                logical_blob_attr.GetPhysicalOpArgBlobAttr(split_axis, parallel_num, i)
-                for i in range(parallel_num)
-            ]
-        else:
-            return [logical_blob_attr] * parallel_num
-
-    def UnpackLogicalBlobToPhysicalBlobs(self, blob_object):
-        phy_parallel_desc_symbols = self.GetPhysicalParallelDescSymbols(
-            blob_object.parallel_desc_symbol
-        )
-        phy_op_arg_blob_attrs = self._GetPhysicalOpArgBlobAttrs(blob_object)
-
-        def GetPhysicalBlob(parallel_desc_sym, blob_attr):
-            op_arg_parallel_attr = oneflow_api.MakeMirroredOpArgParallelAttribute(
-                parallel_desc_sym
-            )
-            pyhsical_blob_object = self._NewBlobObject(op_arg_parallel_attr, blob_attr)
-            return pyhsical_blob_object
-
-        physical_blob_objects = [
-            GetPhysicalBlob(phy_parallel_desc_symbols[i], phy_op_arg_blob_attrs[i])
-            for i in range(len(phy_parallel_desc_symbols))
-        ]
-        self._ReplaceMirrored(
-            blob_object.parallel_desc_symbol, physical_blob_objects, [blob_object]
-        )
-        return physical_blob_objects
-
-    def MakeReferenceBlobObject(self, blob_object, op_arg_parallel_attr):
-        parallel_desc_symbol = blob_object.parallel_desc_symbol
-        assert parallel_desc_symbol == op_arg_parallel_attr.parallel_desc_symbol
-        ref_blob_object = self._NewBlobObject(
-            op_arg_parallel_attr, blob_object.op_arg_blob_attr
-        )
-        self._ReplaceMirrored(parallel_desc_symbol, [ref_blob_object], [blob_object])
-        return ref_blob_object
 
     def MakeLazyRefBlobObject(self, interface_op_name):
         sess = session_ctx.GetDefaultSession()
@@ -397,8 +294,8 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
         )
         op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
 
-        blob_object = self._NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
-        self._LazyReference(blob_object, interface_op_name)
+        blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
+        self.LazyReference(blob_object, interface_op_name)
         return blob_object
 
     def BuildInitialScope(
@@ -452,32 +349,12 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
         )
         return self.BuildScopeWithNewParallelDesc(scope, *tag_and_dev_ids)
 
-    def BuildScopeWithNewIsMirrored(self, scope, is_mirrored):
-        def SetScopeProto(scope_proto):
-            if is_mirrored:
-                scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
-            else:
-                scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
-
-        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
-
-    def BuildScopeWithNewScopeName(self, scope, scope_name):
-        def SetScopeProto(scope_proto):
-            scope_proto.add_scope_op_name_prefixes(scope_name)
-
-        return self.BuildScopeByProtoSetter(scope, SetScopeProto)
-
-    def BuildScopeByProtoSetter(self, scope, setter):
-        scope_proto = scope.MakeChildScopeProto()
-        setter(scope_proto)
-        return self.GetScopeSymbol(scope_proto)
-
     def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
         if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
             return object_storage.GetSharedOpKernelObject4ParallelConfSymbol(
                 parallel_desc_sym
             )
-        object_id = self._NewSharedOpKernelObjectId4ParallelConfSymbolId(
+        object_id = self.NewSharedOpKernelObjectId4ParallelConfSymbolId(
             parallel_desc_sym
         )
         obj = oneflow_api.Object(object_id, parallel_desc_sym)
@@ -488,29 +365,11 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
 
     @contextmanager
     def CudaHostPinBlob(self, blob_object):
-        self._CudaHostRegisterBlob(blob_object)
+        self.CudaHostRegisterBlob(blob_object)
         try:
             yield
         finally:
-            self._CudaHostUnregisterBlob(blob_object)
-
-    def BroadcastBlobReference(self, sole_mirrored_blob_object, parallel_desc_sym):
-        device_ids = dict(
-            sole_mirrored_blob_object.parallel_desc_symbol.machine_id2device_id_list
-        )
-        for _, dev_ids in device_ids.items():
-            assert len(dev_ids) == 1, "dev_ids: %s" % dev_ids
-        object_id = self._BroadcastObjectReference(
-            sole_mirrored_blob_object, parallel_desc_sym
-        )
-        op_arg_parallel_attr = oneflow_api.MakeBroadcastOpArgParallelAttribute(
-            parallel_desc_sym
-        )
-        obj = oneflow_api.BlobObject(
-            object_id, op_arg_parallel_attr, sole_mirrored_blob_object.op_arg_blob_attr,
-        )
-        obj.add_releaser(self.object_releaser())
-        return obj
+            self.CudaHostUnregisterBlob(blob_object)
 
     def NewOpKernelObject(self, op_conf):
         assert op_conf.HasField("scope_symbol_id")
@@ -530,82 +389,8 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
         self.Build121AssignInstruction(ref_blob_object, blob_object)
         return ref_blob_object
 
-    def Build121AssignInstruction(self, ref_blob_object, value_blob_object):
-        parallel_num = ref_blob_object.parallel_desc_symbol.parallel_num
-        assert parallel_num == value_blob_object.parallel_desc_symbol.parallel_num
-        token_ids = (
-            [oneflow_api.vm.NewTokenId() for _ in range(parallel_num)],
-            [oneflow_api.vm.NewTokenId() for _ in range(parallel_num)],
-        )
-        self._BuildSendInstruction(
-            ref_blob_object.parallel_desc_symbol, value_blob_object, token_ids
-        )
-        self._BuildRecvInstruction(
-            value_blob_object.parallel_desc_symbol, ref_blob_object, token_ids
-        )
-
-    def _BuildSendInstruction(
-        self, dst_parallel_desc_symbol, src_blob_object, token_ids
-    ):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("SendBlob")
-        instruction.set_parallel_desc_symbol_id(
-            src_blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(dst_parallel_desc_symbol.symbol_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.ConstOperand(src_blob_object.object_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.OperandSeparator()
-        )
-        for token_id in token_ids[0]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.deprecated.vm.Uint64Operand(token_id)
-            )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.OperandSeparator()
-        )
-        for token_id in token_ids[1]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.deprecated.vm.Uint64Operand(token_id)
-            )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _BuildRecvInstruction(
-        self, src_parallel_desc_symbol, dst_blob_object, token_ids
-    ):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("ReceiveBlob")
-        instruction.set_parallel_desc_symbol_id(
-            dst_blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(src_parallel_desc_symbol.symbol_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.Mut2Operand(dst_blob_object.object_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.OperandSeparator()
-        )
-        for token_id in token_ids[0]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.deprecated.vm.Uint64Operand(token_id)
-            )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.OperandSeparator()
-        )
-        for token_id in token_ids[1]:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.deprecated.vm.Uint64Operand(token_id)
-            )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
     def _NewOpKernelObject(self, parallel_desc_symbol, job_desc_sym, op_conf_sym):
-        object_id = self._NewObjectId(parallel_desc_symbol)
+        object_id = self.NewObjectId(parallel_desc_symbol)
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitOpKernelObject")
         instruction.set_parallel_desc_symbol_id(parallel_desc_symbol.symbol_id)
@@ -736,28 +521,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
             mut2_operand_blob_objects,
         )
 
-    def _CudaHostRegisterBlob(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("CudaHostRegisterBlob")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _CudaHostUnregisterBlob(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("CudaHostUnregisterBlob")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
     def _GetOpConfSymbol(self, op_conf):
         serialized_op_conf = op_conf.SerializeToString()
         if symbol_storage.HasSymbol4SerializedOpConf(serialized_op_conf):
@@ -774,7 +537,7 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
         )
         if oneflow_api.HasOpNodeSignatureSymbol(new_op_node_signature):
             return oneflow_api.GetOpNodeSignatureSymbol(new_op_node_signature)
-        symbol_id = self._NewSymbolId4OpNodeSignature(new_op_node_signature)
+        symbol_id = self.NewSymbolId4OpNodeSignature(new_op_node_signature)
         oneflow_api.AddOpNodeSignatureSymbol(symbol_id, new_op_node_signature)
         return oneflow_api.GetOpNodeSignatureSymbol(symbol_id)
 
@@ -829,9 +592,7 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
                 GetOutBlobParallelDescSymbol(obn), str(op_attribute), obn
             )
             op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
-            out_blob_object = self._NewBlobObject(
-                op_arg_parallel_attr, op_arg_blob_attr
-            )
+            out_blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             bn_in_op2blob_object[obn] = out_blob_object
             mut1_operand_blob_objects.append((obn_sym, out_blob_object))
@@ -873,31 +634,15 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
                 GetOutBlobParallelDescSymbol(obn), str(op_attribute), obn
             )
             op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
-            out_blob_object = self._NewBlobObject(
-                op_arg_parallel_attr, op_arg_blob_attr
-            )
+            out_blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
             bn_in_op2blob_object[obn] = out_blob_object
             mut2_operand_blob_objects.append((obn_sym, out_blob_object))
         return mut2_operand_blob_objects
-
-    def _NewBlobObject(self, op_arg_parallel_attr, op_arg_blob_attr):
-        object_id = self._NewObjectId(op_arg_parallel_attr.parallel_desc_symbol)
-        obj = oneflow_api.BlobObject(object_id, op_arg_parallel_attr, op_arg_blob_attr)
-        obj.add_releaser(self.object_releaser())
-        return obj
 
     def _NewSymbolId4OpConf(self, op_conf):
         symbol_id = self.NewSymbolId()
         self._InitOpConfSymbol(symbol_id, op_conf)
         return symbol_id
-
-    def _NewSymbolId4OpNodeSignature(self, op_node_signature_sym):
-        symbol_id = self.NewSymbolId()
-        self._InitOpNodeSignatureDescSymbol(symbol_id, op_node_signature_sym)
-        return symbol_id
-
-    def _NewSharedOpKernelObjectId4ParallelConfSymbolId(self, parallel_desc_sym):
-        return self._NewObjectId(parallel_desc_sym)
 
     def _StatelessCallOpKernel(
         self,
@@ -1043,49 +788,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
             )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
-    def _NewObjectId(self, parallel_desc_sym):
-        object_id = self.id_generator().NewObjectId()
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("NewObject")
-        instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.Int64Operand(object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        return object_id
-
-    def _LazyReference(self, blob_object, interface_op_name):
-        instruction = instr_cfg.InstructionProto()
-        device_tag = blob_object.parallel_desc_symbol.device_tag
-        instruction.set_instr_type_name("{}.LazyReference".format(device_tag))
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-        interface_op_name_sym = self.GetSymbol4String(
-            blob_object.op_arg_blob_attr.logical_blob_name
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(interface_op_name_sym.symbol_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _BroadcastObjectReference(self, sole_mirrored_object, parallel_desc_sym):
-        object_id = self.id_generator().NewObjectId()
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("BroadcastObjectReference")
-        instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.Int64Operand(object_id)
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.Int64Operand(sole_mirrored_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        return object_id
-
     def _InitOpConfSymbol(self, symbol_id, op_conf):
         instruction = instr_cfg.InstructionProto()
         instruction.set_instr_type_name("InitOperatorConfSymbol")
@@ -1097,18 +799,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
         eager_symbol.symbol_id = symbol_id
         eager_symbol.op_conf_symbol.CopyFrom(op_conf)
         eager_symbol = oneflow_api.deprecated.MakeEagerSymbolByString(str(eager_symbol))
-        self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
-
-    def _InitOpNodeSignatureDescSymbol(self, symbol_id, op_node_signature_sym):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("InitOpNodeSignatureDescSymbol")
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.InitSymbolOperand(symbol_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-        eager_symbol = eager_symbol_cfg.EagerSymbol()
-        eager_symbol.set_symbol_id(symbol_id)
-        eager_symbol.mutable_op_node_signature_symbol().CopyFrom(op_node_signature_sym)
         self.eager_symbol_list().mutable_eager_symbol().Add().CopyFrom(eager_symbol)
 
     def _FetchBlob(self, instruction_name, blob_object, fetcher):
@@ -1141,43 +831,6 @@ class InstructionsBuilder(oneflow_api.deprecated.InstructionsBuilder):
         instruction.mutable_operand().Add().CopyFrom(
             oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
         )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _TryClearObject(self, obj):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("TryClearObject")
-        instruction.set_parallel_desc_symbol_id(obj.parallel_desc_symbol.symbol_id)
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(obj.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _DeleteObject(self, blob_object):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("DeleteObject")
-        instruction.set_parallel_desc_symbol_id(
-            blob_object.parallel_desc_symbol.symbol_id
-        )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.DelObjectOperand(blob_object.object_id)
-        )
-        self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-    def _ReplaceMirrored(self, parallel_desc_sym, lhs_objects, rhs_objects):
-        instruction = instr_cfg.InstructionProto()
-        instruction.set_instr_type_name("ReplaceMirrored")
-        instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-        for lhs_object in lhs_objects:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.deprecated.vm.Int64Operand(lhs_object.object_id)
-            )
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.OperandSeparator()
-        )
-        for rhs_object in rhs_objects:
-            instruction.mutable_operand().Add().CopyFrom(
-                oneflow_api.deprecated.vm.Int64Operand(rhs_object.object_id)
-            )
         self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
 
 
