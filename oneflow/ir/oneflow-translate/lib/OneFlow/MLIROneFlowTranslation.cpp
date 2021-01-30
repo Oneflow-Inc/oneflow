@@ -63,8 +63,8 @@ class Importer {
 
   LogicalResult namedAttributesFromUserOp(const ::oneflow::OperatorConf &op,
                                           std::vector<NamedAttribute> &attr_vec);
-  LogicalResult operandsFromUserOp(const ::oneflow::OperatorConf &op,
-                                   std::vector<::mlir::Value> &operand_vec);
+  LogicalResult AppendDataInOperand(const std::string &lbn,
+                                    std::vector<::mlir::Value> &operand_vec);
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
                                     std::vector<::mlir::Value> &operand_vec);
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types);
@@ -255,25 +255,16 @@ LogicalResult Importer::AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
   return success();
 }
 
-LogicalResult Importer::operandsFromUserOp(const ::oneflow::OperatorConf &op,
-                                           std::vector<Value> &operand_vec) {
-  if (op.has_user_conf() == false) {
-    module.emitError("Not a user op. op name: " + op.name());
+LogicalResult Importer::AppendDataInOperand(const std::string &lbn,
+                                            std::vector<::mlir::Value> &operand_vec) {
+  if (lbn2result_.find(lbn) == lbn2result_.end()) {
+    module.emitError("IR result not found for: " + lbn);
     return failure();
+  } else {
+    auto v = lbn2result_.at(lbn);
+    operand_vec.push_back(v);
+    return success();
   }
-  for (auto kv : op.user_conf().input()) {
-    for (int i = 0; i < kv.second.s_size(); i++) {
-      const std::string &lbn = kv.second.s(i);
-      if (lbn2result_.find(lbn) == lbn2result_.end()) {
-        module.emitError("IR result not found for: " + lbn);
-        return failure();
-      } else {
-        auto v = lbn2result_.at(lbn);
-        operand_vec.push_back(v);
-      }
-    }
-  }
-  return success();
 }
 
 LogicalResult Importer::AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
@@ -407,7 +398,12 @@ LogicalResult Importer::processUserOp(const ::oneflow::OperatorConf &op) {
       b.getNamedAttr("op_type_name", b.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
-  if (failed(operandsFromUserOp(op, operand_vec))) { return failure(); }
+  for (auto kv : op.user_conf().input()) {
+    for (int i = 0; i < kv.second.s_size(); i++) {
+      const std::string &lbn = kv.second.s(i);
+      if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
+    }
+  }
   AppendCtrlInOperand(op, operand_vec);
   ::mlir::ValueRange operands(operand_vec);
 
@@ -488,13 +484,7 @@ LogicalResult Importer::processSystemOp(const ::oneflow::OperatorConf &op) {
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
-    if (lbn2result_.find(input_lbn) == lbn2result_.end()) {
-      module.emitError("IR result not found for: " + input_lbn);
-      return failure();
-    } else {
-      auto v = lbn2result_.at(input_lbn);
-      operand_vec.push_back(v);
-    }
+    if (failed(AppendDataInOperand(input_lbn, operand_vec))) { return failure(); }
   }
   AppendCtrlInOperand(op, operand_vec);
   auto out_types = llvm::SmallVector<Type, 8>();
@@ -522,11 +512,13 @@ LogicalResult Importer::processJob() {
 
   for (int64_t i = 0; i < job->net().op_size(); i++) {
     const auto op = job->net().op(i);
+    bool is_succeeded = false;
     if (op.has_user_conf()) {
-      if (failed(processUserOp(op))) { return failure(); }
+      is_succeeded = succeeded(processUserOp(op));
     } else {
-      if (failed(processSystemOp(op))) { return failure(); }
+      is_succeeded = succeeded(processSystemOp(op));
     }
+    if (is_succeeded == false) { return failure(); }
   }
   ReturnOp returnOp;
   if (!entryBlock.empty()) { returnOp = dyn_cast<ReturnOp>(entryBlock.back()); }
