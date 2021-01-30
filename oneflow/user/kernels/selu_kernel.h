@@ -24,11 +24,10 @@ template<typename T>
 struct SeluFunctor {
   OF_DEVICE_FUNC explicit SeluFunctor(double scale, double alpha) : scale(scale), alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return static_cast<T>((x > static_cast<T>(0)) ? scale * x
-                                                  : scale * alpha * (exp(x) - static_cast<T>(1)));
+    return (x > static_cast<T>(0)) ? scale * x : scale * alpha * (exp(x) - static_cast<T>(1));
   }
-  const double scale;
-  const double alpha;
+  const T scale;
+  const T alpha;
 };
 
 template<typename T>
@@ -36,10 +35,10 @@ struct SeluGradFunctor {
   OF_DEVICE_FUNC explicit SeluGradFunctor(double scale, double alpha)
       : scale(scale), alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return static_cast<T>((x > static_cast<T>(0)) ? scale * dy : dy * scale * alpha * (exp(x)));
+    return (x > static_cast<T>(0)) ? scale * dy : dy * scale * alpha * (exp(x));
   }
-  const double scale;
-  const double alpha;
+  const T scale;
+  const T alpha;
 };
 
 namespace {
