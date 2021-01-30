@@ -2967,6 +2967,14 @@ def elu(
                 \alpha*(exp(x)-1) & \text{ if } x \le 0 \\
     		    \end{cases}
 
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        alpha (float, optional): The `alpha` value for the ELU formula. Defaults to 1.0.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+
     For example: 
 
     .. code-block:: python 
@@ -2985,14 +2993,7 @@ def elu(
         out = elu_job(x)
 
         # output [-0.9698026  1.         3.5      ]
-
-    Args:
-        x (oneflow_api.BlobDesc): The input Tensor. 
-        alpha (float, optional): The `alpha` value for the ELU formula. Defaults to 1.0.
-        name (Optional[str], optional): The name for the operator. Defaults to None.
-
-    Returns:
-        oneflow_api.BlobDesc: The activated Tensor.
+    
     """
     alpha = float(alpha)
     if name is None:
