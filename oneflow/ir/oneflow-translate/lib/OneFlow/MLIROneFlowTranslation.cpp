@@ -509,16 +509,18 @@ LogicalResult Importer::processJob() {
   auto &entryBlock = *function.addEntryBlock();
   b.setInsertionPointToStart(&entryBlock);
 
-  for (int64_t i = 0; i < job->net().op_size(); i++) {
-    const auto op = job->net().op(i);
-    bool is_succeeded = false;
+  bool is_succeeded = true;
+  job_wrapper.TopoForEachOpConf([&](const ::oneflow::OperatorConf *op_conf) {
+    const auto op = *op_conf;
+    if (is_succeeded == false) { return; }
     if (op.has_user_conf()) {
       is_succeeded = succeeded(processUserOp(op));
     } else {
       is_succeeded = succeeded(processSystemOp(op));
     }
-    if (is_succeeded == false) { return failure(); }
-  }
+  });
+  if (is_succeeded == false) { return failure(); }
+
   ReturnOp returnOp;
   if (!entryBlock.empty()) { returnOp = dyn_cast<ReturnOp>(entryBlock.back()); }
   if (!returnOp) { b.create<ReturnOp>(unknownLoc); }

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <utility>
 #include <vector>
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 #include "oneflow/core/framework/user_op_def.h"
@@ -83,6 +84,10 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     CHECK(val) << " Cannot find op_type_name: " << op_type_name;
     user_op::UserOpDefWrapper op_def(val->op_def);
     return op_def.GetAttrType(attr_name);
+  }
+
+  void TopoForEachOpConf(std::function<void(const ::oneflow::OperatorConf*)> Handler) const {
+    op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
  private:
