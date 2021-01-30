@@ -28,9 +28,11 @@ REGISTER_USER_OP("selu")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       double scale = conf.attr<double>("scale");
-      if (scale > 1.0) { return Maybe<void>::Ok(); }
-      return oneflow::Error::CheckFailedError()
-             << "scale value: " << scale << " for SELU op is illegal.";
+      if (scale <= 1.0) {
+        return oneflow::Error::CheckFailedError()
+               << "scale value: " << scale << " for SELU op is illegal.";
+      }
+      return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
@@ -61,9 +63,11 @@ REGISTER_USER_OP("selu_grad")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       double scale = conf.attr<double>("scale");
-      if (scale > 1.0) { return Maybe<void>::Ok(); }
-      return oneflow::Error::CheckFailedError()
-             << "scale value: " << scale << " for SELU op is illegal.";
+      if (scale <= 1.0) {
+        return oneflow::Error::CheckFailedError()
+               << "scale value: " << scale << " for SELU op is illegal.";
+      }
+      return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
