@@ -236,6 +236,18 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
           b.getNamedAttr(name, b.getStringAttr(stringified));
       attr_vec.emplace_back(kv);
     }
+    else if (value.has_at_list_data_type()) {
+      llvm::ArrayRef<int> dt_list(
+          {value.at_list_data_type().val().begin(), value.at_list_data_type().val().end()});
+      auto stringified_list = llvm::map_range(dt_list, [&](int t) {
+        std::string stringified = "";
+        assert(succeeded(StringifyDataType(value, stringified)));
+        return stringified;
+      });
+      attr_vec.emplace_back(b.getNamedAttr(
+          name, b.getStrArrayAttr(
+                    std::vector<StringRef>({stringified_list.begin(), stringified_list.end()}))));
+    }
     else {
       module.emitError("can't handle user op attr: " + name + ", op name: " + op.name()
                        + ", op type name: " + op.user_conf().op_type_name());
