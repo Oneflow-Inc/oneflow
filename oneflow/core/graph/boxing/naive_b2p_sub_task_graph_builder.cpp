@@ -33,8 +33,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     int64_t nearest_out_node_distance = -1;
 
     FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
-      const int64_t nearest_in_parallel_id =
-          SubTskGphBuilderUtil::FindNearestParallelId(in_parallel_desc, out_parallel_desc, out_id);
+      const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
+          in_parallel_desc, out_parallel_desc, out_id);
       out_id2nearest_in_id.emplace(out_id, nearest_in_parallel_id);
       const int64_t distance = SubTskGphBuilderUtil::GetDistance(
           in_parallel_desc, nearest_in_parallel_id, out_parallel_desc, out_id);

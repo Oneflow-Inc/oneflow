@@ -101,23 +101,6 @@ bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const cfg::ErrorProto& erro
   return error.has_boxing_not_supported_error();
 }
 
-int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
-  if (src->machine_id() != dst->machine_id()) {
-    return kDistanceDiffMachine;
-  } else if (src->device_type() != dst->device_type()) {
-    return kDistanceSameMachine;
-  } else if (src->device_type() == DeviceType::kCPU) {
-    return kDistanceSameDevice;
-  } else {
-    if (Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id())
-        == Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id())) {
-      return kDistanceSameDevice;
-    } else {
-      return kDistanceSameMachine;
-    }
-  }
-}
-
 int64_t SubTskGphBuilderUtil::GetDistance(
     const int64_t src_machine_id, const int64_t src_dev_phy_id, const DeviceType& src_device_type,
     const int64_t dst_machine_id, const int64_t dst_dev_phy_id, const DeviceType& dst_device_type) {
@@ -148,6 +131,39 @@ int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
   const int64_t dst_dev_phy_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
   return GetDistance(src_machine_id, src_dev_phy_id, src_parallel_desc.device_type(),
                      dst_machine_id, dst_dev_phy_id, dst_parallel_desc.device_type());
+}
+
+int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
+  const int64_t src_machine_id = src->machine_id();
+  const DeviceType& src_device_type = src->device_type();
+  const int64_t src_gpu_dev_phy_id =
+      (src_device_type == DeviceType::kGPU)
+          ? Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id())
+          : -1;
+  const int64_t dst_machine_id = dst->machine_id();
+  const DeviceType& dst_device_type = dst->device_type();
+  const int64_t dst_gpu_dev_phy_id =
+      (dst_device_type == DeviceType::kGPU)
+          ? Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id())
+          : -1;
+  return GetDistance(src_machine_id, src_gpu_dev_phy_id, src_device_type, dst_machine_id,
+                     dst_gpu_dev_phy_id, dst_device_type);
+}
+
+int64_t SubTskGphBuilderUtil::FindNearestSrcParallelId(const ParallelDesc& from_parallel_desc,
+                                                       const ParallelDesc& to_parallel_desc,
+                                                       const int64_t to_parallel_id) {
+  int64_t nearest_from_parallel_idx = -1;
+  int64_t nearest_distance = SubTskGphBuilderUtil::kDistanceMax;
+  for (int64_t i = 0; i < from_parallel_desc.parallel_num(); ++i) {
+    int64_t distance =
+        SubTskGphBuilderUtil::GetDistance(from_parallel_desc, i, to_parallel_desc, to_parallel_id);
+    if (distance < nearest_distance) {
+      nearest_from_parallel_idx = i;
+      nearest_distance = distance;
+    }
+  }
+  return nearest_from_parallel_idx;
 }
 
 }  // namespace oneflow

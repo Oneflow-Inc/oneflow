@@ -58,12 +58,13 @@ std::string ShapeToString(const Shape& shape) {
   return shape_ss.str();
 }
 
-std::string SubTskGphBuilderStatusToCsvLine(
-    const SubTskGphBuilderStatus& status, const std::string& src_op_name,
-    const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
-    const ParallelDesc& dst_parallel_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc) {
+std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
+                                   const std::string& src_op_name, const std::string& dst_op_name,
+                                   const ParallelDesc& src_parallel_desc,
+                                   const ParallelDesc& dst_parallel_desc,
+                                   const SbpParallel& src_sbp_parallel,
+                                   const SbpParallel& dst_sbp_parallel, const LogicalBlobId& lbi,
+                                   const BlobDesc& logical_blob_desc) {
   std::string serialized_status;
   serialized_status += src_op_name + ",";
   serialized_status += dst_op_name + ",";
@@ -98,9 +99,9 @@ void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::strin
                           const ParallelDesc& dst_parallel_desc,
                           const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
                           const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
-  log_stream_ << SubTskGphBuilderStatusToCsvLine(
-      status, src_op_name, dst_op_name, src_parallel_desc, dst_parallel_desc, src_sbp_parallel,
-      dst_sbp_parallel, lbi, logical_blob_desc);
+  log_stream_ << MakeBoxingLoggerCsvRow(status, src_op_name, dst_op_name, src_parallel_desc,
+                                        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi,
+                                        logical_blob_desc);
 }
 
 }  // namespace oneflow

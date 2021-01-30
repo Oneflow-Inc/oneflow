@@ -427,7 +427,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
           const TensorSliceView& out_slice = out_slices.at(out_id);
           const int64_t nearest_idx =
-              SubTskGphBuilderUtil::FindNearestParallelId(in_pd, out_pd, out_id);
+              SubTskGphBuilderUtil::FindNearestSrcParallelId(in_pd, out_pd, out_id);
           TaskNode* in_node = in_nodes.at(nearest_idx);
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);

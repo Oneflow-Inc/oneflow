@@ -57,14 +57,16 @@ Maybe<void> CollectiveBoxingUnpackOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const CollectiveBoxingUnpackOpConf& unpack_conf = this->op_conf().collective_boxing_unpack_conf();
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *GetBlobDesc4BnInOp("in");
+  *out_blob_desc = *in_blob_desc;
 
   Shape out_shape(unpack_conf.logical_shape());
   if (unpack_conf.dst_sbp_parallel().has_split_parallel()) {
     const int64_t dst_split_axis = unpack_conf.dst_sbp_parallel().split_parallel().axis();
     out_shape.Set(dst_split_axis, out_shape.At(dst_split_axis) / unpack_conf.num_ranks());
   }
+  CHECK_EQ_OR_RETURN(out_shape.elem_cnt(), in_blob_desc->shape().elem_cnt());
   out_blob_desc->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }

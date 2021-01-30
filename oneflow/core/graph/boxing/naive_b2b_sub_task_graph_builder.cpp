@@ -28,10 +28,9 @@ Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
   if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
       && (out_parallel_desc.parallel_num() == 1 || out_sbp_parallel.has_broadcast_parallel())) {
     FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
-      const int64_t nearest_in_parallel_id =
-          SubTskGphBuilderUtil::FindNearestParallelId(in_parallel_desc, out_parallel_desc, out_id);
+      const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
+          in_parallel_desc, out_parallel_desc, out_id);
       TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
-      CHECK_NOTNULL(nearest_in_node);
       TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
                                           out_parallel_desc, out_id);
       sorted_out_tasks->push_back(proxy);

@@ -77,10 +77,12 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const int64_t sr
   const IDMgr* id_mgr = Global<IDMgr>::Get();
   if (dst_parallel_desc.device_type() == DeviceType::kCPU) {
     dst_mem_zone_id = id_mgr->CpuMemZoneId();
-  } else {
+  } else if (dst_parallel_desc.device_type() == DeviceType::kGPU) {
     const int64_t dst_dev_phy_id =
         CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
     dst_mem_zone_id = id_mgr->GpuMemZoneId(dst_dev_phy_id);
+  } else {
+    UNIMPLEMENTED();
   }
   return GetProxyNode(src_node, src_mem_zone_id, dst_machine_id, dst_mem_zone_id);
 }

@@ -268,7 +268,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
-        const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestParallelId(
+        const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
             in_parallel_desc, out_parallel_desc, out_id);
 
         TaskNode* in_node = sorted_in_tasks.at(nearest_in_parallel_id);
@@ -321,7 +321,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
       if (in_parallel_desc.device_type() == DeviceType::kCPU) {
         auto* cpu_in_node = sorted_in_tasks.front();
         root_parallel_id =
-            SubTskGphBuilderUtil::FindNearestParallelId(out_parallel_desc, in_parallel_desc, 0);
+            SubTskGphBuilderUtil::FindNearestSrcParallelId(out_parallel_desc, in_parallel_desc, 0);
         gpu_in_node = ctx->GetProxyNode(cpu_in_node, cpu_in_node->MemZoneId121(), out_parallel_desc,
                                         root_parallel_id);
 

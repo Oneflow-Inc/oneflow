@@ -39,14 +39,10 @@ void CollectiveBoxingUnpackKernel<device_type, T>::ForwardDataContent(
   const CollectiveBoxingUnpackOpConf& unpack_conf = this->op_conf().collective_boxing_unpack_conf();
   const int64_t num_ranks = unpack_conf.num_ranks();
   const Shape logical_shape(unpack_conf.logical_shape());
-
-  bool need_transpose = true;
-  if ((unpack_conf.src_sbp_parallel().has_split_parallel()
-       && unpack_conf.src_sbp_parallel().split_parallel().axis() == 0)
-      || unpack_conf.src_sbp_parallel().has_broadcast_parallel()
-      || unpack_conf.src_sbp_parallel().has_partial_sum_parallel()) {
-    need_transpose = false;
-  }
+  const bool need_transpose = !((unpack_conf.src_sbp_parallel().has_split_parallel()
+                                 && unpack_conf.src_sbp_parallel().split_parallel().axis() == 0)
+                                || unpack_conf.src_sbp_parallel().has_broadcast_parallel()
+                                || unpack_conf.src_sbp_parallel().has_partial_sum_parallel());
   if (need_transpose) {
     const int64_t src_split_axis = unpack_conf.src_sbp_parallel().split_parallel().axis();
     DimVector transpose_in_dim_vec = logical_shape.dim_vec();
@@ -59,7 +55,6 @@ void CollectiveBoxingUnpackKernel<device_type, T>::ForwardDataContent(
     }
     transpose_in_dim_vec.insert(transpose_in_dim_vec.begin(), num_ranks);
     const Shape transpose_in_shape(transpose_in_dim_vec);
-
     DimVector transpose_out_dim_vec;
     std::vector<int32_t> perm;
     FOR_RANGE(int64_t, i, 1, transpose_in_shape.NumAxes()) {
