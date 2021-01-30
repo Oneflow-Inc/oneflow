@@ -147,6 +147,31 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   return success();
 }
 
+LogicalResult StringifyDataType(const ::oneflow::AttrValue &value, std::string &stringified) {
+  switch (value.at_data_type()) {
+    case ::oneflow::DataType::kInvalidDataType:
+      stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
+      break;
+#define DEFINE_ONE_ELIF(datatype)                                        \
+  case ::oneflow::DataType::k##datatype:                                 \
+    stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str(); \
+    break;
+      DEFINE_ONE_ELIF(Char)
+      DEFINE_ONE_ELIF(Float)
+      DEFINE_ONE_ELIF(Double)
+      DEFINE_ONE_ELIF(Int8)
+      DEFINE_ONE_ELIF(Int32)
+      DEFINE_ONE_ELIF(Int64)
+      DEFINE_ONE_ELIF(UInt8)
+      DEFINE_ONE_ELIF(OFRecord)
+      DEFINE_ONE_ELIF(Float16)
+      DEFINE_ONE_ELIF(TensorBuffer)
+#undef DEFINE_ONE_ELIF
+    default: return failure();
+  }
+  return success();
+}
+
 LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf &op,
                                                   std::vector<NamedAttribute> &attr_vec) {
   if (op.has_user_conf() == false) {
@@ -203,26 +228,9 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     }
     else if (value.has_at_data_type()) {
       std::string stringified = "";
-      switch (value.at_data_type()) {
-        case ::oneflow::DataType::kInvalidDataType:
-          stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
-          break;
-#define DEFINE_ONE_ELIF(datatype)                                        \
-  case ::oneflow::DataType::k##datatype:                                 \
-    stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str(); \
-    break;
-          DEFINE_ONE_ELIF(Char)
-          DEFINE_ONE_ELIF(Float)
-          DEFINE_ONE_ELIF(Double)
-          DEFINE_ONE_ELIF(Int8)
-          DEFINE_ONE_ELIF(Int32)
-          DEFINE_ONE_ELIF(Int64)
-          DEFINE_ONE_ELIF(UInt8)
-          DEFINE_ONE_ELIF(OFRecord)
-          DEFINE_ONE_ELIF(Float16)
-          DEFINE_ONE_ELIF(TensorBuffer)
-#undef DEFINE_ONE_ELIF
-        default: module.emitError("fail to convert op attr, key: " + name); break;
+      if (failed(StringifyDataType(value, stringified))) {
+        module.emitError("fail to convert op attr, key: " + name);
+        return failure();
       }
       std::pair<mlir::Identifier, mlir::Attribute> kv =
           b.getNamedAttr(name, b.getStringAttr(stringified));
