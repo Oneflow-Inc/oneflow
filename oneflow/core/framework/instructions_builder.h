@@ -118,6 +118,19 @@ class InstructionsBuilder {
                               std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
                               std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects);
 
+  Maybe<Scope> BuildInitialScope(int64_t session_id,
+                                 const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                 const std::string& device_tag,
+                                 const std::vector<std::string>& machine_device_ids,
+                                 bool is_mirrored);
+
+  Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
+                                             const std::string& device_tag,
+                                             const std::vector<std::string>& machine_device_ids);
+
+  Maybe<Scope> BuildScopeWithNewParallelConf(
+      const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+
   Maybe<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
