@@ -598,7 +598,11 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
 
         x = np.random.uniform(low=-10.0, high=10.0, size=(8,)).astype(np.float32)
         y = SoftplusJob(x).get().numpy()
-        test_case.assertTrue(np.allclose(y, np.log(np.exp(x) + 1), equal_nan=True))
+        test_case.assertTrue(
+            np.allclose(
+                y, np.log(np.exp(x) + 1), equal_nan=True, rtol=1e-03, atol=1e-05
+            )
+        )
 
     def test_sqrt(test_case):
         func_config = flow.FunctionConfig()
