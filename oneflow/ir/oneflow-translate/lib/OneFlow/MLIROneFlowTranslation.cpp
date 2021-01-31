@@ -619,6 +619,32 @@ void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::
   }
 }
 
+LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType &data_type) {
+  Optional<mlir::oneflow::DataType> dt =
+      oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue());
+  assert(dt.hasValue());
+  switch (dt.getValue()) {
+    case oneflow::DataType::DT_InvalidDataType:
+      data_type = ::oneflow::DataType::kInvalidDataType;
+      break;
+#define DEFINE_ONE_CASE(datatype) \
+  case oneflow::DataType::DT_##datatype: data_type = ::oneflow::DataType::k##datatype; break;
+      DEFINE_ONE_CASE(Char)
+      DEFINE_ONE_CASE(Float)
+      DEFINE_ONE_CASE(Double)
+      DEFINE_ONE_CASE(Int8)
+      DEFINE_ONE_CASE(Int32)
+      DEFINE_ONE_CASE(Int64)
+      DEFINE_ONE_CASE(UInt8)
+      DEFINE_ONE_CASE(OFRecord)
+      DEFINE_ONE_CASE(Float16)
+      DEFINE_ONE_CASE(TensorBuffer)
+#undef DEFINE_ONE_CASE
+    default: return failure();
+  }
+  return success();
+}
+
 void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &op_conf,
                                        std::string &err_str) {
   auto user_conf = op_conf.mutable_user_conf();
@@ -659,7 +685,7 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
 
     // convert user conf attributes
     auto attr_name = id.str();
-    auto attr = id_attr.second;
+    Attribute attr = id_attr.second;
     auto user_attr = ::oneflow::AttrValue();
     auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
     ::oneflow::AttrType attr_type = job_wrapper.QueryAttrType(op_type_name, attr_name);
@@ -680,29 +706,11 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
         user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
       }
     } else if (attr_type == ::oneflow::kAtDataType) {
-      Optional<mlir::oneflow::DataType> dt =
-          oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue());
-      assert(dt.hasValue());
-      switch (dt.getValue()) {
-        case oneflow::DataType::DT_InvalidDataType:
-          user_attr.set_at_data_type(::oneflow::DataType::kInvalidDataType);
-          break;
-#define DEFINE_ONE_CASE(datatype)                                 \
-  case oneflow::DataType::DT_##datatype:                          \
-    user_attr.set_at_data_type(::oneflow::DataType::k##datatype); \
-    break;
-          DEFINE_ONE_CASE(Char)
-          DEFINE_ONE_CASE(Float)
-          DEFINE_ONE_CASE(Double)
-          DEFINE_ONE_CASE(Int8)
-          DEFINE_ONE_CASE(Int32)
-          DEFINE_ONE_CASE(Int64)
-          DEFINE_ONE_CASE(UInt8)
-          DEFINE_ONE_CASE(OFRecord)
-          DEFINE_ONE_CASE(Float16)
-          DEFINE_ONE_CASE(TensorBuffer)
-#undef DEFINE_ONE_CASE
-        default: err_str = "fail to convert op attr to data type, key: " + id.str(); return;
+      ::oneflow::DataType dt;
+      if (succeeded(ConvertDT(attr, dt))) {
+        user_attr.set_at_data_type(dt);
+      } else {
+        module->emitError("fail to convert op attr to data type, key: " + id.str());
       }
     } else if (attr_type == ::oneflow::kAtListInt32) {
       user_attr.mutable_at_list_int32();
@@ -724,8 +732,14 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
             v.dyn_cast<FloatAttr>().getValue().convertToFloat());
       }
     } else if (attr_type == ::oneflow::kAtListDataType) {
-      err_str = "fail to convert op attr of name: " + attr_name;
-      return;
+      for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+        ::oneflow::DataType dt;
+        if (succeeded(ConvertDT(v, dt))) {
+          user_attr.mutable_at_list_data_type()->add_val(dt);
+        } else {
+          module->emitError("fail to convert op attr to data type, key: " + id.str());
+        }
+      }
     } else if (attr_type == ::oneflow::kAtListShape) {
       err_str = "fail to convert op attr of name: " + attr_name;
       return;
