@@ -30,7 +30,6 @@ DEFAULT_TEST_DATA_PART_NUM = 256
 DEFAULT_IMAGE_SIZE = 224
 
 
-@oneflow_export("serving.ImageNetRecordDataset")
 class ImageNetRecordDataset(object):
     def __init__(
         self,
