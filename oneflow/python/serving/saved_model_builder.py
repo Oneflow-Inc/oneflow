@@ -50,6 +50,7 @@ class ModelBuilder(object):
             self.DEFAULT_SAVED_MODEL_FILE_BASENAME
         )
         self.saved_model_proto_ = saved_model_pb.SavedModel()
+        self.graph_builders_ = {}
 
     @property
     def proto(self):
@@ -67,7 +68,12 @@ class ModelBuilder(object):
 
     def AddFunction(self, func):
         func_name = func.__name__
+        if func_name in self.graph_builders_:
+            raise ValueError("function with name {} already exists".format(func_name))
         graph_builder = GraphBuilder(func_name, self)
+        self.graph_builders_[func_name] = graph_builder
+        if not self.proto.HasField("default_graph_name"):
+            self.proto.default_graph_name = func_name
         return graph_builder
 
     def _check_input_output_name_conflict(self):
@@ -95,6 +101,9 @@ class ModelBuilder(object):
     @session_ctx.try_init_default_session
     def Save(self):
         self._check_input_output_name_conflict()
+        for _, graph_builder in self.graph_builders_.items():
+            if not graph_builder.finished:
+                graph_builder.Finish()
 
         sess = session_ctx.GetDefaultSession()
         for graph_name, graph_def in self.proto.graphs.items():
@@ -153,12 +162,14 @@ class GraphBuilder(object):
                 )
 
             self.proto_ = model_builder.proto.graphs[name]
-            self.model_builder_ = model_builder
+            self.owner_ = model_builder
         else:
             self.proto_ = saved_model_pb.GraphDef()
-            self.model_builder_ = None
+            self.owner_ = None
 
         self.name_ = name
+        self.finished_ = False
+        self.signature_builders_ = {}
 
     @property
     def name(self):
@@ -168,40 +179,43 @@ class GraphBuilder(object):
     def proto(self):
         return self.proto_
 
+    @property
+    def finished(self):
+        return self.finished_
+
     def AddSignature(self, signature_name: str):
         assert isinstance(signature_name, str)
+        if signature_name in self.signature_builders_:
+            raise ValueError("signature name {} already exists".format(signature_name))
         signature_builder = SignatureBuilder(signature_name, self)
+        self.signature_builders_[signature_name] = signature_builder
+        if not self.proto.HasField("default_signature_name"):
+            self.proto.default_signature_name = signature_name
         return signature_builder
 
-    def Complete(self):
+    def Finish(self):
+        assert self.finished is False
         for _, signature_def in self.proto.signatures.items():
-            for input_name, input_def in signature_def.inputs.items():
+            for _, input_def in signature_def.inputs.items():
                 input_lbn = Lbi2Lbn(input_def.lbi)
                 oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
                     self.name, input_lbn
                 )
                 GetInterfaceBlobConf(self.name, input_lbn, input_def.blob_conf)
 
-            for output_name, output_def in signature_def.outputs.items():
+            for _, output_def in signature_def.outputs.items():
                 oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
                     self.name, Lbi2Lbn(output_def.lbi)
                 )
-                output_lbn = Lbi2Lbn(output_def.lbi)
-                output_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
-                    self.name, output_lbn
-                )
 
-        if self.model_builder_ is None:
-            return None
+        self.finished_ = True
 
-        if not self.model_builder_.proto.HasField("default_graph_name"):
-            self.model_builder_.proto.default_graph_name = self.name
-
-        return self.model_builder_
+    def OwnerModelBuilder(self):
+        return self.owner_
 
     def AsDefault(self):
-        if self.model_builder_ is not None:
-            self.model_builder_.proto.default_graph_name = self.name
+        if self.owner_ is not None:
+            self.owner_.proto.default_graph_name = self.name
 
         return self
 
@@ -226,10 +240,10 @@ class SignatureBuilder(object):
                 )
 
             self.proto_ = graph_builder.proto.signatures[name]
-            self.graph_builder_ = graph_builder
+            self.owner_ = graph_builder
         else:
             self.proto_ = job_conf_pb.JobSignatureDef()
-            self.graph_builder_ = None
+            self.owner_ = None
 
         self.name_ = name
 
@@ -275,18 +289,12 @@ class SignatureBuilder(object):
         Lbn2Lbi(lbn, output_def.lbi)
         return self
 
-    def Complete(self):
-        if self.graph_builder_ is None:
-            return None
-
-        if not self.graph_builder_.proto.HasField("default_signature_name"):
-            self.graph_builder_.proto.default_signature_name = self.name
-
-        return self.graph_builder_
+    def OwnerGraphBuilder(self):
+        return self.owner_
 
     def AsDefault(self):
-        if self.graph_builder_ is not None:
-            self.graph_builder_.proto.default_signature_name = self.name
+        if self.owner_ is not None:
+            self.owner_.proto.default_signature_name = self.name
 
         return self
 

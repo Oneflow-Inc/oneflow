@@ -121,7 +121,7 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             signature_builder.Input(input_name, lbn, batch_axis=0)
         for output_name, lbn in output_lbns.items():
             signature_builder.Output(output_name, lbn)
-        signature_builder.Complete().Complete().Save()
+        saved_model_builder.Save()
 
         # test data
         new_batch_size = int(batch_size / 2)
