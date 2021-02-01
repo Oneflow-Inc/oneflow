@@ -324,24 +324,6 @@ def Build121To(self, blob_object, parallel_desc_symbol):
     return ref_blob_object
 
 
-def _NewOpKernelObject(self, parallel_desc_symbol, job_desc_sym, op_conf_sym):
-    object_id = self.NewObjectId(parallel_desc_symbol)
-    instruction = instr_cfg.InstructionProto()
-    instruction.set_instr_type_name("InitOpKernelObject")
-    instruction.set_parallel_desc_symbol_id(parallel_desc_symbol.symbol_id)
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.SymbolOperand(job_desc_sym.symbol_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.SymbolOperand(op_conf_sym.symbol_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.MutOperand(object_id)
-    )
-    self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-    return object_id
-
-
 def _StatelessCall(
     self,
     stream_tag,
@@ -759,7 +741,6 @@ def RegisterMethod4InstructionsBuilder():
     oneflow_api.deprecated.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
     oneflow_api.deprecated.InstructionsBuilder.NewOpKernelObject = NewOpKernelObject
     oneflow_api.deprecated.InstructionsBuilder.Build121To = Build121To
-    oneflow_api.deprecated.InstructionsBuilder._NewOpKernelObject = _NewOpKernelObject
     oneflow_api.deprecated.InstructionsBuilder._StatelessCall = _StatelessCall
     oneflow_api.deprecated.InstructionsBuilder._StatefulCall = _StatefulCall
     oneflow_api.deprecated.InstructionsBuilder._GetOpNodeSignatureSymbol = (

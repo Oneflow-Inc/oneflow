@@ -675,6 +675,21 @@ Maybe<void> InstructionsBuilder::NewScopeSymbol(
   return Maybe<void>::Ok();
 }
 
+Maybe<int64_t> InstructionsBuilder::_NewOpKernelObject(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+    const std::shared_ptr<JobDesc>& job_desc_sym,
+    const std::shared_ptr<OperatorConfSymbol>& op_conf_sym) {
+  int64_t object_id = JUST(NewObjectId(parallel_desc_symbol));
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitOpKernelObject");
+  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_symbol->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(job_desc_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(op_conf_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(object_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return object_id;
+}
+
 Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
   vm::cfg::InstructionProto instruction;
