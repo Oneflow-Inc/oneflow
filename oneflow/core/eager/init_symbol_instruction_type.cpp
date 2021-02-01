@@ -33,8 +33,6 @@ COMMAND(vm::RegisterInstructionType<JobDescInstr>("InitJobDescSymbol"));
 
 COMMAND(Global<symbol::Storage<OperatorConfSymbol>>::SetAllocated(
     new symbol::Storage<OperatorConfSymbol>()));
-// COMMAND(Global<symbol::Storage<OperatorConf>>::SetAllocated(new
-// symbol::Storage<OperatorConf>()));
 using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConfSymbol>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
 
