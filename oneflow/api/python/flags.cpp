@@ -31,7 +31,7 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return true;
 #else
     return false;
-#endif  // _GLIBCXX_USE_CXX11_ABI
+#endif  // _GLIBCXX_USE_CXX11_ABI == 1
   });
 
   m.def("with_mlir", []() {
