@@ -46,6 +46,76 @@ class Tensor {
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
 
+namespace one {
+
+class Tensor {};
+
+class Device {
+ public:
+  Device(DeviceType device_type, int64_t device_id)
+      : device_id_(device_id), device_type_(device_type) {}
+  DeviceType device_type() const { return device_type_; }
+  int64_t device_id() const { return device_id_; }
+
+ private:
+  int64_t device_id_;
+  DeviceType device_type_;
+};
+
+class MirroredTensorImpl {
+ public:
+  MirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                         const std::shared_ptr<Device>& device);
+  virtual ~MirroredTensorImpl() = default;
+
+  std::shared_ptr<Shape> shape() const { return shape_; }
+  DataType dtype() const { return dtype_; }
+  std::shared_ptr<Device> device() const { return device_; }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
+
+ private:
+  std::shared_ptr<Shape> shape_;
+  DataType dtype_;
+  std::shared_ptr<Device> device_;
+};
+
+class LazyMirroredTensorImpl : public MirroredTensorImpl {
+ public:
+  LazyMirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                         const std::shared_ptr<Device>& device);
+  ~LazyMirroredTensorImpl() = default;
+
+ private:
+  std::shared_ptr<Blob> storage_;
+};
+
+class EagerMirroredTensorImpl : public MirroredTensorImpl {
+ public:
+  EagerMirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                          const std::shared_ptr<Device>& device);
+  ~EagerMirroredTensorImpl() = default;
+
+ private:
+  std::shared_ptr<Blob> storage_;
+};
+
+class MirroredTensor : public Tensor {
+ public:
+  MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
+                 const std::shared_ptr<Device>& device);
+  ~MirroredTensor() = default;
+
+  std::shared_ptr<Shape> shape() const { return impl_->shape(); }
+  DataType dtype() const { return impl_->dtype(); }
+  std::shared_ptr<Device> device() const { return impl_->device(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return impl_->parallel_conf(); }
+
+ private:
+  std::shared_ptr<MirroredTensorImpl> impl_;
+};
+
+}  // namespace one
+
 namespace user_op {
 
 class Tensor {
