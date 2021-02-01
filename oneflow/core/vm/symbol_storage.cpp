@@ -60,7 +60,7 @@ Maybe<StringSymbol> NewSymbol<StringSymbol>(
 template<>
 Maybe<OperatorConfSymbol> NewSymbol<OperatorConfSymbol>(
     int64_t symbol_id, const typename ConstructArgType4Symbol<OperatorConfSymbol>::type& data) {
-  return std::make_shared<OperatorConfSymbol>(symbol_id, std::make_shared<cfg::OperatorConf>(data));
+  return std::make_shared<OperatorConfSymbol>(symbol_id, data);
 }
 
 }  // namespace detail
