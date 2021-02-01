@@ -38,7 +38,6 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.python_interpreter_util as python_interpreter_util
-from oneflow.python.eager.opkernel_object import OpKernelObject
 import oneflow
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -315,7 +314,7 @@ def NewOpKernelObject(self, op_conf):
     object_id = self._NewOpKernelObject(
         parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
     )
-    return OpKernelObject(object_id, op_conf, self.object_releaser())
+    return oneflow_api.OpKernelObject(object_id, op_conf, self.object_releaser())
 
 
 def Build121To(self, blob_object, parallel_desc_symbol):
