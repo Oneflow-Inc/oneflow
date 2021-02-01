@@ -45,8 +45,8 @@ struct SeluGradFunctor<half> {
 
 namespace {
 
-template<template<typename> class Opt, typename T>
-struct ElemwiseSeluFunctor<DeviceType::kGPU, Opt, T> final {
+template<typename T>
+struct ElemwiseSeluFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* out,
                   const T* in) {
     OF_CUDA_CHECK(oneflow::cuda::elementwise::Unary(SeluFunctor<T>(scale, alpha), elem_cnt, out, in,
@@ -54,8 +54,8 @@ struct ElemwiseSeluFunctor<DeviceType::kGPU, Opt, T> final {
   }
 };
 
-template<template<typename> class Opt, typename T>
-struct ElemwiseSeluGradFunctor<DeviceType::kGPU, Opt, T> final {
+template<typename T>
+struct ElemwiseSeluGradFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* dx,
                   const T* y, const T* dy) {
     OF_CUDA_CHECK(oneflow::cuda::elementwise::Binary(SeluGradFunctor<T>(scale, alpha), elem_cnt, dx,

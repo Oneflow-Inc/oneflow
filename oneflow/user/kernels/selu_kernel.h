@@ -43,13 +43,13 @@ struct SeluGradFunctor {
 
 namespace {
 
-template<DeviceType device_type, template<typename> class Opt, typename T>
+template<DeviceType device_type, typename T>
 struct ElemwiseSeluFunctor final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* out,
                   const T* in);
 };
 
-template<DeviceType device_type, template<typename> class Opt, typename T>
+template<DeviceType device_type, typename T>
 struct ElemwiseSeluGradFunctor final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* dx,
                   const T* x, const T* dy);
@@ -57,7 +57,7 @@ struct ElemwiseSeluGradFunctor final {
 
 }  // namespace
 
-template<DeviceType device_type, template<typename> class Opt, typename T>
+template<DeviceType device_type, typename T>
 class ElemwiseSeluKernel final : public user_op::OpKernel {
  public:
   ElemwiseSeluKernel() = default;
@@ -72,13 +72,13 @@ class ElemwiseSeluKernel final : public user_op::OpKernel {
     const double scale = ctx->Attr<double>("scale");
     const double alpha = ctx->Attr<double>("alpha");
     const int64_t elem_cnt = in_tensor->shape().elem_cnt();
-    ElemwiseSeluFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, scale, alpha, out_ptr,
-                                               in_ptr);
+    ElemwiseSeluFunctor<device_type, T>()(ctx->device_ctx(), elem_cnt, scale, alpha, out_ptr,
+                                          in_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, template<typename> class Opt, typename T>
+template<DeviceType device_type, typename T>
 class ElemwiseSeluGradKernel final : public user_op::OpKernel {
  public:
   ElemwiseSeluGradKernel() = default;
@@ -96,20 +96,19 @@ class ElemwiseSeluGradKernel final : public user_op::OpKernel {
     T* dx_ptr = dx_tensor->mut_dptr<T>();
     const int64_t elem_cnt = x_tensor->shape().elem_cnt();
 
-    ElemwiseSeluGradFunctor<device_type, Opt, T>()(ctx->device_ctx(), elem_cnt, scale, alpha,
-                                                   dx_ptr, x_ptr, dy_ptr);
+    ElemwiseSeluGradFunctor<device_type, T>()(ctx->device_ctx(), elem_cnt, scale, alpha, dx_ptr,
+                                              x_ptr, dy_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SELU_KERNELS(device, dtype)                                            \
-  REGISTER_USER_KERNEL("selu")                                                          \
-      .SetCreateFn<ElemwiseSeluKernel<device, SeluFunctor, dtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("selu_grad")                                                     \
-      .SetCreateFn<ElemwiseSeluGradKernel<device, SeluGradFunctor, dtype>>()            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+#define REGISTER_SELU_KERNELS(device, dtype)                                                     \
+  REGISTER_USER_KERNEL("selu").SetCreateFn<ElemwiseSeluKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == device)                                                        \
+      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));                           \
+  REGISTER_USER_KERNEL("selu_grad")                                                              \
+      .SetCreateFn<ElemwiseSeluGradKernel<device, dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
