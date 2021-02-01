@@ -148,8 +148,8 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   return success();
 }
 
-LogicalResult StringifyDataType(const ::oneflow::AttrValue &value, std::string &stringified) {
-  switch (value.at_data_type()) {
+LogicalResult StringifyDataType(::oneflow::DataType value, std::string &stringified) {
+  switch (value) {
     case ::oneflow::DataType::kInvalidDataType:
       stringified = stringifyEnum(oneflow::DataType::DT_InvalidDataType).str();
       break;
@@ -233,7 +233,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     }
     else if (value.has_at_data_type()) {
       std::string stringified = "";
-      if (failed(StringifyDataType(value, stringified))) {
+      if (failed(StringifyDataType(value.at_data_type(), stringified))) {
         module.emitError("fail to convert op attr, key: " + name);
         return failure();
       }
@@ -242,11 +242,9 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_list_data_type()) {
-      llvm::ArrayRef<int> dt_list(
-          {value.at_list_data_type().val().begin(), value.at_list_data_type().val().end()});
-      auto stringified_list = llvm::map_range(dt_list, [&](int t) {
+      auto stringified_list = llvm::map_range(value.at_list_data_type().val(), [&](int t) {
         std::string stringified = "";
-        assert(succeeded(StringifyDataType(value, stringified)));
+        assert(succeeded(StringifyDataType(static_cast<::oneflow::DataType>(t), stringified)));
         return stringified;
       });
       attr_vec.emplace_back(b.getNamedAttr(
@@ -716,14 +714,16 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
       user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
     } else if (attr_type == ::oneflow::kAtShape) {
       for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-        user_attr.mutable_at_shape()->add_dim(*int_v.getRawData());
+        assert(int_v.isSignedIntN(64));
+        user_attr.mutable_at_shape()->add_dim(int_v.getSExtValue());
       }
     } else if (attr_type == ::oneflow::kAtDataType) {
       ::oneflow::DataType dt;
       if (succeeded(ConvertDT(attr, dt))) {
         user_attr.set_at_data_type(dt);
       } else {
-        module->emitError("fail to convert op attr to data type, key: " + id.str());
+        err_str = "fail to convert op attr to data type, key: " + id.str();
+        return;
       }
     } else if (attr_type == ::oneflow::kAtListInt32) {
       user_attr.mutable_at_list_int32();
@@ -750,15 +750,22 @@ void Importer::ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &o
         if (succeeded(ConvertDT(v, dt))) {
           user_attr.mutable_at_list_data_type()->add_val(dt);
         } else {
-          module->emitError("fail to convert op attr to data type, key: " + id.str());
+          err_str = "fail to convert op attr to data type, key: " + id.str();
+          return;
         }
       }
     } else if (attr_type == ::oneflow::kAtListShape) {
-      err_str = "fail to convert op attr of name: " + attr_name;
-      return;
+      for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+        ::oneflow::ShapeProto *shape_ptr = user_attr.mutable_at_list_shape()->add_val();
+        for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
+          assert(int_v.isSignedIntN(64));
+          shape_ptr->mutable_dim()->Add(int_v.getSExtValue());
+        }
+      }
     } else if (attr_type == ::oneflow::kAtListString) {
-      err_str = "fail to convert op attr of name: " + attr_name;
-      return;
+      for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+        user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
+      }
     } else {
       err_str = "fail to convert op attr of name: " + attr_name;
       return;
@@ -865,15 +872,17 @@ void RoundTripOneFlowJob(
   const bool is_strict = std::getenv("ONEFLOW_MLIR_STRICT") != nullptr;
   if (succeeded(imp.processJob())) {
     applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
+
+    std::string mlir;
+    llvm::raw_string_ostream os(mlir);
+    module->print(os);
+    job_wrapper.DumpMLIR("RoundTripOneFlowJob." + job->job_conf().job_name() + ".mlir", mlir);
+
     if (failed(imp.tryToUpdateJob())) {
       std::cerr << "fail to update job with IR, job will stay intact, job_name: "
                 << job->job_conf().job_name() << "\n";
       if (is_strict) { exit(EXIT_FAILURE); }
     }
-    std::string mlir;
-    llvm::raw_string_ostream os(mlir);
-    module->print(os);
-    job_wrapper.DumpMLIR("RoundTripOneFlowJob." + job->job_conf().job_name() + ".mlir", mlir);
   } else {
     std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
     if (is_strict) { exit(EXIT_FAILURE); }
