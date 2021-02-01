@@ -100,6 +100,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   std::unique_ptr<Shape> input_blob_fastest_time_shape_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
+  std::unique_ptr<Shape> parallel_hierarchy_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
