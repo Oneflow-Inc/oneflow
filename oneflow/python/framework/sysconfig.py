@@ -23,6 +23,7 @@ import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python_gen.sysconfig import generated_compile_flags
 from typing import List
+import oneflow_api
 
 
 @oneflow_export("sysconfig.get_include")
@@ -40,6 +41,8 @@ def get_compile_flags() -> List[str]:
     flags = []
     flags.append("-I{}".format(get_include()))
     flags.append("-DHALF_ENABLE_CPP11_USER_LITERALS=0")
+    if oneflow_api.with_cuda():
+        generated_compile_flags.append("-DWITH_CUDA")
     flags.extend(generated_compile_flags)
     return flags
 
