@@ -682,6 +682,38 @@ def conv3d(
     Returns:
         oneflow_api.BlobDesc: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
 
+    The shape formula is (data_format is 'NCDHW'): 
+
+    When `padding` is a tuple, the output shape is: 
+
+        .. math:: 
+
+            & D_{out} = \frac{D_{in}+2*padding\_height - dilation[0]*(kernel\_size[0]-1)-1}{stride[0]} + 1 
+
+            & H_{out} = \frac{H_{in}+2*padding\_height - dilation[1]*(kernel\_size[1]-1)-1}{stride[1]} + 1 
+
+            & W_{out} = \frac{W_{in}+2*padding\_width - dilation[2]*(kernel\_size[2]-1)-1}{stride[2]} + 1
+
+    if `padding` == "SAME", the output shape is: 
+        
+        .. math:: 
+
+            & D_{out} = \frac{D_{in}+stride[0]+1}{stride[0]} + 1
+
+            & H_{out} = \frac{H_{in}+stride[1]+1}{stride[1]} + 1
+
+            & W_{out} = \frac{W_{in}+stride[2]+1}{stride[2]} + 1
+
+    if `padding` == "VALID", the output shape is: 
+
+        .. math:: 
+
+            & D_{out} = \frac{D_{in} - (dilation[0]*(kernel\_size[0]-1)+1)}{stride[0]} + 1
+
+            & H_{out} = \frac{H_{in} - (dilation[1]*(kernel\_size[1]-1)+1)}{stride[1]} + 1
+
+            & W_{out} = \frac{W_{in} - (dilation[2]*(kernel\_size[2]-1)+1)}{stride[2]} + 1
+
     For example: 
 
     Example 1: 
