@@ -27,7 +27,6 @@ import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow_api.oneflow.core.job.scope as scope_cfg
@@ -285,13 +284,13 @@ def MakeLazyRefBlobObject(self, interface_op_name):
 
 
 def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
-    if object_storage.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
-        return object_storage.GetSharedOpKernelObject4ParallelConfSymbol(
+    if oneflow_api.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
+        return oneflow_api.GetSharedOpKernelObject4ParallelConfSymbol(
             parallel_desc_sym
         )
     object_id = self.NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
     obj = oneflow_api.Object(object_id, parallel_desc_sym)
-    object_storage.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
+    oneflow_api.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
     return obj
 
 
