@@ -21,6 +21,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -31,12 +32,15 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 from google.protobuf import text_format
 
 import oneflow
 import oneflow_api
 import numpy as np
 import os
+
+default_blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def Interpret(op_attribute, parallel_conf, blob_register):
@@ -178,10 +182,17 @@ def _Watch(op_attribute, parallel_conf, blob_register):
     uuid = op_attribute.op_conf.foreign_watch_conf.handler_uuid
     lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
     in_blob_object = blob_register.GetObject4BlobName(lbn)
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
     if in_blob_object.op_arg_parallel_attr.is_mirrored():
-        blob = remote_blob_util.EagerMirroredBlob(lbi, in_blob_object)
+        blob = oneflow_api.EagerMirroredBlob(lbi, in_blob_object, default_blob_register)
     else:
-        blob = remote_blob_util.EagerConsistentBlob(lbi, in_blob_object)
+        blob = oneflow_api.EagerConsistentBlob(
+            lbi, in_blob_object, default_blob_register
+        )
     uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
     assert uuid in uuid2watch_handler
     uuid2watch_handler[uuid](blob)
@@ -206,10 +217,15 @@ def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
         "%s/%s" % (lbi.op_name, lbi.blob_name)
     )
     mirrored_sig_map = op_attribute.mirrored_signature.bn_in_op2opt_mirrored_parallel
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
     if mirrored_sig_map[obn].HasField("mirrored_parallel"):
-        return remote_blob_util.EagerMirroredBlob(lbi, blob_object)
+        return oneflow_api.EagerMirroredBlob(lbi, blob_object, default_blob_register)
     else:
-        return remote_blob_util.EagerConsistentBlob(lbi, blob_object)
+        return oneflow_api.EagerConsistentBlob(lbi, blob_object, default_blob_register)
 
 
 def EagerInitVariableBlob(sess, var_op_conf, var_blob):

@@ -75,6 +75,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "squeeze",
                                "expand_dims",
                                "cast_to_static_shape",
+                               "parallel_cast",
                                "repeat",
                                "unpack",
                                "pack"};
