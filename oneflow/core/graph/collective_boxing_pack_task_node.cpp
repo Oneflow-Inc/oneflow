@@ -48,11 +48,12 @@ void CollectiveBoxingPackTaskNode::BuildExecGphAndRegst() {
   OperatorConf op_conf;
   op_conf.set_name("System-Collective-Boxing-Pack-" + NewUniqueId());
   op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
-  *op_conf.mutable_collective_boxing_pack_conf()->mutable_lbi() = lbi_;
-  logical_shape_.ToProto(op_conf.mutable_collective_boxing_pack_conf()->mutable_logical_shape());
-  *op_conf.mutable_collective_boxing_pack_conf()->mutable_src_sbp_parallel() = src_sbp_parallel_;
-  *op_conf.mutable_collective_boxing_pack_conf()->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
-  op_conf.mutable_collective_boxing_pack_conf()->set_num_ranks(parallel_num_);
+  auto* collective_boxing_pack_conf = op_conf.mutable_collective_boxing_pack_conf();
+  *collective_boxing_pack_conf->mutable_lbi() = lbi_;
+  logical_shape_.ToProto(collective_boxing_pack_conf->mutable_logical_shape());
+  *collective_boxing_pack_conf->mutable_src_sbp_parallel() = src_sbp_parallel_;
+  *collective_boxing_pack_conf->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
+  collective_boxing_pack_conf->set_num_ranks(parallel_num_);
   std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));

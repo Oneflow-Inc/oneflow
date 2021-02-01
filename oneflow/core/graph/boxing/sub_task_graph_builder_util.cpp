@@ -102,8 +102,8 @@ bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const cfg::ErrorProto& erro
 }
 
 int64_t SubTskGphBuilderUtil::GetDistance(
-    const int64_t src_machine_id, const int64_t src_dev_phy_id, const DeviceType& src_device_type,
-    const int64_t dst_machine_id, const int64_t dst_dev_phy_id, const DeviceType& dst_device_type) {
+    const int64_t src_machine_id, const int64_t src_dev_phy_id, const DeviceType src_device_type,
+    const int64_t dst_machine_id, const int64_t dst_dev_phy_id, const DeviceType dst_device_type) {
   if (src_machine_id != dst_machine_id) {
     return kDistanceDiffMachine;
   } else if (src_device_type != dst_device_type) {
@@ -135,17 +135,17 @@ int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
 
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
   const int64_t src_machine_id = src->machine_id();
-  const DeviceType& src_device_type = src->device_type();
+  const DeviceType src_device_type = src->device_type();
   const int64_t src_gpu_dev_phy_id =
       (src_device_type == DeviceType::kGPU)
           ? Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id())
-          : -1;
+          : 0;
   const int64_t dst_machine_id = dst->machine_id();
-  const DeviceType& dst_device_type = dst->device_type();
+  const DeviceType dst_device_type = dst->device_type();
   const int64_t dst_gpu_dev_phy_id =
       (dst_device_type == DeviceType::kGPU)
           ? Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id())
-          : -1;
+          : 0;
   return GetDistance(src_machine_id, src_gpu_dev_phy_id, src_device_type, dst_machine_id,
                      dst_gpu_dev_phy_id, dst_device_type);
 }

@@ -46,8 +46,8 @@ struct SubTskGphBuilderUtil {
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
   static int64_t GetDistance(const int64_t src_machine_id, const int64_t src_dev_phy_id,
-                             const DeviceType& src_device_type, const int64_t dst_machine_id,
-                             const int64_t dst_dev_phy_id, const DeviceType& dst_device_type);
+                             const DeviceType src_device_type, const int64_t dst_machine_id,
+                             const int64_t dst_dev_phy_id, const DeviceType dst_device_type);
   static int64_t GetDistance(const ParallelDesc& src_parallel_desc, const int64_t src_parallel_id,
                              const ParallelDesc& dst_parallel_desc, const int64_t dst_parallel_id);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
