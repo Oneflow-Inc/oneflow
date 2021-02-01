@@ -247,9 +247,11 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
         assert(succeeded(StringifyDataType(static_cast<::oneflow::DataType>(t), stringified)));
         return stringified;
       });
-      attr_vec.emplace_back(b.getNamedAttr(
-          name, b.getStrArrayAttr(
-                    std::vector<StringRef>({stringified_list.begin(), stringified_list.end()}))));
+      std::vector<std::string> stringified_vector = {stringified_list.begin(),
+                                                     stringified_list.end()};
+      attr_vec.emplace_back(
+          b.getNamedAttr(name, b.getStrArrayAttr(std::vector<StringRef>(
+                                   {stringified_vector.begin(), stringified_vector.end()}))));
     }
     else if (value.has_at_list_shape()) {
       auto dense_attr_list = llvm::map_range(
@@ -632,7 +634,7 @@ void ConvertUseropOutputs(Operation *op, ::oneflow::UserOpConf *user_conf, std::
 
 LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType &data_type) {
   Optional<mlir::oneflow::DataType> dt =
-      oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue());
+      oneflow::symbolizeEnum<oneflow::DataType>(attr.dyn_cast<StringAttr>().getValue().trim());
   assert(dt.hasValue());
   switch (dt.getValue()) {
     case oneflow::DataType::DT_InvalidDataType:
