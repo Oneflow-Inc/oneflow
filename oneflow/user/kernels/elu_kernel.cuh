@@ -20,21 +20,20 @@ namespace oneflow {
 
 template<>
 struct EluFunctor<half> {
-  __host__ __device__ explicit EluFunctor(double alpha)
-      : alpha(alpha), float_functor(EluFunctor<float>(alpha)) {}
-  __device__ half operator()(half x) const { return __float2half(float_functor(__half2float(x))); }
-  const double alpha;
+  OF_DEVICE_FUNC explicit EluFunctor(float alpha) : alpha(alpha), float_functor(EluFunctor<float>(alpha)) {}
+  OF_DEVICE_FUNC half operator()(half x) const { return __float2half(float_functor(__half2float(x))); }
+  const float alpha;
   EluFunctor<float> float_functor;
 };
 
 template<>
 struct EluGradFunctor<half> {
-  OF_DEVICE_FUNC explicit EluGradFunctor(double alpha)
+  OF_DEVICE_FUNC explicit EluGradFunctor(float alpha)
       : alpha(alpha), float_functor(EluGradFunctor<float>(alpha)) {}
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
-  const double alpha;
+  const float alpha;
   EluGradFunctor<float> float_functor;
 };
 
@@ -45,9 +44,5 @@ struct EluGradFunctor<half> {
 INSTANTIATE_ELU_GPU_FUNCTORS(half);
 INSTANTIATE_ELU_GPU_FUNCTORS(double);
 INSTANTIATE_ELU_GPU_FUNCTORS(float);
-
-REGISTER_ELU_KERNEL(DeviceType::kGPU, half);
-REGISTER_ELU_KERNEL(DeviceType::kGPU, float);
-REGISTER_ELU_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace oneflow

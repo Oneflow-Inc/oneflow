@@ -21,20 +21,20 @@ namespace oneflow {
 
 template<typename T>
 struct EluFunctor {
-  OF_DEVICE_FUNC explicit EluFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit EluFunctor(float alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
     return (x > static_cast<T>(0)) ? x : static_cast<T>(alpha * (exp(x) - static_cast<T>(1)));
   }
-  const double alpha;
+  const float alpha;
 };
 
 template<typename T>
 struct EluGradFunctor {
-  OF_DEVICE_FUNC explicit EluGradFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit EluGradFunctor(float alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return (x > static_cast<T>(0)) ? dy : static_cast<T>(dy * alpha * (exp(x)));
   }
-  const double alpha;
+  const float alpha;
 };
 
 #define REGISTER_ELU_KERNEL(device, dtype)                                              \
@@ -42,7 +42,7 @@ struct EluGradFunctor {
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
         return new UnaryElemwiseXpuKernel<device, EluFunctor<dtype>, dtype>(            \
             [](user_op::KernelComputeContext* ctx) {                                    \
-              return EluFunctor<dtype>(ctx->Attr<double>("alpha"));                     \
+              return EluFunctor<dtype>(ctx->Attr<float>("alpha"));                     \
             },                                                                          \
             "out", "in");                                                               \
       })                                                                                \
@@ -52,7 +52,7 @@ struct EluGradFunctor {
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
         return new BinaryElemwiseXpuKernel<device, EluGradFunctor<dtype>, dtype>(       \
             [](user_op::KernelComputeContext* ctx) {                                    \
-              return EluGradFunctor<dtype>(ctx->Attr<double>("alpha"));                 \
+              return EluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                 \
             },                                                                          \
             "dx", "x", "dy");                                                           \
       })                                                                                \
