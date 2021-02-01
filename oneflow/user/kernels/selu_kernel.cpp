@@ -23,7 +23,7 @@ template<template<typename> class Opt, typename T>
 struct ElemwiseSeluFunctor<DeviceType::kCPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* out,
                   const T* in) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = Opt<T>(scale, alpha)(in[i]); }
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = SeluFunctor<T>(scale, alpha)(in[i]); }
   }
 };
 
@@ -31,7 +31,7 @@ template<template<typename> class Opt, typename T>
 struct ElemwiseSeluGradFunctor<DeviceType::kCPU, Opt, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, double scale, double alpha, T* dx,
                   const T* y, const T* dy) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { dx[i] = Opt<T>(scale, alpha)(y[i], dy[i]); }
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { dx[i] = SeluGradFunctor<T>(scale, alpha)(y[i], dy[i]); }
   }
 };
 
