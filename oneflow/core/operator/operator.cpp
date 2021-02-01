@@ -450,6 +450,7 @@ Maybe<void> Operator::InferParallelHierarchy(
         CHECK_EQ_OR_RETURN(*parallel_hierarchy, *op_parallel_hierarchy);
       }
     }
+    CHECK_EQ_OR_RETURN(op_parallel_hierarchy->elem_cnt(), parallel_desc.parallel_num());
     *shape = *op_parallel_hierarchy;
   }
   return Maybe<void>::Ok();
