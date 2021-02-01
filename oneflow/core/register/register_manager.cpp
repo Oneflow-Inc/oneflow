@@ -33,10 +33,24 @@ void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
         == false);
 }
 
+struct PackedChunkInfo {
+  MemoryCase mem_case;
+  int64_t size;
+  int64_t offset;
+  char* ptr;
+  PackedChunkInfo(const MemoryCase& mem, int64_t s) {
+    mem_case = mem;
+    size = s;
+    offset = 0;
+    ptr = nullptr;
+  }
+};
+
 }  // namespace
 
 RegstMgr::RegstMgr(const Plan& plan) {
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
@@ -44,19 +58,53 @@ RegstMgr::RegstMgr(const Plan& plan) {
     char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
+
+  HashMap<int64_t, PackedChunkInfo> zone_id2chunk_info;
+  HashSet<int64_t> all_block_ids;
+  HashSet<int64_t> packed_chunk_block_ids;
   for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
     if (mem_block.machine_id() != this_machine_id) { continue; }
     if (mem_block.mem_size() == 0) { continue; }
-    char* mem_block_ptr = nullptr;
+    CHECK(all_block_ids.insert(mem_block.mem_block_id()).second);
     if (mem_block.has_chunk_id()) {
       CHECK(mem_block.has_chunk_offset());
       CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
-      mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
+      char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
+      CHECK(mem_block_id2ptr_.emplace(mem_block.mem_block_id(), mem_block_ptr).second);
     } else {
-      mem_block_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(mem_block.mem_case(), mem_block.mem_size());
+      CHECK(packed_chunk_block_ids.insert(mem_block.mem_block_id()).second);
+      int64_t zone_id = MemoryCaseUtil::GenMemZoneUniqueId(this_machine_id, mem_block.mem_case());
+      if (zone_id2chunk_info.find(zone_id) == zone_id2chunk_info.end()) {
+        zone_id2chunk_info.emplace(zone_id,
+                                   PackedChunkInfo(mem_block.mem_case(), mem_block.mem_size()));
+      } else {
+        zone_id2chunk_info.at(zone_id).size += mem_block.mem_size();
+      }
     }
-    CHECK(mem_block_id2ptr_.emplace(mem_block.mem_block_id(), mem_block_ptr).second);
+  }
+
+  for (auto& pair : zone_id2chunk_info) {
+    pair.second.ptr =
+        Global<MemoryAllocator>::Get()->Allocate(pair.second.mem_case, pair.second.size);
+  }
+
+  for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
+    int64_t mem_block_id = mem_block.mem_block_id();
+    if (packed_chunk_block_ids.find(mem_block_id) == packed_chunk_block_ids.end()) { continue; }
+    CHECK(mem_block_id2ptr_.find(mem_block_id) == mem_block_id2ptr_.end());
+    int64_t zone_id = MemoryCaseUtil::GenMemZoneUniqueId(this_machine_id, mem_block.mem_case());
+    CHECK(zone_id2chunk_info.find(zone_id) != zone_id2chunk_info.end());
+    PackedChunkInfo* info = &(zone_id2chunk_info.at(zone_id));
+    char* mem_block_ptr = info->ptr + info->offset;
+    info->offset += mem_block.mem_size();
+    CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
+    CHECK_LE(info->offset, info->size);
+  }
+
+  // Check valid
+  for (const auto& pair : zone_id2chunk_info) { CHECK_EQ(pair.second.size, pair.second.offset); }
+  for (int64_t mem_block_id : all_block_ids) {
+    CHECK(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
   }
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != this_machine_id) { continue; }
