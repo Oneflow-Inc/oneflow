@@ -285,9 +285,7 @@ def MakeLazyRefBlobObject(self, interface_op_name):
 
 def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
     if oneflow_api.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
-        return oneflow_api.GetSharedOpKernelObject4ParallelConfSymbol(
-            parallel_desc_sym
-        )
+        return oneflow_api.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
     object_id = self.NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
     obj = oneflow_api.Object(object_id, parallel_desc_sym)
     oneflow_api.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
