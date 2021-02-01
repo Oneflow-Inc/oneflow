@@ -529,21 +529,20 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
   for (const LogicalBlobId& lbi : lbis) {
-    std::vector<TaskNode*> src_nodes;
+    std::vector<TaskNode*> in_nodes;
     if (lbis.size() == 1) {
-      src_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
+      in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
     } else {
       for (CompTaskNode* src_node : sorted_src_comp_tasks) {
         auto* identity_node = NewNode<BoxingIdentityTaskNode>();
         identity_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi);
         Connect<TaskNode>(src_node, NewEdge(), identity_node);
-        src_nodes.push_back(identity_node);
+        in_nodes.push_back(identity_node);
       }
     }
-    std::vector<TaskNode*> dst_nodes;
-    dst_nodes.reserve(sorted_dst_comp_tasks.size());
+    std::vector<TaskNode*> out_nodes;
+    out_nodes.reserve(sorted_dst_comp_tasks.size());
     std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
-    sorted_ctrl_tasks.resize(sorted_dst_comp_tasks.size());
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -552,17 +551,20 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), src_nodes, &dst_nodes, &sorted_ctrl_tasks,
+        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
         *src_parallel_desc, *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel,
         *src_logical->out_blob_time_shape()));
     boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(), dst_logical->SoleOp()->op_name(),
                         *src_parallel_desc, *dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
                         lbi, blob_desc);
-    sub_tsk_gph_builder_ctx_->ConnectAll121(dst_nodes, sorted_dst_comp_tasks);
-    FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
-      for (TaskNode* ctrl_in_node : sorted_ctrl_tasks.at(i)) {
-        Connect<TaskNode>(ctrl_in_node, NewEdge(), sorted_dst_comp_tasks.at(i));
-        ctrl_in_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i));
+    sub_tsk_gph_builder_ctx_->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
+    if (!sorted_ctrl_tasks.empty()) {
+      CHECK_EQ(sorted_ctrl_tasks.size(), sorted_dst_comp_tasks.size());
+      FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
+        for (TaskNode* ctrl_node : sorted_ctrl_tasks.at(i)) {
+          Connect<TaskNode>(ctrl_node, NewEdge(), sorted_dst_comp_tasks.at(i));
+          ctrl_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i));
+        }
       }
     }
   }

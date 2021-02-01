@@ -136,18 +136,26 @@ int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
   const int64_t src_machine_id = src->machine_id();
   const DeviceType src_device_type = src->device_type();
-  const int64_t src_gpu_dev_phy_id =
-      (src_device_type == DeviceType::kGPU)
-          ? Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id())
-          : 0;
+  int64_t src_dev_phy_id;
+  if (src_device_type == DeviceType::kGPU) {
+    src_dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id());
+  } else if (src_device_type == DeviceType::kCPU) {
+    src_dev_phy_id = 0;
+  } else {
+    UNIMPLEMENTED();
+  }
   const int64_t dst_machine_id = dst->machine_id();
   const DeviceType dst_device_type = dst->device_type();
-  const int64_t dst_gpu_dev_phy_id =
-      (dst_device_type == DeviceType::kGPU)
-          ? Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id())
-          : 0;
-  return GetDistance(src_machine_id, src_gpu_dev_phy_id, src_device_type, dst_machine_id,
-                     dst_gpu_dev_phy_id, dst_device_type);
+  int64_t dst_dev_phy_id;
+  if (dst_device_type == DeviceType::kGPU) {
+    dst_dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id());
+  } else if (dst_device_type == DeviceType::kCPU) {
+    dst_dev_phy_id = 0;
+  } else {
+    UNIMPLEMENTED();
+  }
+  return GetDistance(src_machine_id, src_dev_phy_id, src_device_type, dst_machine_id,
+                     dst_dev_phy_id, dst_device_type);
 }
 
 int64_t SubTskGphBuilderUtil::FindNearestSrcParallelId(const ParallelDesc& from_parallel_desc,
@@ -156,13 +164,14 @@ int64_t SubTskGphBuilderUtil::FindNearestSrcParallelId(const ParallelDesc& from_
   int64_t nearest_from_parallel_idx = -1;
   int64_t nearest_distance = SubTskGphBuilderUtil::kDistanceMax;
   for (int64_t i = 0; i < from_parallel_desc.parallel_num(); ++i) {
-    int64_t distance =
+    const int64_t distance =
         SubTskGphBuilderUtil::GetDistance(from_parallel_desc, i, to_parallel_desc, to_parallel_id);
     if (distance < nearest_distance) {
       nearest_from_parallel_idx = i;
       nearest_distance = distance;
     }
   }
+  CHECK_NE(nearest_from_parallel_idx, -1);
   return nearest_from_parallel_idx;
 }
 

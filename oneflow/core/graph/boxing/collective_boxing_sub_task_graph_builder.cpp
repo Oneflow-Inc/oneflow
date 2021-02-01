@@ -219,6 +219,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
       if (root_parallel_id == -1) { return Error::BoxingNotSupportedError(); }
 
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingReduce-" + NewUniqueId();
+      sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         TaskNode* in_node = sorted_in_tasks.at(i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();

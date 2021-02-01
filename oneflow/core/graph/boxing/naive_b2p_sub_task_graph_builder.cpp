@@ -61,8 +61,10 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
 #else
           UNIMPLEMENTED();
 #endif
-        } else {
+        } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
           thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(out_machine_id);
+        } else {
+          UNIMPLEMENTED();
         }
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
         zeros_node->Init(out_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
