@@ -25,6 +25,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return false;
 #endif  // WITH_CUDA
   });
+
+  m.def("use_cxx11_abi", []() {
+#if _GLIBCXX_USE_CXX11_ABI == 1
+    return true;
+#else
+    return false;
+#endif  // _GLIBCXX_USE_CXX11_ABI
+  });
 }
 
 }  // namespace oneflow

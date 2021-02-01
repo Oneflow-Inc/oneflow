@@ -21,7 +21,6 @@ import importlib.util
 
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python_gen.sysconfig import generated_compile_flags
 from typing import List
 import oneflow_api
 
@@ -41,8 +40,13 @@ def get_compile_flags() -> List[str]:
     flags = []
     flags.append("-I{}".format(get_include()))
     flags.append("-DHALF_ENABLE_CPP11_USER_LITERALS=0")
-    if oneflow_api.with_cuda():
+    generated_compile_flags = []
+    if oneflow_api.flags.with_cuda():
         generated_compile_flags.append("-DWITH_CUDA")
+    if oneflow_api.flags.use_cxx11_abi():
+        generated_compile_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
+    else:
+        generated_compile_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
     flags.extend(generated_compile_flags)
     return flags
 
