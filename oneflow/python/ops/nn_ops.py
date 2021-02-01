@@ -4282,7 +4282,15 @@ def selu(
 				scale * (x & \text{ if } x \gt 0  \\
                 \alpha*(exp(x)-1) & \text{ if } x \le 0) \\
     		    \end{cases}
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        scale (float, optional): The `scale` value for the SELU formula. Defaults to 1.0507009873554804934193349852946.
+        alpha (float, optional): The `alpha` value for the SELU formula. Defaults to 1.6732632423543772848170429916717.
+        name (Optional[str], optional): The name for the operator. Defaults to None.
 
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor.
+    
     For example:
 
     .. code-block:: python 
@@ -4301,15 +4309,6 @@ def selu(
         out = selu_job(x)
 
         # output [-1.7050093  1.050701   3.6774535]
-
-    Args:
-        x (oneflow_api.BlobDesc): The input Tensor. 
-        scale (float, optional): The `scale` value for the SELU formula. Defaults to 1.0507009873554804934193349852946.
-        alpha (float, optional): The `alpha` value for the SELU formula. Defaults to 1.6732632423543772848170429916717.
-        name (Optional[str], optional): The name for the operator. Defaults to None.
-
-    Returns:
-        oneflow_api.BlobDesc: The activated Tensor.
     """
     scale = float(scale)
     assert 1.0 < scale, "scale value should be larger than 1.0"
