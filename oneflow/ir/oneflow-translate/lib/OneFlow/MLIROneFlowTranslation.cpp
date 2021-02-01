@@ -253,6 +253,14 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
           name, b.getStrArrayAttr(
                     std::vector<StringRef>({stringified_list.begin(), stringified_list.end()}))));
     }
+    else if (value.has_at_list_shape()) {
+      auto dense_attr_list = llvm::map_range(
+          value.at_list_shape().val(),
+          [&](::oneflow::ShapeProto s) { return DenseIntElementsAttrFromShape(s); });
+      std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
+                                                     dense_attr_list.end()};
+      attr_vec.emplace_back(b.getNamedAttr(name, b.getArrayAttr(dense_attr_vector)));
+    }
     else {
       module.emitError("can't handle user op attr: " + name + ", op name: " + op.name()
                        + ", op type name: " + op.user_conf().op_type_name());
