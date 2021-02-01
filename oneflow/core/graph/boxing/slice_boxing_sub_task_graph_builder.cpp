@@ -240,8 +240,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         } else {
           std::vector<TensorSliceView> intersections;
           for (const int64_t in_id : in_parallel_ids) {
-            intersections.push_back(out_slice.Intersect(in_slices.at(in_id)));
+            const TensorSliceView& intersection = out_slice.Intersect(in_slices.at(in_id));
+            if (!intersection.IsEmpty()) { intersections.push_back(intersection); }
           }
+          if (intersections.size() == 0) { continue; }
           const TensorSliceView concat_slice =
               TensorSliceView::Concatenate(intersections, in_sbp.split_parallel().axis());
           SliceBoxingTaskNode* local_concat_node =
@@ -261,8 +263,11 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
                                   local_concat_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
           for (const int64_t in_id : in_parallel_ids) {
-            local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
-                                                         in_slices.at(in_id));
+            const TensorSliceView& intersection = out_slice.Intersect(in_slices.at(in_id));
+            if (!intersection.IsEmpty()) {
+              local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
+                                                           in_slices.at(in_id));
+            }
           }
           TaskNode* local_add_proxy_node =
               ctx->GetProxyNode(local_concat_node, Global<IDMgr>::Get()->CpuMemZoneId(),
