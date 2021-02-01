@@ -244,6 +244,16 @@ Maybe<Scope> InstructionsBuilder::GetScopeSymbol(
   return GetSymbol<cfg::ScopeProto, Scope>(*scope_proto);
 }
 
+Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(
+    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+  if (JUST(HasSymbol<cfg::OperatorConf>(*op_conf))) {
+    return GetSymbol<cfg::OperatorConf, OperatorConfSymbol>(*op_conf);
+  }
+  int64_t symbol_id = JUST(NewSymbolId4OpConf(op_conf));
+  JUST(AddSymbol<cfg::OperatorConf, OperatorConf, OperatorConfSymbol>(symbol_id, *op_conf));
+  return GetSymbol<cfg::OperatorConf, OperatorConfSymbol>(*op_conf);
+}
+
 Maybe<int64_t> InstructionsBuilder::NewSymbolId4String(std::string str) {
   int64_t symbol_id = JUST(NewSymbolId());
   JUST(InitStringSymbol(symbol_id, str));
@@ -268,6 +278,13 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId4Scope(
     const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
   int64_t symbol_id = JUST(NewSymbolId());
   JUST(NewScopeSymbol(symbol_id, scope_proto));
+  return symbol_id;
+}
+
+Maybe<int64_t> InstructionsBuilder::NewSymbolId4OpConf(
+    const std::shared_ptr<cfg::OperatorConf> op_conf) {
+  int64_t symbol_id = JUST(NewSymbolId());
+  JUST(InitOpConfSymbol(symbol_id, op_conf));
   return symbol_id;
 }
 
@@ -667,6 +684,19 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::InitOpConfSymbol(
+    int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitOperatorConfSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.mutable_op_conf_symbol()->CopyFrom(*op_conf);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }

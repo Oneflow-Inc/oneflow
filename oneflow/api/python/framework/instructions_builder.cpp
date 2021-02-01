@@ -67,6 +67,12 @@ std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<InstructionsBuilder>
   return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
 }
 
+std::shared_ptr<OperatorConfSymbol> GetOpConfSymbol(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+  return x->GetOpConfSymbol(op_conf).GetPtrOrThrow();
+}
+
 std::shared_ptr<compatible_py::BlobObject> NewBlobObject(
     const std::shared_ptr<InstructionsBuilder>& x,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
@@ -209,6 +215,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetJobConfSymbol", &GetJobConfSymbol)
       .def("GetParallelDescSymbol", &GetParallelDescSymbol)
       .def("GetScopeSymbol", &GetScopeSymbol)
+      .def("GetOpConfSymbol", &GetOpConfSymbol)
       .def("NewBlobObject", &NewBlobObject)
       .def("NewSymbolId4OpNodeSignature", &NewSymbolId4OpNodeSignature)
       .def("NewSharedOpKernelObjectId4ParallelConfSymbolId",
