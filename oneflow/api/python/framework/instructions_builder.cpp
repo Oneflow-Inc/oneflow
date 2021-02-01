@@ -193,6 +193,13 @@ void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
   return x->DeleteObject(blob_object).GetOrThrow();
 }
 
+int64_t _NewOpKernelObject(const std::shared_ptr<InstructionsBuilder>& x,
+                           const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+                           const std::shared_ptr<JobDesc>& job_desc_sym,
+                           const std::shared_ptr<OperatorConfSymbol>& op_conf_sym) {
+  return x->_NewOpKernelObject(parallel_desc_symbol, job_desc_sym, op_conf_sym).GetOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -235,7 +242,8 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("CudaHostRegisterBlob", &CudaHostRegisterBlob)
       .def("CudaHostUnregisterBlob", &CudaHostUnregisterBlob)
       .def("LazyReference", &LazyReference)
-      .def("DeleteObject", &DeleteObject);
+      .def("DeleteObject", &DeleteObject)
+      .def("_NewOpKernelObject", &_NewOpKernelObject);
 
   // these API will be removed when InstructionsBuilder is refactor competely
   py::module_ vm_sub_module = m.def_submodule("vm");

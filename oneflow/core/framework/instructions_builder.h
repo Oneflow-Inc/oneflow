@@ -158,6 +158,10 @@ class InstructionsBuilder {
   Maybe<void> LazyReference(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                             std::string interface_op_name);
 
+  Maybe<int64_t> _NewOpKernelObject(const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+                                    const std::shared_ptr<JobDesc>& job_desc_sym,
+                                    const std::shared_ptr<OperatorConfSymbol>& op_conf_sym);
+
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
     auto* id_cache = Global<symbol::IdCache<T>>::Get();
