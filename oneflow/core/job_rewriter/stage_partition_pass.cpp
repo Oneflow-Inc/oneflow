@@ -81,17 +81,16 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
     JobBuilder job_builder(job);
     std::function<Maybe<int64_t>(int64_t old_scope, int64_t stage_scope)> GetMergedScopeSymbolId;
     MakeGetterGetMergedScopeSymbolId(&GetMergedScopeSymbolId);
+    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
     JUST(ForEachStageScope4TrainableFwOp(
         *op_graph, ctx->job_desc(),
         [&](const OpNode* op_node, int64_t stage_scope_symbol_id) -> Maybe<void> {
           const auto& old_op_conf = op_node->op().op_conf();
           CHECK_OR_RETURN(old_op_conf.has_scope_symbol_id());
-          const auto& old_scope = JUST(
-              Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(old_op_conf.scope_symbol_id()));
+          const auto& old_scope = JUST(scope_storage.MaybeGet(old_op_conf.scope_symbol_id()));
           int64_t merged_scope_symbol_id =
               JUST(GetMergedScopeSymbolId(old_op_conf.scope_symbol_id(), stage_scope_symbol_id));
-          const auto& merged_scope =
-              JUST(Global<vm::SymbolStorage<Scope>>::Get()->MaybeGet(merged_scope_symbol_id));
+          const auto& merged_scope = JUST(scope_storage.MaybeGet(merged_scope_symbol_id));
           // Sets scope_symbol_id
           std::vector<OperatorConf> op_confs(1);
           auto* new_op_conf = &op_confs.at(0);
@@ -172,8 +171,7 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
     JUST(GetStagePartitionScopeIds(job_desc, &stage_partition_scope_ids));
     // Partition to stages
     std::function<Maybe<int64_t>(int64_t)> Stage4Depth;
-    int64_t num_stages = stage_partition_scope_ids.size();
-    JUST(GetStageDepth2Stage(sequantialized_fw_ops, num_stages, &Stage4Depth));
+    JUST(GetStageDepth2Stage(sequantialized_fw_ops, stage_partition_scope_ids, &Stage4Depth));
     int64_t depth = 0;
     for (const auto& fused_vec : sequantialized_fw_ops) {
       int64_t stage = JUST(Stage4Depth(depth));
@@ -222,33 +220,40 @@ class NaiveSequantialStagePartitionStrategy : public StagePartitionStragety {
 
   Maybe<void> GetStageDepth2Stage(
       const std::list<std::unique_ptr<std::vector<OpNode*>>>& sequantialized_fw_ops,
-      int64_t num_stages, std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) const {
-    int64_t num_ops = 0;
-    for (const auto& vec : sequantialized_fw_ops) { num_ops += vec->size(); }
-    BalancedSplitter bs(num_ops, num_stages);
-    std::vector<int64_t> stage2expected_num_ops_from_start(num_stages);
+      const std::vector<int64_t>& stage_partition_scope_ids,
+      std::function<Maybe<int64_t>(int64_t)>* Stage4Depth) const {
+    CHECK_LE_OR_RETURN(stage_partition_scope_ids.size(), sequantialized_fw_ops.size())
+        << "Partition failed. Number of stages is bigger than number of ops";
+    const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+    int64_t num_depth = sequantialized_fw_ops.size();
+    CHECK_GT_OR_RETURN(num_depth, 0);
+    int64_t num_stages = stage_partition_scope_ids.size();
+    CHECK_GT_OR_RETURN(num_stages, 0);
+    std::vector<float> stage_payloads(num_stages);
+    float total_payloads = 0;
     for (int64_t i = 0; i < num_stages; ++i) {
-      int64_t last = (i == 0 ? 0 : stage2expected_num_ops_from_start.at(i - 1));
-      stage2expected_num_ops_from_start.at(i) = bs.At(i).size() + last;
+      const auto& scope = JUST(scope_storage.MaybeGet(stage_partition_scope_ids.at(i)));
+      int64_t stage_payload = scope.Int64("stage_load");
+      CHECK_GT_OR_RETURN(stage_payload, 0);
+      stage_payloads.at(i) = stage_payload;
+      total_payloads += stage_payload;
     }
-    auto depth2stage = std::make_shared<HashMap<int64_t, int64_t>>();
-    {
-      int64_t stage = 0;
-      int64_t depth = 0;
-      int64_t num_ops_from_start = 0;
-      for (const auto& vec : sequantialized_fw_ops) {
-        if (num_ops_from_start > stage2expected_num_ops_from_start.at(stage)) { ++stage; }
-        (*depth2stage)[depth] = stage;
-        ++depth;
-        num_ops_from_start += vec->size();
+    using RangeListT = std::vector<std::pair<int64_t, int64_t>>;
+    auto stage2depth_ranges = std::make_shared<RangeListT>(num_stages);
+    float depth_from_start = 0;
+    for (int64_t i = 0; i < num_stages; ++i) {
+      stage2depth_ranges->at(i).first = static_cast<int64_t>(depth_from_start);
+      depth_from_start += num_depth * stage_payloads.at(i) / total_payloads;
+      stage2depth_ranges->at(i).second = static_cast<int64_t>(depth_from_start);
+    }
+    stage2depth_ranges->at(0).first = 0;
+    stage2depth_ranges->at(num_stages - 1).second = num_depth;
+    *Stage4Depth = [stage2depth_ranges](int64_t depth) -> Maybe<int64_t> {
+      for (int i = 0; i < stage2depth_ranges->size(); ++i) {
+        const auto& range = stage2depth_ranges->at(i);
+        if (depth >= range.first && depth < range.second) { return i; }
       }
-      CHECK_EQ(stage, num_stages - 1);
-      CHECK_EQ(depth, sequantialized_fw_ops.size());
-    }
-    *Stage4Depth = [depth2stage](int64_t depth) -> Maybe<int64_t> {
-      const auto& iter = depth2stage->find(depth);
-      CHECK_OR_RETURN(iter != depth2stage->end());
-      return iter->second;
+      OF_UNIMPLEMENTED() << "depth: " << depth;
     };
     return Maybe<void>::Ok();
   }

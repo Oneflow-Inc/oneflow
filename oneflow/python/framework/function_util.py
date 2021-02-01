@@ -889,10 +889,10 @@ def _GetScopeSymbolIds(stages):
             assert isinstance(stage_weight_buffer_size, int)
             assert stage_weight_buffer_size > 0
 
-        for placement in stage.placements:
-            with placement, oneflow.experimental.scope.config(
-                stage_weight_buffer_size=stage_weight_buffer_size,
-                stage_placement_id=stage_placement_id,
-            ):
-                scope_symbol_ids.append(oneflow.current_scope().symbol_id)
+        with stage.placement, oneflow.experimental.scope.config(
+            stage_load=stage.stage_load,
+            stage_weight_buffer_size=stage_weight_buffer_size,
+            stage_placement_id=stage_placement_id,
+        ):
+            scope_symbol_ids.append(oneflow.current_scope().symbol_id)
     return scope_symbol_ids

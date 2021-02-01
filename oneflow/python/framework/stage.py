@@ -19,15 +19,24 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 @oneflow_export("stage")
 class Stage(object):
     def __init__(
-        self, *placements, stage_placement_id=None, stage_weight_buffer_size=None
+        self,
+        placement,
+        stage_load=1,
+        stage_placement_id=None,
+        stage_weight_buffer_size=None,
     ):
-        self.placements_ = placements
+        self.placement_ = placement
+        self.stage_load_ = stage_load
         self.stage_placement_id_ = stage_placement_id
         self.stage_weight_buffer_size_ = stage_weight_buffer_size
 
     @property
-    def placements(self):
-        return self.placements_
+    def placement(self):
+        return self.placement_
+
+    @property
+    def stage_load(self):
+        return self.stage_load_
 
     @property
     def stage_placement_id(self):
