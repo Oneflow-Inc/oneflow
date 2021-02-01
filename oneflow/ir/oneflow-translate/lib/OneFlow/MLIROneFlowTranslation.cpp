@@ -80,6 +80,7 @@ class Importer {
   LogicalResult processJob();
   LogicalResult tryToUpdateJob();
 
+  DenseIntElementsAttr DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto &shape);
   void ConvertUseropAttributes(Operation *op, ::oneflow::OperatorConf &op_conf,
                                std::string &err_str);
 
@@ -172,6 +173,14 @@ LogicalResult StringifyDataType(const ::oneflow::AttrValue &value, std::string &
   return success();
 }
 
+DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto &shape) {
+  ArrayRef<int64_t> values = {shape.dim().begin(), shape.dim().end()};
+  RankedTensorType tt =
+      RankedTensorType::get({static_cast<int64_t>(values.size())}, b.getIntegerType(64, true));
+  ;
+  return DenseIntElementsAttr::get(tt, values);
+}
+
 LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf &op,
                                                   std::vector<NamedAttribute> &attr_vec) {
   if (op.has_user_conf() == false) {
@@ -203,11 +212,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf 
     DEFINE_ONE_ELIF(at_string, getStringAttr)
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_shape()) {
-      ArrayRef<int64_t> values = {value.at_shape().dim().begin(), value.at_shape().dim().end()};
-      RankedTensorType tt =
-          RankedTensorType::get({static_cast<int64_t>(values.size())}, b.getIntegerType(64, true));
-      ;
-      attr_vec.emplace_back(b.getNamedAttr(name, DenseIntElementsAttr::get(tt, values)));
+      attr_vec.emplace_back(b.getNamedAttr(name, DenseIntElementsAttrFromShape(value.at_shape())));
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
