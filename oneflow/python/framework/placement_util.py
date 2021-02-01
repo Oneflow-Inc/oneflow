@@ -97,6 +97,10 @@ def GetEmptyPlacementScope(device_tag, machine_device_ids):
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def GetNormalModePlacementScope(device_tag, machine_device_ids):
+    if isinstance(machine_device_ids, tuple):
+        machine_device_ids = list(machine_device_ids)
+    if not isinstance(machine_device_ids, list):
+        machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
     scope = scope_util.MakeScope(
         lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(

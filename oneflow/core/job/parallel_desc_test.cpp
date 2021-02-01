@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace test {
 
-TEST(parallel_desc, continuous_1n4d) {
+TEST(ParallelDesc, continuous_1n4d) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -29,7 +29,7 @@ TEST(parallel_desc, continuous_1n4d) {
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
 }
 
-TEST(parallel_desc, discrete_1n4d) {
+TEST(ParallelDesc, discrete_1n4d) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -39,7 +39,7 @@ TEST(parallel_desc, discrete_1n4d) {
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
 }
 
-TEST(parallel_desc, continuous_2n8d) {
+TEST(ParallelDesc, continuous_2n8d) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -49,7 +49,7 @@ TEST(parallel_desc, continuous_2n8d) {
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
 }
 
-TEST(parallel_desc, discrete_2n8d) {
+TEST(ParallelDesc, discrete_2n8d) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
