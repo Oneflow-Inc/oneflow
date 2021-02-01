@@ -1745,7 +1745,7 @@ def generate_random_batch_permutation_indices(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob. Its type is `ListNumpy`. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -1758,7 +1758,7 @@ def generate_random_batch_permutation_indices(
 
         @flow.global_function()
         def random_indice_Job(x: tp.Numpy.Placeholder(shape=(4, 3), dtype=flow.int32),
-        ) -> tp.ListNumpy:
+        ) -> tp.Numpy:
             return flow.random.generate_random_batch_permutation_indices(value=x)
 
         x = np.array([[1, 1, 1], 
@@ -1767,7 +1767,7 @@ def generate_random_batch_permutation_indices(
                     [4, 4, 4]]).astype(np.int32)
         out = random_indice_Job(x)
 
-        # out [array([3, 0, 2, 1], dtype=int32)]
+        # out [2 0 3 1]
 
     """
     import random
