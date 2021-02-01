@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 
 namespace oneflow {
@@ -26,15 +27,17 @@ class OperatorConfSymbol final {
  public:
   OperatorConfSymbol(const OperatorConfSymbol&) = delete;
   OperatorConfSymbol(OperatorConfSymbol&&) = delete;
-  OperatorConfSymbol(int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& data);
+  OperatorConfSymbol(int64_t symbol_id, const OperatorConf& op_conf);
 
   ~OperatorConfSymbol() = default;
 
+  const OperatorConf& op_conf() const { return op_conf_; }
   const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
   std::shared_ptr<cfg::OperatorConf> data() const { return data_; }
 
  private:
   Maybe<int64_t> symbol_id_;
+  OperatorConf op_conf_;
   std::shared_ptr<cfg::OperatorConf> data_;
 };
 

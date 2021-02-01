@@ -17,8 +17,9 @@ limitations under the License.
 
 namespace oneflow {
 
-OperatorConfSymbol::OperatorConfSymbol(int64_t symbol_id,
-                                       const std::shared_ptr<cfg::OperatorConf>& data)
-    : symbol_id_(symbol_id), data_(data) {}
+OperatorConfSymbol::OperatorConfSymbol(int64_t symbol_id, const OperatorConf& op_conf)
+    : symbol_id_(symbol_id), op_conf_(op_conf) {
+  data_ = std::make_shared<cfg::OperatorConf>(op_conf);
+}
 
 }  // namespace oneflow

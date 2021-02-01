@@ -22,16 +22,8 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<OperatorConfSymbol> CreateOpConfSymbol(
-    int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& symbol_conf) {
-  return std::make_shared<OperatorConfSymbol>(symbol_id, symbol_conf);
-}
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OperatorConfSymbol, std::shared_ptr<OperatorConfSymbol>>(m, "OpConfSymbol")
-      .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& symbol_conf) {
-        return CreateOpConfSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
-      }))
       .def_property_readonly("symbol_id",
                              [](const OperatorConfSymbol& x) { return x.symbol_id().GetOrThrow(); })
       .def_property_readonly("data", &OperatorConfSymbol::data);
