@@ -243,7 +243,9 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
+if (WITH_MLIR)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
+endif()
 target_link_libraries(of_ccobj MLIROneFlowTranslation)
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${of_main_cc} ${PYBIND_REGISTRY_CC})
