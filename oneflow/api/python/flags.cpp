@@ -33,6 +33,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return false;
 #endif  // _GLIBCXX_USE_CXX11_ABI
   });
+
+  m.def("with_mlir", []() {
+#ifdef WITH_MLIR
+    return true;
+#else
+    return false;
+#endif  // WITH_MLIR
+  });
 }
 
 }  // namespace oneflow
