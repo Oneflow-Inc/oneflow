@@ -1213,6 +1213,20 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   mirrored_lbi2parallel_desc_.clear();
   mirrored_lbi2sbp_parallel_.clear();
   op_name2ancestors_need_no_grad_.clear();
+  // record op mirror view
+  HashMap<std::string, bool> op_name2is_mirrored;
+  CHECK_OR_RETURN(job_->has_job_parallel_view_conf());
+  for (const auto& op_conf : job_->net().op()) {
+    const auto& op_name = op_conf.name();
+    CHECK_OR_RETURN(op_name2is_mirrored.find(op_name) == op_name2is_mirrored.end());
+    op_name2is_mirrored[op_name] = false;
+    const auto& op_name2is_mirrored_parallel_view =
+        job_->job_parallel_view_conf().op_name2is_mirrored_parallel_view();
+    if (op_name2is_mirrored_parallel_view.find(op_name)
+        != op_name2is_mirrored_parallel_view.end()) {
+      if (op_name2is_mirrored_parallel_view.at(op_name)) { op_name2is_mirrored[op_name] = true; }
+    }
+  }
   // build op graph
   OpGraph op_graph;
   if (Global<JobDesc>::Get()) {
@@ -1228,16 +1242,13 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   job_->mutable_helper()->Clear();
   // topo traverse op_graph to AddAndInferOp
   op_graph.TopoForEachNode([&](OpNode* node) -> void {
-    CHECK_GE(node->op().output_bns().size(), 1);
-    const auto& first_lbi = node->op().BnInOp2Lbi(node->op().output_bns()[0]);
-    const auto& first_obn = *CHECK_JUST(node->op().obn4lbi(first_lbi));
-    const auto& opt_mirrored_parallel =
-        *CHECK_JUST(node->op().OptMirroredParallel4BnInOp(first_obn));
-    bool is_mirrored = opt_mirrored_parallel.has_mirrored_parallel();
+    const auto& op_conf = node->op().op_conf();
+    CHECK(op_name2is_mirrored.find(op_conf.name()) != op_name2is_mirrored.end());
+    bool is_mirrored = op_name2is_mirrored.at(op_conf.name());
     if (is_mirrored) {
-      CHECK_JUST(AddAndInferMirroredOp(node->op().op_conf()));
+      CHECK_JUST(AddAndInferMirroredOp(op_conf));
     } else {
-      CHECK_JUST(AddAndInferConsistentOp(node->op().op_conf()));
+      CHECK_JUST(AddAndInferConsistentOp(op_conf));
     }
   });
   // updata job_helper
