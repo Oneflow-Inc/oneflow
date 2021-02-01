@@ -651,10 +651,12 @@ def conv3d(
         padding (str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair], optional): The padding mode. It can be `string` type like `"SAME"` or `"SAME_LOWER"` 
             or `"SAME_UPPER" or `"VALID". 
             It can also be a Tuple with four elements, each element contains one or two int values. 
-            if `data_format` is `NCHW`, the `padding` should be like ([0, 0], [0, 0], [padding_height_top, padding_height_bottom], [padding_width_top, padding_width_bottom])
-            or (0, 0, padding_height, padding_width). 
-            if `data_format` is `NHWC`, the `padding` should be like ([0, 0], [padding_height_top, padding_height_bottom], [padding_width_top, padding_width_bottom], [0, 0])
-            or (0, padding_height, padding_width, 0).
+            if `data_format` is `NCDHW`, the `padding` should be like ([0, 0], [0, 0], [padding_depth_top, padding_depth_bottom], 
+            [padding_height_top, padding_height_bottom], [padding_width_top, padding_width_bottom])
+            or (0, 0, padding_depth, padding_height, padding_width). 
+            if `data_format` is `NDHWC`, the `padding` should be like ([0, 0], [padding_depth_top, padding_depth_bottom], 
+            [padding_height_top, padding_height_bottom], [padding_width_top, padding_width_bottom], [0, 0])
+            or (0, padding_depth, padding_height, padding_width, 0).
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCDHW" or "NDHWC" (default: "NCDHW"). "NCDHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width).
                         "NDHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). Defaults to "NCDHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
@@ -713,7 +715,38 @@ def conv3d(
         out = conv3d_Job(x)
 
         # out.shape (1, 64, 5, 8, 8)
+    
+    Example 2: 
 
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def conv3d_Job(x: tp.Numpy.Placeholder((1, 10, 16, 16, 32))
+        ) -> tp.Numpy:
+            initializer = flow.truncated_normal(0.1)
+            conv3d = flow.layers.conv3d(
+                x,
+                filters=64,
+                kernel_size=3,
+                strides=2,
+                padding=(0, 1, 1, 1, 0),
+                kernel_initializer=initializer,
+                name="Conv3d", 
+                data_format="NDHWC",
+                activation=flow.nn.relu
+            )
+            return conv3d
+
+
+        x = np.random.randn(1, 10, 16, 16, 32).astype(np.float32)
+        out = conv3d_Job(x)
+
+        # out.shape (1, 5, 8, 8, 64)
     """
     need_transpose = 0
     if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
