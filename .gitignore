@@ -3,8 +3,7 @@
 /docs/build/
 /cmake-build-*
 /dist
-/third_party/*
-!/third_party/llvm-project/
+/third_party/
 /examples/**/oneflow
 /benchmark/**/oneflow
 log/
