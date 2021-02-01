@@ -81,14 +81,12 @@ void OccasionallyClearCtrlKV(const std::string& key) {
 
 void PushClusterInstruction(const ClusterInstructionProto& cluster_instruction) {
   const std::string& key = GetClusterInstructionKey();
-  LOG(INFO) << key;
   Global<CtrlClient>::Get()->PushMasterKV(key, cluster_instruction);
   OccasionallyClearCtrlKV(key);
 }
 
 void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
   const std::string& key = GetClusterInstructionKey();
-  LOG(INFO) << key;
   Global<CtrlClient>::Get()->PullMasterKV(key, cluster_instruction);
   OccasionallyClearCtrlKV(key);
 }

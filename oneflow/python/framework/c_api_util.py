@@ -169,16 +169,6 @@ def GetScopeConfigDef():
     return text_format.Parse(scope_config_def, ConfigDef())
 
 
-def RunLogicalInstruction(vm_instruction_list, eager_symbol_list):
-    symbols = str(text_format.MessageToString(eager_symbol_list))
-    oneflow_api.vm.RunLogicalInstruction(vm_instruction_list, symbols)
-
-
-def RunPhysicalInstruction(vm_instruction_list, eager_symbol_list):
-    symbols = str(text_format.MessageToString(eager_symbol_list))
-    oneflow_api.vm.RunPhysicalInstruction(vm_instruction_list, symbols)
-
-
 def GetOpAttributes():
     op_attributes = oneflow_api.GetSerializedOpAttributes()
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())

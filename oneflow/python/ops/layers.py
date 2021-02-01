@@ -719,8 +719,13 @@ def conv3d(
     if data_format.upper() == "NDHWC":  # NDHWC is not supported before cudnn 8.0
         need_transpose = 1
         data_format = "NCDHW"
+
     if need_transpose:
         inputs = flow.transpose(inputs, perm=[0, 4, 1, 2, 3])
+        # padding for `NDHWC` is [0, 0, 1, 1, 1] to `NCDHW` format [0, 1, 1, 1, 0]
+        if isinstance(padding, (list, tuple)):
+            padding = list(padding)
+            padding[1], padding[4] = padding[4], padding[1]
 
     if isinstance(kernel_size, int):
         kernel_size = (kernel_size, kernel_size, kernel_size)

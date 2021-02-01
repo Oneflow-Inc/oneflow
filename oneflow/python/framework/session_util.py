@@ -17,8 +17,8 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
-import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -51,6 +51,7 @@ import inspect
 import oneflow
 import oneflow_api
 import oneflow_api.oneflow.core.vm.instruction as instr_cfg
+import oneflow_api.oneflow.core.eager.eager_symbol as eager_symbol_cfg
 import traceback
 
 
@@ -84,8 +85,10 @@ class Session(object):
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
         self.instruction_list_ = instr_cfg.InstructionListProto()
-        self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
-        self.backward_blob_register_ = blob_register_util.BlobRegister()
+        self.eager_symbol_list_ = eager_symbol_cfg.EagerSymbolList()
+        self.backward_blob_register_ = oneflow_api.BlobRegister(
+            blob_cache_util.TryDisableBlobCache
+        )
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 
@@ -393,9 +396,9 @@ class Session(object):
             self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             self.eager_global_function_desc_stack_.pop(0)
-            keys = list(self.backward_blob_register.blob_name2object.keys())
+            keys = list(dict(self.backward_blob_register.blob_name2object).keys())
             for key in keys:
-                del self.backward_blob_register.blob_name2object[key]
+                self.backward_blob_register.ClearObject4BlobName(key)
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
