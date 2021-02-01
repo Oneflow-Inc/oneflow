@@ -79,16 +79,12 @@ def _signature_proto_to_cfg(signature_proto, mut_signature_cfg):
         _inferface_blob_conf_proto_to_cfg(
             input_def.blob_conf, input_def_cfg.mutable_blob_conf()
         )
-        if input_def.HasField("batch_axis"):
-            input_def_cfg.set_batch_axis(input_def.batch_axis)
         mut_signature_cfg.mutable_inputs()[input_name].CopyFrom(input_def_cfg)
 
     for output_name, output_def in signature_proto.outputs.items():
         output_def_cfg = job_conf_proto_cfg.JobOutputDef()
         output_def_cfg.mutable_lbi().set_op_name(output_def.lbi.op_name)
         output_def_cfg.mutable_lbi().set_blob_name(output_def.lbi.blob_name)
-        if output_def.HasField("batch_axis"):
-            output_def_cfg.set_batch_axis(output_def.batch_axis)
         mut_signature_cfg.mutable_outputs()[output_name].CopyFrom(output_def_cfg)
 
 
@@ -255,9 +251,12 @@ class InferenceSession(object):
         self._check_status(self.SessionStatus.OPEN)
         job_conf = self._get_job_conf(job_name)
         for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
-            if not mut_input_def.has_batch_axis():
+            if not mut_input_def.blob_conf().has_batch_axis():
                 continue
-            batch_axis = mut_input_def.batch_axis()
+            batch_axis = mut_input_def.blob_conf().batch_axis()
+            if not batch_axis.has_value():
+                continue
+            batch_axis = batch_axis.value()
             mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
             mut_shape.mutable_dim()[batch_axis] = batch_size
 

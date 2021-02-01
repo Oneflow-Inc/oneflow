@@ -161,12 +161,10 @@ message ParallelBlobConf {
 message JobInputDef {
   required LogicalBlobId lbi = 1;
   required InterfaceBlobConf blob_conf = 2;
-  optional int32 batch_axis = 3;
 }
 
 message JobOutputDef {
   required LogicalBlobId lbi = 1;
-  optional int32 batch_axis = 2;
 }
 
 message JobSignatureDef {

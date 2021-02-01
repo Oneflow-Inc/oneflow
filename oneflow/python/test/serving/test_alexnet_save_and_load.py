@@ -120,7 +120,7 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         for input_name, lbn in input_lbns.items():
             signature_builder.Input(input_name, lbn, batch_axis=0)
         for output_name, lbn in output_lbns.items():
-            signature_builder.Output(output_name, lbn, batch_axis=0)
+            signature_builder.Output(output_name, lbn)
         signature_builder.Complete().Complete().Save()
 
         # test data

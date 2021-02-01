@@ -181,15 +181,6 @@ class GraphBuilder(object):
                     self.name, input_lbn
                 )
                 GetInterfaceBlobConf(self.name, input_lbn, input_def.blob_conf)
-                if input_def.HasField("batch_axis") and (
-                    input_def.batch_axis < 0
-                    or input_def.batch_axis >= len(input_def.blob_conf.shape.dim)
-                ):
-                    raise ValueError(
-                        "invalid batch_axis {} for input {}".format(
-                            input_def.batch_axis, input_name
-                        )
-                    )
 
             for output_name, output_def in signature_def.outputs.items():
                 oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
@@ -199,15 +190,6 @@ class GraphBuilder(object):
                 output_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
                     self.name, output_lbn
                 )
-                if output_def.HasField("batch_axis") and (
-                    output_def.batch_axis < 0
-                    or output_def.batch_axis >= len(output_shape)
-                ):
-                    raise ValueError(
-                        "invalid batch_axis {} for output {}".format(
-                            output_def.batch_axis, output_name
-                        )
-                    )
 
         if self.model_builder_ is None:
             return None
@@ -274,12 +256,10 @@ class SignatureBuilder(object):
         input_def = self.proto.inputs[input_name]
         Lbn2Lbi(lbn, input_def.lbi)
         if isinstance(batch_axis, int):
-            input_def.batch_axis = batch_axis
+            input_def.blob_conf.batch_axis.value = batch_axis
         return self
 
-    def Output(
-        self, output_name: str, lbn: str, batch_axis: typing.Optional[int] = None
-    ):
+    def Output(self, output_name: str, lbn: str):
         assert isinstance(output_name, str)
         assert isinstance(lbn, str)
         assert "/" in lbn
@@ -293,8 +273,6 @@ class SignatureBuilder(object):
 
         output_def = self.proto.outputs[output_name]
         Lbn2Lbi(lbn, output_def.lbi)
-        if isinstance(batch_axis, int):
-            output_def.batch_axis = batch_axis
         return self
 
     def Complete(self):
