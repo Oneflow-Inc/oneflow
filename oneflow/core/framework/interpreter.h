@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/vm/id_generator.h"
-#include "oneflow/core/framework/operation.h"
 
 namespace oneflow {
 
@@ -61,35 +60,6 @@ class PhysicalInterpreter : public Interpreter {
 
   Maybe<void> Run(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) override;
 };
-
-namespace one {
-class OpInterpreter {
- public:
-  OpInterpreter() = default;
-  virtual ~OpInterpreter() = default;
-
-  virtual std::vector<TensorRef> Interpret(const Operation& op,
-                                           const std::vector<TensorRef>& inputs) = 0;
-};
-
-class LazyOpInterpreter : public OpInterpreter {
- public:
-  LazyOpInterpreter() : OpInterpreter() {}
-  ~LazyOpInterpreter() = default;
-
-  std::vector<TensorRef> Interpret(const Operation& op,
-                                   const std::vector<TensorRef>& inputs) override;
-};
-
-class EagerOpInterpreter : public OpInterpreter {
- public:
-  EagerOpInterpreter() : OpInterpreter() {}
-  ~EagerOpInterpreter() = default;
-
-  std::vector<TensorRef> Interpret(const Operation& op,
-                                   const std::vector<TensorRef>& inputs) override;
-};
-}  // namespace one
 
 }  // namespace oneflow
 

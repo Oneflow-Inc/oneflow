@@ -28,8 +28,8 @@ class Interpreter(object):
         pass
 
     @staticmethod
-    def Interpret(self, op, inputs):
-        pass
+    def Interpret(op, inputs):
+        return oneflow_api.one.Interpret(op, inputs)
 
 
 @oneflow_export("builtin_op")
@@ -42,10 +42,10 @@ class BuiltinOp(object):
 
     @property
     def op(self):
-        r"""access the built op
+        r"""access the builtin op
 
         Returns:
-            the built op
+            the builtin op
         """
         # TODO: Check for op completeness.
         if self._op is None:
@@ -190,15 +190,31 @@ class BuiltinOp(object):
         return self
 
     def Name(self, op_name):
+        r"""Set the op name.
+
+        Args:
+            op_name (str): the name of the op.
+
+        Returns:
+            self
+        """
         self._builder.Name(op_name)
         return self
 
     def Build(self):
+        r"""Explicitly complete the construction of the builtin op
+        
+        Returns:
+            the completed builtin op
+        """
         if self._op is None:
             self._op = self._builder.Build()
         return self._op
 
     def Apply(self):
-        if self._op is None:
-            self._op = self._builder.Build()
-        return Interpreter.Interpret(self._op, self._inputs)
+        r"""Construct the builtin op and execute it.
+        
+        Returns:
+            the output tensors.
+        """
+        return Interpreter.Interpret(self.Build(), self._inputs)
