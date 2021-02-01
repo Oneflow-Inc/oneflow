@@ -77,7 +77,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(64, 64, 64)]
+        arg_dict["input_shape"] = [(2, 4, 8)]
         arg_dict["axis"] = [None, [1], [0, 2]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
@@ -87,7 +87,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(1024 * 64, 25)]
+        arg_dict["input_shape"] = [(32, 2)]
         arg_dict["axis"] = [[0]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
@@ -97,7 +97,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(25, 1024 * 1024)]
+        arg_dict["input_shape"] = [(2, 64)]
         arg_dict["axis"] = [[1]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
@@ -107,7 +107,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(1024 * 64, 25)]
+        arg_dict["input_shape"] = [(64, 2)]
         arg_dict["axis"] = [[0, 1]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
