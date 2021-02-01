@@ -31,6 +31,7 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool("enable_stage_buffer", false, "enable stage 
 
 REGISTER_SCOPE_CONFIG_DEF()
     .Int64("stage_weight_buffer_size", 0, "stage weight buffer size")
+    .Int64("stage_load", 1, "stage op load")
     .Int64("stage_placement_id", -1, "current stage id ");
 
 }  // namespace
