@@ -267,12 +267,8 @@ add_custom_target(of_pyscript_copy ALL
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
 if (BUILD_CUDA)
   add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py"
         COMMAND echo "\"generated_compile_flags.append('-DWITH_CUDA')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
         )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
 endif()
 
 if (USE_CXX11_ABI)
