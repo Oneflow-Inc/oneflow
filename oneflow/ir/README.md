@@ -24,5 +24,5 @@ Everything related to MLIR-OneFlow translation. [read more](oneflow-translate/RE
 - ### oneflow-opt
 Optimizations on OneFlow MLIR dialect, a placeholder for now.
 
-- ### oneflow dialect
+- ### OneFlow dialect
 In the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
