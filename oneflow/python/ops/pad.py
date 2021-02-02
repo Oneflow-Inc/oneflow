@@ -267,7 +267,7 @@ def reflection_pad2d(
         @flow.global_function()
         def pad_Job(x: tp.Numpy.Placeholder((1, 2, 3, 3))
         ) -> tp.Numpy:
-            return flow.reflection_pad2d(x, padding=[0, 0, 1, 2])
+            return flow.reflection_pad2d(x, padding=[2, 2, 1, 1])
 
 
         x = np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32)
