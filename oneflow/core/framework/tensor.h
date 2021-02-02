@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
@@ -48,8 +50,6 @@ class Tensor {
 
 namespace one {
 
-class Tensor {};
-
 class Device {
  public:
   Device(DeviceType device_type, int64_t device_id)
@@ -62,56 +62,30 @@ class Device {
   DeviceType device_type_;
 };
 
-class MirroredTensorImpl {
+class Tensor {
  public:
-  MirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
-                         const std::shared_ptr<Device>& device);
-  virtual ~MirroredTensorImpl() = default;
+  std::shared_ptr<Shape> shape() const { return impl_->shape(); }
+  DataType dtype() const { return impl_->dtype(); }
+  std::shared_ptr<Device> device() const { return impl_->device(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return impl_->parallel_conf(); }
+  bool is_lazy() const { return !EagerExecutionEnabled(); }
 
-  std::shared_ptr<Shape> shape() const { return shape_; }
-  DataType dtype() const { return dtype_; }
-  std::shared_ptr<Device> device() const { return device_; }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
-
- private:
-  std::shared_ptr<Shape> shape_;
-  DataType dtype_;
-  std::shared_ptr<Device> device_;
-};
-
-class LazyMirroredTensorImpl : public MirroredTensorImpl {
- public:
-  LazyMirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
-                         const std::shared_ptr<Device>& device);
-  ~LazyMirroredTensorImpl() = default;
-
- private:
-  std::shared_ptr<Blob> storage_;
-};
-
-class EagerMirroredTensorImpl : public MirroredTensorImpl {
- public:
-  EagerMirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
-                          const std::shared_ptr<Device>& device);
-  ~EagerMirroredTensorImpl() = default;
-
- private:
-  std::shared_ptr<Blob> storage_;
+ protected:
+  std::shared_ptr<TensorImpl> impl_;
 };
 
 class MirroredTensor : public Tensor {
  public:
   MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
                  const std::shared_ptr<Device>& device);
+  MirroredTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+                 const std::shared_ptr<compatible_py::Distribute>& distribute);
+  MirroredTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                 const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                 const std::shared_ptr<compatible_py::BlobRegister>& blob_register,
+                 const std::string& job_name,
+                 const std::shared_ptr<compatible_py::Distribute>& distribute);
   ~MirroredTensor() = default;
-
-  std::shared_ptr<Shape> shape() const { return impl_->shape(); }
-  DataType dtype() const { return impl_->dtype(); }
-  std::shared_ptr<Device> device() const { return impl_->device(); }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return impl_->parallel_conf(); }
-
- private:
-  std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
 }  // namespace one
