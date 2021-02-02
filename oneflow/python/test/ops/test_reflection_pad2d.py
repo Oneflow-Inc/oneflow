@@ -261,9 +261,9 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1]))
-    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2]))
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [1, 1, 1, 1]))
+    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [2, 2, 2, 2]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [3, 3, 2, 2]))
     if value_type == "float":
         if device_type == "gpu":
             arg_dict["value_type"] = [
