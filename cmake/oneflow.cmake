@@ -245,8 +245,8 @@ endif()
 
 if (WITH_MLIR)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
+  target_link_libraries(of_ccobj MLIROneFlowTranslation)
 endif()
-target_link_libraries(of_ccobj MLIROneFlowTranslation)
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${of_main_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
