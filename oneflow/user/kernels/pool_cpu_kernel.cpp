@@ -246,17 +246,16 @@ struct PoolCpuKernelUtil {
     pool_state->Update(x->shape());
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(
-          pool_state->GetParams3D(), x, y, GetZeroVal<T>, [](const T& lhs, T& rhs) { rhs += lhs; },
-          [](const int64_t size, T& out) { out /= size; });
+      CFirstForward(pool_state->GetParams3D(), x, y, GetZeroVal<T>,
+                    [](const T& lhs, T& rhs) { rhs += lhs; },
+                    [](const int64_t size, T& out) { out /= size; });
     } else if (data_format == "channels_last") {
-      CLastForward(
-          pool_state->GetParams3D(), x, y, GetZeroVal<T>,
-          [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-             EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
-          [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
-            out_mat.col(col) /= size;
-          });
+      CLastForward(pool_state->GetParams3D(), x, y, GetZeroVal<T>,
+                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+                      EigenMatrixMap<T>& out_mat) { out_mat.col(out_col) += in_mat.col(in_col); },
+                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {
+                     out_mat.col(col) /= size;
+                   });
     } else {
       UNIMPLEMENTED();
     }
@@ -295,20 +294,18 @@ struct PoolCpuKernelUtil {
     pool_state->Update(x->shape());
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
-      CFirstForward(
-          pool_state->GetParams3D(), x, y, GetMinVal<T>,
-          [](const T& lhs, T& rhs) {
-            if (lhs > rhs) { rhs = lhs; }
-          },
-          [](const int64_t size, T& out) {});
+      CFirstForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
+                    [](const T& lhs, T& rhs) {
+                      if (lhs > rhs) { rhs = lhs; }
+                    },
+                    [](const int64_t size, T& out) {});
     } else if (data_format == "channels_last") {
-      CLastForward(
-          pool_state->GetParams3D(), x, y, GetMinVal<T>,
-          [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
-             EigenMatrixMap<T>& out_mat) {
-            out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
-          },
-          [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
+      CLastForward(pool_state->GetParams3D(), x, y, GetMinVal<T>,
+                   [](const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+                      EigenMatrixMap<T>& out_mat) {
+                     out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
+                   },
+                   [](const int64_t size, const int64_t col, EigenMatrixMap<T>& out_mat) {});
     } else {
       UNIMPLEMENTED();
     }
