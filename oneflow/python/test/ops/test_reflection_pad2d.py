@@ -160,8 +160,10 @@ def _make_op_function(
 
 def gen_numpy_test_sample(input_shape, padding, is_float=True):
     c_idx, h_idx, w_idx = 1, 2, 3
-    pad_top = pad_bottom = padding[h_idx]
-    pad_left = pad_right = padding[w_idx]
+    pad_left = padding[0]
+    pad_right = padding[1]
+    pad_top = padding[2]
+    pad_bottom = padding[3]
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_reflection_pad2d(input, pad_shape):
