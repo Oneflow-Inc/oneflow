@@ -17,5 +17,7 @@ there are some rules must be enforced for all the optimizers, importers, exporte
     - there should be one `CMakeLists.txt` in every sub-directory
     - don't link anything from OneFlow unless it is necessary for the feature
 
-## Major components and interfaces
-- TODO
+## Major components
+- oneflow-translate: every thing related to MLIR-OneFlow translation.
+- oneflow-opt: optimization on OneFlow MLIR dialect, a placeholder for now.
+- oneflow dialect: in the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
