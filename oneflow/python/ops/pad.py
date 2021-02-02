@@ -267,7 +267,7 @@ def reflection_pad2d(
         @flow.global_function()
         def pad_Job(x: tp.Numpy.Placeholder((1, 2, 3, 3))
         ) -> tp.Numpy:
-            return flow.reflection_pad2d(x, padding=[0, 0, 1, 2])
+            return flow.reflection_pad2d(x, padding=[2, 2, 1, 1])
 
 
         x = np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32)
@@ -296,12 +296,12 @@ def reflection_pad2d(
         ), ValueError(
             "Padding size should be less than the corresponding input dimension!"
         )
-        boundry = [0, 0, padding[2], padding[3]]
+        boundry = [padding[0], padding[1], padding[2], padding[3]]
     elif isinstance(padding, int):
         assert padding < H and padding < W, ValueError(
             "Padding size should be less than the corresponding input dimension!"
         )
-        boundry = [0, 0, padding, padding]
+        boundry = [padding, padding, padding, padding]
     else:
         raise ValueError("padding must be in or list or tuple!")
 
