@@ -112,6 +112,28 @@ void ReplaceMirrored(const std::shared_ptr<InstructionsBuilder>& x,
   return x->ReplaceMirrored(parallel_desc_sym, lhs_objects, rhs_objects).GetOrThrow();
 }
 
+std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuilder>& x,
+                                         int64_t session_id,
+                                         const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                         const std::string& device_tag,
+                                         const std::vector<std::string>& machine_device_ids,
+                                         bool is_mirrored) {
+  return x->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, is_mirrored)
+      .GetPtrOrThrow();
+}
+
+std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
+    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
+  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids).GetPtrOrThrow();
+}
+
+std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
+    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  return x->BuildScopeWithNewParallelConf(scope, parallel_conf).GetPtrOrThrow();
+}
+
 std::shared_ptr<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<InstructionsBuilder>& x,
                                                    const std::shared_ptr<Scope>& scope,
                                                    bool is_mirrored) {
@@ -195,6 +217,9 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("UnpackLogicalBlobToPhysicalBlobs", &UnpackLogicalBlobToPhysicalBlobs)
       .def("MakeReferenceBlobObject", &MakeReferenceBlobObject)
       .def("ReplaceMirrored", &ReplaceMirrored)
+      .def("BuildInitialScope", &BuildInitialScope)
+      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc)
+      .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
       .def("BuildScopeWithNewIsMirrored", &BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &BuildScopeWithNewScopeName)
       .def("BuildScopeByProtoSetter", &BuildScopeByProtoSetter)

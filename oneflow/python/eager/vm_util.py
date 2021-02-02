@@ -30,7 +30,6 @@ import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.object_storage as object_storage
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.c_api_util as c_api_util
@@ -284,50 +283,6 @@ def MakeLazyRefBlobObject(self, interface_op_name):
     blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
     self.LazyReference(blob_object, interface_op_name)
     return blob_object
-
-
-def BuildInitialScope(
-    self, session_id, job_conf, device_tag, machine_device_ids, is_mirrored,
-):
-    scope_proto = scope_cfg.ScopeProto()
-    scope_proto.set_session_id(session_id)
-    job_conf_sym = self.GetJobConfSymbol(job_conf)
-    scope_proto.set_job_desc_symbol_id(job_conf_sym.symbol_id)
-    parallel_conf = parallel_conf_util.MakeParallelConf(device_tag, machine_device_ids)
-    device_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-    scope_proto.set_device_parallel_desc_symbol_id(device_parallel_desc_sym.symbol_id)
-    parallel_conf = parallel_conf_util.MakeParallelConf("cpu", machine_device_ids)
-    host_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-    scope_proto.set_host_parallel_desc_symbol_id(host_parallel_desc_sym.symbol_id)
-    if is_mirrored:
-        scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
-    else:
-        scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
-    return self.GetScopeSymbol(scope_proto)
-
-
-def BuildScopeWithNewParallelDesc(self, scope, device_tag, machine_device_ids):
-    if isinstance(machine_device_ids, str):
-        machine_device_ids = [machine_device_ids]
-
-    def SetScopeProto(scope_proto):
-        parallel_conf = parallel_conf_util.MakeParallelConf(
-            device_tag, machine_device_ids
-        )
-        device_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-        parallel_conf = parallel_conf_util.MakeParallelConf("cpu", machine_device_ids)
-        host_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-        scope_proto.set_device_parallel_desc_symbol_id(
-            device_parallel_desc_sym.symbol_id
-        )
-        scope_proto.set_host_parallel_desc_symbol_id(host_parallel_desc_sym.symbol_id)
-
-    return self.BuildScopeByProtoSetter(scope, SetScopeProto)
-
-
-def BuildScopeWithNewParallelConf(self, scope, parallel_conf):
-    tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(parallel_conf)
-    return self.BuildScopeWithNewParallelDesc(scope, *tag_and_dev_ids)
 
 
 def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
@@ -826,13 +781,6 @@ def RegisterMethod4InstructionsBuilder():
     oneflow_api.deprecated.InstructionsBuilder.FetchBlobBody = FetchBlobBody
     oneflow_api.deprecated.InstructionsBuilder.MakeLazyRefBlobObject = (
         MakeLazyRefBlobObject
-    )
-    oneflow_api.deprecated.InstructionsBuilder.BuildInitialScope = BuildInitialScope
-    oneflow_api.deprecated.InstructionsBuilder.BuildScopeWithNewParallelDesc = (
-        BuildScopeWithNewParallelDesc
-    )
-    oneflow_api.deprecated.InstructionsBuilder.BuildScopeWithNewParallelConf = (
-        BuildScopeWithNewParallelConf
     )
     oneflow_api.deprecated.InstructionsBuilder.GetSharedOpKernelObject4ParallelConfSymbol = (
         GetSharedOpKernelObject4ParallelConfSymbol
