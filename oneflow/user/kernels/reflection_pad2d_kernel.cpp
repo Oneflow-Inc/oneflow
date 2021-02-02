@@ -56,10 +56,10 @@ class ReflectionPad2dKernel final : public OpKernel {
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
-    const int64_t n_idx=0;
-    const int64_t c_idx=1;
-    const int64_t h_idx=2;
-    const int64_t w_idx=3;
+    const int64_t n_idx = 0;
+    const int64_t c_idx = 1;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
 
     const int64_t pad_left = padding[0];
     const int64_t pad_top = padding[2];
@@ -97,10 +97,10 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const int64_t ndims = dy->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
-    const int64_t n_idx=0;
-    const int64_t c_idx=1;
-    const int64_t h_idx=2;
-    const int64_t w_idx=3;
+    const int64_t n_idx = 0;
+    const int64_t c_idx = 1;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
 
     int64_t pad_left = padding[0];
     int64_t pad_top = padding[2];
