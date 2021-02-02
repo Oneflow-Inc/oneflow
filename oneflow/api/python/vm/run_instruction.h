@@ -18,22 +18,23 @@ limitations under the License.
 
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/eager/eager_oneflow.h"
+#include "oneflow/core/eager/eager_symbol.cfg.h"
 
 namespace oneflow {
 
 inline void RunLogicalInstruction(
     const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
-    const std::string& eager_symbol_list_str) {
+    const std::shared_ptr<eager::cfg::EagerSymbolList>& cfg_eager_symbol_list) {
   return Global<eager::EagerOneflow>::Get()
-      ->RunLogicalInstruction(cfg_instruction_list, eager_symbol_list_str)
+      ->RunLogicalInstruction(cfg_instruction_list, cfg_eager_symbol_list)
       .GetOrThrow();
 }
 
 inline void RunPhysicalInstruction(
     const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
-    const std::string& eager_symbol_list_str) {
+    const std::shared_ptr<eager::cfg::EagerSymbolList>& cfg_eager_symbol_list) {
   return Global<eager::EagerOneflow>::Get()
-      ->RunPhysicalInstruction(cfg_instruction_list, eager_symbol_list_str)
+      ->RunPhysicalInstruction(cfg_instruction_list, cfg_eager_symbol_list)
       .GetOrThrow();
 }
 
