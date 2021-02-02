@@ -18,6 +18,11 @@ there are some rules must be enforced for all the optimizers, importers, exporte
     - don't link anything from OneFlow unless it is necessary for the feature
 
 ## Major components
-- oneflow-translate: every thing related to MLIR-OneFlow translation.
-- oneflow-opt: optimization on OneFlow MLIR dialect, a placeholder for now.
-- oneflow dialect: in the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
+- ### oneflow-translate
+Everything related to MLIR-OneFlow translation. [read more](oneflow-translate/README.md)
+
+- ### oneflow-opt
+Optimizations on OneFlow MLIR dialect, a placeholder for now.
+
+- ### oneflow dialect
+In the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
