@@ -103,13 +103,13 @@ def ctc_loss(
 
 
     Args:
-        log_probs (oneflow_api.BlobDesc): A Blob of shape [input_length, batch_size, num_labels].
-        targets (oneflow_api.BlobDesc): A Blob of shape [batch_size, max_target_length].
-        input_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size].
-        target_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size].
+        log_probs (oneflow_api.BlobDesc): A Blob of shape [input_length, batch_size, num_labels]. The logarithmized probabilities of the outputs (e.g. obtained with flow.nn.logsoftmax()).
+        targets (oneflow_api.BlobDesc): A Blob of shape [batch_size, max_target_length]. It represent the target sequences. Each element in the target sequence is a class index. And the target index cannot be blank (default=0).
+        input_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size]. It represent the lengths of the inputs. And the lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
+        target_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size]. It represent lengths of the targets. Lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
         blank (int, optional): Blank label. Defaults to 0.
-        reduction (str, optional): The reduce type, it can be the one of "none", "mean", "sum". Defaults to "mean".
-        zero_infinity (bool, optional):  Whether to zero infinite losses and the associated gradients. Defaults to False.
+        reduction (str, optional): The reduce type, it can be the one of "none", "mean", "sum". "none": no reduction will be applied, "mean": the output losses will be divided by the target lengths and then the mean over the batch is taken, "sum": the output will be summed. Defaults to "mean".
+        zero_infinity (bool, optional):  Whether to zero infinite losses and the associated gradients. Infinite losses mainly occur when the inputs are too short to be aligned to the targets. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
