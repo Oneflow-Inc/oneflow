@@ -30,7 +30,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.python.vm.id_util as id_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
