@@ -56,20 +56,20 @@ class ReflectionPad2dKernel final : public OpKernel {
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
-    int64_t c_idx, h_idx, w_idx;
-    c_idx = 1;
-    h_idx = 2;
-    w_idx = 3;
+    const int64_t n_idx = 0;
+    const int64_t c_idx = 1;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
 
-    int64_t pad_left = padding[w_idx];
-    int64_t pad_top = padding[h_idx];
+    const int64_t pad_left = padding[0];
+    const int64_t pad_top = padding[2];
 
-    int64_t n_batch = y->shape().At(0);
-    int64_t n_channel = y->shape().At(c_idx);
-    int64_t y_height = y->shape().At(h_idx);
-    int64_t y_width = y->shape().At(w_idx);
-    int64_t x_height = x->shape().At(h_idx);
-    int64_t x_width = x->shape().At(w_idx);
+    const int64_t n_batch = y->shape().At(n_idx);
+    const int64_t n_channel = y->shape().At(c_idx);
+    const int64_t y_height = y->shape().At(h_idx);
+    const int64_t y_width = y->shape().At(w_idx);
+    const int64_t x_height = x->shape().At(h_idx);
+    const int64_t x_width = x->shape().At(w_idx);
 
     IN_T* dest = y->mut_dptr<IN_T>();
     const IN_T* src = x->dptr<IN_T>();
@@ -97,14 +97,14 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const int64_t ndims = dy->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
-    int64_t c_idx, h_idx, w_idx;
-    c_idx = 1;
-    h_idx = 2;
-    w_idx = 3;
+    const int64_t n_idx = 0;
+    const int64_t c_idx = 1;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
 
-    int64_t pad_left = padding[w_idx];
-    int64_t pad_top = padding[h_idx];
-    int64_t n_batch = dy->shape().At(0);
+    int64_t pad_left = padding[0];
+    int64_t pad_top = padding[2];
+    int64_t n_batch = dy->shape().At(n_idx);
     int64_t n_channel = dy->shape().At(c_idx);
     int64_t dy_height = dy->shape().At(h_idx);
     int64_t dy_width = dy->shape().At(w_idx);
