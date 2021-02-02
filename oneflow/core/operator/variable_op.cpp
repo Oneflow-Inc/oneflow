@@ -98,6 +98,46 @@ Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(this->op_conf());
 }
 
+Maybe<void> VariableOp::InferParallelHierarchy(
+    std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
+    const ParallelDesc& parallel_desc, Shape* parallel_hierarchy) const {
+  const VariableOpConf& conf = this->op_conf().variable_conf();
+  if (conf.has_parallel_hierarchy()) {
+    const Shape conf_parallel_hierarchy(conf.parallel_hierarchy());
+    CHECK_EQ_OR_RETURN(conf_parallel_hierarchy.elem_cnt(), parallel_desc.parallel_num());
+    *parallel_hierarchy = conf_parallel_hierarchy;
+  } else {
+    *parallel_hierarchy = Shape({parallel_desc.parallel_num()});
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VariableOp::InferParallelDistributionSignature(
+    ParallelDistributionSignature* signature, const SbpSignature& sbp_sig_conf,
+    const ParallelDesc& parallel_desc, const Shape& parallel_hierarchy,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn,
+    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp) {
+  const VariableOpConf& conf = this->op_conf().variable_conf();
+  CHECK_EQ_OR_RETURN(conf.parallel_distribution_size(), parallel_hierarchy.NumAxes());
+  ParallelDistribution& out_parallel_distribution =
+      (*signature->mutable_bn_in_op2parallel_distribution())["out"];
+  for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+    SbpParallel sbp_parallel;
+    CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i), &sbp_parallel));
+    CHECK_OR_RETURN(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
+    *out_parallel_distribution.mutable_sbp_parallel()->Add() = sbp_parallel;
+  }
+  if (conf.has_tick()) {
+    ParallelDistribution& tick_parallel_distribution =
+        (*signature->mutable_bn_in_op2parallel_distribution())["tick"];
+    for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+      tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kVariableConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kVariableConf);

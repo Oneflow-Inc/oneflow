@@ -28,6 +28,14 @@ def _test(test_case):
         x = flow.hierarchical_parallel_cast(
             x, parallel_hierarchy=[2, 2], parallel_distribution=["S(0)", "S(0)"],
         )
+        v = flow.get_variable(
+            name="v",
+            shape=(1024, 1024),
+            parallel_hierarchy=(2, 2),
+            parallel_distribution=["B", "B"],
+            initializer=flow.ones_initializer(),
+        )
+        x = flow.matmul(x, v)
         x = flow.math.relu(x)
         x = flow.hierarchical_parallel_cast(
             x, parallel_hierarchy=[4], parallel_distribution=["S(0)"]

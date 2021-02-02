@@ -379,8 +379,8 @@ Maybe<void> Operator::InferMirroredSignatureIf(
 
 Maybe<void> Operator::InferParallelHierarchyIf(
     std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
-    const ParallelDesc& parallel_desc, Shape* shape) {
-  return InferParallelHierarchy(GetParallelHierarchy4Ibn, parallel_desc, shape);
+    const ParallelDesc& parallel_desc, Shape* parallel_hierarchy) {
+  return InferParallelHierarchy(GetParallelHierarchy4Ibn, parallel_desc, parallel_hierarchy);
 }
 
 std::string DebugString4MirroredHint(
@@ -432,26 +432,26 @@ Maybe<void> Operator::InferMirroredSignature(
 
 Maybe<void> Operator::InferParallelHierarchy(
     std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
-    const ParallelDesc& parallel_desc, Shape* shape) const {
+    const ParallelDesc& parallel_desc, Shape* parallel_hierarchy) const {
   bool is_all_parallel_hierarchy_1d = true;
   for (const auto& ibn : input_bns()) {
-    const auto* parallel_hierarchy = JUST(GetParallelHierarchy4Ibn(ibn));
-    if (parallel_hierarchy->NumAxes() > 1) { is_all_parallel_hierarchy_1d = false; }
+    const auto* parallel_hierarchy_hint = JUST(GetParallelHierarchy4Ibn(ibn));
+    if (parallel_hierarchy_hint->NumAxes() > 1) { is_all_parallel_hierarchy_1d = false; }
   }
   if (is_all_parallel_hierarchy_1d) {
-    *shape = Shape({parallel_desc.parallel_num()});
+    *parallel_hierarchy = Shape({parallel_desc.parallel_num()});
   } else {
     const Shape* op_parallel_hierarchy = nullptr;
     for (const auto& ibn : input_bns()) {
-      const auto parallel_hierarchy = JUST(GetParallelHierarchy4Ibn(ibn));
+      const auto parallel_hierarchy_hint = JUST(GetParallelHierarchy4Ibn(ibn));
       if (op_parallel_hierarchy == nullptr) {
-        op_parallel_hierarchy = parallel_hierarchy;
+        op_parallel_hierarchy = parallel_hierarchy_hint;
       } else {
-        CHECK_EQ_OR_RETURN(*parallel_hierarchy, *op_parallel_hierarchy);
+        CHECK_EQ_OR_RETURN(*parallel_hierarchy_hint, *op_parallel_hierarchy);
       }
     }
     CHECK_EQ_OR_RETURN(op_parallel_hierarchy->elem_cnt(), parallel_desc.parallel_num());
-    *shape = *op_parallel_hierarchy;
+    *parallel_hierarchy = *op_parallel_hierarchy;
   }
   return Maybe<void>::Ok();
 }

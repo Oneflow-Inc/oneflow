@@ -56,7 +56,7 @@ class UserOp final : public Operator {
       Shape* time_shape) const override;
   Maybe<void> InferParallelHierarchy(
       std::function<Maybe<const Shape*>(const std::string&)> GetParallelHierarchy4Ibn,
-      const ParallelDesc& parallel_desc, Shape* shape) const override;
+      const ParallelDesc& parallel_desc, Shape* parallel_hierarchy) const override;
   Maybe<void> InferParallelDistributionSignature(
       ParallelDistributionSignature* signature, const SbpSignature& sbp_sig_conf,
       const ParallelDesc& parallel_desc, const Shape& parallel_hierarchy,
