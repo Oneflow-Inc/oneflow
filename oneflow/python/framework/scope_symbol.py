@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
@@ -90,9 +89,7 @@ class ScopeSymbol(Symbol):
         return self.BuildBySetter(instruction_builder, SetScopeProto)
 
     def BuildWithNewParallelConf(self, instruction_builder, parallel_conf):
-        tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
-            parallel_conf
-        )
+        tag_and_dev_ids = oneflow_api.GetDeviceTagAndMachineDeviceIds(parallel_conf)
         return self.BuildWithNewParallelDesc(instruction_builder, *tag_and_dev_ids)
 
     def BuildWithNewIsMirrored(self, instruction_builder, is_mirrored):
