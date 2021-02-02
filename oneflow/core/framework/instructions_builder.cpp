@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/framework/object_storage.h"
 
 namespace oneflow {
 
@@ -641,6 +642,18 @@ Maybe<void> InstructionsBuilder::LazyReference(
   return Maybe<void>::Ok();
 }
 
+Maybe<compatible_py::Object> InstructionsBuilder::GetSharedOpKernelObject4ParallelConfSymbol(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+  if (JUST(HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym))) {
+    return GetOpKernelObject4ParallelConfSymbol(parallel_desc_sym);
+  }
+  int64_t object_id = JUST(NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym));
+  std::shared_ptr<compatible_py::Object> obj =
+      std::make_shared<compatible_py::Object>(object_id, parallel_desc_sym);
+  JUST(SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj));
+  return obj;
+}
+
 Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("InitStringSymbol");
@@ -773,6 +786,69 @@ Maybe<void> InstructionsBuilder::_StatefulCallOpKernel(
   instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(opkernel_object->object_id()));
   instruction.mutable_operand()->Add()->CopyFrom(
       *SymbolOperand(JUST(op_node_signature_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+
+  for (const auto& pair : const_input_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+  }
+  for (const auto& pair : const_input_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(pair.second->object_id()));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+
+  for (const auto& pair : mutable_input_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+  }
+  for (const auto& pair : mutable_input_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(pair.second->object_id()));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+
+  for (const auto& pair : mut1_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+  }
+  for (const auto& pair : mut1_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(pair.second->object_id()));
+  }
+  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+
+  for (const auto& pair : mut2_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+  }
+  for (const auto& pair : mut2_operand_blob_objects) {
+    instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(pair.second->object_id()));
+  }
+
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_StatelessCallOpKernel(
+    const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+    const std::shared_ptr<JobDesc>& job_desc_sym,
+    const std::shared_ptr<OperatorConfSymbol>& op_conf_sym,
+    const std::shared_ptr<OpNodeSignatureDesc>& op_node_signature_sym,
+    const std::shared_ptr<compatible_py::Object>& shared_opkernel_obj,
+    std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+        const_input_operand_blob_objects,
+    std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+        mutable_input_operand_blob_objects,
+    std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+        mut1_operand_blob_objects,
+    std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+        mut2_operand_blob_objects) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name(parallel_desc_sym->device_tag() + "." + instr_name);
+  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(job_desc_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(op_conf_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(
+      *SymbolOperand(JUST(op_node_signature_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(shared_opkernel_obj->object_id()));
   instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
 
   for (const auto& pair : const_input_operand_blob_objects) {

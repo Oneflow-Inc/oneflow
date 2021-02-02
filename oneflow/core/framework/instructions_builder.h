@@ -104,9 +104,6 @@ class InstructionsBuilder {
   Maybe<int64_t> NewSymbolId4OpNodeSignature(
       const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym);
 
-  Maybe<int64_t> NewSharedOpKernelObjectId4ParallelConfSymbolId(
-      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
-
   Maybe<void> DeleteObject(compatible_py::Object* blob_object);
 
   Maybe<std::vector<std::shared_ptr<ParallelDesc>>> GetPhysicalParallelDescSymbols(
@@ -163,10 +160,32 @@ class InstructionsBuilder {
   Maybe<void> LazyReference(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                             std::string interface_op_name);
 
+  Maybe<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbol(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
+
   Maybe<void> _StatefulCallOpKernel(
       const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
       const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
       const std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym,
+      std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+          const_input_operand_blob_objects,
+      std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+          mutable_input_operand_blob_objects,
+      std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+          mut1_operand_blob_objects,
+      std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+          mut2_operand_blob_objects);
+
+  Maybe<void> _StatelessCallOpKernel(
+      const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::shared_ptr<JobDesc>& job_desc_sym,
+      const std::shared_ptr<OperatorConfSymbol>& op_conf_sym,
+      const std::shared_ptr<OpNodeSignatureDesc>& op_node_signature_sym,
+      const std::shared_ptr<compatible_py::Object>& shared_opkernel_obj,
       std::vector<
           std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
           const_input_operand_blob_objects,
@@ -199,6 +218,9 @@ class InstructionsBuilder {
   Maybe<int64_t> NewSymbolId4Scope(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
 
   Maybe<int64_t> NewSymbolId4OpConf(const std::shared_ptr<cfg::OperatorConf> op_conf);
+
+  Maybe<int64_t> NewSharedOpKernelObjectId4ParallelConfSymbolId(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
   Maybe<int64_t> _NewOpKernelObject(const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
                                     const std::shared_ptr<JobDesc>& job_desc_sym,
