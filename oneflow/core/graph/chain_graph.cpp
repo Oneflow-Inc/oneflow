@@ -248,7 +248,8 @@ void ChainGraph::CheckNoCycle() const {
     auto* ptr = scc.get();
     auto OnCycle = [ptr](ChainNode* chain_node) { return ptr->find(chain_node) != ptr->end(); };
     const auto& chain_graph_filename = "job" + job_id + "_cycle_chain_graph.dot";
-    ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, chain_graph_filename);
+    ToDotWithFilePath(
+        OnCycle, [](ChainEdge*) { return true; }, chain_graph_filename);
 
     HashMap<int64_t, int32_t> task_id2color = {};
     int32_t chain_node_cnt = 0;
@@ -287,7 +288,8 @@ void ChainGraph::CheckNoCycle() const {
     }
     auto TaskOnCycle = [&](TaskNode* task) { return tasks.find(task) != tasks.end(); };
     const auto& task_gph_filename = "job" + job_id + "_cycle_task_graph.dot";
-    task_gph_.ToDotWithFilePath(TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
+    task_gph_.ToDotWithFilePath(
+        TaskOnCycle, [](TaskEdge*) { return true; }, task_gph_filename);
     LOG(FATAL) << "cycle in graph detected, please check:\n"
                << colored_task_graph_filename << "\n"
                << task_gph_filename << "\n"

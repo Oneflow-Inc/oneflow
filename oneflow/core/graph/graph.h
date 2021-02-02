@@ -339,8 +339,9 @@ void Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::function<bool(NodeType*)>& IsNodeAllowed,
     const std::function<bool(EdgeType*)>& IsEdgeAllowed, const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
-  ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; },
-                  [](EdgeType*) { return ""; }, log_stream);
+  ToDotWithStream(
+      IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; }, [](EdgeType*) { return ""; },
+      log_stream);
   log_stream->Flush();
 }
 
