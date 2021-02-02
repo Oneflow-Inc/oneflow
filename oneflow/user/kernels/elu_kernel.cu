@@ -45,4 +45,8 @@ INSTANTIATE_ELU_GPU_FUNCTORS(half);
 INSTANTIATE_ELU_GPU_FUNCTORS(double);
 INSTANTIATE_ELU_GPU_FUNCTORS(float);
 
+REGISTER_ELU_KERNEL(DeviceType::kGPU, half);
+REGISTER_ELU_KERNEL(DeviceType::kGPU, float);
+REGISTER_ELU_KERNEL(DeviceType::kGPU, double);
+
 }  // namespace oneflow
