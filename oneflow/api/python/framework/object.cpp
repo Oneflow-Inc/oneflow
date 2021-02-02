@@ -49,7 +49,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<OpKernelObject, Object, std::shared_ptr<OpKernelObject>>(m, "OpKernelObject")
       .def(py::init([](int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
-                       const std::function<void(OpKernelObject*)>& release) {
+                       const std::function<void(Object*)>& release) {
         return std::make_shared<OpKernelObject>(object_id, op_conf, release);
       }))
       .def_property_readonly("object_id", &OpKernelObject::object_id)
