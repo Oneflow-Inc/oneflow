@@ -70,10 +70,10 @@ if(NOT llvm_monorepo_POPULATED)
       ${LLVM_ROOT}/mlir/include
       ${LLVM_BINARY_DIR}/tools/mlir/include
       )
+  include_directories(${LLVM_INCLUDE_DIRS})
+  include_directories(${MLIR_INCLUDE_DIRS})
 endif()
 
-include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 add_subdirectory(include)
