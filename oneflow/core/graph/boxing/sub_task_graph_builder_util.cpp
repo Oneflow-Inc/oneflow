@@ -134,27 +134,20 @@ int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
 }
 
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
-  const int64_t src_machine_id = src->machine_id();
+  const auto GetDevPhyId = [](const DeviceType device_type, const int64_t thrd_id) -> int64_t {
+    if (device_type == DeviceType::kGPU) {
+      return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+    } else if (device_type == DeviceType::kCPU) {
+      return 0;
+    } else {
+      UNIMPLEMENTED();
+    }
+  };
   const DeviceType src_device_type = src->device_type();
-  int64_t src_dev_phy_id;
-  if (src_device_type == DeviceType::kGPU) {
-    src_dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(src->thrd_id());
-  } else if (src_device_type == DeviceType::kCPU) {
-    src_dev_phy_id = 0;
-  } else {
-    UNIMPLEMENTED();
-  }
-  const int64_t dst_machine_id = dst->machine_id();
+  const int64_t src_dev_phy_id = GetDevPhyId(src_device_type, src->thrd_id());
   const DeviceType dst_device_type = dst->device_type();
-  int64_t dst_dev_phy_id;
-  if (dst_device_type == DeviceType::kGPU) {
-    dst_dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst->thrd_id());
-  } else if (dst_device_type == DeviceType::kCPU) {
-    dst_dev_phy_id = 0;
-  } else {
-    UNIMPLEMENTED();
-  }
-  return GetDistance(src_machine_id, src_dev_phy_id, src_device_type, dst_machine_id,
+  const int64_t dst_dev_phy_id = GetDevPhyId(dst_device_type, dst->thrd_id());
+  return GetDistance(src->machine_id(), src_dev_phy_id, src_device_type, dst->machine_id(),
                      dst_dev_phy_id, dst_device_type);
 }
 
