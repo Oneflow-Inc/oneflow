@@ -38,8 +38,8 @@ class TensorImpl {
 
   virtual std::shared_ptr<Shape> shape() const { return shape_; }
   virtual DataType dtype() const { return dtype_; }
-
   std::shared_ptr<Device> device() const { return device_; }
+
   std::shared_ptr<cfg::LogicalBlobId> lbi() const;
   std::string logical_blob_name() const;
   std::string op_name() const;
