@@ -509,11 +509,9 @@ def _TryCompleteConfigProto(config_proto):
 
 
 def _GetDefaultConfigProto():
-    from oneflow.python_gen.compatibility import with_cuda
-
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    if with_cuda:
+    if oneflow_api.flags.with_cuda():
         config_proto.resource.gpu_device_num = 1
     else:
         config_proto.resource.cpu_device_num = 1
