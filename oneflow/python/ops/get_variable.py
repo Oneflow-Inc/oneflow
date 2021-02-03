@@ -347,7 +347,7 @@ def _CreateVariableBlob(op_conf):
 
 
 def CreateEagerVariableBlob(op_attribute, job_name=""):
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
 
     def BuildInstruction(builder):
         parallel_conf = (

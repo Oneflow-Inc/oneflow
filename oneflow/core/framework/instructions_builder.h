@@ -32,6 +32,9 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/opkernel_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
+#include "oneflow/core/operator/op_attribute.cfg.h"
+#include "oneflow/core/operator/arg_modifier_signature.cfg.h"
+#include "oneflow/core/job/parallel_signature.cfg.h"
 
 namespace oneflow {
 
@@ -96,6 +99,9 @@ class InstructionsBuilder {
   Maybe<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
 
   Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<cfg::OperatorConf>& op_conf);
+
+  Maybe<OpNodeSignatureDesc> GetOpNodeSignatureSymbol(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute);
 
   Maybe<compatible_py::BlobObject> NewBlobObject(
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
@@ -198,6 +204,42 @@ class InstructionsBuilder {
       std::vector<
           std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
           mut2_operand_blob_objects);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetConstInputOperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
+          blob_object4ibn);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetMutableInputOperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
+          blob_object4ibn);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetMut1OperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
+  Maybe<void> CheckRefInBlobObjectParallelDesc(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<ParallelDesc>& op_parallel_desc_sym,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetMut2OperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
 
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {

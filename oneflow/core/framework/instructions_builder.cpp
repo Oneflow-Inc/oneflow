@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/framework/object_storage.h"
+#include "oneflow/core/operator/op_node_signature.cfg.h"
 
 namespace oneflow {
 
@@ -884,6 +885,162 @@ Maybe<void> InstructionsBuilder::_StatelessCallOpKernel(
 
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return Maybe<void>::Ok();
+}
+
+Maybe<OpNodeSignatureDesc> InstructionsBuilder::GetOpNodeSignatureSymbol(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute) {
+  std::shared_ptr<cfg::OpNodeSignature> op_node_signature =
+      std::make_shared<cfg::OpNodeSignature>();
+  {
+    op_node_signature->mutable_sbp_signature()->CopyFrom(op_attribute->sbp_signature());
+    op_node_signature->mutable_mirrored_signature()->CopyFrom(op_attribute->mirrored_signature());
+    op_node_signature->mutable_logical_blob_desc_signature()->CopyFrom(
+        op_attribute->logical_blob_desc_signature());
+    op_node_signature->mutable_batch_axis_signature()->CopyFrom(
+        op_attribute->batch_axis_signature());
+    op_node_signature->mutable_parallel_signature()->CopyFrom(op_attribute->parallel_signature());
+  }
+  if (JUST(HasSymbol<cfg::OpNodeSignature>(*op_node_signature))) {
+    return GetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>(*op_node_signature);
+  }
+  int64_t symbol_id = JUST(NewSymbolId4OpNodeSignature(op_node_signature));
+  JUST(AddSymbol<cfg::OpNodeSignature, OpNodeSignature, OpNodeSignatureDesc>(symbol_id,
+                                                                             *op_node_signature));
+  return GetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>(*op_node_signature);
+}
+
+Maybe<std::vector<
+    std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+InstructionsBuilder::GetConstInputOperandBlobObjects(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
+        blob_object4ibn) {
+  std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const_input_operand_blob_objects;
+  for (const auto& ibn : op_attribute->input_bns()) {
+    const auto& ibn2modifier = op_attribute->arg_modifier_signature().ibn2input_blob_modifier();
+    if (ibn2modifier[ibn].is_mutable()) { continue; }
+    std::shared_ptr<StringSymbol> ibn_sym = JUST(GetSymbol4String(ibn));
+    std::shared_ptr<compatible_py::BlobObject> in_object = blob_object4ibn(ibn);
+    const_input_operand_blob_objects.emplace_back(std::make_pair(ibn_sym, in_object));
+  }
+  return const_input_operand_blob_objects;
+}
+
+Maybe<std::vector<
+    std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+InstructionsBuilder::GetMutableInputOperandBlobObjects(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
+        blob_object4ibn) {
+  std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      mutable_input_operand_blob_objects;
+  for (const auto& ibn : op_attribute->input_bns()) {
+    const auto& ibn2modifier = op_attribute->arg_modifier_signature().ibn2input_blob_modifier();
+    if (!(ibn2modifier[ibn].is_mutable())) { continue; }
+    std::shared_ptr<StringSymbol> ibn_sym = JUST(GetSymbol4String(ibn));
+    std::shared_ptr<compatible_py::BlobObject> in_object = blob_object4ibn(ibn);
+    mutable_input_operand_blob_objects.emplace_back(std::make_pair(ibn_sym, in_object));
+  }
+  return mutable_input_operand_blob_objects;
+}
+
+Maybe<std::vector<
+    std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+InstructionsBuilder::GetMut1OperandBlobObjects(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      mut1_operand_blob_objects;
+  const auto GetOutBlobParallelDescSymbol =
+      [&op_attribute, &parallel_desc_sym](const std::string& obn) -> Maybe<ParallelDesc> {
+    const auto& parallel_signature = op_attribute->parallel_signature();
+    const auto& bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id();
+    if (bn2symbol_id.find(obn) != bn2symbol_id.end()) {
+      return GetSymbol<cfg::ParallelConf, ParallelDesc>(bn2symbol_id.at(obn));
+    } else {
+      return parallel_desc_sym;
+    }
+  };
+  const auto OutputBns = [&op_attribute]() -> std::vector<std::string> {
+    const auto& obn2modifier = op_attribute->arg_modifier_signature().obn2output_blob_modifier();
+    std::vector<std::string> output_bns;
+    for (const auto& obn : op_attribute->output_bns()) {
+      if (obn2modifier.at(obn).header_infered_before_compute()) { output_bns.emplace_back(obn); }
+    }
+    for (const auto& tmp_bn : op_attribute->tmp_bns()) { output_bns.emplace_back(tmp_bn); }
+    return output_bns;
+  };
+  OpAttribute pb_op_attribute;
+  op_attribute->ToProto(&pb_op_attribute);
+  for (const auto& obn : OutputBns()) {
+    std::shared_ptr<StringSymbol> obn_sym = JUST(GetSymbol4String(obn));
+    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+        JUST(compatible_py::GetOpArgParallelAttribute(JUST(GetOutBlobParallelDescSymbol(obn)),
+                                                      pb_op_attribute, obn));
+    std::shared_ptr<compatible_py::OpArgBlobAttribute> op_arg_blob_attr =
+        JUST(compatible_py::GetOpArgBlobAttribute(pb_op_attribute, obn));
+    std::shared_ptr<compatible_py::BlobObject> out_blob_object =
+        JUST(NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr));
+    (*bn_in_op2blob_object)[obn] = out_blob_object;
+    mut1_operand_blob_objects.emplace_back(std::make_pair(obn_sym, out_blob_object));
+  }
+  return mut1_operand_blob_objects;
+}
+
+Maybe<void> InstructionsBuilder::CheckRefInBlobObjectParallelDesc(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<ParallelDesc>& op_parallel_desc_sym,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  for (const std::string& ibn : op_attribute->input_bns()) {
+    const auto& ibn2modifier = op_attribute->arg_modifier_signature().ibn2input_blob_modifier();
+    if (!(ibn2modifier[ibn].is_mutable())) { continue; }
+    std::shared_ptr<compatible_py::BlobObject> ref_blob_object = bn_in_op2blob_object->at(ibn);
+    CHECK_OR_RETURN(*op_parallel_desc_sym == *ref_blob_object->parallel_desc_symbol());
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<std::vector<
+    std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+InstructionsBuilder::GetMut2OperandBlobObjects(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      mut2_operand_blob_objects;
+  const auto GetOutBlobParallelDescSymbol =
+      [&op_attribute, &parallel_desc_sym](const std::string& obn) -> Maybe<ParallelDesc> {
+    const auto& parallel_signature = op_attribute->parallel_signature();
+    const auto& bn2symbol_id = parallel_signature.bn_in_op2parallel_desc_symbol_id();
+    if (bn2symbol_id.find(obn) != bn2symbol_id.end()) {
+      return GetSymbol<cfg::ParallelConf, ParallelDesc>(bn2symbol_id[obn]);
+    } else {
+      return parallel_desc_sym;
+    }
+  };
+  OpAttribute pb_op_attribute;
+  op_attribute->ToProto(&pb_op_attribute);
+  for (const auto& obn : op_attribute->output_bns()) {
+    const auto& obn2modifier = op_attribute->arg_modifier_signature().obn2output_blob_modifier();
+    if (obn2modifier[obn].header_infered_before_compute()) { continue; }
+    std::shared_ptr<StringSymbol> obn_sym = JUST(GetSymbol4String(obn));
+
+    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+        JUST(compatible_py::GetOpArgParallelAttribute(JUST(GetOutBlobParallelDescSymbol(obn)),
+                                                      pb_op_attribute, obn));
+    std::shared_ptr<compatible_py::OpArgBlobAttribute> op_arg_blob_attr =
+        JUST(compatible_py::GetOpArgBlobAttribute(pb_op_attribute, obn));
+    std::shared_ptr<compatible_py::BlobObject> out_blob_object =
+        JUST(NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr));
+    (*bn_in_op2blob_object)[obn] = out_blob_object;
+    mut2_operand_blob_objects.emplace_back(std::make_pair(obn_sym, out_blob_object));
+  }
+  return mut2_operand_blob_objects;
 }
 
 std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id) {
