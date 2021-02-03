@@ -598,7 +598,11 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
 
         x = np.random.uniform(low=-10.0, high=10.0, size=(8,)).astype(np.float32)
         y = SoftplusJob(x).get().numpy()
-        test_case.assertTrue(np.allclose(y, np.log(np.exp(x) + 1), equal_nan=True))
+        test_case.assertTrue(
+            np.allclose(
+                y, np.log(np.exp(x) + 1), equal_nan=True, rtol=1e-03, atol=1e-05
+            )
+        )
 
     def test_sqrt(test_case):
         func_config = flow.FunctionConfig()
@@ -647,14 +651,14 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         y = TanJob(x).get().numpy()
         test_case.assertTrue(np.allclose(y, np.tan(x), equal_nan=True))
 
-    def test_tanh_v2(test_case):
+    def test_tanh(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
         func_config.default_logical_view(flow.scope.consistent_view())
 
         @flow.global_function(function_config=func_config)
         def TanhJob(a: oft.Numpy.Placeholder((8,))):
-            return flow.math.tanh_v2(a)
+            return flow.math.tanh(a)
 
         x = np.array(
             [-float("inf"), -5, -0.5, 1, 1.2, 2, 3, float("inf")], dtype=np.float32

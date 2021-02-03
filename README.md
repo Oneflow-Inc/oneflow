@@ -61,6 +61,14 @@
     python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
     ```
 
+  - To install legacy version of OneFlow with CUDA support:
+
+    ```
+    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102==0.3.1 --user
+    ```
+
+    Some legacy versions available: `0.1.10`, `0.2.0`, `0.3.0`, `0.3.1`
+
   - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
     ```
     python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -79,11 +87,13 @@
 
     - To install dependencies, run:
 
+      On CentOS:
+
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
       rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
       yum update -y && yum install -y epel-release && \
-      yum install -y intel-mkl-64bit-2020.0-088 nasm swig rdma-core-devel
+      yum install -y intel-mkl-64bit-2020.0-088 nasm rdma-core-devel
       ```
 
       On CentOS, if you have MKL installed, please update the environment variable:
@@ -104,10 +114,10 @@
 
 2. #### Clone Source Code
 
-    - #### Option 1: Clone source code from github
+    - #### Option 1: Clone source code from GitHub
 
       ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow
+      git clone https://github.com/Oneflow-Inc/oneflow --depth=1
       ```
 
     - #### Option 2: Download from Aliyun
@@ -211,7 +221,7 @@ For those who would like to understand the OneFlow internals, please read the do
 * [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-* Github issues : any install, bug, feature issues.
+* GitHub issues : any install, bug, feature issues.
 * [www.oneflow.org](http://www.oneflow.org) : brand related information.
 
 ## Contributing

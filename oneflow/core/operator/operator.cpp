@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/logical_node.h"
@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 
 namespace oneflow {
 
@@ -102,7 +103,7 @@ Maybe<void> Operator::InferParallelSignatureIf() {
 }
 
 Maybe<void> Operator::InferParallelSignature() {
-  const auto& scope_storage = *Global<vm::SymbolStorage<Scope>>::Get();
+  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();
@@ -235,7 +236,6 @@ Maybe<void> Operator::GetSbpSignaturesIf(
 void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) const {
   for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
-  for (const std::string& bn_in_op : const_buf_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
 }
 
@@ -475,12 +475,6 @@ LogicalBlobId Operator::tbn2lbi(const std::string& tmp_bn) const {
   ret.set_blob_name(tmp_bn);
   return ret;
 }
-LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_buf_bn);
-  return ret;
-}
 
 void Operator::EnrollTmpBn(const std::string& tbn) {
   *(mut_tmp_bns()->Add()) = tbn;
@@ -591,11 +585,6 @@ void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num
 
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
   EnrollRepeatedOutputBn(obn_prefix, true);
-}
-
-void Operator::EnrollConstBufBn(const std::string& cbbn) {
-  *(mut_const_buf_bns()->Add()) = cbbn;
-  CHECK(mut_bn_in_op2lbi()->insert({cbbn, cbbn2lbi(cbbn)}).second);
 }
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
@@ -765,7 +754,7 @@ Maybe<void> InferOpSbpSignature(
   };
   auto OrderValue4SbpHint = [&](const std::string& ibn,
                                 const SbpParallel& sbp_parallel) -> int32_t {
-    return -3 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
+    return -8 * (CHECK_JUST(SbpInferHint4Ibn(ibn))->sbp_parallel() == sbp_parallel);
   };
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {

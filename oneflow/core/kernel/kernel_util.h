@@ -129,8 +129,6 @@ struct CpuKernelUtilIf {
                         const int64_t elem_cnt, const T* x, T* y);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
-  static void MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
 };
 
 // CPU, Floating
@@ -162,7 +160,6 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y);
   static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
@@ -173,9 +170,6 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                               T* dx);
-  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
-                           T* dx);
   static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
@@ -239,8 +233,6 @@ struct GpuKernelUtilIf {
                                  uint32_t random_seed, Blob* blob);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
   static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
-  static void MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
 };
 
 // GPU, Floating
@@ -274,7 +266,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y);
   static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
@@ -284,9 +275,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                               T* dx);
-  static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y);
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
-                           T* dx);
   static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
