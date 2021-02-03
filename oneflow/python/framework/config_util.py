@@ -81,16 +81,14 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    from oneflow.python_gen.compatibility import with_cuda
-
-    if with_cuda == False:
+    if oneflow_api.flags.with_cuda():
+        return enable_if.unique([gpu_device_num, do_nothing])(val)
+    else:
         print(
             "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
         )
         print(traceback.format_stack()[-2])
         return enable_if.unique([cpu_device_num, do_nothing])(val)
-    else:
-        return enable_if.unique([gpu_device_num, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
