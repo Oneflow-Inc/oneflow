@@ -62,6 +62,20 @@ Maybe<void> VariableOp::InferBlobDescs(
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
   }
+  if (variable_conf.has_parallel_hierarchy()) {
+    const Shape parallel_hierarchy(variable_conf.parallel_hierarchy());
+    for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+      SbpParallel sbp_parallel;
+      CHECK_OR_RETURN(
+          ParseSbpParallelFromString(variable_conf.parallel_distribution(i), &sbp_parallel));
+      if (sbp_parallel.has_split_parallel()) {
+        const int64_t split_axis = sbp_parallel.split_parallel().axis();
+        out_blob_desc->mut_shape().Set(
+            split_axis, out_blob_desc->shape().At(split_axis) / parallel_hierarchy.At(i));
+      }
+    }
+  }
+
   return Maybe<void>::Ok();
 }
 
