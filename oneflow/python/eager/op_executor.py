@@ -269,7 +269,7 @@ def _BuildNotMirroredScope(old_scope, builder):
 
 def _EagerRunModelInit(var_op_conf):
     op_conf, _ = _GenModelInitOpConfAndRetLbi(var_op_conf)
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
 
     def BuildModelInitInstruction(builder):
         upstream_signature = op_node_signature_pb.OpNodeSignature()
