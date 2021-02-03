@@ -186,16 +186,6 @@ class InstructionsBuilder {
           std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
           mut2_operand_blob_objects);
 
-  Maybe<void> _StatefulCall(
-      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-      const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
-      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-          bn_in_op2blob_object,
-      const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&
-          get_delegate_blob_object);
-
   Maybe<void> _StatelessCall(
       const std::string& stream_tag, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       std::shared_ptr<ParallelDesc> op_parallel_desc_sym,
