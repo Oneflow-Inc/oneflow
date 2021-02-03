@@ -1,4 +1,4 @@
-#include "oneflow/user/kernels/activation_ops_util.h"
+#include "oneflow/user/kernels/activation_ops.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 
 namespace oneflow {
