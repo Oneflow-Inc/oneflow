@@ -1,6 +1,5 @@
 # TODO: add flag to control if it should be shared lib
 add_llvm_library(MLIROneFlowTranslation
-        SHARED
         MLIROneFlowTranslation.cpp
 
         ADDITIONAL_HEADER_DIRS
