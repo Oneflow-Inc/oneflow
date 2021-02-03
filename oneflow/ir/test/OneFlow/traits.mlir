@@ -30,6 +30,15 @@ func @testTripleIdempotent(%arg0: tensor<f32>) -> tensor<f32> {
   return %2: tensor<f32>
 }
 
+// CHECK-LABEL: func @testDoubleInvolution
+// CHECK-SAME:  ([[ARG0:%.+]]: tensor<f32>)
+func @testDoubleInvolution(%arg0: tensor<f32>) -> tensor<f32> {
+  %0 = "oneflow.negative"(%arg0) {device = "gpu", input_lbn_segment_keys = ["in"], input_lbn_segment_sizes = [1 : i32], op_name = "Relu_1", op_type_name = "relu", output_lbn_segment_keys = ["out"], output_lbn_segment_sizes = [1 : i32], output_lbns = ["Relu_1/out_0"], placement = ["0:0-0"], scope_symbol_id = 4611686018427420670 : i64, trainable = false} : (tensor<f32>) -> tensor<f32>
+  %1 = "oneflow.negative"(%0) {device = "gpu", input_lbn_segment_keys = ["in"], input_lbn_segment_sizes = [1 : i32], op_name = "Relu_2", op_type_name = "relu", output_lbn_segment_keys = ["out"], output_lbn_segment_sizes = [1 : i32], output_lbns = ["Relu_2/out_0"], placement = ["0:0-0"], scope_symbol_id = 4611686018427420670 : i64, trainable = false} : (tensor<f32>) -> tensor<f32>
+  // CHECK: return [[ARG0]]
+  return %1: tensor<f32>
+}
+
 // CHECK-LABEL: func @testTripleInvolution
 // CHECK-SAME:  ([[ARG0:%.+]]: tensor<f32>)
 func @testTripleInvolution(%arg0: tensor<f32>) -> tensor<f32> {
