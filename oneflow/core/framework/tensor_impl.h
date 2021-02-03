@@ -94,6 +94,15 @@ class MirroredLazyTensorImpl : public LazyTensorImpl {
   ~MirroredLazyTensorImpl() = default;
 };
 
+/* class ConsistentLazyTensorImpl:public LazyTensorImpl:public TensorImpl */
+class ConsistentLazyTensorImpl : public LazyTensorImpl{
+  public:
+  ConsistentLazyTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                           const std::shared_ptr<Device>& device)
+        : LazyTensorImpl(shape, dtype, device){}
+  ~ConsistentLazyTensorImpl() = default;
+};
+
 /* class MirroredLazyBlobDesc:public LazyBlobDesc:public TensorImpl */
 class LazyBlobDesc : public TensorImpl {
  public:
@@ -120,6 +129,26 @@ class MirroredLazyBlobDesc : public LazyBlobDesc {
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 };
 
+/* class ConsistentLazyBlobDesc:public LazyBlobDesc:public TensorImpl */
+class ConsistentLazyBlobDesc:public LazyBlobDesc {
+  public:
+  ConsistentLazyBlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                         const std::string& job_name,
+                         const std::shared_ptr<compatible_py::Distribute>& distribute)
+    : LazyBlobDesc(lbi, job_name, distribute){}
+  ~ConsistentLazyBlobDesc()=default;
+
+  virtual std::string get_lazy_shape_log_warning() const;
+  std::shared_ptr<Shape> shape() const override;
+  DataType dtype() const override;
+  int64_t batch_axis() const override;
+  int64_t split_axis() const override;
+  bool is_dynamic() const override;
+  bool is_tensor_list() const override;
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
+  bool IdenticalTo(const std::shared_ptr<ConsistentLazyBlobDesc>& rhs) const;
+};
+
 /* class MirroredEagerTensorImpl:public EagerTensorImpl:public TensorImpl */
 class EagerTensorImpl : public TensorImpl {
  public:
@@ -134,6 +163,14 @@ class MirroredEagerTensorImpl : public EagerTensorImpl {
   MirroredEagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
                           const std::shared_ptr<Device>& device)
       : EagerTensorImpl(shape, dtype, device) {}
+};
+
+/* class ConsistentEagerTensorImpl:public EagerTensorImpl:public TensorImpl */
+class ConsistentEagerTensorImpl : public EagerTensorImpl {
+  public:
+  ConsistentEagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                            const std::shared_ptr<Device>& device)
+      :EagerTensorImpl(shape, dtype, device){}
 };
 
 /* class MirroredEagerBlobDesc:public EagerBlobDesc:public TensorImpl */
@@ -170,6 +207,17 @@ class MirroredEagerBlobDesc : public EagerBlobDesc {
                         const std::string& job_name,
                         const std::shared_ptr<compatible_py::Distribute>& distribute);
   ~MirroredEagerBlobDesc() override = default;
+};
+
+/* class ConsistentEagerBlobDesc:public EagerBlobDesc:public TensorImpl */
+class ConsistentEagerBlobDesc:public EagerBlobDesc{
+  public:
+  ConsistentEagerBlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+  const std::shared_ptr<compatible_py::BlobRegister>& blob_register,
+  const std::string& job_name,
+  const std::shared_ptr<compatible_py::Distribute>& distribute);
+  ~ConsistentEagerBlobDesc() override = default;
 };
 
 }  // namespace one
