@@ -909,6 +909,68 @@ Maybe<OpNodeSignatureDesc> InstructionsBuilder::GetOpNodeSignatureSymbol(
   return GetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>(*op_node_signature);
 }
 
+Maybe<void> InstructionsBuilder::_StatelessCall(
+    const std::string& stream_tag, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    std::shared_ptr<ParallelDesc> op_parallel_desc_sym,
+    const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& get_delegate_blob_object) {
+  if (op_attribute->parallel_signature().has_op_parallel_desc_symbol_id()) {
+    int64_t symbol_id = op_attribute->parallel_signature().op_parallel_desc_symbol_id();
+    op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(symbol_id));
+  }
+  CHECK_OR_RETURN(op_parallel_desc_sym);
+
+  const auto DelegateBlobObject4Ibn =
+      [&op_attribute, &bn_in_op2blob_object, &get_delegate_blob_object,
+       op_parallel_desc_sym](const std::string& ibn) -> std::shared_ptr<compatible_py::BlobObject> {
+    OpAttribute pb_op_attribute;
+    op_attribute->ToProto(&pb_op_attribute);
+    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr = CHECK_JUST(
+        compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
+    return get_delegate_blob_object((*bn_in_op2blob_object)[ibn], op_arg_parallel_attr);
+  };
+
+  const auto& op_conf = op_attribute->op_conf();
+  CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
+  std::shared_ptr<Scope> scope_symbol =
+      JUST(GetSymbol<cfg::ScopeProto, Scope>(op_conf.scope_symbol_id()));
+  std::shared_ptr<JobDesc> job_desc_sym = scope_symbol->job_desc_symbol();
+  std::shared_ptr<OperatorConfSymbol> op_conf_sym =
+      JUST(GetOpConfSymbol(std::make_shared<cfg::OperatorConf>(op_conf)));
+  std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym =
+      JUST(GetOpNodeSignatureSymbol(op_attribute));
+  std::shared_ptr<compatible_py::Object> opkernel_obj =
+      JUST(GetSharedOpKernelObject4ParallelConfSymbol(op_parallel_desc_sym));
+  CHECK_OR_RETURN((*opkernel_obj->parallel_desc_symbol()) == *op_parallel_desc_sym);
+  auto const_input_operand_blob_objects =
+      JUST(GetConstInputOperandBlobObjects(op_attribute, DelegateBlobObject4Ibn));
+  auto mutable_input_operand_blob_objects =
+      JUST(GetMutableInputOperandBlobObjects(op_attribute, DelegateBlobObject4Ibn));
+  auto mut1_operand_blob_objects =
+      JUST(GetMut1OperandBlobObjects(op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object));
+  auto mut2_operand_blob_objects =
+      JUST(GetMut2OperandBlobObjects(op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object));
+  std::string instruction_prefix;
+  {
+    bool is_user_op = op_attribute->op_conf().has_user_conf();
+    if (is_user_op) {
+      instruction_prefix = "User";
+    } else {
+      instruction_prefix = "System";
+    }
+  }
+  JUST(_StatelessCallOpKernel(
+      stream_tag + "." + instruction_prefix + "StatelessCallOpKernel", op_parallel_desc_sym,
+      job_desc_sym, op_conf_sym, op_node_signature_sym, opkernel_obj,
+      *const_input_operand_blob_objects, *mutable_input_operand_blob_objects,
+      *mut1_operand_blob_objects, *mut2_operand_blob_objects));
+  return Maybe<void>::Ok();
+}
+
 Maybe<std::vector<
     std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
 InstructionsBuilder::GetConstInputOperandBlobObjects(
