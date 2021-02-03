@@ -64,7 +64,7 @@ class IsInvolutionOfIdenticalPlacement
                   "expected operation to take one operand");
     static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
                   "expected operation to preserve type");
-    return impl::verifyIsIdempotent(op);
+    return impl::verifyIsInvolution(op);
   }
 
   static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
