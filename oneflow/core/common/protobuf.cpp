@@ -36,7 +36,7 @@ void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
 
 // parse protobuf message from .pb file
 bool TryParseProtoFromPbFile(const std::string& file_path, PbMessage* proto) {
-  std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
+  std::ifstream in_stream(file_path.c_str(), std::ifstream::in | std::ifstream::binary);
   return proto->ParseFromIstream(&in_stream);
 }
 

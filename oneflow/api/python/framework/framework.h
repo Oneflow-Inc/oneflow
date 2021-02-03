@@ -100,9 +100,7 @@ inline Maybe<std::string> GetSerializedCurrentJob() {
   auto* job_ctx =
       JUST(job_ctx_mgr->FindJobBuildAndInferCtx(*JUST(job_ctx_mgr->GetCurrentJobName())));
   CHECK_NOTNULL_OR_RETURN(job_ctx);
-  std::string ret;
-  google::protobuf::TextFormat::PrintToString(job_ctx->job(), &ret);
-  return ret;
+  return PbMessage2TxtString(job_ctx->job());
 }
 
 inline Maybe<std::string> GetFunctionConfigDef() {
