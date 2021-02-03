@@ -114,7 +114,10 @@ class IRRoundTrip final : public JobPass {
     TeePersistentLogStream::Create(
         ("job_before_ir_round_trip." + job->job_conf().job_name() + ".prototxt"))
         ->Write(*job);
-    mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) { return true; });
+    mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
+      TODO();
+      return true;
+    });
     TeePersistentLogStream::Create(
         ("job_after_ir_round_trip." + job->job_conf().job_name() + ".prototxt"))
         ->Write(*job);
