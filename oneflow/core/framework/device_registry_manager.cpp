@@ -28,9 +28,4 @@ HashMap<DeviceType, DumpVersionInfoFn>& DeviceRegistryMgr::DumpVersionInfoFuncs(
 
 HashMap<DeviceType, GetStringFn>& DeviceRegistryMgr::StringFuncs() { return get_string_funcs_; }
 
-std::string DeviceRegistryMgr::GetDeviceString(DeviceType dev_type) {
-  if (get_string_funcs_.find(dev_type) == get_string_funcs_.end()) { UNIMPLEMENTED(); }
-  return get_string_funcs_[dev_type]();
-}
-
 }  // namespace oneflow

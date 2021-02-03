@@ -32,7 +32,6 @@ class DeviceRegistryMgr final {
   static DeviceRegistryMgr& Get();
   HashMap<DeviceType, DumpVersionInfoFn>& DumpVersionInfoFuncs();
   HashMap<DeviceType, GetStringFn>& StringFuncs();
-  std::string GetDeviceString(DeviceType dev_type);
 
  private:
   HashMap<DeviceType, DumpVersionInfoFn> dump_version_info_funcs_;

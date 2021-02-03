@@ -30,4 +30,10 @@ Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
   return Error::DeviceTagNotFoundError() << "device tag `" << device_tag << "' not found";
 }
 
+std::string GetDeviceString(DeviceType dev_type){
+  auto str_funcs = DeviceRegistryMgr::Get().StringFuncs();
+  if (str_funcs.find(dev_type) == str_funcs.end()) { UNIMPLEMENTED(); }
+  return str_funcs[dev_type]();
+}
+
 }  // namespace oneflow
