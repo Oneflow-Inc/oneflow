@@ -13,24 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/naive_actor.h"
+#include "oneflow/api/python/of_api_registry.h"
 
 namespace oneflow {
 
-void NaiveActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
-
-void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(piece_id);
+ONEFLOW_API_PYBIND11_MODULE("flags", m) {
+  m.def("with_cuda", []() {
+#ifdef WITH_CUDA
     return true;
+#else
+    return false;
+#endif  // WITH_CUDA
+  });
+
+  m.def("use_cxx11_abi", []() {
+#if _GLIBCXX_USE_CXX11_ABI == 1
+    return true;
+#else
+    return false;
+#endif  // _GLIBCXX_USE_CXX11_ABI
   });
 }
-
-REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
-REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
-REGISTER_ACTOR(TaskType::kCollectiveBoxingPack, NaiveActor);
-REGISTER_ACTOR(TaskType::kCollectiveBoxingUnpack, NaiveActor);
-REGISTER_ACTOR(TaskType::kDecodeH2D, NaiveActor);
 
 }  // namespace oneflow
